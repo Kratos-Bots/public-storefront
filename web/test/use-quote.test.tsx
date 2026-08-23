@@ -176,11 +176,12 @@ describe('useQuote (logged-in)', () => {
 });
 
 describe('useQuote (guest)', () => {
-  it('does not fetch without a turnstile token', async () => {
+  it('does not fetch without a turnstile token, and reports it needs one', async () => {
     useCartStore.setState({ lines: [line(1, 2)] });
-    renderHook(() => useQuote(form({ country: 'GB' }), { guest: true }), { wrapper });
+    const { result } = renderHook(() => useQuote(form({ country: 'GB' }), { guest: true }), { wrapper });
     await settle();
     expect(guestQuoteMock).not.toHaveBeenCalled();
+    expect(result.current.needsToken).toBe(true);
   });
 
   it('sends the cart lines and the token once one is supplied', async () => {
@@ -212,12 +213,58 @@ describe('useQuote (guest)', () => {
 
   it('does not silently refetch once the initial guest quote lands', async () => {
     useCartStore.setState({ lines: [line(1, 1)] });
-    renderHook(() => useQuote(form({ country: 'GB' }), { guest: true, turnstileToken: 'tok-1' }), { wrapper });
+    renderHook(
+      () => useQuote(form({ country: 'GB' }), { guest: true, turnstileToken: 'tok-1' }),
+      { wrapper },
+    );
     await settle();
     expect(guestQuoteMock).toHaveBeenCalledTimes(1);
 
     // Nothing about the key changed; idle time passing alone must not trigger another call.
     await settle(60_000);
+    expect(guestQuoteMock).toHaveBeenCalledTimes(1);
+  });
+
+  // Regression: a guest quote must never resend a token the backend has already seen
+  // (Turnstile tokens are single-use server-side — STOREFRONT.md §3.5a). A token is spent
+  // the moment the fetch it was sent with settles, so `needsToken` is already true right
+  // after the first (successful) fetch — the caller needs a fresh token for the *next* one
+  // regardless of what changes next. Before this fix, `staleTime: Infinity` only protected
+  // the *same* query key: a form edit that produced a *new* key (a different country here)
+  // auto-fired using the same spent `turnstileToken` prop and would have gotten a guaranteed
+  // 422 from the backend.
+  it('does not auto-fire a form edit with an already-spent token, and asks for a new one', async () => {
+    useCartStore.setState({ lines: [line(1, 1)] });
+    const { result, rerender } = renderHook(
+      ({ f }: { f: CheckoutForm }) => useQuote(f, { guest: true, turnstileToken: 'tok-1' }),
+      { wrapper, initialProps: { f: form({ country: 'GB' }) } },
+    );
+    await settle();
+    expect(guestQuoteMock).toHaveBeenCalledTimes(1);
+    expect(result.current.needsToken).toBe(true);
+
+    rerender({ f: form({ country: 'FR' }) });
+    await settle();
+
+    expect(guestQuoteMock).toHaveBeenCalledTimes(1);
+    expect(result.current.needsToken).toBe(true);
+  });
+
+  it('marks the token consumed even when the guest fetch fails (422), so it is not retried', async () => {
+    useCartStore.setState({ lines: [line(1, 1)] });
+    guestQuoteMock.mockRejectedValueOnce(new ApiError(422, 'Verification failed'));
+    const { result, rerender } = renderHook(
+      ({ f }: { f: CheckoutForm }) => useQuote(f, { guest: true, turnstileToken: 'tok-1' }),
+      { wrapper, initialProps: { f: form({ country: 'GB' }) } },
+    );
+    await settle();
+    expect(guestQuoteMock).toHaveBeenCalledTimes(1);
+    expect(result.current.error?.message).toBe('Verification failed');
+    expect(result.current.needsToken).toBe(true);
+
+    // A later edit must not retry with the same (spent) token.
+    rerender({ f: form({ country: 'FR' }) });
+    await settle();
     expect(guestQuoteMock).toHaveBeenCalledTimes(1);
   });
 
