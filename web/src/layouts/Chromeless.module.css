@@ -14,10 +14,13 @@
   border-bottom: 1px solid var(--sf-line);
 }
 
+/* Wide enough for the order page's two-column desktop layout; the page itself
+   narrows to a single reading column when it has nothing to act on, so this is
+   a ceiling rather than a width. */
 .main {
   flex: 1;
   width: 100%;
-  max-width: 42rem;
+  max-width: 60rem;
   margin: 0 auto;
   padding: 1.5rem 1rem calc(2.5rem + env(safe-area-inset-bottom, 0px));
 }

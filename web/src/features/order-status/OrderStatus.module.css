@@ -1,0 +1,1057 @@
+/* The order page. Two jobs, one chassis: tell the customer where the order is,
+   and — while there is money owed — get it paid.
+
+   Everything is cut from the shop's own ledger idiom (hairlines, tracked
+   micro-caps, tabular figures) so a link from a chat message lands somewhere
+   that plainly belongs to the same shop the order was placed in. The signature
+   is the route: four square nodes on a rail, in the same 15/7 px geometry the
+   checkout's choice marker uses — the mark that meant "your choice" there means
+   "where your order is" here.
+
+   One class per selector, so nothing in this file can cancel anything else out,
+   and every colour is a `--sf-*` token. */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-width: 34rem;
+  margin: 0 auto;
+}
+
+/* ------------------------------------------------------------------ the hero */
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.5rem;
+}
+
+.eyebrow {
+  margin: 0;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--sf-primary);
+}
+
+.eyebrow[data-tone='success'] {
+  color: var(--sf-success);
+}
+
+.eyebrow[data-tone='danger'] {
+  color: var(--sf-danger);
+}
+
+.eyebrow[data-tone='muted'] {
+  color: var(--sf-faint);
+}
+
+.headline {
+  margin: 0;
+  font-family: var(--sf-font-heading);
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  color: var(--sf-text);
+}
+
+.detail {
+  margin: 0;
+  max-width: 26rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--sf-muted);
+}
+
+.meta {
+  margin: 0;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  color: var(--sf-faint);
+}
+
+/* The pre-order flag: the same rule-in-a-tone the rest of the shop flies. */
+.flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.25rem;
+  padding: 0.35rem 0.6rem;
+  border-left: 2px solid var(--sf-warn);
+  border-radius: 0 var(--mantine-radius-default) var(--mantine-radius-default) 0;
+  background: var(--sf-bg-deep);
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--sf-warn);
+}
+
+/* ----------------------------------------------------------------- the route */
+
+.route {
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+  align-self: center;
+  min-width: 13rem;
+}
+
+.step {
+  display: grid;
+  grid-template-columns: 15px 1fr;
+  gap: 0 0.75rem;
+}
+
+/* The rail. Drawn from the node down, in the tone of the leg it describes:
+   travelled legs in the client's own accent, the rest as a hairline. */
+.rail {
+  grid-column: 1;
+  grid-row: 2;
+  width: 1px;
+  min-height: 22px;
+  justify-self: center;
+  background: var(--sf-line-strong);
+}
+
+.railDone {
+  background: var(--sf-primary);
+}
+
+.node {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  margin-top: 2px;
+  border: 1px solid var(--sf-line-strong);
+  color: var(--sf-bg);
+}
+
+.nodeDone {
+  border-color: var(--sf-primary);
+  background: var(--sf-primary);
+}
+
+.nodeArrived {
+  border-color: var(--sf-success);
+  background: var(--sf-success);
+}
+
+.nodeHere {
+  border-color: var(--sf-primary);
+}
+
+/* The one filled 7px core the whole shop uses for "this one". */
+.nodeCore {
+  width: 7px;
+  height: 7px;
+  background: var(--sf-primary);
+}
+
+.stepBody {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+  padding-bottom: 0.15rem;
+}
+
+.stepLabel {
+  font-family: var(--sf-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--sf-faint);
+}
+
+.stepLabelOn {
+  color: var(--sf-text);
+}
+
+.stepWhen {
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  color: var(--sf-faint);
+}
+
+.stepMark {
+  padding: 0.1rem 0.35rem;
+  border: 1px solid var(--sf-warn);
+  font-family: var(--sf-font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--sf-warn);
+}
+
+/* Cancelled / refunded: the route is replaced by what happens next. */
+.terminal {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-left: 2px solid var(--sf-line-strong);
+  border-radius: 0 var(--mantine-radius-default) var(--mantine-radius-default) 0;
+  background: var(--sf-bg-deep);
+  text-align: left;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--sf-muted);
+}
+
+.terminalDanger {
+  border-left-color: var(--sf-danger);
+}
+
+/* ---------------------------------------------------------------- the layout */
+
+.layout {
+  display: grid;
+  gap: 0.9rem;
+  align-items: start;
+}
+
+.column {
+  display: grid;
+  gap: 0.9rem;
+  align-content: start;
+  min-width: 0;
+}
+
+/* ----------------------------------------------------------------- the cards */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0.95rem 1rem 1.05rem;
+  border: 1px solid var(--sf-line-strong);
+  border-radius: var(--mantine-radius-default);
+  background: var(--sf-bg-deep);
+}
+
+/* The one card that wants something from the customer wears the shop's
+   "this needs you" silhouette rather than a second border colour. */
+.cardAction {
+  border-left: 2px solid var(--sf-primary);
+}
+
+.cardHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.cardHeadBody {
+  min-width: 0;
+}
+
+.cardEyebrow {
+  margin: 0;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--sf-faint);
+}
+
+.cardEyebrowAction {
+  color: var(--sf-primary);
+}
+
+.cardTitle {
+  margin: 0.2rem 0 0;
+  font-family: var(--sf-font-heading);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: var(--sf-text);
+}
+
+.cardNote {
+  margin: 0.35rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--sf-muted);
+}
+
+.cardFigure {
+  margin: 0.3rem 0 0;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  color: var(--sf-muted);
+}
+
+.pill {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--sf-line-strong);
+  border-radius: 999px;
+  font-family: var(--sf-font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--sf-muted);
+}
+
+.pillSuccess {
+  border-color: var(--sf-success);
+  color: var(--sf-success);
+}
+
+.pillDanger {
+  border-color: var(--sf-danger);
+  color: var(--sf-danger);
+}
+
+.pillWarn {
+  border-color: var(--sf-warn);
+  color: var(--sf-warn);
+}
+
+.pillMuted {
+  color: var(--sf-faint);
+}
+
+/* The page's one moving part: a hairline that runs while the shop is waiting on
+   something it cannot hurry — a hosted checkout open in another tab, a
+   transaction being read off a chain. Same sweep the checkout docket flies. */
+.waiting {
+  position: relative;
+  height: 2px;
+  margin: 0.9rem 0 0;
+  overflow: hidden;
+  background: var(--sf-line);
+}
+
+.waiting::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 35%;
+  background: var(--sf-primary);
+  animation: sweep 1.6s ease-in-out infinite;
+}
+
+@keyframes sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(386%);
+  }
+}
+
+.waitingNote {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0.55rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--sf-muted);
+}
+
+/* ------------------------------------------------------------- ledger pieces */
+
+.nowrap {
+  white-space: nowrap;
+}
+
+/* One statement of the auto-cancel deadline, above whichever payment card is
+   showing — every way of paying is on the same clock. */
+.deadline {
+  /* A row of the payment column's own grid — the gap is the spacing. */
+  margin: 0;
+  padding: 0.45rem 0.65rem;
+  border-left: 2px solid var(--sf-warn);
+  border-radius: 0 var(--mantine-radius-default) var(--mantine-radius-default) 0;
+  background: var(--sf-bg-deep);
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  line-height: 1.6;
+  color: var(--sf-warn);
+}
+
+.deadlineWhen {
+  color: var(--sf-text);
+}
+
+.items {
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.15rem 1rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--sf-line);
+}
+
+.itemName {
+  grid-column: 1;
+  grid-row: 1;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--sf-text);
+}
+
+.itemQty {
+  grid-column: 1;
+  grid-row: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  color: var(--sf-faint);
+}
+
+.itemFlag {
+  padding: 0 0.3rem;
+  border: 1px solid var(--sf-warn);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--sf-warn);
+}
+
+.itemTotal {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  font-family: var(--sf-font-mono);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--sf-text);
+}
+
+.totals {
+  margin: 0.85rem 0 0;
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.2rem 0;
+}
+
+.rowLabel {
+  margin: 0;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--sf-muted);
+}
+
+.rowFigure {
+  margin: 0;
+  font-family: var(--sf-font-mono);
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--sf-text);
+}
+
+.rowGood {
+  color: var(--sf-success);
+}
+
+.grand {
+  margin-top: 0.5rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--sf-line-strong);
+}
+
+.grandFigure {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+/* --------------------------------------------------------------- copy fields */
+
+/* A value the customer has to carry into another app — an address, an amount, a
+   tracking number. The figure is the row; the copy control sits beside it. */
+.copyRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--sf-line);
+}
+
+.copyBody {
+  min-width: 0;
+}
+
+.copyLabel {
+  margin: 0;
+  font-family: var(--sf-font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--sf-faint);
+}
+
+.copyValue {
+  margin: 0.15rem 0 0;
+  font-family: var(--sf-font-mono);
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.45;
+  color: var(--sf-text);
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.copyButton {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-width: 68px;
+  min-height: 44px;
+  padding: 0 0.6rem;
+  border: 1px solid var(--sf-line-strong);
+  border-radius: var(--mantine-radius-default);
+  background: transparent;
+  color: var(--sf-muted);
+  font-family: var(--sf-font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 120ms ease, color 120ms ease;
+}
+
+.copyButton:hover {
+  border-color: var(--sf-primary);
+  color: var(--sf-text);
+}
+
+.copyButton:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+.copyDone {
+  border-color: var(--sf-success);
+  color: var(--sf-success);
+}
+
+/* ------------------------------------------------------------------ controls */
+
+.cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 48px;
+  margin-top: 0.9rem;
+  padding: 0 1rem;
+  border: 0;
+  border-radius: var(--mantine-radius-default);
+  background: var(--sf-primary);
+  color: var(--sf-bg);
+  font-family: var(--sf-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 120ms ease;
+}
+
+.cta:hover {
+  opacity: 0.88;
+}
+
+.cta:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+.cta:disabled {
+  background: var(--sf-surface-2);
+  color: var(--sf-faint);
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 44px;
+  padding: 0 0.9rem;
+  border: 1px solid var(--sf-line-strong);
+  border-radius: var(--mantine-radius-default);
+  background: transparent;
+  color: var(--sf-muted);
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 120ms ease, color 120ms ease;
+}
+
+.ghost:hover {
+  border-color: var(--sf-primary);
+  color: var(--sf-text);
+}
+
+.ghost:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+.ghost:disabled {
+  border-color: var(--sf-line);
+  color: var(--sf-faint);
+  cursor: not-allowed;
+}
+
+.ghostWide {
+  width: 100%;
+  margin-top: 0.9rem;
+}
+
+/* The "something is off" line, shared by every error on the page. */
+.note {
+  margin: 0.7rem 0 0;
+  padding: 0.45rem 0.65rem;
+  border-left: 2px solid var(--sf-line-strong);
+  border-radius: 0 var(--mantine-radius-default) var(--mantine-radius-default) 0;
+  background: var(--sf-bg);
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1.6;
+  color: var(--sf-muted);
+}
+
+.note[data-tone='danger'] {
+  border-left-color: var(--sf-danger);
+  color: var(--sf-danger);
+}
+
+.note[data-tone='warn'] {
+  border-left-color: var(--sf-warn);
+  color: var(--sf-warn);
+}
+
+.note[data-tone='success'] {
+  border-left-color: var(--sf-success);
+  color: var(--sf-success);
+}
+
+/* ------------------------------------------------------------- method picker */
+
+.picker {
+  margin-top: 0.9rem;
+}
+
+/* One hairline block, one row per method — the same list the checkout's payment
+   step draws, so the combos that open inside it are already at home. */
+.pickerList {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--sf-line-strong);
+  border-radius: var(--mantine-radius-default);
+  background: var(--sf-bg);
+  overflow: hidden;
+}
+
+/* The rule sits between the block's children, not on the row: a row that opens
+   a drawer is wrapped, so a rule on the row itself would erase every divider. */
+.pickerList > * + * {
+  border-top: 1px solid var(--sf-line);
+}
+
+.pickerRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 56px;
+  padding: 0.7rem 0.85rem;
+  border: 0;
+  background: transparent;
+  color: var(--sf-text);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.pickerRow:hover {
+  background: var(--sf-surface);
+}
+
+.pickerRow:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: -2px;
+}
+
+.pickerRow:disabled {
+  cursor: wait;
+  color: var(--sf-faint);
+}
+
+.pickerMark {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border: 1px solid var(--sf-line-strong);
+}
+
+.pickerMarkOn {
+  border-color: var(--sf-primary);
+}
+
+.pickerMarkCore {
+  width: 7px;
+  height: 7px;
+  background: var(--sf-primary);
+}
+
+/* A row that leaves the page has no marker to fill, but keeps the marker's
+   width so every label starts on the same vertical. */
+.pickerSpacer {
+  flex: none;
+  width: 15px;
+}
+
+.pickerAway {
+  display: flex;
+  align-items: center;
+  color: var(--sf-faint);
+}
+
+.pickerLabel {
+  font-family: var(--sf-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: inherit;
+}
+
+.pickerFigure {
+  margin-left: auto;
+  padding-left: 0.5rem;
+  font-family: var(--sf-font-mono);
+  font-size: 0.875rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: inherit;
+}
+
+/* The combos and the transfer details open under the method that owns them, on
+   one rail — a continuation, not a panel inside a panel. */
+.pickerDrawer {
+  margin: 0 0.85rem 0.85rem 1.55rem;
+  padding-left: 0.85rem;
+  border-left: 1px solid var(--sf-line-strong);
+}
+
+.pickerHead {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.6rem;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--sf-faint);
+}
+
+.pickerHeadRule {
+  flex: 1;
+  height: 1px;
+  background: var(--sf-line);
+}
+
+.chatLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.9rem;
+}
+
+/* Change payment method: a disclosure, folded away until it is wanted. */
+.disclosure {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 1rem;
+  border: 1px solid var(--sf-line);
+  border-radius: var(--mantine-radius-default);
+  background: transparent;
+  color: var(--sf-muted);
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+
+.disclosure:hover {
+  border-color: var(--sf-line-strong);
+  color: var(--sf-text);
+}
+
+.disclosure:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+.disclosureSign {
+  font-size: 13px;
+}
+
+/* The panel the disclosure opens: the same card, tucked under its own control. */
+.disclosurePanel {
+  margin-top: 0.5rem;
+  padding-top: 0.15rem;
+}
+
+/* --------------------------------------------------------------- txid submit */
+
+.txidForm {
+  margin-top: 0.9rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--sf-line);
+}
+
+.txidLabel {
+  display: block;
+  font-family: var(--sf-font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--sf-faint);
+}
+
+.txidBlurb {
+  margin: 0.3rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--sf-muted);
+}
+
+.txidRow {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+
+.txidInput {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 0.7rem;
+  border: 1px solid var(--sf-line-strong);
+  border-radius: var(--mantine-radius-default);
+  background: var(--sf-bg);
+  color: var(--sf-text);
+  font-family: var(--sf-font-mono);
+  font-size: 16px; /* iOS zoom guard */
+}
+
+.txidInput::placeholder {
+  color: var(--sf-faint);
+}
+
+.txidInput:focus {
+  outline: none;
+  border-color: var(--sf-primary);
+  box-shadow: inset 0 0 0 1px var(--sf-primary);
+}
+
+.txidSubmit {
+  flex: none;
+}
+
+/* --------------------------------------------------------------- the address */
+
+.address {
+  margin: 0.6rem 0 0;
+  font-style: normal;
+}
+
+.addressName {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--sf-text);
+}
+
+.addressLine {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--sf-muted);
+}
+
+/* ------------------------------------------------------------- state screens */
+
+.screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+  max-width: 30rem;
+  margin: 2rem auto 0;
+  text-align: center;
+}
+
+.screenRule {
+  width: 2rem;
+  height: 2px;
+  margin-bottom: 0.35rem;
+  background: var(--sf-line-strong);
+}
+
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 34rem;
+  margin: 0 auto;
+}
+
+.block {
+  border-radius: var(--mantine-radius-default);
+  background: var(--sf-surface);
+  animation: breathe 1.6s ease-in-out infinite;
+}
+
+.blockCard {
+  width: 100%;
+  height: 9rem;
+  margin-top: 1rem;
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+/* ---------------------------------------------------------------- responsive */
+
+@media (min-width: 62em) {
+  /* The summary keeps its own column only when there is something to act on
+     beside it — otherwise the grid would draw an empty track. */
+  .pageWide {
+    max-width: 60rem;
+  }
+
+  .layoutWide {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 21rem);
+    gap: 1.25rem;
+  }
+
+  .headline {
+    font-size: 2rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .waiting::after,
+  .block {
+    animation: none;
+  }
+
+  .copyButton,
+  .cta,
+  .ghost,
+  .pickerRow,
+  .disclosure {
+    transition: none;
+  }
+}
