@@ -38,11 +38,16 @@ function mount() {
   );
 }
 
+function setPath(pathname: string) {
+  window.history.pushState({}, '', pathname);
+}
+
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
   api.fetchSettings.mockReset();
   closedGate.getState().setClosed(false);
+  setPath('/');
 });
 
 describe('ClosedGate', () => {
@@ -101,5 +106,25 @@ describe('ClosedGate', () => {
     });
     expect(api.fetchSettings.mock.calls.length).toBeGreaterThan(first);
     expect(screen.getByText('Currently closed')).toBeInTheDocument();
+  });
+
+  it('still renders children on an exempt path while the shop is closed', () => {
+    api.fetchSettings.mockResolvedValue(settings(true));
+    closedGate.getState().setClosed(true);
+    setPath('/order-placed');
+
+    mount();
+    expect(screen.getByText('Shop')).toBeInTheDocument();
+    expect(screen.queryByText('Currently closed')).toBeNull();
+  });
+
+  it('still gates a non-exempt path while the shop is closed', () => {
+    api.fetchSettings.mockResolvedValue(settings(true));
+    closedGate.getState().setClosed(true);
+    setPath('/checkout');
+
+    mount();
+    expect(screen.getByText('Currently closed')).toBeInTheDocument();
+    expect(screen.queryByText('Shop')).toBeNull();
   });
 });
