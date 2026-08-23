@@ -9,6 +9,8 @@ import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { BagIcon, UserIcon } from '@/components/icons.tsx';
 import { NoticeBanners } from '@/features/notices/NoticeBanners.tsx';
 import { CutoffBar } from '@/features/notices/CutoffBar.tsx';
+import { CartDrawer } from '@/features/cart/CartDrawer.tsx';
+import { MobileCartBar, useMobileCartBar } from '@/features/cart/MobileCartBar.tsx';
 import { SearchField } from '@/layouts/SearchField.tsx';
 import type { ShellSearchContext } from '@/layouts/shell-context.ts';
 import classes from '@/layouts/StorefrontShell.module.css';
@@ -21,9 +23,11 @@ export function StorefrontShell() {
   const [search, setSearch] = useState('');
   const outletContext = useMemo<ShellSearchContext>(() => ({ search, setSearch }), [search]);
   const hasChat = !!(brand.links.whatsapp || brand.links.telegram);
+  // The tab is fixed to the foot of the phone; the shell owes it the clearance.
+  const barShowing = useMobileCartBar();
 
   return (
-    <div className={classes.shell}>
+    <div className={barShowing ? `${classes.shell} ${classes.withBar}` : classes.shell}>
       <header className={classes.header}>
         <div className={classes.headerInner}>
           <Link to="/" className={classes.home} aria-label={`${brand.name} — home`}>
@@ -108,6 +112,13 @@ export function StorefrontShell() {
           <span>{new Date().getFullYear()}</span>
         </div>
       </footer>
+
+      {features.ordering ? (
+        <>
+          <CartDrawer />
+          <MobileCartBar />
+        </>
+      ) : null}
     </div>
   );
 }

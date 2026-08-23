@@ -1,6 +1,7 @@
 import { useId, useState } from 'react';
 import { useSettings } from '@/app/settings.ts';
 import { useCartStore } from '@/stores/cart.ts';
+import { addToCart, setCartQuantity } from '@/features/cart/useServerCart.ts';
 import { deriveStockStatus, formatMoney, resolveUnitPrice } from '@/lib/format.ts';
 import { StockChip } from '@/features/catalog/StockChip.tsx';
 import { TierLadder } from '@/features/wholesale/TierLadder.tsx';
@@ -30,8 +31,6 @@ export function WholesaleRow({ product, band, groupEnd, ordering }: WholesaleRow
   const quantity = useCartStore(
     (s) => s.lines.find((l) => l.productId === product.id)?.quantity ?? 0,
   );
-  const add = useCartStore((s) => s.add);
-  const setQuantity = useCartStore((s) => s.setQuantity);
   const [open, setOpen] = useState(false);
   const ladderId = useId();
 
@@ -43,12 +42,13 @@ export function WholesaleRow({ product, band, groupEnd, ordering }: WholesaleRow
   const hasTiers = product.pricingTiers.length > 0;
   const inCart = quantity > 0;
 
-  /** The store keys quantity edits by product id, so a line has to exist first. */
+  /** The store keys quantity edits by product id, so a line has to exist first.
+   *  Both writers go through the cart's sync path so a logged-in trade order mirrors to the server. */
   const setQty = (next: number) => {
     const q = Math.max(0, Math.floor(Number.isFinite(next) ? next : 0));
     if (q === quantity) return;
-    if (quantity === 0) add(product, q);
-    else setQuantity(product.id, q);
+    if (quantity === 0) addToCart(product, q);
+    else setCartQuantity(product.id, q);
   };
 
   const groupClass = [classes.group, band ? classes.band : '', inCart ? classes.inCart : '']

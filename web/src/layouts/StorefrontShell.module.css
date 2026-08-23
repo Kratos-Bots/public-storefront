@@ -239,3 +239,9 @@
     padding-inline: 1.5rem;
   }
 }
+
+/* Clearance for the running tab, which is fixed to the foot of the phone and
+   would otherwise sit on top of the last thing the footer says. */
+.withBar {
+  padding-bottom: 76px;
+}

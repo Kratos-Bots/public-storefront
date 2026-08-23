@@ -10,6 +10,8 @@ import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { BagIcon, FilterIcon, UserIcon } from '@/components/icons.tsx';
 import { NoticeBanners } from '@/features/notices/NoticeBanners.tsx';
 import { CutoffBar } from '@/features/notices/CutoffBar.tsx';
+import { CartDrawer } from '@/features/cart/CartDrawer.tsx';
+import { MobileCartBar, useMobileCartBar } from '@/features/cart/MobileCartBar.tsx';
 import { SearchField } from '@/layouts/SearchField.tsx';
 import type { ShellSearchContext } from '@/layouts/shell-context.ts';
 import classes from '@/layouts/MenuShell.module.css';
@@ -29,13 +31,15 @@ export function MenuShell() {
   const canFilter = onCatalog && !features.wholesale;
   // A category in the path is the only filter this layout has — the dot says one is on.
   const filtered = pathname.startsWith('/c/');
-  // The wholesale sheet flies its own sticky tab at the foot as soon as there is
-  // something on the order, and both bands claim `bottom: 0` — the tab wins, the
-  // way it replaces the contact strip in the chat menu it is ported from.
-  const showContact = onCatalog && !(features.wholesale && cartCount > 0);
+  // A running tab claims the foot as soon as there is something on the order —
+  // the wholesale sheet's own sticky tab, or the cart bar on a phone — and both
+  // bands want `bottom: 0`. The tab wins, the way it replaces the contact strip
+  // in the chat menu this layout is ported from.
+  const barShowing = useMobileCartBar();
+  const showContact = onCatalog && !barShowing && !(features.wholesale && cartCount > 0);
 
   return (
-    <div className={classes.shell}>
+    <div className={barShowing ? `${classes.shell} ${classes.withBar}` : classes.shell}>
       <header className={classes.bar}>
         <div className={classes.barInner}>
           <Link to="/" className={classes.home} aria-label={`${brand.name} — home`}>
@@ -91,6 +95,13 @@ export function MenuShell() {
       </main>
 
       {showContact ? <ContactLinks variant="strip" /> : null}
+
+      {features.ordering ? (
+        <>
+          <CartDrawer />
+          <MobileCartBar />
+        </>
+      ) : null}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSettings } from '@/app/settings.ts';
-import { useCartStore } from '@/stores/cart.ts';
+import { addToCart } from '@/features/cart/useServerCart.ts';
 import { deriveStockStatus, formatMoney } from '@/lib/format.ts';
 import type { Product } from '@/types/catalog.ts';
 import classes from '@/features/catalog/AddToCart.module.css';
@@ -17,13 +17,15 @@ export interface AddToCartProps {
 }
 
 /**
- * The one place a product enters the cart. Renders nothing when the client runs
+ * The one place a product enters the cart. Writes through `addToCart` rather
+ * than the store, so a logged-in shopper's quick-add reaches `PUT /cart` (and
+ * the admin's Live Carts) the same way a stepper edit in the drawer does.
+ * Renders nothing when the client runs
  * browse-only, so a shop with `ordering: false` never shows a control that leads
  * nowhere. The label carries the state — no toast, no badge animation.
  */
 export function AddToCart({ product, size = 'lg', showPrice = true }: AddToCartProps) {
   const { features, currency } = useSettings();
-  const add = useCartStore((s) => s.add);
   const [phase, setPhase] = useState<'idle' | 'added' | 'again'>('idle');
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -48,7 +50,7 @@ export function AddToCart({ product, size = 'lg', showPrice = true }: AddToCartP
           : `${verb}${price}`;
 
   const onClick = () => {
-    add(product, 1);
+    addToCart(product, 1);
     setPhase('added');
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => setPhase('again'), ADDED_MS);

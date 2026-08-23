@@ -1,0 +1,152 @@
+/* The docket foot. One heavy rule, one figure, one way on — the block is quiet
+   so the subtotal is the only thing with weight in it. */
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Same shape as a line's note: a rule in the tone, tracked micro-caps beside it. */
+.notice {
+  margin: 0 0 0.25rem;
+  padding: 0.4rem 0.6rem;
+  background: var(--sf-surface);
+  border-left: 2px solid var(--sf-warn);
+  border-radius: 0 var(--mantine-radius-default) var(--mantine-radius-default) 0;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1.6;
+  color: var(--sf-warn);
+}
+
+.ledger {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--sf-line-strong);
+}
+
+.label {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--sf-muted);
+}
+
+.units {
+  letter-spacing: 0.14em;
+  font-weight: 500;
+  color: var(--sf-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The one figure with weight — set at the size the wholesale tab carries its
+   running total, so the two read as the same instrument. */
+.figure {
+  font-family: var(--sf-font-mono);
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  color: var(--sf-text);
+  white-space: nowrap;
+}
+
+.terms {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--sf-faint);
+}
+
+.checkout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 48px;
+  margin-top: 0.25rem;
+  padding: 0 1rem;
+  border: 0;
+  border-radius: var(--mantine-radius-default);
+  background: var(--sf-primary);
+  color: var(--sf-bg);
+  font-family: var(--sf-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 120ms ease;
+}
+
+.checkout:hover {
+  opacity: 0.88;
+}
+
+.checkout:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+.checkout:disabled {
+  background: var(--sf-surface-2);
+  color: var(--sf-faint);
+  cursor: not-allowed;
+}
+
+.checkout:disabled:hover {
+  opacity: 1;
+}
+
+.held {
+  margin: 0;
+  text-align: center;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--sf-danger);
+}
+
+.keep {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  color: var(--sf-muted);
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border-radius: var(--mantine-radius-default);
+}
+
+.keep:hover {
+  color: var(--sf-text);
+}
+
+.keep:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .checkout {
+    transition: none;
+  }
+}
