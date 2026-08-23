@@ -1,0 +1,137 @@
+/* The ladder rides in the sheet's own columns: threshold under the product,
+   price under the unit price it would replace. Below 62em it is a short list
+   indented under its row. */
+.ladder {
+  display: block;
+}
+
+.band {
+  background: var(--sf-surface);
+}
+
+.rung {
+  display: grid;
+  /* Fixed tracks, not `auto`: every rung is its own grid below 62em, so shared
+     widths are the only way the prices make a column to read down. */
+  grid-template-columns: minmax(0, 1fr) 5.5rem 2.75rem;
+  align-items: baseline;
+  column-gap: 0.6rem;
+  padding: 0.2rem 0.25rem 0.2rem 1.5rem;
+  border-bottom: 1px solid var(--sf-line);
+  border-left: 2px solid transparent;
+}
+
+/* The ladder belongs to its line: it carries the same leading rule so the two
+   read as one block rather than a stray list under it. */
+.inCart .rung {
+  border-left-color: var(--sf-primary);
+}
+
+.groupEnd .rung:last-child {
+  border-bottom-color: var(--sf-line-strong);
+}
+
+.pad {
+  display: none;
+}
+
+/* Plain cells throughout: a flex or grid display here would be wrapped in an
+   anonymous table-cell at 62em and lose the column it is meant to line up with. */
+.threshold {
+  font-family: var(--sf-font-mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--sf-muted);
+  white-space: nowrap;
+}
+
+/* The rung in force is named, not only tinted — colour is never the only signal. */
+.now {
+  margin-left: 0.4rem;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--sf-primary);
+}
+
+.price {
+  font-family: var(--sf-font-mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--sf-muted);
+  white-space: nowrap;
+  text-align: right;
+}
+
+.each {
+  font-size: 9px;
+  color: var(--sf-faint);
+}
+
+.off {
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+  color: var(--sf-faint);
+  white-space: nowrap;
+  text-align: right;
+}
+
+.active {
+  background: var(--sf-surface-3);
+}
+
+.active .threshold,
+.active .price {
+  color: var(--sf-text);
+  font-weight: 700;
+}
+
+.active .off {
+  color: var(--sf-muted);
+}
+
+@media (min-width: 62em) {
+  .ladder {
+    display: table-row-group;
+  }
+
+  .rung {
+    display: table-row;
+    border: 0;
+  }
+
+  .rung > * {
+    padding: 0.15rem 0.5rem;
+    border-bottom: 1px solid var(--sf-line);
+    vertical-align: middle;
+  }
+
+  .rung > *:first-child {
+    border-left: 2px solid transparent;
+  }
+
+  .inCart .rung > *:first-child {
+    border-left-color: var(--sf-primary);
+  }
+
+  .groupEnd .rung:last-child > * {
+    border-bottom-color: var(--sf-line-strong);
+  }
+
+  .pad {
+    display: table-cell;
+    width: 1%;
+  }
+
+  .price,
+  .off {
+    width: 1%;
+  }
+
+  .off {
+    text-align: center;
+  }
+}

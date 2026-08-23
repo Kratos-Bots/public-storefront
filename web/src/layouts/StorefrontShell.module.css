@@ -3,6 +3,11 @@
    typefaces carry the personality. */
 .shell {
   --sf-rail-max: 1200px;
+  /* The header's height and the content column's inset, published for anything
+     inside the page that has to line up with the chrome — a sticky column head,
+     a full-bleed band. `MenuShell` publishes the same two. */
+  --sf-bar-h: 56px;
+  --sf-main-pad: 1rem;
   display: flex;
   flex-direction: column;
   min-height: 100dvh;
@@ -25,7 +30,7 @@
   height: 56px;
   max-width: var(--sf-rail-max);
   margin: 0 auto;
-  padding: 0 1rem;
+  padding: 0 var(--sf-main-pad);
 }
 
 .home {
@@ -123,7 +128,7 @@
   width: 100%;
   max-width: var(--sf-rail-max);
   margin: 0 auto;
-  padding: 0 1rem;
+  padding: 0 var(--sf-main-pad);
 }
 
 /* Footer — a quiet band, not a marketing sitemap. */
@@ -205,10 +210,13 @@
 }
 
 @media (min-width: 62em) {
+  .shell {
+    --sf-bar-h: 68px;
+    --sf-main-pad: 1.5rem;
+  }
   .headerInner {
     height: 68px;
     gap: 2rem;
-    padding-inline: 1.5rem;
   }
   .action {
     width: 38px;
@@ -222,9 +230,6 @@
     flex: 1;
     max-width: 26rem;
     margin-inline: auto;
-  }
-  .main {
-    padding-inline: 1.5rem;
   }
   .footerInner {
     grid-template-columns: 1.6fr 1fr 1fr;

@@ -3,8 +3,9 @@ import { Button } from '@mantine/core';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { useSettings } from '@/app/settings.ts';
 import { useCatalog } from '@/features/catalog/use-catalog.ts';
-import { buildCategoryTree, type CategoryNode } from '@/features/catalog/category-tree.ts';
+import { buildCategoryTree } from '@/features/catalog/category-tree.ts';
 import { categoryCounts, filterProducts, findCategoryBySlugOrId } from '@/features/catalog/filter.ts';
+import { groupProducts } from '@/features/catalog/group.ts';
 import { treeHasEmoji } from '@/features/catalog/CategoryNav.tsx';
 import { ProductRow } from '@/features/catalog/ProductRow.tsx';
 import { ProductDetailSheet } from '@/features/catalog/ProductDetailSheet.tsx';
@@ -14,59 +15,6 @@ import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { useShellSearch } from '@/layouts/shell-context.ts';
 import type { Product } from '@/types/catalog.ts';
 import classes from '@/features/catalog/ProductList.module.css';
-
-interface ProductGroup {
-  key: string;
-  /** The category's own name — the header's headline. */
-  label: string;
-  /** Its ancestors, already joined — the quiet half of the header. */
-  trail: string;
-  emoji: string | null;
-  products: Product[];
-}
-
-/** Depth-first walk of the tree, carrying each node's ancestor names with it. */
-function walk(nodes: CategoryNode[], trail: string[] = []): { node: CategoryNode; trail: string[] }[] {
-  return nodes.flatMap((node) => [
-    { node, trail },
-    ...walk(node.children, [...trail, node.name]),
-  ]);
-}
-
-/**
- * Bucket the visible products under their own category and emit the buckets in
- * the index's order, so the list and the filter sheet agree on what comes first.
- * A product whose category the catalogue no longer carries keeps its place at the
- * end rather than vanishing.
- */
-function groupProducts(visible: Product[], tree: CategoryNode[]): ProductGroup[] {
-  const buckets = new Map<number, Product[]>();
-  const loose: Product[] = [];
-  for (const product of visible) {
-    if (product.categoryId === null) {
-      loose.push(product);
-      continue;
-    }
-    const bucket = buckets.get(product.categoryId);
-    if (bucket) bucket.push(product);
-    else buckets.set(product.categoryId, [product]);
-  }
-
-  const groups: ProductGroup[] = [];
-  for (const { node, trail } of walk(tree)) {
-    const products = buckets.get(node.id);
-    if (!products) continue;
-    buckets.delete(node.id);
-    groups.push({ key: String(node.id), label: node.name, trail: trail.join(' / '), emoji: node.emoji, products });
-  }
-  for (const [id, products] of buckets) {
-    groups.push({ key: String(id), label: products[0]?.categoryName ?? 'Other', trail: '', emoji: null, products });
-  }
-  if (loose.length > 0) {
-    groups.push({ key: 'none', label: 'Uncategorised', trail: '', emoji: null, products: loose });
-  }
-  return groups;
-}
 
 /**
  * The menu layout's catalogue: one dense manifest, ruled into sections by category,
