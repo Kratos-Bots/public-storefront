@@ -32,7 +32,7 @@ Locked decisions from brainstorming:
 - **Guest checkout is a per-client flag.** Login-required is the default; when the flag is on, a
   session-less backend checkout path (Turnstile-verified server-side) is available.
 - **Release artifact = GitHub Release** (built by CI on tag), consumed by Spec 3.
-- **Stack:** React 19 + Vite 6 + Mantine 7 + react-router 7 + @tanstack/react-query 5 + ky + zustand + zod.
+- **Stack:** React 19 + Vite 7 + Mantine 9 (+ `@mantine/colors-generator` for the primary ramp) + react-router 7 + @tanstack/react-query 5 + ky + zustand + zod 4.
   TypeScript throughout. Worker on wrangler 4 with the `assets` binding.
 - **All four page groups** ship in this spec: catalog/cart/checkout, login + account, order status +
   payment redirects, verify + tracking.
@@ -247,7 +247,7 @@ Spec 2 builds the editor; until then they are settable through that endpoint.
 `web/src/app/theme-bridge.ts` turns `settings.theme` + `settings.brand` into:
 
 - a `MantineThemeOverride`: `primaryColor: 'brand'` with a 10-step ramp generated from
-  `colors.primary` (lighten/darken in OKLCH via a small in-repo helper — no extra dependency),
+  `colors.primary` by `generateColors()` from `@mantine/colors-generator`,
   `fontFamily`, `headings.fontFamily`, `defaultRadius`, `colorScheme`, spacing scale for `density`;
 - CSS variables on `:root`: `--sf-bg`, `--sf-surface`, `--sf-surface-2/3` (derived), `--sf-line`,
   `--sf-text`, `--sf-muted`, `--sf-success/warn/danger`, `--sf-logo-h`;
