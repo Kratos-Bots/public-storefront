@@ -1,0 +1,321 @@
+/* Product-unit verification: type the code pair off the label, get a verdict.
+   Cut from the same chassis as tracking/checkout — hairlines, tracked mono
+   micro-caps, tabular figures, colour only from `--sf-*` tokens — extended
+   with the one tone the shop hasn't needed before: a success-toned verdict,
+   for the "this is genuine" case none of the other lookup pages have.
+
+   One class per selector (attribute variants aside), so nothing here can
+   cancel anything else out. */
+
+.page {
+  max-width: 28rem;
+  margin-inline: auto;
+  padding: 1.25rem 0 2.5rem;
+}
+
+/* ---------------------------------------------------------------- the header */
+
+.masthead {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding-bottom: 1.1rem;
+  margin-bottom: 1.4rem;
+  border-bottom: 1px solid var(--sf-line-strong);
+}
+
+.eyebrow {
+  margin: 0;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--sf-primary);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--sf-font-heading);
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  color: var(--sf-text);
+}
+
+.lead {
+  margin: 0;
+  max-width: 26rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--sf-muted);
+}
+
+/* ------------------------------------------------------------------ the form */
+
+.form {
+  display: block;
+}
+
+.field {
+  margin-top: 1.25rem;
+}
+
+.field:first-child {
+  margin-top: 0;
+}
+
+.fieldHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.4rem;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--sf-muted);
+}
+
+.fieldError {
+  flex: none;
+  color: var(--sf-danger);
+}
+
+/* Set as a code field — oversized, tabular, widely tracked — so each code is
+   easy to check character by character against the label. */
+.input {
+  display: block;
+  width: 100%;
+  padding: 0.55rem 0;
+  border: 0;
+  border-bottom: 1px solid var(--sf-line-strong);
+  border-radius: 0;
+  background: transparent;
+  color: var(--sf-text);
+  font-family: var(--sf-font-mono);
+  font-size: 20px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+  transition: border-color 120ms ease;
+}
+
+.input::placeholder {
+  color: var(--sf-faint);
+  opacity: 0.6;
+}
+
+/* The rule under the field is the focus affordance. Doubled with a shadow
+   rather than a thicker border so nothing below it shifts by a pixel on
+   focus. */
+.input:focus {
+  outline: none;
+  border-bottom-color: var(--sf-primary);
+  box-shadow: 0 1px 0 0 var(--sf-primary);
+}
+
+.input[aria-invalid='true'] {
+  border-bottom-color: var(--sf-danger);
+}
+
+.submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 48px;
+  margin-top: 1.5rem;
+  padding: 0 1rem;
+  border: 0;
+  border-radius: var(--mantine-radius-default);
+  background: var(--sf-primary);
+  color: var(--sf-bg);
+  font-family: var(--sf-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: opacity 120ms ease;
+}
+
+.submit:hover:not(:disabled) {
+  opacity: 0.88;
+}
+
+.submit:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.submit:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------- verdict cards */
+
+/* Every verdict wears the shop's one silhouette: a 2 px rule in the tone, no
+   second border colour anywhere. `success` is new here — the other lookup
+   pages never had a "this is genuinely fine" state to draw. */
+.screen {
+  margin-top: 1.5rem;
+  padding: 0.95rem 1rem 1.05rem;
+  border-left: 2px solid var(--sf-line-strong);
+  border-radius: 0 var(--mantine-radius-default) var(--mantine-radius-default) 0;
+  background: var(--sf-bg-deep);
+}
+
+.screen[data-tone='success'] {
+  border-left-color: var(--sf-success);
+}
+
+.screen[data-tone='warn'] {
+  border-left-color: var(--sf-warn);
+}
+
+.screen[data-tone='danger'] {
+  border-left-color: var(--sf-danger);
+}
+
+.screenBadge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ring {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--sf-success);
+  border-radius: 50%;
+  color: var(--sf-success);
+}
+
+.screenHead {
+  margin: 0;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--sf-muted);
+}
+
+.screenHead[data-tone='success'] {
+  color: var(--sf-success);
+}
+
+.screenHead[data-tone='warn'] {
+  color: var(--sf-warn);
+}
+
+.screenHead[data-tone='danger'] {
+  color: var(--sf-danger);
+}
+
+.screenText {
+  margin: 0.55rem 0 0;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--sf-text);
+}
+
+.screenSub {
+  margin: 0.4rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--sf-muted);
+}
+
+.screenNote {
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--sf-danger);
+}
+
+.screenContact {
+  margin-top: 0.9rem;
+}
+
+/* Issued / Expires, laid out as a compact ledger. */
+.facts {
+  margin: 1rem 0 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--sf-line);
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.row + .row {
+  margin-top: 0.5rem;
+}
+
+.rowLabel {
+  margin: 0;
+  font-family: var(--sf-font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--sf-faint);
+}
+
+.rowValue {
+  margin: 0;
+  font-family: var(--sf-font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--sf-text);
+}
+
+.rowValueDanger {
+  color: var(--sf-danger);
+}
+
+/* ---------------------------------------------------------------------- nav */
+
+.back {
+  display: inline-block;
+  margin-top: 2rem;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--sf-faint);
+  text-decoration: none;
+}
+
+.back:hover,
+.back:focus-visible {
+  color: var(--sf-text);
+}
+
+.back:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .input,
+  .submit,
+  .back {
+    transition: none;
+  }
+}
