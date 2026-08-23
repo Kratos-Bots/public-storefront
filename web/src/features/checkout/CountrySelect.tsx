@@ -1,11 +1,24 @@
 import { SelectField } from '@/features/checkout/Field.tsx';
 import { DIAL_CODES } from '@/lib/dial-codes.ts';
 
-const regionDisplay = new Intl.DisplayNames(['en'], { type: 'region' });
-
-function regionName(iso: string): string {
+/**
+ * Built once, at module scope, behind a try/catch: `Intl.DisplayNames` is absent
+ * on a few old WebViews and throws on construction there. A throw here would take
+ * the whole checkout chunk down at import time, before any error boundary exists
+ * — so a missing formatter degrades to bare ISO codes instead.
+ */
+const regionDisplay: Intl.DisplayNames | null = (() => {
   try {
-    return regionDisplay.of(iso) ?? iso;
+    return new Intl.DisplayNames(['en'], { type: 'region' });
+  } catch {
+    return null;
+  }
+})();
+
+/** Country name for an ISO-3166-1 alpha-2 code, falling back to the code itself. */
+export function regionName(iso: string): string {
+  try {
+    return regionDisplay?.of(iso) ?? iso;
   } catch {
     return iso;
   }

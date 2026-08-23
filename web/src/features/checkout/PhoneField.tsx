@@ -1,8 +1,7 @@
 import { Field, SelectField } from '@/features/checkout/Field.tsx';
+import { regionName } from '@/features/checkout/CountrySelect.tsx';
 import { DIAL_CODES } from '@/lib/dial-codes.ts';
 import classes from '@/features/checkout/Fields.module.css';
-
-const regionDisplay = new Intl.DisplayNames(['en'], { type: 'region' });
 
 /**
  * Every dial code, not just the shop's shipping countries — a shopper's phone
@@ -10,15 +9,7 @@ const regionDisplay = new Intl.DisplayNames(['en'], { type: 'region' });
  * addresses). Built once at module load; the list never changes.
  */
 const PREFIX_OPTIONS = Object.entries(DIAL_CODES)
-  .map(([iso, dial]) => {
-    let name: string;
-    try {
-      name = regionDisplay.of(iso) ?? iso;
-    } catch {
-      name = iso;
-    }
-    return { iso, name, dial };
-  })
+  .map(([iso, dial]) => ({ iso, name: regionName(iso), dial }))
   .sort((a, b) => a.name.localeCompare(b.name));
 
 export interface PhoneFieldProps {

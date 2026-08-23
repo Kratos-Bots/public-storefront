@@ -268,6 +268,29 @@ describe('useQuote (guest)', () => {
     expect(guestQuoteMock).toHaveBeenCalledTimes(1);
   });
 
+  // Regression: `fetchQuery` takes the client's default retry unless told
+  // otherwise, and a retry re-runs whatever `queryFn` the query currently holds
+  // — the mounted observer's, which carries no token at all. Observed live:
+  // every failed guest quote produced a second request the backend answered
+  // `body.turnstileToken: Too small`.
+  it('never retries a failed refetchWithToken, whatever the client default says', async () => {
+    client = new QueryClient({ defaultOptions: { queries: { retry: 1 } } });
+    useCartStore.setState({ lines: [line(1, 1)] });
+    guestQuoteMock.mockRejectedValue(new ApiError(422, 'Country is not serviceable'));
+
+    const { result } = renderHook(() => useQuote(form({ country: 'GB' }), { guest: true }), { wrapper });
+    await settle();
+    expect(guestQuoteMock).not.toHaveBeenCalled(); // no token, so nothing automatic
+
+    await act(async () => {
+      await result.current.refetchWithToken('tok-9').catch(() => undefined);
+      await vi.advanceTimersByTimeAsync(5_000); // any retry backoff would fire in here
+    });
+
+    expect(guestQuoteMock).toHaveBeenCalledTimes(1);
+    expect(guestQuoteMock).toHaveBeenCalledWith(expect.objectContaining({ turnstileToken: 'tok-9' }));
+  });
+
   it('refetchWithToken re-queries the same key with a fresh single-use token', async () => {
     useCartStore.setState({ lines: [line(1, 1)] });
     guestQuoteMock.mockResolvedValueOnce(baseQuote({ grandTotal: 50 }));

@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { CryptoOption, PaymentMethod, Quote } from '@/types/checkout.ts';
 import { useCartStore, selectSubtotal } from '@/stores/cart.ts';
 import { Money } from '@/components/Money.tsx';
@@ -14,6 +14,9 @@ export interface QuoteSummaryProps {
   method: PaymentMethod | undefined;
   /** The coin/network chosen inside a crypto method, if any. */
   combo: CryptoOption | null;
+  /** Open the collapsed phone head once, when the shopper reaches the review —
+   *  that is the one step whose whole job is checking these figures. */
+  defaultOpen?: boolean;
 }
 
 /**
@@ -25,9 +28,25 @@ export interface QuoteSummaryProps {
  * cart's own lines and says plainly that shipping and discounts are still to
  * come; that is cheaper than a shopper meeting the real total at the last step.
  */
-export function QuoteSummary({ quote, isFetching, stale, method, combo }: QuoteSummaryProps) {
-  const [open, setOpen] = useState(false);
+export function QuoteSummary({
+  quote,
+  isFetching,
+  stale,
+  method,
+  combo,
+  defaultOpen = false,
+}: QuoteSummaryProps) {
+  const [open, setOpen] = useState(defaultOpen);
+  const autoOpened = useRef(defaultOpen);
   const bodyId = useId();
+
+  // Once, and only ever to open: a shopper who closes it on the review step has
+  // said what they want and must not be overruled on the next render.
+  useEffect(() => {
+    if (!defaultOpen || autoOpened.current) return;
+    autoOpened.current = true;
+    setOpen(true);
+  }, [defaultOpen]);
   const lines = useCartStore((s) => s.lines);
   const localSubtotal = useCartStore((s) => selectSubtotal(s.lines));
 

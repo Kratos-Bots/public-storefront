@@ -172,6 +172,7 @@
 }
 
 .alertAction {
+  position: relative;
   margin-left: 0.5rem;
   border: 0;
   background: none;
@@ -181,6 +182,19 @@
   text-decoration: underline;
   text-underline-offset: 3px;
   cursor: pointer;
+}
+
+/* Same overlay as the review's Change buttons: small mark, thumb-sized target. */
+@media (max-width: 61.99em) {
+  .alertAction::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 0;
+    left: 0;
+    height: 44px;
+    transform: translateY(-50%);
+  }
 }
 
 .verifying {
