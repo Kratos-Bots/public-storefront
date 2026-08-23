@@ -21,6 +21,11 @@ declare global {
 export default {
   async fetch(request, env, ctx): Promise<Response> {
     const { pathname } = new URL(request.url);
+    // Post-deploy check (Spec 3): unauthenticated, no backend round-trip —
+    // only proves the Worker itself is up and serving.
+    if (pathname === '/healthz') {
+      return new Response('ok', { status: 200, headers: { 'content-type': 'text/plain', 'cache-control': 'no-store' } });
+    }
     if (pathname === '/api' || pathname.startsWith('/api/')) return proxyApi(request, env, ctx);
     if (pathname.startsWith('/media/')) return proxyMedia(request, env, ctx);
     return env.ASSETS.fetch(request);
