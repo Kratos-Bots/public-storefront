@@ -59,6 +59,7 @@ describe('fetch /media/*', () => {
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toBe('image/png');
     expect(res.headers.get('cache-control')).toBe('public, max-age=86400');
+    expect(res.headers.get('x-content-type-options')).toBe('nosniff');
     expect(res.headers.get('set-cookie')).toBeNull();
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
@@ -112,6 +113,52 @@ describe('fetch /media/*', () => {
     });
     const res = await worker.fetch(new Request('https://shop.test/media/products/404/image'), env, createExecutionContext());
     expect(res.status).toBe(404);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not cache a 404 upstream response — a following request hits upstream again', async () => {
+    // Distinct product id (62) from the other 404 test (404) so this test's
+    // assertions about call count aren't polluted by that test's cache state
+    // (there is none to pollute here, but keeping ids unique stays consistent
+    // with every other test in this file).
+    const fetchSpy = stubFetch((url) => {
+      expect(url).toBe('https://backend.test/api/v1/products/62/image');
+      return new Response('nope', { status: 404 });
+    });
+    const ctx = createExecutionContext();
+    const first = await worker.fetch(new Request('https://shop.test/media/products/62/image'), env, ctx);
+    await waitOnExecutionContext(ctx);
+    expect(first.status).toBe(404);
+
+    const second = await worker.fetch(new Request('https://shop.test/media/products/62/image'), env, createExecutionContext());
+    expect(second.status).toBe(404);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('HEAD returns headers with an empty body, and warms the cache for a following GET', async () => {
+    const fetchSpy = stubFetch((url, init) => {
+      expect(url).toBe('https://backend.test/api/v1/products/61/image');
+      // proxyMedia always forwards GET upstream, even for a HEAD request.
+      expect(init.method).toBe('GET');
+      return new Response('PNGDATA61', { status: 200, headers: { 'content-type': 'image/png' } });
+    });
+    const ctx = createExecutionContext();
+    const head = await worker.fetch(
+      new Request('https://shop.test/media/products/61/image', { method: 'HEAD' }),
+      env,
+      ctx,
+    );
+    await waitOnExecutionContext(ctx);
+    expect(head.status).toBe(200);
+    expect(head.headers.get('content-type')).toBe('image/png');
+    expect(head.headers.get('x-content-type-options')).toBe('nosniff');
+    expect(await head.text()).toBe('');
+
+    // The HEAD populated the cache under the same GET-normalized key, so the
+    // following GET is served from cache without a second upstream call.
+    const get = await worker.fetch(new Request('https://shop.test/media/products/61/image'), env, createExecutionContext());
+    expect(get.status).toBe(200);
+    expect(await get.text()).toBe('PNGDATA61');
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
