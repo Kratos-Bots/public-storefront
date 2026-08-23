@@ -1,3 +1,5 @@
+import { proxyApi } from './proxy';
+
 interface EnvBindings {
   ASSETS: Fetcher;
   BACKEND_URL: string;
@@ -16,7 +18,9 @@ declare global {
 }
 
 export default {
-  async fetch(request, env): Promise<Response> {
+  async fetch(request, env, ctx): Promise<Response> {
+    const { pathname } = new URL(request.url);
+    if (pathname === '/api' || pathname.startsWith('/api/')) return proxyApi(request, env, ctx);
     return env.ASSETS.fetch(request);
   },
 } satisfies ExportedHandler<Env>;
