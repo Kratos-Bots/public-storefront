@@ -100,9 +100,10 @@ export function LoyaltyPage() {
 
       {ladder ? (
         <section className={classes.section} aria-label="Redeem points">
+          {/* No balance repeated here: the meter states it three lines up, and the
+              ladder's own copy of it can be a fetch behind the meter's. */}
           <div className={classes.sectionHead}>
             <h3 className={classes.sectionTitle}>Redeem</h3>
-            <span className={classes.sectionNote}>{points.toLocaleString()} points</span>
           </div>
 
           {ladder.options.length === 0 ? (
