@@ -121,6 +121,16 @@ export function ClockIcon({ size = 13 }: GlyphProps) {
   );
 }
 
+/** "Ask again" — the tracking page's forced courier re-read. */
+export function RotateIcon({ size = 13 }: GlyphProps) {
+  return (
+    <svg {...stroke(size)}>
+      <path d="M20 12a8 8 0 1 1-2.6-5.9" />
+      <path d="M20 4v4.5h-4.5" />
+    </svg>
+  );
+}
+
 /** "This opens somewhere else" — pinned to links that leave the shop. */
 export function ArrowUpRightIcon({ size = 13 }: GlyphProps) {
   return (

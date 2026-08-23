@@ -1,0 +1,1068 @@
+/* Order tracking. The order page answers "is it paid, and has it shipped"; this
+   one answers the next question — "where is it right now" — and it is reachable
+   with nothing but the reference, so a Turnstile challenge stands in front of it.
+
+   Cut from the same chassis as the rest of the shop: hairlines, tracked mono
+   micro-caps, tabular figures, and colour only from `--sf-*` tokens.
+
+   The signature is the stage rail: the courier's seven stages as seven segments,
+   the one the parcel is in at full accent and the ones behind it mixed down, so
+   progress is countable at a glance on a 390 px screen. Under it, the scan log
+   reuses the shop's "you are here" mark — a 15 px square with a 7 px core, the
+   same one the checkout uses for a chosen option and the order page for the
+   milestone you are on.
+
+   One class per selector (attribute variants aside), so nothing here can cancel
+   anything else out. */
+
+.page {
+  max-width: 34rem;
+  margin-inline: auto;
+  padding: 1.25rem 0 2.5rem;
+}
+
+/* ---------------------------------------------------------------- the header */
+
+.masthead {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding-bottom: 1.1rem;
+  margin-bottom: 1.4rem;
+  border-bottom: 1px solid var(--sf-line-strong);
+}
+
+.eyebrow {
+  margin: 0;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--sf-primary);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--sf-font-heading);
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  color: var(--sf-text);
+}
+
+.lead {
+  margin: 0;
+  max-width: 30rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--sf-muted);
+}
+
+/* Once there is an answer — or one is a moment away — the masthead is dead
+   weight above the fold, so it collapses to a single line of context. The
+   skeleton wears it too, so nothing shifts when the lookup lands. */
+.strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--sf-line);
+}
+
+.stripLabel {
+  margin: 0;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--sf-faint);
+}
+
+.stripLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-block: -0.75rem;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--sf-muted);
+  transition: color 120ms ease;
+}
+
+.stripLink:hover {
+  color: var(--sf-text);
+}
+
+.stripLink:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------ the lookup form */
+
+.form {
+  display: block;
+}
+
+.fieldHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.4rem;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--sf-muted);
+}
+
+.fieldError {
+  flex: none;
+  color: var(--sf-danger);
+}
+
+/* Set as a code field — oversized, tabular, widely tracked — so the reference is
+   easy to check character by character against the confirmation message. */
+.input {
+  display: block;
+  width: 100%;
+  padding: 0.55rem 0;
+  border: 0;
+  border-bottom: 1px solid var(--sf-line-strong);
+  border-radius: 0;
+  background: transparent;
+  color: var(--sf-text);
+  font-family: var(--sf-font-mono);
+  font-size: 22px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  transition: border-color 120ms ease;
+}
+
+.input::placeholder {
+  color: var(--sf-faint);
+  opacity: 0.6;
+}
+
+/* The rule under the field is the focus affordance. Doubled with a shadow rather
+   than a thicker border so nothing below it shifts by a pixel on focus. */
+.input:focus {
+  outline: none;
+  border-bottom-color: var(--sf-primary);
+  box-shadow: 0 1px 0 0 var(--sf-primary);
+}
+
+.input[aria-invalid='true'] {
+  border-bottom-color: var(--sf-danger);
+}
+
+.hint {
+  margin: 0.6rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--sf-faint);
+}
+
+.submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 48px;
+  margin-top: 1.4rem;
+  padding: 0 1rem;
+  border: 0;
+  border-radius: var(--mantine-radius-default);
+  background: var(--sf-primary);
+  color: var(--sf-bg);
+  font-family: var(--sf-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: opacity 120ms ease;
+}
+
+.submit:hover {
+  opacity: 0.88;
+}
+
+.submit:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+.recent {
+  margin-top: 1.75rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--sf-line);
+}
+
+.recentLabel {
+  margin: 0;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--sf-faint);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.7rem;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 0.85rem;
+  border: 1px solid var(--sf-line-strong);
+  border-radius: var(--mantine-radius-default);
+  background: transparent;
+  color: var(--sf-muted);
+  font-family: var(--sf-font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: border-color 120ms ease, color 120ms ease;
+}
+
+.chip:hover {
+  border-color: var(--sf-primary);
+  color: var(--sf-text);
+}
+
+.chip:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------------ the hero */
+
+.hero {
+  display: block;
+}
+
+.heroTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.heroRef {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--sf-faint);
+}
+
+.heroRefValue {
+  font-variant-numeric: tabular-nums;
+  color: var(--sf-muted);
+}
+
+.headline {
+  margin: 0.5rem 0 0;
+  font-family: var(--sf-font-heading);
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  color: var(--sf-text);
+}
+
+.subline {
+  margin: 0.4rem 0 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--sf-muted);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem 1.25rem;
+  margin: 1.35rem 0 0;
+}
+
+.fact {
+  min-width: 0;
+  padding-top: 0.45rem;
+  border-top: 1px solid var(--sf-line);
+}
+
+/* An odd final cell spans the width, so the rules never stop halfway across. */
+.factWide {
+  grid-column: 1 / -1;
+}
+
+.factLabel {
+  margin: 0;
+  font-family: var(--sf-font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--sf-faint);
+}
+
+.factValue {
+  margin: 0.25rem 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--sf-font-mono);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--sf-text);
+}
+
+/* ------------------------------------------------------------------- pills */
+
+.pill {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--sf-line-strong);
+  border-radius: 999px;
+  font-family: var(--sf-font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--sf-muted);
+}
+
+.pill[data-tone='info'] {
+  border-color: var(--sf-primary);
+  color: var(--sf-text);
+}
+
+.pill[data-tone='warn'] {
+  border-color: var(--sf-warn);
+  color: var(--sf-warn);
+}
+
+.pill[data-tone='success'] {
+  border-color: var(--sf-success);
+  color: var(--sf-success);
+}
+
+.pill[data-tone='danger'] {
+  border-color: var(--sf-danger);
+  color: var(--sf-danger);
+}
+
+/* ------------------------------------------------------------- the stage rail */
+
+.stepper {
+  margin-top: 1.15rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--sf-line);
+}
+
+.rail {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 3px;
+}
+
+.seg {
+  height: 5px;
+  background: var(--sf-line-strong);
+  transition: background-color 500ms ease;
+}
+
+.seg[data-fill='passed'] {
+  background: color-mix(in srgb, var(--sf-primary) 45%, transparent);
+}
+
+.seg[data-fill='here'] {
+  background: var(--sf-primary);
+}
+
+.seg[data-tone='danger'][data-fill='passed'] {
+  background: color-mix(in srgb, var(--sf-danger) 55%, transparent);
+}
+
+.seg[data-tone='danger'][data-fill='here'] {
+  background: var(--sf-danger);
+}
+
+/* Below the labels' breakpoint: the stage it is in, plus its place in the seven
+   so the rail is countable rather than decorative. */
+.stageNow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.7rem;
+}
+
+.stageName {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--sf-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--sf-text);
+}
+
+.stageCount {
+  flex: none;
+  margin: 0;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  font-variant-numeric: tabular-nums;
+  color: var(--sf-faint);
+}
+
+.stageLabels {
+  display: none;
+}
+
+.stageLabel {
+  text-align: center;
+  font-family: var(--sf-font-mono);
+  font-size: 8px;
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sf-faint);
+}
+
+.stageLabel[data-state='passed'] {
+  color: var(--sf-muted);
+}
+
+.stageLabel[data-state='here'] {
+  font-weight: 700;
+  color: var(--sf-text);
+}
+
+/* ---------------------------------------------------------------- the refresh */
+
+.refresh {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1.15rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--sf-line);
+}
+
+.refreshNote {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  color: var(--sf-faint);
+}
+
+/* ---------------------------------------------------------------- the cards */
+
+.card {
+  display: block;
+  min-width: 0;
+  margin-top: 1.15rem;
+  padding: 0.95rem 1rem 1.05rem;
+  border: 1px solid var(--sf-line);
+  border-left: 2px solid var(--sf-line-strong);
+  border-radius: var(--mantine-radius-default);
+  background: var(--sf-bg-deep);
+}
+
+.card[data-tone='info'] {
+  border-left-color: var(--sf-primary);
+}
+
+.card[data-tone='warn'] {
+  border-left-color: var(--sf-warn);
+}
+
+.card[data-tone='success'] {
+  border-left-color: var(--sf-success);
+}
+
+.card[data-tone='danger'] {
+  border-left-color: var(--sf-danger);
+}
+
+.cardHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.cardHeadBody {
+  min-width: 0;
+}
+
+.cardTitle {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--sf-font-heading);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: var(--sf-text);
+}
+
+.cardDest {
+  margin: 0.2rem 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--sf-muted);
+}
+
+/* Every number the customer might paste elsewhere, in one block. */
+.numbers {
+  margin-top: 0.85rem;
+  padding-top: 0.15rem;
+  border-top: 1px solid var(--sf-line);
+}
+
+.refRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.refLabel {
+  flex: none;
+  margin: 0;
+  font-family: var(--sf-font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--sf-faint);
+}
+
+.refValue {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--sf-font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--sf-muted);
+}
+
+/* ---------------------------------------------------------------- the controls */
+
+.ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 44px;
+  padding: 0 0.9rem;
+  border: 1px solid var(--sf-line-strong);
+  border-radius: var(--mantine-radius-default);
+  background: transparent;
+  color: var(--sf-muted);
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-decoration: none;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: border-color 120ms ease, color 120ms ease;
+}
+
+.ghost:hover {
+  border-color: var(--sf-primary);
+  color: var(--sf-text);
+}
+
+.ghost:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+.ghost:disabled {
+  border-color: var(--sf-line);
+  color: var(--sf-faint);
+  cursor: not-allowed;
+}
+
+/* A countdown is the answer to "why can't I press this", so it stays legible
+   while the control is inert — dimming the one number worth reading is the
+   opposite of what the disabled state is for. */
+.ghost[data-counting='true'] {
+  color: var(--sf-muted);
+}
+
+.ghostWide {
+  width: 100%;
+  margin-top: 0.9rem;
+}
+
+/* ---------------------------------------------------------------- the timeline */
+
+.timeline {
+  margin-top: 1.15rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--sf-line);
+}
+
+.timelineHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.timelineTitle {
+  margin: 0;
+  font-family: var(--sf-font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--sf-faint);
+}
+
+.timelineCount {
+  flex: none;
+  margin: 0;
+  font-family: var(--sf-font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  color: var(--sf-faint);
+}
+
+.events {
+  margin: 0.9rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.eventsUndated {
+  margin: 0.9rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.event {
+  display: flex;
+  gap: 0.85rem;
+}
+
+/* The marker column: the mark, then the rail running down to the next one. The
+   rail has to grow with the row rather than reserve a fixed strip below it, or a
+   two-line scan leaves the spine drawn in dashes. */
+.mark {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 15px;
+}
+
+.thread {
+  width: 1px;
+  flex: 1;
+  margin-top: 4px;
+  background: var(--sf-line-strong);
+}
+
+/* Head of the trail: the shop's "you are here" mark, unchanged. */
+.node {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  margin-top: 2px;
+  border: 1px solid var(--sf-primary);
+}
+
+.nodeCore {
+  width: 7px;
+  height: 7px;
+  background: var(--sf-primary);
+}
+
+.dot {
+  flex: none;
+  width: 5px;
+  height: 5px;
+  margin-top: 7px;
+  background: var(--sf-line-strong);
+}
+
+/* A scan with no timestamp is a placeholder, not history — hollow, and off the
+   thread entirely. */
+.dotOpen {
+  background: transparent;
+  border: 1px solid var(--sf-line-strong);
+}
+
+.eventBody {
+  flex: 1;
+  min-width: 0;
+  padding-bottom: 0.85rem;
+}
+
+.eventText {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--sf-muted);
+}
+
+.eventTextLatest {
+  font-weight: 600;
+  color: var(--sf-text);
+}
+
+.eventTextMuted {
+  color: var(--sf-faint);
+}
+
+.eventStamp {
+  margin: 0.25rem 0 0;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--sf-faint);
+}
+
+/* --------------------------------------------------------------- card notes */
+
+.note {
+  margin-top: 0.9rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--sf-line);
+}
+
+.noteEyebrow {
+  margin: 0;
+  font-family: var(--sf-font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--sf-faint);
+}
+
+.noteEyebrow[data-tone='warn'] {
+  color: var(--sf-warn);
+}
+
+.noteText {
+  margin: 0.45rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--sf-muted);
+}
+
+.noteAction {
+  margin-top: 0.9rem;
+}
+
+/* ------------------------------------------------------------- state screens */
+
+/* Every "something is off" screen wears the shop's one silhouette: a 2 px rule
+   in the tone, and no second border colour anywhere. */
+.screen {
+  padding: 0.95rem 1rem 1.05rem;
+  border-left: 2px solid var(--sf-line-strong);
+  border-radius: 0 var(--mantine-radius-default) var(--mantine-radius-default) 0;
+  background: var(--sf-bg-deep);
+}
+
+.screen[data-tone='warn'] {
+  border-left-color: var(--sf-warn);
+}
+
+.screen[data-tone='danger'] {
+  border-left-color: var(--sf-danger);
+}
+
+.screenHead {
+  margin: 0;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--sf-muted);
+}
+
+.screenHead[data-tone='warn'] {
+  color: var(--sf-warn);
+}
+
+.screenHead[data-tone='danger'] {
+  color: var(--sf-danger);
+}
+
+.screenText {
+  margin: 0.55rem 0 0;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--sf-text);
+}
+
+.screenAction {
+  margin-top: 0.9rem;
+}
+
+.screenContact {
+  margin-top: 0.9rem;
+}
+
+/* The unavailable screen is centred (it borrows the shop's empty state), so its
+   contact links centre with it rather than hugging the left edge. */
+.centreContact {
+  display: flex;
+  justify-content: center;
+}
+
+/* The lookup form comes back under a failed lookup: a wrong number needs a way
+   to type a different one, not a dead end. */
+.retry {
+  margin-top: 1.75rem;
+  padding-top: 1.4rem;
+  border-top: 1px solid var(--sf-line);
+}
+
+/* Order found, nothing dispatched — the majority case, and a quiet one. */
+.nothing {
+  margin-top: 1.15rem;
+  padding: 0.95rem 1rem 1.05rem;
+  border: 1px solid var(--sf-line);
+  border-left: 2px solid var(--sf-line-strong);
+  border-radius: var(--mantine-radius-default);
+  background: var(--sf-bg-deep);
+}
+
+.nothing[data-tone='danger'] {
+  border-left-color: var(--sf-danger);
+}
+
+.nothingHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+/* Tracking is unconfigured or unreachable; the shipment details still stand. */
+.degraded {
+  margin-top: 1.15rem;
+  padding: 0.7rem 0.9rem 0.8rem;
+  border-left: 2px solid var(--sf-line-strong);
+  border-radius: 0 var(--mantine-radius-default) var(--mantine-radius-default) 0;
+  background: var(--sf-bg-deep);
+}
+
+.degradedText {
+  margin: 0.4rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--sf-muted);
+}
+
+/* The invisible challenge normally resolves in well under a second, so this is
+   usually a flicker — but a slow one must not read as a stalled lookup. The
+   sweeping hairline is the shop's own "waiting on something we can't hurry". */
+.verifying {
+  margin-bottom: 1.15rem;
+}
+
+.verifyingLabel {
+  margin: 0 0 0.5rem;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--sf-muted);
+}
+
+.sweep {
+  position: relative;
+  height: 2px;
+  overflow: hidden;
+  background: var(--sf-line);
+}
+
+.sweep::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 35%;
+  background: var(--sf-primary);
+  animation: sweep 1.6s ease-in-out infinite;
+}
+
+@keyframes sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(386%);
+  }
+}
+
+/* Shaped like the answer it is replaced by, so nothing jumps when it lands. */
+.skeleton {
+  display: block;
+}
+
+.block {
+  display: block;
+  border-radius: var(--mantine-radius-default);
+  background: var(--sf-surface);
+  animation: breathe 1.6s ease-in-out infinite;
+}
+
+.skelRail {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 3px;
+  margin-top: 1.5rem;
+}
+
+.skelFacts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem 1.25rem;
+  margin-top: 1.5rem;
+}
+
+.skelFact {
+  padding-top: 0.45rem;
+  border-top: 1px solid var(--sf-line);
+}
+
+.skelCard {
+  margin-top: 1.15rem;
+  padding: 0.95rem 1rem 1.05rem;
+  border: 1px solid var(--sf-line);
+  border-left: 2px solid var(--sf-line-strong);
+  border-radius: var(--mantine-radius-default);
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+/* ---------------------------------------------------------------- responsive */
+
+/* Seven stage labels need about this much width to stay one word per column;
+   below it the rail states the current stage and its position instead. */
+@media (min-width: 34em) {
+  .stageNow {
+    display: none;
+  }
+
+  .stageLabels {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 3px;
+    margin-top: 0.65rem;
+  }
+}
+
+@media (min-width: 62em) {
+  .title {
+    font-size: 2rem;
+  }
+
+  .headline {
+    font-size: 2rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sweep::after,
+  .block {
+    animation: none;
+  }
+
+  .seg,
+  .chip,
+  .ghost,
+  .input,
+  .submit,
+  .stripLink {
+    transition: none;
+  }
+}
