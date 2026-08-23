@@ -1,0 +1,82 @@
+/* One way in. Hairline block on the shop's own surface — no shadow, no lift:
+   the two cards are entries in an index, and the only thing on this page with
+   weight is the code slip inside one of them. */
+.card {
+  border: 1px solid var(--sf-line-strong);
+  border-radius: var(--mantine-radius-default);
+  background: var(--sf-surface);
+  padding: 0.9rem 1rem 1.1rem;
+}
+
+/* A card that states something rather than offering it. */
+.dim {
+  background: transparent;
+  border-style: dashed;
+  border-color: var(--sf-line);
+}
+
+.channel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-bottom: 0.75rem;
+}
+
+.mark {
+  display: inline-flex;
+  color: var(--sf-muted);
+}
+
+.name {
+  margin: 0;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--sf-muted);
+  white-space: nowrap;
+}
+
+/* Runs out to the edge of the card — the index rule, not a divider. */
+.rule {
+  flex: 1;
+  height: 1px;
+  background: var(--sf-line-strong);
+}
+
+.dim .rule {
+  background: var(--sf-line);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* The app's one "something is off" silhouette: a rule in the tone, tracked caps beside it. */
+.note {
+  margin: 0;
+  padding: 0.45rem 0.65rem;
+  border-left: 2px solid var(--sf-line-strong);
+  border-radius: 0 var(--mantine-radius-default) var(--mantine-radius-default) 0;
+  background: var(--sf-surface-2);
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1.6;
+  color: var(--sf-muted);
+}
+
+.note[data-tone='warn'] {
+  border-left-color: var(--sf-warn);
+  color: var(--sf-warn);
+}
+
+.note[data-tone='danger'] {
+  border-left-color: var(--sf-danger);
+  color: var(--sf-danger);
+}

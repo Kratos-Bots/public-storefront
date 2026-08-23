@@ -1,0 +1,28 @@
+/* The page's column, lifted onto the shop's own surface. The head carries the
+   chassis' tracked micro-caps rather than Mantine's default heading, so a
+   prompt raised over the cart reads as the same instrument as /login. */
+.content {
+  background: var(--sf-bg-deep);
+  border: 1px solid var(--sf-line-strong);
+}
+
+.header {
+  background: transparent;
+  padding-bottom: 0.5rem;
+}
+
+.title {
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--sf-muted);
+}
+
+.lede {
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--sf-muted);
+}

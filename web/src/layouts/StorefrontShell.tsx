@@ -9,6 +9,7 @@ import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { BagIcon, UserIcon } from '@/components/icons.tsx';
 import { NoticeBanners } from '@/features/notices/NoticeBanners.tsx';
 import { CutoffBar } from '@/features/notices/CutoffBar.tsx';
+import { LoginModal } from '@/features/auth/LoginModal.tsx';
 import { CartDrawer } from '@/features/cart/CartDrawer.tsx';
 import { MobileCartBar, useMobileCartBar } from '@/features/cart/MobileCartBar.tsx';
 import { SearchField } from '@/layouts/SearchField.tsx';
@@ -119,6 +120,8 @@ export function StorefrontShell() {
           <MobileCartBar />
         </>
       ) : null}
+
+      {features.accounts ? <LoginModal /> : null}
     </div>
   );
 }

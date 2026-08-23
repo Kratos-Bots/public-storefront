@@ -1,0 +1,14 @@
+/* Telegram draws its own button in an iframe and owns every pixel of it, so the
+   only thing to design here is the space around it: centred, with the height it
+   asks for reserved so the card doesn't jump when the widget arrives. */
+.mount {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+}
+
+.mount iframe {
+  max-width: 100%;
+  color-scheme: light;
+}
