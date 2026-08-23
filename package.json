@@ -1,0 +1,24 @@
+{
+  "name": "ecommerce-storefront",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --port 8787",
+    "dev:web": "npm --prefix web run dev",
+    "build": "npm --prefix web run build && tsc --noEmit -p worker",
+    "typecheck": "npm --prefix web run typecheck && tsc --noEmit -p worker",
+    "test": "npm --prefix web test && vitest run --config worker/vitest.config.ts",
+    "test:web": "npm --prefix web test",
+    "test:worker": "vitest run --config worker/vitest.config.ts",
+    "deploy": "npm run build && wrangler deploy",
+    "install:web": "npm --prefix web install"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.22.0",
+    "@cloudflare/workers-types": "^5.20260823.1",
+    "typescript": "~5.9.3",
+    "vitest": "^4.1.0",
+    "wrangler": "^4.125.0"
+  }
+}
