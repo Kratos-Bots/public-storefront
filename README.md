@@ -71,7 +71,21 @@ npm run test:web     # web only
 npm run test:worker  # worker only
 npm run typecheck    # tsc -b in web, tsc --noEmit in worker
 npm run build         # web: tsc -b && vite build, then worker: tsc --noEmit
+npm run test:e2e      # Playwright, fully mocked (see below)
 ```
+
+### Mocked end-to-end pass (`e2e/`)
+
+`npm run test:e2e` starts its own Vite on `:5199` and drives the real app with **every** `/api/*`,
+`/media/*` and Cloudflare-challenge request answered by `page.route` (`e2e/mocks.ts`, fixtures in
+`e2e/fixtures/`). No Worker, no backend, no network — safe to run against nothing. First run needs
+`npx playwright install chromium`.
+
+Both layouts (`storefront`, `menu`) at 390×844 and 1280×800, plus guest checkout, WhatsApp sign-in,
+the kill switch, tracking/verify and the first-paint theme bootstrap. Screenshots land in
+`e2e/screenshots/` (gitignored); `node e2e/contact-sheet.mjs` montages them into
+[`docs/screenshots/e2e-contact-sheet.png`](docs/screenshots/e2e-contact-sheet.png), which is
+committed as the record of what the pass rendered.
 
 ## What the Worker does — and does not do
 

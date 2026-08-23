@@ -1,0 +1,68 @@
+{
+  "profile": {
+    "loyaltyPoints": 1240,
+    "storeCreditBalance": 12.5,
+    "referralCode": "NB-ADA-7788",
+    "referralsCount": 3,
+    "referredPeopleCount": 2,
+    "hasReferrer": false,
+    "referrerNickname": null,
+    "totalOrders": 4,
+    "totalSpend": 318.4,
+    "memberSince": "2026-02-11T10:00:00.000Z",
+    "nickname": "Ada",
+    "identities": { "telegram": false, "whatsapp": true, "email": false }
+  },
+  "redeemOptions": {
+    "loyaltyPoints": 1240,
+    "options": [
+      { "id": 1, "label": "5.00 off", "pointsCost": 500, "creditValue": 5, "affordable": true },
+      { "id": 2, "label": "25.00 off", "pointsCost": 2000, "creditValue": 25, "affordable": false }
+    ]
+  },
+  "orders": [
+    {
+      "reference": "E2E1",
+      "status": "pending",
+      "createdAt": "2026-08-24T09:05:00.000Z",
+      "totalAmount": 46.03,
+      "outstandingBalance": 46.03
+    },
+    {
+      "reference": "K4M2QP",
+      "status": "delivered",
+      "createdAt": "2026-07-02T14:20:00.000Z",
+      "totalAmount": 128.9,
+      "outstandingBalance": 0
+    }
+  ],
+  "orderDetail": {
+    "reference": "K4M2QP",
+    "status": "delivered",
+    "createdAt": "2026-07-02T14:20:00.000Z",
+    "items": [
+      { "name": "Borealis Drops 25ml", "quantity": 1, "unitPrice": 68, "lineTotal": 68 },
+      { "name": "Citrine Capsules 60ct", "quantity": 2, "unitPrice": 24, "lineTotal": 48 }
+    ],
+    "subtotal": 116,
+    "shippingAmount": 12.9,
+    "discountAmount": 0,
+    "totalAmount": 128.9,
+    "payments": [
+      { "method": "sushipp", "amount": 128.9, "status": "completed", "createdAt": "2026-07-02T14:21:00.000Z" }
+    ],
+    "outstandingBalance": 0,
+    "shipments": [
+      {
+        "status": "delivered",
+        "carrier": "Royal Mail",
+        "trackingNumber": "AB123456789GB",
+        "trackingUrl": "https://example.invalid/track/AB123456789GB",
+        "trackingStatusDescription": "Delivered",
+        "shippedAt": "2026-07-03T08:00:00.000Z",
+        "deliveredAt": "2026-07-04T11:12:00.000Z"
+      }
+    ],
+    "publicUrl": "http://localhost:5199/order/K4M2QP/KEY2"
+  }
+}

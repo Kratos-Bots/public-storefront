@@ -1,0 +1,84 @@
+{
+  "items": [
+    {
+      "productId": 101,
+      "name": "Alpine Extract 10ml",
+      "sku": "ALP-10",
+      "quantity": 1,
+      "unitPrice": 42.5,
+      "lineTotal": 42.5,
+      "tierApplied": false,
+      "isPreorder": false
+    }
+  ],
+  "subtotal": 42.5,
+  "coupon": null,
+  "shippingOptions": [
+    { "id": 11, "name": "Tracked 24", "courier": "Royal Mail", "price": 4.95, "freeShipping": false },
+    { "id": 12, "name": "Tracked 48", "courier": "Royal Mail", "price": 2.95, "freeShipping": false }
+  ],
+  "selectedShippingOptionId": null,
+  "shippingAmount": 4.95,
+  "storeCredit": { "balance": 0, "applied": 0, "remaining": 0 },
+  "grandTotal": 47.45,
+  "amountDue": 47.45,
+  "paymentMethods": [
+    {
+      "slot": "card",
+      "method": "sushipp",
+      "displayName": "Card payment",
+      "type": "gateway",
+      "details": null,
+      "feeType": null,
+      "feeValue": null,
+      "feeRateText": "",
+      "feeLabel": "",
+      "fee": 0,
+      "chargeTotal": 47.45
+    },
+    {
+      "slot": "crypto",
+      "method": "crypto_static",
+      "displayName": "Crypto",
+      "type": "crypto",
+      "details": null,
+      "feeType": "percent",
+      "feeValue": -3,
+      "feeRateText": "−3%",
+      "feeLabel": "Discount",
+      "fee": -1.42,
+      "chargeTotal": 46.03,
+      "cryptoOptions": [
+        {
+          "coin": "btc",
+          "network": "bitcoin",
+          "coinLabel": "BTC",
+          "networkLabel": "Bitcoin",
+          "feeType": "percent",
+          "feeValue": -3,
+          "feeRateText": "−3%",
+          "feeLabel": "Discount",
+          "fee": -1.42,
+          "chargeTotal": 46.03
+        },
+        {
+          "coin": "usdt",
+          "network": "polygon",
+          "coinLabel": "USDT",
+          "networkLabel": "Polygon",
+          "feeType": "percent",
+          "feeValue": -3,
+          "feeRateText": "−3%",
+          "feeLabel": "Discount",
+          "fee": -1.42,
+          "chargeTotal": 46.03
+        }
+      ]
+    }
+  ],
+  "contactModes": {
+    "phoneMode": "optional",
+    "emailMode": "required",
+    "defaultPhoneCountry": "GB"
+  }
+}

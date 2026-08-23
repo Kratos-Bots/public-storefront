@@ -1,0 +1,66 @@
+{
+  "reference": "E2E1",
+  "status": "pending",
+  "createdAt": "2026-08-24T09:05:00.000Z",
+  "deliveredAt": null,
+  "isPreorder": false,
+  "currency": "GBP",
+  "items": [
+    {
+      "productName": "Alpine Extract 10ml",
+      "quantity": 1,
+      "unitPrice": 42.5,
+      "totalPrice": 42.5,
+      "isPreorder": false
+    }
+  ],
+  "totals": {
+    "subtotal": 42.5,
+    "shippingAmount": 4.95,
+    "discountAmount": 0,
+    "taxAmount": 0,
+    "totalAmount": 46.03,
+    "paymentFeeAmount": -1.42,
+    "paymentFeeLabel": "Crypto discount"
+  },
+  "shippingAddress": {
+    "firstName": "Ada",
+    "surname": "Sterling",
+    "addressLine1": "14 Kirkgate",
+    "addressLine2": null,
+    "addressLine3": null,
+    "city": "Leeds",
+    "county": "West Yorkshire",
+    "zip": "LS1 6BY",
+    "country": "GB"
+  },
+  "shipments": [],
+  "cryptoPayments": [
+    {
+      "paymentId": 9001,
+      "paymentStatus": "pending",
+      "coin": "usdt",
+      "network": "polygon",
+      "coinLabel": "USDT",
+      "networkLabel": "Polygon",
+      "address": "0xE2E1a2b3c4d5e6f7089aabbccddeeff0011223344",
+      "coinAmount": "46.030000",
+      "fiatAmount": 46.03,
+      "verificationStatus": "pending",
+      "needsAttention": false,
+      "txidMasked": null
+    }
+  ],
+  "payment": {
+    "canPay": true,
+    "payBy": "2026-08-26T09:05:00.000Z",
+    "activePayment": {
+      "paymentId": 9001,
+      "method": "crypto_static",
+      "kind": "crypto",
+      "status": "pending",
+      "checkoutUrl": null,
+      "canChange": true
+    }
+  }
+}

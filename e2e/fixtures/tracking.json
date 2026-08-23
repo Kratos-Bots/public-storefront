@@ -1,0 +1,56 @@
+{
+  "lookup": {
+    "reference": "E2E1",
+    "status": "shipped",
+    "createdAt": "2026-08-20T09:05:00.000Z",
+    "itemCount": 3,
+    "isPreorder": false,
+    "parcels": [
+      {
+        "trackingNumber": "AB123456789GB",
+        "shipmentStatus": "in_transit",
+        "shippedAt": "2026-08-21T08:30:00.000Z",
+        "deliveredAt": null,
+        "fallbackDescription": null,
+        "tracking": {
+          "outcome": "ok",
+          "status": "IN_TRANSIT",
+          "courierNumber": "AB123456789GB",
+          "destination": { "code": "GB", "name": "United Kingdom" },
+          "lastEventAt": "2026-08-22T18:04:00.000Z",
+          "deliveredAt": null,
+          "events": [
+            {
+              "occurredAt": "2026-08-22T18:04:00.000Z",
+              "place": "Warrington",
+              "code": "IN_TRANSIT",
+              "text": "Departed the national hub"
+            },
+            {
+              "occurredAt": "2026-08-21T20:41:00.000Z",
+              "place": "Leeds",
+              "code": "IN_TRANSIT",
+              "text": "Accepted by the carrier"
+            },
+            {
+              "occurredAt": "2026-08-21T08:30:00.000Z",
+              "place": "Leeds",
+              "code": "PRE_TRANSIT",
+              "text": "Label created"
+            }
+          ],
+          "lastMile": { "name": "Royal Mail", "url": "https://example.invalid/track/AB123456789GB" },
+          "lastMileNumber": "AB123456789GB",
+          "checkedAt": "2026-08-24T08:55:00.000Z",
+          "errorCode": null
+        }
+      }
+    ],
+    "trackingAvailable": true,
+    "checkedAt": "2026-08-24T08:55:00.000Z"
+  },
+  "verification": {
+    "createdAt": "2026-03-04T00:00:00.000Z",
+    "expiryDate": "2028-03-04T00:00:00.000Z"
+  }
+}
