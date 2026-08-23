@@ -3,10 +3,9 @@ import { Link, useSearchParams } from 'react-router';
 import { useSettings } from '@/app/settings.ts';
 import { useCartStore } from '@/stores/cart.ts';
 import { clearPersistedCheckout } from '@/features/checkout/form-state.ts';
-import { ContactLinks } from '@/components/ContactLinks.tsx';
-import { EmptyState } from '@/components/EmptyState.tsx';
 import { CheckIcon, TelegramIcon, WhatsAppIcon } from '@/components/icons.tsx';
 import { orderChatMessage, withPrefilledText } from '@/lib/chat-links.ts';
+import { MissingReferenceScreen } from '@/features/payment-redirect/MissingReferenceScreen.tsx';
 import { ReferenceRow } from '@/features/payment-redirect/ReferenceRow.tsx';
 import classes from '@/features/payment-redirect/PaymentRedirect.module.css';
 
@@ -32,19 +31,7 @@ export function OrderPlacedPage() {
   }, [clearCart]);
 
   if (!orderRef) {
-    return (
-      <div className={classes.page}>
-        <EmptyState
-          eyebrow="Order link"
-          title="Order reference missing"
-          description="Return to the shop and try again, or message us for help."
-        />
-        <ContactLinks />
-        <Link to="/" className={classes.back}>
-          ← Back to shop
-        </Link>
-      </div>
-    );
+    return <MissingReferenceScreen />;
   }
 
   const message = orderChatMessage(orderRef);
@@ -66,12 +53,12 @@ export function OrderPlacedPage() {
           We couldn&rsquo;t set up online payment for this order — message us and we&rsquo;ll
           help you pay.
         </p>
-      ) : (
+      ) : whatsapp || telegram ? (
         <p className={classes.detail}>
           Message us on WhatsApp or Telegram to arrange payment — your order reference
           is already filled in for you.
         </p>
-      )}
+      ) : null}
 
       <ReferenceRow value={orderRef} />
 

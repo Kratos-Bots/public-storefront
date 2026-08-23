@@ -18,3 +18,12 @@ export function withPrefilledText(link: string | null, text: string): string | n
 export function orderChatMessage(ref: string): string {
   return `I've just placed an order, here is my Order ID: ${ref}. I'd like to pay.`;
 }
+
+/**
+ * The prefilled chat message on the payment-success hand-off. The shopper
+ * just paid — "I'd like to pay" would contradict the screen they're reading —
+ * so this is a neutral check-in rather than a request to arrange payment.
+ */
+export function orderInquiryMessage(ref: string): string {
+  return `Hi — checking in about my order ${ref}.`;
+}

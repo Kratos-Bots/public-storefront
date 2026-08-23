@@ -3,10 +3,10 @@ import { Link, Navigate, useSearchParams } from 'react-router';
 import { useCartStore } from '@/stores/cart.ts';
 import { clearPersistedCheckout } from '@/features/checkout/form-state.ts';
 import { ContactLinks } from '@/components/ContactLinks.tsx';
-import { EmptyState } from '@/components/EmptyState.tsx';
 import { CheckIcon } from '@/components/icons.tsx';
-import { orderChatMessage } from '@/lib/chat-links.ts';
+import { orderInquiryMessage } from '@/lib/chat-links.ts';
 import { findSavedOrder } from '@/stores/saved-orders.ts';
+import { MissingReferenceScreen } from '@/features/payment-redirect/MissingReferenceScreen.tsx';
 import { ReferenceRow } from '@/features/payment-redirect/ReferenceRow.tsx';
 import classes from '@/features/payment-redirect/PaymentRedirect.module.css';
 
@@ -32,19 +32,7 @@ export function PaymentSuccessPage() {
   }, [clearCart]);
 
   if (!orderRef) {
-    return (
-      <div className={classes.page}>
-        <EmptyState
-          eyebrow="Order link"
-          title="Order reference missing"
-          description="Return to the shop and try again, or message us for help."
-        />
-        <ContactLinks />
-        <Link to="/" className={classes.back}>
-          ← Back to shop
-        </Link>
-      </div>
-    );
+    return <MissingReferenceScreen />;
   }
 
   const saved = findSavedOrder(orderRef);
@@ -74,7 +62,7 @@ export function PaymentSuccessPage() {
       <ReferenceRow value={orderRef} />
 
       <div className={classes.contact}>
-        <ContactLinks prefill={orderChatMessage(orderRef)} />
+        <ContactLinks prefill={orderInquiryMessage(orderRef)} />
       </div>
 
       <Link to="/" className={classes.back}>

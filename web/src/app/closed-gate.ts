@@ -16,6 +16,11 @@ export const closedGate = create<{ closed: boolean; setClosed: (v: boolean) => v
 const EXEMPT_EXACT_PATHS = ['/payment/success', '/payment/cancel', '/order-placed'];
 const EXEMPT_PREFIX = '/order/';
 
+/** Tolerate exactly one trailing slash (`/payment/success/`) without opening up a prefix match. */
+function stripTrailingSlash(pathname: string): string {
+  return pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
+}
+
 /**
  * Whether `pathname` is one of the routes `ClosedGate` must never swap for
  * `ClosedPage`, kill switch or not. `ClosedGate` renders above the router, so
@@ -23,5 +28,6 @@ const EXEMPT_PREFIX = '/order/';
  * render time and passes it through this pure check instead.
  */
 export function isClosedExemptPath(pathname: string): boolean {
-  return EXEMPT_EXACT_PATHS.includes(pathname) || pathname.startsWith(EXEMPT_PREFIX);
+  const normalized = stripTrailingSlash(pathname);
+  return EXEMPT_EXACT_PATHS.includes(normalized) || normalized.startsWith(EXEMPT_PREFIX);
 }
