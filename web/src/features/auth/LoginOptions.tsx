@@ -55,10 +55,12 @@ export function LoginOptions() {
   );
 
   const whatsapp = login.whatsapp.available;
-  const telegram = login.telegram.available && !!login.telegram.botUsername;
+  // A bot with no username can't be embedded, so an "available" Telegram with
+  // one missing is the same as no Telegram at all.
+  const telegramBot = login.telegram.available ? login.telegram.botUsername : null;
   const password = (login as PasswordSlot).password?.available === true;
 
-  if (!whatsapp && !telegram && !password) {
+  if (!whatsapp && !telegramBot && !password) {
     return (
       <EmptyState
         eyebrow="Sign in"
@@ -77,9 +79,9 @@ export function LoginOptions() {
         </AuthCard>
       ) : null}
 
-      {telegram ? (
+      {telegramBot ? (
         <AuthCard name="Telegram" icon={<TelegramIcon size={15} />}>
-          <TelegramLogin botUsername={login.telegram.botUsername as string} onAuth={onTelegram} />
+          <TelegramLogin botUsername={telegramBot} onAuth={onTelegram} />
           {telegramBusy ? <AuthNote>Signing you in</AuthNote> : null}
           {telegramError ? <AuthNote tone="danger">{telegramError}</AuthNote> : null}
         </AuthCard>

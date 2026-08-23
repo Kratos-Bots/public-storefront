@@ -61,10 +61,12 @@ export function useLoginSuccess(): (result: LoginResult) => Promise<void> {
 
   return useCallback(
     async (result: LoginResult) => {
-      const session = useSessionStore.getState();
-      // First — the api client reads the token from here to sign the cart calls below.
-      session.setSession(result.token, result.customer);
-      const destination = safeReturnTo(session.returnTo) ?? DEFAULT_LANDING;
+      // Read where they were headed before writing anything: `setSession` swaps
+      // the whole state object, so a snapshot taken before it is stale after it.
+      const destination = safeReturnTo(useSessionStore.getState().returnTo) ?? DEFAULT_LANDING;
+      // The api client reads the token from the store to sign the cart calls below,
+      // so the session has to be in place before the first of them goes out.
+      useSessionStore.getState().setSession(result.token, result.customer);
 
       // A previous session in this tab can have left a debounce timer armed and a
       // stale server cart cached; neither belongs to the customer signing in now.
