@@ -1,0 +1,81 @@
+{
+  "enabled": true,
+  "closedMessage": "We're closed while we restock. Back on Monday morning.",
+  "welcomeMessage": "Today's list. Tap a line for the detail.",
+  "notices": [
+    {
+      "id": "notice-free-delivery",
+      "style": "info",
+      "title": "Free delivery",
+      "body": "Free tracked delivery on every order over 75.00.",
+      "startsAt": null,
+      "endsAt": null,
+      "active": true
+    }
+  ],
+  "cutoffs": {
+    "timezone": "Europe/London",
+    "days": {
+      "mon": { "enabled": true, "cutoff": "15:00", "shipsOn": "same day" },
+      "tue": { "enabled": true, "cutoff": "15:00", "shipsOn": "same day" },
+      "wed": { "enabled": true, "cutoff": "15:00", "shipsOn": "same day" },
+      "thu": { "enabled": true, "cutoff": "15:00", "shipsOn": "same day" },
+      "fri": { "enabled": true, "cutoff": "13:00", "shipsOn": "same day" },
+      "sat": { "enabled": false, "cutoff": "12:00", "shipsOn": "Monday" },
+      "sun": { "enabled": false, "cutoff": "12:00", "shipsOn": "Monday" }
+    }
+  },
+  "serverTime": "2026-08-24T09:00:00.000Z",
+  "contactModes": {
+    "phoneMode": "optional",
+    "emailMode": "required",
+    "defaultPhoneCountry": "GB"
+  },
+  "currency": "GBP",
+  "supportLinks": [
+    { "label": "Delivery and returns", "url": "https://example.invalid/delivery" }
+  ],
+  "login": {
+    "whatsapp": { "available": true, "number": "447700900123" },
+    "telegram": { "available": false, "botUsername": null }
+  },
+  "brand": {
+    "name": "Northbound Supply",
+    "shortName": "Northbound",
+    "tagline": "Small-batch supply, shipped from Leeds.",
+    "title": "Northbound Supply",
+    "description": "Small-batch supply, shipped from Leeds.",
+    "logoUrl": null,
+    "faviconUrl": null,
+    "logoHeight": 26,
+    "links": { "whatsapp": "https://wa.me/447700900123", "telegram": null }
+  },
+  "features": {
+    "layout": "menu",
+    "ordering": true,
+    "guestCheckout": false,
+    "accounts": true,
+    "verify": true,
+    "tracking": true,
+    "wholesale": false,
+    "upsell": true
+  },
+  "theme": {
+    "scheme": "dark",
+    "colors": {
+      "primary": "#c8a44b",
+      "bg": "#0b0c0e",
+      "surface": "#14161a",
+      "text": "#f2f3f5",
+      "muted": "#9aa0a6",
+      "success": "#4caf7d",
+      "warn": "#e0a33e",
+      "danger": "#e2574c"
+    },
+    "fonts": { "heading": null, "body": null, "mono": null },
+    "radius": "md",
+    "density": "comfortable",
+    "customCss": ""
+  },
+  "turnstile": { "siteKey": "1x00000000000000000000AA" }
+}

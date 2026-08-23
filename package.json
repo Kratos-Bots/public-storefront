@@ -11,12 +11,14 @@
     "test": "npm --prefix web test && vitest run --config worker/vitest.config.ts",
     "test:web": "npm --prefix web test",
     "test:worker": "vitest run --config worker/vitest.config.ts",
+    "test:e2e": "playwright test -c e2e/playwright.config.ts",
     "deploy": "npm run build && wrangler deploy",
     "install:web": "npm --prefix web install"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.22.0",
     "@cloudflare/workers-types": "^5.20260823.1",
+    "@playwright/test": "^1.62.1",
     "typescript": "~5.9.3",
     "vitest": "^4.1.0",
     "wrangler": "^4.125.0"
