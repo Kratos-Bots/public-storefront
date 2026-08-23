@@ -1,0 +1,99 @@
+/* The running tab: a fixed band at the foot of the phone. Fixed rather than
+   sticky because it hangs off the shell, not off the end of the list — the
+   shells give themselves the clearance it needs. */
+.bar {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 30;
+  background: var(--sf-bg-deep);
+  border-top: 1px solid var(--sf-line-strong);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.inner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: var(--sf-rail-max, 48rem);
+  margin: 0 auto;
+  padding: 0.5rem var(--sf-main-pad, 1rem);
+}
+
+.view {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 0;
+  padding-right: 0.25rem;
+  color: var(--sf-text);
+  text-decoration: none;
+  border-radius: var(--mantine-radius-default);
+}
+
+.view:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+.subtotal {
+  font-family: var(--sf-font-mono);
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.tally {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  color: var(--sf-muted);
+  white-space: nowrap;
+}
+
+/* Points down at rest — turned to point the way through to the cart. */
+.tally svg {
+  transform: rotate(-90deg);
+}
+
+.checkout {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 48px;
+  margin-left: auto;
+  padding: 0 1.25rem;
+  border: 0;
+  border-radius: var(--mantine-radius-default);
+  background: var(--sf-primary);
+  color: var(--sf-bg);
+  font-family: var(--sf-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.checkout:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+.checkout:disabled {
+  background: var(--sf-surface-2);
+  color: var(--sf-faint);
+  cursor: not-allowed;
+}
