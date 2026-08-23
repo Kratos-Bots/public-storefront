@@ -26,9 +26,10 @@ Locked decisions from brainstorming:
 
 - **Runtime configuration.** All per-client customisation (colours, fonts, layout, logo, links, feature
   flags) is fetched from the backend at load time. The built bundle is byte-identical for every client.
-  Per-client deploy inputs are only `BACKEND_URL` + the domain (+ an optional tracking API key).
+  Per-client deploy inputs are only `BACKEND_URL` + the domain.
 - **Thin Worker.** One Worker script serves the SPA's static assets and reverse-proxies `/api/*` and
-  `/media/*` to the backend. No business logic, no sanitisation, no checkout orchestration in the Worker.
+  `/media/*` to the backend. No business logic, no sanitisation, no checkout orchestration, **no
+  secrets** in the Worker — tracking and Turnstile verification live in the backend.
 - **Guest checkout is a per-client flag.** Login-required is the default; when the flag is on, a
   session-less backend checkout path (Turnstile-verified server-side) is available.
 - **Release artifact = GitHub Release** (built by CI on tag), consumed by Spec 3.
@@ -49,11 +50,10 @@ password login (no backend endpoint yet — the login page leaves a slot for it)
 ecommerce-storefront/
   package.json              # root scripts: dev, build, typecheck, test, deploy (delegates to web/ + worker/)
   wrangler.jsonc            # single Worker: main = worker/src/index.ts, assets.directory = web/dist
-  .dev.vars.example         # BACKEND_URL, TRACKING_API_URL, TRACKING_API_KEY
+  .dev.vars.example         # BACKEND_URL
   worker/
-    src/index.ts            # fetch handler: /api/*, /media/*, /api/tracking, else assets
+    src/index.ts            # fetch handler: /api/*, /media/*, else assets
     src/proxy.ts            # allowlist + forward + edge cache
-    src/tracking.ts         # ported from ecommerce-menu/worker/src/tracking.ts
     tsconfig.json
   web/
     index.html              # inline theme bootstrap (see §3.4)
@@ -82,8 +82,8 @@ ecommerce-storefront/
 ```
 
 Routes/custom domains are **not** in the committed config — Spec 3 sets them per client through the
-Cloudflare API; for manual deploys the operator passes `--route`/edits a local copy. Secrets
-(`TRACKING_API_KEY`) are never in the file.
+Cloudflare API; for manual deploys the operator passes `--route`/edits a local copy. The Worker has
+no secrets.
 
 The root `package.json` scripts:
 
@@ -103,7 +103,7 @@ the theme bridge, cut-off maths, cart merge, and the Worker allowlist are pure l
 
 ## 2. The Worker
 
-`worker/src/index.ts` handles exactly four things; everything else falls through to the assets binding
+`worker/src/index.ts` handles exactly two things; everything else falls through to the assets binding
 (`env.ASSETS.fetch(request)`), which serves the SPA with `index.html` fallback.
 
 ### 2.1 `/api/*` reverse proxy
@@ -111,14 +111,16 @@ the theme bridge, cut-off maths, cart merge, and the Worker allowlist are pure l
 `/api/<rest>` → `${BACKEND_URL}api/v1/public/<rest>`. The SPA never knows the backend origin.
 
 - **Allowlisted prefixes** (anything else → `404 { success:false, error:"Not found" }`):
-  `storefront/`, `catalog`, `catalog/`, `orders/`, `verify/`, `wholesale/`.
+  `storefront/`, `catalog`, `catalog/`, `orders/`, `verify/`. (`/public/wholesale/*` is deliberately
+  excluded — it is the Telegram WebApp's JWT-keyed surface; the storefront's wholesale view is a
+  presentation of the public catalog's `pricingTiers`.)
   The admin/API-key surfaces of the backend are therefore unreachable through the client's domain.
 - **Forwarded:** method, body, `Content-Type`, `Authorization` (the storefront Bearer token),
   `Accept`. **Added:** `X-Forwarded-For: <cf-connecting-ip>` and `X-Forwarded-Proto: https`
   (the backend's per-IP rate limits and Telegram-widget origin checks key on these).
   **Stripped:** cookies, `Host` (rewritten to the backend host), all `CF-*` headers.
 - **Edge cache** (`caches.default`, keyed on the full URL, GET only, no `Authorization` header present):
-  `storefront/settings` → 30 s, `catalog` and `catalog/products/:id` → 60 s, `wholesale/catalog` → 60 s.
+  `storefront/settings` → 30 s, `catalog` and `catalog/products/:id` → 60 s.
   Everything else is `no-store`. The cached response copies the backend's status + body and adds
   `X-SF-Cache: HIT|MISS`.
 - Backend unreachable / 5xx on the proxy itself → `502 { success:false, error:"Backend unavailable" }`.
@@ -140,27 +142,18 @@ through one helper, `productImageUrl(id, variant)` → `/media/products/…`, an
 `faviconUrl` (backend-relative `/api/v1/…` strings) to `/media/…` via `mediaUrl()`. The product's
 `imageProductId` (parent-image fallback) semantics are ported from the menu unchanged.
 
-### 2.3 `/api/tracking`
-
-Ported verbatim from `ecommerce-menu/worker/src/tracking.ts`: looks up the order through the proxy,
-then calls the China Tracking API with `TRACKING_API_KEY`. If `TRACKING_API_URL`/`TRACKING_API_KEY`
-are unset the endpoint returns the order with `tracking: { degraded: true }` and the page renders the
-degraded state. This is the **only** secret the Worker ever holds.
-
-### 2.4 Bindings
+### 2.3 Bindings
 
 | name | kind | required |
 |---|---|---|
 | `ASSETS` | assets binding | yes (wrangler-managed) |
 | `BACKEND_URL` | var, trailing slash | yes |
-| `TRACKING_API_URL` | var | no |
-| `TRACKING_API_KEY` | secret | no |
 
-### 2.5 What the Worker deliberately does not do
+### 2.4 What the Worker deliberately does not do
 
-No Turnstile verification (moved to the backend, §5.2), no field sanitisation (the backend's public
-catalog already omits cost/stock thresholds), no WebSockets (WhatsApp login completion polls
-`GET /api/storefront/auth/attempts/:id`), no per-vendor config.
+No Turnstile verification, no tracking-API calls, no API keys (all moved to the backend, §5), no
+field sanitisation (the backend's public catalog already omits cost/stock thresholds), no WebSockets
+(WhatsApp login completion polls `GET /api/storefront/auth/attempts/:id`), no per-vendor config.
 
 ---
 
@@ -217,7 +210,7 @@ top-level objects:
   "density": "comfortable",           // "comfortable" | "compact"
   "customCss": ""                     // max 20 KB, sanitised server-side
 },
-"turnstile": { "siteKey": "0x…" }      // present only when guestCheckout is on and a key is configured
+"turnstile": { "siteKey": "0x…" }      // null until an admin configures a Turnstile site key; used by guest checkout + tracking
 ```
 
 Defaults reproduce the current `kp` vendor look (the menu's `DEFAULT_PALETTE`) so a fresh client with
@@ -295,7 +288,7 @@ web/src/
     account/      AccountLayout (tabs), OrdersPage, OrderDetailPage, LoyaltyPage (points, redeem options → redeem), ReferralsPage (code, share link, "I was referred" form), ProfilePage (nickname, identities, logout)
     order-status/ OrderStatusPage /order/:ref/:key — ported: StatusHero, ItemsCard, AddressCard, ShipmentCard, PaymentSection (CryptoPaymentCard, CryptoComboPicker, txid submit, payment-method switch)
     payment-redirect/ PaymentSuccessPage, PaymentCancelPage, OrderPlacedPage (chat-settled)
-    tracking/     TrackingPage (ported)
+    tracking/     TrackingPage (ported; data from POST /api/storefront/tracking, Turnstile-gated)
     verify/       VerifyPage (ported)
     notices/      NoticeBanners (info/warning/promo, dismiss per id in localStorage), CutoffBar (countdown, "order by HH:mm for <shipsOn>")
     closed/       ClosedPage (brand, closedMessage, support + chat links)
@@ -363,11 +356,15 @@ honestly.
   coupon, shipping option, store-credit toggle change — debounced 300 ms, keyed on a hash of inputs).
 - Payment step lists `quote.paymentMethods`; crypto shows the coin/network picker with per-combo
   `chargeTotal`; offline/manual shows `details` after placement, not before.
-- Submit → `POST /checkout` → on success: gateway `redirectUrl` → navigate away; manual/crypto/chat →
-  navigate to `publicUrl`'s path (`/order/:ref/:key`) for on-site payment instructions; chat-settled →
-  `/order-placed` with the prefilled chat links (ported behaviour).
-- Contact step respects `contactModes`; address step asks `GET /service-points?country=` once per
-  country and shows the service-point picker when available (ported from the collection-points work).
+- Submit → `POST /checkout` → outcome by `payment.type` (next bullet).
+- Contact step respects `contactModes`. **Service-point (collection) delivery is not in this spec**:
+  the backend's storefront checkout currently restricts quotes to `deliveryMethod: 'home'` and strips
+  `servicePoint*` fields from the submitted address (`public-storefront/checkout.ts`), so the picker
+  would be inert. Carried to the open items (§10).
+- Submit outcomes map on `payment.type`: `checkout_url` → redirect to `url`; `crypto` / `manual` →
+  navigate to `/order/:ref/:key` (from `publicUrl`) which shows the instructions; `none` (store credit
+  covered it, or the payment leg failed and `warning` is set) → `/order-placed?ref=…` which shows the
+  reference, the warning if any, and the chat links — this replaces the menu's "chat" gateway page.
 - Guest path (§5.2): same steps; the cart lines are sent in the body, a Turnstile widget (invisible)
   runs before quote and checkout calls, and the contact step is mandatory.
 
@@ -408,6 +405,9 @@ extensionless imports, `AppError` subclasses, zod schemas).
   multer configs, `sanitizeSvg`, and `.ico` header check, with distinct storage keys
   (`storefront-logo`, `storefront-favicon`).
 - `customCss` sanitiser in `src/lib/css-sanitizer.ts` (css-tree walk; rules in §3.2).
+- Turnstile keys (`storefront_turnstile_site_key` public, `storefront_turnstile_secret` private) and
+  tracking-API keys (`storefront_tracking_api_url`, `storefront_tracking_api_key` private) as plain
+  settings; secrets are write-only from the admin API (`…Set: boolean` on read).
 
 ### 5.2 Guest checkout
 
@@ -429,7 +429,28 @@ found` when off.
   `customerId`, so loyalty accrues to whoever later logs in with that phone.
 - Per-customer Redis checkout lock applies the same way.
 
-### 5.3 No schema migrations
+### 5.3 Public tracking lookup (replaces the menu Worker's `/api/tracking`)
+
+`POST /public/storefront/tracking` — body `{ reference, turnstileToken, refresh? }`, no session,
+rate-limited 30/15min/IP, reachable only when the storefront is enabled. Verifies Turnstile with the
+storefront Turnstile secret, loads the order's shipments, calls the China Tracking API with
+`storefront_tracking_api_url` / `storefront_tracking_api_key` (new settings keys; the key is never
+echoed by the admin read — `trackingApiKeySet: boolean`), and returns exactly the menu Worker's
+`TrackingLookup` shape (sanitisers ported verbatim from `ecommerce-menu/worker/src/tracking.ts`:
+no carrier identity, no customer data, `trackingAvailable` = courier network reachable). When the
+tracking API is unconfigured the response is the degraded form (`trackingAvailable: false`, parcels
+without events). `404` unknown reference; `422 Verification failed`.
+
+### 5.4 Public payment options for a placed order
+
+`GET /public/orders/:reference/:accessKey/payment-options` — access-key keyed like its siblings,
+30/15min/IP. Returns `listStorefrontPaymentMethods(shippingAddress.country, preFeeTotal)` (the same
+projection the checkout quote uses, including `cryptoOptions`), where `preFeeTotal =
+totals.totalAmount - totals.paymentFeeAmount`. Feeds the order page's "choose how to pay" /
+"change method" picker; the existing `payment-method` switch endpoint consumes the chosen
+`method`/`coin`/`network`.
+
+### 5.5 No schema migrations
 
 Everything lives in existing KV settings and existing tables.
 
@@ -457,7 +478,7 @@ Everything lives in existing KV settings and existing tables.
   timezone, drift correction), cart `merge()`, `media-url.ts`, theme-bridge output for a default and
   a fully-specified theme, route guards.
 - **Vitest (worker, `@cloudflare/vitest-pool-workers`)**: allowlist (admin path → 404), header
-  forwarding/stripping, cache HIT/MISS on settings, `/media` mapping, tracking degraded mode.
+  forwarding/stripping, cache HIT/MISS on settings, `/media` mapping.
 - **Playwright mocked pass** (same technique as the admin SPA: Vite on a spare port, `page.route`
   mocks for `/api/*`): both layouts at 390 px and 1280 px — catalog → detail → add to cart → checkout
   to the payment step; login page rendering with each provider available/unavailable; account tabs;
@@ -485,9 +506,8 @@ Enable the storefront in admin Settings → Storefront (`storefront_enabled`), o
 - `.github/workflows/release.yml`: on `v*` tags → `npm ci && npm run build && npm test` → zip
   `wrangler.jsonc`, `worker/`, `web/dist/` as `storefront-<tag>.zip` → attach to the GitHub Release.
   Spec 3's backend module lists these releases and uploads the chosen one to a client's Cloudflare
-  account with `BACKEND_URL`, optional tracking secret, and the custom domain.
-- Manual deploy for now: `npm run deploy` with a local `wrangler.jsonc` route added, then
-  `wrangler secret put TRACKING_API_KEY` if tracking is on.
+  account with `BACKEND_URL` and the custom domain.
+- Manual deploy for now: `npm run deploy` with a local `wrangler.jsonc` route added.
 
 ---
 
@@ -501,5 +521,8 @@ Enable the storefront in admin Settings → Storefront (`storefront_enabled`), o
   release listing via GitHub API, Worker script + assets upload, vars/secrets, custom domain binding,
   deploy history, and "update available" badge when a newer release exists.
 - Password login (email/phone): backend endpoint + `login.password` flag; SPA slot already reserved.
+- Service-point (collection) delivery in the web checkout: backend must allow
+  `deliveryMethod: 'collection'` quotes and pass `servicePoint*` through `placeStorefrontOrder`;
+  then the SPA address step gets the picker fed by `GET /service-points` (which already works).
 - Migrating existing `ecommerce-menu` vendors: a one-off script that converts each
   `web/src/config/vendors/<code>/config.ts` into a `PUT /storefront-settings` payload.
