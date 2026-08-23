@@ -38,23 +38,30 @@ const base = (reference: string, accessKey: string) =>
 
 /**
  * A bad reference or key is a client-facing "this link isn't valid", not a
- * server fault — the backend answers 404 for both, and 400/403 for a malformed
- * one. Everything else stays an `ApiError`, so a 503 or a network drop reaches
- * the retry screen instead of telling the customer their link is broken.
+ * server fault. The backend answers 404 for an unknown reference or a wrong
+ * key, and 422 when the params schema refuses the pair outright — an
+ * oversized or garbled reference/key never becomes a valid link, so retrying it
+ * is hopeless and it belongs on the invalid-link screen. Everything else stays
+ * an `ApiError`, so a 503 or a network drop reaches the retry screen instead of
+ * telling the customer their link is broken.
+ *
+ * 422 is deliberately NOT in `asActionError`: on the two action routes the same
+ * status carries the backend's own customer-written message about the *method*
+ * or the *txid*, which the customer can act on.
  */
+const LINK_STATUSES = [400, 403, 404, 422];
+
 function asLinkError(err: unknown): never {
-  if (err instanceof ApiError && (err.status === 400 || err.status === 403 || err.status === 404)) {
-    throw new InvalidLinkError();
-  }
+  if (err instanceof ApiError && LINK_STATUSES.includes(err.status)) throw new InvalidLinkError();
   throw err;
 }
 
 /**
- * The same rule for the two action routes, minus 400 — there a 400 is the
- * backend's ValidationError about the *method* ("Payment method 'x' is not
- * available online", "That transaction has already been used"), written for
- * customers, and reading it as a broken link would throw the page away over a
- * message the customer can act on.
+ * The action routes map 404 alone. A 422 there is the backend's own
+ * ValidationError about the *method* or the *txid* ("Payment method 'x' is not
+ * available online", "That transaction has already been used") — written for
+ * customers, and reading it as a broken link would throw the whole page away
+ * over a message they can act on.
  */
 function asActionError(err: unknown): never {
   if (err instanceof ApiError && err.status === 404) throw new InvalidLinkError();
