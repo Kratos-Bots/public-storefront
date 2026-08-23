@@ -1,0 +1,22 @@
+name: release
+on:
+  push:
+    tags: ['v*']
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions: { contents: write }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm --prefix web ci
+      - run: npm test
+      - run: npm run build
+      - name: Package
+        run: |
+          mkdir -p out
+          zip -r "out/storefront-${GITHUB_REF_NAME}.zip" wrangler.jsonc worker/src web/dist package.json
+      - uses: softprops/action-gh-release@v2
+        with: { files: out/*.zip }
