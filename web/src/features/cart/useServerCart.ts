@@ -32,7 +32,13 @@ const syncStore = create<SyncState>()(() => ({ cart: null, syncing: false }));
 let timer: ReturnType<typeof setTimeout> | null = null;
 /** Set from the moment an edit is scheduled until its PUT goes out. */
 let pendingWrite = false;
-/** Latest-wins: a response only lands if its ticket is still the newest issued. */
+/**
+ * Monotonic ticket, taken by every request *and by every local edit*. A response
+ * only lands if its ticket is still the newest one issued, so an edit made while
+ * a request is in flight invalidates that request's answer: the answer describes
+ * a cart the shopper has already moved on from, and adopting it would roll the
+ * edit back and then re-send the rolled-back state as if it were theirs.
+ */
 let ticketSeq = 0;
 /**
  * Requests still in the air. Counted rather than derived from the ticket: a
@@ -131,6 +137,9 @@ async function refreshCart(): Promise<void> {
 
 function schedule() {
   if (!serverMode()) return;
+  // Supersede anything in flight before arming the timer — the local lines are
+  // now newer than any answer already on its way back.
+  ticketSeq += 1;
   pendingWrite = true;
   if (timer) clearTimeout(timer);
   timer = setTimeout(() => {

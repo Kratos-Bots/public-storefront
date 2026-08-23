@@ -94,21 +94,35 @@ export const useCartStore = create<CartState>()(
 
       clear: () => set({ lines: [], mode: 'local' }),
 
+      /**
+       * Adopt the server's cart. The server has the last word on what is on the
+       * order and what it costs — quantity, unit price, name, pre-order — but its
+       * line shape carries none of the catalogue metadata the UI needs: the base
+       * price a bulk break is struck against, the tiers, the SKU, the parent
+       * image. For a line the store already holds, that metadata is kept; only a
+       * line this browser has never seen (added from the bot, or from another
+       * device) falls back to `basePrice = unitPrice` and no tiers, which reads
+       * as "no discount to show" rather than a wrong one.
+       */
       replaceFromServer: (cart) => {
+        const known = new Map(get().lines.map((l) => [l.productId, l]));
         set({
           mode: 'server',
-          lines: cart.items.map((item) => ({
-            productId: item.productId,
-            displayName: item.name,
-            sku: '',
-            unitPrice: item.unitPrice,
-            basePrice: item.unitPrice,
-            pricingTiers: [],
-            quantity: item.quantity,
-            isPreorder: item.isPreorder,
-            excludedFromFreeShipping: false,
-            imageProductId: item.productId,
-          })),
+          lines: cart.items.map((item) => {
+            const prior = known.get(item.productId);
+            return {
+              productId: item.productId,
+              displayName: item.name,
+              sku: prior ? prior.sku : '',
+              unitPrice: item.unitPrice,
+              basePrice: prior ? prior.basePrice : item.unitPrice,
+              pricingTiers: prior ? prior.pricingTiers : [],
+              quantity: item.quantity,
+              isPreorder: item.isPreorder,
+              excludedFromFreeShipping: prior ? prior.excludedFromFreeShipping : false,
+              imageProductId: prior ? prior.imageProductId : item.productId,
+            };
+          }),
         });
       },
 

@@ -195,6 +195,76 @@ describe('useServerCart', () => {
     expect(result.current.issues).toEqual([]);
   });
 
+  it('discards a superseded response and still sends the edit that superseded it', async () => {
+    // PUT#1 is held open, so the edit that follows it lands while it is still
+    // in flight — the case a bare `latest response wins` rule gets wrong.
+    let settleFirst!: (cart: ServerCart) => void;
+    putMock.mockImplementationOnce(() => new Promise<ServerCart>((res) => { settleFirst = res; }));
+
+    const { result } = renderHook(() => useServerCart());
+
+    act(() => {
+      result.current.setQuantity(7, 2);
+    });
+    await settle();
+    expect(putMock).toHaveBeenCalledTimes(1);
+    expect(putMock).toHaveBeenLastCalledWith([
+      { productId: 7, quantity: 2 },
+      { productId: 9, quantity: 1 },
+    ]);
+
+    // Edit B, while PUT#1 is still open.
+    act(() => {
+      result.current.setQuantity(7, 5);
+    });
+    expect(useCartStore.getState().lines[0]!.quantity).toBe(5);
+
+    // PUT#1 answers with the cart as it was at quantity 2. It must not land.
+    await act(async () => {
+      settleFirst(serverCart([serverLine({ quantity: 2, lineTotal: 58 }), serverLine({ productId: 9, quantity: 1 })]));
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(useCartStore.getState().lines[0]!.quantity).toBe(5);
+
+    // ...and edit B's own flush still happens, carrying B.
+    await settle();
+    expect(putMock).toHaveBeenCalledTimes(2);
+    expect(putMock).toHaveBeenLastCalledWith([
+      { productId: 7, quantity: 5 },
+      { productId: 9, quantity: 1 },
+    ]);
+  });
+
+  it('discards a refresh that was overtaken by an edit', async () => {
+    let settleFetch!: (cart: ServerCart) => void;
+    fetchMock.mockImplementationOnce(() => new Promise<ServerCart>((res) => { settleFetch = res; }));
+
+    const { result } = renderHook(() => useServerCart());
+
+    // The drawer opens with nothing pending, so refresh() is a GET.
+    act(() => {
+      void result.current.refresh();
+    });
+
+    act(() => {
+      result.current.setQuantity(7, 9);
+    });
+    expect(useCartStore.getState().lines[0]!.quantity).toBe(9);
+
+    await act(async () => {
+      settleFetch(serverCart([serverLine({ quantity: 1 })]));
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(useCartStore.getState().lines[0]!.quantity).toBe(9);
+    expect(useCartStore.getState().lines).toHaveLength(2);
+
+    await settle();
+    expect(putMock).toHaveBeenLastCalledWith([
+      { productId: 7, quantity: 9 },
+      { productId: 9, quantity: 1 },
+    ]);
+  });
+
   it('mirrors a quick-add through the same debounced PUT', async () => {
     const { result } = renderHook(() => useServerCart());
 

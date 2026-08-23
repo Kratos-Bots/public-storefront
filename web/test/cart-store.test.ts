@@ -31,6 +31,33 @@ describe('cart store', () => {
     expect(useCartStore.getState().mergeForLogin()).toEqual([{ productId: 3, quantity: 2 }]);
   });
 
+  it('replaceFromServer keeps the catalogue metadata of lines it already holds', () => {
+    // Added locally at a bulk break: unit 8, base 10, with the tier that did it.
+    useCartStore.getState().add(p(1, 10, [{ id: 1, minQuantity: 3, price: 8 }]), 3);
+
+    useCartStore.getState().replaceFromServer({
+      items: [
+        { productId: 1, name: 'P1 as the server names it', quantity: 4, unitPrice: 8, lineTotal: 32, imageUrl: null, isPreorder: true, outOfStock: false, priceChanged: false, inactive: false },
+        { productId: 99, name: 'Added from the bot', quantity: 1, unitPrice: 12, lineTotal: 12, imageUrl: null, isPreorder: false, outOfStock: false, priceChanged: false, inactive: false },
+      ],
+      subtotal: 44,
+      itemCount: 5,
+    });
+
+    const [seen, unseen] = useCartStore.getState().lines;
+    // Server wins on what is on the order and what it costs...
+    expect(seen).toMatchObject({ productId: 1, quantity: 4, unitPrice: 8, displayName: 'P1 as the server names it', isPreorder: true });
+    // ...local keeps what the server's line shape cannot carry, so the struck
+    // base price survives a round trip.
+    expect(seen).toMatchObject({ basePrice: 10, sku: 'S1', imageProductId: null, excludedFromFreeShipping: false });
+    expect(seen!.pricingTiers).toEqual([{ id: 1, minQuantity: 3, price: 8 }]);
+    expect(seen!.unitPrice < seen!.basePrice).toBe(true);
+
+    // A line this browser has never seen shows no discount rather than a wrong one.
+    expect(unseen).toMatchObject({ productId: 99, basePrice: 12, unitPrice: 12, sku: '', imageProductId: 99 });
+    expect(unseen!.pricingTiers).toEqual([]);
+  });
+
   it('replaceFromServer mirrors the server cart and switches to server mode', () => {
     useCartStore.getState().replaceFromServer({ items: [{ productId: 9, name: 'X', quantity: 4, unitPrice: 5, lineTotal: 20, imageUrl: null, isPreorder: false, outOfStock: false, priceChanged: false, inactive: false }], subtotal: 20, itemCount: 4 });
     const st = useCartStore.getState();
