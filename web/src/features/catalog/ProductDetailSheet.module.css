@@ -1,0 +1,189 @@
+/* One column, read top to bottom: what it is, what it costs, what we know about it.
+   Every section label is the chassis' mono micro-caps, so the sheet is legible as
+   an entry in the same manifest the list behind it belongs to. */
+.head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--sf-line);
+}
+
+.eyebrow {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--sf-faint);
+}
+
+.close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  margin: -0.4rem -0.6rem -0.4rem 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--sf-muted);
+  border-radius: var(--mantine-radius-default);
+  cursor: pointer;
+}
+
+.close:hover {
+  color: var(--sf-text);
+  background: var(--sf-surface);
+}
+
+.close:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+.body {
+  padding: 1.1rem 1rem 1.75rem;
+}
+
+.identity {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.identityText {
+  flex: 1;
+  min-width: 0;
+}
+
+.name {
+  margin: 0;
+  font-family: var(--sf-font-heading);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--sf-text);
+}
+
+.flags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.75rem;
+  margin: 0.5rem 0 0;
+}
+
+.sku,
+.preorder {
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--sf-faint);
+}
+
+.preorder {
+  color: var(--sf-warn);
+}
+
+/* A thumbnail, not a plate: on a sheet that is 88% of a phone, the photo earns a
+   corner and the words get the rest. */
+.thumb {
+  flex: none;
+  width: 84px;
+}
+
+/* The price is the one figure the shopper opened this for — it gets its own band
+   and the largest type on the sheet. */
+.priceBand {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.25rem;
+  padding: 1rem 0;
+  border-top: 1px solid var(--sf-line);
+  border-bottom: 1px solid var(--sf-line);
+}
+
+.priceLabel {
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--sf-faint);
+}
+
+.price {
+  font-family: var(--sf-font-mono);
+  font-size: 1.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--sf-text);
+}
+
+.block {
+  margin-top: 1.5rem;
+}
+
+.blockHead {
+  margin: 0 0 0.65rem;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--sf-faint);
+}
+
+.description,
+.askText {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--sf-muted);
+}
+
+.askText {
+  margin-bottom: 0.75rem;
+}
+
+.failed {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 1.5rem 0;
+}
+
+.failedText {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--sf-danger);
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding-top: 0.25rem;
+}
+
+.shape {
+  display: block;
+  border-radius: var(--mantine-radius-default);
+  background: var(--sf-surface-2);
+}

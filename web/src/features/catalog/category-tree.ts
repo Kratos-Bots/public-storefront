@@ -57,6 +57,24 @@ export function buildCategoryTree(
 }
 
 /**
+ * Walk a category up to its root. The catalogue's `categoryName` is a flattened
+ * "Parent > Child" string, so anything that wants the real steps — a breadcrumb,
+ * a sheet's eyebrow — rebuilds them from ids here instead.
+ */
+export function ancestorChain(categories: Category[], leafId: number | null): Category[] {
+  const byId = new Map(categories.map((c) => [c.id, c]));
+  const chain: Category[] = [];
+  const seen = new Set<number>();
+  let current = leafId === null ? undefined : byId.get(leafId);
+  while (current && !seen.has(current.id)) {
+    seen.add(current.id);
+    chain.unshift(current);
+    current = current.parentId === null ? undefined : byId.get(current.parentId);
+  }
+  return chain;
+}
+
+/**
  * Collect a category id and all of its descendant ids, so a parent-tap filter
  * matches every product in any sub-category beneath.
  */

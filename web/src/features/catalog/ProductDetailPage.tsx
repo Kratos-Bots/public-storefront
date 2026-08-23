@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router';
 import { useSettings } from '@/app/settings.ts';
 import { useCatalog, useProduct } from '@/features/catalog/use-catalog.ts';
 import { categoryPath } from '@/features/catalog/CategoryNav.tsx';
+import { ancestorChain } from '@/features/catalog/category-tree.ts';
 import { ProductImage } from '@/features/catalog/ProductImage.tsx';
 import { StockChip } from '@/features/catalog/StockChip.tsx';
 import { AddToCart } from '@/features/catalog/AddToCart.tsx';
@@ -14,26 +15,7 @@ import { ContactLinks } from '@/components/ContactLinks.tsx';
 import { EmptyState } from '@/components/EmptyState.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { deriveStockStatus, formatDate, formatMoney } from '@/lib/format.ts';
-import type { Category } from '@/types/catalog.ts';
 import classes from '@/features/catalog/ProductDetailPage.module.css';
-
-/**
- * Walk a category up to its root. The catalogue's `categoryName` is already a
- * flattened "Parent > Child" path, so the trail is rebuilt from ids instead —
- * that way every step is a real link, and the separators stay consistent.
- */
-function ancestorChain(categories: Category[], leafId: number | null): Category[] {
-  const byId = new Map(categories.map((c) => [c.id, c]));
-  const chain: Category[] = [];
-  const seen = new Set<number>();
-  let current = leafId === null ? undefined : byId.get(leafId);
-  while (current && !seen.has(current.id)) {
-    seen.add(current.id);
-    chain.unshift(current);
-    current = current.parentId === null ? undefined : byId.get(current.parentId);
-  }
-  return chain;
-}
 
 /** The single product page — the storefront layout's detail view. */
 export function ProductDetailPage() {

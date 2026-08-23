@@ -1,0 +1,61 @@
+/* Sheet head: the name of the thing, one line saying what it does, and the way out.
+   Same micro-caps rule as every other structural label in the chassis. */
+.head {
+  flex: none;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--sf-line);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--sf-font-heading);
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+  color: var(--sf-text);
+}
+
+.sub {
+  margin: 0.3rem 0 0;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--sf-faint);
+}
+
+.close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  margin: -0.5rem -0.6rem -0.5rem 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--sf-muted);
+  border-radius: var(--mantine-radius-default);
+  cursor: pointer;
+}
+
+.close:hover {
+  color: var(--sf-text);
+  background: var(--sf-surface);
+}
+
+.close:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+.index {
+  padding: 0.5rem 0.75rem calc(1rem + env(safe-area-inset-bottom, 0px));
+}

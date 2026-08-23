@@ -3,6 +3,9 @@
    strip pinned to the bottom of the catalog. No footer; the strip is the footer. */
 .shell {
   --sf-rail-max: 48rem;
+  /* The bar's own height, published so the catalogue's sticky section rules can
+     come to rest exactly under it. */
+  --sf-bar-h: 52px;
   display: flex;
   flex-direction: column;
   min-height: 100dvh;
@@ -63,15 +66,31 @@
   justify-content: center;
   width: 44px;
   height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
   color: var(--sf-muted);
   border-radius: var(--mantine-radius-default);
   text-decoration: none;
+  cursor: pointer;
   transition: color 120ms ease, background-color 120ms ease;
 }
 
 .action:hover {
   color: var(--sf-text);
   background: var(--sf-surface);
+}
+
+/* One dot, no number: the bar only has to say that the list is narrowed — the
+   catalogue's own heading names the category. */
+.mark {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--sf-primary);
 }
 
 .count {
@@ -101,6 +120,9 @@
 }
 
 @media (min-width: 62em) {
+  .shell {
+    --sf-bar-h: 60px;
+  }
   .barInner {
     height: 60px;
     gap: 1rem;
@@ -109,6 +131,10 @@
   .action {
     width: 34px;
     height: 34px;
+  }
+  .mark {
+    top: 4px;
+    right: 4px;
   }
   .main {
     padding-inline: 1rem;

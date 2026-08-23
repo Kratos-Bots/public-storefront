@@ -48,6 +48,43 @@ export function SearchIcon({ size = 16 }: GlyphProps) {
   );
 }
 
+/** Three shortening rules — the index narrowing to a selection, drawn in the chassis' own hairlines. */
+export function FilterIcon({ size = 16 }: GlyphProps) {
+  return (
+    <svg {...stroke(size)}>
+      <path d="M4 7h16" />
+      <path d="M7 12h10" />
+      <path d="M10 17h4" />
+    </svg>
+  );
+}
+
+export function PlusIcon({ size = 16 }: GlyphProps) {
+  return (
+    <svg {...stroke(size)}>
+      <path d="M12 5.5v13" />
+      <path d="M5.5 12h13" />
+    </svg>
+  );
+}
+
+export function MinusIcon({ size = 16 }: GlyphProps) {
+  return (
+    <svg {...stroke(size)}>
+      <path d="M5.5 12h13" />
+    </svg>
+  );
+}
+
+export function CloseIcon({ size = 16 }: GlyphProps) {
+  return (
+    <svg {...stroke(size)}>
+      <path d="m6 6 12 12" />
+      <path d="m18 6-12 12" />
+    </svg>
+  );
+}
+
 export function WhatsAppIcon({ size = 16 }: GlyphProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
