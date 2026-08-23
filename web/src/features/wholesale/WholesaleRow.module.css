@@ -360,6 +360,12 @@
     min-height: 0;
   }
 
+  /* Rows are 45px here and the grown hit area is 47px, so on a fine pointer the
+     chips would start claiming each other's rows. The pointer is precise; drop it. */
+  .chip::after {
+    content: none;
+  }
+
   .row > * {
     height: 34px;
   }
