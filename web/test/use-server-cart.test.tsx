@@ -133,6 +133,18 @@ describe('useServerCart', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it('stops reporting a sync once the failed write and its resync are done', async () => {
+    putMock.mockRejectedValueOnce(new ApiError(422, 'Only 2 left in stock'));
+    const { result } = renderHook(() => useServerCart());
+
+    act(() => {
+      result.current.setQuantity(7, 99);
+    });
+    await settle();
+
+    expect(result.current.isSyncing).toBe(false);
+  });
+
   it('falls back to local mode on 401 and keeps the lines', async () => {
     putMock.mockRejectedValueOnce(new ApiError(401, 'Unauthorized'));
     const { result } = renderHook(() => useServerCart());

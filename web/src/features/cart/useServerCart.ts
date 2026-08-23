@@ -34,6 +34,23 @@ let timer: ReturnType<typeof setTimeout> | null = null;
 let pendingWrite = false;
 /** Latest-wins: a response only lands if its ticket is still the newest issued. */
 let ticketSeq = 0;
+/**
+ * Requests still in the air. Counted rather than derived from the ticket: a
+ * failed PUT starts a resync, which takes a ticket of its own, so the PUT could
+ * never recognise itself as the last request and would leave `syncing` on for
+ * the rest of the session.
+ */
+let inflight = 0;
+
+function enter() {
+  inflight += 1;
+  syncStore.setState({ syncing: true });
+}
+
+function leave() {
+  inflight = Math.max(0, inflight - 1);
+  if (inflight === 0) syncStore.setState({ syncing: false });
+}
 
 function serverMode(): boolean {
   return useCartStore.getState().mode === 'server';
@@ -53,11 +70,14 @@ function adopt(cart: ServerCart) {
 /** Pull the server's copy and make it the truth. Silent — a reconcile, not an action. */
 async function resync(): Promise<void> {
   const ticket = ++ticketSeq;
+  enter();
   try {
     const cart = await fetchCart();
     if (ticket === ticketSeq) adopt(cart);
   } catch {
     /* Leave the optimistic lines standing; the next edit tries again. */
+  } finally {
+    leave();
   }
 }
 
@@ -71,7 +91,7 @@ async function flush(): Promise<void> {
   if (!serverMode()) return;
 
   const ticket = ++ticketSeq;
-  syncStore.setState({ syncing: true });
+  enter();
   try {
     const cart = await putCart(outgoingLines());
     if (ticket === ticketSeq) adopt(cart);
@@ -91,7 +111,7 @@ async function flush(): Promise<void> {
     });
     await resync();
   } finally {
-    if (ticket === ticketSeq) syncStore.setState({ syncing: false });
+    leave();
   }
 }
 
@@ -145,6 +165,7 @@ export function resetCartSync() {
   timer = null;
   pendingWrite = false;
   ticketSeq = 0;
+  inflight = 0;
   syncStore.setState({ cart: null, syncing: false });
 }
 
