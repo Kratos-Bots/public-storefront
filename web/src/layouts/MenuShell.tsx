@@ -24,6 +24,9 @@ export function MenuShell() {
   const [search, setSearch] = useState('');
   const outletContext = useMemo<ShellSearchContext>(() => ({ search, setSearch }), [search]);
   const onCatalog = pathname === '/' || pathname.startsWith('/c/');
+  // Only the catalogue body carries the sheet this button opens — wholesale replaces
+  // it, so the button would have nothing to show.
+  const canFilter = onCatalog && !features.wholesale;
   // A category in the path is the only filter this layout has — the dot says one is on.
   const filtered = pathname.startsWith('/c/');
 
@@ -38,7 +41,7 @@ export function MenuShell() {
           <SearchField className={classes.search} value={search} onChange={setSearch} placeholder="Search" />
 
           <div className={classes.actions}>
-            {onCatalog ? (
+            {canFilter ? (
               <button
                 type="button"
                 className={classes.action}
