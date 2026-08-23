@@ -208,13 +208,29 @@ describe('useWhatsappLogin', () => {
 
   it('reports a failed complete as an error', async () => {
     pollMock.mockResolvedValue({ status: 'completed' });
-    completeMock.mockRejectedValue(new ApiError(401, 'Unauthorized'));
+    completeMock.mockRejectedValue(new ApiError(500, 'Something broke'));
     const { result } = renderHook(() => useWhatsappLogin());
     await begin(result.current.start);
 
     await ticks(1);
 
     expect(result.current.state).toBe('error');
+    expect(result.current.error).toBe('Something broke');
+    expect(onSuccess).not.toHaveBeenCalled();
+  });
+
+  it('treats a 401 on complete as an expired attempt, not a dead end', async () => {
+    // The backend answers 401 for "expired, unknown, or wrong secret" without
+    // distinguishing them — from the customer's side that is the same thing as
+    // the code running out, and "start a new one" is the honest way to say it.
+    pollMock.mockResolvedValue({ status: 'completed' });
+    completeMock.mockRejectedValue(new ApiError(401, 'Unauthorized'));
+    const { result } = renderHook(() => useWhatsappLogin());
+    await begin(result.current.start);
+
+    await ticks(1);
+
+    expect(result.current.state).toBe('expired');
     expect(onSuccess).not.toHaveBeenCalled();
   });
 

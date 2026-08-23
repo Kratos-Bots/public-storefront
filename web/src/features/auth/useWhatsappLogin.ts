@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { completeWhatsapp, pollAttempt, startWhatsapp } from '@/api/auth.ts';
 import { useLoginSuccess } from '@/features/auth/useLoginSuccess.ts';
-import { errorMessage } from '@/lib/errors.ts';
+import { ApiError, errorMessage } from '@/lib/errors.ts';
 import type { WhatsappStart } from '@/types/auth.ts';
 
 /** Gap between attempt polls (spec §4.6). */
@@ -52,7 +52,13 @@ export function useWhatsappLogin(): WhatsappLoginController {
 
   const onLogin = useLoginSuccess();
   const onLoginRef = useRef(onLogin);
-  onLoginRef.current = onLogin;
+  // Kept in a ref, written in an effect rather than during render: `start` is
+  // created once and the watch chain it closes over outlives any single render,
+  // so it has to reach the current handler rather than the one that existed
+  // when the attempt opened.
+  useEffect(() => {
+    onLoginRef.current = onLogin;
+  }, [onLogin]);
 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mounted = useRef(true);
@@ -92,6 +98,15 @@ export function useWhatsappLogin(): WhatsappLoginController {
         setState('done');
       } catch (err) {
         if (!current()) return;
+        // The backend answers 401 for "expired, unknown, or wrong secret" with
+        // no way to tell them apart — deliberately, so it gives no oracle. From
+        // the customer's side all three are the code having run out, and the
+        // expired state says so with the action that fixes it, rather than
+        // showing them the word "Unauthorized" and a dead end.
+        if (err instanceof ApiError && err.isUnauthorized) {
+          setState('expired');
+          return;
+        }
         setError(errorMessage(err, "We couldn't finish signing you in"));
         setState('error');
       }

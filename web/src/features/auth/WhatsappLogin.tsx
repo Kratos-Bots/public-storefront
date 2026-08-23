@@ -12,6 +12,16 @@ function dialable(number: string | null): string | null {
   return /^\d+$/.test(trimmed) ? `+${trimmed}` : trimmed;
 }
 
+/**
+ * The clipboard API is missing outside a secure context — a shop served over
+ * plain http, which a self-hosted one can be. A Copy button that does nothing
+ * when pressed is worse than no button, so the affordance falls back to the
+ * code block itself, which selects whole on a click (`user-select: all`).
+ */
+function canCopy(): boolean {
+  return typeof navigator !== 'undefined' && !!navigator.clipboard;
+}
+
 function clock(ms: number): string {
   const seconds = Math.max(0, Math.ceil(ms / 1000));
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
@@ -92,14 +102,16 @@ export function WhatsappLogin({ number }: { number: string | null }) {
           </span>
           <div className={classes.slipRow}>
             <code className={classes.code}>{data.code}</code>
-            <button
-              type="button"
-              className={classes.copy}
-              onClick={() => clipboard.copy(data.code)}
-              aria-label={`Copy the code ${data.code}`}
-            >
-              {clipboard.copied ? 'Copied' : 'Copy'}
-            </button>
+            {canCopy() ? (
+              <button
+                type="button"
+                className={classes.copy}
+                onClick={() => clipboard.copy(data.code)}
+                aria-label={`Copy the code ${data.code}`}
+              >
+                {clipboard.copied ? 'Copied' : 'Copy'}
+              </button>
+            ) : null}
           </div>
         </div>
 
