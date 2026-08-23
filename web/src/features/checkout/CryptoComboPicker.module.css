@@ -1,0 +1,49 @@
+/* Coin/network combos, grouped. Same hairline block as the shipping and payment
+   lists — a group head is a tracked micro-caps line on a rule, not a panel. */
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.groupHead {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--sf-faint);
+}
+
+.groupRule {
+  flex: 1;
+  height: 1px;
+  background: var(--sf-line);
+}
+
+/* The combo list runs inside the method list that opened it, so it drops its own
+   box — one hairline rail (the step's `.subPicker`) is enough to say "these belong
+   to the method above". */
+.list {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.fee {
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--sf-success);
+}
