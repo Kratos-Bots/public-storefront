@@ -1,0 +1,225 @@
+/* Storefront shell — the roomier of the two. Header, rail stack, content, footer,
+   all built from hairlines and tracked micro-caps so the client's own colours and
+   typefaces carry the personality. */
+.shell {
+  --sf-rail-max: 1200px;
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background: var(--sf-bg);
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: var(--sf-bg-deep);
+  border-bottom: 1px solid var(--sf-line);
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.headerInner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  height: 56px;
+  max-width: var(--sf-rail-max);
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.home {
+  display: flex;
+  align-items: center;
+  flex: none;
+  margin-inline-start: -0.25rem;
+  padding: 0.25rem;
+  border-radius: var(--mantine-radius-default);
+  text-decoration: none;
+}
+
+.home:focus-visible,
+.action:focus-visible,
+.signIn:focus-visible,
+.footerLink:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+/* Centre search appears at the md breakpoint; below it the catalog page owns
+   its own search field so the header stays a two-target row on a phone. */
+.search {
+  display: none;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: auto;
+  flex: none;
+}
+
+.action {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  color: var(--sf-muted);
+  border-radius: var(--mantine-radius-default);
+  text-decoration: none;
+  transition: color 120ms ease, background-color 120ms ease;
+}
+
+.action:hover {
+  color: var(--sf-text);
+  background: var(--sf-surface);
+}
+
+.count {
+  position: absolute;
+  top: 2px;
+  right: 0;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--sf-primary);
+  color: var(--sf-bg);
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 16px;
+  text-align: center;
+}
+
+.signIn {
+  padding: 0.6rem 0.7rem;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--sf-muted);
+  border-radius: var(--mantine-radius-default);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.signIn:hover {
+  color: var(--sf-text);
+  background: var(--sf-surface);
+}
+
+.main {
+  flex: 1;
+  width: 100%;
+  max-width: var(--sf-rail-max);
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+/* Footer — a quiet band, not a marketing sitemap. */
+.footer {
+  margin-top: 3rem;
+  border-top: 1px solid var(--sf-line);
+  background: var(--sf-bg-deep);
+}
+
+.footerInner {
+  display: grid;
+  gap: 2rem;
+  max-width: var(--sf-rail-max);
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.footerBrand {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.tagline {
+  margin: 0;
+  max-width: 34ch;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--sf-muted);
+}
+
+.footerHead {
+  margin: 0 0 0.85rem;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--sf-faint);
+}
+
+.footerList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.footerLink {
+  font-size: 0.875rem;
+  color: var(--sf-muted);
+  text-decoration: none;
+  border-radius: 2px;
+}
+
+.footerLink:hover {
+  color: var(--sf-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.colophon {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  max-width: var(--sf-rail-max);
+  margin: 0 auto;
+  padding: 0.9rem 1rem calc(0.9rem + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--sf-line);
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  color: var(--sf-faint);
+}
+
+@media (min-width: 62em) {
+  .headerInner {
+    height: 68px;
+    gap: 2rem;
+    padding-inline: 1.5rem;
+  }
+  .search {
+    display: block;
+    flex: 1;
+    max-width: 26rem;
+    margin-inline: auto;
+  }
+  .main {
+    padding-inline: 1.5rem;
+  }
+  .footerInner {
+    grid-template-columns: 1.6fr 1fr 1fr;
+    padding: 2.5rem 1.5rem;
+  }
+  .colophon {
+    padding-inline: 1.5rem;
+  }
+}
