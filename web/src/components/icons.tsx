@@ -85,6 +85,15 @@ export function CloseIcon({ size = 16 }: GlyphProps) {
   );
 }
 
+/** Points down at rest; callers rotate it in CSS for "more this way". */
+export function ChevronIcon({ size = 16 }: GlyphProps) {
+  return (
+    <svg {...stroke(size)}>
+      <path d="m5 9 7 7 7-7" />
+    </svg>
+  );
+}
+
 export function WhatsAppIcon({ size = 16 }: GlyphProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden>

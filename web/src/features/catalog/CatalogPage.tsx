@@ -1,7 +1,7 @@
 import { useSettings } from '@/app/settings.ts';
 import { ProductGrid } from '@/features/catalog/ProductGrid.tsx';
 import { ProductList } from '@/features/catalog/ProductList.tsx';
-import { WholesalePlaceholder } from '@/features/catalog/WholesalePlaceholder.tsx';
+import { WholesaleCatalogPage } from '@/features/wholesale/WholesaleCatalogPage.tsx';
 
 /**
  * The one route (`/` and `/c/:categorySlug`) behind three catalogue bodies. The
@@ -10,7 +10,7 @@ import { WholesalePlaceholder } from '@/features/catalog/WholesalePlaceholder.ts
  */
 export function CatalogPage() {
   const { features } = useSettings();
-  if (features.wholesale) return <WholesalePlaceholder />;
+  if (features.wholesale) return <WholesaleCatalogPage />;
   if (features.layout === 'menu') return <ProductList />;
   return <ProductGrid />;
 }

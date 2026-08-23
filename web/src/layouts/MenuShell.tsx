@@ -29,6 +29,10 @@ export function MenuShell() {
   const canFilter = onCatalog && !features.wholesale;
   // A category in the path is the only filter this layout has — the dot says one is on.
   const filtered = pathname.startsWith('/c/');
+  // The wholesale sheet flies its own sticky tab at the foot as soon as there is
+  // something on the order, and both bands claim `bottom: 0` — the tab wins, the
+  // way it replaces the contact strip in the chat menu it is ported from.
+  const showContact = onCatalog && !(features.wholesale && cartCount > 0);
 
   return (
     <div className={classes.shell}>
@@ -86,7 +90,7 @@ export function MenuShell() {
         </Suspense>
       </main>
 
-      {onCatalog ? <ContactLinks variant="strip" /> : null}
+      {showContact ? <ContactLinks variant="strip" /> : null}
     </div>
   );
 }

@@ -6,6 +6,9 @@
   /* The bar's own height, published so the catalogue's sticky section rules can
      come to rest exactly under it. */
   --sf-bar-h: 52px;
+  /* The content column's own inset, published so a full-bleed band inside the
+     page (the wholesale tab) can escape it without hard-coding this shell's. */
+  --sf-main-pad: 0.75rem;
   display: flex;
   flex-direction: column;
   min-height: 100dvh;
@@ -28,7 +31,7 @@
   height: 52px;
   max-width: var(--sf-rail-max);
   margin: 0 auto;
-  padding: 0 0.75rem;
+  padding: 0 var(--sf-main-pad);
 }
 
 .home {
@@ -116,17 +119,17 @@
   width: 100%;
   max-width: var(--sf-rail-max);
   margin: 0 auto;
-  padding: 0 0.75rem;
+  padding: 0 var(--sf-main-pad);
 }
 
 @media (min-width: 62em) {
   .shell {
     --sf-bar-h: 60px;
+    --sf-main-pad: 1rem;
   }
   .barInner {
     height: 60px;
     gap: 1rem;
-    padding-inline: 1rem;
   }
   .action {
     width: 34px;
@@ -135,8 +138,5 @@
   .mark {
     top: 4px;
     right: 4px;
-  }
-  .main {
-    padding-inline: 1rem;
   }
 }

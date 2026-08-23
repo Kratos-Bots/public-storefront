@@ -1,0 +1,175 @@
+/* The trade sheet. Mobile first: the table is a block and every row a small grid.
+   From 62em it becomes a real table, and the column heads pin under the shell bar
+   — the sheet is long, and a price column with no name at the top of it is a
+   guessing game. */
+.page {
+  padding-bottom: 0.5rem;
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 1rem 0 0.5rem;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--sf-font-heading);
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+/* How much of the sheet you are looking at — a fraction only once it is one. */
+.tally {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  margin: 0 0 0 auto;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  color: var(--sf-faint);
+  white-space: nowrap;
+}
+
+.shown {
+  font-weight: 700;
+  color: var(--sf-text);
+}
+
+.tallyUnit {
+  color: var(--sf-faint);
+}
+
+.clear {
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--sf-muted);
+  text-decoration: none;
+  border-bottom: 1px solid var(--sf-line-strong);
+  white-space: nowrap;
+}
+
+.clear:hover,
+.clear:focus-visible {
+  color: var(--sf-text);
+  border-bottom-color: var(--sf-primary);
+}
+
+.welcome {
+  margin: 0 0 0.25rem;
+  max-width: 46ch;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--sf-muted);
+}
+
+/* The storefront header drops its search below 62em; the sheet carries one there
+   because search is the only navigation this variant has. */
+.search {
+  margin: 0.5rem 0 0.25rem;
+}
+
+.table {
+  display: block;
+  width: 100%;
+  margin: 0;
+  border-collapse: collapse;
+}
+
+/* Present for assistive tech at every width — below 62em the rows are a grid, so
+   the head has no column to sit over. */
+.thead {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.headRow th {
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--sf-faint);
+  text-align: left;
+}
+
+@media (min-width: 62em) {
+  /* A measure, not a rail: on the storefront shell's 1200px column the name and
+     its price would end up 600px apart, which is a long way to carry a line with
+     your eye. The sheet keeps its own width and centres in whatever it is given. */
+  .page {
+    max-width: 64rem;
+    margin-inline: auto;
+  }
+
+  .head {
+    padding-top: 1.5rem;
+  }
+
+  .search {
+    display: none;
+  }
+
+  .table {
+    display: table;
+    table-layout: auto;
+  }
+
+  .thead {
+    position: static;
+    display: table-header-group;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+  }
+
+  .headRow th {
+    position: sticky;
+    top: var(--sf-bar-h, 0px);
+    z-index: 2;
+    padding: 0.5rem 0.5rem 0.4rem;
+    background: var(--sf-bg-deep);
+    border-bottom: 1px solid var(--sf-line-strong);
+  }
+
+  /* Everything but the product name shrinks to its content — the name gets the
+     slack, which is the only column whose length the client controls. */
+  .hCode,
+  .hUnit,
+  .hBulk,
+  .hLine,
+  .hQty {
+    width: 1%;
+    white-space: nowrap;
+  }
+
+  .hCode {
+    padding-left: 0.625rem;
+  }
+
+  .hUnit,
+  .hLine,
+  .hQty {
+    text-align: right;
+  }
+
+  .hBulk {
+    text-align: center;
+  }
+}
