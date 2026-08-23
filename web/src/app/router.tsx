@@ -45,7 +45,9 @@ function ProductRoute() {
 
 /** The cart is a page on a phone and a drawer on a desktop — /cart hands off to the drawer there. */
 function CartRoute() {
-  const desktop = useMediaQuery(DESKTOP, false);
+  // Resolve the match synchronously: with the default deferred read the first render
+  // is always `false`, so a desktop visitor sees CartPage flash before the redirect.
+  const desktop = useMediaQuery(DESKTOP, false, { getInitialValueInEffect: false });
   const openPanel = useUiStore((s) => s.open);
   useEffect(() => {
     if (desktop) openPanel('cartOpen');

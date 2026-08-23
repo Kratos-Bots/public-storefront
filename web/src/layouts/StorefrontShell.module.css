@@ -60,13 +60,14 @@
   flex: none;
 }
 
+/* 44px on touch, tightened to 38px at the desktop breakpoint where the pointer is fine. */
 .action {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
   color: var(--sf-muted);
   border-radius: var(--mantine-radius-default);
   text-decoration: none;
@@ -97,6 +98,9 @@
 }
 
 .signIn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   padding: 0.6rem 0.7rem;
   font-family: var(--sf-font-mono);
   font-size: 10px;
@@ -205,6 +209,13 @@
     height: 68px;
     gap: 2rem;
     padding-inline: 1.5rem;
+  }
+  .action {
+    width: 38px;
+    height: 38px;
+  }
+  .signIn {
+    min-height: 38px;
   }
   .search {
     display: block;

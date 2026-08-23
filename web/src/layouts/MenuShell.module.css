@@ -55,13 +55,14 @@
   flex: none;
 }
 
+/* 44px on touch, tightened to the dense 34px at the desktop breakpoint. */
 .action {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
   color: var(--sf-muted);
   border-radius: var(--mantine-radius-default);
   text-decoration: none;
@@ -104,6 +105,10 @@
     height: 60px;
     gap: 1rem;
     padding-inline: 1rem;
+  }
+  .action {
+    width: 34px;
+    height: 34px;
   }
   .main {
     padding-inline: 1rem;

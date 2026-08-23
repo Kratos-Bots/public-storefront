@@ -54,8 +54,27 @@
 }
 
 .close {
+  position: relative;
   flex: none;
   color: var(--sf-muted);
+}
+
+/* Mantine owns the button's own box, so expand the hit area rather than fight its
+   sizing: a transparent 44px target centred on the glyph. */
+.close::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+}
+
+@media (min-width: 62em) {
+  .close::before {
+    display: none;
+  }
 }
 
 .close:hover {

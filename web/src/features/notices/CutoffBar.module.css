@@ -81,6 +81,17 @@
   background: var(--sf-warn);
 }
 
+/* On phones the sentence and the countdown land within a few pixels of each other and
+   the countdown sits flush against the padding, so give it its own line. The breakpoint
+   is 25em rather than 24em because media queries match the viewport width including the
+   scrollbar: a 390px viewport leaves a 375px content box but still reports 24.375em. */
+@media (max-width: 25em) {
+  .left {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .meter {
     transition: none;
