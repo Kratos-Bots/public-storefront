@@ -1,4 +1,5 @@
 import { proxyApi } from './proxy';
+import { proxyMedia } from './media';
 
 interface EnvBindings {
   ASSETS: Fetcher;
@@ -21,6 +22,7 @@ export default {
   async fetch(request, env, ctx): Promise<Response> {
     const { pathname } = new URL(request.url);
     if (pathname === '/api' || pathname.startsWith('/api/')) return proxyApi(request, env, ctx);
+    if (pathname.startsWith('/media/')) return proxyMedia(request, env, ctx);
     return env.ASSETS.fetch(request);
   },
 } satisfies ExportedHandler<Env>;
