@@ -38,6 +38,19 @@ describe('buildContactSchema', () => {
     if (result.success) expect(result.data.email).toBeUndefined();
   });
 
+  it('strips a hidden phone regardless of what was typed', () => {
+    const schema = buildContactSchema(contactModes({ phoneMode: 'hidden' }), { guest: false });
+    const result = schema.safeParse({
+      firstName: 'Ada',
+      surname: 'Lovelace',
+      email: '',
+      phone: '7700900000',
+      phonePrefix: 'GB',
+    });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.phone).toBeUndefined();
+  });
+
   it('enforces a required phone', () => {
     const schema = buildContactSchema(contactModes({ phoneMode: 'required' }), { guest: false });
     const result = schema.safeParse({
