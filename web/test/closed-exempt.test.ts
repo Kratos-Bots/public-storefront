@@ -13,6 +13,8 @@ describe('isClosedExemptPath', () => {
     ['/account', false],
     ['/orders', false],
     ['/order', false],
+    ['/payment/success/', true],
+    ['/order-placedX', false],
   ])('%s -> exempt=%s', (pathname, exempt) => {
     expect(isClosedExemptPath(pathname)).toBe(exempt);
   });

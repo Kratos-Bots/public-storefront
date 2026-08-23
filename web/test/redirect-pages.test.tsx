@@ -103,6 +103,17 @@ describe('PaymentSuccessPage', () => {
     expect(screen.getByText(/being confirmed/i)).toBeInTheDocument();
     expect(screen.getByText('REF2')).toBeInTheDocument();
   });
+
+  it('prefills the chat link with a neutral check-in, not a request to pay', () => {
+    state.settings = settings({ whatsapp: 'https://wa.me/447700900000', telegram: null });
+    mountSuccess('/payment/success?order=REF2');
+
+    const wa = screen.getByRole('link', { name: /whatsapp/i });
+    const href = wa.getAttribute('href') ?? '';
+    expect(href).toContain('REF2');
+    expect(href).toContain('checking+in');
+    expect(href).not.toContain('like+to+pay');
+  });
 });
 
 describe('PaymentCancelPage', () => {
@@ -172,11 +183,12 @@ describe('OrderPlacedPage', () => {
     expect(tg.getAttribute('href')).toContain('REF6');
   });
 
-  it('falls back to plain contact copy when no chat links are configured', () => {
+  it('falls back to plain contact copy when no chat links are configured, and does not name WhatsApp/Telegram', () => {
     mountOrderPlaced('/order-placed?order=REF7');
     expect(screen.queryByRole('link', { name: /whatsapp/i })).toBeNull();
     expect(screen.queryByRole('link', { name: /telegram/i })).toBeNull();
     expect(screen.getByText(/quote your order reference/i)).toBeInTheDocument();
+    expect(screen.queryByText(/message us on whatsapp or telegram/i)).toBeNull();
   });
 
   it('shows "order reference missing" when ?order is absent', () => {

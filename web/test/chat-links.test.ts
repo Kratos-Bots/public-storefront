@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { withPrefilledText, orderChatMessage } from '@/lib/chat-links.ts';
+import { withPrefilledText, orderChatMessage, orderInquiryMessage } from '@/lib/chat-links.ts';
 
 describe('withPrefilledText', () => {
   it('appends the message as ?text= to a wa.me link', () => {
@@ -17,5 +17,11 @@ describe('withPrefilledText', () => {
 describe('orderChatMessage', () => {
   it('embeds the order reference in the prefilled message', () => {
     expect(orderChatMessage('26H8IN')).toBe("I've just placed an order, here is my Order ID: 26H8IN. I'd like to pay.");
+  });
+});
+
+describe('orderInquiryMessage', () => {
+  it('embeds the order reference in a neutral check-in, not a request to pay', () => {
+    expect(orderInquiryMessage('26H8IN')).toBe('Hi — checking in about my order 26H8IN.');
   });
 });
