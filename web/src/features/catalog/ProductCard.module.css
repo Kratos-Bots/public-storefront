@@ -1,0 +1,120 @@
+/* The tile: photo well on top, then a fixed stack — name, flags, price line —
+   so every card in a row lands its price on the same baseline however long the
+   name runs. No card fill, no shadow; the well is the only mass. */
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.media {
+  width: 100%;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 0.4rem;
+}
+
+.name {
+  margin: 0;
+  font-family: var(--sf-font-heading);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--sf-text);
+}
+
+.link {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Stretched hit area: the whole tile opens the product, the quick-add rides above it. */
+.link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--mantine-radius-default);
+}
+
+.link:hover {
+  color: var(--sf-primary);
+}
+
+.link:focus-visible {
+  outline: none;
+}
+
+.link:focus-visible::after {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 4px;
+}
+
+.flags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+}
+
+.preorder {
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--sf-primary);
+}
+
+/* Pinned to the bottom of the tile so the price rail reads across the row. */
+.foot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.35rem;
+}
+
+.prices {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  margin: 0;
+  min-width: 0;
+}
+
+.price {
+  font-family: var(--sf-font-mono);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  color: var(--sf-text);
+}
+
+/* The bulk rung, stated as the shopper would say it: "5+ £26.00". */
+.tier {
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  font-variant-numeric: tabular-nums;
+  color: var(--sf-faint);
+}
+
+.add {
+  position: relative;
+  z-index: 1;
+  flex: none;
+}

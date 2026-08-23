@@ -1,6 +1,16 @@
-// Placeholder — replaced by the feature task that owns this route.
-import { EmptyState } from '@/components/EmptyState.tsx';
+import { useSettings } from '@/app/settings.ts';
+import { ProductGrid } from '@/features/catalog/ProductGrid.tsx';
+import { MenuCatalogPlaceholder } from '@/features/catalog/MenuCatalogPlaceholder.tsx';
+import { WholesalePlaceholder } from '@/features/catalog/WholesalePlaceholder.tsx';
 
+/**
+ * The one route (`/` and `/c/:categorySlug`) behind three catalogue bodies. The
+ * client's flags decide which: wholesale replaces the catalogue under either
+ * shell, otherwise the layout flag picks the grid or the dense list.
+ */
 export function CatalogPage() {
-  return <EmptyState title="Catalog" />;
+  const { features } = useSettings();
+  if (features.wholesale) return <WholesalePlaceholder />;
+  if (features.layout === 'menu') return <MenuCatalogPlaceholder />;
+  return <ProductGrid />;
 }

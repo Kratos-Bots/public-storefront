@@ -1,0 +1,195 @@
+/* The specimen sheet: photo on one side, the facts stacked on the other, each
+   block separated by a hairline rather than a card. On a phone it is one column
+   with the photo first — the shopper came from a picture in a grid. */
+.page {
+  padding: 0.75rem 0 2rem;
+}
+
+.crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  padding: 0.5rem 0 1rem;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  min-width: 0;
+}
+
+/* One unit per step so a long trail wraps between categories, not inside one. */
+.step {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.crumb {
+  color: var(--sf-faint);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+a.crumb:hover {
+  color: var(--sf-text);
+}
+
+.crumb:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 3px;
+}
+
+.slash {
+  color: var(--sf-line-strong);
+}
+
+.layout {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.media {
+  min-width: 0;
+}
+
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+.head {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.name {
+  margin: 0;
+  font-family: var(--sf-font-heading);
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--sf-text);
+  text-wrap: balance;
+}
+
+.sku {
+  margin: 0;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--sf-faint);
+}
+
+/* Price and availability share one line above the action — the three facts a
+   shopper checks before tapping. */
+.priceRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--sf-line);
+}
+
+.price {
+  margin: 0;
+  font-family: var(--sf-font-mono);
+  font-size: 1.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  color: var(--sf-text);
+}
+
+.flags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 1rem;
+}
+
+.preorder {
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--sf-primary);
+}
+
+.description {
+  margin: 0;
+  max-width: 62ch;
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--sf-muted);
+  white-space: pre-line;
+}
+
+.section,
+.ask {
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--sf-line);
+}
+
+.sectionHead {
+  margin: 0 0 0.85rem;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--sf-faint);
+}
+
+.askText {
+  margin: 0 0 0.85rem;
+  max-width: 46ch;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--sf-muted);
+}
+
+.notFoundActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+@media (min-width: 48em) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 2.5rem;
+    align-items: start;
+  }
+  .name {
+    font-size: 1.75rem;
+  }
+  /* The photo holds its place while the facts scroll past it. */
+  .media {
+    position: sticky;
+    top: 5.5rem;
+  }
+}
+
+@media (min-width: 62em) {
+  .page {
+    padding-top: 1.25rem;
+  }
+  .layout {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    gap: 3.5rem;
+  }
+}
