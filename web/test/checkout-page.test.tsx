@@ -105,6 +105,32 @@ function settings(guestCheckout: boolean): StorefrontSettings {
   } as unknown as StorefrontSettings;
 }
 
+/** A complete checkout form as `form-state.ts` persists it, for restore cases. */
+function persistedForm(overrides: Record<string, unknown> = {}) {
+  return JSON.stringify({
+    firstName: 'Ada',
+    surname: 'Lovelace',
+    email: 'ada@example.com',
+    phone: '',
+    phonePrefix: 'GB',
+    phonePrefixTouched: false,
+    addressLine1: '1 Main St',
+    addressLine2: '',
+    city: 'London',
+    county: '',
+    zip: 'SW1A 1AA',
+    country: 'GB',
+    shippingOptionId: null,
+    couponCode: '',
+    useStoreCredit: false,
+    paymentMethod: '',
+    coin: '',
+    network: '',
+    notes: '',
+    ...overrides,
+  });
+}
+
 function line(productId = 12, quantity = 2): LocalLine {
   return {
     productId,
@@ -301,6 +327,63 @@ describe('CheckoutPage — signed in', () => {
     expect(screen.getByLabelText('First name')).toBeInTheDocument();
   });
 
+  // Regression: the form outlives any one quote (it is restored from
+  // localStorage, and it survives a country change), so it can name a shipping
+  // option the current quote no longer offers. The schema only says "a positive
+  // integer"; membership is the quote's business.
+  it('blocks a restored shipping option the current quote no longer offers', async () => {
+    localStorage.setItem('sf-checkout-v1', persistedForm({ shippingOptionId: 99 }));
+    mount();
+
+    fireEvent.click(continueButton()); // contact -> address
+    fireEvent.click(continueButton()); // address -> shipping
+    await settle();
+
+    fireEvent.click(continueButton());
+
+    expect(screen.getByText(/delivery option is no longer available/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Delivery and discounts' })).toBeInTheDocument();
+    expect(JSON.parse(localStorage.getItem('sf-checkout-v1')!).shippingOptionId).toBeNull();
+    expect(placeOrderMock).not.toHaveBeenCalled();
+  });
+
+  // The same check has to run again at submit time: the quote can change while
+  // the shopper is still reading the review.
+  it('blocks the submit and returns to Payment when the method drops out of the quote', async () => {
+    const credit = { balance: 5, applied: 0, remaining: 5 };
+    quoteMock.mockResolvedValue(makeQuote({ storeCredit: credit }));
+    localStorage.setItem('sf-checkout-v1', persistedForm());
+    mount();
+
+    fireEvent.click(continueButton()); // contact -> address
+    fireEvent.click(continueButton()); // address -> shipping
+    await settle();
+    fireEvent.click(screen.getByRole('radio', { name: /Royal Mail Tracked 24/ }));
+    await settle();
+    fireEvent.click(continueButton()); // shipping -> payment
+    await settle();
+    fireEvent.click(screen.getByRole('radio', { name: /Stripe/ }));
+
+    // Toggling store credit queues a re-quote; step off to Review before the
+    // debounce fires, so the new quote lands with the shopper already there.
+    const paypal = { ...makeQuote().paymentMethods[0]!, method: 'paypal', displayName: 'PayPal' };
+    quoteMock.mockResolvedValue(makeQuote({ storeCredit: credit, paymentMethods: [paypal] }));
+    fireEvent.click(screen.getByLabelText('Use store credit'));
+    fireEvent.click(continueButton()); // payment -> review, still on the old quote
+    await settle();
+    await settle(0); // the re-quote lands with the shopper already on Review
+
+    // The button stops advertising a figure the moment the selection goes stale.
+    expect(placeButton()).toHaveTextContent(/^Place order$/);
+
+    fireEvent.click(placeButton());
+    await settle();
+
+    expect(placeOrderMock).not.toHaveBeenCalled();
+    expect(screen.getByRole('heading', { name: 'How you’ll pay' })).toBeInTheDocument();
+    expect(screen.getByText(/payment method is no longer available/i)).toBeInTheDocument();
+  });
+
   it('re-enables the submit button three seconds after a 409', async () => {
     placeOrderMock.mockRejectedValueOnce(new ApiError(409, 'Checkout already in progress'));
     mount();
@@ -323,6 +406,22 @@ describe('CheckoutPage — guest', () => {
   beforeEach(() => {
     state.settings = settings(true);
     useCartStore.setState({ lines: [line()], mode: 'local' });
+  });
+
+  // Guest checkout is two switches: the feature flag and a Turnstile site key.
+  // With the flag on and no key the widget can never mount, so the form would
+  // sit on a token that never comes — and the backend 503s those routes anyway.
+  it('offers sign-in instead of the form when guest checkout has no site key', () => {
+    state.settings = { ...settings(true), turnstile: null };
+    mount();
+
+    expect(screen.getByText(/guest checkout isn't available right now/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /sign in/i })).toHaveAttribute(
+      'href',
+      '/login?returnTo=%2Fcheckout',
+    );
+    expect(screen.queryByLabelText('First name')).toBeNull();
+    expect(screen.queryByTestId('turnstile')).toBeNull();
   });
 
   it('quotes and places the order with a fresh Turnstile token each time', async () => {

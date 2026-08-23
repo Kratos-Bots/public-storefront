@@ -145,6 +145,14 @@
   overflow: hidden;
 }
 
+/* The divider sits between the block's direct children, not on the row itself.
+   The payment list wraps each method in an element (the crypto picker opens
+   inside it), so every row there is a `:first-child` of its own wrapper and a
+   rule hung off `.choice:first-child` erased every divider in the list. */
+.choices > * + * {
+  border-top: 1px solid var(--sf-line);
+}
+
 .choice {
   position: relative;
   display: flex;
@@ -152,13 +160,8 @@
   gap: 0.75rem;
   min-height: 56px;
   padding: 0.7rem 0.85rem;
-  border-top: 1px solid var(--sf-line);
   cursor: pointer;
   transition: background-color 120ms ease;
-}
-
-.choice:first-child {
-  border-top: 0;
 }
 
 .choice:hover {

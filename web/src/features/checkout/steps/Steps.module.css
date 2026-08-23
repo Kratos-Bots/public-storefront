@@ -206,6 +206,7 @@
 }
 
 .slipEdit {
+  position: relative;
   margin-left: auto;
   border: 0;
   background: none;
@@ -240,4 +241,18 @@
 .slipBody span {
   display: block;
   color: var(--sf-muted);
+}
+
+/* The mark stays small; the target is a thumb's width. An overlay rather than
+   negative margins, so the slip head keeps its baseline. */
+@media (max-width: 61.99em) {
+  .slipEdit::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 0;
+    left: 0;
+    height: 44px;
+    transform: translateY(-50%);
+  }
 }

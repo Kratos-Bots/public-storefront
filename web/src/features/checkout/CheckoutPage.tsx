@@ -131,6 +131,14 @@ export function CheckoutPage() {
   const cardRef = useRef<HTMLDivElement | null>(null);
   const turnstileRef = useRef<GuestTurnstileHandle | null>(null);
   const lockTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /**
+   * The submit latch. `submitting` state drives the button's label and disabled
+   * mark, but it cannot be the guard: two taps inside one tick both read the
+   * pre-update value and both place an order. The backend's per-customer lock is
+   * explicitly best-effort (STOREFRONT.md §3.5), so the client has to hold this
+   * one itself.
+   */
+  const submitLatch = useRef(false);
 
   useEffect(() => {
     persistForm(form);
@@ -196,6 +204,7 @@ export function CheckoutPage() {
 
   useEffect(() => {
     if (!guest || !form.country) return;
+    if (!settings.turnstile) return;
     if (!needsToken) return;
     // The order is away and the cart has been emptied; the empty cart is a key
     // change this must not chase while the browser is on its way somewhere else.
@@ -250,7 +259,7 @@ export function CheckoutPage() {
       // is the way a shopper hits it.
       if (!settled && quotedKey.current === debouncedGuestKey) quotedKey.current = null;
     };
-  }, [guest, form.country, needsToken, placed, debouncedGuestKey, retryTick]);
+  }, [guest, settings.turnstile, form.country, needsToken, placed, debouncedGuestKey, retryTick]);
 
   const contactSchema = useMemo(
     () => buildContactSchema(contactModes, { guest }),
@@ -264,7 +273,26 @@ export function CheckoutPage() {
   );
   const combo: CryptoOption | null =
     method?.cryptoOptions?.find((o) => o.coin === form.coin && o.network === form.network) ?? null;
-  const chargeTotal = combo?.chargeTotal ?? method?.chargeTotal ?? shownQuote?.amountDue ?? null;
+  const shippingOption =
+    shownQuote?.shippingOptions.find((o) => o.id === form.shippingOptionId) ?? null;
+
+  /**
+   * A selection the current quote no longer offers. The form outlives any one
+   * quote — it is restored from localStorage and it survives a country change —
+   * so `shippingOptionId`, `paymentMethod` and `coin`/`network` can all name
+   * something that has since stopped being on the menu. Naming that here keeps
+   * the button honest (a stale method would otherwise fall through to
+   * `amountDue` and advertise a figure nobody is going to be charged) and
+   * `validate` sends the shopper back to re-pick.
+   */
+  const shippingStale = Boolean(shownQuote && form.shippingOptionId !== null && !shippingOption);
+  const methodStale = Boolean(shownQuote && form.paymentMethod && !method);
+  const comboStale = Boolean(method?.cryptoOptions && form.coin && !combo);
+  const selectionsStale = shippingStale || methodStale || comboStale;
+
+  const chargeTotal = selectionsStale
+    ? null
+    : (combo?.chargeTotal ?? method?.chargeTotal ?? shownQuote?.amountDue ?? null);
 
   const errorTarget = classifyQuoteError(quoteError, form);
   const quoteMessage = quoteError
@@ -316,13 +344,51 @@ export function CheckoutPage() {
       const parsed = shippingSchema.safeParse({
         shippingOptionId: form.shippingOptionId ?? undefined,
       });
-      if (parsed.success) return true;
-      setErrors(firstIssues(parsed.error.issues));
-      return false;
+      if (!parsed.success) {
+        setErrors(firstIssues(parsed.error.issues));
+        return false;
+      }
+      if (!shownQuote) {
+        setErrors({ shippingOptionId: 'Still pricing your order — one moment' });
+        return false;
+      }
+      // The schema can only say "a positive integer". Whether that integer is
+      // still on the menu is the quote's business, and the quote changes under
+      // the form (a new country, a restored session) without touching it.
+      if (shippingStale) {
+        setForm((f) => ({ ...f, shippingOptionId: null }));
+        setErrors({
+          shippingOptionId: 'That delivery option is no longer available — choose another',
+        });
+        return false;
+      }
+      return true;
     }
     if (index === 3) {
-      if (shownQuote && shownQuote.amountDue > 0 && !form.paymentMethod) {
+      if (!shownQuote) {
+        setErrors({ method: 'Still pricing your order — one moment' });
+        return false;
+      }
+      // Store credit covers the order: no method is required, and a method left
+      // over from before it did has to go rather than ride along on the body.
+      if (shownQuote.amountDue === 0) {
+        if (form.paymentMethod || form.coin || form.network) {
+          setForm((f) => ({ ...f, paymentMethod: '', coin: '', network: '' }));
+        }
+        return true;
+      }
+      if (!form.paymentMethod) {
         setErrors({ method: 'Choose how you’d like to pay' });
+        return false;
+      }
+      if (methodStale) {
+        setForm((f) => ({ ...f, paymentMethod: '', coin: '', network: '' }));
+        setErrors({ method: 'That payment method is no longer available — choose another' });
+        return false;
+      }
+      if (comboStale) {
+        setForm((f) => ({ ...f, coin: '', network: '' }));
+        setErrors({ coin: 'That coin and network are no longer available — choose another' });
         return false;
       }
       const parsed = paymentSchema.safeParse({
@@ -374,17 +440,20 @@ export function CheckoutPage() {
       },
       email,
       phone,
-      shippingOptionId: form.shippingOptionId ?? 0,
+      // Taken from the quote's own objects, not from the raw form: `validate`
+      // blocks a stale selection before we get here, and reading them back off
+      // the quote means the body can never carry one even if it ever didn't.
+      shippingOptionId: shippingOption?.id ?? form.shippingOptionId ?? 0,
       couponCode: form.couponCode.trim().toUpperCase() || undefined,
-      paymentMethod: form.paymentMethod || undefined,
-      coin: form.coin || undefined,
-      network: form.network || undefined,
+      paymentMethod: method?.method || undefined,
+      coin: combo?.coin || undefined,
+      network: combo?.network || undefined,
       notes: form.notes.trim() || undefined,
     };
   }
 
   async function submit() {
-    if (submitting || locked) return;
+    if (submitLatch.current || locked) return;
     // Re-check every step, and go back to the first one that no longer holds —
     // a shipping option can stop being offered, or a method can drop out of the
     // quote, while the shopper is still reading the review. `validate` has set
@@ -397,6 +466,7 @@ export function CheckoutPage() {
       return;
     }
 
+    submitLatch.current = true;
     setSubmitting(true);
     setSubmitError(null);
     try {
@@ -451,8 +521,29 @@ export function CheckoutPage() {
         setSubmitError(errorMessage(err, "We couldn't place your order"));
       }
     } finally {
+      submitLatch.current = false;
       setSubmitting(false);
     }
+  }
+
+  // Guest checkout is two switches, not one: the feature flag AND a configured
+  // Turnstile site key. With the flag on and no key the widget can never mount,
+  // so every quote would hang on a token that will never come — and the backend
+  // answers those routes `503 Guest checkout is not configured` anyway
+  // (STOREFRONT.md §3.5a). Say so and offer the way through instead.
+  if (guest && !settings.turnstile) {
+    return (
+      <EmptyState
+        eyebrow="Checkout"
+        title="Guest checkout isn't available right now"
+        description="Sign in and we'll pick your order up from here."
+        action={
+          <Button component={Link} to="/login?returnTo=%2Fcheckout" variant="default" size="sm">
+            Sign in
+          </Button>
+        }
+      />
+    );
   }
 
   if (lines.length === 0 && !placed) {
@@ -623,6 +714,7 @@ export function CheckoutPage() {
 
         <aside className={classes.aside}>
           <QuoteSummary
+            defaultOpen={onReview}
             quote={shownQuote}
             isFetching={isFetching || verifying}
             stale={Boolean(quoteError)}
