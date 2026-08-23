@@ -123,7 +123,19 @@ export function useQuote(form: CheckoutForm, { guest, turnstileToken }: UseQuote
   });
 
   async function refetchWithToken(token: string): Promise<void> {
-    await queryClient.fetchQuery({ queryKey, queryFn: () => runQuote(token), staleTime: 0 });
+    // `retry: false` is not optional here. `fetchQuery` takes the client's default
+    // retry (1) unless told otherwise, and a retry re-runs whatever `queryFn` the
+    // query currently holds — which, once the mounted observer has re-applied its
+    // own options, is the observer's, carrying no token at all. The retry then goes
+    // out with `turnstileToken: ''` and the backend answers `body.turnstileToken:
+    // Too small`. Observed live: every failed guest quote produced a second,
+    // token-less request.
+    await queryClient.fetchQuery({
+      queryKey,
+      queryFn: () => runQuote(token),
+      staleTime: 0,
+      retry: false,
+    });
   }
 
   return {

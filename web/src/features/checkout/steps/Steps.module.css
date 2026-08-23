@@ -1,0 +1,243 @@
+/* Shared step chrome. Each step is one stack of fields under one head — no
+   inner panels, no cards inside cards: the step card itself is the only box. */
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.blurb {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--sf-muted);
+}
+
+.aside {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--sf-faint);
+}
+
+.link {
+  color: var(--sf-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--sf-line-strong);
+}
+
+.link:hover {
+  text-decoration-color: var(--sf-primary);
+}
+
+.link:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* The app's one "something is off" silhouette: a rule in the tone, tracked
+   micro-caps beside it. */
+.note {
+  margin: 0;
+  padding: 0.45rem 0.65rem;
+  border-left: 2px solid var(--sf-line-strong);
+  border-radius: 0 var(--mantine-radius-default) var(--mantine-radius-default) 0;
+  background: var(--sf-bg-deep);
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1.6;
+  color: var(--sf-muted);
+}
+
+.note[data-tone='warn'] {
+  border-left-color: var(--sf-warn);
+  color: var(--sf-warn);
+}
+
+.note[data-tone='danger'] {
+  border-left-color: var(--sf-danger);
+  color: var(--sf-danger);
+}
+
+.note[data-tone='success'] {
+  border-left-color: var(--sf-success);
+  color: var(--sf-success);
+}
+
+/* A sub-head inside a step — "Discount", "Payment method". */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--sf-faint);
+}
+
+.sectionRule {
+  flex: 1;
+  height: 1px;
+  background: var(--sf-line);
+}
+
+/* Store-credit switch: a wide target, the balance stated in figures. */
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 52px;
+  padding: 0.5rem 0.85rem;
+  border: 1px solid var(--sf-line-strong);
+  border-radius: var(--mantine-radius-default);
+  background: var(--sf-bg-deep);
+  cursor: pointer;
+}
+
+.toggle input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.toggleBox {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border: 1px solid var(--sf-line-strong);
+}
+
+.toggleBox::after {
+  content: '';
+  width: 7px;
+  height: 7px;
+  background: var(--sf-primary);
+  opacity: 0;
+}
+
+.toggle input:checked ~ .toggleBox {
+  border-color: var(--sf-primary);
+}
+
+.toggle input:checked ~ .toggleBox::after {
+  opacity: 1;
+}
+
+.toggle input:focus-visible ~ .toggleBox {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+.toggleLabel {
+  font-family: var(--sf-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--sf-text);
+}
+
+.toggleFigure {
+  margin-left: auto;
+  font-family: var(--sf-font-mono);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--sf-success);
+}
+
+/* Crypto picker, revealed under the method it belongs to. */
+.subPicker {
+  margin-top: 0.6rem;
+  padding-left: 0.85rem;
+  border-left: 1px solid var(--sf-line-strong);
+}
+
+/* Review: what the shopper is confirming, as a set of labelled slips. */
+.recap {
+  display: grid;
+  gap: 0.75rem;
+}
+
+@media (min-width: 34em) {
+  .recap {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.slip {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--sf-line);
+}
+
+.slipHead {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--sf-faint);
+}
+
+.slipEdit {
+  margin-left: auto;
+  border: 0;
+  background: none;
+  padding: 0.25rem;
+  color: var(--sf-muted);
+  font-family: var(--sf-font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.slipEdit:hover {
+  color: var(--sf-text);
+}
+
+.slipEdit:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.slipBody {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--sf-text);
+  overflow-wrap: anywhere;
+}
+
+.slipBody span {
+  display: block;
+  color: var(--sf-muted);
+}
