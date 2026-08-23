@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ecommerce-storefront",
+  "main": "worker/src/index.ts",
+  "compatibility_date": "2026-08-01",
+  "assets": {
+    "directory": "./web/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/media/*"]
+  },
+  // Per-client values are set at deploy time (Spec 3) or via .dev.vars locally.
+  "vars": { "BACKEND_URL": "http://localhost:3000/" },
+  "workers_dev": false,
+  "preview_urls": false,
+  "observability": { "enabled": true }
+}

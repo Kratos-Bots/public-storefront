@@ -1,0 +1,8 @@
+node_modules/
+web/dist/
+.dev.vars
+.wrangler/
+*.tsbuildinfo
+e2e/screenshots/
+test-results/
+.superpowers/
