@@ -39,7 +39,7 @@ function walk(nodes: CategoryNode[], trail: string[] = []): { node: CategoryNode
  * A product whose category the catalogue no longer carries keeps its place at the
  * end rather than vanishing.
  */
-export function groupProducts(visible: Product[], tree: CategoryNode[]): ProductGroup[] {
+function groupProducts(visible: Product[], tree: CategoryNode[]): ProductGroup[] {
   const buckets = new Map<number, Product[]>();
   const loose: Product[] = [];
   for (const product of visible) {

@@ -186,6 +186,18 @@ describe('ProductList', () => {
     expect(screen.queryByText('BPC-157 5mg')).toBeNull();
   });
 
+  it('keeps a product with no category, in its own group at the end', () => {
+    mount('/', {}, {
+      ...CATALOG,
+      products: [...CATALOG.products, product({ id: 11, sku: 'MISC-1', displayName: 'Bacteriostatic water', categoryId: null, categoryName: null })],
+    });
+
+    const groups = screen.getAllByRole('group');
+    expect(groups).toHaveLength(3);
+    expect(groups[2]).toHaveTextContent('Uncategorised');
+    expect(within(groups[2]!).getByText('Bacteriostatic water')).toBeInTheDocument();
+  });
+
   it('renders no add controls when ordering is switched off', () => {
     mount('/', { ordering: false });
     expect(screen.queryByRole('button', { name: /add bpc-157 5mg/i })).toBeNull();
