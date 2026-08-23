@@ -125,6 +125,13 @@
   background: var(--sf-surface);
 }
 
+/* The "All products" reset sits above the tree, parted from it by a hairline so it
+   reads as a way out of the index rather than its first branch. */
+.reset {
+  border-bottom: 1px solid var(--sf-line);
+  margin-bottom: 0.25rem;
+}
+
 .row[aria-current='page'] {
   border-left-color: var(--sf-primary);
   color: var(--sf-text);

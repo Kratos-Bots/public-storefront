@@ -3,10 +3,11 @@ import { Link, Outlet, useLocation } from 'react-router';
 import { useSettings } from '@/app/settings.ts';
 import { useSessionStore, selectIsLoggedIn } from '@/stores/session.ts';
 import { useCartStore, selectCount } from '@/stores/cart.ts';
+import { useUiStore } from '@/stores/ui.ts';
 import { Brand } from '@/components/Brand.tsx';
 import { ContactLinks } from '@/components/ContactLinks.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
-import { BagIcon, UserIcon } from '@/components/icons.tsx';
+import { BagIcon, FilterIcon, UserIcon } from '@/components/icons.tsx';
 import { NoticeBanners } from '@/features/notices/NoticeBanners.tsx';
 import { CutoffBar } from '@/features/notices/CutoffBar.tsx';
 import { SearchField } from '@/layouts/SearchField.tsx';
@@ -18,10 +19,13 @@ export function MenuShell() {
   const { brand, features } = useSettings();
   const loggedIn = useSessionStore(selectIsLoggedIn);
   const cartCount = useCartStore(selectCount);
+  const openPanel = useUiStore((s) => s.open);
   const { pathname } = useLocation();
   const [search, setSearch] = useState('');
   const outletContext = useMemo<ShellSearchContext>(() => ({ search, setSearch }), [search]);
   const onCatalog = pathname === '/' || pathname.startsWith('/c/');
+  // A category in the path is the only filter this layout has — the dot says one is on.
+  const filtered = pathname.startsWith('/c/');
 
   return (
     <div className={classes.shell}>
@@ -34,6 +38,18 @@ export function MenuShell() {
           <SearchField className={classes.search} value={search} onChange={setSearch} placeholder="Search" />
 
           <div className={classes.actions}>
+            {onCatalog ? (
+              <button
+                type="button"
+                className={classes.action}
+                onClick={() => openPanel('filterOpen')}
+                aria-label={filtered ? 'Categories — one category selected' : 'Categories'}
+              >
+                <FilterIcon size={17} />
+                {filtered ? <span className={classes.mark} aria-hidden /> : null}
+              </button>
+            ) : null}
+
             {features.accounts ? (
               <Link
                 to={loggedIn ? '/account' : '/login'}

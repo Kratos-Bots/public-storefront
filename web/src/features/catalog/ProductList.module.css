@@ -1,0 +1,139 @@
+/* The manifest. Section rules stick under the shell bar as you scroll, so the
+   category you are inside is always named — the header is the only thing between
+   the bar and the rows, and it never lets go of the count. */
+.page {
+  padding-bottom: 2.5rem;
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 0 0.75rem;
+}
+
+.title {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--sf-font-heading);
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--sf-text);
+}
+
+/* Shown / total, in the ledger's own figures — how much of the list you are looking at. */
+.tally {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  flex: none;
+  margin: 0;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  color: var(--sf-faint);
+}
+
+.shown {
+  color: var(--sf-text);
+}
+
+.tallyUnit {
+  color: var(--sf-faint);
+}
+
+.welcome {
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--sf-muted);
+}
+
+.group {
+  margin-top: 0.5rem;
+}
+
+.groupHead {
+  position: sticky;
+  top: calc(var(--sf-bar-h, 52px) + env(safe-area-inset-top, 0px));
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0 -0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--sf-surface);
+  border-top: 1px solid var(--sf-line-strong);
+  border-bottom: 1px solid var(--sf-line-strong);
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--sf-text);
+}
+
+.groupName {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Reserved on every header of a tree that carries any emoji at all, so the names
+   keep one left edge whatever the client set. */
+.glyph {
+  flex: none;
+  width: 1.15rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  letter-spacing: 0;
+  line-height: 1;
+}
+
+/* The ancestors, kept but faded — the hierarchy is information, not a headline. */
+.trail {
+  color: var(--sf-faint);
+  font-weight: 500;
+}
+
+.groupCount {
+  flex: none;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+  color: var(--sf-faint);
+}
+
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+@media (min-width: 62em) {
+  .head {
+    padding-top: 1.75rem;
+  }
+  .title {
+    font-size: 1.625rem;
+  }
+  .groupHead {
+    top: calc(var(--sf-bar-h, 60px) + env(safe-area-inset-top, 0px));
+    margin-inline: -1rem;
+    padding-inline: 1rem;
+  }
+}

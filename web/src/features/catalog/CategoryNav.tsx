@@ -71,6 +71,42 @@ export function CategoryTree({ nodes, activeId, onNavigate, depth = 0, glyphs }:
   );
 }
 
+export interface CategoryIndexProps {
+  tree: CategoryNode[];
+  /** Every product in the catalogue — the count beside "All products". */
+  total: number;
+  activeId: number | null;
+  /** Called after a row is chosen, so a sheet can close itself. */
+  onNavigate?: () => void;
+}
+
+/**
+ * The index itself — the "All products" reset above the tree. Rendered in three
+ * places (the desktop rail, and both layouts' filter sheets), so the reset row and
+ * the tree can never drift apart. Callers supply the surrounding `<nav>`.
+ */
+export function CategoryIndex({ tree, total, activeId, onNavigate }: CategoryIndexProps) {
+  const glyphs = treeHasEmoji(tree);
+
+  return (
+    <>
+      <Link
+        to="/"
+        className={`${classes.row} ${classes.reset}`}
+        aria-current={activeId === null ? 'page' : undefined}
+        onClick={onNavigate}
+      >
+        <span className={classes.rowLabel}>
+          {glyphs ? <span className={classes.glyph} aria-hidden /> : null}
+          All products
+        </span>
+        <span className={classes.count}>{total}</span>
+      </Link>
+      <CategoryTree nodes={tree} activeId={activeId} onNavigate={onNavigate} glyphs={glyphs} />
+    </>
+  );
+}
+
 export interface CategoryNavProps {
   tree: CategoryNode[];
   /** Every product in the catalogue — the count beside "All products". */
@@ -86,7 +122,6 @@ export interface CategoryNavProps {
 export function CategoryNav({ tree, total, activeId }: CategoryNavProps) {
   const openFilters = useUiStore((s) => s.open);
   if (tree.length === 0) return null;
-  const glyphs = treeHasEmoji(tree);
 
   return (
     <>
@@ -118,14 +153,7 @@ export function CategoryNav({ tree, total, activeId }: CategoryNavProps) {
 
       <nav className={classes.rail} aria-label="Categories">
         <h2 className={classes.railHead}>Categories</h2>
-        <Link to="/" className={classes.row} aria-current={activeId === null ? 'page' : undefined}>
-          <span className={classes.rowLabel}>
-            {glyphs ? <span className={classes.glyph} aria-hidden /> : null}
-            All products
-          </span>
-          <span className={classes.count}>{total}</span>
-        </Link>
-        <CategoryTree nodes={tree} activeId={activeId} glyphs={glyphs} />
+        <CategoryIndex tree={tree} total={total} activeId={activeId} />
       </nav>
     </>
   );

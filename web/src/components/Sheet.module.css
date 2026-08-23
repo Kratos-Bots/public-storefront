@@ -1,0 +1,47 @@
+/* Sheet chrome. Mantine positions and animates the panel; everything below is the
+   chassis' own surfaces — deep ground, hairline edges, and a body that is the only
+   thing allowed to scroll so the action foot stays under the shopper's thumb. */
+.content {
+  display: flex;
+  flex-direction: column;
+  background: var(--sf-bg-deep);
+  border-top: 1px solid var(--sf-line-strong);
+  border-radius: var(--mantine-radius-default) var(--mantine-radius-default) 0 0;
+}
+
+/* The grab handle is the promise that the sheet can be pushed back down — it is
+   only true of the bottom sheet, so it leaves with it at 62em. */
+.handle {
+  flex: none;
+  width: 2.25rem;
+  height: 3px;
+  margin: 0.5rem auto 0;
+  border-radius: 999px;
+  background: var(--sf-line-strong);
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.footer {
+  flex: none;
+  border-top: 1px solid var(--sf-line-strong);
+  background: var(--sf-bg-deep);
+  padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 62em) {
+  .content {
+    border-top: 0;
+    border-left: 1px solid var(--sf-line-strong);
+    border-radius: 0;
+  }
+  .handle {
+    display: none;
+  }
+}

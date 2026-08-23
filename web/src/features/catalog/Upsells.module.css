@@ -22,6 +22,15 @@
   gap: 1.75rem 1rem;
 }
 
+/* The sheet's variant: the same manifest lines as the list behind it, topped by a
+   hairline so the suggestions sit on the list's own grid. */
+.rows {
+  list-style: none;
+  margin: -1.25rem 0 0;
+  padding: 0;
+  border-top: 1px solid var(--sf-line);
+}
+
 @media (min-width: 48em) {
   .row {
     grid-template-columns: repeat(4, minmax(0, 1fr));

@@ -1,6 +1,6 @@
 import { useSettings } from '@/app/settings.ts';
 import { ProductGrid } from '@/features/catalog/ProductGrid.tsx';
-import { MenuCatalogPlaceholder } from '@/features/catalog/MenuCatalogPlaceholder.tsx';
+import { ProductList } from '@/features/catalog/ProductList.tsx';
 import { WholesalePlaceholder } from '@/features/catalog/WholesalePlaceholder.tsx';
 
 /**
@@ -11,6 +11,6 @@ import { WholesalePlaceholder } from '@/features/catalog/WholesalePlaceholder.ts
 export function CatalogPage() {
   const { features } = useSettings();
   if (features.wholesale) return <WholesalePlaceholder />;
-  if (features.layout === 'menu') return <MenuCatalogPlaceholder />;
+  if (features.layout === 'menu') return <ProductList />;
   return <ProductGrid />;
 }
