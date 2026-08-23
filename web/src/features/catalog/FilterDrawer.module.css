@@ -1,0 +1,71 @@
+/* Mantine owns the sheet mechanics; the surfaces and the label idiom are ours. */
+.content {
+  background: var(--sf-bg-deep);
+  max-height: 80dvh;
+}
+
+.header {
+  background: var(--sf-bg-deep);
+  border-bottom: 1px solid var(--sf-line);
+  padding-block: 0.75rem;
+}
+
+.title {
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--sf-faint);
+}
+
+.body {
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+}
+
+.all {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 44px;
+  padding: 0.35rem 0.5rem 0.35rem 0.6rem;
+  margin-bottom: 0.25rem;
+  border-left: 2px solid transparent;
+  border-bottom: 1px solid var(--sf-line);
+  font-size: 0.875rem;
+  color: var(--sf-muted);
+  text-decoration: none;
+}
+
+.all[aria-current='page'] {
+  border-left-color: var(--sf-primary);
+  color: var(--sf-text);
+  font-weight: 600;
+}
+
+.all:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+/* Matches CategoryNav's glyph slot so the sheet's first row lines up with the tree below it. */
+.allLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.glyph {
+  flex: none;
+  width: 1.15rem;
+}
+
+.count {
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+  color: var(--sf-faint);
+}

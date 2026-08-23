@@ -1,0 +1,28 @@
+/* A square well on the raised surface. `contain` rather than `cover`: vial and
+   box labels carry the strength and the batch, and cropping them costs the
+   shopper more than a tidier grid gains. */
+.well {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: var(--sf-surface-2);
+  border-radius: var(--mantine-radius-default);
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 4%;
+}
+
+/* The chassis' "nothing follows" mark, reused so a missing photo reads as a
+   deliberate blank instead of a broken tile. */
+.rule {
+  width: 2rem;
+  height: 1px;
+  background: var(--sf-line-strong);
+}

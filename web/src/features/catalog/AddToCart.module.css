@@ -1,0 +1,77 @@
+/* The shop's one loud control. Solid primary block, mono micro-caps like every
+   other label in the chassis, and the confirmation is a state swap rather than a
+   toast — the button hollows out to a primary outline while it says "Added". */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border: 1px solid var(--sf-primary);
+  background: var(--sf-primary);
+  color: var(--sf-bg);
+  border-radius: var(--mantine-radius-default);
+  font-family: var(--sf-font-mono);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+
+.button:hover:not(:disabled) {
+  background: var(--sf-primary-soft);
+  border-color: var(--sf-primary-soft);
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+.button:disabled {
+  background: transparent;
+  border-color: var(--sf-line-strong);
+  color: var(--sf-faint);
+  cursor: not-allowed;
+}
+
+.done,
+.done:hover:not(:disabled) {
+  background: transparent;
+  border-color: var(--sf-primary);
+  color: var(--sf-primary);
+}
+
+.label {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lg {
+  width: 100%;
+  min-height: 52px;
+  padding: 0 1.25rem;
+  font-size: 11px;
+}
+
+.sm {
+  min-height: 44px;
+  padding: 0 0.85rem;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+}
+
+@media (min-width: 62em) {
+  .sm {
+    min-height: 36px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button {
+    transition: none;
+  }
+}

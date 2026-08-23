@@ -1,0 +1,41 @@
+/* No pill, no fill: a status dot plus the same tracked micro-caps every other
+   label in the chassis uses, so a grid of cards stays quiet until something is
+   actually low or gone. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--tone);
+}
+
+.dot {
+  width: 5px;
+  height: 5px;
+  flex: none;
+  border-radius: 999px;
+  background: var(--tone);
+}
+
+.in {
+  --tone: var(--sf-success);
+}
+
+.low {
+  --tone: var(--sf-warn);
+}
+
+.out {
+  --tone: var(--sf-faint);
+}
+
+/* Gone is gone — the dot hollows out so it does not read as another "available" state. */
+.out .dot {
+  background: transparent;
+  border: 1px solid var(--sf-faint);
+}

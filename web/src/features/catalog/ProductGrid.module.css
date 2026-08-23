@@ -1,0 +1,159 @@
+/* The catalogue page: hero panel, then a two-track layout where the category
+   index becomes a rail and the cards take the remaining width. Below 62em the
+   rail is hidden and the chip row (also emitted by CategoryNav) takes its place
+   as the first row of the same grid. */
+.page {
+  padding-bottom: 2rem;
+}
+
+/* Hero — the client's own words on the raised surface, with the catalogue's size
+   stated in the mono ledger face beside them. Nothing sells here; it orients. */
+.hero {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  margin: 1rem 0 0.25rem;
+  padding: 1.25rem;
+  background: var(--sf-surface);
+  border: 1px solid var(--sf-line);
+  border-radius: var(--mantine-radius-default);
+}
+
+.heroText {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.tagline {
+  margin: 0;
+  font-family: var(--sf-font-heading);
+  font-size: 1.375rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--sf-text);
+  text-wrap: balance;
+}
+
+.welcome {
+  margin: 0;
+  max-width: 58ch;
+  font-size: 0.875rem;
+  line-height: 1.65;
+  color: var(--sf-muted);
+  white-space: pre-line;
+}
+
+.stock {
+  margin: 0;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--sf-line-strong);
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  color: var(--sf-faint);
+}
+
+/* The header hides its own search below 62em, so the catalogue carries one. */
+.search {
+  margin: 1rem 0 0.25rem;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.5rem;
+}
+
+.column {
+  min-width: 0;
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 0 1rem;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--sf-font-heading);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--sf-text);
+}
+
+.result {
+  margin: 0;
+  flex: none;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  color: var(--sf-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.75rem 1rem;
+}
+
+@media (min-width: 48em) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2rem 1.25rem;
+  }
+}
+
+@media (min-width: 62em) {
+  .search {
+    display: none;
+  }
+  .hero {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 2rem;
+    margin-top: 1.5rem;
+    padding: 1.75rem;
+  }
+  .tagline {
+    font-size: 1.75rem;
+  }
+  .stock {
+    padding-top: 0;
+    padding-left: 1.25rem;
+    border-top: none;
+    border-left: 1px solid var(--sf-line-strong);
+    white-space: nowrap;
+  }
+  .layout {
+    grid-template-columns: 14rem minmax(0, 1fr);
+    gap: 2.5rem;
+    margin-top: 1rem;
+  }
+  .head {
+    padding-top: 0.35rem;
+  }
+  .title {
+    font-size: 1.125rem;
+  }
+}
+
+@media (min-width: 75em) {
+  .grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}

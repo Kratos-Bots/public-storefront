@@ -1,0 +1,181 @@
+/* Two shapes, one idiom. On a phone the categories are a scrolling chip row; from
+   62em they become an index — name left, transitive count right in tabular mono,
+   the active row marked by a rule rather than a fill. */
+
+.chips {
+  margin: 0 -1rem;
+  border-bottom: 1px solid var(--sf-line);
+}
+
+.chipRow {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem 0.75rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.chipRow::-webkit-scrollbar {
+  display: none;
+}
+
+.chip,
+.more {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex: none;
+  min-height: 44px;
+  padding: 0 0.85rem;
+  border: 1px solid var(--sf-line-strong);
+  border-radius: var(--mantine-radius-default);
+  background: transparent;
+  font-family: var(--sf-font-body);
+  font-size: 0.8125rem;
+  color: var(--sf-muted);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.chip[aria-current='page'] {
+  border-color: var(--sf-primary);
+  color: var(--sf-text);
+}
+
+.chip:focus-visible,
+.more:focus-visible,
+.row:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+.chipCount {
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+  color: var(--sf-faint);
+}
+
+.chip[aria-current='page'] .chipCount {
+  color: var(--sf-primary);
+}
+
+/* Opens the full index as a sheet — only rendered when there are sub-categories to reach. */
+.more {
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--sf-faint);
+  border-style: dashed;
+}
+
+.rail {
+  display: none;
+}
+
+.railHead {
+  margin: 0 0 0.65rem;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--sf-faint);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Each level steps in by one indent and loses a little weight — the hierarchy is
+   read from the left edge, not from a disclosure triangle. */
+.list[data-depth='1'] {
+  margin-left: 0.85rem;
+  border-left: 1px solid var(--sf-line);
+}
+
+.list[data-depth='2'] {
+  margin-left: 0.85rem;
+  border-left: 1px solid var(--sf-line);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 44px;
+  padding: 0.35rem 0.5rem 0.35rem 0.6rem;
+  border-left: 2px solid transparent;
+  margin-left: -2px;
+  font-size: 0.875rem;
+  color: var(--sf-muted);
+  text-decoration: none;
+}
+
+.row:hover {
+  color: var(--sf-text);
+  background: var(--sf-surface);
+}
+
+.row[aria-current='page'] {
+  border-left-color: var(--sf-primary);
+  color: var(--sf-text);
+  font-weight: 600;
+}
+
+/* A fixed slot for the client's category emoji, present on every row of a tree
+   that has any, so the names keep one left edge whatever the client set. */
+.glyph {
+  flex: none;
+  width: 1.15rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  line-height: 1;
+}
+
+.rowLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.count {
+  flex: none;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+  color: var(--sf-faint);
+}
+
+.row[aria-current='page'] .count {
+  color: var(--sf-primary);
+}
+
+@media (min-width: 62em) {
+  .chips {
+    display: none;
+  }
+  .rail {
+    display: block;
+    position: sticky;
+    top: 5.5rem;
+    align-self: start;
+  }
+  /* Fine pointer, so the rows can tighten below the touch minimum. */
+  .row {
+    min-height: 34px;
+  }
+}
