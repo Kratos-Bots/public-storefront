@@ -6,7 +6,11 @@ const CACHE_RULES: Array<[RegExp, number]> = [
   [/^catalog$/, 60],
   [/^catalog\/products\/\d+$/, 60],
 ];
-const STRIP_REQUEST_HEADERS = ['cookie', 'host', 'x-forwarded-for', 'x-forwarded-proto', 'x-real-ip'];
+// Exact-match strips; any inbound `x-forwarded-*` (host, port, for, proto,
+// ...) is additionally wildcard-stripped below alongside `cf-*`, since the
+// proxy sets its own X-Forwarded-For/X-Forwarded-Proto and a client-supplied
+// value for any of that family must never reach the backend.
+const STRIP_REQUEST_HEADERS = ['cookie', 'host', 'x-real-ip'];
 
 export function isAllowedApiPath(rest: string): boolean {
   if (!rest || rest.includes('..')) return false;
@@ -33,7 +37,7 @@ function forwardHeaders(request: Request): Headers {
   const out = new Headers();
   request.headers.forEach((value, key) => {
     const k = key.toLowerCase();
-    if (STRIP_REQUEST_HEADERS.includes(k) || k.startsWith('cf-')) return;
+    if (STRIP_REQUEST_HEADERS.includes(k) || k.startsWith('cf-') || k.startsWith('x-forwarded-')) return;
     out.set(key, value);
   });
   const ip = request.headers.get('cf-connecting-ip');
@@ -60,23 +64,29 @@ export async function proxyApi(request: Request, env: Env, ctx: ExecutionContext
     }
   }
 
+  const hasBody = request.method !== 'GET' && request.method !== 'HEAD';
   let upstream: Response;
   try {
     upstream = await fetch(target.toString(), {
       method: request.method,
       headers: forwardHeaders(request),
-      body: request.method === 'GET' || request.method === 'HEAD' ? undefined : request.body,
+      body: hasBody ? request.body : undefined,
       redirect: 'manual',
-    });
+      // Fetch spec requires `duplex: 'half'` whenever the request body is a
+      // ReadableStream (workerd throws otherwise); not yet in
+      // @cloudflare/workers-types' RequestInit, hence the cast.
+      ...(hasBody ? { duplex: 'half' as const } : {}),
+    } as RequestInit<RequestInitCfProperties>);
   } catch {
     return envelope(502, 'Backend unavailable');
   }
 
+  const cacheable = ttl > 0 && upstream.status === 200;
   const headers = new Headers(upstream.headers);
   headers.delete('set-cookie');
-  headers.set('X-SF-Cache', ttl > 0 ? 'MISS' : 'BYPASS');
-  headers.set('cache-control', ttl > 0 ? `public, max-age=${ttl}` : 'no-store');
+  headers.set('X-SF-Cache', cacheable ? 'MISS' : 'BYPASS');
+  headers.set('cache-control', cacheable ? `public, max-age=${ttl}` : 'no-store');
   const response = new Response(upstream.body, { status: upstream.status, headers });
-  if (ttl > 0 && upstream.status === 200) ctx.waitUntil(cache.put(cacheKey, response.clone()));
+  if (cacheable) ctx.waitUntil(cache.put(cacheKey, response.clone()));
   return response;
 }
