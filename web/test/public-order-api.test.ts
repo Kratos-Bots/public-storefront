@@ -72,9 +72,22 @@ describe('fetchPublicOrder', () => {
     expect((spy.mock.calls[0]![0] as Request).url).toContain('/api/orders/AB%2012/a%2Fb');
   });
 
-  it.each([400, 403, 404])('reads %i as an unusable link', async (status) => {
+  it.each([400, 403, 404, 422])('reads %i as an unusable link', async (status) => {
     mockFetch(status, { success: false, data: null, error: 'Order not found' });
     await expect(fetchPublicOrder('AB12CD', 'wrong')).rejects.toBeInstanceOf(InvalidLinkError);
+  });
+
+  // The params schema caps the reference at 64 and the key at 128, and the
+  // backend's validate() answers 422 (never 400) when either is over. A link
+  // that garbled can never become valid, so "try again" would be a dead end.
+  it('sends a garbled link to the invalid-link screen, not the retry screen', async () => {
+    mockFetch(422, {
+      success: false,
+      data: null,
+      error: 'params.reference: Too big: expected string to have <=64 characters',
+    });
+    const err = await fetchPublicOrder('A'.repeat(200), 'k3y').catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(InvalidLinkError);
   });
 
   it('lets a server fault through as an ApiError so the retry screen shows', async () => {
@@ -93,8 +106,8 @@ describe('fetchPaymentOptions', () => {
     expect((spy.mock.calls[0]![0] as Request).url).toContain('/api/orders/AB12CD/k3y/payment-options');
   });
 
-  it('reads an unusable link the same way the order view does', async () => {
-    mockFetch(404, { success: false, data: null, error: 'Order not found' });
+  it.each([404, 422])('reads %i as an unusable link, like the order view does', async (status) => {
+    mockFetch(status, { success: false, data: null, error: 'Order not found' });
     await expect(fetchPaymentOptions('AB12CD', 'wrong')).rejects.toBeInstanceOf(InvalidLinkError);
   });
 });
@@ -118,9 +131,12 @@ describe('selectPaymentMethod', () => {
     );
   });
 
-  it('surfaces the backend’s own wording on a rejected method', async () => {
-    mockFetch(400, { success: false, data: null, error: "Payment method 'store_credit' is not available online" });
+  // 422 on an ACTION is the backend's ValidationError, not a broken link — the
+  // mirror image of the order fetch above, and the reason the two map apart.
+  it.each([400, 422])('surfaces the backend’s own wording on a %i rejected method', async (status) => {
+    mockFetch(status, { success: false, data: null, error: "Payment method 'store_credit' is not available online" });
     const err = await selectPaymentMethod('AB12CD', 'k3y', { method: 'store_credit' }).catch((e: unknown) => e);
+    expect(err).not.toBeInstanceOf(InvalidLinkError);
     expect(errorMessage(err)).toBe("Payment method 'store_credit' is not available online");
   });
 

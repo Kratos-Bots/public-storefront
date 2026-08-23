@@ -154,6 +154,10 @@ export function MethodPicker({ order, reference, accessKey, onSelected }: Method
           const opensHere = combos.length > 0 || isManual(method);
           const expanded = open === method.method;
           const inFlight = busy && select.variables?.method === method.method;
+          // Only a row that opens a hosted checkout may say so. A static-crypto
+          // submit is in flight on the row too, but the drawer's own button is
+          // already narrating it ("Preparing payment...") and no checkout opens.
+          const opening = inFlight && !opensHere;
 
           return (
             <div key={method.method}>
@@ -175,7 +179,7 @@ export function MethodPicker({ order, reference, accessKey, onSelected }: Method
                   <span className={classes.pickerSpacer} aria-hidden />
                 )}
                 <span className={classes.pickerLabel}>
-                  {inFlight ? 'Opening checkout…' : slotLabel(method)}
+                  {opening ? 'Opening checkout…' : slotLabel(method)}
                 </span>
                 <span className={classes.pickerFigure}>
                   {formatMoney(method.chargeTotal, order.currency)}
