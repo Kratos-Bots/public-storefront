@@ -28,9 +28,15 @@ export async function proxyMedia(request: Request, env: Env, ctx: ExecutionConte
   if (!target) return new Response('Not found', { status: 404 });
 
   const cache = caches.default;
+  // Cache key and upstream fetch are always GET — HEAD reads/warms the same
+  // cache entry as GET (never forwarded upstream as HEAD), so a GET
+  // immediately following a HEAD (or vice versa) hits the same cache entry.
   const key = new Request(target.toString(), { method: 'GET' });
   const hit = await cache.match(key);
-  if (hit) return hit;
+  if (hit) {
+    if (request.method === 'HEAD') return new Response(null, { status: hit.status, headers: hit.headers });
+    return hit;
+  }
 
   let upstream: Response;
   try {
@@ -38,13 +44,27 @@ export async function proxyMedia(request: Request, env: Env, ctx: ExecutionConte
   } catch {
     return new Response('Upstream unavailable', { status: 502 });
   }
+  // Non-OK upstream responses are never cached (only the 200 path below
+  // reaches cache.put), so a transient upstream error doesn't get pinned to
+  // the edge cache for a day.
   if (!upstream.ok) return new Response(null, { status: upstream.status === 404 ? 404 : 502 });
 
   const headers = new Headers();
   headers.set('content-type', upstream.headers.get('content-type') ?? 'application/octet-stream');
   headers.set('cache-control', 'public, max-age=86400');
+  // The static-asset `_headers` file (web/public/_headers) only applies to
+  // files served directly by the ASSETS binding — Worker-constructed
+  // responses like this one need their own X-Content-Type-Options.
+  headers.set('x-content-type-options', 'nosniff');
   const etag = upstream.headers.get('etag');
   if (etag) headers.set('etag', etag);
+
+  if (request.method === 'HEAD') {
+    // Still cache the full body-bearing response for future GET/HEAD hits;
+    // the caller itself gets an empty-bodied response.
+    ctx.waitUntil(cache.put(key, new Response(upstream.body, { status: 200, headers })));
+    return new Response(null, { status: 200, headers });
+  }
   const res = new Response(upstream.body, { status: 200, headers });
   ctx.waitUntil(cache.put(key, res.clone()));
   return res;
