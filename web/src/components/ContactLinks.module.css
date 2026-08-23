@@ -1,0 +1,75 @@
+.link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: var(--sf-muted);
+  text-decoration: none;
+  transition: color 120ms ease, border-color 120ms ease, background-color 120ms ease;
+}
+
+.label {
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.link:hover,
+.link:focus-visible {
+  color: var(--sf-text);
+}
+
+.link:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: -2px;
+}
+
+/* inline — footer / closed page: a pair of hairline chips. */
+.inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.inline .link {
+  border: 1px solid var(--sf-line-strong);
+  padding: 0.55rem 0.9rem;
+  border-radius: var(--mantine-radius-default);
+}
+
+.inline .link:hover {
+  border-color: var(--sf-primary);
+  background: var(--sf-surface);
+}
+
+/* strip — the menu shell's sticky footer: a full-bleed band with two equal
+   targets, split by a hairline, held to the shell's content column. */
+.stripBar {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  background: var(--sf-bg-deep);
+  border-top: 1px solid var(--sf-line);
+}
+
+.strip {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 1px;
+  max-width: var(--sf-rail-max, 1200px);
+  margin: 0 auto;
+  background: var(--sf-line);
+}
+
+.strip .link {
+  background: var(--sf-bg-deep);
+  padding: 0.85rem 0.5rem;
+  padding-bottom: calc(0.85rem + env(safe-area-inset-bottom, 0px));
+}
+
+.strip .link:active {
+  background: var(--sf-surface);
+}

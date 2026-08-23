@@ -1,0 +1,29 @@
+/* The client controls the logo height (`--sf-logo-h`); `--brand-h` is that height
+   scaled for the slot the mark sits in, and everything else keys off it. */
+.root {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.image {
+  display: block;
+  height: var(--brand-h);
+  width: auto;
+  max-width: 42vw;
+  object-fit: contain;
+  user-select: none;
+}
+
+/* Wordmark fallback: no logo uploaded, or both image sources failed. */
+.wordmark {
+  font-family: var(--sf-font-heading);
+  font-size: calc(var(--brand-h) * 0.62);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  color: var(--sf-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

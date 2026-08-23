@@ -1,0 +1,70 @@
+/* Full-bleed strips stacked directly under the header, each carrying its role
+   colour as `--tone`: the tint washes the whole band, and a 2px rule marks the
+   start of the content column so it stays attached to the words it belongs to. */
+.notice {
+  border-bottom: 1px solid var(--sf-line);
+  background: color-mix(in srgb, var(--tone) 9%, var(--sf-bg-deep));
+}
+
+.info {
+  --tone: var(--sf-primary);
+}
+
+.warning {
+  --tone: var(--sf-warn);
+}
+
+.promo {
+  --tone: var(--sf-success);
+}
+
+.inner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  max-width: var(--sf-rail-max, 1200px);
+  margin: 0 auto;
+  padding: 0.65rem 0.75rem 0.65rem 0.85rem;
+  border-left: 2px solid var(--tone);
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--sf-font-heading);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--sf-text);
+}
+
+.body {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--sf-muted);
+}
+
+.title + .body {
+  margin-top: 0.15rem;
+}
+
+.close {
+  flex: none;
+  color: var(--sf-muted);
+}
+
+.close:hover {
+  color: var(--sf-text);
+  background: color-mix(in srgb, var(--tone) 16%, transparent);
+}
+
+@media (min-width: 62em) {
+  .inner {
+    padding-inline: 1.35rem 1.25rem;
+  }
+}

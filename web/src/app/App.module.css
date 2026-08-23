@@ -1,0 +1,9 @@
+/* Boot states: settings have not arrived, so only the --sf-* tokens (defaults, or
+   the palette the first-paint script restored) are trustworthy. */
+.boot {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 2rem 1.25rem;
+  background: var(--sf-bg);
+}

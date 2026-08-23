@@ -1,0 +1,23 @@
+/* For links people arrive at from a chat message (order status): no navigation,
+   no cart — just the mark, so they can see whose order this is. */
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background: var(--sf-bg);
+}
+
+.header {
+  display: flex;
+  justify-content: center;
+  padding: calc(1.5rem + env(safe-area-inset-top, 0px)) 1rem 1.25rem;
+  border-bottom: 1px solid var(--sf-line);
+}
+
+.main {
+  flex: 1;
+  width: 100%;
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem calc(2.5rem + env(safe-area-inset-bottom, 0px));
+}

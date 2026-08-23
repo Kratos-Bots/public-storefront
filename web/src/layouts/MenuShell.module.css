@@ -1,0 +1,111 @@
+/* Menu shell — the dense idiom carried over from the chat price list: one
+   compact bar with the search inline, a narrow reading column, and the contact
+   strip pinned to the bottom of the catalog. No footer; the strip is the footer. */
+.shell {
+  --sf-rail-max: 48rem;
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background: var(--sf-bg);
+}
+
+.bar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: var(--sf-bg-deep);
+  border-bottom: 1px solid var(--sf-line);
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.barInner {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  height: 52px;
+  max-width: var(--sf-rail-max);
+  margin: 0 auto;
+  padding: 0 0.75rem;
+}
+
+.home {
+  display: flex;
+  align-items: center;
+  flex: none;
+  padding: 0.25rem;
+  border-radius: var(--mantine-radius-default);
+  text-decoration: none;
+}
+
+.home:focus-visible,
+.action:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+.search {
+  flex: 1;
+  min-width: 0;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+  flex: none;
+}
+
+.action {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  color: var(--sf-muted);
+  border-radius: var(--mantine-radius-default);
+  text-decoration: none;
+  transition: color 120ms ease, background-color 120ms ease;
+}
+
+.action:hover {
+  color: var(--sf-text);
+  background: var(--sf-surface);
+}
+
+.count {
+  position: absolute;
+  top: 0;
+  right: -2px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--sf-primary);
+  color: var(--sf-bg);
+  font-family: var(--sf-font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 15px;
+  text-align: center;
+}
+
+.main {
+  flex: 1;
+  width: 100%;
+  max-width: var(--sf-rail-max);
+  margin: 0 auto;
+  padding: 0 0.75rem;
+}
+
+@media (min-width: 62em) {
+  .barInner {
+    height: 60px;
+    gap: 1rem;
+    padding-inline: 1rem;
+  }
+  .main {
+    padding-inline: 1rem;
+  }
+}

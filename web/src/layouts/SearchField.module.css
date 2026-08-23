@@ -1,0 +1,31 @@
+/* One field idiom for both shells: no box, just a hairline that lights up on
+   focus — quieter than a pill next to a client logo we do not control. */
+.root {
+  min-width: 0;
+  border-bottom: 1px solid var(--sf-line-strong);
+  transition: border-color 140ms ease;
+}
+
+.root:focus-within {
+  border-bottom-color: var(--sf-primary);
+}
+
+.input {
+  background: transparent;
+  color: var(--sf-text);
+  font-family: var(--sf-font-body);
+  height: 2.25rem;
+  min-height: 2.25rem;
+}
+
+.input::placeholder {
+  color: var(--sf-faint);
+}
+
+.section {
+  color: var(--sf-faint);
+}
+
+.root:focus-within .section {
+  color: var(--sf-muted);
+}
