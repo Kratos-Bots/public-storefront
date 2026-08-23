@@ -4,7 +4,7 @@ import { Notifications } from '@mantine/notifications';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { RouterProvider } from 'react-router';
 import { SETTINGS_KEY, useSettings, useSettingsQuery } from '@/app/settings.ts';
-import { closedGate } from '@/app/closed-gate.ts';
+import { closedGate, isClosedExemptPath } from '@/app/closed-gate.ts';
 import { applyDocumentTheme, buildMantineTheme, THEME_STORAGE_KEY } from '@/app/theme-bridge.ts';
 import { router } from '@/app/router.tsx';
 import { EmptyState } from '@/components/EmptyState.tsx';
@@ -83,7 +83,15 @@ export function ClosedGate({ children }: { children: ReactNode }) {
     return () => clearInterval(timer);
   }, [closed, client]);
 
-  return closed || !settings.enabled ? <ClosedPage /> : <>{children}</>;
+  // Read at render time, not via useLocation — ClosedGate sits above
+  // RouterProvider, so it has no router context of its own. This means a
+  // client-side navigation into an exempt route while already closed won't
+  // un-gate until something else re-renders ClosedGate (a settings refetch,
+  // the poll above); landing on one directly — a fresh load, a pasted link,
+  // the payment gateway's own redirect — always works.
+  const exempt = isClosedExemptPath(window.location.pathname);
+
+  return (closed || !settings.enabled) && !exempt ? <ClosedPage /> : <>{children}</>;
 }
 
 function ThemedApp({ settings }: { settings: StorefrontSettings }) {
