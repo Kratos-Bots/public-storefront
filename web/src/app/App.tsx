@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { Button, MantineProvider } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { RouterProvider } from 'react-router';
-import { useSettings, useSettingsQuery } from '@/app/settings.ts';
+import { SETTINGS_KEY, useSettings, useSettingsQuery } from '@/app/settings.ts';
 import { closedGate } from '@/app/closed-gate.ts';
 import { applyDocumentTheme, buildMantineTheme, THEME_STORAGE_KEY } from '@/app/theme-bridge.ts';
 import { router } from '@/app/router.tsx';
@@ -19,6 +19,9 @@ import classes from '@/app/App.module.css';
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 10_000 } },
 });
+
+/** How often a closed shop re-checks whether it has reopened (spec §6). */
+export const CLOSED_POLL_MS = 60_000;
 
 /** The last brand name we saw, so the retry screen can still name the shop. */
 function lastKnownBrandName(): string | null {
@@ -63,9 +66,23 @@ function useBootCart() {
   }, []);
 }
 
-function ClosedGate({ children }: { children: ReactNode }) {
+export function ClosedGate({ children }: { children: ReactNode }) {
   const closed = closedGate((s) => s.closed);
   const settings = useSettings();
+  const client = useQueryClient();
+
+  // A mid-session 503 flips the gate while the cached settings still say `enabled: true`,
+  // so settings.ts's own refetchInterval — which keys off that cache — never fires and the
+  // tab would sit here forever. Poll from the gate instead; the settings queryFn clears
+  // `closed` as soon as a response comes back enabled, so the shop returns on its own.
+  useEffect(() => {
+    if (!closed) return;
+    const timer = setInterval(() => {
+      void client.invalidateQueries({ queryKey: SETTINGS_KEY });
+    }, CLOSED_POLL_MS);
+    return () => clearInterval(timer);
+  }, [closed, client]);
+
   return closed || !settings.enabled ? <ClosedPage /> : <>{children}</>;
 }
 
