@@ -47,6 +47,15 @@ let ticketSeq = 0;
  * the rest of the session.
  */
 let inflight = 0;
+/**
+ * The promise of whichever `flush()` call currently has a PUT on the wire (or
+ * is running that PUT's failure-path resync). `flush()` clears `pendingWrite`
+ * before its `await putCart(...)` settles, so a `refreshCart()` landing in
+ * that window can no longer tell "nothing pending" from "a write just went
+ * out" by reading `pendingWrite` alone — it reads this too, and rides the
+ * flush instead of racing a GET against it.
+ */
+let inFlightFlush: Promise<void> | null = null;
 
 function enter() {
   inflight += 1;
@@ -96,40 +105,66 @@ async function flush(): Promise<void> {
   pendingWrite = false;
   if (!serverMode()) return;
 
-  const ticket = ++ticketSeq;
-  enter();
-  try {
-    const cart = await putCart(outgoingLines());
-    if (ticket === ticketSeq) adopt(cart);
-  } catch (err) {
-    if (ticket !== ticketSeq) return;
-    if (err instanceof ApiError && err.isUnauthorized) {
-      // The api client has already cleared the session. Keep the lines and carry
-      // on as a guest cart — nothing the shopper picked out is lost.
-      useCartStore.getState().setMode('local');
-      syncStore.setState({ cart: null });
-      notifications.show({ message: 'Please sign in again', color: 'red' });
-      return;
+  const run = async () => {
+    const ticket = ++ticketSeq;
+    enter();
+    try {
+      const cart = await putCart(outgoingLines());
+      if (ticket === ticketSeq) adopt(cart);
+    } catch (err) {
+      if (ticket !== ticketSeq) return;
+      if (err instanceof ApiError && err.isUnauthorized) {
+        // The api client has already cleared the session. Keep the lines and carry
+        // on as a guest cart — nothing the shopper picked out is lost.
+        useCartStore.getState().setMode('local');
+        syncStore.setState({ cart: null });
+        notifications.show({ message: 'Please sign in again', color: 'red' });
+        return;
+      }
+      notifications.show({
+        message: errorMessage(err, "We couldn't update your cart"),
+        color: 'red',
+      });
+      await resync();
+    } finally {
+      leave();
     }
-    notifications.show({
-      message: errorMessage(err, "We couldn't update your cart"),
-      color: 'red',
-    });
-    await resync();
+  };
+
+  // Published before the first await inside `run()` so a `refreshCart()` that
+  // interleaves anywhere after this point — including synchronously, since
+  // nothing yields between here and the assignment — sees this flush as in
+  // flight rather than reading a `pendingWrite` that was already cleared above.
+  const promise = run();
+  inFlightFlush = promise;
+  try {
+    await promise;
   } finally {
-    leave();
+    if (inFlightFlush === promise) inFlightFlush = null;
   }
 }
 
 /**
  * Adopt the server's cart. An edit still sitting in the debounce window is sent
  * first — its response *is* the fresh cart, and fetching around it would hand
- * back the copy from before the edit and undo it.
+ * back the copy from before the edit and undo it. A write already on the wire
+ * gets the same treatment: `flush()` clears `pendingWrite` as soon as the PUT
+ * goes out, so without checking `inFlightFlush` too, a refresh landing in that
+ * window would fall through to `resync()` and race its GET against the PUT —
+ * sometimes winning with the pre-PUT cart and visually rolling the edit back.
  */
 async function refreshCart(): Promise<void> {
   if (!serverMode()) return;
   if (pendingWrite) {
     await flush();
+    return;
+  }
+  if (inFlightFlush) {
+    await inFlightFlush;
+    // An edit may have been scheduled while we waited on the flush we just
+    // rode — send it, since a GET now would only race its PUT the same way.
+    // Otherwise the flush we rode already delivered the current cart.
+    if (pendingWrite) await flush();
     return;
   }
   await resync();
@@ -175,6 +210,7 @@ export function resetCartSync() {
   pendingWrite = false;
   ticketSeq = 0;
   inflight = 0;
+  inFlightFlush = null;
   syncStore.setState({ cart: null, syncing: false });
 }
 
