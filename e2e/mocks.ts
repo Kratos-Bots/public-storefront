@@ -86,6 +86,8 @@ export interface MockState {
   checkouts: Array<Record<string, unknown>>;
   /** Bodies posted to the guest quote route, for assertions. */
   guestQuotes: Array<Record<string, unknown>>;
+  /** Bodies posted to the crypto-txid route, for assertions. */
+  txids: Array<Record<string, unknown>>;
 }
 
 export interface MockHandle {
@@ -197,6 +199,7 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     requests: [],
     checkouts: [],
     guestQuotes: [],
+    txids: [],
   };
 
   options.tweakSettings?.(state.settings);
@@ -356,7 +359,9 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
         return;
       }
       if (tail === 'crypto-txid' && method === 'POST') {
-        const txid = String(body(route).txid ?? '');
+        const submitted = body(route);
+        state.txids.push(submitted);
+        const txid = String(submitted.txid ?? '');
         const payment = state.order.cryptoPayments?.[0];
         if (payment) {
           payment.verificationStatus = 'checking';
