@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { installMocks, ORDER_PATH, ORIGIN, type Layout } from './mocks.ts';
+import { installMocks, ORDER_PATH, ORIGIN, type Layout, type MockHandle } from './mocks.ts';
 
 /**
  * The mocked end-to-end pass. Vite serves the real app; every `/api/*`,
@@ -122,17 +122,28 @@ async function fillCheckout(page: Page): Promise<void> {
   await expect(page.getByText('USDT · Polygon')).toBeVisible();
 }
 
+/** The transaction id the tests paste in, and the payment it belongs to (the
+ *  fixture's only crypto payment). */
+const TXID = '0xabc123def4567890abcdef1234567890';
+const CRYPTO_PAYMENT_ID = 9001;
+
 /** The crypto card on the public order page, through to a submitted txid. */
-async function payWithCrypto(page: Page): Promise<void> {
+async function payWithCrypto(page: Page, mocks: MockHandle): Promise<void> {
   await expect(page).toHaveURL(new RegExp(`${ORDER_PATH}$`));
   await expect(page.getByRole('heading', { name: 'Send 46.03 USDT' })).toBeVisible();
   await expect(page.getByText('0xE2E1a2b3c4d5e6f7089aabbccddeeff0011223344')).toBeVisible();
 
-  await page.getByRole('textbox', { name: 'Transaction ID' }).fill('0xabc123def4567890abcdef1234567890');
+  // Padded on purpose: the client trims before it sends, and the backend rejects
+  // an untrimmed id — so the assertion below is what proves the trim happens.
+  await page.getByRole('textbox', { name: 'Transaction ID' }).fill(`  ${TXID}  `);
   await page.getByRole('button', { name: 'Submit' }).click();
 
   await expect(page.getByRole('heading', { name: 'Verifying your payment' })).toBeVisible();
   await expect(page.getByText('Verifying', { exact: true })).toBeVisible();
+
+  // The card can only report what it sent; this is what actually went out.
+  expect(mocks.state.txids).toHaveLength(1);
+  expect(mocks.state.txids[0]).toEqual({ paymentId: CRYPTO_PAYMENT_ID, txid: TXID });
 }
 
 // ---------------------------------------------------------------------------
@@ -207,7 +218,7 @@ for (const layout of LAYOUTS) {
         await shot(page, `2-checkout-review-${layout}-${size}`);
 
         await page.getByRole('button', { name: /^Place order/ }).click();
-        await payWithCrypto(page);
+        await payWithCrypto(page, mocks);
         await shot(page, `2-order-crypto-${layout}-${size}`);
 
         expect(mocks.state.checkouts).toHaveLength(1);
@@ -217,6 +228,14 @@ for (const layout of LAYOUTS) {
           coin: 'usdt',
           network: 'polygon',
           email: 'ada@example.invalid',
+          shippingAddress: {
+            firstName: 'Ada',
+            surname: 'Sterling',
+            addressLine1: '14 Kirkgate',
+            city: 'Leeds',
+            zip: 'LS1 6BY',
+            country: 'GB',
+          },
         });
       });
     });
@@ -264,7 +283,7 @@ test.describe('guest checkout', () => {
     await shot(page, '3-guest-review');
 
     await page.getByRole('button', { name: /^Place order/ }).click();
-    await payWithCrypto(page);
+    await payWithCrypto(page, mocks);
     await shot(page, '3-guest-order');
 
     expect(mocks.requests()).toContain('POST storefront/checkout/guest');
