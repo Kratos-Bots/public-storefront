@@ -311,4 +311,54 @@ describe('useServerCart', () => {
 
     expect(useCartStore.getState().lines).toEqual([expect.objectContaining({ productId: 7, quantity: 6 })]);
   });
+
+  it('refresh() rides an in-flight flush instead of racing it with a GET', async () => {
+    // flush() clears pendingWrite the instant the PUT goes out, before that PUT
+    // settles. A refresh() landing in that exact window used to read
+    // pendingWrite as false and fall through to resync()'s GET, which could
+    // beat the PUT back and roll the edit's own send back to the pre-edit cart.
+    let settlePut!: (cart: ServerCart) => void;
+    putMock.mockImplementationOnce(() => new Promise<ServerCart>((res) => { settlePut = res; }));
+
+    const { result } = renderHook(() => useServerCart());
+
+    act(() => {
+      result.current.setQuantity(7, 4);
+    });
+
+    // Let the debounce fire: flush() clears pendingWrite and sends the PUT,
+    // which we hold open.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(SYNC_DEBOUNCE_MS);
+    });
+    expect(putMock).toHaveBeenCalledTimes(1);
+
+    // The cart drawer opens while that PUT is still in flight.
+    let refreshSettled = false;
+    let refreshPromise!: Promise<void>;
+    act(() => {
+      refreshPromise = result.current.refresh().then(() => {
+        refreshSettled = true;
+      });
+    });
+
+    // Give refresh() a turn to run its synchronous checks before the PUT
+    // answers — it must not have issued a GET.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(refreshSettled).toBe(false);
+
+    // The PUT lands, carrying the edit.
+    await act(async () => {
+      settlePut(serverCart([serverLine({ quantity: 4, lineTotal: 116 })]));
+      await refreshPromise;
+    });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(putMock).toHaveBeenCalledTimes(1);
+    expect(refreshSettled).toBe(true);
+    expect(useCartStore.getState().lines).toEqual([expect.objectContaining({ productId: 7, quantity: 4 })]);
+  });
 });
