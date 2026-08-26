@@ -5,11 +5,19 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency: { group: "release-${{ github.ref }}", cancel-in-progress: false }
     permissions: { contents: write }
     steps:
+      - run: echo "$GITHUB_REF_NAME" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$' || { echo "tag must look like v1.2.3 or v1.2.3-rc.1"; exit 1; }
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: npm }
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            web/package-lock.json
       - run: npm ci
       - run: npm --prefix web ci
       - run: npm test
@@ -20,10 +28,24 @@ jobs:
         run: node scripts/write-release-manifest.mjs "$GITHUB_REF_NAME"
       - name: Package
         run: |
+          test -s worker/dist/index.js || { echo "worker/dist/index.js missing or empty"; exit 1; }
+          test -s web/dist/index.html || { echo "web/dist/index.html missing or empty"; exit 1; }
+          extra=$(ls worker/dist | grep -vE '^index\.js(\.map)?$|^README\.md$' || true)
+          if [ -n "$extra" ]; then echo "unexpected worker bundle output (multi-module?): $extra"; exit 1; fi
+          sed -i '/^\/\/# sourceMappingURL=/d' worker/dist/index.js
           mkdir -p out
-          zip -r "out/storefront-${GITHUB_REF_NAME}.zip" release.json worker/dist/index.js web/dist
-          unzip -l "out/storefront-${GITHUB_REF_NAME}.zip" | head -20
+          ZIP="out/storefront-${GITHUB_REF_NAME}.zip"
+          zip -r -D -MM "$ZIP" release.json worker/dist/index.js web/dist
+          unzip -l "$ZIP" | grep -q ' release.json$' && unzip -l "$ZIP" | grep -q ' web/dist/index.html$' && unzip -l "$ZIP" | grep -q ' worker/dist/index.js$'
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" out/*.zip --title "$GITHUB_REF_NAME" --generate-notes
+        run: |
+          TAG="$GITHUB_REF_NAME"
+          PRERELEASE=""
+          case "$TAG" in *-*) PRERELEASE="--prerelease" ;; esac
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" out/*.zip --clobber
+          else
+            gh release create "$TAG" out/*.zip --title "$TAG" --generate-notes $PRERELEASE
+          fi

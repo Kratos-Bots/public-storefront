@@ -112,7 +112,7 @@ Telegram WebApp's JWT-keyed catalog, not this proxy's concern.
 
 ## Deploying
 
-The supported path is **deploy from the admin**: a store owner connects their Cloudflare account
+The supported path (once Spec 3 ships) is **deploy from the admin**: a store owner connects their Cloudflare account
 on the admin's Storefront → Deploy tab, picks a hostname on one of their zones, and deploys any
 published release listed there. The backend downloads the release zip, uploads the Worker and its
 assets to their account, attaches the custom domain and health-checks `/healthz`. Nothing in this
@@ -136,10 +136,13 @@ Pushing a tag matching `v*` runs `.github/workflows/release.yml`:
 2. `npx wrangler deploy --dry-run --outdir=worker/dist` — bundles the Worker to `worker/dist/index.js`
    without deploying
 3. `node scripts/write-release-manifest.mjs <tag>` — writes `release.json` from `wrangler.jsonc`
-   (`schemaVersion`, `tag`, worker `compatibilityDate`, assets `notFoundHandling` /
-   `runWorkerFirst`, and the list of `vars` the deployer must supply — currently `BACKEND_URL`)
+   (`schemaVersion`, `tag`, worker `name` / `compatibilityDate` / `compatibilityFlags`, assets
+   `binding` / `notFoundHandling` / `runWorkerFirst`, and the list of `vars` the deployer must
+   supply — currently `BACKEND_URL`)
 4. zips `release.json`, `worker/dist/index.js`, `web/dist/**` as `storefront-<tag>.zip`
-5. `gh release create <tag> --generate-notes` attaches it to a GitHub Release
+5. `gh release create <tag> --generate-notes` attaches it to a GitHub Release — a pre-release tag
+   (e.g. `v1.2.3-rc.1`) is published as a GitHub pre-release, and re-running the workflow on an
+   already-tagged release replaces the zip asset instead of failing
 
 To cut a release:
 
@@ -148,5 +151,5 @@ npm version minor            # or patch — bumps package.json, commits, tags v0
 git push origin main --follow-tags
 ```
 
-The backend's Storefront → Deploy tab lists these releases within five minutes and shows an
-"Update available" badge on stores running an older tag.
+Once Spec 3 ships, the backend's Storefront → Deploy tab lists these releases within five minutes
+and shows an "Update available" badge on stores running an older tag.
