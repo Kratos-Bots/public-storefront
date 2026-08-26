@@ -31,6 +31,11 @@ Locked decisions:
   backend image. CI pre-bundles the Worker so the backend only uploads files.
 - **Custom domain only** as the deploy target: a zone from the connected account + a hostname on it.
 - **One Worker per backend**, fixed name `ecommerce-storefront`, in the connected account.
+- **`bot_settings` is for the Telegram bot only.** Storefront configuration moves to a new
+  `storefront_settings` key/value table (§2.0); the deploy module's config lives there too. Spec 1
+  parked the `storefront_*` keys in `bot_settings` — this spec migrates them out.
+- **Admin UI work uses the `frontend-design` skill** for every new card/tab so the tabs read as one
+  deliberate design rather than a form dump.
 
 ---
 
@@ -120,9 +125,42 @@ Path `src/modules/storefront-deploy/` with the standard `router.ts` / `controlle
 Two thin API clients live in `src/lib/`: `cloudflare-api.ts` and `github-releases.ts`. The deploy
 job lives in `src/lib/queues/storefront-deploy.ts` following the existing queue files.
 
+### 2.0 `storefront_settings` table (moves existing keys out of `bot_settings`)
+
+`src/db/schema/storefront-settings.ts`:
+
+```ts
+export const storefrontSettings = pgTable('storefront_settings', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+  ...timestamps,
+});
+```
+
+The generated migration gets two data statements appended (precedent: `drizzle/0003_*.sql`,
+`0007_*.sql` carry hand-written `INSERT`/`UPDATE`):
+
+```sql
+INSERT INTO storefront_settings (key, value, created_at, updated_at)
+  SELECT key, value, created_at, updated_at FROM bot_settings WHERE key LIKE 'storefront\_%';
+DELETE FROM bot_settings WHERE key LIKE 'storefront\_%';
+```
+
+Code changes:
+
+- `storefront-settings/service.ts` gains local `getStorefrontSetting(key)` /
+  `upsertStorefrontSetting(key, value)` / `deleteStorefrontSetting(key)` against the new table and
+  stops importing `getBotSettingValue` / `upsertBotSetting`. It keeps importing `PAYMENT_SLOT_KEYS`
+  and `getCheckoutContactModes` — those are genuine bot values the storefront falls back to.
+- `bot-settings/service.ts`: the read-side filter that hides `storefront_*` rows becomes dead and is
+  removed. The write-side guard in `bot-settings/schemas.ts` (reject `storefront_*` keys on the
+  generic endpoint) stays, message updated to point at `/storefront-settings`.
+- Key names are unchanged, so nothing else in the backend (`middleware/storefront.ts`,
+  `public-storefront/*`) moves — they already go through the service.
+
 ### 2.1 Configuration storage
 
-`bot_settings` KV, same access helpers `storefront-settings/service.ts` uses:
+`storefront_settings` KV (§2.0), via the same helpers `storefront-settings/service.ts` uses:
 
 | Key | Value |
 |---|---|
@@ -272,6 +310,11 @@ tabs appended: **Appearance**, **Features**, **Integrations**, **Deploy** (nine 
 `src/types/storefront-settings.ts` extended with the brand/features/theme/turnstile/tracking fields
 the backend already returns.
 
+All four tabs are designed with the `frontend-design` skill before coding: one pass to settle the
+visual language of the new tabs (section rhythm, how switches/colour swatches/status badges read,
+the Deploy tab's step-log treatment) so they feel like one deliberate surface, consistent with the
+existing five tabs and the admin's theme tokens.
+
 Every card follows `GeneralCard.tsx`: react-hook-form + zod, `useQuery` on the shared
 `storefrontSettingsKeys.all`, content-keyed `reset` so an unrelated tab's save does not clobber an
 in-progress edit, `useMutation` → invalidate + toast, `Save` disabled until dirty.
@@ -355,7 +398,9 @@ Unchanged (`/storefront-settings` already exists). No new routes.
   `CloudflareApiError` message formatting, and the deploy job's step sequence against a mocked
   `fetch` (happy path; failure at `script`; empty-bucket skip; health-check timeout → warning).
   `access-key.ts` fallback order. Migrations checked with `npm run db:generate` producing exactly
-  one new migration.
+  one new migration (both tables), and the data move verified against a dev database seeded with
+  `storefront_*` rows in `bot_settings`: after migrating, they exist in `storefront_settings`,
+  are gone from `bot_settings`, and `GET /storefront-settings` returns the same values as before.
 - **Admin SPA**: no runner (per CLAUDE.md). `npm run build` + `npm run lint` clean; manual pass of
   each tab against a local backend, including the 422 paths.
 - **End-to-end**: one real deploy to a test zone in the user's Cloudflare account, then a re-deploy
@@ -367,8 +412,10 @@ Unchanged (`/storefront-settings` already exists). No new routes.
 
 1. Storefront repo: workflow + manifest script + README; re-tag; confirm the release exists (the
    backend's release list is useless without it).
-2. Backend: schema + migration → Cloudflare/GitHub clients (with tests) → service/routes → queue
-   job → `publicUrl` fallback.
-3. SPA: types/api → Appearance, Features, Integrations cards → Deploy tab.
+2. Backend: `storefront_settings` table + data migration + repoint `storefront-settings/service.ts`
+   (verify existing settings survive) → `storefront_deploys` table → Cloudflare/GitHub clients
+   (with tests) → service/routes → queue job → `publicUrl` fallback.
+3. SPA: `frontend-design` pass for the four tabs → types/api → Appearance, Features, Integrations
+   cards → Deploy tab.
 4. End-to-end deploy against a real zone; fix what it surfaces; update `STOREFRONT.md` in the
    backend with the new endpoints.
