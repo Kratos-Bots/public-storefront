@@ -214,7 +214,8 @@ subclasses (`ValidationError` 422, `ConflictError` 409, `NotFoundError` 404, plu
 **Target**
 
 - `GET /zones` → `GET /zones?account.id=<id>&per_page=50&status=active` → `[{ id, name, status }]`.
-  502 if not connected or Cloudflare errors.
+  422 if not connected or the stored token can no longer be decrypted (e.g. after a `JWT_SECRET`
+  rotation — the UI shows a "disconnect and reconnect" hint); 502 on Cloudflare/network errors.
 - `GET /target` → `{ zoneId, zoneName, hostname } | null`.
 - `PUT /target` body `{ zoneId, hostname }`: zone must be in the current `GET /zones` result;
   `hostname` lowercased, must be a valid DNS name and equal `zoneName` or end with `.zoneName`;
@@ -385,7 +386,7 @@ Unchanged (`/storefront-settings` already exists). No new routes.
 | Zip malformed / unknown manifest | deploy fails at `extract` with "Release vX is not deployable by this backend version" |
 | Hostname has an existing CNAME | deploy fails at `domain` with Cloudflare's error; the UI links to the zone's DNS page |
 | Two deploys at once | 409 |
-| Backend restarts mid-deploy | The job is enqueued with `attempts: 1`, so BullMQ does not re-run it; the row would stay `running` forever. A `queued`/`running` row older than 15 minutes is treated as stale: the "is one active?" check ignores it, and the next `GET /deploys` marks it `failed` with error "Interrupted by a backend restart" |
+| Backend restarts mid-deploy | `attempts: 1` only stops retry-after-failure; BullMQ's stalled-job recovery still re-delivers a job whose worker died holding the lock (correction from the final review). The job therefore guards on the row's status and skips replay of anything not `queued`/`running`; re-runs of a live row are idempotent (assets dedupe, domain attach is skipped). A `queued`/`running` row older than 15 minutes is treated as stale: the "is one active?" check ignores it, and the next `GET /deploys` marks it `failed` with error "Interrupted by a backend restart". If enqueueing itself fails (Redis down), the row is marked `failed` immediately rather than left `queued` |
 
 ---
 
