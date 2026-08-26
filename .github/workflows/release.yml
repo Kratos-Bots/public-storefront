@@ -14,9 +14,16 @@ jobs:
       - run: npm --prefix web ci
       - run: npm test
       - run: npm run build
+      - name: Bundle worker
+        run: npx wrangler deploy --dry-run --outdir=worker/dist
+      - name: Write release manifest
+        run: node scripts/write-release-manifest.mjs "$GITHUB_REF_NAME"
       - name: Package
         run: |
           mkdir -p out
-          zip -r "out/storefront-${GITHUB_REF_NAME}.zip" wrangler.jsonc worker/src web/dist package.json
-      - uses: softprops/action-gh-release@v2
-        with: { files: out/*.zip }
+          zip -r "out/storefront-${GITHUB_REF_NAME}.zip" release.json worker/dist/index.js web/dist
+          unzip -l "out/storefront-${GITHUB_REF_NAME}.zip" | head -20
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" out/*.zip --title "$GITHUB_REF_NAME" --generate-notes
