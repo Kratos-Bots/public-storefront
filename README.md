@@ -18,12 +18,12 @@ verification + parcel tracking pages.
 ## Prerequisites — settings to configure in the admin first
 
 Nothing renders usefully until the backend is configured. All of the following are backend admin
-settings, not anything in this repo:
+settings (Storefront page in the admin SPA), not anything in this repo:
 
 | Setting | What it does |
 |---|---|
 | `storefront_enabled` | Master switch. While `false` (the default), every `/public/storefront/*` route the SPA depends on 503s and the site shows the closed gate. |
-| `storefront_features` / `storefront_theme` / `storefront_brand` | Feature flags, colours/fonts/layout, and logo/title/description. There is no admin UI for these yet (Spec 2) — set them via `PUT /api/v1/storefront-settings` until then. |
+| `storefront_features` / `storefront_theme` / `storefront_brand` | Feature flags, colours/fonts/layout, and logo/title/description. Editable in the admin under Storefront → Appearance / Features (Spec 2); also settable via `PUT /api/v1/storefront-settings`. |
 | `storefront_turnstile_site_key` / `storefront_turnstile_secret` | Cloudflare Turnstile keys. Required for guest checkout and for the parcel-tracking page (both are Turnstile-gated backend calls). |
 | `storefront_guest_checkout_enabled` | Must be `true` **and** `features.guestCheckout` must be `true` for the session-less checkout path to appear — the two are independent gates. |
 | `storefront_tracking_api_url` / `storefront_tracking_api_key` | China Tracking API credentials. Until both are set, the tracking page runs in degraded mode (`tracking: null` for every parcel). |
@@ -110,24 +110,43 @@ sanitise or validate request bodies beyond the path allowlist; hold any secret (
 its only binding, and it's not sensitive); or reach `/public/wholesale/*` — that surface is the
 Telegram WebApp's JWT-keyed catalog, not this proxy's concern.
 
-## Manual deploy
+## Deploying
+
+The supported path is **deploy from the admin**: a store owner connects their Cloudflare account
+on the admin's Storefront → Deploy tab, picks a hostname on one of their zones, and deploys any
+published release listed there. The backend downloads the release zip, uploads the Worker and its
+assets to their account, attaches the custom domain and health-checks `/healthz`. Nothing in this
+repo runs during that deploy — it only consumes the release artifact described below.
+
+Manual deploy (maintainers only, e.g. for a preview account):
 
 ```bash
 npm run deploy   # npm run build && wrangler deploy
 ```
 
-`wrangler.jsonc` has no route/custom domain committed — Spec 3 sets those per client through the
-Cloudflare API. For a manual deploy, add a `routes` entry to a local copy of `wrangler.jsonc` (or
-pass `--route` to `wrangler deploy`) first.
-
-**Deploy order matters**: this Worker has zero functionality without the backend's storefront
-surface already live and configured (see Prerequisites above) — deploy/configure the backend
-first, then this Worker.
+`wrangler.jsonc` has no route/custom domain committed; add a `routes` entry to a local copy (or pass
+`--route`) first. **Deploy order matters**: the Worker has zero functionality without the backend's
+storefront surface already live and configured (see Prerequisites above).
 
 ## Release process
 
-Pushing a tag matching `v*` (e.g. `v0.2.0`) runs `.github/workflows/release.yml`: checkout → install
-(`npm ci` at the root, then `npm ci` in `web/`) → `npm test` → `npm run build` → zip
-`wrangler.jsonc`, `worker/src`, `web/dist`, and `package.json` into `storefront-<tag>.zip` →
-attach it to a GitHub Release via `softprops/action-gh-release`. That release artifact is what
-Spec 3's backend-driven deploy pipeline will list and upload to a client's own Cloudflare account.
+Pushing a tag matching `v*` runs `.github/workflows/release.yml`:
+
+1. `npm ci` (root, then `web/`) → `npm test` → `npm run build`
+2. `npx wrangler deploy --dry-run --outdir=worker/dist` — bundles the Worker to `worker/dist/index.js`
+   without deploying
+3. `node scripts/write-release-manifest.mjs <tag>` — writes `release.json` from `wrangler.jsonc`
+   (`schemaVersion`, `tag`, worker `compatibilityDate`, assets `notFoundHandling` /
+   `runWorkerFirst`, and the list of `vars` the deployer must supply — currently `BACKEND_URL`)
+4. zips `release.json`, `worker/dist/index.js`, `web/dist/**` as `storefront-<tag>.zip`
+5. `gh release create <tag> --generate-notes` attaches it to a GitHub Release
+
+To cut a release:
+
+```bash
+npm version minor            # or patch — bumps package.json, commits, tags v0.x.0
+git push origin main --follow-tags
+```
+
+The backend's Storefront → Deploy tab lists these releases within five minutes and shows an
+"Update available" badge on stores running an older tag.
