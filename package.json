@@ -8,7 +8,8 @@
     "dev:web": "npm --prefix web run dev",
     "build": "npm --prefix web run build && tsc --noEmit -p worker",
     "typecheck": "npm --prefix web run typecheck && tsc --noEmit -p worker",
-    "test": "npm --prefix web test && vitest run --config worker/vitest.config.ts",
+    "test": "npm --prefix web test && vitest run --config worker/vitest.config.ts && npm run test:scripts",
+    "test:scripts": "node --test scripts/*.test.mjs",
     "test:web": "npm --prefix web test",
     "test:worker": "vitest run --config worker/vitest.config.ts",
     "test:e2e": "playwright test -c e2e/playwright.config.ts",
@@ -19,6 +20,7 @@
     "@cloudflare/vitest-pool-workers": "^0.22.0",
     "@cloudflare/workers-types": "^5.20260823.1",
     "@playwright/test": "^1.62.1",
+    "jsonc-parser": "^3.3.1",
     "typescript": "~5.9.3",
     "vitest": "^4.1.0",
     "wrangler": "^4.125.0"
