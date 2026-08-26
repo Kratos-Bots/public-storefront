@@ -272,7 +272,7 @@ user). Steps, each writing a log line before and after, with `step` updated on t
 |---|---|
 | `download` | fetch the release asset (`browser_download_url`), max 100 MiB, into memory |
 | `extract` | unzip (`fflate` — new dependency, pure JS) into `Map<path, Buffer>`; read + validate `release.json` (`schemaVersion === 1`; `vars ⊆ ['BACKEND_URL']`) |
-| `manifest` | hash every file under `assets.directory` |
+| `manifest` | hash every file under `assets.directory` (blake3 over base64 content + extension, first 32 hex chars — what wrangler does). `_headers` / `_redirects` are **not** assets: they are lifted out and passed as `assets.config._headers` / `_redirects` in the script metadata, again mirroring wrangler |
 | `upload-session` | create session; skip `upload-assets` when `buckets` is empty (everything already stored) |
 | `upload-assets` | upload bucket by bucket, sequentially; keep the completion JWT |
 | `script` | PUT with metadata `{ main_module: 'index.js', compatibility_date, bindings: [{ type:'assets', name:'ASSETS' }, { type:'plain_text', name:'BACKEND_URL', text: \`https://${API_HOST}/\` }], assets: { jwt, config: { not_found_handling, run_worker_first } }, observability: { enabled: true } }` |
@@ -287,9 +287,11 @@ not logged).
 ### 2.6 `publicUrl` improvement
 
 `src/modules/orders/access-key.ts` currently returns `null` without `ORDER_PUBLIC_BASE_URL`. Change
-the base to: `storefront_public_url` setting when the storefront is enabled and the setting is set,
-otherwise `env.ORDER_PUBLIC_BASE_URL`. No other behaviour changes. This removes the need for a
-backend env edit after a store owner deploys.
+the base to: the `storefront_public_url` setting when set (it only exists after a successful deploy),
+otherwise `env.ORDER_PUBLIC_BASE_URL`. `buildOrderPublicUrl` stays synchronous (six call sites), so
+the setting is held in an in-process cache loaded at boot, refreshed after a deploy's `finalize`
+step, and re-read every five minutes so the separate bot process picks it up without a restart.
+This removes the need for a backend env edit after a store owner deploys.
 
 ### 2.7 Security notes
 
@@ -349,8 +351,8 @@ URL + key, same pattern. Doc links to Cloudflare Turnstile and the tracking prov
 ### 3.4 Deploy tab (`DeployTab.tsx` composed of four cards)
 
 1. `CloudflareConnectionCard` — disconnected: token input, "Create token ↗" (opens
-   `https://dash.cloudflare.com/profile/api-tokens` — pre-filled via `permissionGroupKeys` if that
-   query format works in implementation, otherwise plain), a permissions checklist (Account:
+   `https://dash.cloudflare.com/profile/api-tokens`; the pre-fill query format is undocumented, so
+   the card lists the permissions instead), a permissions checklist (Account:
    Workers Scripts Edit, Account Settings Read; Zone: Zone Read, Workers Routes Edit, DNS Edit,
    SSL and Certificates Edit), Connect. If the response is `needsAccount`, a `Select` of accounts
    appears and Connect is re-sent with `accountId`. Connected: account name, `…<suffix>`, verified
