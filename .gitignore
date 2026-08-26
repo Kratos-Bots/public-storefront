@@ -1,8 +1,10 @@
 node_modules/
 web/dist/
+worker/dist/
 .dev.vars
 .wrangler/
 *.tsbuildinfo
 e2e/screenshots/
 test-results/
 .superpowers/
+release.json
