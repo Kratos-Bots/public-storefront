@@ -7,6 +7,14 @@ if (!tag) {
   console.error('usage: node scripts/write-release-manifest.mjs <tag>');
   process.exit(2);
 }
-const manifest = buildReleaseManifest(readFileSync('wrangler.jsonc', 'utf8'), tag);
-writeFileSync('release.json', JSON.stringify(manifest, null, 2) + '\n');
-console.log(`release.json written for ${tag}`);
+
+const root = new URL('../', import.meta.url);
+
+try {
+  const manifest = buildReleaseManifest(readFileSync(new URL('wrangler.jsonc', root), 'utf8'), tag);
+  writeFileSync(new URL('release.json', root), JSON.stringify(manifest, null, 2) + '\n');
+  console.log(`release.json written for ${tag}`);
+} catch (err) {
+  console.error(`error: ${err.message}`);
+  process.exit(1);
+}
