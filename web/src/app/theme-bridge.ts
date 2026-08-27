@@ -1,4 +1,4 @@
-import { createTheme, type MantineThemeOverride } from '@mantine/core';
+import { ActionIcon, Button, Drawer, Input, Modal, createTheme, type MantineThemeOverride } from '@mantine/core';
 import { generateColors } from '@mantine/colors-generator';
 import type { Theme, Brand } from '@/types/settings.ts';
 import { mediaUrl } from '@/lib/media-url.ts';
@@ -45,6 +45,23 @@ export function buildMantineTheme(theme: Theme): MantineThemeOverride {
         }
       : {}),
     other: { density: theme.density },
+    components: {
+      Drawer: Drawer.extend({
+        defaultProps: {
+          transitionProps: { duration: 300, timingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+          overlayProps: { backgroundOpacity: 0.7, blur: 2 },
+        },
+      }),
+      Modal: Modal.extend({
+        defaultProps: {
+          transitionProps: { transition: 'pop', duration: 200, timingFunction: 'cubic-bezier(0.2, 0.8, 0.2, 1)' },
+          overlayProps: { backgroundOpacity: 0.7, blur: 2 },
+        },
+      }),
+      Button: Button.extend({ classNames: { root: 'sf-button' } }),
+      ActionIcon: ActionIcon.extend({ classNames: { root: 'sf-icon-button' } }),
+      Input: Input.extend({ classNames: { input: 'sf-input' } }),
+    },
   });
 }
 
