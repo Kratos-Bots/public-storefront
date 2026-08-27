@@ -233,6 +233,7 @@
    Sticks to the foot of a phone — the slot the running cart tab vacates on
    this route, so the primary action is always a thumb's reach away. */
 .nav {
+  composes: glass-soft from global;
   position: sticky;
   bottom: 0;
   z-index: 5;
@@ -240,9 +241,6 @@
   gap: 0.6rem;
   margin-top: 1rem;
   padding: 0.75rem 0 max(env(safe-area-inset-bottom), 0.75rem);
-  background: color-mix(in srgb, var(--sf-bg) 80%, transparent);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
 }
 
 .back {
@@ -285,11 +283,15 @@
   letter-spacing: 0.22em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: opacity 120ms ease;
+  transition: opacity 120ms ease, transform 150ms ease;
 }
 
 .next:hover:not(:disabled) {
   opacity: 0.88;
+}
+
+.next:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
 .next:disabled {

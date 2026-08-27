@@ -2,14 +2,11 @@
    sticky because it hangs off the shell, not off the end of the list — the
    shells give themselves the clearance it needs. */
 .bar {
+  composes: glass from global;
   position: fixed;
   inset-inline: 0;
   bottom: 0;
   z-index: 30;
-  background: color-mix(in srgb, var(--sf-bg) 85%, transparent);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-  transform: translateZ(0);
   border-top: 1px solid var(--sf-line-strong);
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
@@ -88,6 +85,7 @@
   text-decoration: none;
   white-space: nowrap;
   cursor: pointer;
+  transition: transform 150ms ease;
 }
 
 .checkout:focus-visible {
@@ -95,8 +93,18 @@
   outline-offset: 2px;
 }
 
+.checkout:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
 .checkout:disabled {
   background: var(--sf-surface-2);
   color: var(--sf-faint);
   cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .checkout {
+    transition: none;
+  }
 }

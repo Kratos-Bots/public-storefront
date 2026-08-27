@@ -213,7 +213,7 @@
   background: transparent;
   color: var(--sf-text);
   cursor: pointer;
-  transition: border-color 120ms ease, background-color 120ms ease;
+  transition: border-color 120ms ease, background-color 120ms ease, transform 150ms ease;
 }
 
 .step:first-child {
@@ -227,6 +227,10 @@
 .step:hover:not(:disabled) {
   border-color: var(--sf-primary);
   background: var(--sf-surface-2);
+}
+
+.step:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 .step:focus-visible {

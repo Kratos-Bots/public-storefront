@@ -6,7 +6,7 @@
   flex-direction: column;
   background: var(--sf-bg-deep);
   border-top: 1px solid var(--sf-line-strong);
-  border-radius: 16px 16px 0 0; /* the lip stays whatever the store's radius token is */
+  border-radius: 16px 16px 0 0; /* the lip is fixed at 16px — deliberately independent of the store's radius token */
 }
 
 /* The grab handle is the promise that the sheet can be pushed back down — it is
@@ -29,11 +29,9 @@
 }
 
 .footer {
+  composes: glass-soft from global;
   flex: none;
   border-top: 1px solid var(--sf-line-strong);
-  background: color-mix(in srgb, var(--sf-bg-deep) 80%, transparent);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
   padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
 }
 

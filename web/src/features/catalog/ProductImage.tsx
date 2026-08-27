@@ -3,7 +3,7 @@ import { productImageUrl } from '@/lib/media-url.ts';
 import classes from '@/features/catalog/ProductImage.module.css';
 
 export interface ProductImageProps {
-  /** Pass `product.imageProductId ?? product.id` — the parent-image fallback the menu uses. */
+  /** Pass `product.imageProductId` — callers render this component only when it is non-null, so an image-less product never fetches. */
   productId: number;
   variant?: 'web' | 'thumbnail';
   alt: string;

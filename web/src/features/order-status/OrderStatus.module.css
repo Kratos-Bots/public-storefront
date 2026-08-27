@@ -321,7 +321,7 @@
   align-items: center;
   padding: 0.2rem 0.5rem;
   border: 1px solid var(--sf-line-strong);
-  border-radius: 999px;
+  border-radius: 0;
   font-family: var(--sf-font-mono);
   font-size: 9px;
   font-weight: 600;
@@ -621,11 +621,15 @@
   text-transform: uppercase;
   text-decoration: none;
   cursor: pointer;
-  transition: opacity 120ms ease;
+  transition: opacity 120ms ease, transform 150ms ease;
 }
 
 .cta:hover {
   opacity: 0.88;
+}
+
+.cta:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
 .cta:focus-visible {

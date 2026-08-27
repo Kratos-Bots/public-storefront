@@ -32,7 +32,3 @@ body {
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
 }
-
-/* True 1px rules — crisper than a border on retina. */
-.hr { height: 1px; background: var(--sf-line); }
-.hr-strong { height: 1px; background: var(--sf-line-strong); }

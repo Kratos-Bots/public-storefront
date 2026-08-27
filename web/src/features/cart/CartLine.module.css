@@ -20,6 +20,17 @@
   border-top: 1px solid var(--sf-line);
 }
 
+/* An image-less catalogue never reserves the thumb rail — text starts at the
+   left edge instead of leaving a gap where a well would have sat. */
+.lineNoImage {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'name  total'
+    'meta  meta'
+    'qty   remove'
+    'note  note';
+}
+
 .thumb {
   grid-area: thumb;
   align-self: start;

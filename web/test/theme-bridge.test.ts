@@ -38,6 +38,7 @@ describe('theme bridge', () => {
     expect(buildMantineTheme({ ...theme, radius: 'md' }).defaultRadius).toBe('md');
   });
   it('slows Mantine sheets and modals to the shop timings', () => {
+    expect(buildMantineTheme(theme).respectReducedMotion).toBe(true);
     const c = buildMantineTheme(theme).components as Record<string, { defaultProps?: Record<string, unknown> }>;
     expect(c.Drawer?.defaultProps?.transitionProps).toEqual({ duration: 300, timingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)' });
     expect(c.Drawer?.defaultProps?.overlayProps).toEqual({ backgroundOpacity: 0.7, blur: 2 });

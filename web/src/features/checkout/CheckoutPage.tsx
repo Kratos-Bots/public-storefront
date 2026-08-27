@@ -597,7 +597,7 @@ export function CheckoutPage() {
             ))}
           </Stepper>
 
-          <div className={`${classes.card} ${FADE}`} ref={cardRef}>
+          <div key={step} className={`${classes.card} ${FADE}`} ref={cardRef}>
             <header className={classes.cardHead}>
               <span className={classes.cardCount}>
                 Step {step + 1} of {STEPS.length}
