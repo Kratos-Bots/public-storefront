@@ -182,6 +182,15 @@ a.crumb:hover {
     position: sticky;
     top: 5.5rem;
   }
+  /* No photo: one column, not an empty half — `.layout.layoutNoImage`'s two
+     classes outrank `.layout`'s one at any width, including the 62em block
+     below, so this single declaration covers both breakpoints. */
+  .layout.layoutNoImage {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .layoutNoImage .detail {
+    max-width: 40rem;
+  }
 }
 
 @media (min-width: 62em) {
