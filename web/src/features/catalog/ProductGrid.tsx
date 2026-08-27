@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Button } from '@mantine/core';
-import { Link, useParams } from 'react-router';
+import { Link, useNavigate, useParams } from 'react-router';
 import { useSettings } from '@/app/settings.ts';
 import { useCatalog } from '@/features/catalog/use-catalog.ts';
 import { buildCategoryTree } from '@/features/catalog/category-tree.ts';
@@ -8,10 +8,12 @@ import { categoryCounts, filterProducts, findCategoryBySlugOrId } from '@/featur
 import { CategoryNav } from '@/features/catalog/CategoryNav.tsx';
 import { FilterDrawer } from '@/features/catalog/FilterDrawer.tsx';
 import { ProductCard } from '@/features/catalog/ProductCard.tsx';
+import { ProductRow } from '@/features/catalog/ProductRow.tsx';
 import { EmptyState } from '@/components/EmptyState.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { SearchField } from '@/layouts/SearchField.tsx';
 import { useShellSearch } from '@/layouts/shell-context.ts';
+import { rowAnim } from '@/lib/motion.ts';
 import classes from '@/features/catalog/ProductGrid.module.css';
 
 /** How many cards load their image eagerly — the first two rows on a phone. */
@@ -39,6 +41,8 @@ export function ProductGrid() {
     () => filterProducts(products, categories, { categoryId: active?.id ?? null, search }),
     [products, categories, active?.id, search],
   );
+  const navigate = useNavigate();
+  const imageless = visible.length > 0 && visible.every((p) => p.imageProductId === null);
 
   if (catalog.isPending) return <PageSkeleton inline />;
 
@@ -120,10 +124,18 @@ export function ProductGrid() {
                 description="This part of the shop is empty for now — check back soon."
               />
             )
+          ) : imageless ? (
+            <ul className={classes.rows}>
+              {visible.map((product, i) => (
+                <li key={product.id} {...rowAnim(i)}>
+                  <ProductRow product={product} onSelect={(p) => navigate(`/p/${p.id}`)} />
+                </li>
+              ))}
+            </ul>
           ) : (
             <div className={classes.grid}>
               {visible.map((product, i) => (
-                <ProductCard key={product.id} product={product} eager={i < EAGER_CARDS} />
+                <ProductCard key={product.id} product={product} eager={i < EAGER_CARDS} hasSiblingImages index={i} />
               ))}
             </div>
           )}
