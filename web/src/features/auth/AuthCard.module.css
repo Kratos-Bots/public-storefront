@@ -2,9 +2,9 @@
    the two cards are entries in an index, and the only thing on this page with
    weight is the code slip inside one of them. */
 .card {
-  border: 1px solid var(--sf-line-strong);
+  border: 1px solid var(--sf-line);
   border-radius: var(--mantine-radius-default);
-  background: var(--sf-surface);
+  background: color-mix(in srgb, var(--sf-surface) 40%, transparent);
   padding: 0.9rem 1rem 1.1rem;
 }
 

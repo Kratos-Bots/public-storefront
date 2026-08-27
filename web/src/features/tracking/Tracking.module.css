@@ -515,8 +515,8 @@
   padding: 0.95rem 1rem 1.05rem;
   border: 1px solid var(--sf-line);
   border-left: 2px solid var(--sf-line-strong);
+  background: color-mix(in srgb, var(--sf-surface) 40%, transparent);
   border-radius: var(--mantine-radius-default);
-  background: var(--sf-bg-deep);
 }
 
 .card[data-tone='info'] {

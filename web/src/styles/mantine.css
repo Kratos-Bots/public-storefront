@@ -1,0 +1,36 @@
+/* Mantine component vocabulary — hooks registered in theme-bridge.ts via
+   `classNames`. Buttons speak in tracked micro-caps; inputs are underlines. */
+.sf-button {
+  font-family: var(--sf-font-mono);
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  --button-fz: 12px;
+  transition: transform 150ms ease, background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+.sf-button[data-size="xs"], .sf-button[data-size="sm"], .sf-button[data-size="compact-xs"], .sf-button[data-size="compact-sm"] { --button-fz: 11px; letter-spacing: 0.18em; }
+.sf-button[data-size="lg"], .sf-button[data-size="xl"] { --button-fz: 13px; letter-spacing: 0.22em; }
+.sf-button:active:not([data-disabled]) { transform: scale(0.98); }
+.sf-button[data-variant="filled"] { --button-bg: var(--sf-primary); --button-color: var(--sf-bg); --button-hover: var(--sf-primary-soft); --button-hover-color: var(--sf-bg); }
+.sf-button[data-variant="default"] { --button-bg: transparent; --button-bd: 1px solid var(--sf-line-strong); --button-color: var(--sf-text); --button-hover: var(--sf-surface); }
+.sf-button[data-variant="default"]:hover:not([data-disabled]) { --button-bd: 1px solid var(--sf-primary); }
+.sf-button[data-variant="subtle"] { --button-bg: transparent; --button-color: var(--sf-muted); --button-hover: var(--sf-surface); --button-hover-color: var(--sf-text); }
+.sf-button:focus-visible { outline: 1px solid var(--sf-primary); outline-offset: 2px; }
+
+.sf-icon-button { transition: transform 150ms ease, background-color 150ms ease, border-color 150ms ease; }
+.sf-icon-button:active:not([data-disabled]) { transform: scale(0.97); }
+
+.sf-input {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--sf-line-strong);
+  border-radius: 0;
+  padding-left: 0;
+  padding-right: 0;
+  font-family: var(--sf-font-mono);
+  font-variant-numeric: tabular-nums;
+  transition: border-color 150ms ease;
+}
+.sf-input:focus, .sf-input:focus-within { border-bottom-color: var(--sf-primary); outline: none; }
+.sf-input[data-error] { border-bottom-color: var(--sf-danger); }
+textarea.sf-input { border: 1px solid var(--sf-line-strong); padding: 0.75rem; }

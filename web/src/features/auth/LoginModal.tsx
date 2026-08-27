@@ -29,7 +29,6 @@ export function LoginModal() {
       centered
       size="sm"
       radius="var(--mantine-radius-default)"
-      overlayProps={{ backgroundOpacity: 0.62, blur: 2 }}
       classNames={{ content: classes.content, header: classes.header, title: classes.title }}
     >
       <p className={classes.lede}>
