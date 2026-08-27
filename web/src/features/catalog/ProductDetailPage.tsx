@@ -42,6 +42,7 @@ export function ProductDetailPage() {
   if (query.isError || !product) return <NotFound retry={() => void query.refetch()} />;
 
   const status = deriveStockStatus(product.inStock, product.lowStockAlert);
+  const hasImage = product.imageProductId !== null;
   const trail = ancestorChain(catalog.data?.categories ?? [], product.categoryId);
   // Before the catalogue arrives (or for a category it doesn't carry) fall back to
   // the flattened path the product itself came with, as plain text.
@@ -74,17 +75,17 @@ export function ProductDetailPage() {
         ))}
       </nav>
 
-      <div className={classes.layout}>
-        <div className={classes.media}>
-          {product.imageProductId !== null ? (
+      <div className={hasImage ? classes.layout : `${classes.layout} ${classes.layoutNoImage}`}>
+        {hasImage ? (
+          <div className={classes.media}>
             <ProductImage
-              productId={product.imageProductId}
+              productId={product.imageProductId!}
               variant="web"
               alt={product.displayName}
               eager
             />
-          ) : null}
-        </div>
+          </div>
+        ) : null}
 
         <div className={classes.detail}>
           <header className={classes.head}>
