@@ -37,7 +37,7 @@ export function buildMantineTheme(theme: Theme): MantineThemeOverride {
     fontFamily: fontStacks(theme.fonts).body,
     fontFamilyMonospace: fontStacks(theme.fonts).mono,
     headings: { fontFamily: fontStacks(theme.fonts).heading, fontWeight: '600' },
-    defaultRadius: theme.radius,
+    defaultRadius: theme.radius === 'none' ? 0 : theme.radius,
     ...(compact
       ? {
           spacing: { xs: '0.5rem', sm: '0.625rem', md: '0.875rem', lg: '1.125rem', xl: '1.5rem' },

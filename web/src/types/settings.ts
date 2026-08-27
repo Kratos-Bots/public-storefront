@@ -20,7 +20,7 @@ export interface Theme {
   scheme: 'dark' | 'light';
   colors: { primary: string; bg: string; surface: string; text: string; muted: string; success: string; warn: string; danger: string };
   fonts: { heading: string | null; body: string | null; mono: string | null };
-  radius: 'sm' | 'md' | 'lg' | 'xl';
+  radius: 'none' | 'sm' | 'md' | 'lg' | 'xl';
   density: 'comfortable' | 'compact';
   customCss: string;
 }

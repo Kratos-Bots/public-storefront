@@ -6,7 +6,7 @@
   flex-direction: column;
   background: var(--sf-bg-deep);
   border-top: 1px solid var(--sf-line-strong);
-  border-radius: var(--mantine-radius-default) var(--mantine-radius-default) 0 0;
+  border-radius: 16px 16px 0 0; /* the lip stays whatever the store's radius token is */
 }
 
 /* The grab handle is the promise that the sheet can be pushed back down — it is

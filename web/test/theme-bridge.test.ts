@@ -33,6 +33,10 @@ describe('theme bridge', () => {
     expect(googleFontsHref(theme.fonts)).toBe('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
     expect(googleFontsHref({ heading: null, body: null, mono: null })).toBeNull();
   });
+  it('maps radius none to 0 and passes the named sizes through', () => {
+    expect(buildMantineTheme({ ...theme, radius: 'none' }).defaultRadius).toBe(0);
+    expect(buildMantineTheme({ ...theme, radius: 'md' }).defaultRadius).toBe('md');
+  });
 });
 
 describe('font defaults', () => {
