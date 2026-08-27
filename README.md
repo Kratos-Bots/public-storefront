@@ -110,6 +110,10 @@ sanitise or validate request bodies beyond the path allowlist; hold any secret (
 its only binding, and it's not sensitive); or reach `/public/wholesale/*` — that surface is the
 Telegram WebApp's JWT-keyed catalog, not this proxy's concern.
 
+## Releases
+
+- v0.2.0 — design language: Inter, gradient chassis, sharp corners by default (needs backend ≥ the commit that accepts radius `none`), entrance motion, image-less catalogue list.
+
 ## Deploying
 
 The supported path (once Spec 3 ships) is **deploy from the admin**: a store owner connects their Cloudflare account

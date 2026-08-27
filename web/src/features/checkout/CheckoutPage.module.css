@@ -72,6 +72,7 @@
   background: transparent;
   color: var(--sf-faint);
   font-family: var(--sf-font-mono);
+  font-variant-numeric: tabular-nums;
   font-size: 11px;
   font-weight: 700;
 }
