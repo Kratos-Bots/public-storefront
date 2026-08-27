@@ -1,20 +1,30 @@
 /* Mantine component vocabulary — hooks registered in theme-bridge.ts via
-   `classNames`. Buttons speak in tracked micro-caps; inputs are underlines. */
+   `classNames` (CSS classes) and `vars` (CSS custom properties). Buttons speak
+   in tracked micro-caps; inputs are underlines.
+
+   Button's own varsResolver computes --button-bg/--button-color/--button-hover/
+   --button-hover-color/--button-bd/--button-fz and injects them as an inline
+   `style` attribute on the root, so a class-based override here can never win
+   (inline style always beats a stylesheet rule). The variant/size colours and
+   font-size are set via theme.components.Button.vars in theme-bridge.ts
+   instead — a theme-level vars resolver is merged in after the component's
+   own and so takes precedence. Only plain (non custom-property) declarations
+   belong in this file for .sf-button. */
 .sf-button {
   font-family: var(--sf-font-mono);
   text-transform: uppercase;
   font-weight: 600;
   letter-spacing: 0.2em;
-  --button-fz: 12px;
   transition: transform 150ms ease, background-color 150ms ease, border-color 150ms ease, color 150ms ease;
 }
-.sf-button[data-size="xs"], .sf-button[data-size="sm"], .sf-button[data-size="compact-xs"], .sf-button[data-size="compact-sm"] { --button-fz: 11px; letter-spacing: 0.18em; }
-.sf-button[data-size="lg"], .sf-button[data-size="xl"] { --button-fz: 13px; letter-spacing: 0.22em; }
+.sf-button[data-size="xs"], .sf-button[data-size="sm"], .sf-button[data-size="compact-xs"], .sf-button[data-size="compact-sm"] { letter-spacing: 0.18em; }
+.sf-button[data-size="lg"], .sf-button[data-size="xl"] { letter-spacing: 0.22em; }
 .sf-button:active:not([data-disabled]) { transform: scale(0.98); }
-.sf-button[data-variant="filled"] { --button-bg: var(--sf-primary); --button-color: var(--sf-bg); --button-hover: var(--sf-primary-soft); --button-hover-color: var(--sf-bg); }
-.sf-button[data-variant="default"] { --button-bg: transparent; --button-bd: 1px solid var(--sf-line-strong); --button-color: var(--sf-text); --button-hover: var(--sf-surface); }
-.sf-button[data-variant="default"]:hover:not([data-disabled]) { --button-bd: 1px solid var(--sf-primary); }
-.sf-button[data-variant="subtle"] { --button-bg: transparent; --button-color: var(--sf-muted); --button-hover: var(--sf-surface); --button-hover-color: var(--sf-text); }
+/* The default variant's hover border can't be expressed as a --button-bd
+   override (that variable is set once, statically, via the inline style —
+   there's no way to make an inline custom property respond to :hover without
+   JS), so it's a plain border-color declaration instead. */
+.sf-button[data-variant="default"]:hover:not([data-disabled]) { border-color: var(--sf-primary); }
 .sf-button:focus-visible { outline: 1px solid var(--sf-primary); outline-offset: 2px; }
 
 .sf-icon-button { transition: transform 150ms ease, background-color 150ms ease, border-color 150ms ease; }
@@ -25,12 +35,18 @@
   border: 0;
   border-bottom: 1px solid var(--sf-line-strong);
   border-radius: 0;
-  padding-left: 0;
-  padding-right: 0;
   font-family: var(--sf-font-mono);
   font-variant-numeric: tabular-nums;
   transition: border-color 150ms ease;
 }
+/* Mantine stamps data-with-left-section/data-with-right-section on the input's
+   *wrapper* div, not on the <input> itself, and reserves section space via an
+   inherited --input-padding-inline-start/end custom property consumed by its
+   own .input rule. Zero our own padding only when the immediate parent lacks
+   the corresponding section, so a TextInput with a leftSection (e.g. the
+   header SearchField) keeps the space Mantine computes for its icon. */
+:not([data-with-left-section]) > .sf-input { padding-inline-start: 0; }
+:not([data-with-right-section]) > .sf-input { padding-inline-end: 0; }
 .sf-input:focus, .sf-input:focus-within { border-bottom-color: var(--sf-primary); outline: none; }
 .sf-input[data-error] { border-bottom-color: var(--sf-danger); }
 textarea.sf-input { border: 1px solid var(--sf-line-strong); padding: 0.75rem; }

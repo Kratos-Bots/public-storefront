@@ -18,7 +18,10 @@ describe('mantine.css', () => {
     expect(css).toMatch(/\.sf-button\s*\{[^}]*font-family: var\(--sf-font-mono\)[^}]*text-transform: uppercase[^}]*letter-spacing: 0\.2em/s);
     expect(css).toMatch(/\.sf-button:active:not\(\[data-disabled\]\)\s*\{\s*transform: scale\(0\.98\);/);
     expect(css).toMatch(/\.sf-icon-button:active:not\(\[data-disabled\]\)\s*\{\s*transform: scale\(0\.97\);/);
-    expect(css).toMatch(/\.sf-button\[data-variant="filled"\]\s*\{[^}]*--button-bg: var\(--sf-primary\)[^}]*--button-color: var\(--sf-bg\)[^}]*--button-hover: var\(--sf-primary-soft\)/s);
+    // The variant/size colour and font-size variables are no longer set in CSS — Mantine's
+    // Button injects its own --button-* variables as an inline style, which always beats a
+    // class rule. They're set via theme.components.Button.vars in theme-bridge.ts instead;
+    // see test/theme-bridge.test.ts for coverage of that resolver.
   });
   it('underlines inputs', () => {
     expect(css).toMatch(/\.sf-input\s*\{[^}]*border-bottom: 1px solid var\(--sf-line-strong\)[^}]*border-radius: 0/s);
