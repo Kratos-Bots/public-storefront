@@ -6,7 +6,10 @@
   inset-inline: 0;
   bottom: 0;
   z-index: 30;
-  background: var(--sf-bg-deep);
+  background: color-mix(in srgb, var(--sf-bg) 85%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  transform: translateZ(0);
   border-top: 1px solid var(--sf-line-strong);
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }

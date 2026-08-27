@@ -239,7 +239,9 @@
   gap: 0.6rem;
   margin-top: 1rem;
   padding: 0.75rem 0 max(env(safe-area-inset-bottom), 0.75rem);
-  background: linear-gradient(to top, var(--sf-bg) 72%, transparent);
+  background: color-mix(in srgb, var(--sf-bg) 80%, transparent);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
 }
 
 .back {

@@ -50,7 +50,10 @@
   position: sticky;
   bottom: 0;
   z-index: 20;
-  background: var(--sf-bg-deep);
+  background: color-mix(in srgb, var(--sf-bg) 85%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  transform: translateZ(0);
   border-top: 1px solid var(--sf-line);
 }
 
@@ -65,7 +68,7 @@
 }
 
 .strip .link {
-  background: var(--sf-bg-deep);
+  background: transparent;
   padding: 0.85rem 0.5rem;
   padding-bottom: calc(0.85rem + env(safe-area-inset-bottom, 0px));
 }

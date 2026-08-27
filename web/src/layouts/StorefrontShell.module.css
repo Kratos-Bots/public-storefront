@@ -11,14 +11,17 @@
   display: flex;
   flex-direction: column;
   min-height: 100dvh;
-  background: var(--sf-bg);
+  background: transparent;
 }
 
 .header {
   position: sticky;
   top: 0;
   z-index: 30;
-  background: var(--sf-bg-deep);
+  background: color-mix(in srgb, var(--sf-bg) 85%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  transform: translateZ(0);
   border-bottom: 1px solid var(--sf-line);
   padding-top: env(safe-area-inset-top, 0px);
 }
