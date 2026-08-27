@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildMantineTheme, cssVariablesFor, googleFontsHref } from '@/app/theme-bridge.ts';
+import { fontStacks, INTER } from '@/app/theme-bridge.ts';
 import type { Theme, Brand } from '@/types/settings.ts';
 
 const theme: Theme = {
@@ -31,5 +32,33 @@ describe('theme bridge', () => {
   it('builds one Google Fonts href for the distinct families', () => {
     expect(googleFontsHref(theme.fonts)).toBe('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
     expect(googleFontsHref({ heading: null, body: null, mono: null })).toBeNull();
+  });
+});
+
+describe('font defaults', () => {
+  const none = { heading: null, body: null, mono: null };
+
+  it('falls back to the self-hosted Inter stack for body and heading', () => {
+    const s = fontStacks(none);
+    expect(s.body).toBe(INTER);
+    expect(s.heading).toBe(INTER);
+    expect(INTER.startsWith('"Inter Variable", Inter,')).toBe(true);
+  });
+
+  it('uses the body face as the mono voice unless a mono font is configured', () => {
+    expect(fontStacks(none).mono).toBe(INTER);
+    expect(fontStacks({ heading: null, body: 'Space Grotesk', mono: null }).mono).toBe(`"Space Grotesk", ${INTER}`);
+    expect(fontStacks({ heading: null, body: null, mono: 'JetBrains Mono' }).mono).toBe('"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace');
+  });
+
+  it('feeds the same stacks to Mantine and the --sf-font-* variables', () => {
+    const t = buildMantineTheme({ ...theme, fonts: none });
+    const v = cssVariablesFor({ ...theme, fonts: none }, brand);
+    expect(t.fontFamily).toBe(INTER);
+    expect(t.fontFamilyMonospace).toBe(INTER);
+    expect(t.headings?.fontFamily).toBe(INTER);
+    expect(v['--sf-font-body']).toBe(INTER);
+    expect(v['--sf-font-heading']).toBe(INTER);
+    expect(v['--sf-font-mono']).toBe(INTER);
   });
 });
