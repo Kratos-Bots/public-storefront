@@ -3,11 +3,23 @@ import { generateColors } from '@mantine/colors-generator';
 import type { Theme, Brand } from '@/types/settings.ts';
 import { mediaUrl } from '@/lib/media-url.ts';
 
-const SYSTEM_SANS = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+/** The storefront's own face, self-hosted via @fontsource-variable/inter (imported in main.tsx). */
+export const INTER = '"Inter Variable", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 const SYSTEM_MONO = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
 export const THEME_STORAGE_KEY = 'sf-theme-v1';
 
 function family(name: string | null, fallback: string): string { return name ? `"${name}", ${fallback}` : fallback; }
+
+/** Body, heading and "mono voice" stacks. The mono voice is the body face with
+ *  tabular figures (the ecommerce-menu idiom) unless the store picks a real mono font. */
+export function fontStacks(fonts: Theme['fonts']): { body: string; heading: string; mono: string } {
+  const body = family(fonts.body, INTER);
+  return {
+    body,
+    heading: family(fonts.heading ?? fonts.body, INTER),
+    mono: fonts.mono ? family(fonts.mono, SYSTEM_MONO) : body,
+  };
+}
 
 /** Mix `hex` toward `toward` by `t` (0..1) in sRGB — enough for derived surfaces/lines. */
 export function mix(hex: string, toward: string, t: number): string {
@@ -22,9 +34,9 @@ export function buildMantineTheme(theme: Theme): MantineThemeOverride {
     primaryColor: 'brand',
     primaryShade: { light: 6, dark: 5 },
     colors: { brand: generateColors(theme.colors.primary) },
-    fontFamily: family(theme.fonts.body, SYSTEM_SANS),
-    fontFamilyMonospace: family(theme.fonts.mono, SYSTEM_MONO),
-    headings: { fontFamily: family(theme.fonts.heading ?? theme.fonts.body, SYSTEM_SANS), fontWeight: '600' },
+    fontFamily: fontStacks(theme.fonts).body,
+    fontFamilyMonospace: fontStacks(theme.fonts).mono,
+    headings: { fontFamily: fontStacks(theme.fonts).heading, fontWeight: '600' },
     defaultRadius: theme.radius,
     ...(compact
       ? {
@@ -57,9 +69,9 @@ export function cssVariablesFor(theme: Theme, brand: Pick<Brand, 'logoHeight'>):
     '--sf-warn': c.warn,
     '--sf-danger': c.danger,
     '--sf-logo-h': `${brand.logoHeight}px`,
-    '--sf-font-heading': family(theme.fonts.heading ?? theme.fonts.body, SYSTEM_SANS),
-    '--sf-font-body': family(theme.fonts.body, SYSTEM_SANS),
-    '--sf-font-mono': family(theme.fonts.mono, SYSTEM_MONO),
+    '--sf-font-heading': fontStacks(theme.fonts).heading,
+    '--sf-font-body': fontStacks(theme.fonts).body,
+    '--sf-font-mono': fontStacks(theme.fonts).mono,
   };
 }
 

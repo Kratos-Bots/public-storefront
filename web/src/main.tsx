@@ -1,3 +1,4 @@
+import '@fontsource-variable/inter/index.css';
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
 import '@/styles/global.css';
