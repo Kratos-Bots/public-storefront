@@ -1,0 +1,38 @@
+/* Chassis — the ground every page sits on. Two radial layers built from the
+   palette tokens so the admin's colours still drive it: a glow at the top, a
+   vignette at the foot. Fixed so it does not scroll with long lists. */
+body {
+  min-height: 100dvh;
+  background-color: var(--sf-bg);
+  background-image:
+    radial-gradient(ellipse 80% 60% at 50% 0%, color-mix(in srgb, var(--sf-surface-3) 35%, transparent), transparent 65%),
+    radial-gradient(ellipse 60% 40% at 50% 100%, color-mix(in srgb, var(--sf-bg-deep) 50%, transparent), transparent 70%);
+  background-attachment: fixed;
+}
+
+#root { position: relative; z-index: 1; }
+
+::selection { background: var(--sf-primary); color: var(--sf-bg); }
+
+* { scrollbar-width: thin; scrollbar-color: var(--sf-line-strong) transparent; }
+*::-webkit-scrollbar { width: 4px; height: 4px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: var(--sf-line-strong); border-radius: 2px; }
+
+/* Glass chrome for sticky bars and pinned feet. `translateZ(0)` forces iOS
+   Safari to repaint a sticky + backdrop-filter element during momentum scroll. */
+.glass {
+  background: color-mix(in srgb, var(--sf-bg) 85%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  transform: translateZ(0);
+}
+.glass-soft {
+  background: color-mix(in srgb, var(--sf-bg) 80%, transparent);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+/* True 1px rules — crisper than a border on retina. */
+.hr { height: 1px; background: var(--sf-line); }
+.hr-strong { height: 1px; background: var(--sf-line-strong); }
