@@ -1,4 +1,5 @@
 import { formatStamp, partitionEvents } from '@/features/tracking/status.ts';
+import { rowAnim } from '@/lib/motion.ts';
 import type { TrackedEvent } from '@/types/tracking.ts';
 import classes from '@/features/tracking/Tracking.module.css';
 
@@ -25,14 +26,14 @@ export function ParcelTimeline({ events }: { events: TrackedEvent[] }) {
 
       <ol className={classes.events}>
         {newestFirst.map((e, i) => (
-          <Row key={`d-${i}`} event={e} latest={i === 0} connector={i < newestFirst.length - 1} />
+          <Row key={`d-${i}`} event={e} latest={i === 0} connector={i < newestFirst.length - 1} index={i} />
         ))}
       </ol>
 
       {undated.length > 0 ? (
         <ol className={classes.eventsUndated}>
           {undated.map((e, i) => (
-            <Row key={`u-${i}`} event={e} muted connector={i < undated.length - 1} />
+            <Row key={`u-${i}`} event={e} muted connector={i < undated.length - 1} index={i} />
           ))}
         </ol>
       ) : null}
@@ -45,15 +46,16 @@ interface RowProps {
   latest?: boolean;
   muted?: boolean;
   connector?: boolean;
+  index: number;
 }
 
-function Row({ event, latest = false, muted = false, connector = false }: RowProps) {
+function Row({ event, latest = false, muted = false, connector = false, index }: RowProps) {
   const text = [classes.eventText, latest ? classes.eventTextLatest : '', muted ? classes.eventTextMuted : '']
     .filter(Boolean)
     .join(' ');
 
   return (
-    <li className={classes.event}>
+    <li className={`${classes.event} ${rowAnim(index).className}`} style={rowAnim(index).style}>
       <span className={classes.mark} aria-hidden>
         {latest ? (
           <span className={classes.node}>

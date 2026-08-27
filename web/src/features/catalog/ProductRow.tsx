@@ -3,6 +3,7 @@ import { useCartStore } from '@/stores/cart.ts';
 import { deriveStockStatus, formatMoney } from '@/lib/format.ts';
 import { StockChip } from '@/features/catalog/StockChip.tsx';
 import { MinusIcon, PlusIcon } from '@/components/icons.tsx';
+import { rowAnim } from '@/lib/motion.ts';
 import type { Product } from '@/types/catalog.ts';
 import classes from '@/features/catalog/ProductRow.module.css';
 
@@ -10,6 +11,10 @@ export interface ProductRowProps {
   product: Product;
   /** Opens the detail sheet. The whole row is the target; the gutter sits above it. */
   onSelect: (product: Product) => void;
+  /** Position in the list, for the entrance stagger. Omit when a wrapping
+   *  element (e.g. `ProductGrid`'s `<li>`) already animates — see `ProductList`
+   *  vs. `ProductGrid` for the two call shapes. */
+  index?: number;
 }
 
 /**
@@ -18,7 +23,7 @@ export interface ProductRowProps {
  * and the quantity stepper occupy exactly the same slot, so the column of prices
  * holds its edge whether the cart is empty or full.
  */
-export function ProductRow({ product, onSelect }: ProductRowProps) {
+export function ProductRow({ product, onSelect, index }: ProductRowProps) {
   const { currency, features } = useSettings();
   const quantity = useCartStore((s) => s.lines.find((l) => l.productId === product.id)?.quantity ?? 0);
   const add = useCartStore((s) => s.add);
@@ -32,7 +37,10 @@ export function ProductRow({ product, onSelect }: ProductRowProps) {
   );
 
   return (
-    <div className={classes.row}>
+    <div
+      className={index === undefined ? classes.row : `${classes.row} ${rowAnim(index).className}`}
+      style={index === undefined ? undefined : rowAnim(index).style}
+    >
       <div className={classes.text}>
         <h3 className={classes.name}>
           <button type="button" className={classes.open} onClick={() => onSelect(product)}>

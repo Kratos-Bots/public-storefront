@@ -6,6 +6,7 @@ import { verifyProductUnit } from '@/api/verify.ts';
 import type { VerificationResult } from '@/api/verify.ts';
 import { ContactLinks } from '@/components/ContactLinks.tsx';
 import { CheckIcon } from '@/components/icons.tsx';
+import { FADE } from '@/lib/motion.ts';
 import classes from '@/features/verify/VerifyPage.module.css';
 
 const schema = z.object({
@@ -162,7 +163,7 @@ function VerifiedCard({ result }: { result: VerificationResult }) {
   const expired = !Number.isNaN(expiry.getTime()) && expiry.getTime() < Date.now();
 
   return (
-    <div className={classes.screen} data-tone="success">
+    <div className={`${classes.screen} ${FADE}`} data-tone="success">
       <div className={classes.screenBadge}>
         <span className={classes.ring} aria-hidden>
           <CheckIcon size={11} />
@@ -187,7 +188,7 @@ function VerifiedCard({ result }: { result: VerificationResult }) {
 
 function InvalidCard() {
   return (
-    <div className={classes.screen} data-tone="danger">
+    <div className={`${classes.screen} ${FADE}`} data-tone="danger">
       <p className={classes.screenHead} data-tone="danger">
         Not Verified
       </p>
@@ -207,7 +208,7 @@ function InvalidCard() {
 
 function ErrorCard() {
   return (
-    <div className={classes.screen} data-tone="warn">
+    <div className={`${classes.screen} ${FADE}`} data-tone="warn">
       <p className={classes.screenHead} data-tone="warn">
         Connection Error
       </p>

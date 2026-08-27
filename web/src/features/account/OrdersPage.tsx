@@ -7,6 +7,7 @@ import { formatDate } from '@/lib/format.ts';
 import { orderStatusLabel, orderStatusTone } from '@/features/order-status/status.ts';
 import { StatusPill } from '@/features/account/StatusPill.tsx';
 import { useOrders } from '@/features/account/queries.ts';
+import { rowAnim } from '@/lib/motion.ts';
 import classes from '@/features/account/Account.module.css';
 
 /**
@@ -63,8 +64,8 @@ export function OrdersPage() {
       </div>
 
       <ul className={classes.orders}>
-        {rows.map((order) => (
-          <li key={order.reference}>
+        {rows.map((order, i) => (
+          <li key={order.reference} {...rowAnim(i)}>
             <Link to={`/account/orders/${order.reference}`} className={classes.order}>
               <span className={classes.ref}>{order.reference}</span>
               <span className={classes.total}>

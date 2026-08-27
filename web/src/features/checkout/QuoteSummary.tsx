@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import type { CryptoOption, PaymentMethod, Quote } from '@/types/checkout.ts';
 import { useCartStore, selectSubtotal } from '@/stores/cart.ts';
 import { Money } from '@/components/Money.tsx';
+import { rowAnim } from '@/lib/motion.ts';
 import classes from '@/features/checkout/QuoteSummary.module.css';
 
 export interface QuoteSummaryProps {
@@ -109,18 +110,22 @@ export function QuoteSummary({
         </header>
 
         <ul className={classes.items}>
-          {items.map((i) => (
-            <li className={classes.item} key={i.key}>
-              <span className={classes.itemQty}>{i.quantity}×</span>
+          {items.map((item, idx) => (
+            <li
+              className={`${classes.item} ${rowAnim(idx).className}`}
+              style={rowAnim(idx).style}
+              key={item.key}
+            >
+              <span className={classes.itemQty}>{item.quantity}×</span>
               <span className={classes.itemName}>
-                {i.name}
-                {i.tierApplied ? <span className={classes.tag}>Bulk</span> : null}
-                {i.isPreorder ? (
+                {item.name}
+                {item.tierApplied ? <span className={classes.tag}>Bulk</span> : null}
+                {item.isPreorder ? (
                   <span className={`${classes.tag} ${classes.tagWarn}`}>Pre-order</span>
                 ) : null}
               </span>
               <span className={classes.itemFigure}>
-                <Money amount={i.lineTotal} />
+                <Money amount={item.lineTotal} />
               </span>
             </li>
           ))}

@@ -186,13 +186,14 @@ export function WholesaleCatalogPage() {
             </tr>
           </thead>
 
-          {rows.map(({ product, band, groupEnd }) => (
+          {rows.map(({ product, band, groupEnd }, i) => (
             <WholesaleRow
               key={product.id}
               product={product}
               band={band}
               groupEnd={groupEnd}
               ordering={features.ordering}
+              index={i}
             />
           ))}
         </table>

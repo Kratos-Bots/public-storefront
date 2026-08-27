@@ -1,4 +1,5 @@
 import { formatMoney } from '@/lib/format.ts';
+import { FADE } from '@/lib/motion.ts';
 import type { OrderItem, OrderTotals } from '@/types/public-order.ts';
 import classes from '@/features/order-status/OrderStatus.module.css';
 
@@ -15,7 +16,7 @@ export function ItemsCard({ items, totals, currency }: ItemsCardProps) {
   const fee = totals.paymentFeeAmount ?? 0;
 
   return (
-    <section className={classes.card} aria-label="Items">
+    <section className={`${classes.card} ${FADE}`} aria-label="Items">
       <p className={classes.cardEyebrow}>Items</p>
 
       <ul className={classes.items}>

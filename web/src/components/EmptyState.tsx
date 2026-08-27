@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { FADE } from '@/lib/motion.ts';
 import classes from '@/components/EmptyState.module.css';
 
 export interface EmptyStateProps {
@@ -12,7 +13,7 @@ export interface EmptyStateProps {
 /** Centred "there is nothing here yet" panel. An empty screen is an invitation to act, so pass an `action` whenever there is one. */
 export function EmptyState({ title, description, eyebrow, action }: EmptyStateProps) {
   return (
-    <div className={classes.root}>
+    <div className={`${classes.root} ${FADE}`}>
       <span className={classes.rule} aria-hidden />
       {eyebrow ? <span className={classes.eyebrow}>{eyebrow}</span> : null}
       <h2 className={classes.title}>{title}</h2>

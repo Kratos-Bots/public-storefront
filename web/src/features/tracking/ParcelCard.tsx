@@ -4,6 +4,7 @@ import { CopyRow } from '@/features/order-status/CopyRow.tsx';
 import { ParcelTimeline } from '@/features/tracking/ParcelTimeline.tsx';
 import { ProgressStepper } from '@/features/tracking/ProgressStepper.tsx';
 import { furthestStage, hasHandover, parcelLabel, parcelTone } from '@/features/tracking/status.ts';
+import { staggerAnim } from '@/lib/motion.ts';
 import type { TrackedParcel } from '@/types/tracking.ts';
 import classes from '@/features/tracking/Tracking.module.css';
 
@@ -37,7 +38,12 @@ export function ParcelCard({ parcel, index, count, onRetry }: ParcelCardProps) {
   const spine = t?.outcome === 'error' ? 'warn' : tone;
 
   return (
-    <section className={classes.card} data-tone={spine} aria-label={title}>
+    <section
+      className={`${classes.card} ${staggerAnim(index).className}`}
+      style={staggerAnim(index).style}
+      data-tone={spine}
+      aria-label={title}
+    >
       <div className={classes.cardHead}>
         <div className={classes.cardHeadBody}>
           <h2 className={classes.cardTitle}>{title}</h2>

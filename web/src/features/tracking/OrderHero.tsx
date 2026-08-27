@@ -1,6 +1,7 @@
 import { formatDate } from '@/lib/format.ts';
 import { orderStatusLabel } from '@/features/order-status/status.ts';
 import { formatRelative, parcelLabel, parcelTone } from '@/features/tracking/status.ts';
+import { FADE } from '@/lib/motion.ts';
 import type { TrackingLookup } from '@/types/tracking.ts';
 import classes from '@/features/tracking/Tracking.module.css';
 
@@ -54,7 +55,7 @@ export function OrderHero({ data }: { data: TrackingLookup }) {
   ];
 
   return (
-    <section className={classes.hero} aria-label="Order tracking summary">
+    <section className={`${classes.hero} ${FADE}`} aria-label="Order tracking summary">
       <div className={classes.heroTop}>
         <p className={classes.heroRef}>
           Order <span className={classes.heroRefValue}>{data.reference}</span>

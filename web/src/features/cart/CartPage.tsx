@@ -53,13 +53,14 @@ export function CartPage() {
       </header>
 
       <ul className={classes.lines}>
-        {lines.map((line) => (
+        {lines.map((line, i) => (
           <CartLine
             key={line.productId}
             line={line}
             issue={issueByProduct.get(line.productId)}
             onQuantity={setQuantity}
             onRemove={remove}
+            index={i}
           />
         ))}
       </ul>

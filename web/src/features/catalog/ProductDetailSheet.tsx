@@ -13,6 +13,7 @@ import { Upsells } from '@/features/catalog/Upsells.tsx';
 import { ContactLinks } from '@/components/ContactLinks.tsx';
 import { CloseIcon } from '@/components/icons.tsx';
 import { deriveStockStatus, formatDate, formatMoney } from '@/lib/format.ts';
+import { FADE } from '@/lib/motion.ts';
 import type { Category, Product } from '@/types/catalog.ts';
 import classes from '@/features/catalog/ProductDetailSheet.module.css';
 
@@ -98,7 +99,7 @@ function Detail({ product, onSelect }: { product: Product; onSelect: (product: P
 
   return (
     <>
-      <div className={classes.identity}>
+      <div className={`${classes.identity} ${FADE}`}>
         <div className={classes.identityText}>
           <h2 className={classes.name}>{product.displayName}</h2>
           <p className={classes.flags}>
@@ -109,13 +110,15 @@ function Detail({ product, onSelect }: { product: Product; onSelect: (product: P
             ) : null}
           </p>
         </div>
-        <ProductImage
-          productId={product.imageProductId ?? product.id}
-          variant="web"
-          alt={product.displayName}
-          eager
-          className={classes.thumb}
-        />
+        {product.imageProductId !== null ? (
+          <ProductImage
+            productId={product.imageProductId}
+            variant="web"
+            alt={product.displayName}
+            eager
+            className={classes.thumb}
+          />
+        ) : null}
       </div>
 
       {/* The one number the shopper came for, on its own rule. */}

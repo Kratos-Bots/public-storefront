@@ -4,6 +4,7 @@ import { useCatalog } from '@/features/catalog/use-catalog.ts';
 import { upsellsFor } from '@/features/catalog/filter.ts';
 import { ProductCard } from '@/features/catalog/ProductCard.tsx';
 import { ProductRow } from '@/features/catalog/ProductRow.tsx';
+import { rowAnim } from '@/lib/motion.ts';
 import type { Product } from '@/types/catalog.ts';
 import classes from '@/features/catalog/Upsells.module.css';
 
@@ -41,16 +42,21 @@ export function Upsells({ product, onSelect }: UpsellsProps) {
       </h2>
       {onSelect ? (
         <ul className={classes.rows}>
-          {items.map((item) => (
-            <li key={item.id}>
+          {items.map((item, i) => (
+            <li key={item.id} {...rowAnim(i)}>
               <ProductRow product={item} onSelect={onSelect} />
             </li>
           ))}
         </ul>
       ) : (
         <div className={classes.row}>
-          {items.map((item) => (
-            <ProductCard key={item.id} product={item} />
+          {items.map((item, i) => (
+            <ProductCard
+              key={item.id}
+              product={item}
+              index={i}
+              hasSiblingImages={items.some((p) => p.imageProductId !== null)}
+            />
           ))}
         </div>
       )}

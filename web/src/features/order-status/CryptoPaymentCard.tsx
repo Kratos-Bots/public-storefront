@@ -12,6 +12,7 @@ import {
   type CardState,
   type TxidSubmission,
 } from '@/features/order-status/payment-state.ts';
+import { FADE } from '@/lib/motion.ts';
 import type { PublicCryptoPayment } from '@/types/public-order.ts';
 import classes from '@/features/order-status/OrderStatus.module.css';
 
@@ -77,7 +78,7 @@ export function CryptoPaymentCard({ payment, reference, accessKey, currency }: C
 
   return (
     <section
-      className={state === 'awaiting' ? `${classes.card} ${classes.cardAction}` : classes.card}
+      className={`${state === 'awaiting' ? `${classes.card} ${classes.cardAction}` : classes.card} ${FADE}`}
       aria-label="Crypto payment"
     >
       <div className={classes.cardHead}>

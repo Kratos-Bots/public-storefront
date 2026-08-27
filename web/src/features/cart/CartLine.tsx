@@ -3,6 +3,7 @@ import { useSettings } from '@/app/settings.ts';
 import { formatMoney } from '@/lib/format.ts';
 import { ProductImage } from '@/features/catalog/ProductImage.tsx';
 import { MinusIcon, PlusIcon } from '@/components/icons.tsx';
+import { rowAnim } from '@/lib/motion.ts';
 import type { LocalLine } from '@/stores/cart.ts';
 import type { ServerCartLine } from '@/types/cart.ts';
 import classes from '@/features/cart/CartLine.module.css';
@@ -13,6 +14,8 @@ export interface CartLineProps {
   issue?: ServerCartLine;
   onQuantity: (productId: number, quantity: number) => void;
   onRemove: (productId: number) => void;
+  /** Position in the docket, for the entrance stagger. */
+  index?: number;
 }
 
 /**
@@ -24,7 +27,7 @@ export interface CartLineProps {
  * The field never takes the line below one. Emptying it is how you retype a
  * quantity, not how you delete a line — Remove is the only thing that does that.
  */
-export function CartLine({ line, issue, onQuantity, onRemove }: CartLineProps) {
+export function CartLine({ line, issue, onQuantity, onRemove, index = 0 }: CartLineProps) {
   const { currency } = useSettings();
   const [draft, setDraft] = useState(String(line.quantity));
   useEffect(() => setDraft(String(line.quantity)), [line.quantity]);
@@ -52,7 +55,10 @@ export function CartLine({ line, issue, onQuantity, onRemove }: CartLineProps) {
   );
 
   return (
-    <li className={`${classes.line} ${withdrawn ? classes.withdrawn : ''}`}>
+    <li
+      className={`${classes.line} ${withdrawn ? classes.withdrawn : ''} ${rowAnim(index).className}`}
+      style={rowAnim(index).style}
+    >
       <ProductImage
         productId={line.imageProductId ?? line.productId}
         variant="thumbnail"

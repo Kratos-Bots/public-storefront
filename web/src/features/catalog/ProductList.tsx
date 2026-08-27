@@ -13,6 +13,7 @@ import { FilterSheet } from '@/features/catalog/FilterSheet.tsx';
 import { EmptyState } from '@/components/EmptyState.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { useShellSearch } from '@/layouts/shell-context.ts';
+import { FADE } from '@/lib/motion.ts';
 import type { Product } from '@/types/catalog.ts';
 import classes from '@/features/catalog/ProductList.module.css';
 
@@ -75,7 +76,7 @@ export function ProductList() {
   const glyphs = treeHasEmoji(tree);
 
   return (
-    <div className={classes.page}>
+    <div className={`${classes.page} ${FADE}`}>
       {/* A category we can't resolve has no honest heading or count — the state below
           is the whole answer, so nothing goes above it. */}
       {unknownCategory ? null : (
@@ -150,9 +151,9 @@ export function ProductList() {
               <span className={classes.groupCount}>{group.products.length}</span>
             </h2>
             <ul className={classes.rows}>
-              {group.products.map((product) => (
+              {group.products.map((product, i) => (
                 <li key={product.id}>
-                  <ProductRow product={product} onSelect={showProduct} />
+                  <ProductRow product={product} onSelect={showProduct} index={i} />
                 </li>
               ))}
             </ul>

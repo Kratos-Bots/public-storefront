@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { FADE } from '@/lib/motion.ts';
 import classes from '@/features/auth/AuthCard.module.css';
 
 export interface AuthCardProps {
@@ -17,7 +18,7 @@ export interface AuthCardProps {
  */
 export function AuthCard({ name, icon, dim, children }: AuthCardProps) {
   return (
-    <section className={dim ? `${classes.card} ${classes.dim}` : classes.card}>
+    <section className={dim ? `${classes.card} ${classes.dim} ${FADE}` : `${classes.card} ${FADE}`}>
       <header className={classes.channel}>
         {icon ? <span className={classes.mark}>{icon}</span> : null}
         <h2 className={classes.name}>{name}</h2>

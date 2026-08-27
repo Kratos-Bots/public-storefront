@@ -2,6 +2,7 @@ import { ArrowUpRightIcon } from '@/components/icons.tsx';
 import { formatDate } from '@/lib/format.ts';
 import { CopyRow } from '@/features/order-status/CopyRow.tsx';
 import { SHIPMENT_LABEL, SHIPMENT_TONE, type Tone } from '@/features/order-status/status.ts';
+import { FADE } from '@/lib/motion.ts';
 import type { Shipment } from '@/types/public-order.ts';
 import classes from '@/features/order-status/OrderStatus.module.css';
 
@@ -27,7 +28,7 @@ export function ShipmentCard({ shipment, index, count }: ShipmentCardProps) {
   const dates = [shipped && `Shipped ${shipped}`, delivered && `Delivered ${delivered}`].filter(Boolean);
 
   return (
-    <section className={classes.card} aria-label={eyebrow}>
+    <section className={`${classes.card} ${FADE}`} aria-label={eyebrow}>
       <div className={classes.cardHead}>
         <div className={classes.cardHeadBody}>
           <p className={classes.cardEyebrow}>{eyebrow}</p>
