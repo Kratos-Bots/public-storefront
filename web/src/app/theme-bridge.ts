@@ -10,6 +10,50 @@ export const THEME_STORAGE_KEY = 'sf-theme-v1';
 
 function family(name: string | null, fallback: string): string { return name ? `"${name}", ${fallback}` : fallback; }
 
+/**
+ * Button's own varsResolver computes --button-bg/--button-color/--button-hover/
+ * --button-hover-color/--button-bd/--button-fz and injects them as an inline
+ * `style` attribute on the root (see @mantine/core's Button.tsx), so a
+ * classNames-based CSS override (mantine.css's old `.sf-button[data-variant=…]`
+ * rules) can never win — inline style always beats a stylesheet rule. Mantine
+ * merges a theme-level `components.Button.vars` resolver in *after* the
+ * component's own, so returning the values here instead is what actually wins.
+ */
+function buttonVariantVars(variant: string | undefined): Record<string, string> {
+  switch (variant ?? 'filled') {
+    case 'filled':
+      return {
+        '--button-bg': 'var(--sf-primary)',
+        '--button-color': 'var(--sf-bg)',
+        '--button-hover': 'var(--sf-primary-soft)',
+        '--button-hover-color': 'var(--sf-bg)',
+      };
+    case 'default':
+      return {
+        '--button-bg': 'transparent',
+        '--button-bd': '1px solid var(--sf-line-strong)',
+        '--button-color': 'var(--sf-text)',
+        '--button-hover': 'var(--sf-surface)',
+      };
+    case 'subtle':
+      return {
+        '--button-bg': 'transparent',
+        '--button-color': 'var(--sf-muted)',
+        '--button-hover': 'var(--sf-surface)',
+        '--button-hover-color': 'var(--sf-text)',
+      };
+    default:
+      return {};
+  }
+}
+
+/** The size-responsive half of the mono voice — mirrors the letter-spacing steps in mantine.css. */
+function buttonSizeVars(size: string | undefined): Record<string, string> {
+  if (size === 'xs' || size === 'sm' || size === 'compact-xs' || size === 'compact-sm') return { '--button-fz': '11px' };
+  if (size === 'lg' || size === 'xl') return { '--button-fz': '13px' };
+  return { '--button-fz': '12px' };
+}
+
 /** Body, heading and "mono voice" stacks. The mono voice is the body face with
  *  tabular figures (the ecommerce-menu idiom) unless the store picks a real mono font. */
 export function fontStacks(fonts: Theme['fonts']): { body: string; heading: string; mono: string } {
@@ -58,7 +102,12 @@ export function buildMantineTheme(theme: Theme): MantineThemeOverride {
           overlayProps: { backgroundOpacity: 0.7, blur: 2 },
         },
       }),
-      Button: Button.extend({ classNames: { root: 'sf-button' } }),
+      Button: Button.extend({
+        classNames: { root: 'sf-button' },
+        vars: (_theme, props) => ({
+          root: { ...buttonVariantVars(props.variant), ...buttonSizeVars(props.size) },
+        }),
+      }),
       ActionIcon: ActionIcon.extend({ classNames: { root: 'sf-icon-button' } }),
       Input: Input.extend({ classNames: { input: 'sf-input' } }),
     },

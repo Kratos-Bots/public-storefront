@@ -46,6 +46,27 @@ describe('theme bridge', () => {
     expect(c.ActionIcon).toBeDefined();
     expect(c.Input).toBeDefined();
   });
+  it('feeds Button variant/size colours through a theme-level vars resolver, not CSS', () => {
+    // Button's own varsResolver sets --button-bg/--button-color/etc as an inline style, which a
+    // class-based CSS override can never beat. theme.components.Button.vars is merged in after
+    // the component's own resolver, so it — not mantine.css — is what has to carry these.
+    type ButtonVars = { vars: (theme: unknown, props: { variant?: string; size?: string }, ctx: unknown) => { root: Record<string, string | undefined> } };
+    const button = (buildMantineTheme(theme).components as unknown as { Button: ButtonVars }).Button;
+    const filled = button.vars({}, { variant: 'filled', size: 'md' }, {});
+    expect(filled.root['--button-bg']).toBe('var(--sf-primary)');
+    expect(filled.root['--button-color']).toBe('var(--sf-bg)');
+    expect(filled.root['--button-hover']).toBe('var(--sf-primary-soft)');
+    expect(filled.root['--button-hover-color']).toBe('var(--sf-bg)');
+    expect(filled.root['--button-fz']).toBe('12px');
+
+    const def = button.vars({}, { variant: 'default', size: 'md' }, {});
+    expect(def.root['--button-bg']).toBe('transparent');
+    expect(def.root['--button-bd']).toBe('1px solid var(--sf-line-strong)');
+    expect(def.root['--button-color']).toBe('var(--sf-text)');
+
+    const small = button.vars({}, { variant: 'filled', size: 'sm' }, {});
+    expect(small.root['--button-fz']).toBe('11px');
+  });
 });
 
 describe('font defaults', () => {
