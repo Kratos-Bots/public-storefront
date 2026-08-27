@@ -7,6 +7,7 @@ import { CheckIcon, TelegramIcon, WhatsAppIcon } from '@/components/icons.tsx';
 import { orderChatMessage, withPrefilledText } from '@/lib/chat-links.ts';
 import { MissingReferenceScreen } from '@/features/payment-redirect/MissingReferenceScreen.tsx';
 import { ReferenceRow } from '@/features/payment-redirect/ReferenceRow.tsx';
+import { FADE } from '@/lib/motion.ts';
 import classes from '@/features/payment-redirect/PaymentRedirect.module.css';
 
 /**
@@ -39,7 +40,7 @@ export function OrderPlacedPage() {
   const telegram = withPrefilledText(brand.links.telegram, message);
 
   return (
-    <div className={classes.page}>
+    <div className={`${classes.page} ${FADE}`}>
       <span className={`${classes.ring} ${classes.ringSuccess}`} aria-hidden>
         <CheckIcon size={20} />
       </span>

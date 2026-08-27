@@ -4,6 +4,7 @@ import { CloseIcon } from '@/components/icons.tsx';
 import { orderChatMessage } from '@/lib/chat-links.ts';
 import { findSavedOrder } from '@/stores/saved-orders.ts';
 import { ReferenceRow } from '@/features/payment-redirect/ReferenceRow.tsx';
+import { FADE } from '@/lib/motion.ts';
 import classes from '@/features/payment-redirect/PaymentRedirect.module.css';
 
 /**
@@ -18,7 +19,7 @@ export function PaymentCancelPage() {
   const saved = orderRef ? findSavedOrder(orderRef) : null;
 
   return (
-    <div className={classes.page}>
+    <div className={`${classes.page} ${FADE}`}>
       <span className={`${classes.ring} ${classes.ringWarn}`} aria-hidden>
         <CloseIcon size={18} />
       </span>

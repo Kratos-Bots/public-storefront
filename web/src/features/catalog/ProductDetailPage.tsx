@@ -15,6 +15,7 @@ import { ContactLinks } from '@/components/ContactLinks.tsx';
 import { EmptyState } from '@/components/EmptyState.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { deriveStockStatus, formatDate, formatMoney } from '@/lib/format.ts';
+import { FADE } from '@/lib/motion.ts';
 import classes from '@/features/catalog/ProductDetailPage.module.css';
 
 /** The single product page — the storefront layout's detail view. */
@@ -48,7 +49,7 @@ export function ProductDetailPage() {
   const eta = product.isPreorder && product.preorderEta ? formatDate(new Date(product.preorderEta).toISOString()) : '';
 
   return (
-    <article className={classes.page}>
+    <article className={`${classes.page} ${FADE}`}>
       <nav className={classes.crumbs} aria-label="Breadcrumb">
         <Link to="/" className={classes.crumb}>
           Shop
@@ -75,12 +76,14 @@ export function ProductDetailPage() {
 
       <div className={classes.layout}>
         <div className={classes.media}>
-          <ProductImage
-            productId={product.imageProductId ?? product.id}
-            variant="web"
-            alt={product.displayName}
-            eager
-          />
+          {product.imageProductId !== null ? (
+            <ProductImage
+              productId={product.imageProductId}
+              variant="web"
+              alt={product.displayName}
+              eager
+            />
+          ) : null}
         </div>
 
         <div className={classes.detail}>

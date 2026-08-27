@@ -2,6 +2,7 @@ import { useId, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { listSavedOrders } from '@/stores/saved-orders.ts';
+import { FADE } from '@/lib/motion.ts';
 import classes from '@/features/tracking/Tracking.module.css';
 
 /** Same shape the backend accepts, so a reference it would reject never costs a request. */
@@ -41,7 +42,7 @@ export function LookupForm({ initial = '' }: LookupFormProps) {
   };
 
   return (
-    <form className={classes.form} onSubmit={submit}>
+    <form className={`${classes.form} ${FADE}`} onSubmit={submit}>
       {/* The error sits beside the label rather than inside it: in the label it
           would become part of the field's accessible name. */}
       <div className={classes.fieldHead}>

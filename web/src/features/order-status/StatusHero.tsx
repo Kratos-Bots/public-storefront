@@ -1,6 +1,7 @@
 import { CheckIcon, ClockIcon } from '@/components/icons.tsx';
 import { formatDate } from '@/lib/format.ts';
 import { ROUTE_STEPS, statusView, type StatusView } from '@/features/order-status/status.ts';
+import { FADE } from '@/lib/motion.ts';
 import type { PublicOrder } from '@/types/public-order.ts';
 import classes from '@/features/order-status/OrderStatus.module.css';
 
@@ -22,7 +23,7 @@ export function StatusHero({ order }: { order: PublicOrder }) {
   const stamp = delivered ? `Delivered ${delivered}` : placed ? `Placed ${placed}` : null;
 
   return (
-    <section className={classes.hero} aria-label="Order status">
+    <section className={`${classes.hero} ${FADE}`} aria-label="Order status">
       <p className={classes.eyebrow} data-tone={view.tone}>
         {view.eyebrow}
       </p>
@@ -86,6 +87,7 @@ function Route({ view, order }: { view: StatusView; order: PublicOrder }) {
                 .join(' ')}
               aria-hidden
             >
+              {here ? <span className="ping" /> : null}
               {here ? <span className={classes.nodeCore} /> : null}
               {done || arrived ? <CheckIcon size={10} /> : null}
             </span>

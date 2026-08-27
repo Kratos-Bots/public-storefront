@@ -4,6 +4,7 @@ import { formatDateTime, formatMoney } from '@/lib/format.ts';
 import { CryptoPaymentCard } from '@/features/order-status/CryptoPaymentCard.tsx';
 import { MethodPicker } from '@/features/order-status/MethodPicker.tsx';
 import { visibleCryptoPayments } from '@/features/order-status/payment-state.ts';
+import { FADE } from '@/lib/motion.ts';
 import type { PublicOrder } from '@/types/public-order.ts';
 import classes from '@/features/order-status/OrderStatus.module.css';
 
@@ -132,7 +133,7 @@ function ChangeMethod({
   onSelected,
 }: PaymentSectionProps & { open: boolean; onToggle: () => void; onSelected: () => void }) {
   return (
-    <section aria-label="Change payment method">
+    <section className={FADE} aria-label="Change payment method">
       <button type="button" className={classes.disclosure} onClick={onToggle} aria-expanded={open}>
         <span>{open ? 'Keep this method' : 'Change payment method'}</span>
         <span className={classes.disclosureSign} aria-hidden>

@@ -8,6 +8,7 @@ import { orderInquiryMessage } from '@/lib/chat-links.ts';
 import { findSavedOrder } from '@/stores/saved-orders.ts';
 import { MissingReferenceScreen } from '@/features/payment-redirect/MissingReferenceScreen.tsx';
 import { ReferenceRow } from '@/features/payment-redirect/ReferenceRow.tsx';
+import { FADE } from '@/lib/motion.ts';
 import classes from '@/features/payment-redirect/PaymentRedirect.module.css';
 
 /**
@@ -46,7 +47,7 @@ export function PaymentSuccessPage() {
   }
 
   return (
-    <div className={classes.page}>
+    <div className={`${classes.page} ${FADE}`}>
       <span className={`${classes.ring} ${classes.ringSuccess}`} aria-hidden>
         <CheckIcon size={20} />
       </span>

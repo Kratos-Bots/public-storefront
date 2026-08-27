@@ -36,6 +36,7 @@ import { ShippingStep } from '@/features/checkout/steps/ShippingStep.tsx';
 import { PaymentStep } from '@/features/checkout/steps/PaymentStep.tsx';
 import { ReviewStep } from '@/features/checkout/steps/ReviewStep.tsx';
 import { DIAL_CODES } from '@/lib/dial-codes.ts';
+import { FADE } from '@/lib/motion.ts';
 import classes from '@/features/checkout/CheckoutPage.module.css';
 
 const STEPS = [
@@ -596,7 +597,7 @@ export function CheckoutPage() {
             ))}
           </Stepper>
 
-          <div className={classes.card} ref={cardRef}>
+          <div className={`${classes.card} ${FADE}`} ref={cardRef}>
             <header className={classes.cardHead}>
               <span className={classes.cardCount}>
                 Step {step + 1} of {STEPS.length}

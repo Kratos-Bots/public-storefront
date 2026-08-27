@@ -1,7 +1,8 @@
-import { NavLink, Outlet } from 'react-router';
+import { NavLink, Outlet, useLocation } from 'react-router';
 import { useSessionStore } from '@/stores/session.ts';
 import { formatDate } from '@/lib/format.ts';
 import { useProfile } from '@/features/account/queries.ts';
+import { FADE } from '@/lib/motion.ts';
 import classes from '@/features/account/Account.module.css';
 
 const TABS = [
@@ -26,6 +27,7 @@ export function AccountLayout() {
   const sessionNickname = useSessionStore((s) => s.customer?.nickname);
   const name = sessionNickname ?? profile.data?.nickname ?? null;
   const standing = profile.data;
+  const location = useLocation();
 
   return (
     <div className={classes.account}>
@@ -54,7 +56,9 @@ export function AccountLayout() {
         ))}
       </nav>
 
-      <Outlet />
+      <div key={location.pathname} className={FADE}>
+        <Outlet />
+      </div>
     </div>
   );
 }

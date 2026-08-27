@@ -13,7 +13,7 @@ import { EmptyState } from '@/components/EmptyState.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { SearchField } from '@/layouts/SearchField.tsx';
 import { useShellSearch } from '@/layouts/shell-context.ts';
-import { rowAnim } from '@/lib/motion.ts';
+import { FADE, rowAnim } from '@/lib/motion.ts';
 import classes from '@/features/catalog/ProductGrid.module.css';
 
 /** How many cards load their image eagerly — the first two rows on a phone. */
@@ -65,7 +65,7 @@ export function ProductGrid() {
   const query = search.trim();
 
   return (
-    <div className={classes.page}>
+    <div className={`${classes.page} ${FADE}`}>
       {hasHero ? (
         <section className={classes.hero} aria-label="About this shop">
           <div className={classes.heroText}>

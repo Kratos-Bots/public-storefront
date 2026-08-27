@@ -6,6 +6,7 @@ import { deriveStockStatus, formatMoney, resolveUnitPrice } from '@/lib/format.t
 import { StockChip } from '@/features/catalog/StockChip.tsx';
 import { TierLadder } from '@/features/wholesale/TierLadder.tsx';
 import { ChevronIcon, MinusIcon, PlusIcon } from '@/components/icons.tsx';
+import { rowAnim } from '@/lib/motion.ts';
 import type { Product } from '@/types/catalog.ts';
 import classes from '@/features/wholesale/WholesaleRow.module.css';
 
@@ -16,6 +17,8 @@ export interface WholesaleRowProps {
   /** Last row of its run; closes it with the heavier rule. */
   groupEnd: boolean;
   ordering: boolean;
+  /** Position in the sheet, for the entrance stagger. */
+  index?: number;
 }
 
 /**
@@ -26,7 +29,7 @@ export interface WholesaleRowProps {
  * whole argument of the sheet — so the unit price moves as the stepper passes a
  * price break, and the chip turns into the discount it just won.
  */
-export function WholesaleRow({ product, band, groupEnd, ordering }: WholesaleRowProps) {
+export function WholesaleRow({ product, band, groupEnd, ordering, index }: WholesaleRowProps) {
   const { currency } = useSettings();
   const quantity = useCartStore(
     (s) => s.lines.find((l) => l.productId === product.id)?.quantity ?? 0,
@@ -61,7 +64,12 @@ export function WholesaleRow({ product, band, groupEnd, ordering }: WholesaleRow
   return (
     <>
       <tbody
-        className={`${groupClass} ${groupEnd && !ladderOpen ? classes.groupEnd : ''}`}
+        className={
+          index === undefined
+            ? `${groupClass} ${groupEnd && !ladderOpen ? classes.groupEnd : ''}`
+            : `${groupClass} ${groupEnd && !ladderOpen ? classes.groupEnd : ''} ${rowAnim(index).className}`
+        }
+        style={index === undefined ? undefined : rowAnim(index).style}
         role="rowgroup"
       >
         <tr className={`${classes.row} ${unavailable ? classes.dim : ''}`} role="row">
