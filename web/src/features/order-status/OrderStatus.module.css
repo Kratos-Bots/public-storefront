@@ -250,9 +250,9 @@
   flex-direction: column;
   min-width: 0;
   padding: 0.95rem 1rem 1.05rem;
-  border: 1px solid var(--sf-line-strong);
+  border: 1px solid var(--sf-line);
   border-radius: var(--mantine-radius-default);
-  background: var(--sf-bg-deep);
+  background: color-mix(in srgb, var(--sf-surface) 40%, transparent);
 }
 
 /* The one card that wants something from the customer wears the shop's

@@ -162,7 +162,6 @@ export function LoyaltyPage() {
         centered
         size="sm"
         radius="var(--mantine-radius-default)"
-        overlayProps={{ backgroundOpacity: 0.62, blur: 2 }}
         classNames={{
           content: classes.modalContent,
           header: classes.modalHeader,

@@ -30,15 +30,17 @@
 .input {
   width: 100%;
   min-height: 44px;
-  padding: 0 0.75rem;
-  border: 1px solid var(--sf-line-strong);
-  border-radius: var(--mantine-radius-default);
-  background: var(--sf-bg-deep);
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--sf-line-strong);
+  border-radius: 0;
+  background: transparent;
   color: var(--sf-text);
-  font-family: var(--sf-font-body);
+  font-family: var(--sf-font-mono);
+  font-variant-numeric: tabular-nums;
   font-size: 16px; /* iOS zoom guard — the global rule, restated for the box */
   line-height: 1.4;
-  transition: border-color 120ms ease;
+  transition: border-color 150ms ease;
 }
 
 .input::placeholder {
@@ -47,8 +49,7 @@
 
 .input:focus {
   outline: none;
-  border-color: var(--sf-primary);
-  box-shadow: inset 0 0 0 1px var(--sf-primary);
+  border-bottom-color: var(--sf-primary);
 }
 
 .input[aria-invalid='true'] {
@@ -58,6 +59,7 @@
 .textarea {
   min-height: 5.5rem;
   padding: 0.6rem 0.75rem;
+  border: 1px solid var(--sf-line-strong);
   resize: vertical;
 }
 
