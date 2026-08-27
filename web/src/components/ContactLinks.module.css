@@ -47,13 +47,10 @@
 /* strip — the menu shell's sticky footer: a full-bleed band with two equal
    targets, split by a hairline, held to the shell's content column. */
 .stripBar {
+  composes: glass from global;
   position: sticky;
   bottom: 0;
   z-index: 20;
-  background: color-mix(in srgb, var(--sf-bg) 85%, transparent);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-  transform: translateZ(0);
   border-top: 1px solid var(--sf-line);
 }
 

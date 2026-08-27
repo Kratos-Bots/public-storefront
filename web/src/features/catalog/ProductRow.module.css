@@ -140,13 +140,18 @@
   background: transparent;
   color: var(--sf-text);
   cursor: pointer;
-  transition: border-color 120ms ease, color 120ms ease, background-color 120ms ease;
+  transition: border-color 120ms ease, color 120ms ease, background-color 120ms ease, transform 150ms ease;
 }
 
 .quickAdd:hover:not(:disabled),
 .step:hover {
   border-color: var(--sf-primary);
   background: var(--sf-surface-2);
+}
+
+.quickAdd:active:not(:disabled),
+.step:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 .quickAdd:focus-visible,

@@ -99,4 +99,15 @@ describe('CartLine', () => {
     mount(line());
     expect(screen.getByRole('button', { name: 'One fewer BPC-157 5mg' })).toBeDisabled();
   });
+
+  it('renders no thumbnail for an image-less line, and one when an image is set', () => {
+    const { container: noImage } = mount(line({ imageProductId: null }));
+    expect(noImage.querySelector('img')).toBeNull();
+    expect(noImage.querySelector('[class*="well"]')).toBeNull();
+
+    cleanup();
+
+    const { container: withImage } = mount(line({ imageProductId: 5 }));
+    expect(withImage.querySelector('img')).not.toBeNull();
+  });
 });

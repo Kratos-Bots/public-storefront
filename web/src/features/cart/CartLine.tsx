@@ -56,15 +56,17 @@ export function CartLine({ line, issue, onQuantity, onRemove, index = 0 }: CartL
 
   return (
     <li
-      className={`${classes.line} ${withdrawn ? classes.withdrawn : ''} ${rowAnim(index).className}`}
+      className={`${classes.line} ${line.imageProductId === null ? classes.lineNoImage : ''} ${withdrawn ? classes.withdrawn : ''} ${rowAnim(index).className}`}
       style={rowAnim(index).style}
     >
-      <ProductImage
-        productId={line.imageProductId ?? line.productId}
-        variant="thumbnail"
-        alt=""
-        className={classes.thumb}
-      />
+      {line.imageProductId !== null ? (
+        <ProductImage
+          productId={line.imageProductId}
+          variant="thumbnail"
+          alt=""
+          className={classes.thumb}
+        />
+      ) : null}
 
       <span className={classes.name}>{line.displayName}</span>
 
