@@ -288,11 +288,14 @@ not logged).
 ### 2.6 `publicUrl` improvement
 
 `src/modules/orders/access-key.ts` currently returns `null` without `ORDER_PUBLIC_BASE_URL`. Change
-the base to: the `storefront_public_url` setting when set (it only exists after a successful deploy),
-otherwise `env.ORDER_PUBLIC_BASE_URL`. `buildOrderPublicUrl` stays synchronous (six call sites), so
-the setting is held in an in-process cache loaded at boot, refreshed after a deploy's `finalize`
-step, and re-read every five minutes so the separate bot process picks it up without a restart.
-This removes the need for a backend env edit after a store owner deploys.
+the base to: `env.ORDER_PUBLIC_BASE_URL` when set, otherwise the `storefront_public_url` setting
+(it only exists after a successful deploy). The env var wins so that deploying a storefront never
+redirects an operator's existing order site by itself — switching customers to the storefront is a
+deliberate step (unset `ORDER_PUBLIC_BASE_URL`). `buildOrderPublicUrl` stays synchronous (six call
+sites), so the setting is held in an in-process cache loaded at boot, refreshed after a deploy's
+`finalize` step, and re-read every five minutes so the separate bot process picks it up without a
+restart. (Revised 2026-08-27: the original precedence — setting over env — moved live customer
+links to the new storefront as soon as a deploy succeeded.)
 
 ### 2.7 Security notes
 
