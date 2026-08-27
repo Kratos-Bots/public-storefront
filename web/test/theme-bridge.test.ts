@@ -37,6 +37,15 @@ describe('theme bridge', () => {
     expect(buildMantineTheme({ ...theme, radius: 'none' }).defaultRadius).toBe(0);
     expect(buildMantineTheme({ ...theme, radius: 'md' }).defaultRadius).toBe('md');
   });
+  it('slows Mantine sheets and modals to the shop timings', () => {
+    const c = buildMantineTheme(theme).components as Record<string, { defaultProps?: Record<string, unknown> }>;
+    expect(c.Drawer?.defaultProps?.transitionProps).toEqual({ duration: 300, timingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)' });
+    expect(c.Drawer?.defaultProps?.overlayProps).toEqual({ backgroundOpacity: 0.7, blur: 2 });
+    expect(c.Modal?.defaultProps?.transitionProps).toEqual({ transition: 'pop', duration: 200, timingFunction: 'cubic-bezier(0.2, 0.8, 0.2, 1)' });
+    expect(c.Button).toBeDefined();
+    expect(c.ActionIcon).toBeDefined();
+    expect(c.Input).toBeDefined();
+  });
 });
 
 describe('font defaults', () => {

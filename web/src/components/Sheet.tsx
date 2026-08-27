@@ -41,8 +41,14 @@ export function Sheet({ opened, onClose, label, header, footer, children }: Shee
       // that prop is handed to the positioning wrapper as well as the panel, and a
       // `flex-direction: column` reaching the wrapper re-anchors the whole drawer.
       classNames={{ content: classes.content }}
+      // The theme's `components.Drawer.defaultProps` only reaches the all-in-one
+      // `<Drawer>`: compound `Drawer.Root`/`Drawer.Overlay` look themselves up
+      // under theme.components.DrawerRoot/DrawerOverlay (Mantine's useProps takes
+      // the exact factory name), which this theme never sets — so both the timing
+      // and the overlay have to be repeated explicitly here.
+      transitionProps={{ duration: 300, timingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)' }}
     >
-      <Drawer.Overlay backgroundOpacity={0.62} blur={2} />
+      <Drawer.Overlay backgroundOpacity={0.7} blur={2} />
       <Drawer.Content aria-label={label}>
         <span className={classes.handle} aria-hidden />
         {header}
