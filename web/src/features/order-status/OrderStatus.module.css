@@ -414,6 +414,7 @@
 }
 
 .deadlineWhen {
+  font-variant-numeric: tabular-nums;
   color: var(--sf-text);
 }
 

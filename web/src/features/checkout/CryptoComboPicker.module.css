@@ -41,6 +41,7 @@
 
 .fee {
   font-family: var(--sf-font-mono);
+  font-variant-numeric: tabular-nums;
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.14em;

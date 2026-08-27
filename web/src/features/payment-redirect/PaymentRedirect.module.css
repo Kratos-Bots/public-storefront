@@ -123,6 +123,7 @@
 .referenceValue {
   margin: 0.15rem 0 0;
   font-family: var(--sf-font-mono);
+  font-variant-numeric: tabular-nums;
   font-size: 1rem;
   font-weight: 700;
   letter-spacing: 0.03em;
