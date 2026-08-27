@@ -40,7 +40,7 @@ is structurally sound and stays.
 - Dependency: `@fontsource-variable/inter` (5.x). `web/src/main.tsx` imports
   `@fontsource-variable/inter/index.css` (the default `wght` axis file; no `slnt` axis) **before**
   `global.css`. Vite emits the woff2 files as hashed assets; the existing release `_headers`
-  immutable-cache rule for `/assets/*` covers them. Budget: ≤ 130 KB of woff2 in the release zip.
+  immutable-cache rule for `/assets/*` covers them. Budget: ≈ 130 KB of woff2 for the latin + latin-ext subsets (stock fontsource output is 133 KB; other subsets ship but load only on demand via `unicode-range`).
 - `web/src/app/theme-bridge.ts` constants become:
   ```ts
   const INTER = '"Inter Variable", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
@@ -88,10 +88,11 @@ body {
 .hr { height: 1px; background: var(--sf-line); }
 .hr-strong { height: 1px; background: var(--sf-line-strong); }
 ```
-Applied: `.glass` on `StorefrontShell` `.header`, `MenuShell` `.bar`, the menu `ContactLinks`
-strip and `MobileCartBar`; `.glass-soft` on `Sheet` footer, `CartDrawer` footer, checkout sticky
-CTA. Their module CSS drops the opaque `background: var(--sf-bg-deep)` in favour of the class
-(border-bottom/top lines stay).
+Applied via CSS Modules global composition — `composes: glass from global;` — on `StorefrontShell`
+`.header`, `MenuShell` `.bar`, the menu `ContactLinks` strip, `MobileCartBar` and `WholesaleBar`;
+`composes: glass-soft from global;` on the `Sheet` footer and the checkout sticky `.nav`. Their module
+CSS drops the opaque `background: var(--sf-bg-deep)` (border-bottom/top lines stay). `.hr`/`.hr-strong`
+were dropped as unused.
 
 **`motion.css`** — the old keyframes verbatim:
 ```css
@@ -154,9 +155,12 @@ components: {
   Input: Input.extend({ classNames: { input: 'sf-input' } }),
 }
 ```
-`Sheet.tsx` keeps its explicit `position`/`size` but stops passing its own overlay props (theme
-default). The `StatusHero` and tracking `ProgressStepper` "current" node gets a `<span className="ping" aria-hidden />`
-child (the node already is `position: relative`).
+`Sheet.tsx` keeps its explicit `position`/`size`, and — because Mantine's compound `Drawer.Root`
+reads the `DrawerRoot` theme key, not `Drawer` — also repeats the transition and overlay props
+explicitly. `respectReducedMotion: true` is set so Mantine's own transitions honour the OS setting.
+The `StatusHero` "current" node gets a `<span className="ping" />` child (`.node` is `position: relative`).
+The tracking `ProgressStepper` gets no ping: it renders seven bar segments, not nodes, so a ring has
+nothing to sit on (deliberate omission, 2026-08-27).
 
 ### 3.5 Component vocabulary (`mantine.css`)
 
@@ -168,7 +172,10 @@ child (the node already is `position: relative`).
 .sf-button[data-size="xs"], .sf-button[data-size="sm"] { font-size: 11px; letter-spacing: 0.18em; }
 .sf-button[data-size="md"] { font-size: 12px; }
 .sf-button[data-size="lg"], .sf-button[data-size="xl"] { font-size: 13px; letter-spacing: 0.22em; }
-.sf-button:active:not(:disabled) { transform: scale(0.98); }
+.sf-button:active:not([data-disabled]) { transform: scale(0.98); }
+/* the same press feedback is declared on the app-owned CTAs (AddToCart, ProductRow ±/+, MobileCartBar,
+   order-status checkout button, wholesale steppers) — spec scoped this to Mantine Buttons at first,
+   but the customer's most-pressed controls are not Mantine Buttons (amended 2026-08-27). */
 .sf-button[data-variant="filled"] { background: var(--sf-primary); color: var(--sf-bg); }
 .sf-button[data-variant="filled"]:hover { background: var(--sf-primary-soft); }
 .sf-button[data-variant="default"] { background: transparent; border-color: var(--sf-line-strong); color: var(--sf-text); }
@@ -187,7 +194,10 @@ child (the node already is `position: relative`).
 .sf-input[data-error] { border-bottom-color: var(--sf-danger); }
 textarea.sf-input { border: 1px solid var(--sf-line-strong); padding: 0.75rem; }
 ```
-The app's own `Fields` component (checkout/login/verify) adopts the same underline rules in its
+Mantine's `Button` injects `--button-*` as inline styles, so the variant/size values above are set from
+a theme-level `Button.extend({ vars })` resolver (which wins) and `mantine.css` keeps only the
+non-variable properties; `.sf-input` zeroes inline padding only on inputs without a section
+(`:not([data-with-left-section]) > .sf-input`). The app's own `Fields` component (checkout/login/verify) adopts the same underline rules in its
 module CSS; its labels already use the eyebrow idiom. Mantine `Select`/`NativeSelect` inherit via
 `Input`. Mantine `Notifications` keep stock styling.
 
