@@ -9,6 +9,10 @@
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*", "/media/*", "/healthz"]
   },
+  // `name` applies to local `wrangler dev` / manual deploys only. Deploys driven
+  // from the admin panel name the script `ecommerce-storefront-${CLIENT_ID}` and
+  // ignore this field — one client can run several stacks (a warehouse each) in
+  // one Cloudflare account, and a shared name made them overwrite each other.
   // Per-client values are set at deploy time (Spec 3) or via .dev.vars locally.
   "vars": { "BACKEND_URL": "http://localhost:3000/" },
   "workers_dev": false,
