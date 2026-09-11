@@ -222,3 +222,24 @@ describe('fetch /api/*', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 });
+
+// The personalised catalog is per-customer (group rules + group prices): it
+// must be proxied, and must never land in the Worker's edge cache. The
+// storefront/ prefix already allows it and no CACHE_RULES entry matches it —
+// these pin that so a future cache rule can't silently start sharing it.
+describe('personalised catalog proxying', () => {
+  it('allows the storefront catalog routes', () => {
+    expect(isAllowedApiPath('storefront/catalog')).toBe(true);
+    expect(isAllowedApiPath('storefront/catalog/products/42')).toBe(true);
+  });
+
+  it('never edge-caches them', () => {
+    expect(cacheTtlFor('storefront/catalog')).toBe(0);
+    expect(cacheTtlFor('storefront/catalog/products/42')).toBe(0);
+  });
+
+  it('still edge-caches the anonymous catalog', () => {
+    expect(cacheTtlFor('catalog')).toBe(60);
+    expect(cacheTtlFor('catalog/products/42')).toBe(60);
+  });
+});
