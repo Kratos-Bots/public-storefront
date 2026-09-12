@@ -214,6 +214,33 @@
   outline-offset: 2px;
 }
 
+/* The one-tap fix on a limit note — same shape as Remove, but it resolves the
+   line rather than deleting it, so its hover tone reads as the accent, not danger. */
+.fix {
+  min-height: 44px;
+  padding: 0 0.5rem;
+  border: 0;
+  background: none;
+  color: var(--sf-muted);
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: var(--mantine-radius-default);
+  white-space: nowrap;
+}
+
+.fix:hover {
+  color: var(--sf-primary);
+}
+
+.fix:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
 /* The server's word on the line, flown under it with a rule in its own tone —
    the same shape whether it is a warning or a blocker, so a scan finds them all. */
 .note {
@@ -271,7 +298,8 @@
     font-size: 0.875rem;
   }
 
-  .remove {
+  .remove,
+  .fix {
     min-height: 38px;
   }
 }

@@ -146,6 +146,57 @@ describe('fetch /api/*', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
+  // The Worker never parses or projects a JSON body — it streams `upstream.body`
+  // straight through (see `proxyApi`) — so there is no per-field allowlist for a
+  // new backend field (order-quantity limits: `minOrderQuantity`, `maxOrderQuantity`,
+  // `belowMin`, `aboveMax`) to be dropped from. This pins that contract for both
+  // the catalog and the cart, so a future rewrite that DOES introduce a projection
+  // is forced to carry these fields through.
+  it('passes catalog and cart fields it has never heard of straight through unchanged', async () => {
+    const catalogBody = JSON.stringify({
+      success: true,
+      data: {
+        products: [{ id: 1, price: 10, minOrderQuantity: 10, maxOrderQuantity: 50 }],
+        categories: [],
+      },
+    });
+    const cartBody = JSON.stringify({
+      success: true,
+      data: {
+        items: [
+          {
+            productId: 1, quantity: 4, belowMin: true, aboveMax: false,
+            minOrderQuantity: 10, maxOrderQuantity: 50,
+          },
+        ],
+        subtotal: 40,
+        itemCount: 4,
+      },
+    });
+
+    stubFetch((url) =>
+      url.includes('/catalog')
+        ? new Response(catalogBody, { status: 200, headers: { 'content-type': 'application/json' } })
+        : new Response(cartBody, { status: 200, headers: { 'content-type': 'application/json' } }),
+    );
+
+    // A distinct query string keeps this off the plain `/api/catalog` cache key
+    // that a later test in this file relies on being a fresh MISS.
+    const catalogRes = await worker.fetch(
+      new Request('https://shop.test/api/catalog?probe=quantity-limits'),
+      env,
+      createExecutionContext(),
+    );
+    expect(await catalogRes.text()).toBe(catalogBody);
+
+    const cartRes = await worker.fetch(
+      new Request('https://shop.test/api/storefront/cart'),
+      env,
+      createExecutionContext(),
+    );
+    expect(await cartRes.text()).toBe(cartBody);
+  });
+
   it('does not cache a non-200 upstream response on a cacheable path', async () => {
     const fetchSpy = stubFetch((url) => {
       expect(url).toBe('https://backend.test/api/v1/public/catalog');

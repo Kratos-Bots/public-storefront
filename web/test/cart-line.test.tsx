@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
 import type { StorefrontSettings } from '@/types/settings.ts';
 import type { LocalLine } from '@/stores/cart.ts';
@@ -38,6 +38,10 @@ function issue(overrides: Partial<ServerCartLine> = {}): ServerCartLine {
     outOfStock: false,
     priceChanged: false,
     inactive: false,
+    belowMin: false,
+    aboveMax: false,
+    minOrderQuantity: null,
+    maxOrderQuantity: null,
     ...overrides,
   };
 }
@@ -98,6 +102,60 @@ describe('CartLine', () => {
   it("won't step below one — Remove is the only deletion", () => {
     mount(line());
     expect(screen.getByRole('button', { name: 'One fewer BPC-157 5mg' })).toBeDisabled();
+  });
+
+  it('flags a below-minimum line with a one-tap fix, and leaves the stepper', () => {
+    mount(
+      line({ quantity: 4 }),
+      issue({ quantity: 4, belowMin: true, minOrderQuantity: 10 }),
+    );
+    expect(screen.getByText('Minimum 10 per order')).toBeInTheDocument();
+    const fix = screen.getByRole('button', { name: 'Set to 10' });
+    expect(screen.getByRole('button', { name: 'One more BPC-157 5mg' })).toBeInTheDocument();
+    fireEvent.click(fix);
+  });
+
+  it('flags an above-maximum line with a one-tap fix', () => {
+    mount(
+      line({ quantity: 60 }),
+      issue({ quantity: 60, aboveMax: true, maxOrderQuantity: 50 }),
+    );
+    expect(screen.getByText('Maximum 50 per order')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Set to 50' })).toBeInTheDocument();
+  });
+
+  it('the fix button sets the quantity to the limit', () => {
+    const onQuantity = vi.fn();
+    render(
+      <MantineProvider env="test">
+        <ul>
+          <CartLine
+            line={line({ quantity: 4 })}
+            issue={issue({ quantity: 4, belowMin: true, minOrderQuantity: 10 })}
+            onQuantity={onQuantity}
+            onRemove={vi.fn()}
+          />
+        </ul>
+      </MantineProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Set to 10' }));
+    expect(onQuantity).toHaveBeenCalledWith(7, 10);
+  });
+
+  it('clamps the stepper at the resolved minimum once a line is flagged below it', () => {
+    mount(
+      line({ quantity: 4 }),
+      issue({ quantity: 4, belowMin: true, minOrderQuantity: 10 }),
+    );
+    expect(screen.getByRole('button', { name: 'One fewer BPC-157 5mg' })).toBeDisabled();
+  });
+
+  it('clamps the stepper at the resolved maximum once a line is flagged above it', () => {
+    mount(
+      line({ quantity: 60 }),
+      issue({ quantity: 60, aboveMax: true, maxOrderQuantity: 50 }),
+    );
+    expect(screen.getByRole('button', { name: 'One more BPC-157 5mg' })).toBeDisabled();
   });
 
   it('renders no thumbnail for an image-less line, and one when an image is set', () => {

@@ -52,7 +52,7 @@ export function MobileCartBar() {
 
   if (!showing) return null;
 
-  const blocked = issues.some((i) => i.inactive);
+  const blocked = issues.some((i) => i.inactive || i.belowMin || i.aboveMax);
   const items = `${count} ${count === 1 ? 'item' : 'items'}`;
 
   return (

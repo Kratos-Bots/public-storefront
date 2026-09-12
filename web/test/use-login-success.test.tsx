@@ -60,6 +60,10 @@ function serverLine(overrides: Partial<ServerCartLine> = {}): ServerCartLine {
     outOfStock: false,
     priceChanged: false,
     inactive: false,
+    belowMin: false,
+    aboveMax: false,
+    minOrderQuantity: null,
+    maxOrderQuantity: null,
     ...overrides,
   };
 }

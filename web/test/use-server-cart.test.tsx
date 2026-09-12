@@ -47,6 +47,10 @@ function serverLine(overrides: Partial<ServerCartLine> = {}): ServerCartLine {
     outOfStock: false,
     priceChanged: false,
     inactive: false,
+    belowMin: false,
+    aboveMax: false,
+    minOrderQuantity: null,
+    maxOrderQuantity: null,
     ...overrides,
   };
 }
@@ -170,6 +174,24 @@ describe('useServerCart', () => {
     const { result } = renderHook(() => useServerCart());
 
     expect(result.current.issues).toEqual([]);
+
+    act(() => {
+      result.current.setQuantity(7, 2);
+    });
+    await settle();
+
+    expect(result.current.issues.map((i) => i.productId)).toEqual([9, 11]);
+  });
+
+  it('includes quantity-limit violations among the flagged lines', async () => {
+    putMock.mockResolvedValueOnce(
+      serverCart([
+        serverLine(),
+        serverLine({ productId: 9, name: 'TB-500 5mg', belowMin: true, minOrderQuantity: 10 }),
+        serverLine({ productId: 11, name: 'Ipamorelin 5mg', aboveMax: true, maxOrderQuantity: 50 }),
+      ]),
+    );
+    const { result } = renderHook(() => useServerCart());
 
     act(() => {
       result.current.setQuantity(7, 2);
