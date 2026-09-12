@@ -108,6 +108,9 @@ function Detail({ product, onSelect }: { product: Product; onSelect: (product: P
             {product.isPreorder ? (
               <span className={classes.preorder}>{eta ? `Ships ${eta}` : 'Pre-order'}</span>
             ) : null}
+            {product.minOrderQuantity != null ? (
+              <span className={classes.limit}>Min {product.minOrderQuantity}</span>
+            ) : null}
           </p>
         </div>
         {product.imageProductId !== null ? (

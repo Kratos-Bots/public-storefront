@@ -23,6 +23,8 @@ function product(overrides: Partial<Product> & { id: number }): Product {
     excludedFromFreeShipping: false,
     imageProductId: null,
     provenance: null,
+    minOrderQuantity: null,
+    maxOrderQuantity: null,
     ...overrides,
   };
 }

@@ -84,7 +84,8 @@
 }
 
 .sku,
-.preorder {
+.preorder,
+.limit {
   font-family: var(--sf-font-mono);
   font-variant-numeric: tabular-nums;
   font-size: 10px;

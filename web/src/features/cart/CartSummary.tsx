@@ -7,7 +7,8 @@ import { checkoutTarget } from '@/features/cart/checkout-target.ts';
 import classes from '@/features/cart/CartSummary.module.css';
 
 export interface CartSummaryProps {
-  /** A line the server has withdrawn is still on the order — checkout is held until it goes. */
+  /** A line the server has withdrawn, or one violating its order-quantity limit, is
+   *  still on the order — checkout is held until it's removed or fixed. */
   blocked: boolean;
   /** Called when a link inside the summary is followed, so the drawer can stand down. */
   onNavigate?: () => void;
@@ -53,7 +54,7 @@ export function CartSummary({ blocked, onNavigate }: CartSummaryProps) {
           <button type="button" className={classes.checkout} disabled>
             Checkout
           </button>
-          <p className={classes.held}>Remove the unavailable items to continue.</p>
+          <p className={classes.held}>Resolve the flagged items to continue.</p>
         </>
       ) : (
         <Link

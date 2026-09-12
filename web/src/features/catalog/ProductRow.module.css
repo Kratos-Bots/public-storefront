@@ -85,7 +85,8 @@
 
 .sku,
 .tier,
-.preorder {
+.preorder,
+.limit {
   font-family: var(--sf-font-mono);
   font-size: 10px;
   font-weight: 500;
@@ -97,7 +98,8 @@
   text-overflow: ellipsis;
 }
 
-.tier {
+.tier,
+.limit {
   color: var(--sf-muted);
 }
 
@@ -144,7 +146,7 @@
 }
 
 .quickAdd:hover:not(:disabled),
-.step:hover {
+.step:hover:not(:disabled) {
   border-color: var(--sf-primary);
   background: var(--sf-surface-2);
 }
@@ -170,6 +172,15 @@
 .step {
   border-color: var(--sf-primary);
   color: var(--sf-primary);
+}
+
+/* `+` at the ceiling — same dashed, quiet treatment as a quick-add that can't
+   be tapped, so a maxed-out line reads the same way stock-out does. */
+.step:disabled {
+  border-color: var(--sf-line-strong);
+  border-style: dashed;
+  color: var(--sf-faint);
+  cursor: not-allowed;
 }
 
 .quantity {

@@ -100,6 +100,9 @@ export function ProductDetailPage() {
               {product.isPreorder ? (
                 <span className={classes.preorder}>{eta ? `Pre-order · ships ${eta}` : 'Pre-order'}</span>
               ) : null}
+              {product.minOrderQuantity != null ? (
+                <span className={classes.limit}>Min {product.minOrderQuantity}</span>
+              ) : null}
             </div>
           </div>
 

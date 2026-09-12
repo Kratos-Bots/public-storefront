@@ -32,6 +32,8 @@ function product(overrides: Partial<Product> = {}): Product {
     excludedFromFreeShipping: false,
     imageProductId: null,
     provenance: null,
+    minOrderQuantity: null,
+    maxOrderQuantity: null,
     ...overrides,
   };
 }
@@ -94,6 +96,24 @@ describe('AddToCart', () => {
     expect(useCartStore.getState().lines).toEqual([
       expect.objectContaining({ productId: 7, quantity: 1, unitPrice: 29 }),
     ]);
+  });
+
+  it('opens at the minimum order quantity, not 1', () => {
+    mount(product({ minOrderQuantity: 10 }));
+    fireEvent.click(button()!);
+    expect(useCartStore.getState().lines).toEqual([
+      expect.objectContaining({ productId: 7, quantity: 10 }),
+    ]);
+  });
+
+  it('labels the button with the quantity and total when a minimum applies', () => {
+    mount(product({ minOrderQuantity: 10, price: 29 }));
+    expect(button()).toHaveTextContent('Add 10 · £290.00');
+  });
+
+  it('stays at 1 when there is no minimum', () => {
+    mount(product({ minOrderQuantity: null }));
+    expect(button()).toHaveTextContent('Add · £29.00');
   });
 
   it('cycles Add → Added → Add another', () => {
