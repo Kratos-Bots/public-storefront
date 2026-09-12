@@ -6,6 +6,7 @@ const p = (id: number, price = 10, tiers: Product['pricingTiers'] = []): Product
   id, sku: `S${id}`, name: `P${id}`, displayName: `P${id}`, shortDisplayName: null, description: null, categoryId: 1, categoryName: 'C',
   sortOrder: 0, price, inStock: true, lowStockAlert: false, isActive: true, isPreorder: false, preorderEta: null, pricingTiers: tiers,
   upsellProductIds: [], excludedFromFreeShipping: false, imageProductId: null, provenance: null,
+  minOrderQuantity: null, maxOrderQuantity: null,
 });
 
 describe('cart store', () => {
@@ -37,8 +38,8 @@ describe('cart store', () => {
 
     useCartStore.getState().replaceFromServer({
       items: [
-        { productId: 1, name: 'P1 as the server names it', quantity: 4, unitPrice: 8, lineTotal: 32, imageUrl: null, isPreorder: true, outOfStock: false, priceChanged: false, inactive: false },
-        { productId: 99, name: 'Added from the bot', quantity: 1, unitPrice: 12, lineTotal: 12, imageUrl: null, isPreorder: false, outOfStock: false, priceChanged: false, inactive: false },
+        { productId: 1, name: 'P1 as the server names it', quantity: 4, unitPrice: 8, lineTotal: 32, imageUrl: null, isPreorder: true, outOfStock: false, priceChanged: false, inactive: false, belowMin: false, aboveMax: false, minOrderQuantity: null, maxOrderQuantity: null },
+        { productId: 99, name: 'Added from the bot', quantity: 1, unitPrice: 12, lineTotal: 12, imageUrl: null, isPreorder: false, outOfStock: false, priceChanged: false, inactive: false, belowMin: false, aboveMax: false, minOrderQuantity: null, maxOrderQuantity: null },
       ],
       subtotal: 44,
       itemCount: 5,
@@ -59,7 +60,7 @@ describe('cart store', () => {
   });
 
   it('replaceFromServer mirrors the server cart and switches to server mode', () => {
-    useCartStore.getState().replaceFromServer({ items: [{ productId: 9, name: 'X', quantity: 4, unitPrice: 5, lineTotal: 20, imageUrl: null, isPreorder: false, outOfStock: false, priceChanged: false, inactive: false }], subtotal: 20, itemCount: 4 });
+    useCartStore.getState().replaceFromServer({ items: [{ productId: 9, name: 'X', quantity: 4, unitPrice: 5, lineTotal: 20, imageUrl: null, isPreorder: false, outOfStock: false, priceChanged: false, inactive: false, belowMin: false, aboveMax: false, minOrderQuantity: null, maxOrderQuantity: null }], subtotal: 20, itemCount: 4 });
     const st = useCartStore.getState();
     expect(st.mode).toBe('server');
     expect(st.lines[0]).toMatchObject({ productId: 9, quantity: 4, unitPrice: 5, displayName: 'X' });

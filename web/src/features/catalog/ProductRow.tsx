@@ -36,6 +36,9 @@ export function ProductRow({ product, onSelect, index }: ProductRowProps) {
     null,
   );
 
+  const floor = Math.max(1, product.minOrderQuantity ?? 1);
+  const atCeiling = product.maxOrderQuantity != null && quantity >= product.maxOrderQuantity;
+
   return (
     <div
       className={index === undefined ? classes.row : `${classes.row} ${rowAnim(index).className}`}
@@ -49,6 +52,9 @@ export function ProductRow({ product, onSelect, index }: ProductRowProps) {
         </h3>
         <p className={classes.meta}>
           <span className={classes.sku}>{product.sku}</span>
+          {product.minOrderQuantity != null ? (
+            <span className={classes.limit}>Min {product.minOrderQuantity}</span>
+          ) : null}
           {best ? (
             <span className={classes.tier}>
               {best.minQuantity}+ {formatMoney(best.price, currency)}
@@ -68,7 +74,7 @@ export function ProductRow({ product, onSelect, index }: ProductRowProps) {
               <button
                 type="button"
                 className={classes.step}
-                onClick={() => setQuantity(product.id, quantity - 1)}
+                onClick={() => setQuantity(product.id, quantity > floor ? quantity - 1 : 0)}
                 aria-label={`One fewer ${product.displayName}`}
               >
                 <MinusIcon size={15} />
@@ -79,6 +85,7 @@ export function ProductRow({ product, onSelect, index }: ProductRowProps) {
               <button
                 type="button"
                 className={classes.step}
+                disabled={atCeiling}
                 onClick={() => setQuantity(product.id, quantity + 1)}
                 aria-label={`One more ${product.displayName}`}
               >
@@ -90,7 +97,7 @@ export function ProductRow({ product, onSelect, index }: ProductRowProps) {
               type="button"
               className={classes.quickAdd}
               disabled={unavailable}
-              onClick={() => add(product, 1)}
+              onClick={() => add(product, floor)}
               aria-label={
                 !product.isActive
                   ? `Unavailable — ${product.displayName}`

@@ -94,6 +94,18 @@
   white-space: nowrap;
 }
 
+/* The floor the stepper already opens at and the `−` won't cross — shown so
+   a buyer isn't surprised by the batch size the first tap commits to. */
+.limit {
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--sf-muted);
+  white-space: nowrap;
+}
+
 .unit {
   grid-area: unit;
   white-space: nowrap;

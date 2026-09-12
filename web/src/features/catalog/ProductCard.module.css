@@ -76,6 +76,18 @@
   color: var(--sf-primary);
 }
 
+/* The floor the quick-add already opens at — shown so tapping Add is never a
+   surprise about how many units just landed in the cart. */
+.limit {
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  color: var(--sf-muted);
+}
+
 /* Pinned to the bottom of the tile so the price rail reads across the row. */
 .foot {
   display: flex;

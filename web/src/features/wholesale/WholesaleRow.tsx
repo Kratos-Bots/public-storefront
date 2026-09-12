@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useSettings } from '@/app/settings.ts';
 import { useCartStore } from '@/stores/cart.ts';
 import { addToCart, setCartQuantity } from '@/features/cart/useServerCart.ts';
@@ -45,6 +45,10 @@ export function WholesaleRow({ product, band, groupEnd, ordering, index }: Whole
   const hasTiers = product.pricingTiers.length > 0;
   const inCart = quantity > 0;
 
+  const floor = Math.max(1, product.minOrderQuantity ?? 1);
+  const max = product.maxOrderQuantity;
+  const atCeiling = inCart && max != null && quantity >= max;
+
   /** The store keys quantity edits by product id, so a line has to exist first.
    *  Both writers go through the cart's sync path so a logged-in trade order mirrors to the server. */
   const setQty = (next: number) => {
@@ -52,6 +56,27 @@ export function WholesaleRow({ product, band, groupEnd, ordering, index }: Whole
     if (q === quantity) return;
     if (quantity === 0) addToCart(product, q);
     else setCartQuantity(product.id, q);
+  };
+
+  // `+`/`−` clamp immediately against known bounds. The typed field can't: it
+  // commits on every keystroke with no draft of its own, so clamping there
+  // mid-type would fight the digits as they're entered (typing "10" toward a
+  // floor of 10 would snap to 10 after the first "1" and strand the second
+  // keystroke) — `draft`/`commitDraft` below give it the same on-blur pattern
+  // `CartLine`'s quantity field already uses.
+  const onDecrement = () => setQty(quantity > floor ? quantity - 1 : 0);
+  const onIncrement = () => setQty(quantity === 0 ? floor : quantity + 1);
+
+  const [draft, setDraft] = useState(quantity > 0 ? String(quantity) : '');
+  useEffect(() => setDraft(quantity > 0 ? String(quantity) : ''), [quantity]);
+
+  const commitDraft = () => {
+    const digits = draft.replace(/\D/g, '');
+    let q = digits === '' ? 0 : Math.max(0, parseInt(digits, 10));
+    if (q > 0 && q < floor) q = floor;
+    if (q > 0 && max != null && q > max) q = max;
+    setDraft(q > 0 ? String(q) : '');
+    setQty(q);
   };
 
   const groupClass = [classes.group, band ? classes.band : '', inCart ? classes.inCart : '']
@@ -82,6 +107,9 @@ export function WholesaleRow({ product, band, groupEnd, ordering, index }: Whole
                 box gets wrapped in an anonymous one at 62em and loses its column. */}
             <span className={classes.identity}>
               <span className={classes.name}>{product.displayName}</span>
+              {product.minOrderQuantity != null ? (
+                <span className={classes.limit}>Min {product.minOrderQuantity}</span>
+              ) : null}
               {product.isPreorder ? <span className={classes.preorder}>Pre-order</span> : null}
               {status !== 'in' ? <StockChip status={status} /> : null}
             </span>
@@ -141,7 +169,7 @@ export function WholesaleRow({ product, band, groupEnd, ordering, index }: Whole
                       type="button"
                       className={classes.step}
                       disabled={!inCart}
-                      onClick={() => setQty(quantity - 1)}
+                      onClick={onDecrement}
                       aria-label={`One fewer ${product.displayName}`}
                     >
                       <MinusIcon size={15} />
@@ -154,13 +182,18 @@ export function WholesaleRow({ product, band, groupEnd, ordering, index }: Whole
                       autoComplete="off"
                       placeholder="0"
                       aria-label={`${product.displayName} quantity`}
-                      value={inCart ? String(quantity) : ''}
-                      onChange={(e) => setQty(parseInt(e.currentTarget.value.replace(/\D/g, ''), 10))}
+                      value={draft}
+                      onChange={(e) => setDraft(e.currentTarget.value.replace(/\D/g, ''))}
+                      onBlur={commitDraft}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') e.currentTarget.blur();
+                      }}
                     />
                     <button
                       type="button"
                       className={classes.step}
-                      onClick={() => setQty(quantity + 1)}
+                      disabled={atCeiling}
+                      onClick={onIncrement}
                       aria-label={`One more ${product.displayName}`}
                     >
                       <PlusIcon size={15} />

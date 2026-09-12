@@ -5,6 +5,8 @@ export interface Product {
   price: number; inStock: boolean; lowStockAlert: boolean; isActive: boolean; isPreorder: boolean;
   preorderEta: number | null; pricingTiers: PricingTier[]; upsellProductIds: number[];
   excludedFromFreeShipping: boolean; imageProductId: number | null; provenance: string | null;
+  /** Resolved for this shopper's customer group (override → product → parent chain). null = no limit. */
+  minOrderQuantity: number | null; maxOrderQuantity: number | null;
 }
 export interface Category { id: number; name: string; slug: string | null; parentId: number | null; sortOrder: number; emoji: string | null }
 export interface Catalog { products: Product[]; categories: Category[] }
