@@ -57,8 +57,11 @@ export function ProductCard({ product, eager = false, hasSiblingImages = true, i
           </Link>
         </h3>
 
-        {product.isPreorder || status !== 'in' ? (
+        {product.isPreorder || status !== 'in' || product.minOrderQuantity != null ? (
           <div className={classes.flags}>
+            {product.minOrderQuantity != null ? (
+              <span className={classes.limit}>Min {product.minOrderQuantity}</span>
+            ) : null}
             {product.isPreorder ? <span className={classes.preorder}>Pre-order</span> : null}
             {status !== 'in' ? <StockChip status={status} /> : null}
           </div>

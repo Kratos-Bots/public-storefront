@@ -34,7 +34,7 @@ export function CartDrawer() {
     () => new Map(issues.map((i) => [i.productId, i])),
     [issues],
   );
-  const blocked = issues.some((i) => i.inactive);
+  const blocked = issues.some((i) => i.inactive || i.belowMin || i.aboveMax);
 
   return (
     <Sheet

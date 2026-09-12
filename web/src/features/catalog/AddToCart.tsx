@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSettings } from '@/app/settings.ts';
 import { addToCart } from '@/features/cart/useServerCart.ts';
-import { deriveStockStatus, formatMoney } from '@/lib/format.ts';
+import { deriveStockStatus, formatMoney, resolveUnitPrice } from '@/lib/format.ts';
 import type { Product } from '@/types/catalog.ts';
 import classes from '@/features/catalog/AddToCart.module.css';
 
@@ -34,11 +34,22 @@ export function AddToCart({ product, size = 'lg', showPrice = true }: AddToCartP
   if (!features.ordering) return null;
 
   const status = deriveStockStatus(product.inStock, product.lowStockAlert);
+  // A product with fewer units in stock than its own minimum can never actually
+  // be bought, but the catalogue only ever reports `inStock` as a boolean — the
+  // exact count is never sent to the public API — so this can only catch full
+  // depletion, not a positive-but-insufficient stock level. See task-13-report.md.
   const outOfStock = !product.isPreorder && status === 'out';
   const disabled = !product.isActive || outOfStock;
 
+  // A product with a minimum opens straight at it — never fewer than the floor
+  // it would just be flagged for a moment later — so the first tap always adds
+  // a compliant line rather than one the cart has to immediately correct.
+  const quantity = Math.max(1, product.minOrderQuantity ?? 1);
+  const totalPrice = resolveUnitPrice(product, quantity) * quantity;
+
   const verb = product.isPreorder ? 'Pre-order' : 'Add';
-  const price = showPrice ? ` · ${formatMoney(product.price, currency)}` : '';
+  const qty = quantity > 1 ? ` ${quantity}` : '';
+  const price = showPrice ? ` · ${formatMoney(totalPrice, currency)}` : '';
   const label = !product.isActive
     ? 'Unavailable'
     : outOfStock
@@ -47,10 +58,10 @@ export function AddToCart({ product, size = 'lg', showPrice = true }: AddToCartP
         ? 'Added'
         : phase === 'again'
           ? 'Add another'
-          : `${verb}${price}`;
+          : `${verb}${qty}${price}`;
 
   const onClick = () => {
-    addToCart(product, 1);
+    addToCart(product, quantity);
     setPhase('added');
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => setPhase('again'), ADDED_MS);

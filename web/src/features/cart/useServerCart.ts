@@ -218,7 +218,7 @@ export interface ServerCartControls {
   mode: 'local' | 'server';
   /** A write is in the air — for a quiet progress mark, never for disabling the stepper. */
   isSyncing: boolean;
-  /** Lines the server flagged: inactive, out of stock, or repriced since they were added. */
+  /** Lines the server flagged: inactive, out of stock, repriced, or violating an order-quantity limit. */
   issues: ServerCartLine[];
   add: (product: Product, quantity?: number) => void;
   setQuantity: (productId: number, quantity: number) => void;
@@ -253,7 +253,9 @@ export function useServerCart(): ServerCartControls {
   const issues = useMemo(
     () =>
       mode === 'server'
-        ? (cart?.items ?? []).filter((i) => i.inactive || i.outOfStock || i.priceChanged)
+        ? (cart?.items ?? []).filter(
+            (i) => i.inactive || i.outOfStock || i.priceChanged || i.belowMin || i.aboveMax,
+          )
         : [],
     [mode, cart],
   );

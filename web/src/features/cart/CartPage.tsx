@@ -24,7 +24,7 @@ export function CartPage() {
   }, [refresh]);
 
   const issueByProduct = useMemo(() => new Map(issues.map((i) => [i.productId, i])), [issues]);
-  const blocked = issues.some((i) => i.inactive);
+  const blocked = issues.some((i) => i.inactive || i.belowMin || i.aboveMax);
 
   if (lines.length === 0) {
     return (

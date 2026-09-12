@@ -122,6 +122,12 @@ function buildCart(items: CartLineInput[], catalog: Catalog): ServerCart {
     const product = catalog.products.find((p) => p.id === item.productId);
     if (!product || item.quantity <= 0) continue;
     const unitPrice = unitPriceFor(product, item.quantity);
+    // Mirrors the backend's `checkQuantity`: the mock flags rather than
+    // rejects, exactly like the real cart write does — a fixture product with
+    // no `minOrderQuantity`/`maxOrderQuantity` set is `undefined`, not `null`,
+    // so this treats either as "no limit" the same way the real client does.
+    const min = product.minOrderQuantity ?? null;
+    const max = product.maxOrderQuantity ?? null;
     lines.push({
       productId: product.id,
       name: product.displayName,
@@ -133,6 +139,10 @@ function buildCart(items: CartLineInput[], catalog: Catalog): ServerCart {
       outOfStock: !product.inStock && !product.isPreorder,
       priceChanged: false,
       inactive: !product.isActive,
+      belowMin: min != null && item.quantity < min,
+      aboveMax: max != null && item.quantity > max,
+      minOrderQuantity: min,
+      maxOrderQuantity: max,
     });
   }
   return {
@@ -254,12 +264,15 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
       return;
     }
 
-    if (path === 'catalog' && method === 'GET') {
+    // The personalised routes (`fetchCatalog`/`fetchProduct` in `web/src/api/catalog.ts`
+    // call these first whenever a session is seeded) share the anonymous
+    // endpoints' payload shape, so they're served from the same fixture state.
+    if ((path === 'catalog' || path === 'storefront/catalog') && method === 'GET') {
       await envelope(route, state.catalog);
       return;
     }
 
-    const product = /^catalog\/products\/(\d+)$/.exec(path);
+    const product = /^(?:storefront\/)?catalog\/products\/(\d+)$/.exec(path);
     if (product && method === 'GET') {
       const found = state.catalog.products.find((p) => p.id === Number(product[1]));
       if (!found) {

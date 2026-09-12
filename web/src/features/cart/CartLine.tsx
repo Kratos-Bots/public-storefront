@@ -10,7 +10,8 @@ import classes from '@/features/cart/CartLine.module.css';
 
 export interface CartLineProps {
   line: LocalLine;
-  /** The server's word on this line — flags a repriced, sold-out or withdrawn product. */
+  /** The server's word on this line — flags a repriced, sold-out, withdrawn, or
+   *  quantity-limit-violating product. */
   issue?: ServerCartLine;
   onQuantity: (productId: number, quantity: number) => void;
   onRemove: (productId: number) => void;
@@ -35,6 +36,14 @@ export function CartLine({ line, issue, onQuantity, onRemove, index = 0 }: CartL
   const withdrawn = issue?.inactive ?? false;
   const discounted = line.unitPrice < line.basePrice;
   const total = line.unitPrice * line.quantity;
+
+  // The server's resolved limits ride along on `issue` whenever the line has
+  // any flag at all (not only a quantity one), so a repriced or out-of-stock
+  // line still clamps correctly. A clean line carries no `issue` and so no
+  // limit info — the stepper can't preemptively know a bound it hasn't been
+  // told yet, and relies on the next server round trip to flag it.
+  const minBound = issue?.minOrderQuantity ?? 1;
+  const maxBound = issue?.maxOrderQuantity ?? null;
 
   const type = (raw: string) => {
     const digits = raw.replace(/\D/g, '');
@@ -88,7 +97,7 @@ export function CartLine({ line, issue, onQuantity, onRemove, index = 0 }: CartL
             <button
               type="button"
               className={classes.step}
-              disabled={line.quantity <= 1}
+              disabled={line.quantity <= minBound}
               onClick={() => onQuantity(line.productId, line.quantity - 1)}
               aria-label={`One fewer ${line.displayName}`}
             >
@@ -108,6 +117,7 @@ export function CartLine({ line, issue, onQuantity, onRemove, index = 0 }: CartL
             <button
               type="button"
               className={classes.step}
+              disabled={maxBound !== null && line.quantity >= maxBound}
               onClick={() => onQuantity(line.productId, line.quantity + 1)}
               aria-label={`One more ${line.displayName}`}
             >
@@ -123,6 +133,28 @@ export function CartLine({ line, issue, onQuantity, onRemove, index = 0 }: CartL
         <span className={`${classes.note} ${classes.gone}`}>
           <span className={classes.noteText}>No longer available — remove to continue</span>
           {removeButton}
+        </span>
+      ) : issue && issue.belowMin && issue.minOrderQuantity != null ? (
+        <span className={`${classes.note} ${classes.short}`}>
+          <span className={classes.noteText}>Minimum {issue.minOrderQuantity} per order</span>
+          <button
+            type="button"
+            className={classes.fix}
+            onClick={() => onQuantity(line.productId, issue.minOrderQuantity as number)}
+          >
+            Set to {issue.minOrderQuantity}
+          </button>
+        </span>
+      ) : issue && issue.aboveMax && issue.maxOrderQuantity != null ? (
+        <span className={`${classes.note} ${classes.short}`}>
+          <span className={classes.noteText}>Maximum {issue.maxOrderQuantity} per order</span>
+          <button
+            type="button"
+            className={classes.fix}
+            onClick={() => onQuantity(line.productId, issue.maxOrderQuantity as number)}
+          >
+            Set to {issue.maxOrderQuantity}
+          </button>
         </span>
       ) : issue?.outOfStock ? (
         <span className={`${classes.note} ${classes.short}`}>

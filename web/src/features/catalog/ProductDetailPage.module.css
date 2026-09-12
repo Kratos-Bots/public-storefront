@@ -130,6 +130,18 @@ a.crumb:hover {
   color: var(--sf-primary);
 }
 
+/* The floor the Add button already opens at — shown so tapping it is never a
+   surprise about how many units just landed in the cart. */
+.limit {
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  color: var(--sf-muted);
+}
+
 .description {
   margin: 0;
   max-width: 62ch;
