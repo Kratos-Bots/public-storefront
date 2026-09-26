@@ -107,3 +107,23 @@ export function slotLabel(method: PaymentMethod): string {
 export function isManual(method: PaymentMethod): boolean {
   return method.slot === 'manual';
 }
+
+/** An amount in the currency the payment actually settles in. */
+export interface SettlementQuote {
+  amount: number;
+  currency: string;
+}
+
+/**
+ * The backend's settlement quote for `method`, when the order's pending payment
+ * is that method and carries one (a UK bank transfer from a non-GBP store is
+ * quoted in GBP once, when the payment is created). The picker lists every
+ * method, so a quote on one must never be shown against another.
+ */
+export function settlementQuote(order: PublicOrder, method: PaymentMethod): SettlementQuote | null {
+  const active = order.payment?.activePayment;
+  if (!active || active.method !== method.method || active.status !== 'pending') return null;
+  const { settlementAmount, settlementCurrency } = active;
+  if (settlementAmount == null || !settlementCurrency) return null;
+  return { amount: settlementAmount, currency: settlementCurrency };
+}

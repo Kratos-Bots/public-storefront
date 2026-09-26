@@ -80,6 +80,12 @@ export interface ActivePayment {
   status: string; // 'pending' | 'completed' | 'failed' | 'refunded'
   checkoutUrl: string | null; // gateway payments only
   canChange: boolean; // false once a crypto txid is submitted
+  /** What to actually send when the gateway settles in another currency than
+   *  the store's (e.g. GBP for a UK bank transfer from a USD store), quoted once
+   *  when the payment was created. Null when no conversion applies; absent from
+   *  backends that predate the quote. */
+  settlementAmount?: number | null;
+  settlementCurrency?: string | null;
 }
 
 export interface OrderPaymentState {

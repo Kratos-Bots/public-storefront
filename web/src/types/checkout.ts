@@ -26,7 +26,7 @@ export interface CheckoutInput {
 export type CheckoutPayment =
   | { type: 'none' }
   | { type: 'checkout_url'; paymentId: number; method: string; amount: number; url: string }
-  | { type: 'manual'; paymentId: number; method: string; displayName: string; amount: number; instructions: Record<string, string> }
+  | { type: 'manual'; paymentId: number; method: string; displayName: string; amount: number; instructions: Record<string, string>; settlementAmount?: number | null; settlementCurrency?: string | null }
   | { type: 'crypto'; paymentId: number; method: string; coin: string; network: string; coinLabel: string; networkLabel: string; address: string; coinAmount: string; fiatAmount: number; qrData: string; walletLinks: Array<{ label: string; url: string }> };
 export interface CheckoutResult { reference: string; publicUrl: string | null; status: string; total: number; payment: CheckoutPayment; warning?: string }
 export interface GuestQuoteInput extends Omit<QuoteInput, 'useStoreCredit'> { turnstileToken: string; items: import('./cart.ts').CartLineInput[] }
