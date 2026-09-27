@@ -19,6 +19,15 @@ export function formatMoney(amount: number, currency: string): string {
   return priceFmt(currency).format(amount);
 }
 
+/**
+ * An amount as a banking app's amount field wants it: no symbol, no grouping,
+ * the currency's own number of decimals ("1234.50" for GBP, "1235" for JPY).
+ */
+export function formatAmountPlain(amount: number, currency: string): string {
+  const digits = priceFmt(currency).resolvedOptions().maximumFractionDigits ?? 2;
+  return amount.toFixed(digits);
+}
+
 const dateFmt = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
 /** Format an ISO 8601 timestamp as e.g. "7 July 2026". Returns '' for unparseable input. */

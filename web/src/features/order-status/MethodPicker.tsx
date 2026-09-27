@@ -10,11 +10,16 @@ import { ArrowUpRightIcon } from '@/components/icons.tsx';
 import { ContactLinks } from '@/components/ContactLinks.tsx';
 import { errorMessage } from '@/lib/errors.ts';
 import { orderChatMessage } from '@/lib/chat-links.ts';
-import { formatMoney } from '@/lib/format.ts';
+import { formatAmountPlain, formatMoney } from '@/lib/format.ts';
 import { CryptoComboPicker, type CryptoCombo } from '@/features/checkout/CryptoComboPicker.tsx';
 import { CopyRow } from '@/features/order-status/CopyRow.tsx';
 import { paymentOptionsKey, publicOrderKey } from '@/features/order-status/queries.ts';
-import { isManual, slotLabel } from '@/features/order-status/payment-state.ts';
+import {
+  isManual,
+  settlementQuote,
+  slotLabel,
+  type SettlementQuote,
+} from '@/features/order-status/payment-state.ts';
 import type { PaymentMethod } from '@/types/checkout.ts';
 import type { PublicOrder, SelectPaymentResult } from '@/types/public-order.ts';
 import classes from '@/features/order-status/OrderStatus.module.css';
@@ -226,7 +231,11 @@ export function MethodPicker({ order, reference, accessKey, onSelected }: Method
 
               {expanded && isManual(method) ? (
                 <div className={classes.pickerDrawer}>
-                  <TransferDetails method={method} reference={order.reference} />
+                  <TransferDetails
+                    method={method}
+                    reference={order.reference}
+                    settlement={settlementQuote(order, method)}
+                  />
                 </div>
               ) : null}
             </div>
@@ -252,9 +261,20 @@ function comboLabel(options: PaymentMethod['cryptoOptions'], combo: CryptoCombo)
 /**
  * A bank transfer's details. These come from the payment-options response —
  * the public order view carries no instructions — and are shown as copy rows,
- * because every one of them has to be typed into a banking app.
+ * because every one of them has to be typed into a banking app. When the account
+ * settles in another currency than the shop's, the amount to send is quoted in
+ * that currency: shown with its symbol, copied as the bare number an amount
+ * field accepts.
  */
-function TransferDetails({ method, reference }: { method: PaymentMethod; reference: string }) {
+function TransferDetails({
+  method,
+  reference,
+  settlement,
+}: {
+  method: PaymentMethod;
+  reference: string;
+  settlement: SettlementQuote | null;
+}) {
   const details = Object.entries(method.details ?? {});
 
   return (
@@ -268,6 +288,13 @@ function TransferDetails({ method, reference }: { method: PaymentMethod; referen
           {details.map(([label, value]) => (
             <CopyRow key={label} label={label} value={value} />
           ))}
+          {settlement ? (
+            <CopyRow
+              label="Amount to send"
+              value={formatMoney(settlement.amount, settlement.currency)}
+              copyValue={formatAmountPlain(settlement.amount, settlement.currency)}
+            />
+          ) : null}
           <CopyRow label="Payment reference" value={reference} />
           <p className={classes.txidBlurb}>
             Use the order reference so we can match your transfer. Message us once it&rsquo;s sent
