@@ -112,6 +112,7 @@ Telegram WebApp's JWT-keyed catalog, not this proxy's concern.
 
 ## Releases
 
+- v0.3.0 — logged-in shoppers get their customer group's catalog and prices (falls back to the public catalog on a backend without that route); order quantity limits shown in the cart and enforced before checkout; a UK bank transfer on a non-GBP store shows the GBP "Amount to send" (needs backend ≥ migration `0042`, deployed first).
 - v0.2.0 — design language: Inter, gradient chassis, sharp corners by default (needs backend ≥ the commit that accepts radius `none`), entrance motion, image-less catalogue list.
   Stores that saved a theme before v0.2.0 keep their corner radius — set Admin → Storefront → Appearance → Corner radius → **None** once to get the sharp look; new stores default to it.
 
