@@ -38,16 +38,34 @@ export async function expectCartBarUnobstructed(page: Page): Promise<void> {
   await expect(link).toBeVisible();
   const box = (await link.boundingBox())!;
   expect(box.height).toBeGreaterThanOrEqual(44);
+  expect(box.width).toBeGreaterThanOrEqual(44);
   const hit = await page.evaluate(([x, y]) => !!document.elementFromPoint(x!, y!)?.closest('[data-sf-part="cart-bar"]'), [box.x + box.width / 2, box.y + box.height / 2]);
   expect(hit, 'something covers the cart bar checkout').toBe(true);
 }
 
-export async function expectSlotTapTargets(page: Page): Promise<void> {
-  const small = await page.evaluate(() =>
+/**
+ * Slot tap targets under 44×44px (in either dimension), excluding anything not actually
+ * rendered or not actually interactive. `offsetParent` is unusable here: it is null for
+ * `position: fixed` elements even when they are visible and hit-testable, so a fixed slot
+ * control would silently escape the check. `pointer-events: none` elements are decorations,
+ * not tap targets, so they are skipped regardless of size.
+ */
+export async function findSmallSlotTapTargets(page: Page): Promise<string[]> {
+  return page.evaluate(() =>
     [...document.querySelectorAll<HTMLElement>('[data-sf-slot] a, [data-sf-slot] button')]
-      .filter((el) => el.offsetParent !== null && el.getBoundingClientRect().height < 44)
+      .filter((el) => {
+        const cs = getComputedStyle(el);
+        const visible = cs.display !== 'none' && cs.visibility !== 'hidden' && el.getClientRects().length > 0;
+        if (!visible || cs.pointerEvents === 'none') return false;
+        const r = el.getBoundingClientRect();
+        return r.width < 44 || r.height < 44;
+      })
       .map((el) => el.outerHTML.slice(0, 80)),
   );
+}
+
+export async function expectSlotTapTargets(page: Page): Promise<void> {
+  const small = await findSmallSlotTapTargets(page);
   expect(small, 'slot tap targets under 44px').toEqual([]);
 }
 
@@ -55,6 +73,25 @@ test('every template in the catalog has a matrix case', async ({ page }) => {
   const cat = await catalogJson(page);
   const covered = new Set(TEMPLATE_CASES.map((c) => c.template));
   expect(cat.templates.map((t) => t.id).filter((id) => !covered.has(id))).toEqual([]);
+});
+
+test('findSmallSlotTapTargets: fixed-position and pointer-events edge cases', async ({ page }) => {
+  // A minimal, app-free page: three fixed-position links inside a `[data-sf-slot]` wrapper.
+  // `offsetParent` is null for ALL of these (position: fixed), which is exactly the bug this
+  // proves is fixed — the old check used `offsetParent !== null` as its visibility test, so it
+  // silently skipped every fixed element regardless of size.
+  await page.setContent(`
+    <div data-sf-slot="TopBar">
+      <a id="tiny" href="#" style="position:fixed;top:0;left:0;width:100px;height:20px;">tiny</a>
+      <a id="ok" href="#" style="position:fixed;top:40px;left:0;width:44px;height:44px;">ok</a>
+      <a id="decor" href="#" style="position:fixed;top:100px;left:0;width:10px;height:10px;pointer-events:none;">decor</a>
+    </div>
+  `);
+  const small = await findSmallSlotTapTargets(page);
+  expect(small.some((html) => html.includes('id="tiny"')), 'a visible 100×20 fixed link must be flagged').toBe(true);
+  expect(small.some((html) => html.includes('id="ok"')), 'a 44×44 fixed link must not be flagged').toBe(false);
+  expect(small.some((html) => html.includes('id="decor"')), 'a pointer-events:none element must not be flagged, even though it is 10×10').toBe(false);
+  expect(small.length, 'exactly one violation is expected').toBe(1);
 });
 
 for (const c of TEMPLATE_CASES) {
