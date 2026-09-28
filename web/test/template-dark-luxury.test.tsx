@@ -1,4 +1,15 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
+import type { StorefrontSettings } from '@/types/settings.ts';
+import type { OptionValues, SlotBaseProps } from '@/templates/contract.ts';
+
+const h = vi.hoisted(() => ({ settings: {} as StorefrontSettings }));
+vi.mock('@/app/settings.ts', () => ({ useSettings: () => h.settings }));
+
+import { LuxuryOverlay } from '@/templates/dark-luxury/slots/LuxuryOverlay.tsx';
+import { LuxuryCatalogHero } from '@/templates/dark-luxury/slots/LuxuryCatalogHero.tsx';
+import { LuxurySectionLabel } from '@/templates/dark-luxury/slots/LuxurySectionLabel.tsx';
+import { LuxuryFooter } from '@/templates/dark-luxury/slots/LuxuryFooter.tsx';
 import manifest from '@/templates/dark-luxury/manifest.ts';
 import { validateManifest } from '@/templates/define.ts';
 import { allTemplates, getTemplate, lookupManifest } from '@/templates/registry.ts';
@@ -67,5 +78,115 @@ describe('splitHeadline', () => {
     expect(splitHeadline('Aurum')).toEqual({ muted: '', bright: 'Aurum' });
     expect(splitHeadline('   ')).toEqual({ muted: '', bright: '' });
     expect(splitHeadline('  Rare   resins  here ')).toEqual({ muted: 'Rare resins', bright: 'here' });
+  });
+});
+
+function settings(over: { ordering?: boolean; tagline?: string } = {}): StorefrontSettings {
+  return {
+    enabled: true,
+    serverTime: '2026-08-24T09:05:07.000Z',
+    cutoffs: { timezone: 'UTC', days: {} },
+    brand: { name: 'Aurum', shortName: 'Aurum', tagline: over.tagline ?? 'Rare resins, slow made', title: 'Aurum', description: '', logoUrl: null, faviconUrl: null, logoHeight: 28, links: { whatsapp: null, telegram: null } },
+    features: { layout: 'storefront', ordering: over.ordering ?? true, guestCheckout: false, accounts: true, verify: false, tracking: false, wholesale: false, upsell: false },
+    supportLinks: [],
+    welcomeMessage: null,
+    currency: 'GBP',
+  } as unknown as StorefrontSettings;
+}
+
+const DEFAULTS: OptionValues = Object.fromEntries(manifest.options.map((o) => [o.key, o.default]));
+function base(options: OptionValues = {}, over: Partial<SlotBaseProps> = {}): SlotBaseProps {
+  return { brand: h.settings.brand, options: { ...DEFAULTS, ...options }, scheme: 'dark', layout: 'storefront', tokens: manifest.tokens, ...over };
+}
+
+afterEach(cleanup);
+
+describe('LuxuryOverlay', () => {
+  it('renders the grain layer when the option is on, nothing when off', () => {
+    h.settings = settings();
+    const { container, rerender } = render(<LuxuryOverlay {...base()} />);
+    expect(container.querySelector('[data-lux="grain"]')).toBeInTheDocument();
+    rerender(<LuxuryOverlay {...base({ grain: false })} />);
+    expect(container.querySelector('[data-lux="grain"]')).toBeNull();
+  });
+});
+
+describe('LuxuryCatalogHero', () => {
+  const hero = { tagline: 'Rare resins, slow made', welcomeMessage: 'Dispatched daily.', productCount: 42, categoryCount: 5 };
+
+  it('grid: badge with real counts, colour-split headline, welcome and orb', () => {
+    h.settings = settings();
+    const { container } = render(<LuxuryCatalogHero {...base()} surface="grid" {...hero} />);
+    expect(screen.getByText('42 products · 5 categories')).toBeInTheDocument();
+    expect(container.querySelector('.lux-hero__muted')).toHaveTextContent('Rare resins,');
+    expect(container.querySelector('.lux-hero__bright')).toHaveTextContent('slow made');
+    expect(screen.getByText('Dispatched daily.')).toBeInTheDocument();
+    expect(container.querySelector('[data-lux="orb"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-sf-part="hero"]')).toBeInTheDocument();
+  });
+
+  it('grid: orb off, no category count, headline absent without a tagline', () => {
+    h.settings = settings();
+    const { container } = render(<LuxuryCatalogHero {...base({ orb: false })} surface="grid" {...hero} tagline="" categoryCount={0} />);
+    expect(container.querySelector('[data-lux="orb"]')).toBeNull();
+    expect(container.querySelector('.lux-hero__headline')).toBeNull();
+    expect(screen.getByText('42 products')).toBeInTheDocument();
+  });
+
+  it('grid with neither tagline nor welcome renders nothing (same as modern)', () => {
+    h.settings = settings();
+    const { container } = render(<LuxuryCatalogHero {...base()} surface="grid" {...hero} tagline="" welcomeMessage={null} />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it('list and wholesale surfaces render only the welcome line', () => {
+    h.settings = settings();
+    const { container, rerender } = render(<LuxuryCatalogHero {...base()} surface="list" {...hero} />);
+    expect(container.querySelector('.lux-welcome')).toHaveTextContent('Dispatched daily.');
+    expect(container.querySelector('.lux-hero')).toBeNull();
+    rerender(<LuxuryCatalogHero {...base()} surface="wholesale" {...hero} welcomeMessage={null} />);
+    expect(container).toBeEmptyDOMElement();
+  });
+});
+
+describe('LuxurySectionLabel', () => {
+  it('labels the page [Catalogue] and groups [01], [02]…', () => {
+    h.settings = settings();
+    const { container, rerender } = render(<LuxurySectionLabel {...base()} index={1} title="All products" level="page" />);
+    expect(container.querySelector('[data-sf-part="section-label"]')).toHaveTextContent('[Catalogue]');
+    rerender(<LuxurySectionLabel {...base()} index={7} title="Resins" level="group" />);
+    expect(container.querySelector('[data-sf-part="section-label"]')).toHaveTextContent('[07]');
+  });
+});
+
+describe('LuxuryFooter', () => {
+  const links = [{ label: 'Shipping', url: 'https://example.com/shipping' }];
+
+  it('storefront: panel with tagline, [Support] links and an open status badge', () => {
+    h.settings = settings();
+    const { container } = render(<LuxuryFooter {...base()} supportLinks={links} hasChat={false} />);
+    expect(container.querySelector('[data-sf-part="footer"]')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '[Support]' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Shipping' })).toHaveAttribute('href', 'https://example.com/shipping');
+    expect(container.querySelector('.lux-status')).toHaveAttribute('data-state', 'open');
+    expect(container.querySelector('.lux-status')).toHaveTextContent('[ACCEPTING ORDERS]');
+  });
+
+  it('reads [ORDERING PAUSED] when ordering is off', () => {
+    h.settings = settings({ ordering: false });
+    const { container } = render(<LuxuryFooter {...base()} supportLinks={[]} hasChat={false} />);
+    expect(container.querySelector('.lux-status')).toHaveAttribute('data-state', 'paused');
+    expect(container.querySelector('.lux-status')).toHaveTextContent('[ORDERING PAUSED]');
+  });
+
+  it('statusBadge off hides the badge; menu layout gets the compact panel or nothing', () => {
+    h.settings = settings();
+    const { container, rerender } = render(<LuxuryFooter {...base({ statusBadge: false })} supportLinks={[]} hasChat={false} />);
+    expect(container.querySelector('.lux-status')).toBeNull();
+    rerender(<LuxuryFooter {...base({}, { layout: 'menu' })} supportLinks={links} hasChat={false} />);
+    expect(container.querySelector('.lux-footer--compact')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Shipping' })).toBeNull();
+    rerender(<LuxuryFooter {...base({ statusBadge: false }, { layout: 'menu' })} supportLinks={links} hasChat={false} />);
+    expect(container).toBeEmptyDOMElement();
   });
 });
