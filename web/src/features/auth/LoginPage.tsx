@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Navigate, useSearchParams } from 'react-router';
 import { useSettings } from '@/app/settings.ts';
 import { useSessionStore } from '@/stores/session.ts';
+import { useTelegramAuthStore } from '@/stores/telegram.ts';
+import { TelegramSignInError } from '@/features/auth/TelegramSignInError.tsx';
 import { LoginOptions } from '@/features/auth/LoginOptions.tsx';
 import { DEFAULT_LANDING, safeReturnTo } from '@/features/auth/useLoginSuccess.ts';
 import classes from '@/features/auth/LoginPage.module.css';
@@ -16,6 +18,7 @@ export function LoginPage() {
   const { brand } = useSettings();
   const [params] = useSearchParams();
   const setReturnTo = useSessionStore((s) => s.setReturnTo);
+  const telegramStatus = useTelegramAuthStore((s) => s.status);
 
   // Read once, at mount: a login that succeeds while this page is open navigates
   // on its own, and re-reading the store here would race that with a redirect of
@@ -33,6 +36,18 @@ export function LoginPage() {
 
   if (entry.signedIn) {
     return <Navigate to={requested ?? safeReturnTo(entry.parked) ?? DEFAULT_LANDING} replace />;
+  }
+
+  // Inside Telegram the account comes from Telegram or not at all: the widget and
+  // WhatsApp options would only sign the shopper into something other than the
+  // account that opened the shop. A successful exchange never lands here (the
+  // signed-in redirect above catches it), so anything else is a failure.
+  if (telegramStatus !== 'none') {
+    return (
+      <div className={classes.page}>
+        <TelegramSignInError />
+      </div>
+    );
   }
 
   return (

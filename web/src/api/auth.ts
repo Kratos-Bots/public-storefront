@@ -14,3 +14,7 @@ export const loginTelegram = (payload: TelegramAuthPayload) =>
   unwrap<LoginResult>(api.post('storefront/auth/telegram', { json: payload }));
 
 export const logout = () => unwrap<null>(api.post('storefront/auth/logout'));
+
+/** Mini App sign-in: `initData` is posted exactly as Telegram handed it over. */
+export const loginTelegramWebApp = (initData: string) =>
+  unwrap<LoginResult>(api.post('storefront/auth/telegram-webapp', { json: { initData } }));
