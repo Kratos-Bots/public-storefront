@@ -15,6 +15,8 @@ export interface TelegramSessionDeps {
   login: (initData: string) => Promise<LoginResult>;
   /** `merge` = fold local (guest) lines in; otherwise adopt the server cart as-is. */
   adoptCart: (merge: boolean) => Promise<void>;
+  /** Forget the previous account: stored session, basket and any armed cart sync. */
+  forgetAccount: () => void;
 }
 
 /** A signed-in launch: the persisted lines mirror *some* account's server cart, so never merge them. */
@@ -26,11 +28,20 @@ async function adoptServerCart(): Promise<void> {
   }
 }
 
+/** The same reset as signing out (ProfilePage), so nothing of the previous account survives. */
+export function forgetAccount(): void {
+  useSessionStore.getState().clear();
+  useCartStore.getState().clear();
+  useCartStore.getState().setMode('local');
+  resetCartSync();
+}
+
 const DEFAULT_DEPS: TelegramSessionDeps = {
   inTelegram: isTelegramWebApp,
   initData: telegramInitData,
   login: loginTelegramWebApp,
   adoptCart: (merge) => (merge ? adoptAccountCart() : adoptServerCart()),
+  forgetAccount,
 };
 
 /**
@@ -54,7 +65,7 @@ export async function bootTelegramSession(overrides: Partial<TelegramSessionDeps
 
   const initData = d.initData();
   if (!initData) {
-    useSessionStore.getState().clear();
+    d.forgetAccount();
     auth.setStatus('failed', "Telegram didn't pass your account to the shop");
     return;
   }
@@ -69,7 +80,7 @@ export async function bootTelegramSession(overrides: Partial<TelegramSessionDeps
     await d.adoptCart(!hadSession);
     useTelegramAuthStore.getState().setStatus('ready');
   } catch (err) {
-    useSessionStore.getState().clear();
+    d.forgetAccount();
     useTelegramAuthStore.getState().setStatus('failed', errorMessage(err, "Couldn't sign you in through Telegram"));
   }
 }

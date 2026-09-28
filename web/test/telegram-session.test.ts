@@ -2,8 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@mantine/notifications', () => ({ notifications: { show: vi.fn() } }));
 
-import { bootTelegramSession, type TelegramSessionDeps } from '@/app/telegram-session.ts';
+import { bootTelegramSession, forgetAccount, type TelegramSessionDeps } from '@/app/telegram-session.ts';
 import { useSessionStore } from '@/stores/session.ts';
+import { useCartStore } from '@/stores/cart.ts';
 import { useTelegramAuthStore } from '@/stores/telegram.ts';
 import { ApiError } from '@/lib/errors.ts';
 import type { LoginResult } from '@/types/auth.ts';
@@ -16,12 +17,21 @@ function deps(overrides: Partial<TelegramSessionDeps> = {}): TelegramSessionDeps
     initData: () => 'user=%7B%22id%22%3A1%7D&hash=abc',
     login: vi.fn(async () => RESULT),
     adoptCart: vi.fn(async () => undefined),
+    forgetAccount: vi.fn(forgetAccount),
     ...overrides,
   };
 }
 
+function seedCart() {
+  useCartStore.setState({
+    mode: 'server',
+    lines: [{ productId: 5, displayName: 'X', sku: 'x', unitPrice: 1, basePrice: 1, pricingTiers: [], quantity: 2, isPreorder: false, excludedFromFreeShipping: false, imageProductId: null }],
+  });
+}
+
 beforeEach(() => {
   useSessionStore.getState().clear();
+  useCartStore.getState().clear();
   useTelegramAuthStore.getState().setStatus('none');
 });
 
@@ -75,5 +85,33 @@ describe('bootTelegramSession', () => {
     await bootTelegramSession(d);
     expect(useTelegramAuthStore.getState().status).toBe('failed');
     expect(d.login).not.toHaveBeenCalled();
+  });
+
+  it('forgets the previous account on every failure path', async () => {
+    for (const d of [
+      deps({ login: vi.fn(async () => { throw new ApiError(401, 'expired'); }) }),
+      deps({ initData: () => null }),
+    ]) {
+      useSessionStore.getState().setSession('stale', { id: 99, nickname: 'Bea' });
+      seedCart();
+      await bootTelegramSession(d);
+      expect(d.forgetAccount).toHaveBeenCalledTimes(1);
+      expect(useSessionStore.getState().token).toBeNull();
+      expect(useCartStore.getState().lines).toEqual([]);
+      expect(useCartStore.getState().mode).toBe('local');
+    }
+  });
+
+  it('does not carry the previous account basket into a different account after a failed launch', async () => {
+    useSessionStore.getState().setSession('bea-token', { id: 99, nickname: 'Bea' });
+    seedCart();
+    await bootTelegramSession(deps({ login: vi.fn(async () => { throw new ApiError(500, 'boom'); }) }));
+
+    let localAtAdopt: unknown = null;
+    const retry = deps({
+      adoptCart: vi.fn(async () => { localAtAdopt = useCartStore.getState().lines; }),
+    });
+    await bootTelegramSession(retry);
+    expect(localAtAdopt).toEqual([]);
   });
 });
