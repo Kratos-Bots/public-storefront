@@ -3,7 +3,7 @@ import { generateColors } from '@mantine/colors-generator';
 import type { Brand } from '@/types/settings.ts';
 import type { ButtonFill } from '@/templates/define.ts';
 import type { ResolvedFonts, ResolvedTheme } from '@/templates/resolve.ts';
-import { rootAttributes, tokenVariables } from '@/templates/tokens.ts';
+import { ROOT_ATTRIBUTE_NAMES, rootAttributes, tokenVariables } from '@/templates/tokens.ts';
 import { mediaUrl } from '@/lib/media-url.ts';
 
 /** The storefront's own face, self-hosted via @fontsource-variable/inter (imported in main.tsx). */
@@ -169,12 +169,58 @@ export interface StoredThemePayload {
   fontsHref: string | null;
 }
 
+/** Only these look like our own CSS custom properties — anything else in a stored `vars` blob
+ *  (foreign, tampered, or from a future release with new var names) is dropped rather than
+ *  replayed onto `<html>.style`. */
+const SF_VAR_NAME_RE = /^--sf-[a-z0-9-]+$/;
+/** Only a Google Fonts stylesheet URL is ever turned into a `<link>` — anything else in a stored
+ *  `fontsHref` is dropped silently. */
+const GOOGLE_FONTS_ORIGIN = 'https://fonts.googleapis.com/';
+
+function sanitizeVars(vars: unknown): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (vars && typeof vars === 'object') {
+    for (const [k, v] of Object.entries(vars as Record<string, unknown>)) {
+      if (SF_VAR_NAME_RE.test(k) && typeof v === 'string') out[k] = v;
+    }
+  }
+  return out;
+}
+
+/** Allowlisted to exactly `ROOT_ATTRIBUTE_NAMES` — the set `rootAttributes` emits — so a stored
+ *  `attrs` blob can never set an arbitrary attribute (e.g. an event handler) on `<html>`. */
+function sanitizeAttrs(attrs: unknown): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (attrs && typeof attrs === 'object') {
+    const allowed: readonly string[] = ROOT_ATTRIBUTE_NAMES;
+    for (const [k, v] of Object.entries(attrs as Record<string, unknown>)) {
+      if (allowed.includes(k) && typeof v === 'string') out[k] = v;
+    }
+  }
+  return out;
+}
+
+function sanitizeFontsHref(href: unknown): string | null {
+  return typeof href === 'string' && href.startsWith(GOOGLE_FONTS_ORIGIN) ? href : null;
+}
+
 export function readStoredTheme(): StoredThemePayload | null {
   try {
     const raw = localStorage.getItem(THEME_STORAGE_KEY);
     if (!raw) return null;
     const p = JSON.parse(raw) as Partial<StoredThemePayload> | null;
-    return p && p.v === 2 && typeof p.templateId === 'string' && p.vars && p.attrs ? (p as StoredThemePayload) : null;
+    if (!p || p.v !== 2 || typeof p.templateId !== 'string' || typeof p.vars !== 'object' || p.vars === null || typeof p.attrs !== 'object' || p.attrs === null) {
+      return null;
+    }
+    return {
+      v: 2,
+      templateId: p.templateId,
+      vars: sanitizeVars(p.vars),
+      attrs: sanitizeAttrs(p.attrs),
+      title: typeof p.title === 'string' ? p.title : '',
+      brandName: typeof p.brandName === 'string' ? p.brandName : '',
+      fontsHref: sanitizeFontsHref(p.fontsHref),
+    };
   } catch {
     return null;
   }

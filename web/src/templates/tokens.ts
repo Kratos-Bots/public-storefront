@@ -29,7 +29,23 @@ export function tokenVariables(tokens: TemplateTokens): Record<string, string> {
   };
 }
 
-export function rootAttributes(theme: ResolvedTheme): Record<string, string> {
+/** The exact attribute names `rootAttributes` sets on `<html>` — the single source of truth for
+ *  the read-path allowlist that replays a stored theme payload (the inlined bootstrap script and
+ *  `readStoredTheme` in theme-bridge.ts), so a tampered or foreign-shaped `localStorage` entry can
+ *  never inject an arbitrary attribute. The return type below is keyed off this tuple, so adding or
+ *  removing an attribute here without updating the object (or vice versa) is a type error. */
+export const ROOT_ATTRIBUTE_NAMES = [
+  'data-sf-template',
+  'data-sf-preset',
+  'data-sf-btn-fill',
+  'data-sf-input',
+  'data-sf-chassis',
+  'data-sf-label',
+  'data-sf-glass',
+  'data-mantine-color-scheme',
+] as const;
+
+export function rootAttributes(theme: ResolvedTheme): Record<(typeof ROOT_ATTRIBUTE_NAMES)[number], string> {
   return {
     'data-sf-template': theme.templateId,
     'data-sf-preset': theme.presetId,

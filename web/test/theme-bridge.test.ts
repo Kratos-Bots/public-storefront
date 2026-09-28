@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { buildMantineTheme, cssVariablesFor, fontStacks, googleFontsHref, INTER } from '@/app/theme-bridge.ts';
+import { afterEach, describe, expect, it } from 'vitest';
+import { buildMantineTheme, cssVariablesFor, fontStacks, googleFontsHref, INTER, readStoredTheme, THEME_STORAGE_KEY } from '@/app/theme-bridge.ts';
 import { BASE_TOKENS, defineTemplate } from '@/templates/define.ts';
 import { resolveTheme, type ResolvedTheme } from '@/templates/resolve.ts';
 import { lookupManifest } from '@/templates/registry.ts';
@@ -73,6 +73,46 @@ describe('theme bridge', () => {
     const withFill = (fill: 'outline-glow' | 'ghost') => resolveTheme({ ...theme, template: 'x' }, () => defineTemplate({ ...modern, id: 'x', tokens: { ...BASE_TOKENS, button: { ...BASE_TOKENS.button, fill } } }));
     expect(buttonOf(withFill('outline-glow')).vars({}, { variant: 'filled' }, {}).root).toMatchObject({ '--button-bg': 'var(--sf-bg)', '--button-color': 'var(--sf-primary)', '--button-bd': '1px solid var(--sf-primary)' });
     expect(buttonOf(withFill('ghost')).vars({}, { variant: 'filled' }, {}).root).toMatchObject({ '--button-bg': 'transparent', '--button-color': 'var(--sf-primary)' });
+  });
+});
+
+describe('readStoredTheme (fix round 1: corrupt/foreign storage must be harmless — spec §1.8)', () => {
+  afterEach(() => localStorage.clear());
+
+  it('drops an attribute key outside rootAttributes(), keeps allowlisted ones', () => {
+    localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify({
+      v: 2, templateId: 'modern', vars: {}, attrs: { onclick: "alert('x')", 'data-sf-template': 'modern' }, title: 't', brandName: 'b', fontsHref: null,
+    }));
+    const stored = readStoredTheme();
+    expect(stored?.attrs).toEqual({ 'data-sf-template': 'modern' });
+  });
+
+  it('drops a var name outside the --sf-* pattern, keeps allowlisted ones', () => {
+    localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify({
+      v: 2, templateId: 'modern', vars: { '--evil': 'x', '--sf-bg': '#123456' }, attrs: {}, title: 't', brandName: 'b', fontsHref: null,
+    }));
+    expect(readStoredTheme()?.vars).toEqual({ '--sf-bg': '#123456' });
+  });
+
+  it('drops a fontsHref that is not a Google Fonts URL', () => {
+    localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify({
+      v: 2, templateId: 'modern', vars: {}, attrs: {}, title: 't', brandName: 'b', fontsHref: 'https://evil.example/steal.css',
+    }));
+    expect(readStoredTheme()?.fontsHref).toBeNull();
+  });
+
+  it('keeps a genuine Google Fonts fontsHref', () => {
+    localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify({
+      v: 2, templateId: 'modern', vars: {}, attrs: {}, title: 't', brandName: 'b', fontsHref: 'https://fonts.googleapis.com/css2?family=Inter&display=swap',
+    }));
+    expect(readStoredTheme()?.fontsHref).toBe('https://fonts.googleapis.com/css2?family=Inter&display=swap');
+  });
+
+  it('rejects vars/attrs that are not non-null objects, without throwing', () => {
+    localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify({ v: 2, templateId: 'modern', vars: null, attrs: {}, title: 't', brandName: 'b', fontsHref: null }));
+    expect(readStoredTheme()).toBeNull();
+    localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify({ v: 2, templateId: 'modern', vars: {}, attrs: 'nope', title: 't', brandName: 'b', fontsHref: null }));
+    expect(readStoredTheme()).toBeNull();
   });
 });
 

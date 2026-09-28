@@ -7,6 +7,7 @@ import { THEME_BOOTSTRAP } from '@/app/theme-bootstrap.ts';
 import { applyDocumentTheme, lastKnownBrandName, LEGACY_THEME_STORAGE_KEY, mix, readStoredTemplateId, THEME_STORAGE_KEY } from '@/app/theme-bridge.ts';
 import { resolveTheme } from '@/templates/resolve.ts';
 import { lookupManifest } from '@/templates/registry.ts';
+import { ROOT_ATTRIBUTE_NAMES } from '@/templates/tokens.ts';
 import type { Brand, Theme } from '@/types/settings.ts';
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
@@ -73,5 +74,45 @@ describe('theme bootstrap (inlined first-paint script)', () => {
 
   it('is inlined verbatim in index.html', () => {
     expect(readFileSync(path.resolve(testDir, '../index.html'), 'utf8')).toContain(THEME_BOOTSTRAP);
+  });
+
+  // Fix round 1 (spec §1.8): corrupt/foreign localStorage must be harmless.
+
+  it('ignores an attribute key outside rootAttributes() (e.g. onclick)', () => {
+    const stored = { v: 2, templateId: 'modern', vars: {}, attrs: { onclick: "alert('x')", 'data-sf-template': 'modern' }, title: 't', brandName: 'b', fontsHref: null };
+    localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(stored));
+    run();
+    expect(root().hasAttribute('onclick')).toBe(false);
+    expect(root().getAttribute('data-sf-template')).toBe('modern');
+  });
+
+  it('ignores a fontsHref that is not a Google Fonts URL', () => {
+    const stored = { v: 2, templateId: 'modern', vars: {}, attrs: {}, title: 't', brandName: 'b', fontsHref: 'https://evil.example/steal.css' };
+    localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(stored));
+    run();
+    expect(document.head.querySelector('link#sf-fonts')).toBeNull();
+  });
+
+  it('ignores a var name outside the --sf-* pattern', () => {
+    const stored = { v: 2, templateId: 'modern', vars: { '--evil': 'x', '--sf-bg': '#123456' }, attrs: {}, title: 't', brandName: 'b', fontsHref: null };
+    localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(stored));
+    run();
+    expect(root().style.getPropertyValue('--evil')).toBe('');
+    expect(root().style.getPropertyValue('--sf-bg')).toBe('#123456');
+  });
+
+  it('falls through to a valid v1 payload when v2 is corrupt', () => {
+    localStorage.setItem(THEME_STORAGE_KEY, '{not json');
+    localStorage.setItem(LEGACY_THEME_STORAGE_KEY, JSON.stringify({ theme, brand }));
+    run();
+    expect(root().style.getPropertyValue('--sf-bg')).toBe('#0f3965');
+    expect(root().getAttribute('data-mantine-color-scheme')).toBe('dark');
+  });
+
+  it('inlines the same attribute allowlist as tokens.ts exports (ROOT_ATTRIBUTE_NAMES)', () => {
+    const m = THEME_BOOTSTRAP.match(/A=\[([^\]]*)\]/);
+    expect(m).not.toBeNull();
+    const inline = m![1]!.split(',').map((s) => s.trim().replace(/^'|'$/g, '')).sort();
+    expect(inline).toEqual([...ROOT_ATTRIBUTE_NAMES].sort());
   });
 });
