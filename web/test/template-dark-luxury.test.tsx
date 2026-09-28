@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import type { StorefrontSettings } from '@/types/settings.ts';
 import type { OptionValues, SlotBaseProps } from '@/templates/contract.ts';
+import { cssRules, readFromTest, splitSelectors } from './helpers/css-rules.ts';
 
 const h = vi.hoisted(() => ({ settings: {} as StorefrontSettings }));
 vi.mock('@/app/settings.ts', () => ({ useSettings: () => h.settings }));
@@ -188,5 +189,84 @@ describe('LuxuryFooter', () => {
     expect(screen.queryByRole('link', { name: 'Shipping' })).toBeNull();
     rerender(<LuxuryFooter {...base({ statusBadge: false }, { layout: 'menu' })} supportLinks={links} hasChat={false} />);
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+describe('dark-luxury template.css', () => {
+  const css = readFromTest('../src/templates/dark-luxury/template.css');
+  const rules = cssRules(css);
+  const ROOT = ':root[data-sf-template="dark-luxury"]';
+  const find = (sel: string, atRule: string | null = null) => rules.find((r) => r.selector === sel && r.atRule === atRule);
+
+  it('scopes every selector under the template root', () => {
+    expect(rules.length).toBeGreaterThan(30);
+    for (const r of rules) for (const s of splitSelectors(r.selector)) expect(s.startsWith(ROOT), s).toBe(true);
+  });
+
+  it('pulses only the main call to action', () => {
+    const pulsing = rules.filter((r) => r.body.includes('sf-lux-pulse'));
+    expect(pulsing.length).toBeGreaterThan(0);
+    for (const r of pulsing) for (const s of splitSelectors(r.selector)) expect(s).toContain('[data-sf-cta="main"]');
+  });
+
+  it('runs every animation only when motion is welcome', () => {
+    for (const r of rules) {
+      const m = /animation:\s*([^;]+);/.exec(r.body);
+      if (m && m[1]!.trim() !== 'none') expect(r.atRule ?? '', r.selector).toContain('prefers-reduced-motion: no-preference');
+    }
+  });
+
+  it('keeps decoration out of the way of taps', () => {
+    for (const cls of ['.lux-grain', '.lux-orb']) {
+      const r = rules.find((x) => x.selector === `${ROOT} ${cls}` && x.atRule === null)!;
+      expect(r.body, cls).toContain('pointer-events: none');
+    }
+    const hero = rules.find((x) => x.selector === `${ROOT} .lux-hero` && x.atRule === null)!;
+    expect(hero.body).toContain('overflow: hidden'); // the 900px orb never widens the page
+  });
+
+  it('never fills a button with the accent', () => {
+    for (const r of rules.filter((x) => x.selector.includes('[data-sf-part="button"]'))) {
+      expect(r.body, r.selector).not.toMatch(/background(-color)?:\s*var\(--sf-primary\)/);
+    }
+  });
+
+  it('leaves fill, text and border of filled buttons to the shared outline-glow rules', () => {
+    const filled = rules.filter((x) => x.selector.includes('[data-variant="filled"]'));
+    expect(filled.length).toBeGreaterThan(0);
+    for (const r of filled) expect(r.body, r.selector).not.toMatch(/(^|;)\s*(background|color|border)(-color)?\s*:/);
+    const disabled = filled.find((x) => x.selector.includes(':is(:disabled, [data-disabled])'))!;
+    expect(disabled.body).toContain('box-shadow: none');
+  });
+
+  it('gives every button part the locked button voice (custom CTAs hard-code theirs)', () => {
+    const b = find(`${ROOT} [data-sf-part="button"]`)!.body;
+    for (const v of ['font-family: var(--sf-btn-font)', 'text-transform: var(--sf-btn-transform)', 'font-weight: var(--sf-btn-weight)', 'letter-spacing: var(--sf-btn-tracking-md)']) expect(b).toContain(v);
+  });
+
+  it('applies the heading tokens to every page and group title', () => {
+    for (const part of ['page-title', 'group-title']) {
+      const b = find(`${ROOT} [data-sf-part="${part}"]`)!.body;
+      for (const v of ['var(--sf-heading-weight)', 'var(--sf-heading-tracking)', 'var(--sf-heading-transform)']) expect(b, part).toContain(v);
+    }
+  });
+
+  it('rounds product cards to the card radius and pads their content', () => {
+    const b = find(`${ROOT} [data-sf-part="product-card"]`)!.body;
+    expect(b).toContain('border-radius: var(--sf-card-radius)');
+    expect(b).toMatch(/padding:/);
+  });
+
+  it('lifts on hover only when motion is welcome', () => {
+    for (const r of rules.filter((x) => /transform:\s*translateY/.test(x.body))) {
+      expect(r.atRule ?? '', r.selector).toContain('prefers-reduced-motion: no-preference');
+    }
+  });
+
+  it('gives footer links a 44×44 target', () => {
+    const link = find(`${ROOT} .lux-footer__link`)!.body;
+    expect(link).toContain('min-height: 44px');
+    expect(link).toContain('min-width: 44px');
+    expect(find(`${ROOT} [data-sf-slot="Footer"] a`)!.body).toContain('min-height: 44px');
   });
 });

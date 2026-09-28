@@ -1,1 +1,415 @@
-/* Dark Luxury — filled in by Task 3. Every rule scoped under :root[data-sf-template="dark-luxury"]. */
+/* Dark Luxury — near-black ground, one warm metallic accent, grain, a single orb.
+   Brief: designs/dark-luxury/DESIGN.md + the dark-luxury skill. The rules that matter:
+   cards have no border (the inset top highlight is the edge); filled buttons are a dark
+   surface with an accent border and an always-on layered glow — never an accent fill;
+   the accent is surgical (labels, borders, prices); only the page's main CTA pulses.
+   Every rule is scoped under :root[data-sf-template="dark-luxury"]; keyframes are
+   prefixed sf-lux-; animations live only inside prefers-reduced-motion: no-preference. */
+
+:root[data-sf-template="dark-luxury"] {
+  --lux-glow: 0 0 8px color-mix(in srgb, var(--sf-primary) 55%, transparent), 0 0 20px color-mix(in srgb, var(--sf-primary) 25%, transparent), 0 0 40px color-mix(in srgb, var(--sf-primary) 10%, transparent);
+  --lux-glow-mid: 0 0 10px color-mix(in srgb, var(--sf-primary) 70%, transparent), 0 0 28px color-mix(in srgb, var(--sf-primary) 35%, transparent), 0 0 52px color-mix(in srgb, var(--sf-primary) 16%, transparent);
+  --lux-glow-hi: 0 0 10px color-mix(in srgb, var(--sf-primary) 75%, transparent), 0 0 28px color-mix(in srgb, var(--sf-primary) 40%, transparent), 0 0 55px color-mix(in srgb, var(--sf-primary) 18%, transparent);
+  --lux-border-subtle: color-mix(in srgb, var(--sf-text) 7%, transparent);
+  --lux-border-medium: color-mix(in srgb, var(--sf-text) 13%, transparent);
+  --lux-highlight: color-mix(in srgb, var(--sf-text) 8%, transparent);
+  --lux-dim: color-mix(in srgb, var(--sf-muted) 62%, var(--sf-bg));
+  --lux-accent-bright: color-mix(in srgb, var(--sf-primary) 82%, #ffffff);
+  --lux-ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── Chrome ─────────────────────────────────────────────────────────── */
+
+:root[data-sf-template="dark-luxury"] [data-sf-part="header"] {
+  background: color-mix(in srgb, var(--sf-bg) 80%, transparent);
+  border-bottom-color: var(--lux-border-subtle);
+}
+
+:root[data-sf-template="dark-luxury"] [data-sf-part="cart-bar"] {
+  border-top-color: var(--lux-border-subtle);
+}
+
+/* ── Type ───────────────────────────────────────────────────────────── */
+
+/* heading.* only reaches ProductGrid's title and the product page's weight (docs/templates.md §3),
+   so every title part gets the heading tokens here: 700 / -0.03em / none. */
+:root[data-sf-template="dark-luxury"] [data-sf-part="page-title"] {
+  font-size: clamp(1.75rem, 3.2vw, 2.75rem);
+  font-weight: var(--sf-heading-weight);
+  letter-spacing: var(--sf-heading-tracking);
+  text-transform: var(--sf-heading-transform);
+  line-height: 1.1;
+  color: var(--sf-text);
+}
+
+:root[data-sf-template="dark-luxury"] [data-sf-part="group-title"] {
+  font-weight: var(--sf-heading-weight);
+  letter-spacing: var(--sf-heading-tracking);
+  text-transform: var(--sf-heading-transform);
+}
+
+:root[data-sf-template="dark-luxury"] [data-sf-part="price"] {
+  font-family: var(--sf-font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--sf-primary);
+}
+
+:root[data-sf-template="dark-luxury"] .lux-label {
+  margin: 0 0 0.5rem;
+  font-family: var(--sf-font-mono);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  color: var(--sf-primary);
+}
+
+/* ── Buttons: dark surface + accent border + layered glow ───────────── */
+
+/* The locked button voice. Mantine's .sf-button reads these variables already; the custom CTAs
+   (AddToCart, the checkouts, CheckoutPage .next/.back, …) hard-code mono micro-caps and only
+   tokenise their radius, so without this rule luxury's most visible buttons would stay mono. */
+:root[data-sf-template="dark-luxury"] [data-sf-part="button"] {
+  font-family: var(--sf-btn-font);
+  text-transform: var(--sf-btn-transform);
+  font-weight: var(--sf-btn-weight);
+  letter-spacing: var(--sf-btn-tracking-md);
+}
+
+/* Fill, text and border of every filled button come from Plan 2's shared outline-glow rules in
+   mantine.css (base (0,4,0), hover (0,7,0), disabled (0,5,0)). Luxury adds only the glow, at equal
+   specificity, loading later. */
+:root[data-sf-template="dark-luxury"] [data-sf-part="button"][data-variant="filled"] {
+  box-shadow: var(--lux-glow);
+  transition: box-shadow 220ms ease, background-color 150ms ease, color 150ms ease, border-color 150ms ease, transform 150ms var(--lux-ease);
+}
+
+:root[data-sf-template="dark-luxury"] [data-sf-part="button"][data-variant="filled"]:is(:disabled, [data-disabled]) {
+  box-shadow: none;
+}
+
+:root[data-sf-template="dark-luxury"] [data-sf-part="button"][data-variant="default"] {
+  border-color: var(--lux-border-medium);
+  color: var(--sf-text);
+}
+
+:root[data-sf-template="dark-luxury"] [data-sf-part="button"]:focus-visible {
+  outline: 2px solid var(--lux-accent-bright);
+  outline-offset: 3px;
+}
+
+@media (hover: hover) {
+  :root[data-sf-template="dark-luxury"] [data-sf-part="button"][data-variant="filled"]:hover:not(:disabled):not([data-disabled]) {
+    box-shadow: var(--lux-glow-hi);
+    animation: none;
+  }
+  :root[data-sf-template="dark-luxury"] [data-sf-part="button"][data-variant="default"]:hover:not(:disabled):not([data-disabled]) {
+    border-color: color-mix(in srgb, var(--sf-text) 28%, transparent);
+    background: color-mix(in srgb, #ffffff 3%, transparent);
+  }
+}
+
+/* The hover lift is motion: only when it is welcome. */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  :root[data-sf-template="dark-luxury"] [data-sf-part="button"][data-variant="filled"]:hover:not(:disabled):not([data-disabled]) {
+    transform: translateY(-1px);
+  }
+}
+
+/* ── Surfaces: no border, inset top highlight + soft drop shadow ────── */
+/* Border 'none' and the inset-highlight shadow arrive through the card tokens (the card modules and
+   ProductCard read --sf-card-border / --sf-card-shadow). ProductCard has no radius, fill or padding
+   of its own, so luxury gives it all three; the card modules already carry the card radius and
+   their own padding. */
+
+:root[data-sf-template="dark-luxury"] [data-sf-part="product-card"],
+:root[data-sf-template="dark-luxury"] [data-sf-part="card"] {
+  background: var(--sf-surface);
+}
+
+:root[data-sf-template="dark-luxury"] [data-sf-part="product-card"] {
+  overflow: hidden;
+  border-radius: var(--sf-card-radius);
+  padding: 0.75rem 0.75rem 1rem;
+}
+
+:root[data-sf-template="dark-luxury"] [data-sf-part="product-row"] {
+  border-color: var(--lux-border-subtle);
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  :root[data-sf-template="dark-luxury"] [data-sf-part="product-card"] {
+    transition: transform 220ms var(--lux-ease), box-shadow 220ms ease;
+  }
+  :root[data-sf-template="dark-luxury"] [data-sf-part="product-card"]:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--sf-card-shadow-hover);
+  }
+}
+
+/* ── Inputs: the shared box variant (tokens.input.style = 'box') draws the box, radius and
+   accent focus border; luxury adds only a soft focus ring. ─────────── */
+
+:root[data-sf-template="dark-luxury"] [data-sf-part="input"]:focus,
+:root[data-sf-template="dark-luxury"] [data-sf-part="input"]:focus-within {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sf-primary) 18%, transparent);
+}
+
+/* ── Overlay: grain ─────────────────────────────────────────────────── */
+
+:root[data-sf-template="dark-luxury"] .lux-grain {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.04;
+  mix-blend-mode: overlay;
+  background-size: 128px;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  transform: translateZ(0);
+}
+
+/* Phones: blending a full-screen fixed layer is costly during momentum scroll. */
+@media (max-width: 47.99em) {
+  :root[data-sf-template="dark-luxury"] .lux-grain {
+    mix-blend-mode: normal;
+    opacity: 0.03;
+  }
+}
+
+/* ── Catalogue hero ─────────────────────────────────────────────────── */
+
+:root[data-sf-template="dark-luxury"] .lux-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  margin: 0 0 1.5rem;
+  padding: clamp(2rem, 6vw, 4.5rem) clamp(1.25rem, 4vw, 2.5rem) clamp(2.5rem, 7vw, 5rem);
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--sf-surface) 45%, var(--sf-bg));
+  box-shadow: inset 0 1px 0 var(--lux-highlight);
+}
+
+:root[data-sf-template="dark-luxury"] .lux-orb {
+  position: absolute;
+  z-index: -1;
+  left: 50%;
+  bottom: -45%;
+  width: min(900px, 160%);
+  aspect-ratio: 9 / 5;
+  border-radius: 50%;
+  filter: blur(40px);
+  pointer-events: none;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at center bottom, color-mix(in srgb, var(--sf-primary) 28%, transparent) 0%, color-mix(in srgb, var(--sf-primary) 12%, transparent) 35%, transparent 70%);
+}
+
+:root[data-sf-template="dark-luxury"] .lux-hero__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 1.5rem;
+  padding: 0.45rem 1rem;
+  border: 1px solid var(--lux-border-subtle);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--sf-text) 5%, transparent);
+  font-family: var(--sf-font-mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--sf-muted);
+}
+
+:root[data-sf-template="dark-luxury"] .lux-hero__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--sf-primary);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--sf-primary) 55%, transparent);
+}
+
+:root[data-sf-template="dark-luxury"] .lux-hero__headline {
+  margin: 0;
+  max-width: 18ch;
+  font-family: var(--sf-font-heading);
+  font-size: clamp(2.25rem, 7vw, 5.25rem);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  overflow-wrap: anywhere;
+}
+
+:root[data-sf-template="dark-luxury"] .lux-hero__muted {
+  color: var(--lux-dim);
+}
+
+:root[data-sf-template="dark-luxury"] .lux-hero__bright {
+  color: var(--sf-text);
+}
+
+:root[data-sf-template="dark-luxury"] .lux-hero__welcome {
+  margin: 1.25rem 0 0;
+  max-width: 56ch;
+  font-size: 1rem;
+  line-height: 1.65;
+  color: var(--sf-muted);
+}
+
+:root[data-sf-template="dark-luxury"] .lux-welcome {
+  margin: 0 0 1rem;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: var(--sf-muted);
+}
+
+/* ── Footer: a rounded elevated panel on the page, never flush ──────── */
+
+:root[data-sf-template="dark-luxury"] .lux-footer-wrap {
+  margin-top: auto;
+  padding: 1.5rem 1rem calc(1rem + env(safe-area-inset-bottom, 0px));
+}
+
+:root[data-sf-template="dark-luxury"] .lux-footer {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: clamp(1.5rem, 5vw, 3rem) clamp(1.25rem, 5vw, 3rem) 1.25rem;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--sf-surface) 88%, var(--sf-bg));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--sf-text) 6%, transparent);
+}
+
+:root[data-sf-template="dark-luxury"] .lux-footer--compact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding: 1rem 1.25rem;
+}
+
+:root[data-sf-template="dark-luxury"] .lux-footer__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+}
+
+@media (min-width: 48em) {
+  :root[data-sf-template="dark-luxury"] .lux-footer__grid {
+    grid-template-columns: 2fr 1fr 1fr;
+  }
+}
+
+:root[data-sf-template="dark-luxury"] .lux-footer__tagline {
+  margin: 0.75rem 0 0;
+  max-width: 36ch;
+  font-size: 0.9rem;
+  line-height: 1.65;
+  color: var(--sf-muted);
+}
+
+:root[data-sf-template="dark-luxury"] .lux-footer__head {
+  margin: 0 0 0.5rem;
+  font-family: var(--sf-font-mono);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  color: var(--sf-primary);
+}
+
+:root[data-sf-template="dark-luxury"] .lux-footer__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+:root[data-sf-template="dark-luxury"] .lux-footer__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  min-width: 44px;
+  color: var(--sf-muted);
+  text-decoration: none;
+  transition: color 150ms ease;
+}
+
+:root[data-sf-template="dark-luxury"] .lux-footer__link:hover {
+  color: var(--sf-text);
+}
+
+:root[data-sf-template="dark-luxury"] .lux-footer__link:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ContactLinks chips are ~32px tall by default; inside the footer they must reach 44 in
+   both dimensions (controller ruling — e2e checks width AND height for every slot tap target). */
+:root[data-sf-template="dark-luxury"] [data-sf-slot="Footer"] a {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+:root[data-sf-template="dark-luxury"] .lux-footer__base {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  margin-top: 2rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--lux-border-subtle);
+}
+
+:root[data-sf-template="dark-luxury"] .lux-footer__meta {
+  font-family: var(--sf-font-mono);
+  font-size: 12px;
+  color: var(--lux-dim);
+}
+
+:root[data-sf-template="dark-luxury"] .lux-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-family: var(--sf-font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+
+:root[data-sf-template="dark-luxury"] .lux-status[data-state="open"] {
+  color: var(--sf-success);
+}
+
+:root[data-sf-template="dark-luxury"] .lux-status[data-state="paused"] {
+  color: var(--sf-warn);
+}
+
+:root[data-sf-template="dark-luxury"] .lux-status__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
+}
+
+/* ── Motion (only when welcome) ─────────────────────────────────────── */
+
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-sf-template="dark-luxury"] [data-sf-cta="main"]:not(:disabled):not([data-disabled]) {
+    animation: sf-lux-pulse 2.8s ease-in-out infinite;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) and (min-width: 62em) {
+  :root[data-sf-template="dark-luxury"] .lux-orb {
+    animation: sf-lux-orb 8s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes sf-lux-pulse {
+  0%, 100% { box-shadow: var(--lux-glow); }
+  50% { box-shadow: var(--lux-glow-mid); }
+}
+
+@keyframes sf-lux-orb {
+  from { opacity: 0.8; transform: translateX(-50%) scale(1); }
+  to { opacity: 1; transform: translateX(-50%) scale(1.08); }
+}
