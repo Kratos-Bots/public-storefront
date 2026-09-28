@@ -184,6 +184,66 @@ test('forbiddenCssImports ignores ordinary CSS text that is not a URL-taking pos
   assert.deepEqual(forbiddenCssImports(`a { color: var(--x, "https://evil.example"); }`, ctx), []);
 });
 
+const EVIL = 'https://evil.example/x.png';
+
+test('forbiddenCssImports normalises CR/CRLF/FF like a browser before tokenizing (round 4)', () => {
+  const ctx = { fileDir: '/t/external/acme', templateRoot: '/t/external/acme' };
+  // a raw CR / FF inside a string is a newline: the string ends there, so the url() that follows is live CSS
+  assert.deepEqual(forbiddenCssImports(`a{content:"\r} b{background:url(${EVIL})} c{content:"}`, ctx), [EVIL]);
+  assert.deepEqual(forbiddenCssImports(`a{content:"\f} b{background:url(${EVIL})} c{content:"}`, ctx), [EVIL]);
+  // backslash-CRLF is one line continuation, so the string closes at the next quote
+  assert.deepEqual(forbiddenCssImports(`a{content:"x\\\r\n"} b{background:image-set("${EVIL}" 1x)}`, ctx), [EVIL]);
+  assert.deepEqual(forbiddenCssImports(`a{content:"x\\\r"} b{background:image-set("${EVIL}" 1x)}`, ctx), [EVIL]);
+});
+
+test('forbiddenCssImports models numbers/dimensions/hashes, so "1url(" cannot open a fake bad-url (round 4)', () => {
+  const ctx = { fileDir: '/t/external/acme', templateRoot: '/t/external/acme' };
+  for (const prefix of ['1', '#', '.5', '-1', '+.5e2']) {
+    assert.deepEqual(forbiddenCssImports(`x{y:${prefix}url(a"b) "); } q{background:url(${EVIL})} r{s:" "}`, ctx), [EVIL], prefix);
+  }
+  // …while ordinary numbers, dimensions and colours are untouched
+  assert.deepEqual(forbiddenCssImports(`a{margin:.5rem 1e3px -2.5%;color:#fff;border:1px solid #1a2b3c;z-index:+1}`, ctx), []);
+});
+
+test('forbiddenCssImports unions browser and spec non-ASCII ident rules (a divergence cannot hide a url)', () => {
+  const ctx = { fileDir: '/t/external/acme', templateRoot: '/t/external/acme' };
+  // browsers treat every non-ASCII code point as an ident char: "\u00d7url(" is a function, the quote opens a string
+  // in spec mode, "\u00d7" is a delim and url( starts a bad-url — each hides the payload from the other reading
+  assert.deepEqual(forbiddenCssImports(`x{y:\u00d7url(a"b) "); } q{background:url(${EVIL})} r{s:" "}`, ctx), [EVIL]);
+  assert.deepEqual(forbiddenCssImports(`x{y:\u00d7url(x ") q{background:url(${EVIL})} r{s:"}`, ctx), [EVIL]);
+  assert.deepEqual(forbiddenCssImports(`a{font-family:"\u00c9l\u00e9gante";content:"\u00d7"}`, ctx), []);
+});
+
+test('forbiddenCssImports applies WHATWG URL whitespace/C0 stripping before the check (round 4)', () => {
+  const ctx = { fileDir: '/t/external/acme', templateRoot: '/t/external/acme' };
+  assert.deepEqual(forbiddenCssImports(`a{background:url("h\tttps://evil.example/x.png")}`, ctx), [EVIL]); // raw tab in a string
+  assert.deepEqual(forbiddenCssImports(`a{background:url(h\\9ttps://evil.example/x.png)}`, ctx), [EVIL]); // \9 = tab
+  assert.deepEqual(forbiddenCssImports(`a{background:url(h\\attps://evil.example/x.png)}`, ctx), [EVIL]); // \a = LF
+  assert.deepEqual(forbiddenCssImports(`a{background:url(h\\d ttps://evil.example/x.png)}`, ctx), [EVIL]); // \d = CR
+  assert.deepEqual(forbiddenCssImports(`a{background:url(\\1 https://evil.example/x.png)}`, ctx), [EVIL]); // leading C0
+  assert.deepEqual(forbiddenCssImports(`a{background:image-set("${EVIL}\\1f  " 1x)}`, ctx), [EVIL]); // trailing C0 + space
+  assert.deepEqual(forbiddenCssImports(`a{background:url(.\\9./.\\9./secret.png)}`, ctx), ['../../secret.png']);
+  assert.deepEqual(forbiddenCssImports(`a{background:url(/\\9/evil.example/x.png)}`, ctx), ['//evil.example/x.png']);
+  // data: survives normalisation; an in-folder path with a stripped tab stays allowed
+  assert.deepEqual(forbiddenCssImports(`a{background:url(d\\9 ata:image/png;base64,AAAA)}`, ctx), []);
+  assert.deepEqual(forbiddenCssImports(`a{background:url(./a\\9.png)}`, ctx), []);
+});
+
+test('forbiddenCssImports keeps ignoring ordinary CSS (round 4 regression guard)', () => {
+  const ctx = { fileDir: '/t/external/acme', templateRoot: '/t/external/acme' };
+  for (const css of [
+    `a::before{content:"Price: "}`,
+    `a[href^="https://"]::after{content:"\\2197"}`,
+    `a{font:700 1rem/1.2 "Tektur", sans-serif}`,
+    `.g{grid-template-areas:"head head" "side main"}`,
+    `a{filter:url(#blur)}`,
+    `@font-face{font-family:x;src:local("Tektur"),url(./t.woff2) format("woff2")}`,
+    `a{background:url(DATA:image/png;base64,AAAA)}`,
+    `a{background:url(./a.png?v=1#x)}`,
+    `@media (min-width:40em){a{margin:calc(100% - .5rem)}}`,
+  ]) assert.deepEqual(forbiddenCssImports(css, ctx), [], css);
+});
+
 function sh(cwd, ...args) { return execFileSync('git', args, { cwd, encoding: 'utf8' }).trim(); }
 
 function fixtureRepo(files, { symlinks = {} } = {}) {
@@ -296,6 +356,21 @@ test('findManifestId fails closed on a spread, a computed property name, or a st
   assert.throws(() => findManifestId(wrap(`'id': 'acme'`), 'manifest.ts'), /string-literal property name/);
   // a normal id alongside an unrelated computed/spread property is rejected too — presence alone is disqualifying
   assert.throws(() => findManifestId(wrap(`id: 'acme', [computedKey]: 'x'`), 'manifest.ts'), /computed property/);
+});
+
+test('findManifestId fails closed on an accessor, method or shorthand named id', () => {
+  const wrap = (obj) => `import { defineTemplate } from '@/templates/define.ts';\nexport default defineTemplate({ contractVersion: 1, ${obj} } as never);\n`;
+  for (const obj of [
+    `id: 'acme', get id() { return 'evil'; }`,
+    `id: 'acme', set id(v) {}`,
+    `id: 'acme', id() { return 'evil'; }`,
+    `get id() { return 'acme'; }`,
+    `id`,
+    `id: 'acme', get 'id'() { return 'evil'; }`,
+    `id: 'acme', get ['id']() { return 'evil'; }`,
+  ]) assert.throws(() => findManifestId(wrap(obj), 'manifest.ts'), /id/, obj);
+  // unrelated accessors/methods/shorthands are fine
+  assert.equal(findManifestId(wrap(`id: 'acme', get name() { return 'x'; }, render() {}, slots`), 'manifest.ts'), 'acme');
 });
 
 test('rejects a template whose manifest declares `id` more than once', () => {

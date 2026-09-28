@@ -124,12 +124,22 @@ function decodePercentEscapes(str) {
   return str.replace(/%([0-9a-fA-F]{2})/g, (_m, hex) => String.fromCharCode(Number.parseInt(hex, 16)));
 }
 
+/** What the WHATWG URL parser does to its input before anything else: strip leading/trailing C0
+ *  controls and spaces, then drop every ASCII tab/LF/CR anywhere — so `h\9ttps://…` (after CSS
+ *  escape decoding) is `https://…` to the browser. Runs after CSS decoding, before percent-decoding. */
+function urlParserCleanup(str) {
+  return str.replace(/^[\u0000- ]+|[\u0000- ]+$/g, '').replace(/[\t\n\r]/g, '');
+}
+
+const asciiLowerCase = (s) => s.replace(/[A-Z]/g, (ch) => ch.toLowerCase());
+
 /**
- * CSS import restriction, built on a real tokenizer (scripts/css-tokenizer.mjs) rather than
- * decode-then-regex: decoding CSS escapes across the whole file *before* finding string/paren
- * boundaries is unsound (an escaped quote or `)` can turn into a real delimiter once decoded,
- * desyncing every token after it — see the tokenizer module doc). Escapes and percent-encoding are
- * decoded per-token, once its true boundaries are known.
+ * CSS import restriction, built on a CSS Syntax 3 tokenizer (scripts/css-tokenizer.mjs, with §3.3
+ * preprocessing) rather than decode-then-regex: decoding CSS escapes across the whole file *before*
+ * finding string/paren boundaries is unsound (an escaped quote or `)` can turn into a real delimiter
+ * once decoded, desyncing every token after it — see the tokenizer module doc). Each value is then
+ * cleaned the way the URL parser cleans it (C0/space trim, tab/LF/CR removal) and percent-decoded.
+ * A guardrail for reviewed first-party code, not a sandbox.
  *
  * Only three kinds of position are ever checked: the target of an `@import` prelude (`@import "x"`
  * or `@import url(x)`), every `url(...)` (quoted or not, anywhere, including nested inside another
@@ -142,33 +152,47 @@ export function forbiddenCssImports(source, ctx) {
   const bad = [];
   const seen = new Set();
   const check = (raw) => {
-    const decoded = decodePercentEscapes(raw ?? '').trim();
+    const decoded = decodePercentEscapes(urlParserCleanup(raw ?? '')).trim();
     if (!decoded || seen.has(decoded)) return;
     seen.add(decoded);
     if (isRemoteOrAbsolute(decoded) || leavesFolder(decoded, ctx)) bad.push(decoded);
   };
 
-  const tokens = tokenizeCss(source);
-  const parenStack = []; // one entry per open '(' — the enclosing function's lowercased name, or null
-  let pendingFunction = null;
-  let inImportPrelude = false;
+  scanTokens(tokenizeCss(source), check);
+  // Browsers and css-syntax-3 disagree on which non-ASCII code points are ident code points, which
+  // changes how e.g. `×url(` tokenizes; scan with both readings so neither can hide a reference.
+  if (/[^\x00-\x7f]/.test(source)) scanTokens(tokenizeCss(source, { nonAsciiIdent: 'spec' }), check);
+  return bad;
+}
 
+/**
+ * Walks a token stream, calling `check` on every URL-carrying value. `stack` mirrors the parser's
+ * component-value nesting (§5): a function, '(' or '[' or '{' opens a level that only its own closer
+ * ends — a stray `}` inside a function is just a token in it, exactly as the CSS parser treats it.
+ */
+function scanTokens(tokens, check) {
+  const stack = []; // function name, or '(' / '[' / '{'
+  const CLOSES = { ')': null, ']': '[', '}': '{' };
+  let importDepth = -1; // stack depth of the open @import prelude, or -1
   for (const tok of tokens) {
     if (tok.type === 'at-keyword') {
-      inImportPrelude = tok.value.toLowerCase() === 'import';
-      pendingFunction = null;
+      if (importDepth < 0 && asciiLowerCase(tok.value) === 'import') importDepth = stack.length;
     } else if (tok.type === 'function') {
-      pendingFunction = tok.value;
+      stack.push(tok.value);
     } else if (tok.type === 'punct') {
-      if (tok.value === '(') { parenStack.push(pendingFunction); pendingFunction = null; }
-      else if (tok.value === ')') parenStack.pop();
-      else if (tok.value === ';' || tok.value === '{' || tok.value === '}') inImportPrelude = false;
-    } else if (tok.type === 'url') {
-      check(tok.value);
-    } else if (tok.type === 'string') {
-      const enclosingFunction = parenStack[parenStack.length - 1];
-      if (inImportPrelude || (enclosingFunction && URL_TAKING_FUNCTIONS.has(enclosingFunction))) check(tok.value);
+      const v = tok.value;
+      if ((v === ';' || v === '{' || v === '}') && stack.length === importDepth) importDepth = -1;
+      if (v === '(' || v === '[' || v === '{') stack.push(v);
+      else if (v in CLOSES && stack.length > 0) {
+        const top = stack[stack.length - 1];
+        const matches = v === ')' ? top !== '[' && top !== '{' : top === CLOSES[v];
+        if (matches) stack.pop();
+      }
+    } else if (tok.type === 'url' || tok.type === 'bad-url') {
+      check(tok.value); // bad-url is never fetched, but checking what was read is the conservative side
+    } else if (tok.type === 'string' || tok.type === 'bad-string') {
+      const enclosing = stack[stack.length - 1];
+      if (importDepth >= 0 || URL_TAKING_FUNCTIONS.has(enclosing)) check(tok.value);
     }
   }
-  return bad;
 }

@@ -98,12 +98,17 @@ export function findManifestId(source, fileName = 'manifest.ts') {
           invalidReason = 'manifest uses a spread (...) inside defineTemplate({...}) — the id cannot be statically verified, so it is rejected';
           return;
         }
-        if (arg.properties.some((prop) => ts.isPropertyAssignment(prop) && ts.isComputedPropertyName(prop.name))) {
+        if (arg.properties.some((prop) => prop.name && ts.isComputedPropertyName(prop.name))) {
           invalidReason = "manifest uses a computed property name (e.g. ['id']) inside defineTemplate({...}) — the id cannot be statically verified, so it is rejected";
           return;
         }
         if (arg.properties.some((prop) => ts.isPropertyAssignment(prop) && ts.isStringLiteralLike(prop.name) && prop.name.text === 'id')) {
           invalidReason = "manifest declares 'id' as a string-literal property name instead of a plain identifier — rejected";
+          return;
+        }
+        const isIdName = (name) => (ts.isIdentifier(name) || ts.isStringLiteralLike(name)) && name.text === 'id';
+        if (arg.properties.some((prop) => (ts.isGetAccessorDeclaration(prop) || ts.isSetAccessorDeclaration(prop) || ts.isMethodDeclaration(prop) || ts.isShorthandPropertyAssignment(prop)) && isIdName(prop.name))) {
+          invalidReason = 'manifest declares `id` as a getter, setter, method or shorthand property in defineTemplate({...}) — only a plain string `id: \'…\'` can be verified, so it is rejected';
           return;
         }
         const idProps = arg.properties.filter((prop) => ts.isPropertyAssignment(prop) && ts.isIdentifier(prop.name) && prop.name.text === 'id');
