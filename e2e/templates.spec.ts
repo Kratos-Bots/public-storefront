@@ -2,6 +2,7 @@ import { fileURLToPath } from 'node:url';
 import { expect, test, type Page } from '@playwright/test';
 import { installMocks, type Layout } from './mocks.ts';
 import { addFirstToCart, FIXED_NOW, onlyVisible, openCart, openProduct } from './flows.ts';
+import { presetTheme } from './template-theme.ts';
 
 interface TemplateCase {
   template: string;
@@ -22,8 +23,7 @@ const WIDTHS = [360, 390, 768, 1280] as const;
 const MENU_WIDTHS = [390, 1280] as const;
 const SHOTS = fileURLToPath(new URL('../docs/screenshots/templates/', import.meta.url));
 
-interface CatalogPreset { id: string; scheme: 'dark' | 'light'; colors: Record<string, string>; fonts: Record<'heading' | 'body' | 'mono', { family: string } | null>; radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' }
-interface CatalogJson { templates: Array<{ id: string; presets: CatalogPreset[] }> }
+interface CatalogJson { templates: Array<{ id: string }> }
 
 async function catalogJson(page: Page): Promise<CatalogJson> {
   const res = await page.request.get('/templates.json');
@@ -104,22 +104,10 @@ for (const c of TEMPLATE_CASES) {
     test(`${c.template}/${c.preset} · ${layout} · ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
       await page.clock.setFixedTime(FIXED_NOW);
-      const preset = (await catalogJson(page)).templates.find((t) => t.id === c.template)!.presets.find((p) => p.id === c.preset)!;
       const mocks = await installMocks(page, {
         layout,
         session: true,
-        tweakSettings: (s) => {
-          s.theme = {
-            ...s.theme,
-            template: c.template,
-            preset: c.preset,
-            options: {},
-            scheme: preset.scheme,
-            colors: preset.colors as typeof s.theme.colors,
-            fonts: { heading: preset.fonts.heading?.family ?? null, body: preset.fonts.body?.family ?? null, mono: preset.fonts.mono?.family ?? null },
-            radius: preset.radius,
-          };
-        },
+        tweakSettings: await presetTheme(page, c.template, c.preset),
       });
       const name = `${c.template}-${c.preset}-${layout}-${width}`;
       const phone = width < 992;
