@@ -22,7 +22,7 @@ describe('built-in templates respect the import contract', () => {
   it.each(folders)('%s', (folder) => {
     const root = path.join(templatesDir, folder);
     for (const file of files(root, (n) => SOURCE_FILE_RE.test(n))) {
-      const bad = forbiddenImports(readFileSync(file, 'utf8'), { fileDir: path.dirname(file), templateRoot: root, isManifest: path.basename(file) === 'manifest.ts' && path.dirname(file) === root });
+      const bad = forbiddenImports(readFileSync(file, 'utf8'), { fileDir: path.dirname(file), templateRoot: root, isManifest: path.basename(file) === 'manifest.ts' && path.dirname(file) === root, fileName: path.basename(file) });
       expect(bad, path.relative(templatesDir, file)).toEqual([]);
     }
     for (const file of files(root, (n) => n.endsWith('.css'))) {

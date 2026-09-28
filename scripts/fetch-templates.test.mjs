@@ -7,7 +7,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parseLock } from './templates-lock.mjs';
 import { forbiddenCssImports, forbiddenImports } from './template-imports.mjs';
-import { fetchTemplates } from './fetch-templates.mjs';
+import { fetchTemplates, findManifestId } from './fetch-templates.mjs';
 import { RESERVED_DIRS } from './template-rules.mjs';
 
 const SHA = 'a'.repeat(40);
@@ -34,6 +34,15 @@ test('parseLock rejects a repo shaped to smuggle a git option or a disallowed tr
   bad('-x');
   bad('ext::sh -c "touch PWNED"'); // the `ext::` transport helper runs an arbitrary shell command
   bad('ftp://example.invalid/repo.git'); // not on the allowlist (https/ssh/file/scp-style only)
+});
+
+test('parseLock rejects a repo whose host itself starts with "-" (ssh/scp option injection one level down)', () => {
+  const bad = (repo) => assert.throws(() => parseLock(JSON.stringify({ templates: [{ id: 'acme', repo, ref: SHA }] }), ['modern']), (e) => e.message.includes('repo'));
+  bad('git@-evil.com:x'); // git invokes ssh, which would read "-evil.com" as an ssh option
+  bad('ssh://-evil.com/x');
+  bad('ssh://user@-evil.com/x'); // a userinfo prefix must not let the dash-host slip past the check
+  bad('https://-evil.com/x');
+  bad('https://user@-evil.com/x');
 });
 
 test('parseLock accepts https://, ssh:// and scp-style repo URLs', () => {
@@ -109,6 +118,19 @@ test('forbiddenImports resists formatting/construct bypasses a regex scanner wou
   assert.match(dynUrl[0], /^new URL\(/);
 });
 
+test('forbiddenImports parses by the real file extension, not always as TSX', () => {
+  // <any>expr and <T>(x: T) => … are legal only outside .tsx (there, `<` starts a JSX element).
+  // Parsing every file as TSX (round 1) silently read these as JSX text, hiding the call inside.
+  const ctx = { fileDir: '/t/external/acme', templateRoot: '/t/external/acme', isManifest: false, fileName: 'index.ts' };
+  assert.deepEqual(forbiddenImports(`const m = <any>import('@/api/cart.ts');`, ctx), ['@/api/cart.ts']);
+  assert.deepEqual(forbiddenImports(`const f = <T>(x: T) => import('@/api/cart.ts');`, ctx), ['@/api/cart.ts']);
+  assert.deepEqual(forbiddenImports(`const r = <any>require('@/api/cart.ts');`, ctx), ['@/api/cart.ts']);
+  // sanity check that the mode really is extension-driven: a genuine .tsx file can't use this
+  // syntax at all (TypeScript itself requires `as never` there instead of `<never>x`), so there's
+  // no equivalent bypass for .tsx — parsing it as TSX for a .tsx file is correct, not a gap.
+  assert.deepEqual(forbiddenImports(`const m = <any>import('@/api/cart.ts');`, { ...ctx, fileName: 'index.tsx' }), []);
+});
+
 test('forbiddenCssImports allows in-folder files and data: URIs, rejects remote/absolute/escaping refs', () => {
   const ctx = { fileDir: '/t/external/acme', templateRoot: '/t/external/acme' };
   assert.deepEqual(forbiddenCssImports(`@import './other.css';`, ctx), []);
@@ -118,6 +140,23 @@ test('forbiddenCssImports allows in-folder files and data: URIs, rejects remote/
   assert.deepEqual(forbiddenCssImports(`@import url('https://evil.example/x.css');`, ctx), ['https://evil.example/x.css']);
   assert.deepEqual(forbiddenCssImports(`:root { background: url('//evil.example/x.png'); }`, ctx), ['//evil.example/x.png']);
   assert.deepEqual(forbiddenCssImports(`:root { background: url('/etc/passwd'); }`, ctx), ['/etc/passwd']);
+});
+
+test('forbiddenCssImports resists no-space/comment/case/escape bypasses and non-url() functions', () => {
+  const ctx = { fileDir: '/t/external/acme', templateRoot: '/t/external/acme' };
+  assert.deepEqual(forbiddenCssImports(`@import"../../../app/secret.css";`, ctx), ['../../../app/secret.css']);
+  assert.deepEqual(forbiddenCssImports(`@import/**/"../../secret.css";`, ctx), ['../../secret.css']);
+  assert.deepEqual(forbiddenCssImports(`@IMPORT "https://evil.example/x.css";`, ctx), ['https://evil.example/x.css']);
+  assert.deepEqual(forbiddenCssImports(`body { background: URL(../../../../secret.png); }`, ctx), ['../../../../secret.png']);
+  assert.deepEqual(forbiddenCssImports(`body { background: image-set("../../../../../secret.png" 1x); }`, ctx), ['../../../../../secret.png']);
+  assert.deepEqual(forbiddenCssImports(`body { background: -webkit-image-set("../../../../../secret.png" 1x); }`, ctx), ['../../../../../secret.png']);
+  assert.deepEqual(forbiddenCssImports(`body { background: image-set("https://evil.example/x.png" 1x); }`, ctx), ['https://evil.example/x.png']);
+  assert.deepEqual(forbiddenCssImports(`@font-face { src: src("../../../secret.woff2"); }`, ctx), ['../../../secret.woff2']);
+  // \2e = '.', \2f = '/' (CSS hex escapes); the trailing space after \2f is consumed by the escape, not emitted
+  assert.deepEqual(forbiddenCssImports(`body { background: url(.\\2e/.\\2e/secret.png); }`, ctx), ['../../secret.png']);
+  assert.deepEqual(forbiddenCssImports(`body { background: url(\\2f\\2f evil.example/x.png); }`, ctx), ['//evil.example/x.png']);
+  // ordinary CSS text that happens to be quoted must not be flagged
+  assert.deepEqual(forbiddenCssImports(`font-family: 'Space Grotesk', sans-serif;`, ctx), []);
 });
 
 function sh(cwd, ...args) { return execFileSync('git', args, { cwd, encoding: 'utf8' }).trim(); }
@@ -205,6 +244,34 @@ test('rejects a template containing a symlink, and removes the folder', (t) => {
   assert.ok(!existsSync(path.join(ws.templatesDir, 'external', 'acme')));
   rmSync(ws.root, { recursive: true, force: true });
   rmSync(evil.dir, { recursive: true, force: true });
+});
+
+test('rejects a template whose index.ts hides a forbidden import behind a type assertion', () => {
+  // Round-2 finding: parsing every file as TSX let `<any>require(...)` slip past the scanner in a
+  // real .ts file (the mode must be picked from the actual extension). This exercises the full
+  // fetch → validateTemplateDir → forbiddenImports wiring, not just the unit-level function.
+  const sneaky = fixtureRepo({ ...GOOD, 'index.ts': `import './template.css';\nimport type { TemplateSlots } from '@/templates/contract.ts';\nconst hidden = <any>require('@/app/settings.ts');\nexport const slots: TemplateSlots = {};\n` });
+  const ws = workspace();
+  writeFileSync(ws.lockPath, JSON.stringify({ templates: [{ id: 'acme', repo: sneaky.url, ref: sneaky.sha }] }));
+  assert.throws(() => fetchTemplates({ ...ws, log: () => {} }), /@\/app\/settings\.ts/);
+  assert.ok(!existsSync(path.join(ws.templatesDir, 'external', 'acme')));
+  rmSync(ws.root, { recursive: true, force: true });
+  rmSync(sneaky.dir, { recursive: true, force: true });
+});
+
+test('findManifestId rejects a manifest that declares `id` more than once', () => {
+  const src = `import { defineTemplate } from '@/templates/define.ts';\nexport default defineTemplate({ contractVersion: 1, id: 'acme', id: 'evil' } as never);\n`;
+  assert.throws(() => findManifestId(src, 'manifest.ts'), /more than once/);
+});
+
+test('rejects a template whose manifest declares `id` more than once', () => {
+  const dup = fixtureRepo({ ...GOOD, 'manifest.ts': `import { defineTemplate } from '@/templates/define.ts';\nexport default defineTemplate({ contractVersion: 1, id: 'acme', id: 'evil' } as never);\n` });
+  const ws = workspace();
+  writeFileSync(ws.lockPath, JSON.stringify({ templates: [{ id: 'acme', repo: dup.url, ref: dup.sha }] }));
+  assert.throws(() => fetchTemplates({ ...ws, log: () => {} }), /more than once/);
+  assert.ok(!existsSync(path.join(ws.templatesDir, 'external', 'acme')));
+  rmSync(ws.root, { recursive: true, force: true });
+  rmSync(dup.dir, { recursive: true, force: true });
 });
 
 test('names the template when git cannot fetch it', () => {
