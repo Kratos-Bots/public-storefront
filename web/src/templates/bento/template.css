@@ -1,0 +1,537 @@
+/* Bento — asymmetric cells on one shared grid; size states importance.
+   Brief: designs/bento/DESIGN.md (the storefront adaptation of designs/bento-grid/DESIGN.md).
+   The rules that matter: one radius (18px) on every cell, tile and card, 12px on anything nested
+   inside one; one border weight; the accent only on the stock cell, primary buttons, focus rings
+   and the active category — never on prices or names; the first product is the only promoted
+   tile; the board's one entrance stagger is the only unprompted motion.
+   Every rule is scoped under :root[data-sf-template="bento"]; keyframes are prefixed sf-bento-;
+   animations live only inside prefers-reduced-motion: no-preference. */
+
+:root[data-sf-template="bento"] {
+  --bento-radius: 18px;
+  --bento-radius-inner: 12px;
+  --bento-gap: 12px;
+  --bento-border: color-mix(in srgb, var(--sf-text) 9%, transparent);
+  --bento-border-hover: color-mix(in srgb, var(--sf-primary) 45%, var(--bento-border));
+  --bento-lift-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+  --bento-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --bento-settle: cubic-bezier(0.16, 1, 0.3, 1);
+  /* Solid-fill hover: the accent pushed towards the text colour, so the --sf-bg label only gains contrast. */
+  --sf-filled-hover-bg: color-mix(in srgb, var(--sf-primary) 82%, var(--sf-text));
+}
+
+:root[data-sf-template="bento"][data-mantine-color-scheme="light"] {
+  --bento-border: color-mix(in srgb, var(--sf-text) 10%, transparent);
+  --bento-lift-shadow: 0 18px 40px rgba(17, 17, 17, 0.1);
+}
+
+@media (min-width: 48em) {
+  :root[data-sf-template="bento"] {
+    --bento-gap: 16px;
+  }
+}
+
+/* ── Chrome ─────────────────────────────────────────────────────────── */
+
+:root[data-sf-template="bento"] [data-sf-part="header"] {
+  border-bottom-color: var(--bento-border);
+}
+
+:root[data-sf-template="bento"] [data-sf-part="cart-bar"] {
+  border-top-color: var(--bento-border);
+}
+
+/* ── Type ───────────────────────────────────────────────────────────── */
+
+/* heading.* only reaches ProductGrid's title and the product page's weight (docs/templates.md §3),
+   so every title part takes the display face here. */
+:root[data-sf-template="bento"] [data-sf-part="page-title"] {
+  font-family: var(--sf-font-heading);
+  font-size: clamp(1.5rem, 2.6vw, 2.125rem);
+  font-weight: var(--sf-heading-weight);
+  letter-spacing: var(--sf-heading-tracking);
+  text-transform: var(--sf-heading-transform);
+  line-height: 1.1;
+  color: var(--sf-text);
+}
+
+:root[data-sf-template="bento"] [data-sf-part="group-title"],
+:root[data-sf-template="bento"] [data-sf-part="sheet-title"] {
+  font-family: var(--sf-font-heading);
+  font-weight: var(--sf-heading-weight);
+  letter-spacing: var(--sf-heading-tracking);
+  text-transform: var(--sf-heading-transform);
+}
+
+/* The menu's group head is 10px mono micro-caps by default; here it's a readable section title.
+   The sheet title is a product name and keeps its own 1.5rem. */
+:root[data-sf-template="bento"] [data-sf-part="group-title"] {
+  font-size: 1.0625rem;
+  color: var(--sf-text);
+}
+
+/* Money in the body face with tabular figures, in the text colour — never the accent. */
+:root[data-sf-template="bento"] [data-sf-part="price"] {
+  font-family: var(--sf-font-body);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  font-weight: 700;
+  color: var(--sf-text);
+}
+
+/* ── Buttons: solid accent, sentence case, body face, 12px (nested inside 18px cells) ── */
+
+/* The custom CTAs (AddToCart, the checkouts, CheckoutPage .next/.back, …) hard-code mono micro-caps
+   and only tokenise their radius; this gives them the locked button voice too. */
+:root[data-sf-template="bento"] [data-sf-part="button"] {
+  font-family: var(--sf-btn-font);
+  text-transform: var(--sf-btn-transform);
+  font-weight: var(--sf-btn-weight);
+  letter-spacing: var(--sf-btn-tracking-md);
+}
+
+:root[data-sf-template="bento"] [data-sf-part="button"][data-variant="default"] {
+  border-color: var(--bento-border);
+  color: var(--sf-text);
+}
+
+:root[data-sf-template="bento"] [data-sf-part="button"]:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 3px;
+}
+
+@media (hover: hover) {
+  :root[data-sf-template="bento"] [data-sf-part="button"][data-variant="default"]:hover:not(:disabled):not([data-disabled]) {
+    border-color: var(--bento-border-hover);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-sf-template="bento"] [data-sf-part="button"] {
+    transition: transform 160ms var(--bento-settle), background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+  }
+  :root[data-sf-template="bento"] [data-sf-part="button"]:active:not(:disabled):not([data-disabled]) {
+    transform: scale(0.97);
+  }
+}
+
+/* ── Surfaces: every tile and card is a cell ────────────────────────── */
+/* Border and radius arrive through the card tokens; ProductCard has no fill, radius or padding of
+   its own, so bento gives it all three. The photo well inside takes the nested radius. */
+
+:root[data-sf-template="bento"] [data-sf-part="product-card"],
+:root[data-sf-template="bento"] [data-sf-part="card"] {
+  background: var(--sf-surface);
+  border-color: var(--bento-border);
+}
+
+:root[data-sf-template="bento"] [data-sf-part="product-card"] {
+  border: 1px solid var(--bento-border);
+  border-radius: var(--bento-radius);
+  padding: 8px 8px 12px;
+}
+
+:root[data-sf-template="bento"] [data-sf-part="product-card"] > :first-child {
+  border-radius: var(--bento-radius-inner);
+}
+
+:root[data-sf-template="bento"] [data-sf-part="product-card"] h3 {
+  padding: 0 4px;
+}
+
+:root[data-sf-template="bento"] [data-sf-part="product-card"] h3 ~ * {
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+:root[data-sf-template="bento"] [data-sf-part="product-row"] {
+  border-color: var(--bento-border);
+}
+
+@media (hover: hover) {
+  :root[data-sf-template="bento"] [data-sf-part="product-card"]:hover {
+    border-color: var(--bento-border-hover);
+    box-shadow: var(--bento-lift-shadow);
+  }
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  :root[data-sf-template="bento"] [data-sf-part="product-card"] {
+    transition: transform 300ms var(--bento-spring), box-shadow 300ms ease, border-color 300ms ease;
+  }
+  :root[data-sf-template="bento"] [data-sf-part="product-card"]:hover {
+    transform: translateY(-3px);
+  }
+}
+
+/* ── Product grid: one promoted tile, an even rhythm after it ───────── */
+
+:root[data-sf-template="bento"] [data-sf-part="product-grid"] {
+  gap: var(--bento-gap);
+  grid-auto-flow: dense;
+}
+
+/* Phones: the hero product is a full-width 2×1 tile, photo left and details right — a 2×2 tile
+   on a two-column phone grid would push the second product below the fold. */
+:root[data-sf-template="bento"]:not(:has([data-bento-featured="off"])) [data-sf-part="product-grid"] > [data-sf-part="product-card"]:first-child {
+  grid-column: span 2;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 12px;
+}
+
+:root[data-sf-template="bento"]:not(:has([data-bento-featured="off"])) [data-sf-part="product-grid"] > [data-sf-part="product-card"]:first-child > :first-child {
+  flex: 0 0 46%;
+  width: 46%;
+  align-self: flex-start;
+}
+
+:root[data-sf-template="bento"]:not(:has([data-bento-featured="off"])) [data-sf-part="product-grid"] > [data-sf-part="product-card"]:first-child h3 {
+  padding-top: 4px;
+  font-family: var(--sf-font-heading);
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+/* Tablet and up: the hero product becomes a true 2×2 tile, stacked like every other tile. */
+@media (min-width: 48em) {
+  :root[data-sf-template="bento"]:not(:has([data-bento-featured="off"])) [data-sf-part="product-grid"] > [data-sf-part="product-card"]:first-child {
+    grid-row: span 2;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  :root[data-sf-template="bento"]:not(:has([data-bento-featured="off"])) [data-sf-part="product-grid"] > [data-sf-part="product-card"]:first-child > :first-child {
+    flex: none;
+    width: 100%;
+  }
+  :root[data-sf-template="bento"]:not(:has([data-bento-featured="off"])) [data-sf-part="product-grid"] > [data-sf-part="product-card"]:first-child h3 {
+    font-size: 1.375rem;
+  }
+}
+
+/* ── Inputs: the shared box variant draws the box; bento adds the accent focus ring. ── */
+
+:root[data-sf-template="bento"] [data-sf-part="input"]:focus,
+:root[data-sf-template="bento"] [data-sf-part="input"]:focus-within {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sf-primary) 22%, transparent);
+}
+
+/* ── Shop board ─────────────────────────────────────────────────────── */
+
+:root[data-sf-template="bento"] .bento-board {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-flow: dense;
+  gap: var(--bento-gap);
+  margin: 1rem 0 1rem;
+}
+
+@media (min-width: 48em) {
+  :root[data-sf-template="bento"] .bento-board {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-top: 1.5rem;
+  }
+}
+
+:root[data-sf-template="bento"] .bento-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  min-width: 0;
+  padding: 1.125rem;
+  border: 1px solid var(--bento-border);
+  border-radius: var(--bento-radius);
+  background: var(--sf-surface);
+  color: var(--sf-text);
+}
+
+:root[data-sf-template="bento"] .bento-icon {
+  flex: none;
+  color: var(--sf-muted);
+}
+
+/* Hero: tagline as the headline. Padding scales with the span. */
+:root[data-sf-template="bento"] .bento-cell--hero {
+  grid-column: span 2;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  min-height: 10rem;
+  padding: clamp(1.375rem, 3.5vw, 2.25rem);
+  background: color-mix(in srgb, var(--sf-surface) 96%, var(--sf-text));
+}
+
+@media (min-width: 48em) {
+  :root[data-sf-template="bento"] .bento-cell--hero {
+    grid-row: span 2;
+    min-height: 17rem;
+  }
+}
+
+:root[data-sf-template="bento"] .bento-hero__headline {
+  margin: 0;
+  max-width: 20ch;
+  font-family: var(--sf-font-heading);
+  font-size: clamp(1.75rem, 4.5vw, 3.25rem);
+  font-weight: 700;
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+:root[data-sf-template="bento"] .bento-hero__body {
+  margin: 0;
+  max-width: 52ch;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--sf-muted);
+  white-space: pre-line;
+}
+
+/* Stock: the one accent-filled cell, tall. Label colour pairs with the accent exactly like a
+   filled button's (--sf-bg on --sf-primary), so every preset's contrast check covers it. */
+:root[data-sf-template="bento"] .bento-cell--stock {
+  grid-row: span 2;
+  justify-content: space-between;
+  background: var(--sf-primary);
+  border-color: transparent;
+  color: var(--sf-bg);
+}
+
+:root[data-sf-template="bento"] .bento-cell--stock .bento-icon {
+  color: currentColor;
+}
+
+:root[data-sf-template="bento"] .bento-board[data-hero="off"] .bento-cell--stock {
+  grid-row: span 1;
+}
+
+:root[data-sf-template="bento"] .bento-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+}
+
+:root[data-sf-template="bento"] .bento-stat__num {
+  font-family: var(--sf-font-heading);
+  font-size: clamp(2.75rem, 7vw, 4.75rem);
+  font-weight: 800;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+:root[data-sf-template="bento"] .bento-stat__label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+:root[data-sf-template="bento"] .bento-cell--small {
+  justify-content: space-between;
+}
+
+:root[data-sf-template="bento"] .bento-cell--tall {
+  grid-row: span 2;
+}
+
+:root[data-sf-template="bento"] .bento-cell--wide {
+  grid-column: span 2;
+  flex-direction: row;
+  align-items: flex-start;
+}
+
+/* Phones: the dispatch and contact cells repeat the shell's cut-off bar and the footer, and
+   would push the first product below the fold — the board keeps just its four core cells. */
+@media (max-width: 47.99em) {
+  :root[data-sf-template="bento"] .bento-cell--wide {
+    display: none;
+  }
+}
+
+@media (min-width: 48em) {
+  :root[data-sf-template="bento"] .bento-cell--full {
+    grid-column: 1 / -1;
+  }
+}
+
+:root[data-sf-template="bento"] .bento-fact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+  margin: 0;
+}
+
+:root[data-sf-template="bento"] .bento-fact__value {
+  font-family: var(--sf-font-heading);
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+:root[data-sf-template="bento"] .bento-fact__status,
+:root[data-sf-template="bento"] .bento-fact__headline {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+/* Only the status line is flex (dot + words); the headline is running text, where flex gaps
+   would split "Order by 15:00 today" into spaced fragments. */
+:root[data-sf-template="bento"] .bento-fact__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+:root[data-sf-template="bento"] .bento-fact__headline time {
+  font-variant-numeric: tabular-nums;
+}
+
+:root[data-sf-template="bento"] .bento-fact__label {
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--sf-muted);
+}
+
+:root[data-sf-template="bento"] .bento-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--sf-success);
+}
+
+:root[data-sf-template="bento"] [data-state="paused"] .bento-dot {
+  background: var(--sf-warn);
+}
+
+/* Contact chips inside a cell: nested radius, 44px targets, sentence-case labels. */
+:root[data-sf-template="bento"] .bento-cell a {
+  min-height: 44px;
+  min-width: 44px;
+  border-radius: var(--bento-radius-inner);
+  border-color: var(--bento-border);
+  color: var(--sf-text);
+}
+
+:root[data-sf-template="bento"] .bento-cell a > span {
+  font-family: var(--sf-font-body);
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+@media (hover: hover) {
+  :root[data-sf-template="bento"] .bento-cell a:hover {
+    border-color: var(--bento-border-hover);
+  }
+}
+
+:root[data-sf-template="bento"] .bento-cell a:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+:root[data-sf-template="bento"] .bento-welcome {
+  margin: 0.75rem 0;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--bento-border);
+  border-radius: var(--bento-radius);
+  background: var(--sf-surface);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--sf-muted);
+  white-space: pre-line;
+}
+
+/* ── Footer: a row of cells ─────────────────────────────────────────── */
+
+/* Same rail as the shell's <main> (1200px including its --sf-main-pad inset), so the cells line up with
+   the catalogue above. */
+:root[data-sf-template="bento"] .bento-footer {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1200px;
+  margin: 3rem auto 0;
+  padding: 0 var(--sf-main-pad, 1rem) calc(1rem + env(safe-area-inset-bottom, 0px));
+}
+
+:root[data-sf-template="bento"] .bento-footer__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--bento-gap);
+}
+
+@media (min-width: 48em) {
+  :root[data-sf-template="bento"] .bento-footer__grid {
+    grid-template-columns: 2fr 1fr 1fr;
+  }
+}
+
+:root[data-sf-template="bento"] .bento-footer__tagline {
+  margin: 0;
+  max-width: 40ch;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--sf-muted);
+}
+
+:root[data-sf-template="bento"] .bento-footer__meta {
+  margin: auto 0 0;
+  font-size: 0.8125rem;
+  color: var(--sf-muted);
+}
+
+:root[data-sf-template="bento"] .bento-footer__head {
+  margin: 0;
+  font-family: var(--sf-font-heading);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+:root[data-sf-template="bento"] .bento-footer__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+:root[data-sf-template="bento"] .bento-cell a.bento-footer__link {
+  display: inline-flex;
+  align-items: center;
+  color: var(--sf-muted);
+  text-decoration: none;
+}
+
+@media (hover: hover) {
+  :root[data-sf-template="bento"] .bento-cell a.bento-footer__link:hover {
+    color: var(--sf-text);
+  }
+}
+
+/* ── Motion: the board's single entrance stagger ────────────────────── */
+
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-sf-template="bento"] .bento-board > .bento-cell {
+    animation: sf-bento-in 0.55s var(--bento-settle) both;
+  }
+  :root[data-sf-template="bento"] .bento-board > .bento-cell:nth-child(2) { animation-delay: 60ms; }
+  :root[data-sf-template="bento"] .bento-board > .bento-cell:nth-child(3) { animation-delay: 120ms; }
+  :root[data-sf-template="bento"] .bento-board > .bento-cell:nth-child(4) { animation-delay: 180ms; }
+  :root[data-sf-template="bento"] .bento-board > .bento-cell:nth-child(5) { animation-delay: 240ms; }
+  :root[data-sf-template="bento"] .bento-board > .bento-cell:nth-child(6) { animation-delay: 300ms; }
+}
+
+@keyframes sf-bento-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}

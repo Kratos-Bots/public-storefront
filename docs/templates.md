@@ -267,6 +267,7 @@ template that wants one consistent heading look across every page styles the par
 | `card` | exactly these eleven roots: `features/auth/AuthCard.tsx` `<section>`; `features/order-status/AddressCard.tsx` `<section>`; `features/order-status/CryptoPaymentCard.tsx` root; `features/order-status/ItemsCard.tsx` `<section>`; `features/order-status/PaymentSection.tsx` (four `classes.card` elements); `features/order-status/ShipmentCard.tsx` `<section>`; `features/tracking/ParcelCard.tsx` root; `features/checkout/CheckoutPage.tsx` step card `<div>` |
 | `product-card` | `ProductCard` `<article>` |
 | `product-row` | `ProductRow` root element |
+| `product-grid` | the storefront catalogue's card grid `<div>` in `ProductGrid` (not the upsell row) — its direct children are the `product-card`s, so a template can promote `:first-child` |
 | `price` | the main price element in `ProductCard`, `ProductRow`, `ProductDetailPage`, `ProductDetailSheet` |
 | `badge` | `StockChip` root, `StatusPill` root, header cart count `<span>` in both shells |
 | `sheet` | `Drawer.Content` in `components/Sheet.tsx` (every sheet except the cart) |
@@ -629,6 +630,7 @@ preview mode, so nothing a preview ever applies is written to `localStorage`.
 | `modern` | dark, light | Default | nothing | — |
 | `dark-luxury` | dark | Gold (default), Silver, Emerald, Crimson | fonts, radius | `grain`, `orb`, `statusBadge` (all on) |
 | `cyber-brutalism` | dark, light | Acid Dark (default), Purple Light | fonts, radius (always square) | `systemBar`, `statusBar`, `crosshairs` (on), `nodeLabel` (text, `NODE_01`, ≤ 24) |
+| `bento` | dark, light | one dark + one light per store type: Tech & electronics (`tech-dark` default), Fashion & apparel, Beauty & wellness, Home & lifestyle, Food & grocery, Monochrome | fonts, radius | `dispatch`, `contact`, `featured` (all on) |
 
 Button style (fill, case, weight, tracking) comes from each template's tokens and is never
 admin-editable, for any template.
@@ -638,6 +640,13 @@ Both non-default templates read real store data for their decoration: the orderi
 next dispatch cut-off and its timezone (brutalist clock and readout). They are worked
 examples of the contract: `web/src/templates/dark-luxury/` and
 `web/src/templates/cyber-brutalism/`.
+
+`bento` (brief: `designs/bento/DESIGN.md`) turns the catalogue intro into a shop board of
+real-data cells (product count, categories, ordering status, next dispatch cut-off, chat links)
+and promotes the first catalogue product to a large tile through the `product-grid` part. Its
+`featured` option can't reach `<html>` as an attribute, so the `Overlay` slot renders a hidden
+`[data-bento-featured="off"]` marker when it is off and `template.css` keys the promotion on
+`:root:not(:has(...))` — the pattern to copy when an option must switch pure CSS.
 
 Preview images are regenerated with
 `CAPTURE_PREVIEWS=1 E2E_REAL_FONTS=1 npm run test:e2e -- template-previews.spec.ts`.

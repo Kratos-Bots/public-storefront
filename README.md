@@ -90,7 +90,7 @@ committed as the record of what the pass rendered.
 ## Templates
 
 The storefront's look is a **template** (`web/src/templates/<id>/`) chosen per client in the
-admin (Storefront → Appearance): `modern` (default), plus any built-in or imported template.
+admin (Storefront → Appearance): `modern` (default), `dark-luxury`, `cyber-brutalism` and `bento`, plus any imported template.
 The full contract — manifest, tokens, parts, slots, hooks, mobile rules, git imports — is in
 [`docs/templates.md`](docs/templates.md).
 
