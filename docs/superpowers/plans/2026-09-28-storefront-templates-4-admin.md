@@ -22,7 +22,7 @@
 - Imports use the `@/` alias with explicit `.ts`/`.tsx` extensions (`from '@/api/storefront-settings.ts'`). No relative `../../` imports. Sibling files in the same feature folder use `./X.tsx`, matching the existing storefront-settings files.
 - Reuse the `src/components/ui/` primitives: `Card`, `Button` (variants `primary | secondary | ghost | danger`, sizes `sm | md | lg`), `Select`, `Input`, `Textarea`, `ColorPicker`, `Badge`, `ConfirmDialog`, `Spinner`, and the feature-local `ui/CardHeader.tsx` and `ui/SwitchRow.tsx`. Don't build raw-Tailwind replacements for these.
 - Copy in `src/features/storefront-settings/` is literal English (no `useTranslation`); keep it that way. `npm run build` runs `scripts/check-locale-parity.mjs`, and this plan adds no locale keys.
-- **Never put the `disabled` attribute on a react-hook-form registered input or a `Controller` field to express a template lock.** RHF drops disabled fields' values on submit (they become `undefined`), which fails zod. Locked fields render as the read-only `LockedField` display instead (Task 3). The existing `<fieldset disabled={!canWrite}>` for read-only users is fine, because those users have no Save button.
+- **Never put the `disabled` attribute on a react-hook-form registered input or a `Controller` field to express a template lock.** RHF drops disabled fields' values on submit (they become `undefined`), which fails zod. Locked fields render as the read-only `LockedField` display instead (Task 3). This read-only rendering is spec amendment 14 (ruling F2), which supersedes §3.2's "disabled". The existing `<fieldset disabled={!canWrite}>` for read-only users is fine, because those users have no Save button.
 - Writes are gated by `useCan()('storefront', 'write')`, exactly as `ThemeCard` does today. Read-only users see everything, including the live preview, but can't change the template, preset or fields, or save.
 - Theme fields added by the spec: `template: string` (slug, default `'modern'`), `preset: string | null`, `options: Record<string, boolean | string>`. Older backends omit them, so the read type marks them optional and `toForm` defaults them.
 - Preview message (spec §1.10): `{ type: 'sf-preview-theme', theme }`, where `theme` **never has a `customCss` key**. Readiness message from the storefront: `{ type: 'sf-preview-ready' }`. Post with `targetOrigin` = the preview origin, never `'*'`. Debounce 150 ms.
@@ -39,7 +39,7 @@
 1. **Theme saved by an older backend** has no `template`/`preset`/`options`. The editor must open it as Modern with the stored colours intact, and the first save must write the three fields. Pinned in Task 2 (`toForm` check) and Task 6 (mock with an old-shape theme).
 2. **Catalog endpoint missing or failing** (admin deployed before the backend, or 500). The editor must still load, with Modern only and the "built-in only" note, rather than spinning forever or erroring. Pinned in Task 2 (`FALLBACK_CATALOG` check) and Task 6 (route returns 404).
 3. **Stale stored preset or options after a template update**: preset id removed, option key removed, option value of the wrong type, select value no longer in choices. Locks must fall back to `defaultPreset`, options coerce to defaults, and the save payload carries only the template's current option keys. Pinned in Task 2 (`findPreset` / `resolveOptions` / `toThemePayload` checks).
-4. **Stored template not in the catalog** (an import removed from the lock file). The editor shows "Unavailable — storefront is showing Modern", keeps every field editable with no locks, and doesn't rewrite the stored id until the admin picks another template. Pinned in Task 2 (`locksFor(null)`, `enforceLocks` with a null template) and Task 6.
+4. **Stored template not in the catalog** (an import removed from the lock file). The editor shows "Unavailable — storefront is showing Modern", keeps every field editable with no locks, and doesn't rewrite the stored id until the admin picks another template. When the catalog itself is the fallback (`catalog.source === 'fallback'`: the catalog call failed, or the backend had no catalog), the storefront may well be rendering that template, so the alert says "Template catalog unavailable — can't show this template's options; saving keeps it" instead (pre-flight ruling F1). Pinned in Task 2 (`locksFor(null)`, `enforceLocks` with a null template) and Task 6 (scenarios 2b and 5).
 5. **Preview messaging edge cases**: a `sf-preview-ready` from another origin or window must be ignored; navigating inside the iframe (a new ready) must re-send the current draft; an invalid or `javascript:` `baseUrl` must give the swatch fallback, not an iframe. Pinned in Task 2 (`previewTarget`, `isPreviewReady` checks) and Task 6 (in-iframe navigation re-post).
 
 ---
@@ -319,12 +319,14 @@ assert.equal(tf.findPreset(brutal as never, 'purple-light').id, 'purple-light');
 assert.equal(tf.findPreset(brutal as never, 'removed').id, 'acid-dark');
 assert.equal(tf.findPreset(brutal as never, null).id, 'acid-dark');
 
-// options (Review Focus 3: stale keys dropped, wrong types → default, bad select → default, text truncated)
+// options (Review Focus 3: stale keys dropped, wrong types → default, bad select → default,
+// over-long text → default — same as the storefront's resolveOptions in web/src/templates/resolve.ts; ruling F3)
 assert.deepEqual(tf.defaultOptions(brutal as never), { systemBar: true, nodeLabel: 'NODE_01', mode: 'a' });
 assert.deepEqual(
   tf.resolveOptions(brutal as never, { systemBar: 'yes', nodeLabel: 'X'.repeat(40), mode: 'zzz', legacy: true }),
-  { systemBar: true, nodeLabel: 'X'.repeat(24), mode: 'a' },
+  { systemBar: true, nodeLabel: 'NODE_01', mode: 'a' },
 );
+assert.equal(tf.resolveOptions(brutal as never, { nodeLabel: 'X'.repeat(24) }).nodeLabel, 'X'.repeat(24)); // exactly maxLength is kept
 assert.deepEqual(tf.resolveOptions(brutal as never, { systemBar: false, mode: 'b' }), { systemBar: false, nodeLabel: 'NODE_01', mode: 'b' });
 
 // applyPreset copies preset values, maps FontSpec → family string, resets options, keeps density + customCss
@@ -524,14 +526,18 @@ export function defaultOptions(template: StorefrontCatalogTemplate): StorefrontT
   return Object.fromEntries(template.options.map((o) => [o.key, o.default]));
 }
 
-/** Manifest defaults ⊕ stored values: unknown keys dropped, wrong types / stale select values → default, text truncated. */
+/**
+ * Manifest defaults ⊕ stored values: unknown keys dropped; wrong types, stale select values and
+ * over-long text → default. Mirrors the storefront's resolveOptions (web/src/templates/resolve.ts)
+ * exactly, so the form shows what the storefront renders.
+ */
 export function resolveOptions(template: StorefrontCatalogTemplate, stored: StorefrontThemeOptions | undefined): StorefrontThemeOptions {
   const out: StorefrontThemeOptions = {};
   for (const o of template.options) {
     const v = stored?.[o.key];
     if (o.type === 'boolean') out[o.key] = typeof v === 'boolean' ? v : o.default;
     else if (o.type === 'select') out[o.key] = typeof v === 'string' && o.choices.some((c) => c.value === v) ? v : o.default;
-    else out[o.key] = typeof v === 'string' ? v.slice(0, o.maxLength) : o.default;
+    else out[o.key] = typeof v === 'string' && v.length <= o.maxLength ? v : o.default;
   }
   return out;
 }
@@ -746,13 +752,16 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 
 - [ ] **Step 1: Move the reusable pieces out of `ThemeCard.tsx`**
 
-Create `theme/FontField.tsx` containing `useGoogleFont` and `FontField`, copied verbatim from `ThemeCard.tsx` (lines 84–113 today), with `FontField` as the **default export** (`useGoogleFont` stays module-private) and `Input` imported from `@/components/ui/Input.tsx`. Add one optional prop, `id?: string`, forwarded to `Input` so labels associate.
+Create `theme/FontField.tsx` containing `useGoogleFont` and `FontField`, copied verbatim from `ThemeCard.tsx` (lines 76–112 today: the doc comment, `useGoogleFont` at 84–100, `FontField` at 102–112), with `FontField` as the **default export** (`useGoogleFont` stays module-private) and `Input` imported from `@/components/ui/Input.tsx`. Add one optional prop, `id?: string`, forwarded to `Input` so labels associate.
 
-Create `theme/ThemePreview.tsx` with `RADIUS_PX` and `ThemePreview`, copied verbatim (lines 72 and 115–157), with `ThemePreview` as the **default export**, changing only the prop type's import:
+Create `theme/ThemePreview.tsx` with `RADIUS_PX` (ThemeCard.tsx line 66) and `ThemePreview` (lines 114–158, doc comment included), with `ThemePreview` as the **default export**. Change two things only: the prop type's import, and the `RADIUS_PX` type. The copied line reads `Record<FormData['radius'], number>`, and once ThemeCard's local `FormData` alias is gone, `FormData` resolves to the DOM global and `tsc` fails. Keep `RADIUS_PX` unexported, because an extra non-component export trips `react-refresh/only-export-components`:
 
 ```tsx
 import { useWatch, type Control } from 'react-hook-form';
 import type { ThemeFormData } from '@/features/storefront-settings/template-form.ts';
+import type { StorefrontThemeRadius } from '@/types/storefront-settings.ts';
+
+const RADIUS_PX: Record<StorefrontThemeRadius, number> = { none: 0, sm: 6, md: 10, lg: 16, xl: 24 };
 ```
 
 Rule for every file under `theme/`: import feature-level modules (`template-form.ts`, `ui/*`) via `@/features/storefront-settings/...`. Siblings inside `theme/` use `./X.tsx`. Never use `../`.
@@ -943,7 +952,8 @@ export default function CustomiseCard({ ctx }: { ctx: ThemeEditorContext }) {
               if (locks.fonts) {
                 return (
                   <LockedField key={k} label={label} templateName={templateName}>
-                    <span className="truncate" style={{ fontFamily: fonts?.[k] ? `'${fonts[k]}', sans-serif` : undefined }}>{fonts?.[k] || 'System font'}</span>
+                    {/* null/'' = the storefront's self-hosted Inter stack (spec §4.1, amendment 11), not a system font — ruling F10 */}
+                    <span className="truncate" style={{ fontFamily: fonts?.[k] ? `'${fonts[k]}', sans-serif` : undefined }}>{fonts?.[k] || 'Template default (Inter)'}</span>
                   </LockedField>
                 );
               }
@@ -1113,14 +1123,11 @@ Run: `npm run build 2>&1 | tail -5` → success.
 Run: `node <scratch>/admin-templates/lint-gate.mjs storefront-settings/theme/ storefront-settings/AppearanceTab.tsx` → `LINT GATE OK`.
 Run the Task 2 check script again → `ALL PASS`, confirming the logic module is untouched.
 
-- [ ] **Step 8: Quick render smoke**
+- [ ] **Step 8: No browser smoke here (ruling F5)**
 
-Start the mocked admin exactly as in Task 6 Step 1–2, using the Task 6 fixtures with the catalog route returning **404**. At 1440×900, open `/storefront-settings` → Appearance tab. Check:
-- the Customise card renders with every field editable;
-- the swatch preview updates when you change the Primary colour;
-- the save bar appears, and Discard hides it.
+This task's gate is Step 7: `npm run build`, the lint gate, and the Task 2 check script. Don't write or borrow the Task 6 Playwright script. The browser pass happens once, in Task 6, and covers everything this task renders (scenarios 1, 2 and 7).
 
-Fix any error before committing. This is only a smoke check; Task 6 is the full pass.
+If you want an optional manual look, which is not a gate and nothing to report, run `npm run dev` against whatever backend `.env` points at and open Storefront Settings → Appearance. Don't click Save: the `.env` backend may hold live data (memory `env-northbound-db-live-side-effects`).
 
 - [ ] **Step 9: Commit**
 
@@ -1230,7 +1237,14 @@ export default function TemplateCard({ ctx }: { ctx: ThemeEditorContext }) {
         {!template && (
           <div role="alert" className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning-muted px-3 py-2 text-sm text-warning">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-            <span>“{templateId}” is unavailable. The storefront is showing Modern. Pick a template below to replace it.</span>
+            {/* Ruling F1: with the fallback catalog (call failed / no catalog) we can't know the storefront
+                lacks this template, so don't claim it shows Modern. ThemeEditor sets FALLBACK_CATALOG
+                (source 'fallback') on a failed call, so this one check covers both cases. */}
+            {catalog.source === 'fallback' ? (
+              <span>Template catalog unavailable — can't show “{templateId}”'s options; saving keeps it.</span>
+            ) : (
+              <span>“{templateId}” is unavailable. The storefront is showing Modern. Pick a template below to replace it.</span>
+            )}
           </div>
         )}
         {note && <p className="text-xs text-text-tertiary">{note}</p>}
@@ -1480,11 +1494,20 @@ export default function LivePreview({ ctx }: { ctx: ThemeEditorContext }) {
   const frameRef = useRef<HTMLIFrameElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const [boxWidth, setBoxWidth] = useState(0);
+  // Ruling F7: StorefrontSettingsPage mounts every tab (inactive ones are `hidden`), and Chromium loads
+  // display:none iframes even with loading="lazy". So the iframe mounts only once the box has been
+  // measured wider than 0 — i.e. the Appearance tab (and, on phones, the expanded Preview section) was
+  // actually shown. Latched: hiding the tab again keeps the frame (and its connection) alive.
+  const [shown, setShown] = useState(false);
 
   useEffect(() => {
     const el = boxRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(([entry]) => setBoxWidth(entry?.contentRect.width ?? 0));
+    const ro = new ResizeObserver(([entry]) => {
+      const w = entry?.contentRect.width ?? 0;
+      setBoxWidth(w);
+      if (w > 0) setShown(true);
+    });
     ro.observe(el);
     return () => ro.disconnect();
   }, [target]);
@@ -1541,15 +1564,17 @@ export default function LivePreview({ ctx }: { ctx: ThemeEditorContext }) {
                   <Spinner size="sm" /> Connecting to storefront…
                 </div>
               )}
-              <iframe
-                ref={frameRef}
-                title="Storefront preview"
-                src={target.src}
-                sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-                referrerPolicy="strict-origin-when-cross-origin"
-                className="absolute left-1/2 top-0 origin-top border-0 bg-white"
-                style={{ width: frame.w, height: frame.h, transform: `translateX(-50%) scale(${scale || 0.001})` }}
-              />
+              {shown && (
+                <iframe
+                  ref={frameRef}
+                  title="Storefront preview"
+                  src={target.src}
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  className="absolute left-1/2 top-0 origin-top border-0 bg-white"
+                  style={{ width: frame.w, height: frame.h, transform: `translateX(-50%) scale(${scale || 0.001})` }}
+                />
+              )}
             </div>
           ) : (
             <ThemePreview control={control} />
@@ -1565,6 +1590,8 @@ export default function LivePreview({ ctx }: { ctx: ThemeEditorContext }) {
   );
 }
 ```
+
+Late mount is safe for the hook. `useStorefrontPreview` reads `frameRef.current` when a message arrives, not when it subscribes. The storefront only posts `sf-preview-ready` after its document mounts, and that happens after `shown` flips and the iframe renders. Don't add `loading="lazy"` as a substitute for `shown`, because it doesn't stop hidden-tab loads.
 
 Sandbox rationale: the storefront needs its own scripts and same-origin storage to boot. `allow-same-origin` here means the storefront's own origin, which differs from the admin's, so it gains no admin access. Top-navigation isn't allowed, so the frame can't navigate the admin away.
 
@@ -1607,11 +1634,11 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 
 ### Task 6: Mocked browser pass and final gates
 
-**Done by the executor (not the frontend-design subagent)**, following memory `env-playwright-mocked-admin-pass` exactly.
+**The browser pass is run by the executor**, following memory `env-playwright-mocked-admin-pass` exactly. **Any UI fix it finds is made by a frontend-design subagent** (ruling F8; user preference `user-prefers-frontend-agent`). The executor writes up the failing scenario and the expected behaviour, dispatches the subagent, re-runs the pass and commits. The subagent's prompt must require it to load the `frontend-design:frontend-design` skill first. It gets the defect report, the relevant Task 3–5 text verbatim, and this plan's Global Constraints. The executor edits no `.tsx` itself.
 
 **Files:**
 - Scratch (not committed): `T:\Projects\ecommerce\.playwright-mcp\admin-templates.js`
-- Fix commits only if the pass finds defects, touching files from Tasks 3–5.
+- Fix commits only if the pass finds defects, touching files from Tasks 3–5. The frontend-design subagent writes the fixes; the executor commits them.
 
 **Interfaces:**
 - Consumes: the finished editor (Tasks 1–5).
@@ -1654,6 +1681,12 @@ The script:
 
 Scenarios. Each sets `__theme`/`__catalog` via `page.addInitScript`, then does `page.goto('http://localhost:5199/storefront-settings')` and clicks the **Appearance** tab. Viewport is 1440×900 unless stated.
 
+0. **No iframe on hidden tabs** (ruling F7). Use scenario 3's theme and the deployed catalog. After `goto` and before clicking Appearance (the page opens on General), wait 1 s. Assert:
+   - `iframe[title="Storefront preview"]` count is 0;
+   - no request to `http://localhost:5198` was made (count them in the 5198 route handler).
+
+   Click Appearance. The iframe must appear and receive a `sf-preview-theme` message.
+
 1. **Old-shape theme** (Review Focus 1): the theme has no `template`/`preset`/`options` and custom colours (`primary: '#ff0000'`). Assert:
    - Modern's radio is `aria-checked="true"`;
    - the Primary hex shows `#ff0000`;
@@ -1665,6 +1698,12 @@ Scenarios. Each sets `__theme`/`__catalog` via `page.addInitScript`, then does `
    - only one template radio exists;
    - the text "built-in templates only" is visible;
    - the swatch preview is shown and no iframe exists (`iframe[title="Storefront preview"]` count 0).
+
+   **2b. Catalog 404 with a stored non-modern template** (ruling F1): `__catalog = 404`, and the theme is scenario 5's shape but with `template: 'cyber-brutalism'`, `preset: 'acid-dark'`, `options: { systemBar: false }`. Assert:
+   - the alert contains "Template catalog unavailable";
+   - the alert does not contain "showing Modern".
+
+   Change the Primary colour → Save. Assert the PUT keeps `template === 'cyber-brutalism'`, `preset === 'acid-dark'`, and `options` deep-equals `{ systemBar: false }`.
 3. **Pick template with confirm**: start from scenario 1's theme. Click Cyber Brutalism → the dialog "Replace your theme values?" appears → click Replace. Assert:
    - Corner radius shows "Set by Cyber Brutalism";
    - the fonts are locked;
@@ -1680,19 +1719,19 @@ Scenarios. Each sets `__theme`/`__catalog` via `page.addInitScript`, then does `
 
    Finally, with `page.evaluate`, post a spoofed `{ type: 'sf-preview-ready' }` from the admin window itself (`window.postMessage(..., '*')`). Assert it caused no new message in the frame, because it came from the wrong source.
 5. **Unavailable template** (Review Focus 4): the theme has `template: 'acme-noir'`, `preset: 'x'`, `options: { foo: true }`. Assert:
-   - the alert "“acme-noir” is unavailable" is visible;
+   - the alert "“acme-noir” is unavailable" is visible. The catalog here is `deployed`, so the wording that says the storefront is showing Modern applies;
    - no "Set by" text is present;
    - the options card is absent.
 
    Change the Primary colour → Save. Assert the PUT has `template === 'acme-noir'` and `options` deep-equals `{ foo: true }`.
 6. **Read-only user**: `permissions.modules.storefront = 'read'`. Assert:
    - template radios are disabled;
-   - there's no save bar after trying to click a template;
+   - after `click({ force: true })` on the Cyber Brutalism radio (ruling F6; a plain `click` waits for an enabled element and times out), that radio is still `aria-checked="false"`, Modern is still `aria-checked="true"`, and there's no save bar and no "Replace your theme values?" dialog;
    - the Desktop/Phone toggle still works (click Phone → the iframe `style.width === '390px'`).
 7. **Phone layout**: viewport 390×844, scenario 3's theme. Assert:
    - `document.querySelector('main').scrollWidth <= document.querySelector('main').clientWidth + 1` (check `<main>`, not `documentElement`, per memory);
    - the Preview section is collapsed and expands on tap;
-   - template cards stack in one column (all radios share the same `offsetLeft`);
+   - template cards stack in one column: every `[role="radiogroup"][aria-label="Storefront template"] [role="radio"]` shares the same `getBoundingClientRect().left`. Scope the query to the template radiogroup (ruling F6), because the preset chips are `role="radio"` too and sit in a wrapping row;
    - the save bar buttons are at least 44 px tall after an edit.
 
    Take screenshots at 1440 and 390 into `T:\Projects\ecommerce\.playwright-mcp\`.
@@ -1705,7 +1744,7 @@ Expected: every assertion passes. The script should `throw new Error('<scenario>
 
 - [ ] **Step 4: Fix and re-run until green**
 
-Fix defects in the Task 3–5 files, re-run Step 3, then commit the fixes:
+For each failing scenario, dispatch the frontend-design subagent (see the task header) with the scenario name, the thrown message, and the relevant Task 3–5 text. When it returns, the executor re-runs Step 3, checks the Step 5 gates, then commits the fixes:
 
 ```bash
 git status --short
