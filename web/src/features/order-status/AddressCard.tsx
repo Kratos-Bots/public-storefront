@@ -14,7 +14,7 @@ export function AddressCard({ address }: { address: ShippingAddress }) {
   ].filter((line): line is string => !!line && line.trim().length > 0);
 
   return (
-    <section className={`${classes.card} ${FADE}`} aria-label="Delivery address">
+    <section className={`${classes.card} ${FADE}`} aria-label="Delivery address" data-sf-part="card">
       <p className={classes.cardEyebrow}>Delivery address</p>
       <address className={classes.address}>
         <p className={classes.addressName}>

@@ -1,6 +1,7 @@
 import { fileURLToPath } from 'node:url';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { installMocks, ORDER_PATH, ORIGIN, type Layout, type MockHandle } from './mocks.ts';
+import { fillCheckout, onlyVisible, openCart, openProduct, productOpener } from './flows.ts';
 
 /**
  * The mocked end-to-end pass. Vite serves the real app; every `/api/*`,
@@ -36,21 +37,8 @@ async function shot(page: Page, name: string): Promise<void> {
   await page.screenshot({ path: `${SHOTS}${name}.png` });
 }
 
-/** Both shells keep the phone and desktop variants of a control in the DOM and
- *  let CSS choose — so every shared-name query resolves through visibility. */
-function onlyVisible(locator: Locator): Locator {
-  return locator.filter({ visible: true }).first();
-}
-
 function searchBox(page: Page): Locator {
   return onlyVisible(page.getByRole('textbox', { name: 'Search products' }));
-}
-
-/** What opens a product: a card link in the storefront grid, a row button in the menu list. */
-function productOpener(page: Page, layout: Layout, name: string): Locator {
-  return layout === 'menu'
-    ? page.getByRole('button', { name, exact: true })
-    : page.getByRole('link', { name, exact: true });
 }
 
 async function expectProducts(page: Page, layout: Layout, names: string[]): Promise<void> {
@@ -70,56 +58,6 @@ async function openCategory(page: Page, layout: Layout, name: string): Promise<v
     return;
   }
   await onlyVisible(page.getByRole('link', { name: new RegExp(`^${name}`) })).click();
-}
-
-async function openProduct(page: Page, layout: Layout, name: string): Promise<void> {
-  await productOpener(page, layout, name).click();
-  if (layout === 'menu') await expect(page.getByRole('dialog', { name })).toBeVisible();
-  else await expect(page.getByRole('heading', { name, level: 1 })).toBeVisible();
-}
-
-/** The cart, wherever this viewport keeps it: a page on a phone, a drawer on a desktop. */
-async function openCart(page: Page, viewport: 'mobile' | 'desktop'): Promise<Locator> {
-  await onlyVisible(page.getByRole('link', { name: /^Cart, / })).click();
-  if (viewport === 'desktop') {
-    const drawer = page.getByRole('dialog', { name: 'Your cart' });
-    await expect(drawer).toBeVisible();
-    return drawer;
-  }
-  await expect(page.getByRole('heading', { name: 'Your cart' })).toBeVisible();
-  return page.locator('body');
-}
-
-/** Contact → Address → Shipping → Payment (crypto) → Review, stopping on Review. */
-async function fillCheckout(page: Page): Promise<void> {
-  await expect(page.getByRole('heading', { name: 'Your details' })).toBeVisible();
-  await page.getByRole('textbox', { name: 'First name' }).fill('Ada');
-  await page.getByRole('textbox', { name: 'Surname' }).fill('Sterling');
-  await page.getByRole('textbox', { name: 'Email' }).fill('ada@example.invalid');
-  await page.getByRole('button', { name: 'Continue' }).click();
-
-  await expect(page.getByRole('heading', { name: 'Delivery address' })).toBeVisible();
-  await page.getByRole('textbox', { name: 'Address line 1' }).fill('14 Kirkgate');
-  await page.getByRole('textbox', { name: 'City' }).fill('Leeds');
-  await page.getByRole('textbox', { name: 'ZIP / Postcode' }).fill('LS1 6BY');
-  // Pre-seeded from the shop's `defaultPhoneCountry`; the quote is keyed on it.
-  await expect(page.getByRole('combobox', { name: 'Country' })).toHaveValue('GB');
-  await page.getByRole('button', { name: 'Continue' }).click();
-
-  await expect(page.getByRole('heading', { name: 'Delivery and discounts' })).toBeVisible();
-  // The options only exist once the backend has priced the order.
-  await expect(page.getByText('Tracked 24')).toBeVisible();
-  await page.getByText('Tracked 24').click();
-  await page.getByRole('button', { name: 'Continue' }).click();
-
-  await expect(page.getByRole('heading', { name: /How you.ll pay/ })).toBeVisible();
-  await page.locator('label').filter({ hasText: 'Crypto' }).first().click();
-  await page.locator('label').filter({ hasText: 'USDT' }).first().click();
-  await page.getByRole('button', { name: 'Continue' }).click();
-
-  await expect(page.getByRole('heading', { name: 'Review your order' })).toBeVisible();
-  await expect(page.getByText('ada@example.invalid')).toBeVisible();
-  await expect(page.getByText('USDT · Polygon')).toBeVisible();
 }
 
 /** The transaction id the tests paste in, and the payment it belongs to (the
@@ -493,9 +431,9 @@ test.describe('theme first paint', () => {
     await page.goto('/');
     await expect(page.getByRole('heading', { name: 'All products', level: 1 })).toBeVisible();
 
-    const stored = await page.evaluate(() => window.localStorage.getItem('sf-theme-v1'));
+    const stored = await page.evaluate(() => window.localStorage.getItem('sf-theme-v2'));
     expect(stored).toBeTruthy();
-    expect(JSON.parse(stored!).theme.colors.bg).toBe('#0b0c0e');
+    expect(JSON.parse(stored!).vars['--sf-bg']).toBe('#0b0c0e');
 
     // Reload with the app's entry module blocked: whatever paints now is the
     // inline bootstrap in index.html, not React.

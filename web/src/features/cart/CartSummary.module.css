@@ -12,7 +12,7 @@
   padding: 0.4rem 0.6rem;
   background: var(--sf-surface);
   border-left: 2px solid var(--sf-warn);
-  border-radius: 0 var(--mantine-radius-default) var(--mantine-radius-default) 0;
+  border-radius: 0 var(--sf-card-radius) var(--sf-card-radius) 0;
   font-family: var(--sf-font-mono);
   font-size: 10px;
   font-weight: 600;
@@ -78,7 +78,7 @@
   margin-top: 0.25rem;
   padding: 0 1rem;
   border: 0;
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-btn-radius);
   background: var(--sf-primary);
   color: var(--sf-bg);
   font-family: var(--sf-font-mono);
@@ -133,7 +133,7 @@
   letter-spacing: 0.18em;
   text-transform: uppercase;
   text-decoration: none;
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-card-radius);
 }
 
 .keep:hover {

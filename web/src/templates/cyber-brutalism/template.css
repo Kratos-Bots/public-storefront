@@ -1,0 +1,585 @@
+/* Cyber Brutalism — strict grid, heavy uppercase Tektur, Share Tech Mono readouts, one
+   acid accent, zero radius, 1px borders, no shadows, no blur, no gradients (the footer
+   hazard stripe is the one sanctioned exception). Brief: designs/cyber-brutalism/DESIGN.md
+   + the cyber-brutalism-design skill. Every rule is scoped under
+   :root[data-sf-template="cyber-brutalism"]; keyframes are prefixed sf-cb-; animations
+   live only inside prefers-reduced-motion: no-preference. */
+
+:root[data-sf-template="cyber-brutalism"] {
+  --cb-ink: #000000;
+  --cb-signal: #d4ff00;
+  --cb-bar-bg: var(--sf-primary);
+  --cb-bar-fg: #000000;
+  --cb-bar-btn-bg: var(--cb-ink);
+  --cb-bar-btn-fg: var(--sf-primary);
+  --cb-footer-bg: #000000;
+  --cb-pad-start: max(1rem, env(safe-area-inset-left, 0px));
+  --cb-pad-end: max(1rem, env(safe-area-inset-right, 0px));
+  /* Solid filled buttons hover to the text colour (label stays --sf-bg): the shared primary-soft mix
+     is dark olive under dark text on Acid Dark and pale lavender under white text on Purple Light. */
+  --sf-filled-hover-bg: var(--sf-text);
+}
+
+/* Light mode: the bars are ink with acid signal text (purple on black is illegible at 10px);
+   the footer drops from pure black to the lifted surface. */
+:root[data-sf-template="cyber-brutalism"][data-mantine-color-scheme="light"] {
+  --cb-bar-bg: #111111;
+  --cb-bar-fg: var(--cb-signal);
+  --cb-bar-btn-bg: var(--sf-primary);
+  --cb-bar-btn-fg: #ffffff;
+  --cb-footer-bg: var(--sf-surface);
+}
+
+/* No frosted chrome: the manifest's glass token is 'off', so Plan 2's shared chassis.css rules strip the blur from the frosted
+   bars and Mantine overlays. Nothing to do here. */
+
+:root[data-sf-template="cyber-brutalism"] [data-sf-part="header"] {
+  border-bottom: 1px solid var(--sf-line);
+}
+
+/* ── Type ───────────────────────────────────────────────────────────── */
+
+/* heading.* only reaches ProductGrid's title and the product page's weight (docs/templates.md §3),
+   so every title part gets the heading tokens here: uppercase / 700 / -0.02em. */
+:root[data-sf-template="cyber-brutalism"] [data-sf-part="page-title"] {
+  font-size: clamp(1.75rem, 6vw, 3.5rem);
+  font-weight: var(--sf-heading-weight);
+  letter-spacing: var(--sf-heading-tracking);
+  text-transform: var(--sf-heading-transform);
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+
+:root[data-sf-template="cyber-brutalism"] [data-sf-part="group-title"],
+:root[data-sf-template="cyber-brutalism"] [data-sf-part="sheet-title"] {
+  font-family: var(--sf-font-heading);
+  font-weight: var(--sf-heading-weight);
+  letter-spacing: var(--sf-heading-tracking);
+  text-transform: var(--sf-heading-transform);
+}
+
+:root[data-sf-template="cyber-brutalism"] [data-sf-part="section-label"] {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--sf-primary);
+}
+
+:root[data-sf-template="cyber-brutalism"] [data-sf-part="price"] {
+  font-family: var(--sf-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+:root[data-sf-template="cyber-brutalism"] [data-sf-part="badge"] {
+  border-radius: 0;
+  font-family: var(--sf-font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+:root[data-sf-template="cyber-brutalism"] [data-sf-part="cutoff"] {
+  font-family: var(--sf-font-mono);
+}
+
+/* ── Buttons: solid acid, caps; ghost lifts to the accent ────────────── */
+/* The fill is 'solid', which has no shared rule: Mantine (theme vars) and the custom CTAs (their
+   modules) already paint accent + --sf-bg text, and own their hover/disabled/"Added" states — so
+   this stylesheet never sets background, color or border on filled buttons and has no disabled
+   override (AddToCart's hollow "Added" state keeps working). Radius 0 comes from --sf-btn-radius.
+   What it does add is the locked button voice: the custom CTAs hard-code mono micro-caps and only
+   tokenise their radius. */
+
+:root[data-sf-template="cyber-brutalism"] [data-sf-part="button"] {
+  font-family: var(--sf-btn-font);
+  text-transform: var(--sf-btn-transform);
+  font-weight: var(--sf-btn-weight);
+  letter-spacing: var(--sf-btn-tracking-md);
+}
+
+:root[data-sf-template="cyber-brutalism"] [data-sf-part="button"][data-variant="filled"] {
+  box-shadow: none;
+}
+
+:root[data-sf-template="cyber-brutalism"] [data-sf-part="button"][data-variant="default"] {
+  border: 1px solid var(--sf-line-strong);
+  transition: border-color 150ms ease, color 150ms ease;
+}
+
+:root[data-sf-template="cyber-brutalism"] [data-sf-part="button"]:focus-visible {
+  outline: 1px solid var(--sf-primary);
+  outline-offset: 3px;
+}
+
+@media (hover: hover) {
+  :root[data-sf-template="cyber-brutalism"] [data-sf-part="button"][data-variant="default"]:hover:not(:disabled):not([data-disabled]) {
+    border-color: var(--sf-primary);
+    color: var(--sf-primary);
+  }
+}
+
+:root[data-sf-template="cyber-brutalism"] .cb-arrow {
+  flex: none;
+  width: 1em;
+  height: 1em;
+  margin-left: 0.5em;
+}
+
+@media (max-width: 47.99em) {
+  :root[data-sf-template="cyber-brutalism"] .cb-arrow[data-cta="false"] {
+    display: none;
+  }
+}
+
+/* ── Surfaces: 1px borders, no fill, no shadow ──────────────────────── */
+/* The card modules already read --sf-card-radius (0) / --sf-card-border (1px line) /
+   --sf-card-shadow (none). ProductCard reads only the shadow and has no border, radius or padding
+   of its own — it gets the token border and an inset so content never touches the line. */
+
+:root[data-sf-template="cyber-brutalism"] [data-sf-part="product-card"] {
+  border: var(--sf-card-border);
+  padding: 0.75rem;
+  background: transparent;
+}
+
+:root[data-sf-template="cyber-brutalism"] [data-sf-part="sheet"],
+:root[data-sf-template="cyber-brutalism"] [data-sf-part="drawer"],
+:root[data-sf-template="cyber-brutalism"] [data-sf-part="input"] {
+  border-radius: 0;
+}
+
+:root[data-sf-template="cyber-brutalism"] [data-sf-part="input"] {
+  font-family: var(--sf-font-mono);
+}
+
+@media (hover: hover) {
+  :root[data-sf-template="cyber-brutalism"] [data-sf-part="product-card"]:hover {
+    border-color: var(--sf-primary);
+  }
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  :root[data-sf-template="cyber-brutalism"] [data-sf-part="product-card"] {
+    transition: border-color 150ms ease, transform 150ms ease;
+  }
+  :root[data-sf-template="cyber-brutalism"] [data-sf-part="product-card"]:hover {
+    transform: translateY(-3px);
+  }
+}
+
+/* ── The phone cart bar becomes the bottom status strip ─────────────── */
+
+/* Height budget: the shells reserve 76px (.withBar) under the fixed bar. The bar's own content is
+   64px (.inner: 0.5rem + 48px checkout + 0.5rem) and the brutalist border-top is 0, so the strip
+   line gets exactly 12px of padding-top and sits in it absolutely — never taller than the clearance.
+   (Blur is already gone: the bar's module already applies the shared glass class, turned solid
+   because the glass token is 'off'.) */
+:root[data-sf-template="cyber-brutalism"] [data-sf-part="cart-bar"] {
+  background: var(--cb-bar-bg);
+  color: var(--cb-bar-fg);
+  border-top: 0;
+  padding-top: 12px;
+}
+
+:root[data-sf-template="cyber-brutalism"] [data-sf-part="cart-bar"]::before {
+  content: "\25CF  CONNECTION SECURE  \00B7  > CART LOADED_" / "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 12px;
+  padding: 0 var(--cb-pad-end) 0 var(--cb-pad-start);
+  font-family: var(--sf-font-mono);
+  font-size: 9px;
+  line-height: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.72;
+}
+
+:root[data-sf-template="cyber-brutalism"] [data-sf-part="cart-bar"] a:not([data-sf-part="button"]),
+:root[data-sf-template="cyber-brutalism"] [data-sf-part="cart-bar"] a:not([data-sf-part="button"]) * {
+  color: inherit;
+}
+
+/* Enabled checkout only: a blocked cart's disabled <button> keeps its module's disabled look. */
+:root[data-sf-template="cyber-brutalism"] [data-sf-part="cart-bar"] [data-sf-part="button"]:not(:disabled),
+:root[data-sf-template="cyber-brutalism"] [data-sf-part="cart-bar"] [data-sf-part="button"]:not(:disabled):hover {
+  background: var(--cb-bar-btn-bg);
+  color: var(--cb-bar-btn-fg);
+  border-color: var(--cb-bar-btn-bg);
+}
+
+/* ── System bar ─────────────────────────────────────────────────────── */
+
+:root[data-sf-template="cyber-brutalism"] .cb-sysbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  min-height: 32px;
+  padding: 0 var(--cb-pad-end) 0 var(--cb-pad-start);
+  border-bottom: 1px solid var(--sf-line);
+  background: var(--sf-bg);
+  font-family: var(--sf-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  color: var(--sf-muted);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+:root[data-sf-template="cyber-brutalism"] .cb-sysbar__time {
+  color: var(--sf-text);
+}
+
+:root[data-sf-template="cyber-brutalism"] .cb-sysbar__sep {
+  opacity: 0.5;
+}
+
+/* SKU runs inline after "NODE: … ·" (spec §4.3 order), clipped with the bar rather than pushed right. */
+:root[data-sf-template="cyber-brutalism"] .cb-sysbar__end {
+  color: var(--sf-muted);
+}
+
+/* ── Crosshairs ─────────────────────────────────────────────────────── */
+
+/* Starts below the header bar (and so below the system bar above it): the top crosses never sit on
+   the SYS.TIME readout. --sf-bar-h is published by both shells, which host the Overlay slot. */
+:root[data-sf-template="cyber-brutalism"] .cb-frame {
+  position: fixed;
+  inset: 12px;
+  top: calc(var(--sf-bar-h, 56px) + env(safe-area-inset-top, 0px) + 12px);
+  z-index: 5;
+  pointer-events: none;
+}
+
+:root[data-sf-template="cyber-brutalism"] .cb-cross {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  color: var(--sf-text);
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+:root[data-sf-template="cyber-brutalism"] .cb-cross::before,
+:root[data-sf-template="cyber-brutalism"] .cb-cross::after {
+  content: "";
+  position: absolute;
+  background: currentColor;
+}
+
+:root[data-sf-template="cyber-brutalism"] .cb-cross::before {
+  top: 0;
+  left: 50%;
+  width: 1px;
+  height: 100%;
+  transform: translateX(-50%);
+}
+
+:root[data-sf-template="cyber-brutalism"] .cb-cross::after {
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  transform: translateY(-50%);
+}
+
+:root[data-sf-template="cyber-brutalism"] .cb-cross[data-at="tl"] { top: -6px; left: -6px; }
+:root[data-sf-template="cyber-brutalism"] .cb-cross[data-at="tr"] { top: -6px; right: -6px; }
+:root[data-sf-template="cyber-brutalism"] .cb-cross[data-at="bl"] { bottom: -6px; left: -6px; }
+:root[data-sf-template="cyber-brutalism"] .cb-cross[data-at="br"] { bottom: -6px; right: -6px; }
+
+/* The footer is outside <main>'s gutter and .cb-footer__inner is viewport-wide up to 1280px, so its
+   crosses sit on the inner box's own corners — a -6px offset there would add 6px of horizontal scroll
+   at 768/1280. (.cb-footer also clips overflow-x as a backstop.) */
+:root[data-sf-template="cyber-brutalism"] .cb-footer__inner > .cb-cross[data-at="tl"] { top: 0; left: 0; }
+:root[data-sf-template="cyber-brutalism"] .cb-footer__inner > .cb-cross[data-at="tr"] { top: 0; right: 0; }
+:root[data-sf-template="cyber-brutalism"] .cb-footer__inner > .cb-cross[data-at="bl"] { bottom: 0; left: 0; }
+:root[data-sf-template="cyber-brutalism"] .cb-footer__inner > .cb-cross[data-at="br"] { bottom: 0; right: 0; }
+
+/* ── Catalogue hero ─────────────────────────────────────────────────── */
+
+:root[data-sf-template="cyber-brutalism"] .cb-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.5rem;
+  margin: 0 0 1.5rem;
+  padding: clamp(1.5rem, 5vw, 3rem) 0 clamp(1.5rem, 4vw, 2.5rem);
+  border-top: 1px solid var(--sf-line);
+  border-bottom: 1px solid var(--sf-line);
+}
+
+@media (min-width: 62em) {
+  :root[data-sf-template="cyber-brutalism"] .cb-hero {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+  }
+  :root[data-sf-template="cyber-brutalism"] .cb-readout:not(.cb-readout--inline) {
+    text-align: right;
+  }
+}
+
+:root[data-sf-template="cyber-brutalism"] .cb-hero__main {
+  min-width: 0;
+}
+
+:root[data-sf-template="cyber-brutalism"] .cb-hero__scn {
+  margin: 0 0 0.75rem;
+  font-family: var(--sf-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--sf-muted);
+}
+
+:root[data-sf-template="cyber-brutalism"] .cb-hero__name {
+  margin: 0;
+  font-family: var(--sf-font-heading);
+  font-size: clamp(2.5rem, 10vw, 7rem);
+  font-weight: 900;
+  line-height: 0.92;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  color: var(--sf-text);
+  overflow-wrap: anywhere;
+}
+
+:root[data-sf-template="cyber-brutalism"] .cb-hero__tagline {
+  margin: 1rem 0 0;
+  max-width: 48ch;
+  font-size: 1rem;
+  line-height: 1.65;
+  color: var(--sf-primary);
+}
+
+:root[data-sf-template="cyber-brutalism"] .cb-hero__welcome {
+  margin: 0.75rem 0 0;
+  max-width: 60ch;
+  line-height: 1.65;
+  color: var(--sf-muted);
+}
+
+:root[data-sf-template="cyber-brutalism"] .cb-hero-compact {
+  margin: 0 0 1rem;
+}
+
+:root[data-sf-template="cyber-brutalism"] .cb-readout {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--sf-font-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  color: var(--sf-muted);
+}
+
+:root[data-sf-template="cyber-brutalism"] .cb-readout--inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+}
+
+:root[data-sf-template="cyber-brutalism"] .cb-cursor::after {
+  content: "_" / "";
+  color: var(--sf-primary);
+}
+
+/* ── Footer ─────────────────────────────────────────────────────────── */
+
+:root[data-sf-template="cyber-brutalism"] .cb-footer {
+  margin-top: auto;
+  overflow-x: clip;
+  border-top: 1px solid var(--sf-line);
+  background: var(--cb-footer-bg);
+}
+
+:root[data-sf-template="cyber-brutalism"] .cb-footer--compact {
+  border-top: 0;
+  background: transparent;
+}
+
+:root[data-sf-template="cyber-brutalism"] .cb-hazard {
+  height: 12px;
+  background: repeating-linear-gradient(-45deg, var(--cb-ink) 0 10px, var(--sf-primary) 10px 20px);
+}
+
+:root[data-sf-template="cyber-brutalism"] .cb-rule {
+  height: 4px;
+  background: var(--sf-text);
+}
+
+:root[data-sf-template="cyber-brutalism"] .cb-footer__inner {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2rem;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: clamp(2rem, 6vw, 4rem) var(--cb-pad-end) 2rem var(--cb-pad-start);
+}
+
+@media (min-width: 48em) {
+  :root[data-sf-template="cyber-brutalism"] .cb-footer__inner {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+:root[data-sf-template="cyber-brutalism"] .cb-footer__eyebrow {
+  margin: 0 0 0.75rem;
+  font-family: var(--sf-font-mono);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sf-primary);
+}
+
+:root[data-sf-template="cyber-brutalism"] .cb-footer__tagline {
+  margin: 0.75rem 0 0;
+  max-width: 36ch;
+  line-height: 1.65;
+  color: var(--sf-muted);
+}
+
+:root[data-sf-template="cyber-brutalism"] .cb-footer__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--sf-line);
+}
+
+:root[data-sf-template="cyber-brutalism"] .cb-footer__list li {
+  border-bottom: 1px solid var(--sf-line);
+}
+
+:root[data-sf-template="cyber-brutalism"] .cb-footer__link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 44px;
+  min-width: 44px;
+  color: var(--sf-text);
+  text-decoration: none;
+  font-family: var(--sf-font-heading);
+  font-size: 0.875rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  transition: color 150ms ease;
+}
+
+:root[data-sf-template="cyber-brutalism"] .cb-footer__link:hover {
+  color: var(--sf-primary);
+}
+
+:root[data-sf-template="cyber-brutalism"] .cb-footer__link:focus-visible {
+  outline: 1px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+/* ContactLinks chips are ~32px tall by default; inside the footer they must reach 44 in both
+   dimensions (controller ruling carried from Task 5 — e2e checks width AND height for every
+   slot tap target, and today both .cb-footer__link and this chip fail it). */
+:root[data-sf-template="cyber-brutalism"] [data-sf-slot="Footer"] a {
+  min-height: 44px;
+  min-width: 44px;
+  border-radius: 0;
+}
+
+:root[data-sf-template="cyber-brutalism"] .cb-footer__nodes {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin: 0;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--sf-line);
+  font-family: var(--sf-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sf-muted);
+}
+
+:root[data-sf-template="cyber-brutalism"] .cb-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 32px;
+  padding: 0 var(--cb-pad-end) env(safe-area-inset-bottom, 0px) var(--cb-pad-start);
+  background: var(--cb-bar-bg);
+  color: var(--cb-bar-fg);
+  font-family: var(--sf-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+:root[data-sf-template="cyber-brutalism"] .cb-status__fill {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: clip;
+  opacity: 0.6;
+}
+
+:root[data-sf-template="cyber-brutalism"] .cb-status__dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 0.5rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* ── Small phones: collapse the readouts, drop the crosshairs ───────── */
+
+@media (max-width: 29.99em) {
+  :root[data-sf-template="cyber-brutalism"] [data-cb-wide] {
+    display: none;
+  }
+  :root[data-sf-template="cyber-brutalism"] .cb-cross {
+    display: none;
+  }
+}
+
+/* ── Motion (only when welcome) ─────────────────────────────────────── */
+
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-sf-template="cyber-brutalism"] .cb-hero__line {
+    animation: sf-cb-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  :root[data-sf-template="cyber-brutalism"] .cb-hero__line + .cb-hero__line {
+    animation-delay: 80ms;
+  }
+  :root[data-sf-template="cyber-brutalism"] .cb-cursor::after {
+    animation: sf-cb-blink 1s step-end infinite;
+  }
+  :root[data-sf-template="cyber-brutalism"] .cb-status__dot {
+    animation: sf-cb-pulse 2s ease infinite;
+  }
+}
+
+@keyframes sf-cb-up {
+  from { opacity: 0; transform: translateY(32px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes sf-cb-blink {
+  50% { opacity: 0; }
+}
+
+@keyframes sf-cb-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.75); }
+}

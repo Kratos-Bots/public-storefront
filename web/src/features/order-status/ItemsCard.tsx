@@ -16,7 +16,7 @@ export function ItemsCard({ items, totals, currency }: ItemsCardProps) {
   const fee = totals.paymentFeeAmount ?? 0;
 
   return (
-    <section className={`${classes.card} ${FADE}`} aria-label="Items">
+    <section className={`${classes.card} ${FADE}`} aria-label="Items" data-sf-part="card">
       <p className={classes.cardEyebrow}>Items</p>
 
       <ul className={classes.items}>

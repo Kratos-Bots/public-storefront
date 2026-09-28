@@ -4,7 +4,6 @@ import { useSettings } from '@/app/settings.ts';
 import { useSessionStore, selectIsLoggedIn } from '@/stores/session.ts';
 import { useCartStore, selectCount } from '@/stores/cart.ts';
 import { Brand } from '@/components/Brand.tsx';
-import { ContactLinks } from '@/components/ContactLinks.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { BagIcon, UserIcon } from '@/components/icons.tsx';
 import { NoticeBanners } from '@/features/notices/NoticeBanners.tsx';
@@ -14,6 +13,7 @@ import { CartDrawer } from '@/features/cart/CartDrawer.tsx';
 import { MobileCartBar, useMobileCartBar } from '@/features/cart/MobileCartBar.tsx';
 import { SearchField } from '@/layouts/SearchField.tsx';
 import type { ShellSearchContext } from '@/layouts/shell-context.ts';
+import { Slot } from '@/templates/runtime.tsx';
 import classes from '@/layouts/StorefrontShell.module.css';
 
 /** The image-led shell: header, notice + dispatch rails, content column, footer. */
@@ -29,7 +29,8 @@ export function StorefrontShell() {
 
   return (
     <div className={barShowing ? `${classes.shell} ${classes.withBar}` : classes.shell}>
-      <header className={classes.header}>
+      <Slot name="TopBar" />
+      <header className={classes.header} data-sf-part="header">
         <div className={classes.headerInner}>
           <Link to="/" className={classes.home} aria-label={`${brand.name} — home`}>
             <Brand size="md" />
@@ -57,7 +58,7 @@ export function StorefrontShell() {
                 aria-label={`Cart, ${cartCount} item${cartCount === 1 ? '' : 's'}`}
               >
                 <BagIcon size={18} />
-                {cartCount > 0 ? <span className={classes.count}>{cartCount}</span> : null}
+                {cartCount > 0 ? <span className={classes.count} data-sf-part="badge">{cartCount}</span> : null}
               </Link>
             ) : null}
           </div>
@@ -67,52 +68,13 @@ export function StorefrontShell() {
       <NoticeBanners />
       <CutoffBar />
 
-      <main className={classes.main}>
+      <main className={classes.main} data-sf-part="main">
         <Suspense fallback={<PageSkeleton inline />}>
           <Outlet context={outletContext} />
         </Suspense>
       </main>
 
-      <footer className={classes.footer}>
-        <div className={classes.footerInner}>
-          <div className={classes.footerBrand}>
-            <Brand size="sm" />
-            {brand.tagline ? <p className={classes.tagline}>{brand.tagline}</p> : null}
-          </div>
-
-          {supportLinks.length > 0 ? (
-            <nav aria-label="Support">
-              <h2 className={classes.footerHead}>Support</h2>
-              <ul className={classes.footerList}>
-                {supportLinks.map((link) => (
-                  <li key={link.url}>
-                    <a
-                      className={classes.footerLink}
-                      href={link.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {link.label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-          ) : null}
-
-          {hasChat ? (
-            <div>
-              <h2 className={classes.footerHead}>Talk to us</h2>
-              <ContactLinks />
-            </div>
-          ) : null}
-        </div>
-
-        <div className={classes.colophon}>
-          <span>{brand.name}</span>
-          <span>{new Date().getFullYear()}</span>
-        </div>
-      </footer>
+      <Slot name="Footer" supportLinks={supportLinks} hasChat={hasChat} />
 
       {features.ordering ? (
         <>
@@ -122,6 +84,8 @@ export function StorefrontShell() {
       ) : null}
 
       {features.accounts ? <LoginModal /> : null}
+
+      <Slot name="Overlay" />
     </div>
   );
 }

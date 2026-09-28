@@ -71,7 +71,14 @@ export function WhatsappLogin({ number }: { number: string | null }) {
         <p className={classes.lede}>
           A code is only good for a few minutes. Start a new one when you&rsquo;re ready to send it.
         </p>
-        <button type="button" className={classes.cta} onClick={start} disabled={pending}>
+        <button
+          type="button"
+          className={classes.cta}
+          onClick={start}
+          disabled={pending}
+          data-sf-part="button"
+          data-variant="filled"
+        >
           Start again
         </button>
       </>
@@ -82,7 +89,14 @@ export function WhatsappLogin({ number }: { number: string | null }) {
     return (
       <>
         <AuthNote tone="danger">{error ?? 'Something went wrong'}</AuthNote>
-        <button type="button" className={classes.cta} onClick={start} disabled={pending}>
+        <button
+          type="button"
+          className={classes.cta}
+          onClick={start}
+          disabled={pending}
+          data-sf-part="button"
+          data-variant="filled"
+        >
           Try again
         </button>
       </>
@@ -92,7 +106,14 @@ export function WhatsappLogin({ number }: { number: string | null }) {
   if (state === 'started' && data) {
     return (
       <>
-        <a className={classes.cta} href={data.waLink} target="_blank" rel="noopener noreferrer">
+        <a
+          className={classes.cta}
+          href={data.waLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          data-sf-part="button"
+          data-variant="filled"
+        >
           Open WhatsApp
         </a>
 
@@ -132,7 +153,14 @@ export function WhatsappLogin({ number }: { number: string | null }) {
         Send us one message from WhatsApp and you&rsquo;re in. Nothing to remember, nothing to type
         back.
       </p>
-      <button type="button" className={classes.cta} onClick={start} disabled={pending}>
+      <button
+        type="button"
+        className={classes.cta}
+        onClick={start}
+        disabled={pending}
+        data-sf-part="button"
+        data-variant="filled"
+      >
         {pending ? 'Starting…' : 'Continue with WhatsApp'}
       </button>
     </>

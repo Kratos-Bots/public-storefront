@@ -29,7 +29,7 @@ export function ProgressStepper({ stage, failed }: ProgressStepperProps) {
       : `Stage ${reached + 1} of ${STAGES.length}: ${STAGES[reached]}`;
 
   return (
-    <div className={classes.stepper}>
+    <div className={classes.stepper} data-sf-part="stepper">
       {/* The rail is a picture of the summary; screen readers get the sentence. */}
       <VisuallyHidden>{summary}</VisuallyHidden>
 

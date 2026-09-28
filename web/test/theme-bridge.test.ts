@@ -1,7 +1,10 @@
-import { describe, expect, it } from 'vitest';
-import { buildMantineTheme, cssVariablesFor, googleFontsHref } from '@/app/theme-bridge.ts';
-import { fontStacks, INTER } from '@/app/theme-bridge.ts';
-import type { Theme, Brand } from '@/types/settings.ts';
+import { afterEach, describe, expect, it } from 'vitest';
+import { buildMantineTheme, cssVariablesFor, fontStacks, googleFontsHref, INTER, readStoredTheme, THEME_STORAGE_KEY } from '@/app/theme-bridge.ts';
+import { BASE_TOKENS, defineTemplate } from '@/templates/define.ts';
+import { resolveTheme, type ResolvedTheme } from '@/templates/resolve.ts';
+import { lookupManifest } from '@/templates/registry.ts';
+import modern from '@/templates/modern/manifest.ts';
+import type { Brand, Theme } from '@/types/settings.ts';
 
 const theme: Theme = {
   scheme: 'dark',
@@ -10,85 +13,125 @@ const theme: Theme = {
   radius: 'lg', density: 'compact', customCss: '',
 };
 const brand = { logoHeight: 32 } as Brand;
+const resolve = (t: Theme): ResolvedTheme => resolveTheme(t, lookupManifest);
+const none = { heading: null, body: null, mono: null };
 
 describe('theme bridge', () => {
   it('builds a 10-shade brand ramp and maps radius/fonts', () => {
-    const t = buildMantineTheme(theme);
+    const t = buildMantineTheme(resolve(theme));
     expect(t.primaryColor).toBe('brand');
     expect((t.colors as unknown as Record<string, string[]>).brand).toHaveLength(10);
     expect(t.defaultRadius).toBe('lg');
     expect(t.fontFamily).toContain('Inter');
     expect(t.headings?.fontFamily).toContain('Space Grotesk');
   });
-  it('derives surface-2/3, line, faint from bg/surface/muted', () => {
-    const v = cssVariablesFor(theme, brand);
+  it('derives surface-2/3, line, faint from bg/surface/muted and adds the token variables', () => {
+    const v = cssVariablesFor(resolve(theme), brand);
     expect(v['--sf-bg']).toBe('#0f3965');
     expect(v['--sf-primary']).toBe('#3355ff');
     expect(v['--sf-logo-h']).toBe('32px');
     expect(v['--sf-surface-2']).toMatch(/^#[0-9a-f]{6}$/);
     expect(v['--sf-surface-2']).not.toBe(v['--sf-surface']);
-    expect(v['--sf-line']).toMatch(/^#[0-9a-f]{6}$/);
+    expect(v['--sf-btn-font']).toBe('var(--sf-font-mono)');
+    expect(v['--sf-pill-radius']).toBe('999px');
   });
-  it('builds one Google Fonts href for the distinct families', () => {
-    expect(googleFontsHref(theme.fonts)).toBe('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
-    expect(googleFontsHref({ heading: null, body: null, mono: null })).toBeNull();
+  it('builds one Google Fonts href for the distinct families with their weights', () => {
+    expect(googleFontsHref(resolve(theme).fonts)).toBe('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+    expect(googleFontsHref(none)).toBeNull();
+  });
+  it('omits the weight axis for single-weight 400 families and merges weights per family', () => {
+    expect(googleFontsHref({ heading: { family: 'Tektur', weights: [900, 700] }, body: { family: 'Tektur', weights: [400] }, mono: { family: 'Share Tech Mono', weights: [400] } }))
+      .toBe('https://fonts.googleapis.com/css2?family=Tektur:wght@400;700;900&family=Share+Tech+Mono&display=swap');
   });
   it('maps radius none to 0 and passes the named sizes through', () => {
-    expect(buildMantineTheme({ ...theme, radius: 'none' }).defaultRadius).toBe(0);
-    expect(buildMantineTheme({ ...theme, radius: 'md' }).defaultRadius).toBe('md');
+    expect(buildMantineTheme(resolve({ ...theme, radius: 'none' })).defaultRadius).toBe(0);
+    expect(buildMantineTheme(resolve({ ...theme, radius: 'md' })).defaultRadius).toBe('md');
   });
-  it('slows Mantine sheets and modals to the shop timings', () => {
-    expect(buildMantineTheme(theme).respectReducedMotion).toBe(true);
-    const c = buildMantineTheme(theme).components as Record<string, { defaultProps?: Record<string, unknown> }>;
+  it('slows Mantine sheets and modals to the shop timings and tags parts', () => {
+    const c = buildMantineTheme(resolve(theme)).components as Record<string, { defaultProps?: Record<string, unknown> }>;
+    expect(buildMantineTheme(resolve(theme)).respectReducedMotion).toBe(true);
     expect(c.Drawer?.defaultProps?.transitionProps).toEqual({ duration: 300, timingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)' });
     expect(c.Drawer?.defaultProps?.overlayProps).toEqual({ backgroundOpacity: 0.7, blur: 2 });
     expect(c.Modal?.defaultProps?.transitionProps).toEqual({ transition: 'pop', duration: 200, timingFunction: 'cubic-bezier(0.2, 0.8, 0.2, 1)' });
-    expect(c.Button).toBeDefined();
+    expect(c.Button?.defaultProps?.['data-sf-part']).toBe('button');
+    expect(c.Input?.defaultProps?.['data-sf-part']).toBe('input');
     expect(c.ActionIcon).toBeDefined();
-    expect(c.Input).toBeDefined();
   });
-  it('feeds Button variant/size colours through a theme-level vars resolver, not CSS', () => {
-    // Button's own varsResolver sets --button-bg/--button-color/etc as an inline style, which a
-    // class-based CSS override can never beat. theme.components.Button.vars is merged in after
-    // the component's own resolver, so it — not mantine.css — is what has to carry these.
-    type ButtonVars = { vars: (theme: unknown, props: { variant?: string; size?: string }, ctx: unknown) => { root: Record<string, string | undefined> } };
-    const button = (buildMantineTheme(theme).components as unknown as { Button: ButtonVars }).Button;
+
+  type ButtonVars = { vars: (theme: unknown, props: { variant?: string; size?: string }, ctx: unknown) => { root: Record<string, string | undefined> } };
+  const buttonOf = (r: ResolvedTheme) => (buildMantineTheme(r).components as unknown as { Button: ButtonVars }).Button;
+
+  it('feeds solid-fill Button variant/size colours through the vars resolver (modern)', () => {
+    const button = buttonOf(resolve(theme));
     const filled = button.vars({}, { variant: 'filled', size: 'md' }, {});
-    expect(filled.root['--button-bg']).toBe('var(--sf-primary)');
-    expect(filled.root['--button-color']).toBe('var(--sf-bg)');
-    expect(filled.root['--button-hover']).toBe('var(--sf-primary-soft)');
-    expect(filled.root['--button-hover-color']).toBe('var(--sf-bg)');
-    expect(filled.root['--button-fz']).toBe('12px');
-
+    expect(filled.root).toMatchObject({ '--button-radius': 'var(--sf-btn-radius)', '--button-bg': 'var(--sf-primary)', '--button-color': 'var(--sf-bg)', '--button-hover': 'var(--sf-filled-hover-bg, var(--sf-primary-soft))', '--button-hover-color': 'var(--sf-bg)', '--button-fz': '12px' });
     const def = button.vars({}, { variant: 'default', size: 'md' }, {});
-    expect(def.root['--button-bg']).toBe('transparent');
-    expect(def.root['--button-bd']).toBe('1px solid var(--sf-line-strong)');
-    expect(def.root['--button-color']).toBe('var(--sf-text)');
+    expect(def.root).toMatchObject({ '--button-bg': 'transparent', '--button-bd': '1px solid var(--sf-line-strong)', '--button-color': 'var(--sf-text)' });
+    expect(button.vars({}, { variant: 'filled', size: 'sm' }, {}).root['--button-fz']).toBe('11px');
+  });
+  it('switches the filled variant for outline-glow and ghost fills', () => {
+    const withFill = (fill: 'outline-glow' | 'ghost') => resolveTheme({ ...theme, template: 'x' }, () => defineTemplate({ ...modern, id: 'x', tokens: { ...BASE_TOKENS, button: { ...BASE_TOKENS.button, fill } } }));
+    expect(buttonOf(withFill('outline-glow')).vars({}, { variant: 'filled' }, {}).root).toMatchObject({ '--button-bg': 'var(--sf-bg)', '--button-color': 'var(--sf-primary)', '--button-bd': '1px solid var(--sf-primary)' });
+    expect(buttonOf(withFill('ghost')).vars({}, { variant: 'filled' }, {}).root).toMatchObject({ '--button-bg': 'transparent', '--button-color': 'var(--sf-primary)' });
+  });
+});
 
-    const small = button.vars({}, { variant: 'filled', size: 'sm' }, {});
-    expect(small.root['--button-fz']).toBe('11px');
+describe('readStoredTheme (fix round 1: corrupt/foreign storage must be harmless — spec §1.8)', () => {
+  afterEach(() => localStorage.clear());
+
+  it('drops an attribute key outside rootAttributes(), keeps allowlisted ones', () => {
+    localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify({
+      v: 2, templateId: 'modern', vars: {}, attrs: { onclick: "alert('x')", 'data-sf-template': 'modern' }, title: 't', brandName: 'b', fontsHref: null,
+    }));
+    const stored = readStoredTheme();
+    expect(stored?.attrs).toEqual({ 'data-sf-template': 'modern' });
+  });
+
+  it('drops a var name outside the --sf-* pattern, keeps allowlisted ones', () => {
+    localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify({
+      v: 2, templateId: 'modern', vars: { '--evil': 'x', '--sf-bg': '#123456' }, attrs: {}, title: 't', brandName: 'b', fontsHref: null,
+    }));
+    expect(readStoredTheme()?.vars).toEqual({ '--sf-bg': '#123456' });
+  });
+
+  it('drops a fontsHref that is not a Google Fonts URL', () => {
+    localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify({
+      v: 2, templateId: 'modern', vars: {}, attrs: {}, title: 't', brandName: 'b', fontsHref: 'https://evil.example/steal.css',
+    }));
+    expect(readStoredTheme()?.fontsHref).toBeNull();
+  });
+
+  it('keeps a genuine Google Fonts fontsHref', () => {
+    localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify({
+      v: 2, templateId: 'modern', vars: {}, attrs: {}, title: 't', brandName: 'b', fontsHref: 'https://fonts.googleapis.com/css2?family=Inter&display=swap',
+    }));
+    expect(readStoredTheme()?.fontsHref).toBe('https://fonts.googleapis.com/css2?family=Inter&display=swap');
+  });
+
+  it('rejects vars/attrs that are not non-null objects, without throwing', () => {
+    localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify({ v: 2, templateId: 'modern', vars: null, attrs: {}, title: 't', brandName: 'b', fontsHref: null }));
+    expect(readStoredTheme()).toBeNull();
+    localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify({ v: 2, templateId: 'modern', vars: {}, attrs: 'nope', title: 't', brandName: 'b', fontsHref: null }));
+    expect(readStoredTheme()).toBeNull();
   });
 });
 
 describe('font defaults', () => {
-  const none = { heading: null, body: null, mono: null };
-
   it('falls back to the self-hosted Inter stack for body and heading', () => {
     const s = fontStacks(none);
     expect(s.body).toBe(INTER);
     expect(s.heading).toBe(INTER);
     expect(INTER.startsWith('"Inter Variable", Inter,')).toBe(true);
   });
-
   it('uses the body face as the mono voice unless a mono font is configured', () => {
     expect(fontStacks(none).mono).toBe(INTER);
-    expect(fontStacks({ heading: null, body: 'Space Grotesk', mono: null }).mono).toBe(`"Space Grotesk", ${INTER}`);
-    expect(fontStacks({ heading: null, body: null, mono: 'JetBrains Mono' }).mono).toBe('"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace');
+    expect(fontStacks({ heading: null, body: { family: 'Space Grotesk', weights: [400] }, mono: null }).mono).toBe(`"Space Grotesk", ${INTER}`);
+    expect(fontStacks({ heading: null, body: null, mono: { family: 'JetBrains Mono', weights: [400] } }).mono).toBe('"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace');
   });
-
   it('feeds the same stacks to Mantine and the --sf-font-* variables', () => {
-    const t = buildMantineTheme({ ...theme, fonts: none });
-    const v = cssVariablesFor({ ...theme, fonts: none }, brand);
+    const r = resolve({ ...theme, fonts: { heading: null, body: null, mono: null } });
+    const t = buildMantineTheme(r);
+    const v = cssVariablesFor(r, brand);
     expect(t.fontFamily).toBe(INTER);
     expect(t.fontFamilyMonospace).toBe(INTER);
     expect(t.headings?.fontFamily).toBe(INTER);

@@ -16,7 +16,10 @@ export default defineConfig({
   fullyParallel: true,
   workers: 2,
   timeout: 90_000,
-  expect: { timeout: 15_000 },
+  expect: { timeout: 15_000, toHaveScreenshot: { maxDiffPixelRatio: 0.001, animations: 'disabled', caret: 'hide' } },
+  // Modern's pixel baseline (templates-baseline.spec.ts) — one set, committed, no platform suffix:
+  // it is a same-machine regression gate for the token refactor, regenerated only on purpose.
+  snapshotPathTemplate: '{testDir}/__baseline__/{arg}{ext}',
   reporter: [['list']],
   use: {
     baseURL: 'http://localhost:5199',

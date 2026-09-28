@@ -6,6 +6,10 @@ import type { Product } from '@/types/catalog.ts';
 
 const state = vi.hoisted(() => ({ settings: {} as StorefrontSettings }));
 vi.mock('@/app/settings.ts', () => ({ useSettings: () => state.settings }));
+// The adornment slot, reduced to what AddToCart hands it.
+vi.mock('@/templates/runtime.tsx', () => ({
+  Slot: (p: { name: string; variant?: string; cta?: boolean }) => <span data-testid={`slot-${p.name}`} data-variant={p.variant} data-cta={String(p.cta)} />,
+}));
 
 import { AddToCart } from '@/features/catalog/AddToCart.tsx';
 import { useCartStore } from '@/stores/cart.ts';
@@ -62,6 +66,15 @@ afterEach(() => {
 });
 
 describe('AddToCart', () => {
+  it('flags the page / sheet CTA (lg) as a main CTA for the adornment, never the card quick-add (sm)', () => {
+    state.settings = { currency: 'GBP', features: { layout: 'storefront', ordering: true, guestCheckout: false, accounts: true, verify: true, tracking: false, wholesale: false, upsell: true } } as StorefrontSettings;
+    const { rerender } = render(<MantineProvider env="test"><AddToCart product={product()} size="lg" /></MantineProvider>);
+    expect(screen.getByTestId('slot-ButtonAdornment')).toHaveAttribute('data-cta', 'true');
+    expect(screen.getByTestId('slot-ButtonAdornment')).toHaveAttribute('data-variant', 'primary');
+    rerender(<MantineProvider env="test"><AddToCart product={product()} size="sm" showPrice={false} /></MantineProvider>);
+    expect(screen.getByTestId('slot-ButtonAdornment')).toHaveAttribute('data-cta', 'false');
+  });
+
   it('labels the button with the price', () => {
     mount(product());
     expect(button()).toHaveTextContent('Add · £29.00');

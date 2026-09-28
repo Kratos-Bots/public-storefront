@@ -7,7 +7,7 @@
    is always open. */
 .docket {
   border: 1px solid var(--sf-line-strong);
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-card-radius);
   background: var(--sf-surface);
 }
 
@@ -46,7 +46,7 @@
   min-height: 52px;
   padding: 0 0.9rem;
   border: 0;
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-card-radius);
   background: none;
   color: inherit;
   cursor: pointer;
@@ -271,7 +271,7 @@
   margin: 0.65rem 0 0;
   padding: 0.45rem 0.6rem;
   border-left: 2px solid var(--sf-line-strong);
-  border-radius: 0 var(--mantine-radius-default) var(--mantine-radius-default) 0;
+  border-radius: 0 var(--sf-card-radius) var(--sf-card-radius) 0;
   background: var(--sf-bg-deep);
   font-family: var(--sf-font-mono);
   font-size: 10px;

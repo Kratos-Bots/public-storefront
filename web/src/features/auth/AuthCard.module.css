@@ -2,10 +2,11 @@
    the two cards are entries in an index, and the only thing on this page with
    weight is the code slip inside one of them. */
 .card {
-  border: 1px solid var(--sf-line);
-  border-radius: var(--mantine-radius-default);
+  border: var(--sf-card-border);
+  border-radius: var(--sf-card-radius);
   background: color-mix(in srgb, var(--sf-surface) 40%, transparent);
   padding: 0.9rem 1rem 1.1rem;
+  box-shadow: var(--sf-card-shadow);
 }
 
 /* A card that states something rather than offering it. */
@@ -60,7 +61,7 @@
   margin: 0;
   padding: 0.45rem 0.65rem;
   border-left: 2px solid var(--sf-line-strong);
-  border-radius: 0 var(--mantine-radius-default) var(--mantine-radius-default) 0;
+  border-radius: 0 var(--sf-card-radius) var(--sf-card-radius) 0;
   background: var(--sf-surface-2);
   font-family: var(--sf-font-mono);
   font-size: 10px;

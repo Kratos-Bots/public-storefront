@@ -185,7 +185,7 @@
   margin-top: 1.4rem;
   padding: 0 1rem;
   border: 0;
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-btn-radius);
   background: var(--sf-primary);
   color: var(--sf-bg);
   font-family: var(--sf-font-mono);
@@ -235,7 +235,7 @@
   min-height: 44px;
   padding: 0 0.85rem;
   border: 1px solid var(--sf-line-strong);
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-card-radius);
   background: transparent;
   color: var(--sf-muted);
   font-family: var(--sf-font-mono);
@@ -354,7 +354,7 @@
   align-items: center;
   padding: 0.2rem 0.5rem;
   border: 1px solid var(--sf-line-strong);
-  border-radius: 999px;
+  border-radius: var(--sf-pill-radius);
   font-family: var(--sf-font-mono);
   font-size: 9px;
   font-weight: 600;
@@ -513,10 +513,11 @@
   min-width: 0;
   margin-top: 1.15rem;
   padding: 0.95rem 1rem 1.05rem;
-  border: 1px solid var(--sf-line);
+  border: var(--sf-card-border);
   border-left: 2px solid var(--sf-line-strong);
   background: color-mix(in srgb, var(--sf-surface) 40%, transparent);
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-card-radius);
+  box-shadow: var(--sf-card-shadow);
 }
 
 .card[data-tone='info'] {
@@ -618,7 +619,7 @@
   min-height: 44px;
   padding: 0 0.9rem;
   border: 1px solid var(--sf-line-strong);
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-card-radius);
   background: transparent;
   color: var(--sf-muted);
   font-family: var(--sf-font-mono);
@@ -836,7 +837,7 @@
 .screen {
   padding: 0.95rem 1rem 1.05rem;
   border-left: 2px solid var(--sf-line-strong);
-  border-radius: 0 var(--mantine-radius-default) var(--mantine-radius-default) 0;
+  border-radius: 0 var(--sf-card-radius) var(--sf-card-radius) 0;
   background: var(--sf-bg-deep);
 }
 
@@ -902,7 +903,7 @@
   padding: 0.95rem 1rem 1.05rem;
   border: 1px solid var(--sf-line);
   border-left: 2px solid var(--sf-line-strong);
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-card-radius);
   background: var(--sf-bg-deep);
 }
 
@@ -922,7 +923,7 @@
   margin-top: 1.15rem;
   padding: 0.7rem 0.9rem 0.8rem;
   border-left: 2px solid var(--sf-line-strong);
-  border-radius: 0 var(--mantine-radius-default) var(--mantine-radius-default) 0;
+  border-radius: 0 var(--sf-card-radius) var(--sf-card-radius) 0;
   background: var(--sf-bg-deep);
 }
 
@@ -982,7 +983,7 @@
 
 .block {
   display: block;
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-card-radius);
   background: var(--sf-surface);
   animation: breathe 1.6s ease-in-out infinite;
 }
@@ -1011,7 +1012,7 @@
   padding: 0.95rem 1rem 1.05rem;
   border: 1px solid var(--sf-line);
   border-left: 2px solid var(--sf-line-strong);
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-card-radius);
 }
 
 @keyframes breathe {

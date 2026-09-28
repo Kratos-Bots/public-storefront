@@ -74,7 +74,12 @@ export function LookupForm({ initial = '' }: LookupFormProps) {
         Six characters, on your order confirmation.
       </p>
 
-      <button className={classes.submit} type="submit">
+      <button
+        className={classes.submit}
+        type="submit"
+        data-sf-part="button"
+        data-variant="filled"
+      >
         Track order
       </button>
 

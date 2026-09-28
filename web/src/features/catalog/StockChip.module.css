@@ -18,7 +18,7 @@
   width: 5px;
   height: 5px;
   flex: none;
-  border-radius: 999px;
+  border-radius: var(--sf-pill-radius);
   background: var(--tone);
 }
 

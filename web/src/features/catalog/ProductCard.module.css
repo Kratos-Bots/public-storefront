@@ -7,6 +7,11 @@
   flex-direction: column;
   gap: 0.75rem;
   min-width: 0;
+  box-shadow: var(--sf-card-shadow);
+}
+
+.card:hover {
+  box-shadow: var(--sf-card-shadow-hover);
 }
 
 .media {
@@ -44,7 +49,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-card-radius);
 }
 
 .link:hover {
@@ -98,6 +103,13 @@
   padding-top: 0.35rem;
 }
 
+/* Templates pad their cards, so a narrow two-up phone tile can't always fit a long label
+   ("Out of stock", "Pre-order") beside the price: the foot wraps, price above, button right.
+   Scoped off modern, whose committed pixel baseline keeps the unwrapped row. */
+:global(:root:not([data-sf-template="modern"])) .foot {
+  flex-wrap: wrap;
+}
+
 .prices {
   display: flex;
   flex-direction: column;
@@ -129,4 +141,5 @@
   position: relative;
   z-index: 1;
   flex: none;
+  margin-left: auto;
 }

@@ -8,6 +8,8 @@ jobs:
     timeout-minutes: 20
     concurrency: { group: "release-${{ github.ref }}", cancel-in-progress: false }
     permissions: { contents: write }
+    env:
+      TEMPLATES_DEPLOY_KEY: ${{ secrets.TEMPLATES_DEPLOY_KEY }}
     steps:
       - run: echo "$GITHUB_REF_NAME" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$' || { echo "tag must look like v1.2.3 or v1.2.3-rc.1"; exit 1; }
       - uses: actions/checkout@v4
@@ -20,6 +22,17 @@ jobs:
             web/package-lock.json
       - run: npm ci
       - run: npm --prefix web ci
+      - name: Load template deploy key
+        if: env.TEMPLATES_DEPLOY_KEY != ''
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+          eval "$(ssh-agent -s)"
+          echo "$TEMPLATES_DEPLOY_KEY" | tr -d '\r' | ssh-add -
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> "$GITHUB_ENV"
+          echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> "$GITHUB_ENV"
+      - name: Fetch imported templates
+        run: node scripts/fetch-templates.mjs
       - run: npm test
       - run: npm run build
       - name: Bundle worker

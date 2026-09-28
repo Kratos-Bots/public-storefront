@@ -18,7 +18,10 @@ export interface AuthCardProps {
  */
 export function AuthCard({ name, icon, dim, children }: AuthCardProps) {
   return (
-    <section className={dim ? `${classes.card} ${classes.dim} ${FADE}` : `${classes.card} ${FADE}`}>
+    <section
+      className={dim ? `${classes.card} ${classes.dim} ${FADE}` : `${classes.card} ${FADE}`}
+      data-sf-part="card"
+    >
       <header className={classes.channel}>
         {icon ? <span className={classes.mark}>{icon}</span> : null}
         <h2 className={classes.name}>{name}</h2>

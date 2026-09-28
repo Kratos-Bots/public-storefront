@@ -35,7 +35,7 @@ export function ProductCard({ product, eager = false, hasSiblingImages = true, i
   const hasImage = product.imageProductId !== null;
 
   return (
-    <article className={`${classes.card} ${anim.className}`} style={anim.style}>
+    <article className={`${classes.card} ${anim.className}`} style={anim.style} data-sf-part="product-card">
       {hasImage ? (
         <ProductImage
           productId={product.imageProductId!}
@@ -69,7 +69,7 @@ export function ProductCard({ product, eager = false, hasSiblingImages = true, i
 
         <div className={classes.foot}>
           <p className={classes.prices}>
-            <span className={classes.price}>{formatMoney(product.price, currency)}</span>
+            <span className={classes.price} data-sf-part="price">{formatMoney(product.price, currency)}</span>
             {best ? (
               <span className={classes.tier}>
                 {best.minQuantity}+ {formatMoney(best.price, currency)}

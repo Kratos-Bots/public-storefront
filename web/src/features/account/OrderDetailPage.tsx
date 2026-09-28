@@ -217,6 +217,8 @@ export function OrderDetailPage() {
             href={data.publicUrl}
             target="_blank"
             rel="noopener noreferrer"
+            data-sf-part="button"
+            data-variant="filled"
           >
             Open order page
           </a>

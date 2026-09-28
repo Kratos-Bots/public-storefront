@@ -22,7 +22,7 @@
       ],
       "upsellProductIds": [102],
       "excludedFromFreeShipping": false,
-      "imageProductId": null,
+      "imageProductId": 101,
       "provenance": "Pressed in batch 24-B, tested by an independent lab."
     },
     {
@@ -44,7 +44,7 @@
       "pricingTiers": [],
       "upsellProductIds": [],
       "excludedFromFreeShipping": false,
-      "imageProductId": null,
+      "imageProductId": 102,
       "provenance": null
     },
     {
@@ -66,7 +66,7 @@
       "pricingTiers": [],
       "upsellProductIds": [],
       "excludedFromFreeShipping": false,
-      "imageProductId": null,
+      "imageProductId": 103,
       "provenance": null
     },
     {
@@ -88,7 +88,7 @@
       "pricingTiers": [],
       "upsellProductIds": [],
       "excludedFromFreeShipping": false,
-      "imageProductId": null,
+      "imageProductId": 104,
       "provenance": null
     },
     {
@@ -110,7 +110,7 @@
       "pricingTiers": [],
       "upsellProductIds": [],
       "excludedFromFreeShipping": false,
-      "imageProductId": null,
+      "imageProductId": 105,
       "provenance": null
     },
     {
@@ -132,7 +132,7 @@
       "pricingTiers": [],
       "upsellProductIds": [],
       "excludedFromFreeShipping": false,
-      "imageProductId": null,
+      "imageProductId": 106,
       "provenance": null
     }
   ],

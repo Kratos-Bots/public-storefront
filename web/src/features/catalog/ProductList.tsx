@@ -14,6 +14,7 @@ import { EmptyState } from '@/components/EmptyState.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { useShellSearch } from '@/layouts/shell-context.ts';
 import { FADE } from '@/lib/motion.ts';
+import { Slot } from '@/templates/runtime.tsx';
 import type { Product } from '@/types/catalog.ts';
 import classes from '@/features/catalog/ProductList.module.css';
 
@@ -23,7 +24,7 @@ import classes from '@/features/catalog/ProductList.module.css';
  * `CatalogPage` for `layout: 'menu'`.
  */
 export function ProductList() {
-  const { welcomeMessage } = useSettings();
+  const { brand, welcomeMessage } = useSettings();
   const { search, setSearch } = useShellSearch();
   const { categorySlug } = useParams();
   const [params, setParams] = useSearchParams();
@@ -81,8 +82,9 @@ export function ProductList() {
           is the whole answer, so nothing goes above it. */}
       {unknownCategory ? null : (
         <>
+          <Slot name="SectionLabel" index={1} title={active ? active.name : 'All products'} level="page" />
           <div className={classes.head}>
-            <h1 className={classes.title}>{active ? active.name : 'All products'}</h1>
+            <h1 className={classes.title} data-sf-part="page-title">{active ? active.name : 'All products'}</h1>
             {/* How much of the list you are looking at — a fraction only once it is one. */}
             <p className={classes.tally}>
               <span className={classes.shown}>{visible.length}</span>
@@ -96,7 +98,7 @@ export function ProductList() {
               )}
             </p>
           </div>
-          {welcomeMessage ? <p className={classes.welcome}>{welcomeMessage}</p> : null}
+          <Slot name="CatalogHero" surface="list" tagline={brand.tagline} welcomeMessage={welcomeMessage} productCount={products.length} categoryCount={tree.length} />
         </>
       )}
 
@@ -131,14 +133,15 @@ export function ProductList() {
           />
         )
       ) : (
-        groups.map((group) => (
+        groups.map((group, groupIndex) => (
           <section
             key={group.key}
             className={classes.group}
             role="group"
             aria-labelledby={`group-${group.key}`}
           >
-            <h2 id={`group-${group.key}`} className={classes.groupHead}>
+            <Slot name="SectionLabel" index={groupIndex + 1} title={group.label} level="group" />
+            <h2 id={`group-${group.key}`} className={classes.groupHead} data-sf-part="group-title">
               <span className={classes.groupName}>
                 {glyphs ? (
                   <span className={classes.glyph} aria-hidden>

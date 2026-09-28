@@ -66,13 +66,27 @@ export function OrderPlacedPage() {
       {whatsapp || telegram ? (
         <div className={classes.actions}>
           {whatsapp ? (
-            <a href={whatsapp} target="_blank" rel="noopener noreferrer" className={classes.cta}>
+            <a
+              href={whatsapp}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={classes.cta}
+              data-sf-part="button"
+              data-variant="filled"
+            >
               <WhatsAppIcon size={16} />
               Pay via WhatsApp
             </a>
           ) : null}
           {telegram ? (
-            <a href={telegram} target="_blank" rel="noopener noreferrer" className={classes.cta}>
+            <a
+              href={telegram}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={classes.cta}
+              data-sf-part="button"
+              data-variant="filled"
+            >
               <TelegramIcon size={16} />
               Pay via Telegram
             </a>

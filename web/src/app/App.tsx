@@ -5,7 +5,9 @@ import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/reac
 import { RouterProvider } from 'react-router';
 import { SETTINGS_KEY, useSettings, useSettingsQuery } from '@/app/settings.ts';
 import { closedGate, isClosedExemptPath } from '@/app/closed-gate.ts';
-import { applyDocumentTheme, buildMantineTheme, THEME_STORAGE_KEY } from '@/app/theme-bridge.ts';
+import { buildMantineTheme, lastKnownBrandName } from '@/app/theme-bridge.ts';
+import { useDocumentTheme } from '@/app/document-theme.ts';
+import { TemplateProvider } from '@/templates/runtime.tsx';
 import { router } from '@/app/router.tsx';
 import { EmptyState } from '@/components/EmptyState.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
@@ -22,18 +24,6 @@ const queryClient = new QueryClient({
 
 /** How often a closed shop re-checks whether it has reopened (spec §6). */
 export const CLOSED_POLL_MS = 60_000;
-
-/** The last brand name we saw, so the retry screen can still name the shop. */
-function lastKnownBrandName(): string | null {
-  try {
-    const raw = localStorage.getItem(THEME_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as { brand?: { name?: unknown } };
-    return typeof parsed.brand?.name === 'string' && parsed.brand.name ? parsed.brand.name : null;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * The scheme the first-paint script restored, so the boot screens match the palette
@@ -95,21 +85,17 @@ export function ClosedGate({ children }: { children: ReactNode }) {
 }
 
 function ThemedApp({ settings }: { settings: StorefrontSettings }) {
-  const { theme, brand } = settings;
-  // One key for both objects: the document only needs re-theming when their content
-  // changes, not on every settings refetch.
-  const themeKey = JSON.stringify({ theme, brand });
-  useEffect(() => {
-    applyDocumentTheme(theme, brand);
-  }, [themeKey]);
-  const mantineTheme = useMemo(() => buildMantineTheme(theme), [theme]);
+  const resolved = useDocumentTheme(settings);
+  const mantineTheme = useMemo(() => buildMantineTheme(resolved), [resolved]);
 
   return (
-    <MantineProvider theme={mantineTheme} forceColorScheme={theme.scheme}>
-      <Notifications position="top-center" />
-      <ClosedGate>
-        <RouterProvider router={router} />
-      </ClosedGate>
+    <MantineProvider theme={mantineTheme} forceColorScheme={resolved.scheme}>
+      <TemplateProvider resolved={resolved} fallback={<PageSkeleton />}>
+        <Notifications position="top-center" />
+        <ClosedGate>
+          <RouterProvider router={router} />
+        </ClosedGate>
+      </TemplateProvider>
     </MantineProvider>
   );
 }

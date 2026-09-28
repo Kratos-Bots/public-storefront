@@ -36,7 +36,7 @@
   border: 0;
   background: none;
   color: var(--sf-muted);
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-card-radius);
   cursor: pointer;
 }
 
@@ -186,6 +186,6 @@
 
 .shape {
   display: block;
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-card-radius);
   background: var(--sf-surface-2);
 }

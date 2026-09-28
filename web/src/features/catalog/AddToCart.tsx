@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useSettings } from '@/app/settings.ts';
 import { addToCart } from '@/features/cart/useServerCart.ts';
 import { deriveStockStatus, formatMoney, resolveUnitPrice } from '@/lib/format.ts';
+import { Slot } from '@/templates/runtime.tsx';
 import type { Product } from '@/types/catalog.ts';
 import classes from '@/features/catalog/AddToCart.module.css';
 
@@ -74,10 +75,14 @@ export function AddToCart({ product, size = 'lg', showPrice = true }: AddToCartP
       disabled={disabled}
       onClick={onClick}
       aria-label={showPrice ? undefined : `${label} — ${product.displayName}`}
+      data-sf-part="button"
+      data-variant="filled"
     >
       <span className={classes.label} aria-live="polite">
         {label}
       </span>
+      {/* The detail page / menu sheet CTA (lg) is a main CTA; the card quick-add (sm) is not. */}
+      <Slot name="ButtonAdornment" variant="primary" cta={size === 'lg'} />
     </button>
   );
 }

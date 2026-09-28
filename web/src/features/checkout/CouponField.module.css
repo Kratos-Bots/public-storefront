@@ -26,7 +26,7 @@
   min-height: 44px;
   padding: 0 0.75rem;
   border: 1px solid var(--sf-line-strong);
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-card-radius);
   background: var(--sf-bg-deep);
   color: var(--sf-text);
   font-family: var(--sf-font-mono);
@@ -57,7 +57,7 @@
   min-height: 44px;
   padding: 0 0.9rem;
   border: 1px solid var(--sf-line-strong);
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-card-radius);
   background: transparent;
   color: var(--sf-text);
   font-family: var(--sf-font-mono);
@@ -92,7 +92,7 @@
   padding: 0.5rem 0.75rem;
   border: 1px solid var(--sf-line-strong);
   border-left: 2px solid var(--sf-success);
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-card-radius);
   background: var(--sf-bg-deep);
 }
 

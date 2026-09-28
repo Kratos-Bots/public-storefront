@@ -1,13 +1,13 @@
+import type { SVGProps } from 'react';
+
 /**
  * Inline SVG glyphs for the shell chrome. Hairline strokes with square caps to
  * match the chassis' rule-and-micro-caps idiom; every glyph inherits
  * `currentColor` so colour always comes from a `--sf-*` token on the parent.
  */
-interface GlyphProps {
-  size?: number;
-}
+export type GlyphProps = { size?: number | string } & Omit<SVGProps<SVGSVGElement>, 'width' | 'height'>;
 
-function stroke(size: number) {
+function stroke(size: number | string) {
   return {
     width: size,
     height: size,
@@ -131,10 +131,10 @@ export function RotateIcon({ size = 13 }: GlyphProps) {
   );
 }
 
-/** "This opens somewhere else" — pinned to links that leave the shop. */
-export function ArrowUpRightIcon({ size = 13 }: GlyphProps) {
+/** "This opens somewhere else" — pinned to links that leave the shop. Extra SVG props (className, data-*) pass through. */
+export function ArrowUpRightIcon({ size = 13, ...rest }: GlyphProps) {
   return (
-    <svg {...stroke(size)}>
+    <svg {...stroke(size)} {...rest}>
       <path d="M7 17 17 7" />
       <path d="M8 7h9v9" />
     </svg>

@@ -54,7 +54,7 @@ export function PaymentSection({ order, reference, accessKey }: PaymentSectionPr
       {payment.canPay ? <Deadline payBy={payment.payBy} /> : null}
 
       {payment.canPay && !active ? (
-        <section className={`${classes.card} ${classes.cardAction}`} aria-label="Payment">
+        <section className={`${classes.card} ${classes.cardAction}`} aria-label="Payment" data-sf-part="card">
           <p className={`${classes.cardEyebrow} ${classes.cardEyebrowAction}`}>Payment required</p>
           <h2 className={classes.cardTitle}>Choose how to pay {total}</h2>
           <MethodPicker order={order} reference={reference} accessKey={accessKey} />
@@ -62,7 +62,7 @@ export function PaymentSection({ order, reference, accessKey }: PaymentSectionPr
       ) : null}
 
       {payment.canPay && active?.kind === 'gateway' && !changing ? (
-        <section className={`${classes.card} ${classes.cardAction}`} aria-label="Payment">
+        <section className={`${classes.card} ${classes.cardAction}`} aria-label="Payment" data-sf-part="card">
           <div className={classes.cardHead}>
             <div className={classes.cardHeadBody}>
               <p className={`${classes.cardEyebrow} ${classes.cardEyebrowAction}`}>Payment required</p>
@@ -72,7 +72,14 @@ export function PaymentSection({ order, reference, accessKey }: PaymentSectionPr
             <span className={classes.pill}>Awaiting payment</span>
           </div>
           {active.checkoutUrl ? (
-            <a className={classes.cta} href={active.checkoutUrl} target="_blank" rel="noopener">
+            <a
+              className={classes.cta}
+              href={active.checkoutUrl}
+              target="_blank"
+              rel="noopener"
+              data-sf-part="button"
+              data-variant="filled"
+            >
               Open secure checkout
               <ArrowUpRightIcon size={12} />
             </a>
@@ -85,7 +92,7 @@ export function PaymentSection({ order, reference, accessKey }: PaymentSectionPr
       ) : null}
 
       {payment.canPay && active?.kind === 'other' && !changing ? (
-        <section className={classes.card} aria-label="Payment">
+        <section className={classes.card} aria-label="Payment" data-sf-part="card">
           <p className={classes.cardEyebrow}>Payment pending</p>
           <h2 className={classes.cardTitle}>We&rsquo;re waiting on your payment</h2>
           <p className={classes.cardNote}>
@@ -141,7 +148,7 @@ function ChangeMethod({
         </span>
       </button>
       {open ? (
-        <div className={`${classes.card} ${classes.disclosurePanel}`}>
+        <div className={`${classes.card} ${classes.disclosurePanel}`} data-sf-part="card">
           <MethodPicker
             order={order}
             reference={reference}

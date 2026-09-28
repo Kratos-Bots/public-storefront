@@ -80,6 +80,7 @@ export function CryptoPaymentCard({ payment, reference, accessKey, currency }: C
     <section
       className={`${state === 'awaiting' ? `${classes.card} ${classes.cardAction}` : classes.card} ${FADE}`}
       aria-label="Crypto payment"
+      data-sf-part="card"
     >
       <div className={classes.cardHead}>
         <div className={classes.cardHeadBody}>

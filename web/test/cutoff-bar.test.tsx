@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
 import type { Cutoffs, DayKey, StorefrontSettings } from '@/types/settings.ts';
@@ -28,7 +28,10 @@ function mount(cutoffs: Cutoffs, serverTime = '2026-08-23T10:48:00.000Z') {
 
 const rail = () => screen.queryByRole('region', { name: /dispatch cut-off/i });
 
-afterEach(cleanup);
+// The server clock offset is computed against Date.now(); freeze it at the mocked serverTime so a
+// millisecond tick between mount and assertion can't straddle a minute boundary ("4h 11m left").
+beforeEach(() => { vi.useFakeTimers({ now: Date.parse('2026-08-23T10:48:00Z'), toFake: ['Date'] }); });
+afterEach(() => { cleanup(); vi.useRealTimers(); });
 
 describe('CutoffBar', () => {
   it('announces the cut-off time and what it buys', () => {

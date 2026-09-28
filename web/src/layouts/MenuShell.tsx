@@ -15,11 +15,12 @@ import { CartDrawer } from '@/features/cart/CartDrawer.tsx';
 import { MobileCartBar, useMobileCartBar } from '@/features/cart/MobileCartBar.tsx';
 import { SearchField } from '@/layouts/SearchField.tsx';
 import type { ShellSearchContext } from '@/layouts/shell-context.ts';
+import { Slot } from '@/templates/runtime.tsx';
 import classes from '@/layouts/MenuShell.module.css';
 
 /** The dense shell: one compact bar, a narrow list column, contact strip at the foot of the catalog. */
 export function MenuShell() {
-  const { brand, features } = useSettings();
+  const { brand, features, supportLinks } = useSettings();
   const loggedIn = useSessionStore(selectIsLoggedIn);
   const cartCount = useCartStore(selectCount);
   const openPanel = useUiStore((s) => s.open);
@@ -38,10 +39,12 @@ export function MenuShell() {
   // in the chat menu this layout is ported from.
   const barShowing = useMobileCartBar();
   const showContact = onCatalog && !barShowing && !(features.wholesale && cartCount > 0);
+  const hasChat = !!(brand.links.whatsapp || brand.links.telegram);
 
   return (
     <div className={barShowing ? `${classes.shell} ${classes.withBar}` : classes.shell}>
-      <header className={classes.bar}>
+      <Slot name="TopBar" />
+      <header className={classes.bar} data-sf-part="header">
         <div className={classes.barInner}>
           <Link to="/" className={classes.home} aria-label={`${brand.name} — home`}>
             <Brand size="sm" />
@@ -79,7 +82,7 @@ export function MenuShell() {
                 aria-label={`Cart, ${cartCount} item${cartCount === 1 ? '' : 's'}`}
               >
                 <BagIcon size={17} />
-                {cartCount > 0 ? <span className={classes.count}>{cartCount}</span> : null}
+                {cartCount > 0 ? <span className={classes.count} data-sf-part="badge">{cartCount}</span> : null}
               </Link>
             ) : null}
           </div>
@@ -89,11 +92,12 @@ export function MenuShell() {
       <NoticeBanners />
       <CutoffBar />
 
-      <main className={classes.main}>
+      <main className={classes.main} data-sf-part="main">
         <Suspense fallback={<PageSkeleton inline />}>
           <Outlet context={outletContext} />
         </Suspense>
       </main>
+      <Slot name="Footer" supportLinks={supportLinks} hasChat={hasChat} />
 
       {showContact ? <ContactLinks variant="strip" /> : null}
 
@@ -105,6 +109,8 @@ export function MenuShell() {
       ) : null}
 
       {features.accounts ? <LoginModal /> : null}
+
+      <Slot name="Overlay" />
     </div>
   );
 }

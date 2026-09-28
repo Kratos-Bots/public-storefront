@@ -16,7 +16,12 @@ export interface Features {
   layout: LayoutKind; ordering: boolean; guestCheckout: boolean; accounts: boolean;
   verify: boolean; tracking: boolean; wholesale: boolean; upsell: boolean;
 }
+export type TemplateOptionValue = boolean | string;
 export interface Theme {
+  /** Absent on backends older than the template engine — resolves to 'modern'. */
+  template?: string;
+  preset?: string | null;
+  options?: Record<string, TemplateOptionValue>;
   scheme: 'dark' | 'light';
   colors: { primary: string; bg: string; surface: string; text: string; muted: string; success: string; warn: string; danger: string };
   fonts: { heading: string | null; body: string | null; mono: string | null };

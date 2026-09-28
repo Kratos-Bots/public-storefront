@@ -30,7 +30,7 @@
   padding-right: 0.25rem;
   color: var(--sf-text);
   text-decoration: none;
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-card-radius);
 }
 
 .view:focus-visible {
@@ -74,7 +74,7 @@
   margin-left: auto;
   padding: 0 1.25rem;
   border: 0;
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-btn-radius);
   background: var(--sf-primary);
   color: var(--sf-bg);
   font-family: var(--sf-font-mono);

@@ -28,7 +28,7 @@ export function ShipmentCard({ shipment, index, count }: ShipmentCardProps) {
   const dates = [shipped && `Shipped ${shipped}`, delivered && `Delivered ${delivered}`].filter(Boolean);
 
   return (
-    <section className={`${classes.card} ${FADE}`} aria-label={eyebrow}>
+    <section className={`${classes.card} ${FADE}`} aria-label={eyebrow} data-sf-part="card">
       <div className={classes.cardHead}>
         <div className={classes.cardHeadBody}>
           <p className={classes.cardEyebrow}>{eyebrow}</p>

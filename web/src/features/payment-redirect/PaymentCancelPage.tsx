@@ -39,11 +39,13 @@ export function PaymentCancelPage() {
           <Link
             to={`/order/${encodeURIComponent(saved.reference)}/${encodeURIComponent(saved.accessKey)}`}
             className={classes.cta}
+            data-sf-part="button"
+            data-variant="filled"
           >
             Return to your order
           </Link>
         ) : (
-          <Link to="/" className={classes.cta}>
+          <Link to="/" className={classes.cta} data-sf-part="button" data-variant="filled">
             Back to shop
           </Link>
         )}

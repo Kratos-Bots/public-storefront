@@ -4,6 +4,10 @@
 body {
   min-height: 100dvh;
   background-color: var(--sf-bg);
+}
+/* The two-layer ground — a glow at the top, a vignette at the foot. A template with
+   chassis 'flat' paints its own ground (or none). */
+:root:not([data-sf-chassis="flat"]) body {
   background-image:
     radial-gradient(ellipse 80% 60% at 50% 0%, color-mix(in srgb, var(--sf-surface-3) 35%, transparent), transparent 65%),
     radial-gradient(ellipse 60% 40% at 50% 100%, color-mix(in srgb, var(--sf-bg-deep) 50%, transparent), transparent 70%);
@@ -31,4 +35,17 @@ body {
   background: color-mix(in srgb, var(--sf-bg) 80%, transparent);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
+}
+
+/* tokens.glass = 'off': frosted chrome turns solid. Covers the sticky bars (.glass/.glass-soft,
+   composed into module classes) and Mantine's modal/drawer overlay. */
+:root[data-sf-glass="off"] .glass,
+:root[data-sf-glass="off"] .glass-soft {
+  background: var(--sf-bg);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+:root[data-sf-glass="off"] .mantine-Overlay-root {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
