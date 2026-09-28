@@ -142,12 +142,12 @@ plugin) — an invalid **modern** manifest fails the build outright; any other i
 *skipped* at runtime (one `console.warn`) but still fails `npm run build`, so it never reaches a
 release.
 
-### Limits (match the backend's catalog schema)
+### Limits (at least as strict as the backend's catalog schema)
 
 A manifest that satisfies `validateManifest` but exceeds the backend's own caps (`storefront-templates.ts`
 in `ecommerce-backend`, which parses each release's `templates.json`) would otherwise pass the
-storefront's build and then get silently dropped when the admin ingests the catalog — so both
-sides enforce the same numbers:
+storefront's build and then get silently dropped when the admin ingests the catalog — so the
+storefront enforces every one of the backend's numbers, and is stricter where noted:
 
 | Field | Limit |
 |---|---|
@@ -155,10 +155,18 @@ sides enforce the same numbers:
 | `description` | ≤ 500 characters |
 | `author` | ≤ 100 characters |
 | `version` | ≤ 40 characters |
+| `schemes` | 1–2 entries, `dark` and/or `light`, no duplicates |
+| `presets` | 1–20 entries |
+| preset `name` | ≤ 60 characters |
+| `editable.colors` | colour keys, no duplicates (so ≤ 8) |
+| `editable.fonts` / `.radius` / `.density` | booleans (required) |
 | `options` | ≤ 30 entries |
+| option `label` | 1–80 characters |
+| option `help` | optional; a string of ≤ 200 characters |
 | select `choices` | 1–20 entries |
+| select choice `value` / `label` | 1–100 / 1–80 characters |
 | text `maxLength` | 1–100 |
-| `FontSpec.weights` | 1–9 values, each 100–900 in steps of 100 |
+| `FontSpec.weights` | 1–9 values; storefront stricter: 100–900 step 100; backend accepts 100–1000 |
 | `id` / preset `id` / `defaultPreset` | `/^[a-z0-9-]{1,40}$/` |
 | option `key` | `/^[a-zA-Z0-9_-]{1,40}$/` |
 | font `family` | `/^[A-Za-z0-9 ]{1,50}$/` |
@@ -537,9 +545,12 @@ before it's trusted, removing the folder again on any failure):
   TypeScript compiler API, not a regex, so formatting/comments/template-literal specifiers can't
   hide one) — including `import.meta.glob`/`globEager` and a `new URL(x, import.meta.url)` whose
   path leaves the folder
-- a forbidden reference in any `.css` file — see below
+- a relative import carrying a query string, unless it is exactly `?inline`, `?url` or `?raw` on a
+  `.css` path (a query can switch Vite's loader, or make it read `./x.foo?.css` as CSS)
+- a forbidden reference in any `.css` file (extension matched case-insensitively) — see below
 - any stylesheet that isn't plain `.css` (`.pcss`, `.postcss`, `.sss`, `.scss`, `.sass`, `.less`,
   `.styl`, `.stylus` are all rejected; Vite would run these through their own preprocessors)
+- any CSS module (`*.module.css`), as a file or as an import — templates ship plain global `.css`
 
 **CSS references.** Built on a hand-written CSS Syntax Level 3 tokenizer
 (`scripts/css-tokenizer.mjs`) rather than decode-then-regex, because decoding CSS escapes before
@@ -551,9 +562,11 @@ rewriter is a regex, so it rewrites those too) — is allowed only when it is `d
 or a `./`/`../` path that resolves *inside* the template folder. Everything else is rejected: a bare
 or aliased specifier (`@/…`, `~pkg`, `img/a.png`), any other scheme, `//host`, root-absolute `/…`.
 A *candidate* — a string that isn't itself a reference but could be substituted into one (inside a
-custom-property value, a `var()` fallback, or nested under a URL-taking function) — is flagged only
-when it looks like it would actually leave the template (a network scheme, `@/`/`~`, or an escaping
-relative path); ordinary text (`content`, `font-family`, attribute selectors) is never inspected.
+custom-property value, a `var()` fallback, anywhere inside an `@property` block (its `initial-value`),
+or nested under a URL-taking function) — is flagged only when it looks like it would actually leave
+the template (a network scheme, `@/`/`~`, or an escaping relative path); ordinary text (`content`,
+`font-family`, attribute selectors) is never inspected. Not checked at all: bare strings passed to
+other (non-URL-taking) functions, and `blob:` / `mailto:` style candidates.
 
 This is a **guardrail for reviewed first-party code, not a sandbox** — see [§10](#10-trust).
 
