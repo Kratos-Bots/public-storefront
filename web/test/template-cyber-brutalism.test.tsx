@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, render, screen } from '@testing-library/react';
 import type { DayKey, StorefrontSettings } from '@/types/settings.ts';
 import type { OptionValues, SlotBaseProps } from '@/templates/contract.ts';
+import { cssRules, readFromTest, splitSelectors } from './helpers/css-rules.ts';
 
 const h = vi.hoisted(() => ({
   settings: {} as StorefrontSettings,
@@ -239,5 +240,117 @@ describe('CyberButtonAdornment', () => {
     expect(container.querySelector('svg.cb-arrow')).toHaveAttribute('data-cta', 'false');
     rerender(<CyberButtonAdornment {...base()} variant="secondary" cta={false} />);
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+describe('cyber-brutalism template.css', () => {
+  const css = readFromTest('../src/templates/cyber-brutalism/template.css');
+  const rules = cssRules(css);
+  const ROOT = ':root[data-sf-template="cyber-brutalism"]';
+  const find = (sel: string, atRule: string | null = null) => rules.find((r) => r.selector === sel && r.atRule === atRule);
+
+  it('scopes every selector under the template root', () => {
+    expect(rules.length).toBeGreaterThan(40);
+    for (const r of rules) for (const s of splitSelectors(r.selector)) expect(s.startsWith(ROOT), s).toBe(true);
+  });
+
+  it('has zero radius everywhere except the round status dot', () => {
+    for (const r of rules) {
+      for (const m of r.body.matchAll(/border-radius:\s*([^;]+);/g)) {
+        if (r.selector.includes('.cb-status__dot')) continue;
+        expect(m[1]!.trim(), r.selector).toBe('0');
+      }
+    }
+  });
+
+  it('casts no shadows and blurs nothing', () => {
+    for (const r of rules) {
+      for (const m of r.body.matchAll(/box-shadow:\s*([^;]+);/g)) expect(m[1]!.trim(), r.selector).toBe('none');
+      for (const m of r.body.matchAll(/backdrop-filter:\s*([^;]+);/g)) expect(m[1]!.trim(), r.selector).toBe('none');
+    }
+    // blur removal itself comes from tokens.glass = 'off' (asserted in the manifest test) — the stylesheet
+    // must not re-target the glass classes
+    expect(css).not.toMatch(/\.glass|\.mantine-Overlay-root/);
+  });
+
+  it('runs every animation only when motion is welcome', () => {
+    for (const r of rules) {
+      const m = /animation:\s*([^;]+);/.exec(r.body);
+      if (m && m[1]!.trim() !== 'none') expect(r.atRule ?? '', r.selector).toContain('prefers-reduced-motion: no-preference');
+    }
+  });
+
+  it('collapses the wide system readouts under 480px and keeps the bar one line', () => {
+    const narrow = rules.filter((r) => r.atRule?.includes('max-width: 29.99em'));
+    expect(narrow.some((r) => r.selector.includes('[data-cb-wide]') && r.body.includes('display: none'))).toBe(true);
+    expect(narrow.some((r) => r.selector.includes('.cb-cross') && r.body.includes('display: none'))).toBe(true);
+    const bar = find(`${ROOT} .cb-sysbar`)!;
+    expect(bar.body).toContain('white-space: nowrap');
+    expect(bar.body).toContain('overflow: hidden');
+  });
+
+  it('restyles the phone cart bar as the status strip, ink-and-acid in light mode', () => {
+    expect(find(`${ROOT} [data-sf-part="cart-bar"]`)!.body).toContain('background: var(--cb-bar-bg)');
+    const light = find(`${ROOT}[data-mantine-color-scheme="light"]`)!;
+    expect(light.body).toContain('--cb-bar-bg: #111111');
+    expect(light.body).toContain('--cb-bar-fg: var(--cb-signal)');
+  });
+
+  it('keeps the strip line inside the shell 76px cart-bar clearance and leaves a blocked checkout looking disabled', () => {
+    // bar = 12px strip + .inner (0.5rem + 48px checkout + 0.5rem) = 76px; the brutalist border-top is 0
+    expect(find(`${ROOT} [data-sf-part="cart-bar"]`)!.body).toContain('padding-top: 12px');
+    const line = find(`${ROOT} [data-sf-part="cart-bar"]::before`)!.body;
+    expect(line).toContain('position: absolute');
+    expect(line).toContain('height: 12px');
+    const btn = rules.filter((r) => r.selector.includes('[data-sf-part="cart-bar"] [data-sf-part="button"]'));
+    expect(btn.length).toBeGreaterThan(0);
+    for (const r of btn) for (const s of splitSelectors(r.selector)) expect(s, s).toContain(':not(:disabled)');
+  });
+
+  it('leaves the native solid fill alone (no fill/text/border on filled buttons, no disabled override)', () => {
+    for (const r of rules.filter((x) => x.selector.includes('[data-variant="filled"]'))) {
+      expect(r.body, r.selector).not.toMatch(/(^|;)\s*(background|color|border)(-color)?\s*:/);
+    }
+    expect(rules.some((r) => r.selector.includes(':is(:disabled'))).toBe(false);
+  });
+
+  it('gives every button part the locked button voice (custom CTAs hard-code theirs)', () => {
+    const b = find(`${ROOT} [data-sf-part="button"]`)!.body;
+    for (const v of ['font-family: var(--sf-btn-font)', 'text-transform: var(--sf-btn-transform)', 'font-weight: var(--sf-btn-weight)', 'letter-spacing: var(--sf-btn-tracking-md)']) expect(b).toContain(v);
+  });
+
+  it('applies the heading tokens (uppercase 700) to every page and group title', () => {
+    for (const part of ['page-title', 'group-title']) {
+      const b = find(`${ROOT} [data-sf-part="${part}"]`)!.body;
+      for (const v of ['var(--sf-heading-weight)', 'var(--sf-heading-tracking)', 'var(--sf-heading-transform)']) expect(b, part).toContain(v);
+    }
+  });
+
+  it('pads product cards so content never touches the 1px border', () => {
+    expect(find(`${ROOT} [data-sf-part="product-card"]`)!.body).toMatch(/padding:/);
+  });
+
+  it('keeps footer crosshairs inside the footer (no horizontal overflow at 768/1280)', () => {
+    expect(find(`${ROOT} .cb-footer`)!.body).toContain('overflow-x: clip');
+    for (const at of ['tr', 'br']) expect(find(`${ROOT} .cb-footer__inner > .cb-cross[data-at="${at}"]`)!.body, at).toContain('right: 0');
+    for (const at of ['tl', 'bl']) expect(find(`${ROOT} .cb-footer__inner > .cb-cross[data-at="${at}"]`)!.body, at).toContain('left: 0');
+  });
+
+  it('keeps overlays tap-transparent and footer links 44px tall', () => {
+    expect(find(`${ROOT} .cb-frame`)!.body).toContain('pointer-events: none');
+    expect(find(`${ROOT} .cb-cross`)!.body).toContain('pointer-events: none');
+    expect(find(`${ROOT} .cb-footer__link`)!.body).toContain('min-height: 44px');
+    expect(find(`${ROOT} [data-sf-slot="Footer"] a`)!.body).toContain('min-height: 44px');
+  });
+
+  it('gives footer links a 44px tap target in both dimensions (controller ruling)', () => {
+    expect(find(`${ROOT} .cb-footer__link`)!.body).toContain('min-width: 44px');
+    expect(find(`${ROOT} [data-sf-slot="Footer"] a`)!.body).toContain('min-width: 44px');
+  });
+
+  it('wraps a long brand name instead of widening the page, at the spec size', () => {
+    const name = find(`${ROOT} .cb-hero__name`)!.body;
+    expect(name).toContain('overflow-wrap: anywhere');
+    expect(name).toContain('font-size: clamp(2.5rem, 10vw, 7rem)'); // spec §4.3
   });
 });
