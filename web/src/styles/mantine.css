@@ -60,6 +60,10 @@ textarea.sf-input { border: 1px solid var(--sf-line-strong); padding: 0.75rem; }
 :root[data-sf-input="box"] :not([data-with-left-section]) > .sf-input { padding-inline-start: 0.75rem; }
 :root[data-sf-input="box"] :not([data-with-right-section]) > .sf-input { padding-inline-end: 0.75rem; }
 :root[data-sf-input="box"] .sf-input:focus, :root[data-sf-input="box"] .sf-input:focus-within { border-color: var(--sf-primary); }
+/* The box variant's own `border` shorthand outranks the underline's plain
+   `border-bottom-color`, so the invalid state needs its own, equally-specific
+   override or a boxed input never shows red. */
+:root[data-sf-input="box"] .sf-input[data-error] { border-color: var(--sf-danger); }
 
 /* Shared fill recipes (tokens.button.fill) for every filled button — Mantine Buttons and the
    custom module buttons (AddToCart, CartSummary checkout, MobileCartBar checkout, CheckoutPage .next), which

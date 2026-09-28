@@ -67,7 +67,7 @@
   margin-left: auto;
   min-height: 44px;
   padding: 0 0.9rem;
-  border-radius: var(--sf-card-radius);
+  border-radius: var(--sf-btn-radius);
   background: var(--sf-primary);
   color: var(--sf-bg);
   font-family: var(--sf-font-mono);

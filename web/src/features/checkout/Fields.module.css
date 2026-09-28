@@ -63,8 +63,19 @@
   background: color-mix(in srgb, var(--sf-surface) 40%, transparent);
   padding-inline: 0.75rem;
 }
+/* The select's own gutter for the caret drawn in `.caret` outranks the box
+   variant's flat inline padding, or the picked value runs under the arrow. */
+:global(:root[data-sf-input="box"]) .select {
+  padding-right: 2rem;
+}
 :global(:root[data-sf-input="box"]) .input:focus {
   border-color: var(--sf-primary);
+}
+/* The box variant's own `border` shorthand outranks the underline's plain
+   `border-color`, so the invalid state needs its own, equally-specific
+   override or a boxed field never shows red. */
+:global(:root[data-sf-input="box"]) .input[aria-invalid='true'] {
+  border-color: var(--sf-danger);
 }
 
 .textarea {

@@ -142,7 +142,13 @@ export function VerifyPage() {
           />
         </div>
 
-        <button className={classes.submit} type="submit" disabled={status === 'pending'}>
+        <button
+          className={classes.submit}
+          type="submit"
+          disabled={status === 'pending'}
+          data-sf-part="button"
+          data-variant="filled"
+        >
           {status === 'pending' ? 'Checking…' : 'Verify product'}
         </button>
       </form>

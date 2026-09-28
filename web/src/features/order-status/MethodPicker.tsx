@@ -216,6 +216,8 @@ export function MethodPicker({ order, reference, accessKey, onSelected }: Method
                         network: combo.network,
                       })
                     }
+                    data-sf-part="button"
+                    data-variant="filled"
                   >
                     {busy
                       ? 'Preparing payment…'

@@ -72,7 +72,14 @@ export function PaymentSection({ order, reference, accessKey }: PaymentSectionPr
             <span className={classes.pill}>Awaiting payment</span>
           </div>
           {active.checkoutUrl ? (
-            <a className={classes.cta} href={active.checkoutUrl} target="_blank" rel="noopener">
+            <a
+              className={classes.cta}
+              href={active.checkoutUrl}
+              target="_blank"
+              rel="noopener"
+              data-sf-part="button"
+              data-variant="filled"
+            >
               Open secure checkout
               <ArrowUpRightIcon size={12} />
             </a>

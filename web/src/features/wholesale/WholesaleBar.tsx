@@ -34,7 +34,7 @@ export function WholesaleBar() {
             {lines} {lines === 1 ? 'line' : 'lines'} · {units} {units === 1 ? 'unit' : 'units'}
           </span>
         </span>
-        <span className={classes.cta} aria-hidden>
+        <span className={classes.cta} aria-hidden data-sf-part="button" data-variant="filled">
           View basket
           <ChevronIcon size={12} />
         </span>

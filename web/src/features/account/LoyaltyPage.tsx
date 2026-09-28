@@ -189,6 +189,8 @@ export function LoyaltyPage() {
                 className={`${classes.cta} ${classes.ctaFlush}`}
                 onClick={() => mutation.mutate(confirming.id)}
                 disabled={mutation.isPending}
+                data-sf-part="button"
+                data-variant="filled"
               >
                 {mutation.isPending ? 'Redeeming' : 'Redeem'}
               </button>

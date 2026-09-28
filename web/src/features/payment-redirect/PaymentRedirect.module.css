@@ -187,7 +187,7 @@
   min-height: 48px;
   padding: 0 1rem;
   border: 1px solid var(--sf-primary);
-  border-radius: var(--sf-card-radius);
+  border-radius: var(--sf-btn-radius);
   background: var(--sf-primary);
   color: var(--sf-bg);
   font-family: var(--sf-font-mono);
