@@ -619,8 +619,11 @@ preview mode, so nothing a preview ever applies is written to `localStorage`.
 | Id | Schemes | Presets | Locked | Options |
 |---|---|---|---|---|
 | `modern` | dark, light | Default | nothing | — |
-| `dark-luxury` | dark | Gold (default), Silver, Emerald, Crimson | fonts, radius, button style | `grain`, `orb`, `statusBadge` (all on) |
-| `cyber-brutalism` | dark, light | Acid Dark (default), Purple Light | fonts, radius (always square), button style | `systemBar`, `statusBar`, `crosshairs` (on), `nodeLabel` (text, `NODE_01`, ≤ 24) |
+| `dark-luxury` | dark | Gold (default), Silver, Emerald, Crimson | fonts, radius | `grain`, `orb`, `statusBadge` (all on) |
+| `cyber-brutalism` | dark, light | Acid Dark (default), Purple Light | fonts, radius (always square) | `systemBar`, `statusBar`, `crosshairs` (on), `nodeLabel` (text, `NODE_01`, ≤ 24) |
+
+Button style (fill, case, weight, tracking) comes from each template's tokens and is never
+admin-editable, for any template.
 
 Both non-default templates read real store data for their decoration: the ordering flag
 (luxury footer badge, brutalist readout), the catalogue size (hero badge, `SKU:`), and the

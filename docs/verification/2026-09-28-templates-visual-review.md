@@ -139,6 +139,9 @@ part-way down the page, and the menu shell's inner scroller cutting the list sho
   - What: `ProductList` renders the `SectionLabel` slot before `.head`, which owns the `1.25rem` top
     padding, so the label touches the bar above it and the gap opens between label and title
     instead. The storefront grid is fine.
+  - Rule broken: the skill's eyebrow-above-heading pattern (the label belongs to the title below
+    it, not to the bar above) and the page's own vertical rhythm, where the storefront grid keeps
+    that gap.
   - Suggested fix: give `[data-sf-part="section-label"]` a top margin inside the list, or move the
     slot inside `.head`.
 - **N6 (minor): brutalism menu shows `/01` twice.**
