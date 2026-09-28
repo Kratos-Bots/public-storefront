@@ -123,7 +123,7 @@ export function ProductGrid() {
               ))}
             </ul>
           ) : (
-            <div className={classes.grid}>
+            <div className={classes.grid} data-sf-part="product-grid">
               {visible.map((product, i) => (
                 <ProductCard key={product.id} product={product} eager={i < EAGER_CARDS} hasSiblingImages index={i} />
               ))}

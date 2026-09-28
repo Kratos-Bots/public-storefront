@@ -8,6 +8,7 @@ import { presetTheme } from './template-theme.ts';
 const TARGETS = [
   { template: 'dark-luxury', preset: 'gold' },
   { template: 'cyber-brutalism', preset: 'acid-dark' },
+  { template: 'bento', preset: 'tech-dark' },
 ];
 
 test.describe('template previews', () => {

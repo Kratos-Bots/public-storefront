@@ -17,6 +17,8 @@ export const TEMPLATE_CASES: TemplateCase[] = [
   { template: 'dark-luxury', preset: 'gold', tapTargets: true },
   { template: 'cyber-brutalism', preset: 'acid-dark', tapTargets: true },
   { template: 'cyber-brutalism', preset: 'purple-light', tapTargets: true },
+  { template: 'bento', preset: 'tech-dark', tapTargets: true },
+  { template: 'bento', preset: 'fashion-light', tapTargets: true },
 ];
 
 const WIDTHS = [360, 390, 768, 1280] as const;
