@@ -1,0 +1,3 @@
+/* Modern is the base look: every rule it needs lives in the shared styles and
+   the default slots. This file exists so modern loads through the same path as
+   every other template. Scope any future rule under :root[data-sf-template="modern"]. */
