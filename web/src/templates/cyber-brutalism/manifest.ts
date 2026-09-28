@@ -40,4 +40,5 @@ export default defineTemplate({
     { key: 'crosshairs', type: 'boolean', label: 'Crosshair marks', help: '+ marks at the hero, footer and screen corners (hidden on small phones).', default: true },
     { key: 'nodeLabel', type: 'text', label: 'Node label', help: 'Shown as NODE: … in the system bar and footer.', default: 'NODE_01', maxLength: 24 },
   ],
+  preview: './preview.webp',
 });

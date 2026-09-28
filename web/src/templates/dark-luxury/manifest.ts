@@ -52,4 +52,5 @@ export default defineTemplate({
     { key: 'orb', type: 'boolean', label: 'Hero glow', help: 'One soft accent-coloured glow behind the catalogue intro.', default: true },
     { key: 'statusBadge', type: 'boolean', label: 'Ordering status badge', help: 'Shows [ACCEPTING ORDERS] or [ORDERING PAUSED] in the footer.', default: true },
   ],
+  preview: './preview.webp',
 });

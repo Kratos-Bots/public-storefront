@@ -354,3 +354,10 @@ describe('cyber-brutalism template.css', () => {
     expect(name).toContain('font-size: clamp(2.5rem, 10vw, 7rem)'); // spec §4.3
   });
 });
+
+describe('cyber-brutalism preview', () => {
+  it('declares the committed preview image', () => {
+    expect(manifest.preview).toBe('./preview.webp');
+    expect(readFromTest('../src/templates/cyber-brutalism/preview.webp').length).toBeGreaterThan(1000);
+  });
+});

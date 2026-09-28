@@ -157,6 +157,17 @@ function maskTxid(txid: string): string {
   return t.length > 14 ? `${t.slice(0, 6)}…${t.slice(-6)}` : t;
 }
 
+const GOOGLE_FONTS = /^https:\/\/fonts\.(googleapis|gstatic)\.com\//;
+
+/**
+ * What the catch-all route does with a request that leaves the dev server. Default: abort
+ * (hermetic). E2E_REAL_FONTS=1 lets the two Google Fonts hosts through so template
+ * screenshots and preview images use the real faces; nothing else is ever let out.
+ */
+export function externalRequestPolicy(url: string, env: Record<string, string | undefined> = process.env): 'continue' | 'abort' {
+  return env.E2E_REAL_FONTS === '1' && GOOGLE_FONTS.test(url) ? 'continue' : 'abort';
+}
+
 async function envelope(route: Route, data: unknown, meta?: unknown): Promise<void> {
   await route.fulfill({
     status: 200,
@@ -228,9 +239,10 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
   }
 
   // Nothing outside the dev server and the (shimmed) challenge script should
-  // ever be reached — a real request would hang the run.
+  // ever be reached — a real request would hang the run. Only exception: Google
+  // Fonts when E2E_REAL_FONTS=1 (see externalRequestPolicy).
   await page.route(/^https?:\/\/(?!localhost:5199|challenges\.cloudflare\.com)/, (route) =>
-    route.abort(),
+    externalRequestPolicy(route.request().url()) === 'continue' ? route.continue() : route.abort(),
   );
 
   await page.route('https://challenges.cloudflare.com/**', (route) =>

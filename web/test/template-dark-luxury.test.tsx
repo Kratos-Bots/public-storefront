@@ -270,3 +270,10 @@ describe('dark-luxury template.css', () => {
     expect(find(`${ROOT} [data-sf-slot="Footer"] a`)!.body).toContain('min-height: 44px');
   });
 });
+
+describe('dark-luxury preview', () => {
+  it('declares the committed preview image', () => {
+    expect(manifest.preview).toBe('./preview.webp');
+    expect(readFromTest('../src/templates/dark-luxury/preview.webp').length).toBeGreaterThan(1000);
+  });
+});
