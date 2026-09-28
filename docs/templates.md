@@ -335,7 +335,7 @@ export interface SlotBaseProps {
   brand: Brand;
   options: OptionValues;   // resolved: manifest defaults ⊕ stored values
   scheme: Scheme;
-  layout: LayoutKind;      // 'storefront' | 'menu'
+  layout: LayoutKind;      // 'storefront' | 'menu' | 'webapp' (always 'webapp' inside Telegram)
   tokens: TemplateTokens;
 }
 /** Above the header, first child of both shells (not on the chromeless order page). */
@@ -352,7 +352,7 @@ export interface CatalogHeroProps extends SlotBaseProps {
 }
 /** Eyebrow above a heading. page = the catalogue page title (index 1); group = a menu-layout category section (1-based). */
 export interface SectionLabelProps extends SlotBaseProps { index: number; title: string; level: 'page' | 'group' }
-/** Fixed decoration layer, last child of all three shells. Must be pointer-events: none. */
+/** Fixed decoration layer, last child of every shell. Must be pointer-events: none. */
 export type OverlayProps = SlotBaseProps;
 /** Trailing adornment inside primary buttons. cta = the page's single main call to action.
  *  busy (optional) = the action behind this button is in flight (e.g. checkout's Place order
@@ -378,8 +378,8 @@ export type SlotChildren = ReactNode;
 
 | Slot | Renders | Modern's default |
 |---|---|---|
-| `TopBar` | first child of `StorefrontShell` and `MenuShell` (not on `Chromeless`) | nothing |
-| `Footer` | `StorefrontShell`: replaces the footer. `MenuShell`: after `<main>`, before the contact strip | today's three-column footer + colophon (storefront layout only — nothing in the menu layout) |
+| `TopBar` | first child of `StorefrontShell` and `MenuShell` (not on `Chromeless`, not in `WebAppShell` — Telegram owns the top of the screen there) | nothing |
+| `Footer` | `StorefrontShell`: replaces the footer. `MenuShell`: after `<main>`, before the contact strip | today's three-column footer + colophon (storefront layout only — nothing in the menu layout); `WebAppShell`: not rendered |
 | `CatalogHero` | catalogue intro (grid/list/wholesale) | today's hero/welcome markup per surface |
 | `SectionLabel` | eyebrow above a heading | nothing for `label.style === 'plain'`; `[Title]` for `'bracket'`; `/01` (1-based, zero-padded) for `'numbered'` groups, and `/00` for the page label, so the first group keeps `/01` — mono, 11px, `--sf-primary`, `data-sf-part="section-label"` |
 | `Overlay` | fixed decoration layer, last child of all three shells (must be `pointer-events: none`) | nothing |
@@ -390,6 +390,12 @@ A template-provided slot component is wrapped by `<Slot>` (`runtime.tsx`) in a
 `ButtonAdornment` (it renders inside `<button>`, where only phrasing content is valid) and a
 `<div>` for every other slot; a default slot renders unwrapped, so modern's DOM is byte-identical
 to before templates existed.
+
+The `webapp` layout (Telegram Mini App, or any store that picks it for browsers) renders no
+`TopBar` and no `Footer`. It does render `CatalogHero`, `SectionLabel`, `Overlay` and
+`ButtonAdornment`, exactly as the menu layout does. A template that branches on `layout` should
+treat `'webapp'` like `'menu'` unless it has a reason not to; external templates built before
+this value existed keep working because every built-in check is `layout !== 'storefront'`.
 
 **Cart-bar merge pattern.** The mobile cart bar root (`MobileCartBar`) carries
 `data-sf-part="cart-bar"`. A template restyles it from its own `template.css`

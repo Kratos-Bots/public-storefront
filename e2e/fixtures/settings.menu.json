@@ -77,5 +77,6 @@
     "density": "comfortable",
     "customCss": ""
   },
-  "turnstile": { "siteKey": "1x00000000000000000000AA" }
+  "turnstile": { "siteKey": "1x00000000000000000000AA" },
+  "telegramWebApp": { "mode": "off" }
 }

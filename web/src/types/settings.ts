@@ -11,7 +11,7 @@ export interface Brand {
   logoUrl: string | null; faviconUrl: string | null; logoHeight: number;
   links: { whatsapp: string | null; telegram: string | null };
 }
-export type LayoutKind = 'storefront' | 'menu';
+export type LayoutKind = 'storefront' | 'menu' | 'webapp';
 export interface Features {
   layout: LayoutKind; ordering: boolean; guestCheckout: boolean; accounts: boolean;
   verify: boolean; tracking: boolean; wholesale: boolean; upsell: boolean;
@@ -35,4 +35,6 @@ export interface StorefrontSettings {
   currency: string; supportLinks: SupportLink[];
   login: { whatsapp: { available: boolean; number: string | null }; telegram: { available: boolean; botUsername: string | null } };
   brand: Brand; features: Features; theme: Theme; turnstile: { siteKey: string } | null;
+  /** The bot's effective web app mode. Absent on backends older than the Mini App. */
+  telegramWebApp?: { mode: 'off' | 'beta' | 'forced' };
 }
