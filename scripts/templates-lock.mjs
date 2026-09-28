@@ -1,4 +1,4 @@
-import { RESERVED_DIRS, SHA_RE, TEMPLATE_ID_RE as ID_RE } from './template-rules.mjs';
+import { REPO_RE, RESERVED_DIRS, SHA_RE, TEMPLATE_ID_RE as ID_RE } from './template-rules.mjs';
 
 const RESERVED = new Set(RESERVED_DIRS);
 
@@ -19,6 +19,8 @@ export function parseLock(text, builtIns) {
     if (seen.has(e.id)) errors.push(`${where}: duplicate id "${e.id}"`);
     seen.add(e.id);
     if (typeof e.repo !== 'string' || e.repo.trim() === '') errors.push(`${where}: repo is required`);
+    else if (e.repo.startsWith('-')) errors.push(`${where}: repo must not start with "-" (git would read it as an option)`);
+    else if (!REPO_RE.test(e.repo)) errors.push(`${where}: repo must be an https://, ssh://, file:// or git@host:path URL`);
     if (typeof e.ref !== 'string' || !SHA_RE.test(e.ref)) errors.push(`${where}: ref must be a full 40-char commit SHA (branches and tags are not allowed)`);
     entries.push({ id: e.id, repo: e.repo, ref: e.ref });
   });

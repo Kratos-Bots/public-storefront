@@ -12,3 +12,12 @@ export const SHA_RE = /^[0-9a-f]{40}$/;
 export const CONTRACT_SPECIFIERS = Object.freeze(['@/templates/contract', '@/templates/contract.ts']);
 export const DEFINE_SPECIFIERS = Object.freeze(['@/templates/define', '@/templates/define.ts']);
 export const ALLOWED_PACKAGES = Object.freeze(['react', 'react/jsx-runtime']);
+/**
+ * Accepted `templates.lock.json` repo forms: https://, ssh://, file:// (local fixtures/tests only)
+ * or scp-style `user@host:path`. A bare string is never accepted — in particular nothing starting
+ * with '-' — because it is passed as a positional argument to `git fetch`, and a value like
+ * `--upload-pack=...` is otherwise interpreted by git as an option (arbitrary command execution).
+ */
+export const REPO_RE = /^(?:https:\/\/|ssh:\/\/|file:\/\/)\S+$|^[A-Za-z0-9][\w.-]*@[\w.-]+:\S+$/;
+/** Every source file family a template may ship (.js/.jsx/.ts/.tsx/.mjs/.cjs/.mts/.cts, incl. .d.ts). */
+export const SOURCE_FILE_RE = /\.(m|c)?[jt]sx?$/;
