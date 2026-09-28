@@ -3,13 +3,14 @@ import { generateColors } from '@mantine/colors-generator';
 import type { Brand } from '@/types/settings.ts';
 import type { ButtonFill } from '@/templates/define.ts';
 import type { ResolvedFonts, ResolvedTheme } from '@/templates/resolve.ts';
-import { tokenVariables } from '@/templates/tokens.ts';
+import { rootAttributes, tokenVariables } from '@/templates/tokens.ts';
 import { mediaUrl } from '@/lib/media-url.ts';
 
 /** The storefront's own face, self-hosted via @fontsource-variable/inter (imported in main.tsx). */
 export const INTER = '"Inter Variable", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 const SYSTEM_MONO = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
-export const THEME_STORAGE_KEY = 'sf-theme-v1';
+export const THEME_STORAGE_KEY = 'sf-theme-v2';
+export const LEGACY_THEME_STORAGE_KEY = 'sf-theme-v1';
 
 function family(name: string | null | undefined, fallback: string): string { return name ? `"${name}", ${fallback}` : fallback; }
 
@@ -157,11 +158,55 @@ function upsert<T extends HTMLElement>(selector: string, create: () => T): T {
   const el = create(); document.head.appendChild(el); return el;
 }
 
-export function applyDocumentTheme(theme: ResolvedTheme, brand: Brand): void {
+/** What the first-paint script replays. Pre-computed so the script needs no theme logic. */
+export interface StoredThemePayload {
+  v: 2;
+  templateId: string;
+  vars: Record<string, string>;
+  attrs: Record<string, string>;
+  title: string;
+  brandName: string;
+  fontsHref: string | null;
+}
+
+export function readStoredTheme(): StoredThemePayload | null {
+  try {
+    const raw = localStorage.getItem(THEME_STORAGE_KEY);
+    if (!raw) return null;
+    const p = JSON.parse(raw) as Partial<StoredThemePayload> | null;
+    return p && p.v === 2 && typeof p.templateId === 'string' && p.vars && p.attrs ? (p as StoredThemePayload) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function readStoredTemplateId(): string | null {
+  return readStoredTheme()?.templateId ?? null;
+}
+
+/** The last brand name we saw, so the retry screen can still name the shop. */
+export function lastKnownBrandName(): string | null {
+  const v2 = readStoredTheme()?.brandName;
+  if (v2) return v2;
+  try {
+    const raw = localStorage.getItem(LEGACY_THEME_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { brand?: { name?: unknown } };
+    return typeof parsed.brand?.name === 'string' && parsed.brand.name ? parsed.brand.name : null;
+  } catch {
+    return null;
+  }
+}
+
+export function applyDocumentTheme(theme: ResolvedTheme, brand: Brand, opts: { persist?: boolean } = {}): void {
+  const persist = opts.persist ?? true;
+  let payload: StoredThemePayload | null = null;
   try {
     const root = document.documentElement;
-    for (const [k, v] of Object.entries(cssVariablesFor(theme, brand))) root.style.setProperty(k, v);
-    root.setAttribute('data-mantine-color-scheme', theme.scheme);
+    const vars = cssVariablesFor(theme, brand);
+    for (const [k, v] of Object.entries(vars)) root.style.setProperty(k, v);
+    const attrs = rootAttributes(theme);
+    for (const [k, v] of Object.entries(attrs)) root.setAttribute(k, v);
     root.style.colorScheme = theme.scheme;
 
     const href = googleFontsHref(theme.fonts);
@@ -176,9 +221,12 @@ export function applyDocumentTheme(theme: ResolvedTheme, brand: Brand): void {
     upsert<HTMLMetaElement>('meta[name="theme-color"]', () => Object.assign(document.createElement('meta'), { name: 'theme-color' })).content = theme.colors.bg;
     const fav = mediaUrl(brand.faviconUrl) ?? '/favicon.svg';
     upsert<HTMLLinkElement>('link[rel="icon"]', () => Object.assign(document.createElement('link'), { rel: 'icon' })).href = fav;
+
+    payload = { v: 2, templateId: theme.templateId, vars, attrs, title: brand.title, brandName: brand.name, fontsHref: href };
   } catch {
     /* never throw — first-paint / theme sync must not break the app */
   }
-
-  try { localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify({ theme, brand })); } catch { /* private mode */ }
+  if (persist && payload) {
+    try { localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(payload)); } catch { /* private mode */ }
+  }
 }

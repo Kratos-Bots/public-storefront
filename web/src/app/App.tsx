@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/reac
 import { RouterProvider } from 'react-router';
 import { SETTINGS_KEY, useSettings, useSettingsQuery } from '@/app/settings.ts';
 import { closedGate, isClosedExemptPath } from '@/app/closed-gate.ts';
-import { applyDocumentTheme, buildMantineTheme, THEME_STORAGE_KEY } from '@/app/theme-bridge.ts';
+import { applyDocumentTheme, buildMantineTheme, lastKnownBrandName } from '@/app/theme-bridge.ts';
 import { resolveTheme } from '@/templates/resolve.ts';
 import { lookupManifest } from '@/templates/registry.ts';
 import { router } from '@/app/router.tsx';
@@ -24,18 +24,6 @@ const queryClient = new QueryClient({
 
 /** How often a closed shop re-checks whether it has reopened (spec §6). */
 export const CLOSED_POLL_MS = 60_000;
-
-/** The last brand name we saw, so the retry screen can still name the shop. */
-function lastKnownBrandName(): string | null {
-  try {
-    const raw = localStorage.getItem(THEME_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as { brand?: { name?: unknown } };
-    return typeof parsed.brand?.name === 'string' && parsed.brand.name ? parsed.brand.name : null;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * The scheme the first-paint script restored, so the boot screens match the palette

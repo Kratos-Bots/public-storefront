@@ -431,9 +431,9 @@ test.describe('theme first paint', () => {
     await page.goto('/');
     await expect(page.getByRole('heading', { name: 'All products', level: 1 })).toBeVisible();
 
-    const stored = await page.evaluate(() => window.localStorage.getItem('sf-theme-v1'));
+    const stored = await page.evaluate(() => window.localStorage.getItem('sf-theme-v2'));
     expect(stored).toBeTruthy();
-    expect(JSON.parse(stored!).theme.colors.bg).toBe('#0b0c0e');
+    expect(JSON.parse(stored!).vars['--sf-bg']).toBe('#0b0c0e');
 
     // Reload with the app's entry module blocked: whatever paints now is the
     // inline bootstrap in index.html, not React.
