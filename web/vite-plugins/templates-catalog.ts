@@ -1,6 +1,7 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { createServer, type Plugin, type ViteDevServer } from 'vite';
+import { missingPreviewErrors } from './missing-previews.ts';
 
 interface CatalogBuild {
   json: unknown;
@@ -49,10 +50,15 @@ export function templatesCatalog(): Plugin {
       } finally {
         await server.close();
       }
+      built.errors.push(...missingPreviewErrors(root, built.previews));
       if (built.errors.length > 0) this.error(`Invalid templates:\n  ${built.errors.join('\n  ')}`);
     },
     closeBundle() {
-      if (command !== 'build' || !built) return;
+      // Rollup still calls closeBundle for cleanup after a plugin's buildStart hook has already
+      // failed the build via this.error — bail out here too, or a missing preview (or any other
+      // caught error) would still blow up copyFileSync with a raw ENOENT that masks the clean
+      // "Invalid templates:" message already reported above.
+      if (command !== 'build' || !built || built.errors.length > 0) return;
       writeFileSync(path.join(outDir, 'templates.json'), JSON.stringify(built.json, null, 2) + '\n');
       for (const p of built.previews) {
         const target = path.join(outDir, p.target);

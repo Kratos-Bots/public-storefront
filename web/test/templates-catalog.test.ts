@@ -3,6 +3,7 @@ import { buildCatalog, toCatalog } from '@/templates/catalog.ts';
 import { defineTemplate } from '@/templates/define.ts';
 import modern from '@/templates/modern/manifest.ts';
 import type { TemplateEntry } from '@/templates/registry.ts';
+import { missingPreviewErrors } from '../vite-plugins/missing-previews.ts';
 
 const entry = (id: string, name: string, builtIn: boolean, preview?: string): TemplateEntry => ({
   manifest: defineTemplate({ ...modern, id, name, ...(preview ? { preview } : {}) }),
@@ -30,5 +31,30 @@ describe('templates catalog', () => {
     const { json, errors } = buildCatalog();
     expect(errors).toEqual([]);
     expect(json.templates[0]!.id).toBe('modern');
+  });
+});
+
+describe('missingPreviewErrors', () => {
+  const previews = [
+    { id: 'beta', sourceRel: 'beta/preview.png', target: 'templates/beta/preview.png' },
+    { id: 'alpha', sourceRel: 'external/alpha/preview.webp', target: 'templates/alpha/preview.webp' },
+  ];
+
+  it('reports each preview whose source file is missing, naming the template id and path', () => {
+    const exists = (file: string) => file.replace(/\\/g, '/').endsWith('beta/preview.png');
+    expect(missingPreviewErrors('/repo/web', previews, exists)).toEqual([
+      'alpha: preview file not found: src/templates/external/alpha/preview.webp',
+    ]);
+  });
+
+  it('reports nothing when every preview file exists', () => {
+    expect(missingPreviewErrors('/repo/web', previews, () => true)).toEqual([]);
+  });
+
+  it('reports every preview when none exist', () => {
+    expect(missingPreviewErrors('/repo/web', previews, () => false)).toEqual([
+      'beta: preview file not found: src/templates/beta/preview.png',
+      'alpha: preview file not found: src/templates/external/alpha/preview.webp',
+    ]);
   });
 });
