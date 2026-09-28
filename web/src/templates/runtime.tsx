@@ -28,8 +28,12 @@ export function prefetchTemplate(id: string | null): void {
   void loadTemplateModule(id).catch(() => undefined);
 }
 
+/** The one "no custom slots" object — a stable identity, so the context value (and every consumer
+ *  memoised on it) doesn't churn while a template loads, times out or fails. */
+const EMPTY_SLOTS: TemplateSlots = {};
+
 interface TemplateContextValue { resolved: ResolvedTheme | null; slots: TemplateSlots }
-const NO_PROVIDER: TemplateContextValue = { resolved: null, slots: {} };
+const NO_PROVIDER: TemplateContextValue = { resolved: null, slots: EMPTY_SLOTS };
 const TemplateContext = createContext<TemplateContextValue>(NO_PROVIDER);
 
 /** Outside a provider (component tests) this is "modern, no custom slots". */
@@ -53,7 +57,7 @@ export function TemplateProvider({ resolved, fallback, children, load = loadTemp
   const id = resolved.templateId;
   const [loaded, setLoaded] = useState<{ id: string; slots: TemplateSlots } | null>(() => {
     const mod = peek(id);
-    return mod ? { id, slots: mod.slots ?? {} } : null;
+    return mod ? { id, slots: mod.slots ?? EMPTY_SLOTS } : null;
   });
   // Once true, the provider has rendered real children at least once — the first chunk
   // resolved, failed, or timed out. A *later* template switch (settings refetch, admin
@@ -74,21 +78,21 @@ export function TemplateProvider({ resolved, fallback, children, load = loadTemp
     const already = peekRef.current(id);
     if (already) {
       everMounted.current = true;
-      setLoaded((cur) => (cur?.id === id ? cur : { id, slots: already.slots ?? {} }));
+      setLoaded((cur) => (cur?.id === id ? cur : { id, slots: already.slots ?? EMPTY_SLOTS }));
       return;
     }
     let live = true;
     const timer = setTimeout(() => {
       console.warn(`[templates] "${id}" is taking longer than ${timeoutMs}ms — rendering default slots for now`);
       everMounted.current = true;
-      if (live) setLoaded((cur) => (cur?.id === id ? cur : { id, slots: {} }));
+      if (live) setLoaded((cur) => (cur?.id === id ? cur : { id, slots: EMPTY_SLOTS }));
     }, timeoutMs);
     loadRef.current(id).then(
-      (mod) => { everMounted.current = true; if (live) setLoaded({ id, slots: mod.slots ?? {} }); },
+      (mod) => { everMounted.current = true; if (live) setLoaded({ id, slots: mod.slots ?? EMPTY_SLOTS }); },
       (err: unknown) => {
         console.warn(`[templates] "${id}" failed to load — rendering default slots`, err);
         everMounted.current = true;
-        if (live) setLoaded({ id, slots: {} });
+        if (live) setLoaded({ id, slots: EMPTY_SLOTS });
       },
     ).finally(() => clearTimeout(timer));
     return () => { live = false; clearTimeout(timer); };
@@ -97,7 +101,7 @@ export function TemplateProvider({ resolved, fallback, children, load = loadTemp
   // The previous template's slots never carry over to a new id — its CSS/root attributes
   // may not even be loaded yet, so a stale slot component could render against the wrong
   // tokens. Default slots stand in until the new id's own module lands.
-  const slots = loaded?.id === id ? loaded.slots : {};
+  const slots = loaded?.id === id ? loaded.slots : EMPTY_SLOTS;
   const value = useMemo(() => ({ resolved, slots }), [resolved, slots]);
   if (!everMounted.current && (!loaded || loaded.id !== id)) return <>{fallback}</>;
   return <TemplateContext.Provider value={value}>{children}</TemplateContext.Provider>;
@@ -108,8 +112,9 @@ type SlotOwnProps<N extends SlotName> = Omit<SlotPropsMap[N], keyof SlotBaseProp
 /**
  * Renders the active template's component for `name`, or modern's default. Base props
  * (brand, options, scheme, layout, tokens) are filled in here. A template's component is
- * wrapped in a display:contents div carrying data-sf-slot — defaults are not, so modern's
- * DOM is unchanged.
+ * wrapped in a display:contents element carrying data-sf-slot — defaults are not, so modern's
+ * DOM is unchanged. The wrapper is a <span> for ButtonAdornment (it renders inside <button>,
+ * where only phrasing content is valid) and a <div> for every other slot.
  */
 export function Slot<N extends SlotName>(props: { name: N } & SlotOwnProps<N>) {
   const { name, ...own } = props;
@@ -128,5 +133,6 @@ export function Slot<N extends SlotName>(props: { name: N } & SlotOwnProps<N>) {
   // (it only sees the union of every slot's props) — an `unknown` intermediate is TS's own
   // suggested escape hatch for a generic cast it can't verify structurally.
   const element = createElement(Component, { ...base, ...own } as unknown as SlotPropsMap[N]);
-  return custom ? <div data-sf-slot={name} style={{ display: 'contents' }}>{element}</div> : element;
+  if (!custom) return element;
+  return createElement(name === 'ButtonAdornment' ? 'span' : 'div', { 'data-sf-slot': name, style: { display: 'contents' } }, element);
 }

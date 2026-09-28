@@ -19,6 +19,6 @@ export function useDocumentTheme(settings: StorefrontSettings, win: Window = win
   useEffect(() => {
     // A preview frame must never overwrite the real visitor payload.
     applyDocumentTheme(resolved, brand, { persist: !isPreviewMode(win) });
-  }, [themeKey]);
+  }, [themeKey, win]);
   return resolved;
 }

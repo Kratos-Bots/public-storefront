@@ -46,4 +46,11 @@ describe('useDocumentTheme', () => {
     expect(document.getElementById('sf-custom-css')?.textContent).toBe('.saved{}');
     expect(localStorage.getItem(THEME_STORAGE_KEY)).toBeNull();
   });
+
+  it('re-applies when the window changes, so the persist decision follows the current window', () => {
+    const { rerender } = renderHook(({ win }) => useDocumentTheme(settings, win), { initialProps: { win: framedWindow('?sf-preview=1').win } });
+    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBeNull(); // preview frame: nothing persisted
+    rerender({ win: framedWindow('').win }); // same theme, no longer a preview frame
+    expect(JSON.parse(localStorage.getItem(THEME_STORAGE_KEY)!).vars['--sf-bg']).toBe('#0f3965');
+  });
 });

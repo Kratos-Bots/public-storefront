@@ -5,10 +5,10 @@ import type { StorefrontSettings } from '@/types/settings.ts';
 const state = vi.hoisted(() => ({ settings: {} as StorefrontSettings }));
 vi.mock('@/app/settings.ts', () => ({ useSettings: () => state.settings }));
 
-import { loadTemplateModule, Slot, TemplateProvider } from '@/templates/runtime.tsx';
+import { loadTemplateModule, Slot, TemplateProvider, useTemplateContext } from '@/templates/runtime.tsx';
 import { resolveTheme } from '@/templates/resolve.ts';
 import { getTemplate, lookupManifest } from '@/templates/registry.ts';
-import type { TemplateModule } from '@/templates/slots.ts';
+import type { TemplateModule, TemplateSlots } from '@/templates/slots.ts';
 import { ArrowUpRightIcon } from '@/templates/contract.ts';
 
 state.settings = {
@@ -164,6 +164,55 @@ describe('TemplateProvider template switch', () => {
     expect(screen.queryByText(/^top /)).toBeNull();
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('failed to load'), expect.anything());
     warn.mockRestore();
+  });
+});
+
+describe('TemplateProvider slot identity', () => {
+  // Consumers memoise on the context value; a fresh `{}` per render would churn every one of them.
+  const seen: TemplateSlots[] = [];
+  function Probe() { seen.push(useTemplateContext().slots); return null; }
+  afterEach(() => { seen.length = 0; });
+
+  it('keeps one stable empty slots object through the switch window and after a failed load', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const altResolved = { ...resolved, templateId: 'alt' };
+    let rejectAlt!: (err: Error) => void;
+    const load = (tid: string) => (tid === 'alt' ? new Promise<TemplateModule>((_r, rej) => { rejectAlt = rej; }) : Promise.resolve(custom));
+    const peek = (tid: string) => (tid === resolved.templateId ? custom : undefined);
+    const tree = (r: typeof resolved, n: number) => (
+      <TemplateProvider resolved={r} fallback={<p>loading</p>} load={load} peek={peek}><Probe key={n} /></TemplateProvider>
+    );
+    const { rerender } = render(tree(resolved, 0));
+    rerender(tree(altResolved, 0));
+    const during = seen.length;
+    rerender(tree(altResolved, 0));
+    expect(seen.length).toBeGreaterThan(during);
+    expect(seen[seen.length - 1]).toBe(seen[during - 1]); // same object across switch-window renders
+    await act(async () => rejectAlt(new Error('404')));
+    const afterFail = seen.length;
+    rerender(tree(altResolved, 0));
+    expect(seen[seen.length - 1]).toBe(seen[afterFail - 1]);
+    expect(seen[seen.length - 1]).toBe(seen[during - 1]); // failure path reuses the same empty object
+    warn.mockRestore();
+  });
+});
+
+describe('Slot wrapper element', () => {
+  it('wraps a template ButtonAdornment in a display:contents <span> (valid inside <button>), other slots in a <div>', () => {
+    const mod: TemplateModule = { slots: { ...custom.slots, ButtonAdornment: () => <i>adorn</i> } };
+    render(
+      <TemplateProvider resolved={resolved} fallback={<p>loading</p>} load={() => Promise.resolve(mod)} peek={() => mod}>
+        <button type="button"><Slot name="ButtonAdornment" variant="primary" cta /></button>
+        <Slot name="TopBar" />
+      </TemplateProvider>,
+    );
+    const adorn = screen.getByText('adorn').parentElement!;
+    expect(adorn.tagName).toBe('SPAN');
+    expect(adorn).toHaveAttribute('data-sf-slot', 'ButtonAdornment');
+    expect(adorn).toHaveStyle({ display: 'contents' });
+    const top = screen.getByText('top Acme storefront').parentElement!;
+    expect(top.tagName).toBe('DIV');
+    expect(top).toHaveAttribute('data-sf-slot', 'TopBar');
   });
 });
 

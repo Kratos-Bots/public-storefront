@@ -1,6 +1,6 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { createServer, type Plugin, type ViteDevServer } from 'vite';
+import { createServer, type AliasOptions, type Plugin, type ViteDevServer } from 'vite';
 import { missingPreviewErrors } from './missing-previews.ts';
 
 interface CatalogBuild {
@@ -24,6 +24,7 @@ async function loadCatalog(server: ViteDevServer): Promise<CatalogBuild> {
 export function templatesCatalog(): Plugin {
   let root = '';
   let outDir = '';
+  let alias: AliasOptions = [];
   let command: 'build' | 'serve' = 'serve';
   let built: CatalogBuild | null = null;
 
@@ -32,6 +33,7 @@ export function templatesCatalog(): Plugin {
     configResolved(config) {
       root = config.root;
       outDir = path.resolve(config.root, config.build.outDir);
+      alias = config.resolve.alias; // the nested SSR server resolves exactly like the app build
       command = config.command;
     },
     async buildStart() {
@@ -41,7 +43,7 @@ export function templatesCatalog(): Plugin {
         configFile: false,
         logLevel: 'silent',
         appType: 'custom',
-        resolve: { alias: { '@': path.join(root, 'src') } },
+        resolve: { alias },
         server: { middlewareMode: true, hmr: false, watch: null },
         optimizeDeps: { noDiscovery: true, include: [] },
       });
@@ -79,6 +81,7 @@ export function templatesCatalog(): Plugin {
         });
       }
       server.middlewares.use(async (req, res, next) => {
+        if (req.method !== 'GET' && req.method !== 'HEAD') { next(); return; }
         const url = (req.url ?? '').split('?')[0];
         try {
           if (url === '/templates.json') {
