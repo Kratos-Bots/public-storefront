@@ -14,6 +14,7 @@ import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { SearchField } from '@/layouts/SearchField.tsx';
 import { useShellSearch } from '@/layouts/shell-context.ts';
 import { FADE, rowAnim } from '@/lib/motion.ts';
+import { Slot } from '@/templates/runtime.tsx';
 import classes from '@/features/catalog/ProductGrid.module.css';
 
 /** How many cards load their image eagerly — the first two rows on a phone. */
@@ -61,23 +62,11 @@ export function ProductGrid() {
     );
   }
 
-  const hasHero = !!(brand.tagline || welcomeMessage);
   const query = search.trim();
 
   return (
     <div className={`${classes.page} ${FADE}`}>
-      {hasHero ? (
-        <section className={classes.hero} aria-label="About this shop">
-          <div className={classes.heroText}>
-            {brand.tagline ? <p className={classes.tagline}>{brand.tagline}</p> : null}
-            {welcomeMessage ? <p className={classes.welcome}>{welcomeMessage}</p> : null}
-          </div>
-          <p className={classes.stock}>
-            {products.length} products
-            {tree.length > 0 ? ` · ${tree.length} categories` : ''}
-          </p>
-        </section>
-      ) : null}
+      <Slot name="CatalogHero" surface="grid" tagline={brand.tagline} welcomeMessage={welcomeMessage} productCount={products.length} categoryCount={tree.length} />
 
       <SearchField className={classes.search} value={search} onChange={setSearch} />
 
@@ -85,6 +74,7 @@ export function ProductGrid() {
         <CategoryNav tree={tree} total={products.length} activeId={active?.id ?? null} />
 
         <div className={classes.column}>
+          <Slot name="SectionLabel" index={1} title={active ? active.name : 'All products'} level="page" />
           <div className={classes.head}>
             <h1 className={classes.title}>{active ? active.name : 'All products'}</h1>
             {/* Micro-caps, so the shopper's own query stays out of it — the field

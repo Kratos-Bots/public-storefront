@@ -37,6 +37,7 @@ import { PaymentStep } from '@/features/checkout/steps/PaymentStep.tsx';
 import { ReviewStep } from '@/features/checkout/steps/ReviewStep.tsx';
 import { DIAL_CODES } from '@/lib/dial-codes.ts';
 import { FADE } from '@/lib/motion.ts';
+import { Slot } from '@/templates/runtime.tsx';
 import classes from '@/features/checkout/CheckoutPage.module.css';
 
 const STEPS = [
@@ -698,10 +699,12 @@ export function CheckoutPage() {
                 ) : (
                   'Place order'
                 )}
+                <Slot name="ButtonAdornment" variant="primary" cta />
               </button>
             ) : (
               <button type="button" className={classes.next} onClick={next}>
                 Continue
+                <Slot name="ButtonAdornment" variant="primary" cta />
               </button>
             )}
           </div>

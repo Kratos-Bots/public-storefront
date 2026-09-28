@@ -8,6 +8,7 @@ import { closedGate, isClosedExemptPath } from '@/app/closed-gate.ts';
 import { applyDocumentTheme, buildMantineTheme, lastKnownBrandName } from '@/app/theme-bridge.ts';
 import { resolveTheme } from '@/templates/resolve.ts';
 import { lookupManifest } from '@/templates/registry.ts';
+import { TemplateProvider } from '@/templates/runtime.tsx';
 import { router } from '@/app/router.tsx';
 import { EmptyState } from '@/components/EmptyState.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
@@ -97,10 +98,12 @@ function ThemedApp({ settings }: { settings: StorefrontSettings }) {
 
   return (
     <MantineProvider theme={mantineTheme} forceColorScheme={resolved.scheme}>
-      <Notifications position="top-center" />
-      <ClosedGate>
-        <RouterProvider router={router} />
-      </ClosedGate>
+      <TemplateProvider resolved={resolved} fallback={<PageSkeleton />}>
+        <Notifications position="top-center" />
+        <ClosedGate>
+          <RouterProvider router={router} />
+        </ClosedGate>
+      </TemplateProvider>
     </MantineProvider>
   );
 }

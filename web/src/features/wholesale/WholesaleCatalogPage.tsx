@@ -13,6 +13,7 @@ import { EmptyState } from '@/components/EmptyState.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { SearchField } from '@/layouts/SearchField.tsx';
 import { useShellSearch } from '@/layouts/shell-context.ts';
+import { Slot } from '@/templates/runtime.tsx';
 import classes from '@/features/wholesale/WholesaleCatalogPage.module.css';
 
 /**
@@ -26,7 +27,7 @@ import classes from '@/features/wholesale/WholesaleCatalogPage.module.css';
  * and `bandRows` fills alternate runs. Search is the navigation.
  */
 export function WholesaleCatalogPage() {
-  const { features, welcomeMessage } = useSettings();
+  const { brand, features, welcomeMessage } = useSettings();
   const { search, setSearch } = useShellSearch();
   const { categorySlug } = useParams();
   const catalog = useCatalog();
@@ -105,6 +106,7 @@ export function WholesaleCatalogPage() {
 
   return (
     <div className={classes.page}>
+      <Slot name="SectionLabel" index={1} title={active ? active.name : 'Trade list'} level="page" />
       <div className={classes.head}>
         <h1 className={classes.title}>{active ? active.name : 'Trade list'}</h1>
         <p className={classes.tally}>
@@ -125,7 +127,7 @@ export function WholesaleCatalogPage() {
         ) : null}
       </div>
 
-      {welcomeMessage ? <p className={classes.welcome}>{welcomeMessage}</p> : null}
+      <Slot name="CatalogHero" surface="wholesale" tagline={brand.tagline} welcomeMessage={welcomeMessage} productCount={products.length} categoryCount={tree.length} />
 
       {ownSearch ? (
         <SearchField

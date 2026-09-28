@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { useSettings } from '@/app/settings.ts';
-import { formatCountdown, nextCutoff } from '@/lib/cutoffs.ts';
+import { type CSSProperties } from 'react';
+import { formatCountdown } from '@/lib/cutoffs.ts';
+import { useCutoffInfo } from '@/lib/server-clock.ts';
 import classes from '@/features/notices/CutoffBar.module.css';
 
 /** How long the meter takes to drain: the last 12 hours before a cut-off. */
@@ -20,26 +20,7 @@ const DAY_LABEL: Record<string, string> = {
  * real deadline. Renders nothing when no cut-off is scheduled.
  */
 export function CutoffBar() {
-  const { cutoffs, serverTime } = useSettings();
-
-  // Re-anchor the drift correction whenever a fresh settings response arrives.
-  const anchoredTo = useRef(serverTime);
-  const fetchedAt = useRef(Date.now());
-  if (anchoredTo.current !== serverTime) {
-    anchoredTo.current = serverTime;
-    fetchedAt.current = Date.now();
-  }
-
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 30_000);
-    return () => clearInterval(t);
-  }, []);
-
-  const next = useMemo(
-    () => nextCutoff(cutoffs, serverTime, fetchedAt.current, now),
-    [cutoffs, serverTime, now],
-  );
+  const { next } = useCutoffInfo();
   if (!next) return null;
 
   const urgent = next.msRemaining <= URGENT_MS;

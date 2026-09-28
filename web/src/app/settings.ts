@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchSettings } from '@/api/settings.ts';
 import { closedGate } from '@/app/closed-gate.ts';
+import { recordSettingsFetch } from '@/lib/settings-anchor.ts';
 import type { StorefrontSettings } from '@/types/settings.ts';
 
 export const SETTINGS_KEY = ['settings'] as const;
@@ -10,6 +11,7 @@ export function useSettingsQuery() {
     queryKey: SETTINGS_KEY,
     queryFn: async () => {
       const s = await fetchSettings();
+      recordSettingsFetch(s.serverTime);
       closedGate.getState().setClosed(!s.enabled);
       return s;
     },

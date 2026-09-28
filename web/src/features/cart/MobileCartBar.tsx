@@ -7,6 +7,7 @@ import { formatMoney } from '@/lib/format.ts';
 import { checkoutTarget } from '@/features/cart/checkout-target.ts';
 import { useServerCart } from '@/features/cart/useServerCart.ts';
 import { ChevronIcon } from '@/components/icons.tsx';
+import { Slot } from '@/templates/runtime.tsx';
 import classes from '@/features/cart/MobileCartBar.module.css';
 
 /** Mantine's `md` breakpoint — above it the cart is a drawer and needs no band. */
@@ -73,10 +74,12 @@ export function MobileCartBar() {
         {blocked ? (
           <button type="button" className={classes.checkout} disabled>
             Checkout
+            <Slot name="ButtonAdornment" variant="primary" cta />
           </button>
         ) : (
           <Link to={checkoutTarget(loggedIn, features.guestCheckout)} className={classes.checkout}>
             Checkout
+            <Slot name="ButtonAdornment" variant="primary" cta />
           </Link>
         )}
       </div>

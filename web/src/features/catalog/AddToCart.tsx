@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useSettings } from '@/app/settings.ts';
 import { addToCart } from '@/features/cart/useServerCart.ts';
 import { deriveStockStatus, formatMoney, resolveUnitPrice } from '@/lib/format.ts';
+import { Slot } from '@/templates/runtime.tsx';
 import type { Product } from '@/types/catalog.ts';
 import classes from '@/features/catalog/AddToCart.module.css';
 
@@ -78,6 +79,7 @@ export function AddToCart({ product, size = 'lg', showPrice = true }: AddToCartP
       <span className={classes.label} aria-live="polite">
         {label}
       </span>
+      <Slot name="ButtonAdornment" variant="primary" cta={false} />
     </button>
   );
 }

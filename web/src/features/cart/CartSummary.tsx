@@ -4,6 +4,7 @@ import { useSessionStore, selectIsLoggedIn } from '@/stores/session.ts';
 import { useCartStore, selectCount, selectHasMixedPreorder, selectSubtotal } from '@/stores/cart.ts';
 import { formatMoney } from '@/lib/format.ts';
 import { checkoutTarget } from '@/features/cart/checkout-target.ts';
+import { Slot } from '@/templates/runtime.tsx';
 import classes from '@/features/cart/CartSummary.module.css';
 
 export interface CartSummaryProps {
@@ -53,6 +54,7 @@ export function CartSummary({ blocked, onNavigate }: CartSummaryProps) {
         <>
           <button type="button" className={classes.checkout} disabled>
             Checkout
+            <Slot name="ButtonAdornment" variant="primary" cta />
           </button>
           <p className={classes.held}>Resolve the flagged items to continue.</p>
         </>
@@ -63,6 +65,7 @@ export function CartSummary({ blocked, onNavigate }: CartSummaryProps) {
           onClick={onNavigate}
         >
           Checkout
+          <Slot name="ButtonAdornment" variant="primary" cta />
         </Link>
       )}
 
