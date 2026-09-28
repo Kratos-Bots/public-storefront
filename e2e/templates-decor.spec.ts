@@ -225,4 +225,12 @@ test.describe('dark-luxury', () => {
     await expect(page.locator('[data-lux="orb"]')).toHaveCount(0);
     await expect(page.locator('.lux-status')).toHaveCount(0);
   });
+
+  test('menu layout: the product sheet title keeps its own 24px, not the group heading\'s 14px', async ({ page }) => {
+    const { layout } = await open(page, 'dark-luxury', 'gold', 390, { layout: 'menu' });
+    await openProduct(page, layout, 'Alpine Extract 10ml');
+    const title = page.getByRole('heading', { name: 'Alpine Extract 10ml', level: 2 });
+    await expect(title).toBeVisible();
+    expect(await style(title, 'font-size')).toBe('24px');
+  });
 });

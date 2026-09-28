@@ -269,6 +269,7 @@ describe('dark-luxury template.css', () => {
   });
 
   const findPart = (part: string) => rules.find((r) => r.atRule === null && splitSelectors(r.selector).includes(`${ROOT} [data-sf-part="${part}"]`));
+  const findAllParts = (part: string) => rules.filter((r) => r.atRule === null && splitSelectors(r.selector).includes(`${ROOT} [data-sf-part="${part}"]`));
 
   it('applies the heading tokens to every page and group title, and to the menu sheet title', () => {
     for (const part of ['page-title', 'group-title', 'sheet-title']) {
@@ -289,10 +290,16 @@ describe('dark-luxury template.css', () => {
     }
   });
 
-  it('sets menu group and sheet titles in the heading face at a readable size (not the list\'s 10px mono)', () => {
-    const b = findPart('group-title')!.body;
-    expect(b).toContain('font-family: var(--sf-font-heading)');
-    expect(b).toContain('font-size: 0.875rem');
+  it('sets the menu group title in the heading face at a readable size (not the list\'s 10px mono)', () => {
+    const combined = findAllParts('group-title').map((r) => r.body).join('\n');
+    expect(combined).toContain('font-family: var(--sf-font-heading)');
+    expect(combined).toContain('font-size: 0.875rem');
+  });
+
+  it('never sizes the menu sheet title from the shared heading rule (it keeps its own 1.5rem from ProductDetailSheet.module.css)', () => {
+    const sheetRules = findAllParts('sheet-title');
+    expect(sheetRules.length).toBeGreaterThan(0);
+    for (const r of sheetRules) expect(r.body, r.selector).not.toMatch(/font-size\s*:/);
   });
 
   it('keeps the dim headline words at >= 3:1 on every preset and the footer meta on --sf-muted', () => {

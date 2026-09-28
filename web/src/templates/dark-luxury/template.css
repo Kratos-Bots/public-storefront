@@ -43,15 +43,19 @@
   color: var(--sf-text);
 }
 
-/* Menu group titles and the menu product sheet's title: the heading face at a readable size (the
-   list's own group head is 10px mono, which negative tracking would cramp). */
+/* Menu group titles and the menu product sheet's title share the heading face (weight/tracking/
+   transform), but not its size: the group head needs bumping up from the list's 10px mono, while
+   the sheet title is a product name and keeps its own 1.5rem set by ProductDetailSheet.module.css. */
 :root[data-sf-template="dark-luxury"] [data-sf-part="group-title"],
 :root[data-sf-template="dark-luxury"] [data-sf-part="sheet-title"] {
   font-family: var(--sf-font-heading);
-  font-size: 0.875rem;
   font-weight: var(--sf-heading-weight);
   letter-spacing: var(--sf-heading-tracking);
   text-transform: var(--sf-heading-transform);
+}
+
+:root[data-sf-template="dark-luxury"] [data-sf-part="group-title"] {
+  font-size: 0.875rem;
 }
 
 :root[data-sf-template="dark-luxury"] [data-sf-part="price"] {
