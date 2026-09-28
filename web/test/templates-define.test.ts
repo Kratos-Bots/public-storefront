@@ -71,6 +71,46 @@ describe('validateManifest', () => {
   });
 });
 
+describe('validateManifest — at least as strict as the backend catalog parser', () => {
+  const preset = () => manifest().presets[0]!;
+  const select = (choices: unknown, def = 'v') => manifest({ options: [{ key: 'm', type: 'select', label: 'M', default: def, choices: choices as never }] });
+  it.each<[string, unknown, string]>([
+    ['preset name over 60', manifest({ presets: [{ ...preset(), name: 'n'.repeat(61) }] }), 'acme: preset "gold": name must be at most 60 characters'],
+    ['duplicate schemes', manifest({ schemes: ['dark', 'dark'] }), 'acme: schemes must list dark and/or light, each at most once'],
+    ['three schemes', manifest({ schemes: ['dark', 'light', 'dark'] }), 'acme: schemes must list dark and/or light, each at most once'],
+    ['editable.fonts not boolean', manifest({ editable: { colors: [], fonts: 'yes' as never, radius: true, density: true } }), 'acme: editable.fonts must be a boolean'],
+    ['editable.radius missing', manifest({ editable: { colors: [], fonts: true, density: true } as never }), 'acme: editable.radius must be a boolean'],
+    ['editable.density not boolean', manifest({ editable: { colors: [], fonts: true, radius: true, density: 1 as never } }), 'acme: editable.density must be a boolean'],
+    ['duplicate editable colours', manifest({ editable: { colors: ['primary', 'primary'], fonts: true, radius: true, density: true } }), 'acme: editable.colors must list each colour key at most once'],
+    ['more than 8 editable colours', manifest({ editable: { colors: ['primary', 'bg', 'surface', 'text', 'muted', 'success', 'warn', 'danger', 'primary'], fonts: true, radius: true, density: true } }), 'acme: editable.colors must list each colour key at most once'],
+    ['option label over 80', manifest({ options: [{ key: 'a', type: 'boolean', label: 'l'.repeat(81), default: true }] }), 'acme: option "a": label must be at most 80 characters'],
+    ['option help over 200', manifest({ options: [{ key: 'a', type: 'boolean', label: 'A', help: 'h'.repeat(201), default: true }] }), 'acme: option "a": help must be a string of at most 200 characters'],
+    ['option help not a string', manifest({ options: [{ key: 'a', type: 'boolean', label: 'A', help: 5 as never, default: true }] }), 'acme: option "a": help must be a string of at most 200 characters'],
+    ['empty choice value', select([{ value: '', label: 'Empty' }, { value: 'v', label: 'V' }]), 'acme: option "m": choice values must be 1..100 characters'],
+    ['choice value over 100', select([{ value: 'x'.repeat(101), label: 'X' }, { value: 'v', label: 'V' }]), 'acme: option "m": choice values must be 1..100 characters'],
+    ['empty choice label', select([{ value: 'v', label: '' }]), 'acme: option "m": choice labels must be 1..80 characters'],
+    ['choice label over 80', select([{ value: 'v', label: 'l'.repeat(81) }]), 'acme: option "m": choice labels must be 1..80 characters'],
+  ])('rejects %s', (_name, value, message) => {
+    expect(validateManifest(value, 'acme')).toEqual([message]);
+  });
+  it('rejects more than 20 presets', () => {
+    const presets = Array.from({ length: 21 }, (_, i) => ({ ...preset(), id: `p${i}` }));
+    expect(validateManifest(manifest({ presets, defaultPreset: 'p0' }), 'acme')).toEqual(['acme: at most 20 presets']);
+  });
+  it('accepts every limit exactly at its cap', () => {
+    const presets = Array.from({ length: 20 }, (_, i) => ({ ...preset(), id: `p${i}`, name: 'n'.repeat(60) }));
+    expect(validateManifest(manifest({
+      schemes: ['dark', 'light'],
+      presets, defaultPreset: 'p0',
+      editable: { colors: ['primary', 'bg', 'surface', 'text', 'muted', 'success', 'warn', 'danger'], fonts: true, radius: false, density: true },
+      options: [
+        { key: 'a', type: 'boolean', label: 'l'.repeat(80), help: 'h'.repeat(200), default: true },
+        { key: 'm', type: 'select', label: 'M', default: 'x'.repeat(100), choices: [{ value: 'x'.repeat(100), label: 'l'.repeat(80) }] },
+      ],
+    }), 'acme')).toEqual([]);
+  });
+});
+
 describe('validateManifest — tokens', () => {
   const tok = (over: Partial<TemplateTokens>) => manifest({ tokens: { ...BASE_TOKENS, ...over } });
 

@@ -92,8 +92,15 @@ const RADII: readonly RadiusName[] = ['none', 'sm', 'md', 'lg', 'xl'];
 const MAX_OPTIONS = 30;
 const MAX_CHOICES = 20;
 const MAX_WEIGHTS = 9;
+const MAX_PRESETS = 20;
 /** Text caps — identical to Plan 1's catalog schema, so a manifest that builds is never dropped by the backend. */
 const TEXT_CAPS = { name: 60, version: 40, description: 500, author: 100 } as const;
+/** Per-field caps mirroring the backend catalog parser (ecommerce-backend src/lib/storefront-templates.ts). */
+const PRESET_NAME_MAX = 60;
+const OPTION_LABEL_MAX = 80;
+const OPTION_HELP_MAX = 200;
+const CHOICE_VALUE_MAX = 100;
+const CHOICE_LABEL_MAX = 80;
 
 /** Identity — exists so manifests are type-checked against the contract. */
 export function defineTemplate(manifest: TemplateManifest): TemplateManifest {
@@ -163,10 +170,13 @@ export function validateManifest(value: unknown, folderId: string): string[] {
     else if (v.length > TEXT_CAPS[k]) err(`${k} must be at most ${TEXT_CAPS[k]} characters`);
   }
   const schemes = Array.isArray(m.schemes) ? m.schemes : [];
-  if (schemes.length === 0 || !schemes.every((s) => s === 'dark' || s === 'light')) err('schemes must list dark and/or light');
+  if (schemes.length === 0 || !schemes.every((s) => s === 'dark' || s === 'light') || new Set(schemes).size !== schemes.length) {
+    err('schemes must list dark and/or light, each at most once');
+  }
 
   const presets = Array.isArray(m.presets) ? m.presets : [];
   if (presets.length === 0) err('at least one preset is required');
+  else if (presets.length > MAX_PRESETS) err(`at most ${MAX_PRESETS} presets`);
   const presetIds = new Set<string>();
   for (const p of presets) {
     const where = `preset "${isObj(p) ? String(p.id) : '?'}"`;
@@ -174,6 +184,7 @@ export function validateManifest(value: unknown, folderId: string): string[] {
     if (presetIds.has(p.id)) err(`${where}: duplicate preset id`);
     presetIds.add(p.id);
     if (!isStr(p.name)) err(`${where}: name is required`);
+    else if (p.name.length > PRESET_NAME_MAX) err(`${where}: name must be at most ${PRESET_NAME_MAX} characters`);
     if (!schemes.includes(p.scheme as Scheme)) err(`${where}: scheme "${String(p.scheme)}" is not in schemes`);
     const colors = isObj(p.colors) ? p.colors : ({} as Record<string, unknown>);
     for (const k of COLOR_KEYS) if (typeof colors[k] !== 'string' || !HEX_RE.test(colors[k] as string)) err(`${where}: colors.${k} must be a 6-digit hex`);
@@ -185,8 +196,10 @@ export function validateManifest(value: unknown, folderId: string): string[] {
 
   if (!isObj(m.tokens)) err('tokens are required');
   else e.push(...tokenErrors(m.tokens).map((msg) => `${folderId}: ${msg}`));
-  const ed = m.editable;
-  if (!isObj(ed) || !Array.isArray(ed.colors) || !ed.colors.every((c) => COLOR_KEYS.includes(c))) err('editable.colors must be a subset of the colour keys');
+  const ed: Record<string, unknown> = isObj(m.editable) ? m.editable : {};
+  if (!Array.isArray(ed.colors) || !ed.colors.every((c) => COLOR_KEYS.includes(c))) err('editable.colors must be a subset of the colour keys');
+  else if (new Set(ed.colors).size !== ed.colors.length) err('editable.colors must list each colour key at most once');
+  for (const k of ['fonts', 'radius', 'density'] as const) if (typeof ed[k] !== 'boolean') err(`editable.${k} must be a boolean`);
 
   const options = Array.isArray(m.options) ? m.options : [];
   if (options.length > MAX_OPTIONS) err(`at most ${MAX_OPTIONS} options`);
@@ -196,10 +209,15 @@ export function validateManifest(value: unknown, folderId: string): string[] {
     if (keys.has(o.key)) err(`duplicate option key "${o.key}"`);
     keys.add(o.key);
     if (!isStr(o.label)) err(`option "${o.key}": label is required`);
+    else if (o.label.length > OPTION_LABEL_MAX) err(`option "${o.key}": label must be at most ${OPTION_LABEL_MAX} characters`);
+    if (o.help !== undefined && (typeof o.help !== 'string' || o.help.length > OPTION_HELP_MAX)) err(`option "${o.key}": help must be a string of at most ${OPTION_HELP_MAX} characters`);
     if (o.type === 'boolean') { if (typeof o.default !== 'boolean') err(`option "${o.key}": default must be boolean`); }
     else if (o.type === 'select') {
       const choices = Array.isArray(o.choices) ? o.choices : [];
       if (choices.length === 0 || choices.length > MAX_CHOICES) err(`option "${o.key}": choices must list 1..${MAX_CHOICES} entries`);
+      const textIn = (v: unknown, max: number) => typeof v === 'string' && v.length >= 1 && v.length <= max;
+      if (!choices.every((c) => isObj(c) && textIn(c.value, CHOICE_VALUE_MAX))) err(`option "${o.key}": choice values must be 1..${CHOICE_VALUE_MAX} characters`);
+      if (!choices.every((c) => isObj(c) && textIn(c.label, CHOICE_LABEL_MAX))) err(`option "${o.key}": choice labels must be 1..${CHOICE_LABEL_MAX} characters`);
       if (!choices.some((c) => isObj(c) && c.value === o.default)) err(`option "${o.key}": default must be one of its choices`);
     } else if (o.type === 'text') {
       const max = o.maxLength;
