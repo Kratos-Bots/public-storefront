@@ -10,7 +10,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-28-storefront-templates-design.md` — §4.2, §4.3, §4.4 and the template parts of §6. Design briefs: `designs/dark-luxury/DESIGN.md`, `designs/cyber-brutalism/DESIGN.md`, plus the `dark-luxury` and `cyber-brutalism-design` skills.
 
-**Depends on:** Plan 2 (`2026-09-28-storefront-templates-2-engine.md`) fully landed on the same branch. Every name below — `defineTemplate`, `BASE_TOKENS`, `COLOR_KEYS`, `TemplateSlots`, the slot prop types, `useOrderingState`, `useCatalogStats`, `useServerClock`, `useCutoffInfo` (its `CutoffInfo` type is re-exported by the contract from `@/lib/server-clock.ts`, where it is declared — `next` carries `day`, `cutoff`, `shipsOn`, `isToday`, `at`, `msRemaining`), `useMobileCartBar`, `formatClock`, `utcOffsetLabel`, `Brand`, `ContactLinks`, `ArrowUpRightIcon`, `validateManifest`, `resolveTheme`, `lookupManifest`, `getTemplate`, `allTemplates`, the `--sf-*` variables, root attributes, `data-sf-part` values (the five custom buttons — `AddToCart`, `CartSummary` checkout, `MobileCartBar` checkout, `CheckoutPage` `.next` and `.back` — carry `data-sf-part="button"` with `data-variant`), `data-sf-cta="main"` (CartSummary, MobileCartBar and the CheckoutPage Place order / Continue button), `data-sf-slot`, `e2e/flows.ts` (`addFirstToCart`, `FIXED_NOW`), `e2e/mocks.ts` (`installMocks`, `Layout`, `InstallMocksOptions`) and `TEMPLATE_CASES` in `e2e/templates.spec.ts` — comes from Plan 2's Contract reference and tasks, used verbatim.
+**Depends on:** Plan 2 (`2026-09-28-storefront-templates-2-engine.md`) fully landed on the same branch. Every name below — `defineTemplate`, `BASE_TOKENS`, `COLOR_KEYS`, `TemplateSlots`, the slot prop types, `useOrderingState`, `useCatalogStats`, `useServerClock`, `useCutoffInfo` (its `CutoffInfo` type is re-exported by the contract from `@/lib/server-clock.ts`, where it is declared — `next` carries `day`, `cutoff`, `shipsOn`, `isToday`, `at`, `msRemaining`), `useMobileCartBar`, `formatClock`, `utcOffsetLabel`, `Brand`, `ContactLinks`, `ArrowUpRightIcon`, `validateManifest`, `resolveTheme`, `lookupManifest`, `getTemplate`, `allTemplates`, the `--sf-*` variables, root attributes, `data-sf-part` values (every Mantine `Button` plus every custom CTA listed in `docs/templates.md` §4 — `AddToCart`, both `CartSummary`/`MobileCartBar` checkouts, `CheckoutPage` `.next`/`.back`, and the Loyalty/OrderDetail/WhatsappLogin/PaymentSection/MethodPicker/OrderPlaced/PaymentCancel/LookupForm/Verify/WholesaleBar CTAs — carry `data-sf-part="button"` with `data-variant`; custom CTAs tokenise only their radius, hard-coding mono/uppercase/tracking, which is why both templates re-apply the button voice variables), `ButtonAdornmentProps.busy?` (optional; both templates ignore it), `data-sf-cta="main"` (CartSummary, MobileCartBar and the CheckoutPage Place order / Continue button), `data-sf-slot`, `e2e/flows.ts` (`addFirstToCart`, `FIXED_NOW`), `e2e/mocks.ts` (`installMocks`, `Layout`, `InstallMocksOptions`) and `TEMPLATE_CASES` in `e2e/templates.spec.ts` — comes from Plan 2's Contract reference and tasks, used verbatim.
 
 ## Global Constraints
 
@@ -24,11 +24,12 @@
 - Mobile contract (spec §4.4): no horizontal scroll at 360 px; tap targets ≥ 44 px inside slots; decorations collapse/hide at the breakpoints stated below (480 px = `29.99em` max, 768 px = `48em`, 992 px = `62em`); safe-area insets respected; overlays `pointer-events: none`; reduced motion honoured; 16 px inputs untouched.
 - Option strings (e.g. `nodeLabel`) render as React text only.
 - UI tasks (2, 3, 5, 6 and the review in 9) are implemented by a **frontend-design subagent that first loads the matching design skill** (`dark-luxury` for Tasks 2–3, `cyber-brutalism-design` for Tasks 5–6, both for 9) — user preference. Logic tasks may be done directly.
+- Manifests stay inside Plan 2's (possibly stricter, final-fix-wave) `validateManifest` limits: preset `name` ≤ 60, ≤ 20 presets, `schemes` unique and ≤ 2, `editable` flags real booleans, `editable.colors` unique and ≤ 8, option `label` ≤ 80, `help` ≤ 200, select choice value 1–100 / label 1–80. Template files never import `*.module.css` or a query-suffixed specifier (`./x.css?inline`, `?url`, `?raw`) — only plain `./template.css`.
 - Every commit message ends with a blank line then `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`.
 
 ## Review Focus
 
-1. **A long brand name at 360 px in the brutalist hero** (uppercase Tektur 900 at `clamp(2.25rem, 10vw, 7rem)`) → wraps inside the column, no horizontal scroll. Pinned in Task 7 (`templates-decor.spec.ts`: "long brand name does not overflow at 360px").
+1. **A long brand name at 360 px in the brutalist hero** (uppercase Tektur 900 at the spec's `clamp(2.5rem, 10vw, 7rem)`) → wraps inside the column, no horizontal scroll. Pinned in Task 7 (`templates-decor.spec.ts`: "long brand name does not overflow at 360px").
 2. **A catalogue-only store (`features.ordering = false`)** → luxury footer reads `[ORDERING PAUSED]`, brutalist readout `ORDERING PAUSED`, nothing claims orders are open. Pinned in Task 2 (`LuxuryFooter` paused test) and Task 5 (`CyberCatalogHero` paused test).
 3. **`nodeLabel` stored blank, whitespace or over-long** (older backend, hand-edited setting) → `NODE_01` / clamped to 24 chars, system bar never widens the page. Pinned in Task 4 (`nodeName` tests) and Task 6 (sysbar `overflow: hidden; white-space: nowrap` CSS test).
 4. **Purple Light brutalism on a phone with a cart** → the cart bar is ink (`#111`) with acid text, not purple-on-black, and the checkout stays legible. Pinned in Task 7 ("purple light cart bar is ink with acid text").
@@ -74,6 +75,7 @@
 **Files:**
 - Create: `web/test/helpers/css-rules.ts`
 - Create: `web/src/templates/dark-luxury/manifest.ts`, `web/src/templates/dark-luxury/index.ts`, `web/src/templates/dark-luxury/template.css`, `web/src/templates/dark-luxury/slots/headline.ts`
+- Modify: `e2e/templates.spec.ts` (append the `dark-luxury` matrix case — the catalog guard must never be red between tasks)
 - Test: `web/test/template-dark-luxury.test.tsx`
 
 **Interfaces:**
@@ -146,8 +148,9 @@ export function splitSelectors(selector: string): string[] {
   return parts;
 }
 
-/** web/test/ — this file lives in web/test/helpers/. */
-const TEST_DIR = fileURLToPath(new URL('../', import.meta.url));
+/** web/test/ — this file lives in web/test/helpers/. Resolved with path, never `new URL('../', import.meta.url)`:
+ *  Vite's asset-import-meta-url transform rewrites that inside vitest (see vocabulary.test.ts). */
+const TEST_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 /** Read a file relative to web/test/ (e.g. '../src/templates/x/template.css'). */
 export function readFromTest(rel: string): string {
@@ -342,10 +345,23 @@ export const slots: TemplateSlots = {};
 
 Run: `npm run test:web -- template-dark-luxury templates-registry` → PASS. Run: `npm run typecheck` → clean.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 7: Add the matrix case**
+
+The catalog now lists `dark-luxury`, so `every template in the catalog has a matrix case` would fail until a case exists. In `e2e/templates.spec.ts` change `TEMPLATE_CASES` to:
+
+```ts
+export const TEMPLATE_CASES: TemplateCase[] = [
+  { template: 'modern', preset: 'default', tapTargets: false },
+  { template: 'dark-luxury', preset: 'gold', tapTargets: true },
+];
+```
+
+Run: `npm run test:e2e -- templates.spec.ts -g "every template in the catalog|dark-luxury"` → PASS (the guard plus 6 luxury cases; with no slots yet there are no slot tap targets to fail).
+
+- [ ] **Step 8: Commit**
 
 ```bash
-git add web/test/helpers/css-rules.ts web/src/templates/dark-luxury web/test/template-dark-luxury.test.tsx
+git add web/test/helpers/css-rules.ts web/src/templates/dark-luxury web/test/template-dark-luxury.test.tsx e2e/templates.spec.ts
 git commit -m "feat(templates): dark-luxury manifest, presets and locks
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
@@ -667,7 +683,7 @@ export const slots: TemplateSlots = {
 
 - [ ] **Step 4: Run the tests**
 
-Run: `npm run test:web -- template-dark-luxury template-imports` → PASS (the import scanner vitest from Plan 2 Task 10 must accept every new file). Run: `npm run typecheck` → clean.
+Run: `npm run test:web -- template-dark-luxury template-imports` → PASS (the import scanner vitest from Plan 2 Task 10 must accept every new file). Run: `npm run typecheck` → clean. Run: `npm run test:e2e -- templates.spec.ts -g dark-luxury` → PASS (the footer links are now slot tap targets).
 
 - [ ] **Step 5: Commit**
 
@@ -699,6 +715,7 @@ describe('dark-luxury template.css', () => {
   const css = readFromTest('../src/templates/dark-luxury/template.css');
   const rules = cssRules(css);
   const ROOT = ':root[data-sf-template="dark-luxury"]';
+  const find = (sel: string, atRule: string | null = null) => rules.find((r) => r.selector === sel && r.atRule === atRule);
 
   it('scopes every selector under the template root', () => {
     expect(rules.length).toBeGreaterThan(30);
@@ -733,9 +750,43 @@ describe('dark-luxury template.css', () => {
     }
   });
 
-  it('gives footer links a 44px target', () => {
-    expect(rules.find((x) => x.selector === `${ROOT} .lux-footer__link`)!.body).toContain('min-height: 44px');
-    expect(rules.find((x) => x.selector === `${ROOT} [data-sf-slot="Footer"] a`)!.body).toContain('min-height: 44px');
+  it('leaves fill, text and border of filled buttons to the shared outline-glow rules', () => {
+    const filled = rules.filter((x) => x.selector.includes('[data-variant="filled"]'));
+    expect(filled.length).toBeGreaterThan(0);
+    for (const r of filled) expect(r.body, r.selector).not.toMatch(/(^|;)\s*(background|color|border)(-color)?\s*:/);
+    const disabled = filled.find((x) => x.selector.includes(':is(:disabled, [data-disabled])'))!;
+    expect(disabled.body).toContain('box-shadow: none');
+  });
+
+  it('gives every button part the locked button voice (custom CTAs hard-code theirs)', () => {
+    const b = find(`${ROOT} [data-sf-part="button"]`)!.body;
+    for (const v of ['font-family: var(--sf-btn-font)', 'text-transform: var(--sf-btn-transform)', 'font-weight: var(--sf-btn-weight)', 'letter-spacing: var(--sf-btn-tracking-md)']) expect(b).toContain(v);
+  });
+
+  it('applies the heading tokens to every page and group title', () => {
+    for (const part of ['page-title', 'group-title']) {
+      const b = find(`${ROOT} [data-sf-part="${part}"]`)!.body;
+      for (const v of ['var(--sf-heading-weight)', 'var(--sf-heading-tracking)', 'var(--sf-heading-transform)']) expect(b, part).toContain(v);
+    }
+  });
+
+  it('rounds product cards to the card radius and pads their content', () => {
+    const b = find(`${ROOT} [data-sf-part="product-card"]`)!.body;
+    expect(b).toContain('border-radius: var(--sf-card-radius)');
+    expect(b).toMatch(/padding:/);
+  });
+
+  it('lifts on hover only when motion is welcome', () => {
+    for (const r of rules.filter((x) => /transform:\s*translateY/.test(x.body))) {
+      expect(r.atRule ?? '', r.selector).toContain('prefers-reduced-motion: no-preference');
+    }
+  });
+
+  it('gives footer links a 44×44 target', () => {
+    const link = find(`${ROOT} .lux-footer__link`)!.body;
+    expect(link).toContain('min-height: 44px');
+    expect(link).toContain('min-width: 44px');
+    expect(find(`${ROOT} [data-sf-slot="Footer"] a`)!.body).toContain('min-height: 44px');
   });
 });
 ```
@@ -782,15 +833,21 @@ Replace `web/src/templates/dark-luxury/template.css` with:
 
 /* ── Type ───────────────────────────────────────────────────────────── */
 
+/* heading.* only reaches ProductGrid's title and the product page's weight (docs/templates.md §3),
+   so every title part gets the heading tokens here: 700 / -0.03em / none. */
 :root[data-sf-template="dark-luxury"] [data-sf-part="page-title"] {
   font-size: clamp(1.75rem, 3.2vw, 2.75rem);
+  font-weight: var(--sf-heading-weight);
+  letter-spacing: var(--sf-heading-tracking);
+  text-transform: var(--sf-heading-transform);
   line-height: 1.1;
   color: var(--sf-text);
 }
 
 :root[data-sf-template="dark-luxury"] [data-sf-part="group-title"] {
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-weight: var(--sf-heading-weight);
+  letter-spacing: var(--sf-heading-tracking);
+  text-transform: var(--sf-heading-transform);
 }
 
 :root[data-sf-template="dark-luxury"] [data-sf-part="price"] {
@@ -810,19 +867,25 @@ Replace `web/src/templates/dark-luxury/template.css` with:
 
 /* ── Buttons: dark surface + accent border + layered glow ───────────── */
 
+/* The locked button voice. Mantine's .sf-button reads these variables already; the custom CTAs
+   (AddToCart, the checkouts, CheckoutPage .next/.back, …) hard-code mono micro-caps and only
+   tokenise their radius, so without this rule luxury's most visible buttons would stay mono. */
+:root[data-sf-template="dark-luxury"] [data-sf-part="button"] {
+  font-family: var(--sf-btn-font);
+  text-transform: var(--sf-btn-transform);
+  font-weight: var(--sf-btn-weight);
+  letter-spacing: var(--sf-btn-tracking-md);
+}
+
+/* Fill, text and border of every filled button come from Plan 2's shared outline-glow rules in
+   mantine.css (base (0,4,0), hover (0,7,0), disabled (0,5,0)). Luxury adds only the glow, at equal
+   specificity, loading later. */
 :root[data-sf-template="dark-luxury"] [data-sf-part="button"][data-variant="filled"] {
-  /* Plan 2's shared outline-glow rule already gives every filled button (Mantine and the three
-     custom module buttons) its accent border; luxury only lifts the fill and adds the glow. */
-  background: var(--sf-surface);
-  color: var(--sf-text);
   box-shadow: var(--lux-glow);
-  transition: box-shadow 220ms ease, border-color 220ms ease, transform 150ms var(--lux-ease);
+  transition: box-shadow 220ms ease, background-color 150ms ease, color 150ms ease, border-color 150ms ease, transform 150ms var(--lux-ease);
 }
 
 :root[data-sf-template="dark-luxury"] [data-sf-part="button"][data-variant="filled"]:is(:disabled, [data-disabled]) {
-  background: var(--sf-surface);
-  color: var(--sf-faint);
-  border-color: var(--lux-border-medium);
   box-shadow: none;
 }
 
@@ -838,9 +901,7 @@ Replace `web/src/templates/dark-luxury/template.css` with:
 
 @media (hover: hover) {
   :root[data-sf-template="dark-luxury"] [data-sf-part="button"][data-variant="filled"]:hover:not(:disabled):not([data-disabled]) {
-    border-color: var(--lux-accent-bright);
     box-shadow: var(--lux-glow-hi);
-    transform: translateY(-1px);
     animation: none;
   }
   :root[data-sf-template="dark-luxury"] [data-sf-part="button"][data-variant="default"]:hover:not(:disabled):not([data-disabled]) {
@@ -849,17 +910,28 @@ Replace `web/src/templates/dark-luxury/template.css` with:
   }
 }
 
+/* The hover lift is motion: only when it is welcome. */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  :root[data-sf-template="dark-luxury"] [data-sf-part="button"][data-variant="filled"]:hover:not(:disabled):not([data-disabled]) {
+    transform: translateY(-1px);
+  }
+}
+
 /* ── Surfaces: no border, inset top highlight + soft drop shadow ────── */
+/* Border 'none' and the inset-highlight shadow arrive through the card tokens (the card modules and
+   ProductCard read --sf-card-border / --sf-card-shadow). ProductCard has no radius, fill or padding
+   of its own, so luxury gives it all three; the card modules already carry the card radius and
+   their own padding. */
 
 :root[data-sf-template="dark-luxury"] [data-sf-part="product-card"],
 :root[data-sf-template="dark-luxury"] [data-sf-part="card"] {
-  border: none;
   background: var(--sf-surface);
-  box-shadow: var(--sf-card-shadow);
 }
 
 :root[data-sf-template="dark-luxury"] [data-sf-part="product-card"] {
   overflow: hidden;
+  border-radius: var(--sf-card-radius);
+  padding: 0.75rem 0.75rem 1rem;
 }
 
 :root[data-sf-template="dark-luxury"] [data-sf-part="product-row"] {
@@ -876,17 +948,11 @@ Replace `web/src/templates/dark-luxury/template.css` with:
   }
 }
 
-/* ── Inputs: quiet boxes, accent on focus ───────────────────────────── */
-
-:root[data-sf-template="dark-luxury"] [data-sf-part="input"] {
-  border-color: var(--lux-border-medium);
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--sf-surface) 60%, transparent);
-}
+/* ── Inputs: the shared box variant (tokens.input.style = 'box') draws the box, radius and
+   accent focus border; luxury adds only a soft focus ring. ─────────── */
 
 :root[data-sf-template="dark-luxury"] [data-sf-part="input"]:focus,
 :root[data-sf-template="dark-luxury"] [data-sf-part="input"]:focus-within {
-  border-color: var(--sf-primary);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--sf-primary) 18%, transparent);
 }
 
@@ -1060,6 +1126,7 @@ Replace `web/src/templates/dark-luxury/template.css` with:
   display: inline-flex;
   align-items: center;
   min-height: 44px;
+  min-width: 44px;
   color: var(--sf-muted);
   text-decoration: none;
   transition: color 150ms ease;
@@ -1150,7 +1217,7 @@ Replace `web/src/templates/dark-luxury/template.css` with:
 
 - [ ] **Step 4: Run the tests and look at it**
 
-Run: `npm run test:web -- template-dark-luxury` → PASS. Run: `npm run typecheck` → clean. Then run the app against the mocks: `npm run test:e2e -- templates.spec.ts -g modern` (sanity — modern unaffected) and eyeball luxury by temporarily running the Task 7 decor spec once it exists; until then a quick manual check via `npm run dev:web` with a local backend set to `template: 'dark-luxury'` is optional.
+Run: `npm run test:web -- template-dark-luxury template-imports` → PASS. Run: `npm run typecheck` → clean. Then run the app against the mocks: `npm run test:e2e -- templates.spec.ts -g "every template in the catalog|modern|dark-luxury"` → PASS (modern unaffected; the luxury matrix — overflow, cart bar, 44×44 slot targets — holds with the finished stylesheet). Eyeball `docs/screenshots/templates/dark-luxury-*` (gitignored) for the cards, buttons and footer.
 
 - [ ] **Step 5: Commit**
 
@@ -1167,6 +1234,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 
 **Files:**
 - Create: `web/src/templates/cyber-brutalism/manifest.ts`, `web/src/templates/cyber-brutalism/index.ts`, `web/src/templates/cyber-brutalism/template.css`, `web/src/templates/cyber-brutalism/slots/readout.ts`
+- Modify: `e2e/templates.spec.ts` (append both brutalism matrix cases)
 - Test: `web/test/template-cyber-brutalism.test.tsx`
 
 **Interfaces:**
@@ -1355,10 +1423,25 @@ export const slots: TemplateSlots = {};
 
 Run: `npm run test:web -- template-cyber-brutalism templates-registry` → PASS. Run: `npm run typecheck` → clean.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 6: Add the matrix cases**
+
+In `e2e/templates.spec.ts` change `TEMPLATE_CASES` to:
+
+```ts
+export const TEMPLATE_CASES: TemplateCase[] = [
+  { template: 'modern', preset: 'default', tapTargets: false },
+  { template: 'dark-luxury', preset: 'gold', tapTargets: true },
+  { template: 'cyber-brutalism', preset: 'acid-dark', tapTargets: true },
+  { template: 'cyber-brutalism', preset: 'purple-light', tapTargets: true },
+];
+```
+
+Run: `npm run test:e2e -- templates.spec.ts -g "every template in the catalog|cyber-brutalism"` → PASS.
+
+- [ ] **Step 7: Commit**
 
 ```bash
-git add web/src/templates/cyber-brutalism web/test/template-cyber-brutalism.test.tsx
+git add web/src/templates/cyber-brutalism web/test/template-cyber-brutalism.test.tsx e2e/templates.spec.ts
 git commit -m "feat(templates): cyber-brutalism manifest, presets, locks and readout helpers
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
@@ -1440,6 +1523,7 @@ describe('CyberTopBar', () => {
     expect(container).toHaveTextContent('/ UTC+0');
     expect(container).toHaveTextContent('NODE: LDN_02');
     expect(container).toHaveTextContent('SKU: 128');
+    expect(container.querySelectorAll('.cb-sysbar__sep')).toHaveLength(2); // SYS.TIME · NODE · SKU (spec §4.3)
     act(() => { vi.advanceTimersByTime(1000); });
     expect(container.querySelector('.cb-sysbar__time')).toHaveTextContent('09:05:08');
   });
@@ -1449,7 +1533,7 @@ describe('CyberTopBar', () => {
     h.stats = { productCount: null, categoryCount: null };
     const { container } = render(<CyberTopBar {...base()} />);
     const wide = [...container.querySelectorAll('[data-cb-wide]')].map((e) => e.textContent);
-    expect(wide).toEqual([expect.stringContaining('UTC'), 'SKU: ---']);
+    expect(wide).toEqual([expect.stringContaining('UTC'), '·', 'SKU: ---']); // the NODE · SKU separator goes with SKU
     expect(container).toHaveTextContent('NODE: NODE_01');
   });
 
@@ -1595,6 +1679,7 @@ function SystemBar({ node }: { node: string }) {
       </span>
       <span className="cb-sysbar__sep">·</span>
       <span>NODE: {node}</span>
+      <span className="cb-sysbar__sep" data-cb-wide>·</span>
       <span className="cb-sysbar__end" data-cb-wide>SKU: {productCount ?? '---'}</span>
     </div>
   );
@@ -1874,6 +1959,46 @@ describe('cyber-brutalism template.css', () => {
     expect(light.body).toContain('--cb-bar-fg: var(--cb-signal)');
   });
 
+  it('keeps the strip line inside the shell 76px cart-bar clearance and leaves a blocked checkout looking disabled', () => {
+    // bar = 12px strip + .inner (0.5rem + 48px checkout + 0.5rem) = 76px; the brutalist border-top is 0
+    expect(find(`${ROOT} [data-sf-part="cart-bar"]`)!.body).toContain('padding-top: 12px');
+    const line = find(`${ROOT} [data-sf-part="cart-bar"]::before`)!.body;
+    expect(line).toContain('position: absolute');
+    expect(line).toContain('height: 12px');
+    const btn = rules.filter((r) => r.selector.includes('[data-sf-part="cart-bar"] [data-sf-part="button"]'));
+    expect(btn.length).toBeGreaterThan(0);
+    for (const r of btn) for (const s of splitSelectors(r.selector)) expect(s, s).toContain(':not(:disabled)');
+  });
+
+  it('leaves the native solid fill alone (no fill/text/border on filled buttons, no disabled override)', () => {
+    for (const r of rules.filter((x) => x.selector.includes('[data-variant="filled"]'))) {
+      expect(r.body, r.selector).not.toMatch(/(^|;)\s*(background|color|border)(-color)?\s*:/);
+    }
+    expect(rules.some((r) => r.selector.includes(':is(:disabled'))).toBe(false);
+  });
+
+  it('gives every button part the locked button voice (custom CTAs hard-code theirs)', () => {
+    const b = find(`${ROOT} [data-sf-part="button"]`)!.body;
+    for (const v of ['font-family: var(--sf-btn-font)', 'text-transform: var(--sf-btn-transform)', 'font-weight: var(--sf-btn-weight)', 'letter-spacing: var(--sf-btn-tracking-md)']) expect(b).toContain(v);
+  });
+
+  it('applies the heading tokens (uppercase 700) to every page and group title', () => {
+    for (const part of ['page-title', 'group-title']) {
+      const b = find(`${ROOT} [data-sf-part="${part}"]`)!.body;
+      for (const v of ['var(--sf-heading-weight)', 'var(--sf-heading-tracking)', 'var(--sf-heading-transform)']) expect(b, part).toContain(v);
+    }
+  });
+
+  it('pads product cards so content never touches the 1px border', () => {
+    expect(find(`${ROOT} [data-sf-part="product-card"]`)!.body).toMatch(/padding:/);
+  });
+
+  it('keeps footer crosshairs inside the footer (no horizontal overflow at 768/1280)', () => {
+    expect(find(`${ROOT} .cb-footer`)!.body).toContain('overflow-x: clip');
+    for (const at of ['tr', 'br']) expect(find(`${ROOT} .cb-footer__inner > .cb-cross[data-at="${at}"]`)!.body, at).toContain('right: 0');
+    for (const at of ['tl', 'bl']) expect(find(`${ROOT} .cb-footer__inner > .cb-cross[data-at="${at}"]`)!.body, at).toContain('left: 0');
+  });
+
   it('keeps overlays tap-transparent and footer links 44px tall', () => {
     expect(find(`${ROOT} .cb-frame`)!.body).toContain('pointer-events: none');
     expect(find(`${ROOT} .cb-cross`)!.body).toContain('pointer-events: none');
@@ -1881,8 +2006,10 @@ describe('cyber-brutalism template.css', () => {
     expect(find(`${ROOT} [data-sf-slot="Footer"] a`)!.body).toContain('min-height: 44px');
   });
 
-  it('wraps a long brand name instead of widening the page', () => {
-    expect(find(`${ROOT} .cb-hero__name`)!.body).toContain('overflow-wrap: anywhere');
+  it('wraps a long brand name instead of widening the page, at the spec size', () => {
+    const name = find(`${ROOT} .cb-hero__name`)!.body;
+    expect(name).toContain('overflow-wrap: anywhere');
+    expect(name).toContain('font-size: clamp(2.5rem, 10vw, 7rem)'); // spec §4.3
   });
 });
 ```
@@ -1906,7 +2033,6 @@ Replace `web/src/templates/cyber-brutalism/template.css` with:
 :root[data-sf-template="cyber-brutalism"] {
   --cb-ink: #000000;
   --cb-signal: #d4ff00;
-  --cb-on-accent: #000000;
   --cb-bar-bg: var(--sf-primary);
   --cb-bar-fg: #000000;
   --cb-bar-btn-bg: var(--cb-ink);
@@ -1919,7 +2045,6 @@ Replace `web/src/templates/cyber-brutalism/template.css` with:
 /* Light mode: the bars are ink with acid signal text (purple on black is illegible at 10px);
    the footer drops from pure black to the lifted surface. */
 :root[data-sf-template="cyber-brutalism"][data-mantine-color-scheme="light"] {
-  --cb-on-accent: #ffffff;
   --cb-bar-bg: #111111;
   --cb-bar-fg: var(--cb-signal);
   --cb-bar-btn-bg: var(--sf-primary);
@@ -1936,17 +2061,22 @@ Replace `web/src/templates/cyber-brutalism/template.css` with:
 
 /* ── Type ───────────────────────────────────────────────────────────── */
 
+/* heading.* only reaches ProductGrid's title and the product page's weight (docs/templates.md §3),
+   so every title part gets the heading tokens here: uppercase / 700 / -0.02em. */
 :root[data-sf-template="cyber-brutalism"] [data-sf-part="page-title"] {
   font-size: clamp(1.75rem, 6vw, 3.5rem);
+  font-weight: var(--sf-heading-weight);
+  letter-spacing: var(--sf-heading-tracking);
+  text-transform: var(--sf-heading-transform);
   line-height: 1;
   overflow-wrap: anywhere;
 }
 
 :root[data-sf-template="cyber-brutalism"] [data-sf-part="group-title"] {
   font-family: var(--sf-font-heading);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: -0.01em;
+  font-weight: var(--sf-heading-weight);
+  letter-spacing: var(--sf-heading-tracking);
+  text-transform: var(--sf-heading-transform);
 }
 
 :root[data-sf-template="cyber-brutalism"] [data-sf-part="section-label"] {
@@ -1971,30 +2101,28 @@ Replace `web/src/templates/cyber-brutalism/template.css` with:
   font-family: var(--sf-font-mono);
 }
 
-/* ── Buttons: solid acid, black caps; ghost lifts to the accent ─────── */
+/* ── Buttons: solid acid, caps; ghost lifts to the accent ────────────── */
+/* The fill is 'solid', which has no shared rule: Mantine (theme vars) and the custom CTAs (their
+   modules) already paint accent + --sf-bg text, and own their hover/disabled/"Added" states — so
+   this stylesheet never sets background, color or border on filled buttons and has no disabled
+   override (AddToCart's hollow "Added" state keeps working). Radius 0 comes from --sf-btn-radius.
+   What it does add is the locked button voice: the custom CTAs hard-code mono micro-caps and only
+   tokenise their radius. */
 
 :root[data-sf-template="cyber-brutalism"] [data-sf-part="button"] {
-  border-radius: 0;
-  font-family: var(--sf-font-heading);
+  font-family: var(--sf-btn-font);
+  text-transform: var(--sf-btn-transform);
+  font-weight: var(--sf-btn-weight);
+  letter-spacing: var(--sf-btn-tracking-md);
 }
 
 :root[data-sf-template="cyber-brutalism"] [data-sf-part="button"][data-variant="filled"] {
-  background: var(--sf-primary);
-  color: var(--cb-on-accent);
-  border: 1px solid var(--sf-primary);
   box-shadow: none;
-  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
 }
 
 :root[data-sf-template="cyber-brutalism"] [data-sf-part="button"][data-variant="default"] {
   border: 1px solid var(--sf-line-strong);
   transition: border-color 150ms ease, color 150ms ease;
-}
-
-:root[data-sf-template="cyber-brutalism"] [data-sf-part="button"]:is(:disabled, [data-disabled]) {
-  background: var(--sf-surface);
-  color: var(--sf-faint);
-  border-color: var(--sf-line);
 }
 
 :root[data-sf-template="cyber-brutalism"] [data-sf-part="button"]:focus-visible {
@@ -2003,9 +2131,6 @@ Replace `web/src/templates/cyber-brutalism/template.css` with:
 }
 
 @media (hover: hover) {
-  :root[data-sf-template="cyber-brutalism"] [data-sf-part="button"][data-variant="filled"]:hover:not(:disabled):not([data-disabled]) {
-    background: color-mix(in srgb, var(--sf-primary) 85%, #000000);
-  }
   :root[data-sf-template="cyber-brutalism"] [data-sf-part="button"][data-variant="default"]:hover:not(:disabled):not([data-disabled]) {
     border-color: var(--sf-primary);
     color: var(--sf-primary);
@@ -2026,15 +2151,13 @@ Replace `web/src/templates/cyber-brutalism/template.css` with:
 }
 
 /* ── Surfaces: 1px borders, no fill, no shadow ──────────────────────── */
-
-:root[data-sf-template="cyber-brutalism"] [data-sf-part="product-card"],
-:root[data-sf-template="cyber-brutalism"] [data-sf-part="card"] {
-  border-radius: 0;
-  border: 1px solid var(--sf-line);
-  box-shadow: none;
-}
+/* The card modules already read --sf-card-radius (0) / --sf-card-border (1px line) /
+   --sf-card-shadow (none). ProductCard reads only the shadow and has no border, radius or padding
+   of its own — it gets the token border and an inset so content never touches the line. */
 
 :root[data-sf-template="cyber-brutalism"] [data-sf-part="product-card"] {
+  border: var(--sf-card-border);
+  padding: 0.75rem;
   background: transparent;
 }
 
@@ -2065,20 +2188,28 @@ Replace `web/src/templates/cyber-brutalism/template.css` with:
 
 /* ── The phone cart bar becomes the bottom status strip ─────────────── */
 
+/* Height budget: the shells reserve 76px (.withBar) under the fixed bar. The bar's own content is
+   64px (.inner: 0.5rem + 48px checkout + 0.5rem) and the brutalist border-top is 0, so the strip
+   line gets exactly 12px of padding-top and sits in it absolutely — never taller than the clearance.
+   (Blur is already gone: the bar composes .glass, which tokens.glass = 'off' makes solid.) */
 :root[data-sf-template="cyber-brutalism"] [data-sf-part="cart-bar"] {
   background: var(--cb-bar-bg);
   color: var(--cb-bar-fg);
   border-top: 0;
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
+  padding-top: 12px;
 }
 
 :root[data-sf-template="cyber-brutalism"] [data-sf-part="cart-bar"]::before {
   content: "\25CF  CONNECTION SECURE  \00B7  > CART LOADED_";
-  display: block;
-  padding: 0.35rem var(--cb-pad-end) 0 var(--cb-pad-start);
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 12px;
+  padding: 0 var(--cb-pad-end) 0 var(--cb-pad-start);
   font-family: var(--sf-font-mono);
-  font-size: 10px;
+  font-size: 9px;
+  line-height: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   white-space: nowrap;
@@ -2092,8 +2223,9 @@ Replace `web/src/templates/cyber-brutalism/template.css` with:
   color: inherit;
 }
 
-:root[data-sf-template="cyber-brutalism"] [data-sf-part="cart-bar"] [data-sf-part="button"],
-:root[data-sf-template="cyber-brutalism"] [data-sf-part="cart-bar"] [data-sf-part="button"]:hover:not(:disabled):not([data-disabled]) {
+/* Enabled checkout only: a blocked cart's disabled <button> keeps its module's disabled look. */
+:root[data-sf-template="cyber-brutalism"] [data-sf-part="cart-bar"] [data-sf-part="button"]:not(:disabled),
+:root[data-sf-template="cyber-brutalism"] [data-sf-part="cart-bar"] [data-sf-part="button"]:not(:disabled):hover {
   background: var(--cb-bar-btn-bg);
   color: var(--cb-bar-btn-fg);
   border-color: var(--cb-bar-btn-bg);
@@ -2127,8 +2259,9 @@ Replace `web/src/templates/cyber-brutalism/template.css` with:
   opacity: 0.5;
 }
 
+/* SKU runs inline after "NODE: … ·" (spec §4.3 order), clipped with the bar rather than pushed right. */
 :root[data-sf-template="cyber-brutalism"] .cb-sysbar__end {
-  margin-left: auto;
+  color: var(--sf-muted);
 }
 
 /* ── Crosshairs ─────────────────────────────────────────────────────── */
@@ -2177,6 +2310,14 @@ Replace `web/src/templates/cyber-brutalism/template.css` with:
 :root[data-sf-template="cyber-brutalism"] .cb-cross[data-at="bl"] { bottom: -6px; left: -6px; }
 :root[data-sf-template="cyber-brutalism"] .cb-cross[data-at="br"] { bottom: -6px; right: -6px; }
 
+/* The footer is outside <main>'s gutter and .cb-footer__inner is viewport-wide up to 1280px, so its
+   crosses sit on the inner box's own corners — a -6px offset there would add 6px of horizontal scroll
+   at 768/1280. (.cb-footer also clips overflow-x as a backstop.) */
+:root[data-sf-template="cyber-brutalism"] .cb-footer__inner > .cb-cross[data-at="tl"] { top: 0; left: 0; }
+:root[data-sf-template="cyber-brutalism"] .cb-footer__inner > .cb-cross[data-at="tr"] { top: 0; right: 0; }
+:root[data-sf-template="cyber-brutalism"] .cb-footer__inner > .cb-cross[data-at="bl"] { bottom: 0; left: 0; }
+:root[data-sf-template="cyber-brutalism"] .cb-footer__inner > .cb-cross[data-at="br"] { bottom: 0; right: 0; }
+
 /* ── Catalogue hero ─────────────────────────────────────────────────── */
 
 :root[data-sf-template="cyber-brutalism"] .cb-hero {
@@ -2215,7 +2356,7 @@ Replace `web/src/templates/cyber-brutalism/template.css` with:
 :root[data-sf-template="cyber-brutalism"] .cb-hero__name {
   margin: 0;
   font-family: var(--sf-font-heading);
-  font-size: clamp(2.25rem, 10vw, 7rem);
+  font-size: clamp(2.5rem, 10vw, 7rem);
   font-weight: 900;
   line-height: 0.92;
   letter-spacing: -0.02em;
@@ -2272,6 +2413,7 @@ Replace `web/src/templates/cyber-brutalism/template.css` with:
 
 :root[data-sf-template="cyber-brutalism"] .cb-footer {
   margin-top: auto;
+  overflow-x: clip;
   border-top: 1px solid var(--sf-line);
   background: var(--cb-footer-bg);
 }
@@ -2458,7 +2600,7 @@ Replace `web/src/templates/cyber-brutalism/template.css` with:
 
 - [ ] **Step 4: Run the tests**
 
-Run: `npm run test:web -- template-cyber-brutalism` → PASS. Run: `npm run typecheck` → clean.
+Run: `npm run test:web -- template-cyber-brutalism template-imports` → PASS. Run: `npm run typecheck` → clean. Run: `npm run test:e2e -- templates.spec.ts -g cyber-brutalism` → PASS (in particular no horizontal overflow at 768/1280 from the footer crosshairs, and the cart-bar checkout still unobstructed and ≥ 44×44 with the strip line).
 
 - [ ] **Step 5: Commit**
 
@@ -2471,30 +2613,17 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 
 ---
 
-### Task 7: E2E — matrix cases and template decor checks
+### Task 7: E2E — shared preset helper and template decor checks
 
 **Files:**
 - Create: `e2e/template-theme.ts`, `e2e/templates-decor.spec.ts`
-- Modify: `e2e/templates.spec.ts` (append to `TEMPLATE_CASES`)
+- Modify: `e2e/templates.spec.ts` (the matrix uses `presetTheme` instead of its own inline preset → theme copy; the `TEMPLATE_CASES` entries already landed in Tasks 1 and 4)
 
 **Interfaces:**
 - Consumes: `installMocks`, `Layout`, `InstallMocksOptions` (`e2e/mocks.ts`); `addFirstToCart`, `FIXED_NOW` (`e2e/flows.ts`); `TEMPLATE_CASES` shape `{ template; preset; tapTargets }` (`e2e/templates.spec.ts`); `/templates.json` served by the dev server (Plan 2 Task 9).
-- Produces: `presetTheme(page, template, preset, options?)` → a `tweakSettings` function.
+- Produces: `presetTheme(page, template, preset, options?)` → a `tweakSettings` function — the single place that turns a catalog preset into a stored theme.
 
-- [ ] **Step 1: Add the matrix cases**
-
-In `e2e/templates.spec.ts`, change the `TEMPLATE_CASES` array to:
-
-```ts
-export const TEMPLATE_CASES: TemplateCase[] = [
-  { template: 'modern', preset: 'default', tapTargets: false },
-  { template: 'dark-luxury', preset: 'gold', tapTargets: true },
-  { template: 'cyber-brutalism', preset: 'acid-dark', tapTargets: true },
-  { template: 'cyber-brutalism', preset: 'purple-light', tapTargets: true },
-];
-```
-
-- [ ] **Step 2: The preset helper**
+- [ ] **Step 1: The preset helper**
 
 `e2e/template-theme.ts`:
 
@@ -2533,6 +2662,31 @@ export async function presetTheme(page: Page, template: string, preset: string, 
   };
 }
 ```
+
+- [ ] **Step 2: The matrix uses the helper (no second copy of the preset → theme logic)**
+
+In `e2e/templates.spec.ts`:
+
+1. Add `import { presetTheme } from './template-theme.ts';`.
+2. Delete the `CatalogPreset` interface and narrow `CatalogJson` to what the guard test reads:
+
+```ts
+interface CatalogJson { templates: Array<{ id: string }> }
+```
+
+3. In `run(...)`, replace the `const preset = …` line and the inline `tweakSettings` object with:
+
+```ts
+      const mocks = await installMocks(page, {
+        layout,
+        session: true,
+        tweakSettings: await presetTheme(page, c.template, c.preset),
+      });
+```
+
+(`presetTheme` copies exactly the fields the inline version copied — `template`, `preset`, `options: {}`, `scheme`, `colors`, `fonts` family names, `radius` — over `...s.theme`.) `catalogJson` stays: the guard test still uses it.
+
+Run: `npm run test:e2e -- templates.spec.ts` → the same 26 tests pass as before this step (the guard, the tap-target helper test, 4 cases × 6).
 
 - [ ] **Step 3: Write the decor spec**
 
@@ -2586,6 +2740,8 @@ test.describe('cyber-brutalism', () => {
     await expect(cartBar).toBeVisible();
     await expect(page.locator('[data-cb="status"]')).toHaveCount(0);
     expect(await style(cartBar, 'background-color')).toBe('rgb(212, 255, 0)');
+    // the strip line lives inside the shells' 76px .withBar clearance
+    expect((await cartBar.boundingBox())!.height).toBeLessThanOrEqual(76);
   });
 
   test('purple light cart bar is ink with acid text', async ({ page }) => {
@@ -2598,6 +2754,10 @@ test.describe('cyber-brutalism', () => {
 
   test('options off remove every decoration', async ({ page }) => {
     await open(page, 'cyber-brutalism', 'acid-dark', 1280, { options: { systemBar: false, statusBar: false, crosshairs: false } });
+    // the template is live (open() checked data-sf-template) and its slots have mounted —
+    // otherwise the absence checks below would pass against modern's defaults
+    await expect(page.locator('.cb-hero')).toBeVisible();
+    await expect(page.locator('.cb-footer')).toBeVisible();
     await expect(page.locator('[data-cb="sysbar"]')).toHaveCount(0);
     await expect(page.locator('[data-cb="frame"]')).toHaveCount(0);
     await expect(page.locator('[data-cb="status"]')).toHaveCount(0);
@@ -2627,7 +2787,9 @@ test.describe('dark-luxury', () => {
     await expect(grain).toHaveCount(1);
     expect(await style(grain, 'pointer-events')).toBe('none');
     await expect(page.locator('[data-lux="orb"]')).toHaveCount(1);
+    expect(await style(page.locator('[data-lux="orb"]'), 'animation-name')).toBe('sf-lux-orb'); // breathes ≥ 62em
     const card = page.locator('[data-sf-part="product-card"]').first();
+    expect(await style(card, 'border-top-left-radius')).toBe('16px');
     expect(await style(card, 'border-top-style')).toBe('none');
     expect(await style(card, 'box-shadow')).toContain('inset');
     await expect(page.locator('.lux-status')).toHaveText('[ACCEPTING ORDERS]');
@@ -2645,16 +2807,29 @@ test.describe('dark-luxury', () => {
     expect(await noOverflow(page)).toBe(true);
   });
 
-  test('reduced motion: nothing pulses or breathes', async ({ page }) => {
+  test('reduced motion (phone): the main CTA does not pulse', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     const { mocks, layout } = await open(page, 'dark-luxury', 'gold', 390);
     await addFirstToCart(page, layout, mocks);
-    expect(await style(page.locator('[data-sf-part="cart-bar"] [data-sf-cta="main"]'), 'animation-name')).toBe('none');
-    expect(await style(page.locator('[data-lux="orb"]'), 'animation-name')).toBe('none');
+    const cta = page.locator('[data-sf-part="cart-bar"] [data-sf-cta="main"]');
+    await expect(cta).toBeVisible();
+    expect(await style(cta, 'animation-name')).toBe('none');
+  });
+
+  test('reduced motion (desktop): the orb does not breathe', async ({ page }) => {
+    // 1280, not a phone: the orb only animates at ≥ 62em, so a phone check would pass vacuously
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await open(page, 'dark-luxury', 'gold', 1280);
+    const orb = page.locator('[data-lux="orb"]');
+    await expect(orb).toHaveCount(1);
+    expect(await style(orb, 'animation-name')).toBe('none');
   });
 
   test('options off remove grain, orb and badge', async ({ page }) => {
     await open(page, 'dark-luxury', 'gold', 1280, { options: { grain: false, orb: false, statusBadge: false } });
+    // the template is live and its slots have mounted — otherwise the absence checks pass against modern
+    await expect(page.locator('.lux-hero')).toBeVisible();
+    await expect(page.locator('.lux-footer')).toBeVisible();
     await expect(page.locator('[data-lux="grain"]')).toHaveCount(0);
     await expect(page.locator('[data-lux="orb"]')).toHaveCount(0);
     await expect(page.locator('.lux-status')).toHaveCount(0);
@@ -2662,17 +2837,17 @@ test.describe('dark-luxury', () => {
 });
 ```
 
-The fixture's brand must have a tagline or welcome for the luxury orb to render (the hero renders nothing without either, same as modern). If `e2e/fixtures/settings.storefront.json` has neither, add `extra: (s) => { s.brand.tagline = 'Rare resins, slow made'; }` to the three luxury tests that assert the orb — check the fixture first (`grep -n tagline e2e/fixtures/settings.storefront.json`).
+The luxury hero (and so the orb) needs a tagline or welcome; `e2e/fixtures/settings.storefront.json` has both (tagline "Small-batch supply, shipped from Leeds."), so no `extra` is needed.
 
 - [ ] **Step 4: Run**
 
-Run: `npm run test:e2e -- templates.spec.ts templates-decor.spec.ts` → all pass: the matrix is 1 guard + 6 × 4 cases (4 storefront widths + 2 menu widths per case) = 25, plus 10 decor tests. A failure here is a real template bug (overflow, a covered cart bar, a sub-44px slot link) — fix the template, never the assertion.
+Run: `npm run test:e2e -- templates.spec.ts templates-decor.spec.ts` → all pass: `templates.spec.ts` is the guard + the tap-target helper test + 6 × 4 cases (4 storefront widths + 2 menu widths per case) = 26, plus 11 decor tests. A failure here is a real template bug (overflow, a covered cart bar, a sub-44px slot link) — fix the template, never the assertion.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add e2e/template-theme.ts e2e/templates-decor.spec.ts e2e/templates.spec.ts
-git commit -m "test(e2e): dark-luxury and cyber-brutalism matrix cases and decor checks
+git commit -m "test(e2e): shared presetTheme helper and dark-luxury / cyber-brutalism decor checks
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ```
@@ -2795,7 +2970,8 @@ test.describe('template previews', () => {
       await installMocks(page, { layout: 'storefront', tweakSettings: await presetTheme(page, t.template, t.preset) });
       await page.goto('/');
       await expect(page.getByRole('heading', { name: 'All products', level: 1 })).toBeVisible();
-      await page.evaluate(() => document.fonts.ready);
+      // await inside the page: returning the FontFaceSet itself is not serialisable
+      await page.evaluate(async () => { await document.fonts.ready; });
       const png = await page.screenshot({ clip: { x: 0, y: 0, width: 1280, height: 800 } });
       const webp = await page.evaluate(async (b64) => {
         const img = new Image();
@@ -2878,7 +3054,9 @@ Run (bash): `E2E_REAL_FONTS=1 npm run test:e2e -- templates.spec.ts templates-de
 
 Open each PNG (Read tool). For **dark-luxury** check, per the skill's anti-pattern list and the brief:
 - [ ] no button with an accent fill; primary buttons dark + accent border + visible glow
-- [ ] cards borderless, edge = inset top highlight; hover lift only on hover devices
+- [ ] custom CTAs (Add to cart, checkout, Place order, cart-bar checkout) use the body font, no caps, no tracking — same voice as Mantine buttons
+- [ ] page and group titles 700 / tight tracking on every page (grid, menu list, wholesale, product detail)
+- [ ] cards borderless and 16px-rounded, content inset from the fill; edge = inset top highlight; hover lift only on hover devices
 - [ ] headline contrast by colour, same weight; no thin (300) weights anywhere
 - [ ] `[Label]` bracket labels in mono accent; no `— dashes —`
 - [ ] exactly one orb, elliptical, bottom-centre of the hero; grain visible but faint
@@ -2890,7 +3068,10 @@ For **cyber-brutalism** check, per the skill's anti-pattern list and the brief:
 - [ ] zero radius on every element (buttons, cards, inputs, badges, sheets, chips)
 - [ ] no shadows, no blur, no gradients except the footer hazard stripe
 - [ ] system bar above the header; `/01` numbering; crosshairs in hero, footer and viewport corners (≥ 480 px)
-- [ ] headings uppercase Tektur, left-aligned; readouts in Share Tech Mono
+- [ ] headings uppercase Tektur 700 on every page (grid, menu list, wholesale, product detail), left-aligned; readouts in Share Tech Mono
+- [ ] custom CTAs in Tektur 600 caps at 0.04em (not mono micro-caps); Add to cart still hollows out while it says "Added"
+- [ ] product-card content inset from its 1px border; footer crosshairs inside the footer box
+- [ ] phone cart bar: strip line fits above the checkout, nothing on the page is hidden under the bar; a blocked cart's checkout looks disabled
 - [ ] one accent only (acid on dark; purple on light, with acid only on the ink bars)
 - [ ] bottom status strip present; on phones with a cart it is the cart bar, never two stacked bars
 - [ ] 360 px: system bar one line (time + node), hero name wraps, no horizontal scroll
@@ -2903,10 +3084,10 @@ Write `docs/verification/2026-09-28-templates-visual-review.md`: date, commit SH
 
 - [ ] **Step 4: Document the built-ins**
 
-Append to `docs/templates.md`:
+Append to `docs/templates.md` (after §11, numbered like the rest of the doc):
 
 ```md
-## Built-in templates
+## 12. Built-in templates
 
 | Id | Schemes | Presets | Locked | Options |
 |---|---|---|---|---|
@@ -2944,7 +3125,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ## Contract notes for Plan 2 (resolved — Plan 2 was patched)
 
 1. **Blur removal** → Plan 2 added `tokens.glass: 'on' | 'off'` (root `data-sf-glass`) with shared `chassis.css` rules that make `.glass`/`.glass-soft` bars and `.mantine-Overlay-root` solid; `.glass`, `.glass-soft`, `.mantine-Overlay-root` are also documented as supported hooks. Brutalism sets `glass: 'off'` and its stylesheet no longer targets those selectors (Tasks 4 and 6).
-2. **Custom buttons and `button.fill`** → Plan 2 Task 7 adds shared `:root[data-sf-btn-fill="outline-glow"|"ghost"] [data-sf-part="button"][data-variant="filled"]` rules (fill, text, border, hover, disabled) covering `AddToCart`, `CartSummary` and `MobileCartBar` checkouts and the checkout page's `.next` (Place order / Continue; `data-variant="filled"`, `data-sf-cta="main"`) and `.back` (`data-variant="default"`) buttons too (Plan 2 preflight ruling F2). Luxury's filled-button rule keeps only its surface fill, text colour and glow/pulse (Task 3); both templates reach the checkout buttons through `[data-sf-part="button"]` / `[data-sf-cta="main"]` alone — no page-specific class (such as `.next`) is ever targeted.
+2. **Custom buttons and `button.fill`** → Plan 2 Task 7 adds shared `:root[data-sf-btn-fill="outline-glow"|"ghost"] [data-sf-part="button"][data-variant="filled"]` rules (fill, text, border, hover, disabled) covering `AddToCart`, `CartSummary` and `MobileCartBar` checkouts and the checkout page's `.next` (Place order / Continue; `data-variant="filled"`, `data-sf-cta="main"`) and `.back` (`data-variant="default"`) buttons too (Plan 2 preflight ruling F2). Luxury's filled-button rules keep only the glow/pulse and transition (`box-shadow: none` when disabled) — the shared rules own fill, text and border (Task 3; pre-flight ruling F3); brutalism's `solid` fill has no shared rule and its stylesheet never sets fill/text/border on filled buttons (F4); both templates reach the checkout buttons through `[data-sf-part="button"]` / `[data-sf-cta="main"]` alone — no page-specific class (such as `.next`) is ever targeted.
 3. **Token values** → Plan 2's `validateManifest` now checks every token and explicitly accepts numeric radii 0..64 (incl. `badge.radius: 0`), `'0'`/em tracking, `card.border: 'none'` and `button.font: 'body' | 'heading'`; its tests use this plan's exact luxury and brutalism token blocks.
 4. **Import scanner** → pinned by a Plan 2 Task 10 test covering `./x.ts`/`./x.tsx`/`../slots/x.tsx` in-folder imports, `import type { SVGProps } from 'react'` and inline `type` specifiers.
 5. **Icons** → `ArrowUpRightIcon` (props `GlyphProps`: `size?: number | string` plus pass-through SVG props) is re-exported from `@/templates/contract.ts`; this plan imports it and no longer ships its own `Arrow.tsx` (Task 5). It keeps the shop's 1.6 stroke rather than the brief's 1.5 so the glyph matches the rest of the storefront.
@@ -2959,4 +3140,5 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 - **Light-mode ink bars** use acid `#d4ff00` text on `#111`, not purple-on-black (illegible at 10–11 px). This is the skill's `--accent-hi`, used for status only.
 - **Grid add-to-cart arrows** hide under 768 px (`data-cta="false"`) so compact grid buttons don't overflow; main CTAs always keep `↗`.
 - **Menu layout footers:** luxury shows a compact badge panel, brutalism only the status strip; both render nothing when their option is off.
+- **Pre-flight rulings F1–F15 (2026-09-28)** are applied in the task steps above: path-based test helper (F1); footer crosshairs inside the box + `overflow-x: clip` (F2); luxury glow-only / brutalism no-fill button rules (F3/F4); button voice variables on every `[data-sf-part="button"]` (F5); heading variables on `page-title`/`group-title` (F6); product-card radius and padding (F7); positive "template is live" anchors and a 1280px reduced-motion orb check (F8); `presetTheme` shared with the matrix (F9); 44×44 luxury footer links (F10); spec hero clamp 2.5rem and `NODE · SKU` separator, the other deviations recorded as spec amendments 10–13 (F11); matrix cases land with their manifests (F12); reduced-motion-guarded hover lift (F13); 12px absolutely-placed cart-bar strip within the 76px clearance and an untouched disabled checkout (F14); housekeeping (F15).
 - **Options drive markup, not CSS:** each decoration's option decides whether its slot renders at all, so `template.css` never has to read options.

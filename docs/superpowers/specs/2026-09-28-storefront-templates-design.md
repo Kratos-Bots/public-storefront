@@ -435,3 +435,10 @@ Also adopted from the review:
 - **Manifest limits.** `validateManifest` enforces `name` ≤ 60, `description` ≤ 500, `author` ≤ 100, `version` ≤ 40, select `choices` 1–20 and `FontSpec.weights` 1–9. These are the same limits as the backend's catalog schema, so a manifest that builds is never dropped on capture.
 - **Checkout buttons are template parts.** The checkout page's Place order / Continue and Back buttons carry `data-sf-part="button"` (plus `data-variant`), and Place order / Continue also carries `data-sf-cta="main"`. This way §4.2's main-CTA treatment and §4.3's button styles reach them.
 - **`stepper` part on both steppers.** The `stepper` part covers the checkout stepper as well as the tracking stepper.
+
+Ratified by the controller after the Plan 3 pre-flight review (ruling F11). These entries continue the numbered list above; where §4.2/§4.3 differ, these entries win.
+
+10. **Luxury section labels (§4.2).** `SectionLabel` shows `[Catalogue]` on the catalogue page title and `[01]`, `[02]` … on menu-layout category groups. It does not show `[<category>]`, because the heading directly beneath already names the category.
+11. **Luxury fonts (§4.2).** The luxury presets set heading and body fonts to `null` — the self-hosted Inter Variable stack, which already covers weights 400–800. Only JetBrains Mono 400/500 is fetched from Google Fonts, so there is no duplicate Inter download.
+12. **Brutalist crosshair placement (§4.3).** The `+` marks sit at the four corners of three places: the catalogue hero, the footer (inside its box, so they never cause horizontal scroll), and the viewport, through a fixed `pointer-events: none` frame rendered by `Overlay`. They do not sit at every section's corners. All are hidden under 480 px.
+13. **Purple Light button text (§4.3).** On the Purple Light preset, solid primary buttons use the app's light `--sf-bg` text (near-white) on `#6B3FF6`, not black: white measures ≈ 6.2:1 against that purple, black ≈ 3.4:1. Acid Dark keeps black text (`--sf-bg`) on `#D4FF00`. On the light scheme, the ink status bars carry acid `#D4FF00` status text on `#111`.
