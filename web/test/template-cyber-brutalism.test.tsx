@@ -21,6 +21,7 @@ import { CyberOverlay } from '@/templates/cyber-brutalism/slots/CyberOverlay.tsx
 import { CyberCatalogHero } from '@/templates/cyber-brutalism/slots/CyberCatalogHero.tsx';
 import { CyberFooter } from '@/templates/cyber-brutalism/slots/CyberFooter.tsx';
 import { CyberButtonAdornment } from '@/templates/cyber-brutalism/slots/CyberButtonAdornment.tsx';
+import { DefaultSectionLabel } from '@/templates/defaults/DefaultSectionLabel.tsx';
 import manifest from '@/templates/cyber-brutalism/manifest.ts';
 import { validateManifest } from '@/templates/define.ts';
 import { allTemplates, getTemplate, lookupManifest } from '@/templates/registry.ts';
@@ -231,6 +232,18 @@ describe('CyberFooter', () => {
   });
 });
 
+describe('numbered section labels (the default slot brutalism uses)', () => {
+  it('numbers the page /00 so the first group keeps /01', () => {
+    h.settings = settings();
+    const { container, rerender } = render(<DefaultSectionLabel {...base()} index={1} title="All products" level="page" />);
+    expect(container.querySelector('[data-sf-part="section-label"]')).toHaveTextContent(/^\/00$/);
+    rerender(<DefaultSectionLabel {...base()} index={1} title="Resins" level="group" />);
+    expect(container.querySelector('[data-sf-part="section-label"]')).toHaveTextContent(/^\/01$/);
+    rerender(<DefaultSectionLabel {...base()} index={12} title="Tools" level="group" />);
+    expect(container.querySelector('[data-sf-part="section-label"]')).toHaveTextContent(/^\/12$/);
+  });
+});
+
 describe('CyberButtonAdornment', () => {
   it('adds ↗ to primary buttons only, flagged for the main CTA', () => {
     h.settings = settings();
@@ -319,11 +332,28 @@ describe('cyber-brutalism template.css', () => {
     for (const v of ['font-family: var(--sf-btn-font)', 'text-transform: var(--sf-btn-transform)', 'font-weight: var(--sf-btn-weight)', 'letter-spacing: var(--sf-btn-tracking-md)']) expect(b).toContain(v);
   });
 
-  it('applies the heading tokens (uppercase 700) to every page and group title', () => {
-    for (const part of ['page-title', 'group-title']) {
-      const b = find(`${ROOT} [data-sf-part="${part}"]`)!.body;
+  const findPart = (part: string) => rules.find((r) => r.atRule === null && splitSelectors(r.selector).includes(`${ROOT} [data-sf-part="${part}"]`));
+
+  it('applies the heading tokens (uppercase 700) to every page and group title, and to the menu sheet title', () => {
+    for (const part of ['page-title', 'group-title', 'sheet-title']) {
+      const b = findPart(part)!.body;
       for (const v of ['var(--sf-heading-weight)', 'var(--sf-heading-tracking)', 'var(--sf-heading-transform)']) expect(b, part).toContain(v);
     }
+  });
+
+  it('gives filled buttons a readable hover: the text colour, not the dark primary-soft mix', () => {
+    expect(find(ROOT)!.body).toContain('--sf-filled-hover-bg: var(--sf-text);');
+  });
+
+  it('starts the viewport crosshair frame below the header bar, clear of the system bar', () => {
+    const frame = find(`${ROOT} .cb-frame`)!.body;
+    expect(frame).toContain('inset: 12px');
+    expect(frame).toContain('top: calc(var(--sf-bar-h, 56px) + env(safe-area-inset-top, 0px) + 12px)');
+  });
+
+  it('hides generated decoration text from screen readers (empty alt text)', () => {
+    expect(find(`${ROOT} [data-sf-part="cart-bar"]::before`)!.body).toMatch(/content: "[^"]+" \/ "";/);
+    expect(find(`${ROOT} .cb-cursor::after`)!.body).toContain('content: "_" / "";');
   });
 
   it('pads product cards so content never touches the 1px border', () => {

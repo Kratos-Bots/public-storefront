@@ -13,7 +13,8 @@ export function LuxuryCatalogHero({ surface, tagline, welcomeMessage, productCou
   if (!tagline && !welcomeMessage) return null;
 
   const { muted, bright } = splitHeadline(tagline);
-  const counts = `${productCount} products${categoryCount > 0 ? ` · ${categoryCount} categories` : ''}`;
+  const products = `${productCount} ${productCount === 1 ? 'product' : 'products'}`;
+  const counts = categoryCount > 0 ? `${products} · ${categoryCount} ${categoryCount === 1 ? 'category' : 'categories'}` : products;
 
   return (
     <section className="lux-hero" aria-label="About this shop" data-sf-part="hero">

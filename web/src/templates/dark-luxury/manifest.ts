@@ -27,7 +27,7 @@ export default defineTemplate({
     },
     {
       id: 'crimson', name: 'Crimson', scheme: 'dark', radius: 'lg', fonts: FONTS,
-      colors: { primary: '#c8385a', bg: '#09070a', surface: '#130f14', text: '#f2eaf0', muted: '#907080', success: '#3d9e5c', warn: '#c9a24a', danger: '#e0524f' },
+      colors: { primary: '#d9486a', bg: '#09070a', surface: '#130f14', text: '#f2eaf0', muted: '#907080', success: '#3d9e5c', warn: '#c9a24a', danger: '#e0524f' },
     },
   ],
   defaultPreset: 'gold',

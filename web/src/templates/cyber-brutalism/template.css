@@ -15,6 +15,9 @@
   --cb-footer-bg: #000000;
   --cb-pad-start: max(1rem, env(safe-area-inset-left, 0px));
   --cb-pad-end: max(1rem, env(safe-area-inset-right, 0px));
+  /* Solid filled buttons hover to the text colour (label stays --sf-bg): the shared primary-soft mix
+     is dark olive under dark text on Acid Dark and pale lavender under white text on Purple Light. */
+  --sf-filled-hover-bg: var(--sf-text);
 }
 
 /* Light mode: the bars are ink with acid signal text (purple on black is illegible at 10px);
@@ -47,7 +50,8 @@
   overflow-wrap: anywhere;
 }
 
-:root[data-sf-template="cyber-brutalism"] [data-sf-part="group-title"] {
+:root[data-sf-template="cyber-brutalism"] [data-sf-part="group-title"],
+:root[data-sf-template="cyber-brutalism"] [data-sf-part="sheet-title"] {
   font-family: var(--sf-font-heading);
   font-weight: var(--sf-heading-weight);
   letter-spacing: var(--sf-heading-tracking);
@@ -176,7 +180,7 @@
 }
 
 :root[data-sf-template="cyber-brutalism"] [data-sf-part="cart-bar"]::before {
-  content: "\25CF  CONNECTION SECURE  \00B7  > CART LOADED_";
+  content: "\25CF  CONNECTION SECURE  \00B7  > CART LOADED_" / "";
   position: absolute;
   top: 0;
   left: 0;
@@ -242,9 +246,12 @@
 
 /* ── Crosshairs ─────────────────────────────────────────────────────── */
 
+/* Starts below the header bar (and so below the system bar above it): the top crosses never sit on
+   the SYS.TIME readout. --sf-bar-h is published by both shells, which host the Overlay slot. */
 :root[data-sf-template="cyber-brutalism"] .cb-frame {
   position: fixed;
   inset: 12px;
+  top: calc(var(--sf-bar-h, 56px) + env(safe-area-inset-top, 0px) + 12px);
   z-index: 5;
   pointer-events: none;
 }
@@ -381,7 +388,7 @@
 }
 
 :root[data-sf-template="cyber-brutalism"] .cb-cursor::after {
-  content: "_";
+  content: "_" / "";
   color: var(--sf-primary);
 }
 

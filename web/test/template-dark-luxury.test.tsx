@@ -33,6 +33,10 @@ describe('dark-luxury manifest', () => {
     expect(manifest.presets[0]!.colors).toMatchObject({ primary: '#d4a03c', bg: '#0a0907', surface: '#161412', text: '#f0ebe0' });
   });
 
+  it('every preset accent reads at >= 4.5:1 on its background', () => {
+    for (const p of manifest.presets) expect(contrast(p.colors.primary, p.colors.bg), p.id).toBeGreaterThanOrEqual(4.5);
+  });
+
   it('never fills buttons with the accent and never borders cards', () => {
     expect(manifest.tokens.button.fill).toBe('outline-glow');
     expect(manifest.tokens.card.border).toBe('none');
@@ -102,6 +106,20 @@ function base(options: OptionValues = {}, over: Partial<SlotBaseProps> = {}): Sl
 
 afterEach(cleanup);
 
+const rgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+function mixHex(a: string, b: string, weightA: number): string {
+  const x = rgb(a), y = rgb(b);
+  return '#' + x.map((v, i) => Math.round(v * weightA + y[i]! * (1 - weightA)).toString(16).padStart(2, '0')).join('');
+}
+function luminance(hex: string): number {
+  const [r, g, b] = rgb(hex).map((v) => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; });
+  return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
+}
+function contrast(a: string, b: string): number {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((m, n) => n - m);
+  return (hi! + 0.05) / (lo! + 0.05);
+}
+
 describe('LuxuryOverlay', () => {
   it('renders the grain layer when the option is on, nothing when off', () => {
     h.settings = settings();
@@ -132,6 +150,12 @@ describe('LuxuryCatalogHero', () => {
     expect(container.querySelector('[data-lux="orb"]')).toBeNull();
     expect(container.querySelector('.lux-hero__headline')).toBeNull();
     expect(screen.getByText('42 products')).toBeInTheDocument();
+  });
+
+  it('grid: singular counts read "1 product · 1 category"', () => {
+    h.settings = settings();
+    render(<LuxuryCatalogHero {...base()} surface="grid" {...hero} productCount={1} categoryCount={1} />);
+    expect(screen.getByText('1 product · 1 category')).toBeInTheDocument();
   });
 
   it('grid with neither tagline nor welcome renders nothing (same as modern)', () => {
@@ -244,9 +268,11 @@ describe('dark-luxury template.css', () => {
     for (const v of ['font-family: var(--sf-btn-font)', 'text-transform: var(--sf-btn-transform)', 'font-weight: var(--sf-btn-weight)', 'letter-spacing: var(--sf-btn-tracking-md)']) expect(b).toContain(v);
   });
 
-  it('applies the heading tokens to every page and group title', () => {
-    for (const part of ['page-title', 'group-title']) {
-      const b = find(`${ROOT} [data-sf-part="${part}"]`)!.body;
+  const findPart = (part: string) => rules.find((r) => r.atRule === null && splitSelectors(r.selector).includes(`${ROOT} [data-sf-part="${part}"]`));
+
+  it('applies the heading tokens to every page and group title, and to the menu sheet title', () => {
+    for (const part of ['page-title', 'group-title', 'sheet-title']) {
+      const b = findPart(part)!.body;
       for (const v of ['var(--sf-heading-weight)', 'var(--sf-heading-tracking)', 'var(--sf-heading-transform)']) expect(b, part).toContain(v);
     }
   });
@@ -255,6 +281,36 @@ describe('dark-luxury template.css', () => {
     const b = find(`${ROOT} [data-sf-part="product-card"]`)!.body;
     expect(b).toContain('border-radius: var(--sf-card-radius)');
     expect(b).toMatch(/padding:/);
+  });
+
+  it('never clips product cards, so the stretched link keeps its outset focus ring', () => {
+    for (const r of rules.filter((x) => splitSelectors(x.selector).includes(`${ROOT} [data-sf-part="product-card"]`))) {
+      expect(r.body, r.atRule ?? 'top level').not.toMatch(/overflow(-[xy])?:\s*(hidden|clip)/);
+    }
+  });
+
+  it('sets menu group and sheet titles in the heading face at a readable size (not the list\'s 10px mono)', () => {
+    const b = findPart('group-title')!.body;
+    expect(b).toContain('font-family: var(--sf-font-heading)');
+    expect(b).toContain('font-size: 0.875rem');
+  });
+
+  it('keeps the dim headline words at >= 3:1 on every preset and the footer meta on --sf-muted', () => {
+    const pct = Number(/--lux-dim:\s*color-mix\(in srgb, var\(--sf-muted\) (\d+)%, var\(--sf-bg\)\);/.exec(css)?.[1]);
+    expect(pct).toBeGreaterThanOrEqual(75);
+    for (const p of manifest.presets) {
+      const dim = mixHex(p.colors.muted, p.colors.bg, pct / 100);
+      expect(contrast(dim, p.colors.bg), p.id).toBeGreaterThanOrEqual(3);
+    }
+    expect(find(`${ROOT} .lux-footer__meta`)!.body).toContain('color: var(--sf-muted)');
+  });
+
+  it('keeps press feedback on the hover-lifted filled button, gated like the lift', () => {
+    const press = rules.find((r) => r.selector.includes(':hover:active:not(:disabled)'));
+    expect(press, 'a :hover:active rule').toBeDefined();
+    expect(press!.selector).toContain('[data-variant="filled"]');
+    expect(press!.body).toContain('transform: scale(0.98)');
+    expect(press!.atRule).toBe('@media (hover: hover) and (prefers-reduced-motion: no-preference)');
   });
 
   it('lifts on hover only when motion is welcome', () => {

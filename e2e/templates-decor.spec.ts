@@ -20,6 +20,28 @@ async function open(page: Page, template: string, preset: string, width: number,
 const style = (loc: Locator, prop: string) => loc.evaluate((el, p) => getComputedStyle(el).getPropertyValue(p), prop);
 const noOverflow = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
 
+/** WCAG contrast of an element's computed text colour on its computed background, plus both colours. */
+const paint = (loc: Locator) => loc.evaluate((el) => {
+  const channels = (c: string) => {
+    const m = /^rgba?\(([^)]+)\)$/.exec(c) ?? /^color\(srgb ([^)]+)\)$/.exec(c);
+    if (!m) throw new Error(`unparsed colour ${c}`);
+    const v = m[1]!.split(/[\s,/]+/).filter(Boolean).slice(0, 3).map(Number);
+    return c.startsWith('color(') ? v.map((x) => x * 255) : v;
+  };
+  const lum = (c: string) => {
+    const [r, g, b] = channels(c).map((v) => { const s = v / 255; return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4; });
+    return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
+  };
+  const cs = getComputedStyle(el);
+  const probe = document.createElement('i');
+  probe.style.color = 'var(--sf-bg)';
+  document.body.appendChild(probe);
+  const pageBg = getComputedStyle(probe).color;
+  probe.remove();
+  const [hi, lo] = [lum(cs.color), lum(cs.backgroundColor)].sort((a, b) => b - a);
+  return { background: cs.backgroundColor, color: cs.color, pageBg, ratio: (hi! + 0.05) / (lo! + 0.05) };
+});
+
 test.describe('cyber-brutalism', () => {
   test('desktop: system bar, readout, crosshairs, status strip, square cards', async ({ page }) => {
     await open(page, 'cyber-brutalism', 'acid-dark', 1280);
@@ -81,6 +103,32 @@ test.describe('cyber-brutalism', () => {
     expect(await noOverflow(page)).toBe(true);
   });
 
+  for (const preset of ['acid-dark', 'purple-light']) {
+    test(`${preset}: a hovered Add to cart stays readable (not the dark primary-soft mix)`, async ({ page }) => {
+      const { layout } = await open(page, 'cyber-brutalism', preset, 1280);
+      await openProduct(page, layout, 'Alpine Extract 10ml');
+      const add = page.getByRole('button', { name: /^Add · / }).first();
+      await add.hover();
+      // measure the settled hover, not the first frame of the 140ms colour transition
+      await add.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+      const p = await paint(add);
+      expect(p.background).not.toBe(p.pageBg);
+      expect(p.ratio, `hover ${p.color} on ${p.background}`).toBeGreaterThanOrEqual(4.5);
+    });
+  }
+
+  for (const width of [768, 1280]) {
+    test(`${width}: the viewport crosshair frame clears the system bar`, async ({ page }) => {
+      await open(page, 'cyber-brutalism', 'acid-dark', width);
+      const cross = page.locator('[data-cb="frame"] .cb-cross[data-at="tl"]');
+      await expect(cross).toBeVisible();
+      const c = (await cross.boundingBox())!;
+      const bar = (await page.locator('[data-cb="sysbar"]').boundingBox())!;
+      const overlaps = c.x < bar.x + bar.width && c.x + c.width > bar.x && c.y < bar.y + bar.height && c.y + c.height > bar.y;
+      expect(overlaps, `cross ${JSON.stringify(c)} vs bar ${JSON.stringify(bar)}`).toBe(false);
+    });
+  }
+
   test('menu layout keeps the bar and the strip', async ({ page }) => {
     await open(page, 'cyber-brutalism', 'acid-dark', 390, { layout: 'menu' });
     await expect(page.locator('[data-cb="sysbar"]')).toBeVisible();
@@ -113,6 +161,16 @@ test.describe('dark-luxury', () => {
     // accent fill and never no shadow at all.
     expect(await style(add, 'background-color')).toBe('rgb(10, 9, 7)');
     expect(await style(add, 'box-shadow')).not.toBe('none');
+  });
+
+  test('a keyboard-focused product card shows its focus ring (the card does not clip it)', async ({ page }) => {
+    await open(page, 'dark-luxury', 'gold', 1280);
+    const card = page.locator('[data-sf-part="product-card"]').first();
+    expect(await style(card, 'overflow')).toBe('visible');
+    const link = card.getByRole('link').first();
+    await link.focus();
+    const ring = await link.evaluate((el) => ({ focusVisible: el.matches(':focus-visible'), outline: getComputedStyle(el, '::after').outlineStyle }));
+    expect(ring).toEqual({ focusVisible: true, outline: 'solid' });
   });
 
   test('a disabled filled CTA has no glow', async ({ page }) => {

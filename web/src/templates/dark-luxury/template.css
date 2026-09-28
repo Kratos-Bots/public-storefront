@@ -13,7 +13,8 @@
   --lux-border-subtle: color-mix(in srgb, var(--sf-text) 7%, transparent);
   --lux-border-medium: color-mix(in srgb, var(--sf-text) 13%, transparent);
   --lux-highlight: color-mix(in srgb, var(--sf-text) 8%, transparent);
-  --lux-dim: color-mix(in srgb, var(--sf-muted) 62%, var(--sf-bg));
+  /* ≥ 3:1 on every preset's ground (large text): the headline's dim words stay legible. */
+  --lux-dim: color-mix(in srgb, var(--sf-muted) 75%, var(--sf-bg));
   --lux-accent-bright: color-mix(in srgb, var(--sf-primary) 82%, #ffffff);
   --lux-ease: cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -42,7 +43,12 @@
   color: var(--sf-text);
 }
 
-:root[data-sf-template="dark-luxury"] [data-sf-part="group-title"] {
+/* Menu group titles and the menu product sheet's title: the heading face at a readable size (the
+   list's own group head is 10px mono, which negative tracking would cramp). */
+:root[data-sf-template="dark-luxury"] [data-sf-part="group-title"],
+:root[data-sf-template="dark-luxury"] [data-sf-part="sheet-title"] {
+  font-family: var(--sf-font-heading);
+  font-size: 0.875rem;
   font-weight: var(--sf-heading-weight);
   letter-spacing: var(--sf-heading-tracking);
   text-transform: var(--sf-heading-transform);
@@ -113,6 +119,10 @@
   :root[data-sf-template="dark-luxury"] [data-sf-part="button"][data-variant="filled"]:hover:not(:disabled):not([data-disabled]) {
     transform: translateY(-1px);
   }
+  /* …without losing the press feedback the lift would otherwise override. */
+  :root[data-sf-template="dark-luxury"] [data-sf-part="button"][data-variant="filled"]:hover:active:not(:disabled):not([data-disabled]) {
+    transform: scale(0.98);
+  }
 }
 
 /* ── Surfaces: no border, inset top highlight + soft drop shadow ────── */
@@ -126,8 +136,9 @@
   background: var(--sf-surface);
 }
 
+/* No overflow clipping: the stretched name link draws its keyboard focus ring 4px outside the card,
+   and the media well is inset by the padding, so nothing needs clipping to the radius. */
 :root[data-sf-template="dark-luxury"] [data-sf-part="product-card"] {
-  overflow: hidden;
   border-radius: var(--sf-card-radius);
   padding: 0.75rem 0.75rem 1rem;
 }
@@ -361,7 +372,7 @@
 :root[data-sf-template="dark-luxury"] .lux-footer__meta {
   font-family: var(--sf-font-mono);
   font-size: 12px;
-  color: var(--lux-dim);
+  color: var(--sf-muted);
 }
 
 :root[data-sf-template="dark-luxury"] .lux-status {

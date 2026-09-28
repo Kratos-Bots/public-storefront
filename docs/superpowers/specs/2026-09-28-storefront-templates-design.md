@@ -446,3 +446,7 @@ Ratified by the controller after the Plan 3 pre-flight review (ruling F11). Thes
 Ratified by the controller after the Plan 4 pre-flight review (ruling F2). This entry continues the numbered list above; where §3 differs, it wins.
 
 14. **Locked fields are read-only, not disabled (§3.2).** In the admin's Customise card, a field the active template locks (colour, font, radius, density, or the scheme when the template offers one) is not rendered as a disabled input. It is replaced by a read-only display (`LockedField`) that shows the effective value, a lock icon and "Set by <template name>". The reason is that react-hook-form drops disabled fields' values on submit, which would fail validation and lose the locked values from the saved theme. The value stays in the form (as the preset's value) and is saved like any other field. A locked font that is `null` reads "Template default (Inter)".
+
+Ratified by the controller in the Plan 3 final review. This entry continues the numbered list above; where §4.2 differs, it wins.
+
+15. **Crimson accent (§4.2).** The Dark Luxury Crimson preset's primary is `#d9486a`, not `#c8385a`: the brief's value measures ≈ 3.98:1 on the `#09070a` ground, under the 4.5:1 the accent needs as label and price text; `#d9486a` measures ≈ 4.86:1 and keeps the hue.
