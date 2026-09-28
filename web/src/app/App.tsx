@@ -5,9 +5,8 @@ import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/reac
 import { RouterProvider } from 'react-router';
 import { SETTINGS_KEY, useSettings, useSettingsQuery } from '@/app/settings.ts';
 import { closedGate, isClosedExemptPath } from '@/app/closed-gate.ts';
-import { applyDocumentTheme, buildMantineTheme, lastKnownBrandName } from '@/app/theme-bridge.ts';
-import { resolveTheme } from '@/templates/resolve.ts';
-import { lookupManifest } from '@/templates/registry.ts';
+import { buildMantineTheme, lastKnownBrandName } from '@/app/theme-bridge.ts';
+import { useDocumentTheme } from '@/app/document-theme.ts';
 import { TemplateProvider } from '@/templates/runtime.tsx';
 import { router } from '@/app/router.tsx';
 import { EmptyState } from '@/components/EmptyState.tsx';
@@ -86,14 +85,7 @@ export function ClosedGate({ children }: { children: ReactNode }) {
 }
 
 function ThemedApp({ settings }: { settings: StorefrontSettings }) {
-  const { theme, brand } = settings;
-  // One key for both objects: the document only needs re-theming when their content
-  // changes, not on every settings refetch.
-  const themeKey = JSON.stringify({ theme, brand });
-  const resolved = useMemo(() => resolveTheme(theme, lookupManifest), [themeKey]);
-  useEffect(() => {
-    applyDocumentTheme(resolved, brand);
-  }, [themeKey]);
+  const resolved = useDocumentTheme(settings);
   const mantineTheme = useMemo(() => buildMantineTheme(resolved), [resolved]);
 
   return (
