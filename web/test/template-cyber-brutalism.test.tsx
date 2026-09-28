@@ -341,6 +341,12 @@ describe('cyber-brutalism template.css', () => {
     }
   });
 
+  it('never sizes the menu sheet title from its shared rule with group-title (it keeps its own 1.5rem from ProductDetailSheet.module.css)', () => {
+    const sheetRules = rules.filter((r) => r.atRule === null && splitSelectors(r.selector).includes(`${ROOT} [data-sf-part="sheet-title"]`));
+    expect(sheetRules.length).toBeGreaterThan(0);
+    for (const r of sheetRules) expect(r.body, r.selector).not.toMatch(/font-size\s*:/);
+  });
+
   it('gives filled buttons a readable hover: the text colour, not the dark primary-soft mix', () => {
     expect(find(ROOT)!.body).toContain('--sf-filled-hover-bg: var(--sf-text);');
   });
