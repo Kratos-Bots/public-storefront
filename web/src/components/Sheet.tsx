@@ -16,6 +16,8 @@ export interface SheetProps {
   /** Pinned below it — where the sheet's action lives. */
   footer?: ReactNode;
   children: ReactNode;
+  /** `drawer` for the cart's own sheet (`CartDrawer`); every other sheet is `sheet`. */
+  part?: 'sheet' | 'drawer';
 }
 
 /**
@@ -25,7 +27,7 @@ export interface SheetProps {
  * body and action foot are three rows of one flex column, so the action never
  * scrolls away from the thing it acts on.
  */
-export function Sheet({ opened, onClose, label, header, footer, children }: SheetProps) {
+export function Sheet({ opened, onClose, label, header, footer, children, part = 'sheet' }: SheetProps) {
   // Read synchronously: a deferred match renders the bottom sheet first and snaps
   // it to the side panel a frame later.
   const desktop = useMediaQuery(DESKTOP, false, { getInitialValueInEffect: false });
@@ -49,7 +51,7 @@ export function Sheet({ opened, onClose, label, header, footer, children }: Shee
       transitionProps={{ duration: 300, timingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)' }}
     >
       <Drawer.Overlay backgroundOpacity={0.7} blur={2} />
-      <Drawer.Content aria-label={label}>
+      <Drawer.Content aria-label={label} data-sf-part={part}>
         <span className={classes.handle} aria-hidden />
         {header}
         <div className={classes.body}>{children}</div>

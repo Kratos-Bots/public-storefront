@@ -17,7 +17,7 @@
   min-height: 48px;
   padding: 0 1rem;
   border: 0;
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-card-radius);
   background: var(--sf-primary);
   color: var(--sf-bg);
   font-family: var(--sf-font-mono);
@@ -55,7 +55,7 @@
   gap: 0.4rem;
   padding: 0.7rem 0.8rem 0.8rem;
   border: 1px solid var(--sf-line-strong);
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-card-radius);
   background: var(--sf-surface-2);
 }
 
@@ -97,7 +97,7 @@
   min-height: 44px;
   padding: 0 0.6rem;
   border: 1px solid var(--sf-line-strong);
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-card-radius);
   background: transparent;
   color: var(--sf-muted);
   font-family: var(--sf-font-mono);
@@ -140,7 +140,7 @@
   flex: none;
   width: 5px;
   height: 5px;
-  border-radius: 999px;
+  border-radius: var(--sf-pill-radius);
   background: var(--sf-success);
 }
 

@@ -75,6 +75,8 @@ export function AddToCart({ product, size = 'lg', showPrice = true }: AddToCartP
       disabled={disabled}
       onClick={onClick}
       aria-label={showPrice ? undefined : `${label} — ${product.displayName}`}
+      data-sf-part="button"
+      data-variant="filled"
     >
       <span className={classes.label} aria-live="polite">
         {label}

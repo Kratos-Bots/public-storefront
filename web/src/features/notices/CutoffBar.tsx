@@ -30,6 +30,7 @@ export function CutoffBar() {
     <section
       className={`${classes.rail} ${urgent ? classes.urgent : ''}`}
       aria-label="Dispatch cut-off"
+      data-sf-part="cutoff"
     >
       <div className={classes.inner}>
         <p className={classes.line}>

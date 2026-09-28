@@ -76,7 +76,7 @@ export function ProductGrid() {
         <div className={classes.column}>
           <Slot name="SectionLabel" index={1} title={active ? active.name : 'All products'} level="page" />
           <div className={classes.head}>
-            <h1 className={classes.title}>{active ? active.name : 'All products'}</h1>
+            <h1 className={classes.title} data-sf-part="page-title">{active ? active.name : 'All products'}</h1>
             {/* Micro-caps, so the shopper's own query stays out of it — the field
                 above and the empty state below both quote it in their own case. */}
             <p className={classes.result}>

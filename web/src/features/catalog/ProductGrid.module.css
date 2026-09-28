@@ -16,7 +16,7 @@
   padding: 1.25rem;
   background: color-mix(in srgb, var(--sf-surface) 40%, transparent);
   border: 1px solid var(--sf-line);
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-card-radius);
 }
 
 .heroText {
@@ -84,7 +84,9 @@
   margin: 0;
   font-family: var(--sf-font-heading);
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: var(--sf-heading-weight);
+  letter-spacing: var(--sf-heading-tracking);
+  text-transform: var(--sf-heading-transform);
   line-height: 1.3;
   color: var(--sf-text);
 }

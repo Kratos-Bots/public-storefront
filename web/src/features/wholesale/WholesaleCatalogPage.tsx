@@ -108,7 +108,7 @@ export function WholesaleCatalogPage() {
     <div className={classes.page}>
       <Slot name="SectionLabel" index={1} title={active ? active.name : 'Trade list'} level="page" />
       <div className={classes.head}>
-        <h1 className={classes.title}>{active ? active.name : 'Trade list'}</h1>
+        <h1 className={classes.title} data-sf-part="page-title">{active ? active.name : 'Trade list'}</h1>
         <p className={classes.tally}>
           <span className={classes.shown}>{visible.length}</span>
           {visible.length === products.length ? (

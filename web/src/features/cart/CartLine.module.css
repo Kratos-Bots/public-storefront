@@ -107,7 +107,7 @@
 .chip {
   padding: 0.05rem 0.3rem;
   border: 1px solid var(--sf-line-strong);
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-card-radius);
   font-family: var(--sf-font-mono);
   font-size: 10px;
   font-weight: 600;
@@ -140,11 +140,11 @@
 }
 
 .step:first-child {
-  border-radius: var(--mantine-radius-default) 0 0 var(--mantine-radius-default);
+  border-radius: var(--sf-card-radius) 0 0 var(--sf-card-radius);
 }
 
 .step:last-child {
-  border-radius: 0 var(--mantine-radius-default) var(--mantine-radius-default) 0;
+  border-radius: 0 var(--sf-card-radius) var(--sf-card-radius) 0;
 }
 
 .step:hover:not(:disabled) {
@@ -202,7 +202,7 @@
   letter-spacing: 0.14em;
   text-transform: uppercase;
   cursor: pointer;
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-card-radius);
 }
 
 .remove:hover {
@@ -228,7 +228,7 @@
   letter-spacing: 0.14em;
   text-transform: uppercase;
   cursor: pointer;
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-card-radius);
   white-space: nowrap;
 }
 
@@ -253,7 +253,7 @@
   padding: 0.3rem 0.5rem;
   background: var(--sf-surface);
   border-left: 2px solid var(--tone);
-  border-radius: 0 var(--mantine-radius-default) var(--mantine-radius-default) 0;
+  border-radius: 0 var(--sf-card-radius) var(--sf-card-radius) 0;
 }
 
 .noteText {

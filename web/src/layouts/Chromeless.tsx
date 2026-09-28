@@ -9,10 +9,10 @@ import classes from '@/layouts/Chromeless.module.css';
 export function Chromeless() {
   return (
     <div className={classes.shell}>
-      <header className={classes.header}>
+      <header className={classes.header} data-sf-part="header">
         <Brand size="md" />
       </header>
-      <main className={classes.main}>
+      <main className={classes.main} data-sf-part="main">
         <Suspense fallback={<PageSkeleton inline />}>
           <Outlet />
         </Suspense>

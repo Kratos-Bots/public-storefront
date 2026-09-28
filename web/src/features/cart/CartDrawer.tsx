@@ -41,6 +41,7 @@ export function CartDrawer() {
       opened={opened}
       onClose={dismiss}
       label="Your cart"
+      part="drawer"
       header={
         <div className={classes.head}>
           <div>

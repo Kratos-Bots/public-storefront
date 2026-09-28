@@ -30,7 +30,7 @@ export function StorefrontShell() {
   return (
     <div className={barShowing ? `${classes.shell} ${classes.withBar}` : classes.shell}>
       <Slot name="TopBar" />
-      <header className={classes.header}>
+      <header className={classes.header} data-sf-part="header">
         <div className={classes.headerInner}>
           <Link to="/" className={classes.home} aria-label={`${brand.name} — home`}>
             <Brand size="md" />
@@ -58,7 +58,7 @@ export function StorefrontShell() {
                 aria-label={`Cart, ${cartCount} item${cartCount === 1 ? '' : 's'}`}
               >
                 <BagIcon size={18} />
-                {cartCount > 0 ? <span className={classes.count}>{cartCount}</span> : null}
+                {cartCount > 0 ? <span className={classes.count} data-sf-part="badge">{cartCount}</span> : null}
               </Link>
             ) : null}
           </div>
@@ -68,7 +68,7 @@ export function StorefrontShell() {
       <NoticeBanners />
       <CutoffBar />
 
-      <main className={classes.main}>
+      <main className={classes.main} data-sf-part="main">
         <Suspense fallback={<PageSkeleton inline />}>
           <Outlet context={outletContext} />
         </Suspense>

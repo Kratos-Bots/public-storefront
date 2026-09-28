@@ -55,7 +55,11 @@ export function NoticeBanners() {
   return (
     <aside aria-label="Store notices">
       {visible.map((notice) => (
-        <div key={notice.id} className={`${classes.notice} ${classes[notice.style] ?? classes.info}`}>
+        <div
+          key={notice.id}
+          className={`${classes.notice} ${classes[notice.style] ?? classes.info}`}
+          data-sf-part="notice"
+        >
           <div className={classes.inner}>
             <div className={classes.text}>
               {notice.title ? <p className={classes.title}>{notice.title}</p> : null}

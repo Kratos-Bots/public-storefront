@@ -29,7 +29,7 @@
   min-height: 44px;
   padding: 0 0.85rem;
   border: 1px solid var(--sf-line-strong);
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-card-radius);
   background: transparent;
   font-family: var(--sf-font-body);
   font-size: 0.8125rem;

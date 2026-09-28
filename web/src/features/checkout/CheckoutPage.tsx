@@ -582,6 +582,7 @@ export function CheckoutPage() {
             allowNextStepsSelect={false}
             size="xs"
             iconSize={26}
+            data-sf-part="stepper"
             classNames={{
               root: classes.stepper,
               steps: classes.steps,
@@ -598,7 +599,7 @@ export function CheckoutPage() {
             ))}
           </Stepper>
 
-          <div key={step} className={`${classes.card} ${FADE}`} ref={cardRef}>
+          <div key={step} className={`${classes.card} ${FADE}`} ref={cardRef} data-sf-part="card">
             <header className={classes.cardHead}>
               <span className={classes.cardCount}>
                 Step {step + 1} of {STEPS.length}
@@ -679,7 +680,13 @@ export function CheckoutPage() {
 
           <div className={classes.nav}>
             {step > 0 ? (
-              <button type="button" className={classes.back} onClick={back}>
+              <button
+                type="button"
+                className={classes.back}
+                onClick={back}
+                data-sf-part="button"
+                data-variant="default"
+              >
                 Back
               </button>
             ) : null}
@@ -689,6 +696,9 @@ export function CheckoutPage() {
                 className={classes.next}
                 onClick={() => void submit()}
                 disabled={nextDisabled}
+                data-sf-part="button"
+                data-variant="filled"
+                data-sf-cta="main"
               >
                 {submitting ? (
                   'Placing order…'
@@ -702,7 +712,14 @@ export function CheckoutPage() {
                 <Slot name="ButtonAdornment" variant="primary" cta busy={submitting} />
               </button>
             ) : (
-              <button type="button" className={classes.next} onClick={next}>
+              <button
+                type="button"
+                className={classes.next}
+                onClick={next}
+                data-sf-part="button"
+                data-variant="filled"
+                data-sf-cta="main"
+              >
                 Continue
                 <Slot name="ButtonAdornment" variant="primary" cta />
               </button>

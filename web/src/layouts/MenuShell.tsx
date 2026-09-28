@@ -44,7 +44,7 @@ export function MenuShell() {
   return (
     <div className={barShowing ? `${classes.shell} ${classes.withBar}` : classes.shell}>
       <Slot name="TopBar" />
-      <header className={classes.bar}>
+      <header className={classes.bar} data-sf-part="header">
         <div className={classes.barInner}>
           <Link to="/" className={classes.home} aria-label={`${brand.name} — home`}>
             <Brand size="sm" />
@@ -82,7 +82,7 @@ export function MenuShell() {
                 aria-label={`Cart, ${cartCount} item${cartCount === 1 ? '' : 's'}`}
               >
                 <BagIcon size={17} />
-                {cartCount > 0 ? <span className={classes.count}>{cartCount}</span> : null}
+                {cartCount > 0 ? <span className={classes.count} data-sf-part="badge">{cartCount}</span> : null}
               </Link>
             ) : null}
           </div>
@@ -92,7 +92,7 @@ export function MenuShell() {
       <NoticeBanners />
       <CutoffBar />
 
-      <main className={classes.main}>
+      <main className={classes.main} data-sf-part="main">
         <Suspense fallback={<PageSkeleton inline />}>
           <Outlet context={outletContext} />
         </Suspense>

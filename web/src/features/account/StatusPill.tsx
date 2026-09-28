@@ -12,5 +12,9 @@ const TONE_CLASS: Record<Tone, string | null> = {
 /** A bordered status chip in the tone the shared status map assigns. */
 export function StatusPill({ tone = 'default', children }: { tone?: Tone; children: ReactNode }) {
   const accent = TONE_CLASS[tone];
-  return <span className={accent ? `${classes.pill} ${accent}` : classes.pill}>{children}</span>;
+  return (
+    <span className={accent ? `${classes.pill} ${accent}` : classes.pill} data-sf-part="badge">
+      {children}
+    </span>
+  );
 }

@@ -11,14 +11,14 @@
    own and so takes precedence. Only plain (non custom-property) declarations
    belong in this file for .sf-button. */
 .sf-button {
-  font-family: var(--sf-font-mono);
-  text-transform: uppercase;
-  font-weight: 600;
-  letter-spacing: 0.2em;
+  font-family: var(--sf-btn-font);
+  text-transform: var(--sf-btn-transform);
+  font-weight: var(--sf-btn-weight);
+  letter-spacing: var(--sf-btn-tracking-md);
   transition: transform 150ms ease, background-color 150ms ease, border-color 150ms ease, color 150ms ease;
 }
-.sf-button[data-size="xs"], .sf-button[data-size="sm"], .sf-button[data-size="compact-xs"], .sf-button[data-size="compact-sm"] { letter-spacing: 0.18em; }
-.sf-button[data-size="lg"], .sf-button[data-size="xl"] { letter-spacing: 0.22em; }
+.sf-button[data-size="xs"], .sf-button[data-size="sm"], .sf-button[data-size="compact-xs"], .sf-button[data-size="compact-sm"] { letter-spacing: var(--sf-btn-tracking-sm); }
+.sf-button[data-size="lg"], .sf-button[data-size="xl"] { letter-spacing: var(--sf-btn-tracking-lg); }
 .sf-button:active:not([data-disabled]) { transform: scale(0.98); }
 /* The default variant's hover border can't be expressed as a --button-bd
    override (that variable is set once, statically, via the inline style —
@@ -50,3 +50,40 @@
 .sf-input:focus, .sf-input:focus-within { border-bottom-color: var(--sf-primary); outline: none; }
 .sf-input[data-error] { border-bottom-color: var(--sf-danger); }
 textarea.sf-input { border: 1px solid var(--sf-line-strong); padding: 0.75rem; }
+
+/* The boxed input a template can ask for (tokens.input.style = 'box'). Modern keeps the underline. */
+:root[data-sf-input="box"] .sf-input {
+  border: 1px solid var(--sf-line-strong);
+  border-radius: var(--sf-card-radius);
+  background: color-mix(in srgb, var(--sf-surface) 40%, transparent);
+}
+:root[data-sf-input="box"] :not([data-with-left-section]) > .sf-input { padding-inline-start: 0.75rem; }
+:root[data-sf-input="box"] :not([data-with-right-section]) > .sf-input { padding-inline-end: 0.75rem; }
+:root[data-sf-input="box"] .sf-input:focus, :root[data-sf-input="box"] .sf-input:focus-within { border-color: var(--sf-primary); }
+
+/* Shared fill recipes (tokens.button.fill) for every filled button — Mantine Buttons and the
+   custom module buttons (AddToCart, CartSummary checkout, MobileCartBar checkout, CheckoutPage .next), which
+   carry data-sf-part="button" data-variant="filled". Mirrors buttonVariantVars in theme-bridge.ts.
+   'solid' has no rule: the modules' own accent fill is the modern look. Templates add only what
+   is theirs (a glow, a pulse) with an equally specific rule that loads later. */
+:root[data-sf-btn-fill="outline-glow"] [data-sf-part="button"][data-variant="filled"] {
+  background: var(--sf-bg);
+  color: var(--sf-primary);
+  border: 1px solid var(--sf-primary);
+}
+:root[data-sf-btn-fill="ghost"] [data-sf-part="button"][data-variant="filled"] {
+  background: transparent;
+  color: var(--sf-primary);
+  border: 1px solid var(--sf-line-strong);
+}
+:root[data-sf-btn-fill="outline-glow"] [data-sf-part="button"][data-variant="filled"]:hover:not(:disabled):not([data-disabled]),
+:root[data-sf-btn-fill="ghost"] [data-sf-part="button"][data-variant="filled"]:hover:not(:disabled):not([data-disabled]) {
+  background: var(--sf-surface);
+  color: var(--sf-primary);
+}
+:root[data-sf-btn-fill="outline-glow"] [data-sf-part="button"][data-variant="filled"]:is(:disabled, [data-disabled]),
+:root[data-sf-btn-fill="ghost"] [data-sf-part="button"][data-variant="filled"]:is(:disabled, [data-disabled]) {
+  background: transparent;
+  color: var(--sf-faint);
+  border-color: var(--sf-line);
+}

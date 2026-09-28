@@ -57,7 +57,7 @@ export function MobileCartBar() {
   const items = `${count} ${count === 1 ? 'item' : 'items'}`;
 
   return (
-    <div className={classes.bar}>
+    <div className={classes.bar} data-sf-part="cart-bar">
       <div className={classes.inner}>
         <Link
           to="/cart"
@@ -72,12 +72,25 @@ export function MobileCartBar() {
         </Link>
 
         {blocked ? (
-          <button type="button" className={classes.checkout} disabled>
+          <button
+            type="button"
+            className={classes.checkout}
+            disabled
+            data-sf-part="button"
+            data-variant="filled"
+            data-sf-cta="main"
+          >
             Checkout
             <Slot name="ButtonAdornment" variant="primary" cta />
           </button>
         ) : (
-          <Link to={checkoutTarget(loggedIn, features.guestCheckout)} className={classes.checkout}>
+          <Link
+            to={checkoutTarget(loggedIn, features.guestCheckout)}
+            className={classes.checkout}
+            data-sf-part="button"
+            data-variant="filled"
+            data-sf-cta="main"
+          >
             Checkout
             <Slot name="ButtonAdornment" variant="primary" cta />
           </Link>

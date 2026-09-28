@@ -88,7 +88,7 @@
   margin-top: 0.25rem;
   padding: 0.35rem 0.6rem;
   border-left: 2px solid var(--sf-warn);
-  border-radius: 0 var(--mantine-radius-default) var(--mantine-radius-default) 0;
+  border-radius: 0 var(--sf-card-radius) var(--sf-card-radius) 0;
   background: var(--sf-bg-deep);
   font-family: var(--sf-font-mono);
   font-size: 10px;
@@ -217,7 +217,7 @@
   margin-top: 0.75rem;
   padding: 0.6rem 0.75rem;
   border-left: 2px solid var(--sf-line-strong);
-  border-radius: 0 var(--mantine-radius-default) var(--mantine-radius-default) 0;
+  border-radius: 0 var(--sf-card-radius) var(--sf-card-radius) 0;
   background: var(--sf-bg-deep);
   text-align: left;
   font-size: 0.8125rem;
@@ -251,9 +251,10 @@
   flex-direction: column;
   min-width: 0;
   padding: 0.95rem 1rem 1.05rem;
-  border: 1px solid var(--sf-line);
-  border-radius: var(--mantine-radius-default);
+  border: var(--sf-card-border);
+  border-radius: var(--sf-card-radius);
   background: color-mix(in srgb, var(--sf-surface) 40%, transparent);
+  box-shadow: var(--sf-card-shadow);
 }
 
 /* The one card that wants something from the customer wears the shop's
@@ -402,7 +403,7 @@
   margin: 0;
   padding: 0.45rem 0.65rem;
   border-left: 2px solid var(--sf-warn);
-  border-radius: 0 var(--mantine-radius-default) var(--mantine-radius-default) 0;
+  border-radius: 0 var(--sf-card-radius) var(--sf-card-radius) 0;
   background: var(--sf-bg-deep);
   font-family: var(--sf-font-mono);
   font-size: 10px;
@@ -572,7 +573,7 @@
   min-height: 44px;
   padding: 0 0.6rem;
   border: 1px solid var(--sf-line-strong);
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-card-radius);
   background: transparent;
   color: var(--sf-muted);
   font-family: var(--sf-font-mono);
@@ -611,7 +612,7 @@
   margin-top: 0.9rem;
   padding: 0 1rem;
   border: 0;
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-card-radius);
   background: var(--sf-primary);
   color: var(--sf-bg);
   font-family: var(--sf-font-mono);
@@ -652,7 +653,7 @@
   min-height: 44px;
   padding: 0 0.9rem;
   border: 1px solid var(--sf-line-strong);
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-card-radius);
   background: transparent;
   color: var(--sf-muted);
   font-family: var(--sf-font-mono);
@@ -691,7 +692,7 @@
   margin: 0.7rem 0 0;
   padding: 0.45rem 0.65rem;
   border-left: 2px solid var(--sf-line-strong);
-  border-radius: 0 var(--mantine-radius-default) var(--mantine-radius-default) 0;
+  border-radius: 0 var(--sf-card-radius) var(--sf-card-radius) 0;
   background: var(--sf-bg);
   font-family: var(--sf-font-mono);
   font-size: 10px;
@@ -729,7 +730,7 @@
   display: flex;
   flex-direction: column;
   border: 1px solid var(--sf-line-strong);
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-card-radius);
   background: var(--sf-bg);
   overflow: hidden;
 }
@@ -866,7 +867,7 @@
   min-height: 48px;
   padding: 0 1rem;
   border: 1px solid var(--sf-line);
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-card-radius);
   background: transparent;
   color: var(--sf-muted);
   font-family: var(--sf-font-mono);
@@ -935,7 +936,7 @@
   min-height: 44px;
   padding: 0 0.7rem;
   border: 1px solid var(--sf-line-strong);
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-card-radius);
   background: var(--sf-bg);
   color: var(--sf-text);
   font-family: var(--sf-font-mono);
@@ -1007,7 +1008,7 @@
 }
 
 .block {
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-card-radius);
   background: var(--sf-surface);
   animation: breathe 1.6s ease-in-out infinite;
 }

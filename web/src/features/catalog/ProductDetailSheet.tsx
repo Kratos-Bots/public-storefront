@@ -127,7 +127,7 @@ function Detail({ product, onSelect }: { product: Product; onSelect: (product: P
       {/* The one number the shopper came for, on its own rule. */}
       <div className={classes.priceBand}>
         <span className={classes.priceLabel}>Unit</span>
-        <span className={classes.price}>{formatMoney(product.price, currency)}</span>
+        <span className={classes.price} data-sf-part="price">{formatMoney(product.price, currency)}</span>
       </div>
 
       {product.description ? (

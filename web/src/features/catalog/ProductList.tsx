@@ -84,7 +84,7 @@ export function ProductList() {
         <>
           <Slot name="SectionLabel" index={1} title={active ? active.name : 'All products'} level="page" />
           <div className={classes.head}>
-            <h1 className={classes.title}>{active ? active.name : 'All products'}</h1>
+            <h1 className={classes.title} data-sf-part="page-title">{active ? active.name : 'All products'}</h1>
             {/* How much of the list you are looking at — a fraction only once it is one. */}
             <p className={classes.tally}>
               <span className={classes.shown}>{visible.length}</span>
@@ -141,7 +141,7 @@ export function ProductList() {
             aria-labelledby={`group-${group.key}`}
           >
             <Slot name="SectionLabel" index={groupIndex + 1} title={group.label} level="group" />
-            <h2 id={`group-${group.key}`} className={classes.groupHead}>
+            <h2 id={`group-${group.key}`} className={classes.groupHead} data-sf-part="group-title">
               <span className={classes.groupName}>
                 {glyphs ? (
                   <span className={classes.glyph} aria-hidden>

@@ -43,6 +43,7 @@ export function ProductRow({ product, onSelect, index }: ProductRowProps) {
     <div
       className={index === undefined ? classes.row : `${classes.row} ${rowAnim(index).className}`}
       style={index === undefined ? undefined : rowAnim(index).style}
+      data-sf-part="product-row"
     >
       <div className={classes.text}>
         <h3 className={classes.name}>
@@ -65,7 +66,7 @@ export function ProductRow({ product, onSelect, index }: ProductRowProps) {
         </p>
       </div>
 
-      <p className={classes.price}>{formatMoney(product.price, currency)}</p>
+      <p className={classes.price} data-sf-part="price">{formatMoney(product.price, currency)}</p>
 
       {features.ordering ? (
         <div className={classes.gutter}>

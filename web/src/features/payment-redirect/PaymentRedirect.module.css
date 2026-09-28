@@ -82,7 +82,7 @@
   margin: 0.85rem 0 0;
   padding: 0.6rem 0.75rem;
   border-left: 2px solid var(--sf-warn);
-  border-radius: 0 var(--mantine-radius-default) var(--mantine-radius-default) 0;
+  border-radius: 0 var(--sf-card-radius) var(--sf-card-radius) 0;
   background: var(--sf-bg-deep);
   text-align: left;
   font-size: 0.8125rem;
@@ -101,7 +101,7 @@
   margin-top: 1.25rem;
   padding: 0.65rem 0.85rem;
   border: 1px solid var(--sf-line-strong);
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-card-radius);
   background: var(--sf-bg-deep);
 }
 
@@ -142,7 +142,7 @@
   min-height: 44px;
   padding: 0 0.6rem;
   border: 1px solid var(--sf-line-strong);
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-card-radius);
   background: transparent;
   color: var(--sf-muted);
   font-family: var(--sf-font-mono);
@@ -187,7 +187,7 @@
   min-height: 48px;
   padding: 0 1rem;
   border: 1px solid var(--sf-primary);
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-card-radius);
   background: var(--sf-primary);
   color: var(--sf-bg);
   font-family: var(--sf-font-mono);

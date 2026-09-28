@@ -43,6 +43,7 @@ export function ParcelCard({ parcel, index, count, onRetry }: ParcelCardProps) {
       style={staggerAnim(index).style}
       data-tone={spine}
       aria-label={title}
+      data-sf-part="card"
     >
       <div className={classes.cardHead}>
         <div className={classes.cardHeadBody}>

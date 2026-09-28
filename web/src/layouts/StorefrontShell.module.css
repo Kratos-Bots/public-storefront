@@ -39,7 +39,7 @@
   flex: none;
   margin-inline-start: -0.25rem;
   padding: 0.25rem;
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-card-radius);
   text-decoration: none;
 }
 
@@ -74,7 +74,7 @@
   width: 44px;
   height: 44px;
   color: var(--sf-muted);
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-card-radius);
   text-decoration: none;
   transition: color 120ms ease, background-color 120ms ease;
 }
@@ -91,7 +91,7 @@
   min-width: 16px;
   height: 16px;
   padding: 0 4px;
-  border-radius: 999px;
+  border-radius: var(--sf-pill-radius);
   background: var(--sf-primary);
   color: var(--sf-bg);
   font-family: var(--sf-font-mono);
@@ -113,7 +113,7 @@
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--sf-muted);
-  border-radius: var(--mantine-radius-default);
+  border-radius: var(--sf-card-radius);
   text-decoration: none;
   white-space: nowrap;
 }

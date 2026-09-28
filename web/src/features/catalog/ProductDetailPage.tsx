@@ -89,12 +89,12 @@ export function ProductDetailPage() {
 
         <div className={classes.detail}>
           <header className={classes.head}>
-            <h1 className={classes.name}>{product.displayName}</h1>
+            <h1 className={classes.name} data-sf-part="page-title">{product.displayName}</h1>
             <p className={classes.sku}>{product.sku}</p>
           </header>
 
           <div className={classes.priceRow}>
-            <p className={classes.price}>{formatMoney(product.price, currency)}</p>
+            <p className={classes.price} data-sf-part="price">{formatMoney(product.price, currency)}</p>
             <div className={classes.flags}>
               <StockChip status={status} />
               {product.isPreorder ? (

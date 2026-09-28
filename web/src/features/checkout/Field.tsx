@@ -46,6 +46,7 @@ export function Field({
       <input
         id={id}
         className={classes.input}
+        data-sf-part="input"
         type={type}
         inputMode={inputMode}
         value={value}
@@ -104,6 +105,7 @@ export function SelectField({
         <select
           id={id}
           className={`${classes.input} ${classes.select}`}
+          data-sf-part="input"
           value={value}
           onChange={(e) => onChange(e.currentTarget.value)}
           aria-label={label}
@@ -158,6 +160,7 @@ export function TextareaField({
       <textarea
         id={id}
         className={`${classes.input} ${classes.textarea}`}
+        data-sf-part="input"
         value={value}
         rows={rows}
         onChange={(e) => onChange(e.currentTarget.value)}

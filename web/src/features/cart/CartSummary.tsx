@@ -52,7 +52,14 @@ export function CartSummary({ blocked, onNavigate }: CartSummaryProps) {
 
       {blocked ? (
         <>
-          <button type="button" className={classes.checkout} disabled>
+          <button
+            type="button"
+            className={classes.checkout}
+            disabled
+            data-sf-part="button"
+            data-variant="filled"
+            data-sf-cta="main"
+          >
             Checkout
             <Slot name="ButtonAdornment" variant="primary" cta />
           </button>
@@ -63,6 +70,9 @@ export function CartSummary({ blocked, onNavigate }: CartSummaryProps) {
           to={checkoutTarget(loggedIn, features.guestCheckout)}
           className={classes.checkout}
           onClick={onNavigate}
+          data-sf-part="button"
+          data-variant="filled"
+          data-sf-cta="main"
         >
           Checkout
           <Slot name="ButtonAdornment" variant="primary" cta />

@@ -73,7 +73,7 @@ a.crumb:hover {
   margin: 0;
   font-family: var(--sf-font-heading);
   font-size: 1.5rem;
-  font-weight: 600;
+  font-weight: var(--sf-heading-weight);
   line-height: 1.2;
   letter-spacing: -0.01em;
   color: var(--sf-text);

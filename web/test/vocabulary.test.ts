@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { tokenVariables } from '@/templates/tokens.ts';
+import { BASE_TOKENS } from '@/templates/define.ts';
 
 // `new URL('../foo', import.meta.url)` is intercepted by Vite's asset-import
 // transform even inside test files, rewriting it into a fake dev-server URL
@@ -15,7 +17,7 @@ const css = read('../src/styles/mantine.css');
 
 describe('mantine.css', () => {
   it('gives buttons the mono voice and press feedback', () => {
-    expect(css).toMatch(/\.sf-button\s*\{[^}]*font-family: var\(--sf-font-mono\)[^}]*text-transform: uppercase[^}]*letter-spacing: 0\.2em/s);
+    expect(css).toMatch(/\.sf-button\s*\{[^}]*font-family: var\(--sf-btn-font\)[^}]*text-transform: var\(--sf-btn-transform\)[^}]*font-weight: var\(--sf-btn-weight\)[^}]*letter-spacing: var\(--sf-btn-tracking-md\)/s);
     expect(css).toMatch(/\.sf-button:active:not\(\[data-disabled\]\)\s*\{\s*transform: scale\(0\.98\);/);
     expect(css).toMatch(/\.sf-icon-button:active:not\(\[data-disabled\]\)\s*\{\s*transform: scale\(0\.97\);/);
     // The variant/size colour and font-size variables are no longer set in CSS — Mantine's
@@ -29,6 +31,18 @@ describe('mantine.css', () => {
   });
 });
 
+describe('mantine.css reads the button/input tokens', () => {
+  it('button voice comes from tokens whose modern values are the old literals', () => {
+    expect(css).toMatch(/\.sf-button\s*\{[^}]*font-family: var\(--sf-btn-font\)[^}]*text-transform: var\(--sf-btn-transform\)[^}]*font-weight: var\(--sf-btn-weight\)[^}]*letter-spacing: var\(--sf-btn-tracking-md\)/s);
+    const v = tokenVariables(BASE_TOKENS);
+    expect(v['--sf-btn-font']).toBe('var(--sf-font-mono)');
+    expect(v['--sf-btn-tracking-md']).toBe('0.2em');
+  });
+  it('has a box input variant behind the root attribute', () => {
+    expect(css).toMatch(/:root\[data-sf-input="box"\] \.sf-input\s*\{/);
+  });
+});
+
 describe('cards', () => {
   it.each([
     ['../src/features/order-status/OrderStatus.module.css'],
@@ -37,7 +51,8 @@ describe('cards', () => {
   ])('%s uses the hairline + 40%% surface recipe with no shadow', (file) => {
     const block = read(file).match(/\.card\s*\{[^}]*\}/s)?.[0] ?? '';
     expect(block).toContain('background: color-mix(in srgb, var(--sf-surface) 40%, transparent)');
-    expect(block).not.toMatch(/box-shadow: (?!none)/);
+    expect(block).toMatch(/box-shadow: var\(--sf-card-shadow\)/);
+    expect(block).toContain('border-radius: var(--sf-card-radius)');
   });
   it('checkout fields are underlined', () => {
     const block = read('../src/features/checkout/Fields.module.css').match(/\.input\s*\{[^}]*\}/s)?.[0] ?? '';
