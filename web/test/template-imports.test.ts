@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { tokenizeCss } from '../../scripts/css-tokenizer.mjs';
 import { forbiddenCssImports, forbiddenImports } from '../../scripts/template-imports.mjs';
-import { RESERVED_DIRS, SOURCE_FILE_RE } from '../../scripts/template-rules.mjs';
+import { CSS_FILE_RE, RESERVED_DIRS, SOURCE_FILE_RE } from '../../scripts/template-rules.mjs';
 
 const templatesDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../src/templates');
 const folders = readdirSync(templatesDir).filter((n) => lstatSync(path.join(templatesDir, n)).isDirectory() && !RESERVED_DIRS.includes(n));
@@ -26,7 +26,7 @@ describe('built-in templates respect the import contract', () => {
       const bad = forbiddenImports(readFileSync(file, 'utf8'), { fileDir: path.dirname(file), templateRoot: root, isManifest: path.basename(file) === 'manifest.ts' && path.dirname(file) === root, fileName: path.basename(file) });
       expect(bad, path.relative(templatesDir, file)).toEqual([]);
     }
-    for (const file of files(root, (n) => n.endsWith('.css'))) {
+    for (const file of files(root, (n) => CSS_FILE_RE.test(n))) {
       const bad = forbiddenCssImports(readFileSync(file, 'utf8'), { fileDir: path.dirname(file), templateRoot: root });
       expect(bad, path.relative(templatesDir, file)).toEqual([]);
     }
@@ -125,7 +125,7 @@ function fuzzCorpus(count: number): string[] {
 
 describe.skipIf(!oracle)(`css tokenizer matches a css-syntax-3 reference tokenizer${oracle ? '' : ' (SKIPPED: @csstools/css-tokenizer not loadable)'}`, () => {
   it('on the bypass payload corpus and the built-in templates', () => {
-    const templateCss = folders.flatMap((f) => files(path.join(templatesDir, f), (n) => n.endsWith('.css'))).map((f) => readFileSync(f, 'utf8'));
+    const templateCss = folders.flatMap((f) => files(path.join(templatesDir, f), (n) => CSS_FILE_RE.test(n))).map((f) => readFileSync(f, 'utf8'));
     for (const css of [...CORPUS, ...templateCss]) expect(ourKeys(css), JSON.stringify(css.slice(0, 120))).toEqual(oracleKeys(css));
   });
 

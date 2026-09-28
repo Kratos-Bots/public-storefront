@@ -43,6 +43,10 @@ test('parseLock rejects a repo whose host itself starts with "-" (ssh/scp option
   bad('ssh://user@-evil.com/x'); // a userinfo prefix must not let the dash-host slip past the check
   bad('https://-evil.com/x');
   bad('https://user@-evil.com/x');
+  // a bracketed (IPv6-literal style) host is unwrapped before ssh sees it, so '[-' is a dash-host too
+  bad('ssh://[-evil.com]/x');
+  bad('https://[-x]/y');
+  bad('git@[-x]:y');
 });
 
 test('parseLock accepts https://, ssh:// and scp-style repo URLs', () => {
@@ -262,6 +266,16 @@ test('forbiddenCssImports treats custom-property values, var() fallbacks and nes
   ]) assert.deepEqual(forbiddenCssImports(css, ctx), [], css);
 });
 
+test('forbiddenCssImports treats every string inside an @property block (e.g. initial-value) as a URL candidate', () => {
+  const ctx = { fileDir: '/t/external/acme', templateRoot: '/t/external/acme' };
+  // a registered property's initial-value flows through var() into image-set() like any custom-property value
+  assert.deepEqual(forbiddenCssImports(`@property --a { syntax:"*"; inherits:false; initial-value:"https://evil.example/p1.png"; } .t{background-image:image-set(var(--a) 1x)}`, ctx), ['https://evil.example/p1.png']);
+  assert.deepEqual(forbiddenCssImports(`@PROPERTY --a{syntax:"*";inherits:false;initial-value:x ("//evil.example/p2.png")}`, ctx), ['//evil.example/p2.png']);
+  assert.deepEqual(forbiddenCssImports(`@property --a { syntax:"*"; inherits:false; initial-value:"../../../p3.png" }`, ctx), ['../../../p3.png']);
+  // harmless text stays allowed, and the scope ends with the block
+  assert.deepEqual(forbiddenCssImports(`@property --a { syntax:"<length>"; inherits:false; initial-value:0px } a[href^="https://"]{content:"https://x.example"}`, ctx), []);
+});
+
 test('forbiddenCssImports only allows ./, ../ (inside the folder), data: and #fragment references (round 5)', () => {
   const ctx = { fileDir: '/t/external/acme/slots', templateRoot: '/t/external/acme' };
   assert.deepEqual(forbiddenCssImports(`a{background:url(@/assets/x.png)}`, ctx), ['@/assets/x.png']);
@@ -300,6 +314,39 @@ test('templates may ship only .css stylesheets: other style languages are reject
 
   const ctx = { fileDir: '/t/external/acme', templateRoot: '/t/external/acme', isManifest: false, fileName: 'index.ts' };
   assert.deepEqual(forbiddenImports(`import './a.scss';\nimport s from './b.less?inline';\nimport './c.STYL';\nimport './ok.css';`, ctx), ['./a.scss', './b.less?inline', './c.STYL']);
+});
+
+test('a relative import may carry a query only when it is ?inline, ?url or ?raw on a .css path', () => {
+  const ctx = { fileDir: '/t/external/acme', templateRoot: '/t/external/acme', isManifest: false, fileName: 'index.ts' };
+  // the query makes Vite treat the path by the query's "extension", or selects a non-CSS loader
+  assert.deepEqual(forbiddenImports(`import './evil.foo?.css';\nimport './evil2?x.pcss';\nimport s from './a.ts?raw';\nimport u from './b.CSS?worker';\nimport v from './c.css?inline&x';`, ctx), ['./evil.foo?.css', './evil2?x.pcss', './a.ts?raw', './b.CSS?worker', './c.css?inline&x']);
+  assert.deepEqual(forbiddenImports(`import a from './a.css?inline';\nimport b from './b.css?url';\nimport c from './c.CSS?raw';\nimport './d.css';`, ctx), []);
+});
+
+test('templates may not ship or import CSS modules (*.module.css)', () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'sf-tpl-cssmod-'));
+  writeFileSync(path.join(dir, 'manifest.ts'), `import { defineTemplate } from '@/templates/define.ts';\nexport default defineTemplate({ id: 'acme' } as never);\n`);
+  writeFileSync(path.join(dir, 'index.ts'), `import './template.css';\n`);
+  writeFileSync(path.join(dir, 'template.css'), '');
+  mkdirSync(path.join(dir, 'slots'));
+  writeFileSync(path.join(dir, 'slots', 'Hero.module.css'), '');
+  writeFileSync(path.join(dir, 'slots', 'Card.Module.CSS'), '');
+  const errors = validateTemplateDir(dir, 'acme');
+  rmSync(dir, { recursive: true, force: true });
+  for (const f of ['Hero.module.css', 'Card.Module.CSS']) assert.ok(errors.some((e) => e.includes(f) && /CSS module/.test(e)), f);
+
+  const ctx = { fileDir: '/t/external/acme', templateRoot: '/t/external/acme', isManifest: false, fileName: 'index.ts' };
+  assert.deepEqual(forbiddenImports(`import c from './slots/Hero.module.css';\nimport d from './x.MODULE.css?inline';\nimport './ok.css';`, ctx), ['./slots/Hero.module.css', './x.MODULE.css?inline']);
+});
+
+test('validateTemplateDir scans stylesheets whatever the case of their .css extension', () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'sf-tpl-csscase-'));
+  writeFileSync(path.join(dir, 'manifest.ts'), `import { defineTemplate } from '@/templates/define.ts';\nexport default defineTemplate({ id: 'acme' } as never);\n`);
+  writeFileSync(path.join(dir, 'index.ts'), `import './template.CSS';\n`);
+  writeFileSync(path.join(dir, 'template.CSS'), `a{background:url(https://evil.example/x.png)}`);
+  const errors = validateTemplateDir(dir, 'acme');
+  rmSync(dir, { recursive: true, force: true });
+  assert.ok(errors.some((e) => e.includes('template.CSS') && e.includes('https://evil.example/x.png')), errors.join('\n'));
 });
 
 function sh(cwd, ...args) { return execFileSync('git', args, { cwd, encoding: 'utf8' }).trim(); }

@@ -19,7 +19,8 @@ export const ALLOWED_PACKAGES = Object.freeze(['react', 'react/jsx-runtime']);
  * `--upload-pack=...` is otherwise interpreted by git as an option (arbitrary command execution).
  * The host itself (in the ssh://, https:// and scp forms) may also not start with '-', for the
  * same reason one level down: git in turn invokes `ssh`, which parses a `-`-leading "hostname"
- * as one of its own options.
+ * as one of its own options. A bracketed host (`[-x]`, IPv6-literal syntax) is unwrapped before
+ * ssh sees it, so a `[-` prefix counts as a dash-leading host too.
  *
  * `file://` stays allowed unconditionally rather than gated behind a test-only env var: the lock
  * is maintainer-authored (not attacker-supplied request input), the transport is already pinned to
@@ -28,8 +29,14 @@ export const ALLOWED_PACKAGES = Object.freeze(['react', 'react/jsx-runtime']);
  * file:// grants no extra capability beyond "read a local git repo the maintainer already pointed
  * the lock at". Tests rely on exactly this to fetch from local fixture repos.
  */
-export const REPO_RE = /^https:\/\/(?:[^@/\s]+@)?(?!-)[^/\s@]+\/\S*$|^ssh:\/\/(?:[^@/\s]+@)?(?!-)[^/\s@]+\/\S*$|^file:\/\/\S+$|^[A-Za-z0-9][\w.-]*@(?!-)[^:\s@]+:\S+$/;
+export const REPO_RE = /^https:\/\/(?:[^@/\s]+@)?(?!\[?-)[^/\s@]+\/\S*$|^ssh:\/\/(?:[^@/\s]+@)?(?!\[?-)[^/\s@]+\/\S*$|^file:\/\/\S+$|^[A-Za-z0-9][\w.-]*@(?!\[?-)[^:\s@]+:\S+$/;
 /** Every source file family a template may ship (.js/.jsx/.ts/.tsx/.mjs/.cjs/.mts/.cts, incl. .d.ts). */
 export const SOURCE_FILE_RE = /\.(m|c)?[jt]sx?$/;
 /** Stylesheet languages other than plain CSS. Templates may ship only .css (Vite would run these through their own preprocessors). */
 export const STYLE_LANGUAGE_FILE_RE = /\.(pcss|postcss|sss|scss|sass|less|styl|stylus)$/i;
+/** CSS modules. Vite would hash their class names and run them through its CSS-modules pipeline; templates ship plain global .css only. */
+export const CSS_MODULE_FILE_RE = /\.module\.css$/i;
+/** Plain stylesheets (any case: Vite matches `.css` case-insensitively). */
+export const CSS_FILE_RE = /\.css$/i;
+/** The only query a relative template import may carry, and only on a `.css` path. */
+export const ALLOWED_CSS_QUERY_RE = /^\?(?:inline|url|raw)$/;

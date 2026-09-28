@@ -2,7 +2,7 @@ import path from 'node:path';
 import ts from 'typescript';
 
 import { decodeCssEscapes, preprocessCss, tokenizeCss } from './css-tokenizer.mjs';
-import { ALLOWED_PACKAGES, CONTRACT_SPECIFIERS, DEFINE_SPECIFIERS, STYLE_LANGUAGE_FILE_RE } from './template-rules.mjs';
+import { ALLOWED_CSS_QUERY_RE, ALLOWED_PACKAGES, CONTRACT_SPECIFIERS, CSS_FILE_RE, CSS_MODULE_FILE_RE, DEFINE_SPECIFIERS, STYLE_LANGUAGE_FILE_RE } from './template-rules.mjs';
 
 const CONTRACT = new Set(CONTRACT_SPECIFIERS);
 const DEFINE = new Set(DEFINE_SPECIFIERS);
@@ -12,8 +12,13 @@ const GLOB_METHODS = new Set(['glob', 'globEager']);
 function isAllowedSpecifier(spec, { fileDir, templateRoot, isManifest }) {
   if (isManifest) return DEFINE.has(spec);
   if (CONTRACT.has(spec) || DEFINE.has(spec) || PACKAGES.has(spec)) return true;
-  if (STYLE_LANGUAGE_FILE_RE.test(spec.replace(/[?#].*$/, ''))) return false; // templates ship plain .css only
+  const specPath = spec.replace(/[?#].*$/, '');
+  if (STYLE_LANGUAGE_FILE_RE.test(specPath) || CSS_MODULE_FILE_RE.test(specPath)) return false; // templates ship plain global .css only
   if (spec.startsWith('./') || spec.startsWith('../')) {
+    // A query can switch Vite's loader (`?worker`, `?raw` on a module) or make it read the query's own
+    // "extension" as the file type (`./x.foo?.css`), so only ?inline/?url/?raw on a .css path pass.
+    const q = spec.indexOf('?');
+    if (q >= 0 && !(ALLOWED_CSS_QUERY_RE.test(spec.slice(q)) && CSS_FILE_RE.test(spec.slice(0, q)))) return false;
     const rel = path.relative(templateRoot, path.resolve(fileDir, spec));
     if (!rel.startsWith('..') && !path.isAbsolute(rel)) return true;
   }
@@ -177,7 +182,8 @@ const asciiLowerCase = (s) => s.replace(/[A-Z]/g, (ch) => ch.toLowerCase());
  *     src(), the direct target of an @import prelude, and every raw `url(…)` in the source text
  *     (Vite's CSS url rewriter is a regex, so it also rewrites url( inside strings and comments);
  *   candidates — every other string in a custom-property value, a var() (fallback), an @import
- *     prelude, or at any depth under a URL-taking function.
+ *     prelude, at any depth inside an @property block (its initial-value is a custom-property
+ *     value), or at any depth under a URL-taking function.
  * Other strings (`content`, `font-family`, attribute selectors, `grid-template-areas`, :not("…"))
  * are never inspected.
  */
@@ -246,12 +252,16 @@ function scanTokens(tokens, checks) {
   let importDepth = -1; // stack depth of the open @import prelude, or -1
   let customDepth = -1; // stack depth of the open custom-property value (`--x: …`), or -1
   let pendingCustom = -1; // stack depth of a `--x` ident that may be followed by ':'
+  let propertyPrelude = -1; // stack depth of an open `@property` prelude (before its '{'), or -1
+  let propertyDepth = -1; // stack depth *outside* the open @property block, or -1
   const counts = (name) => URL_TAKING_FUNCTIONS.has(name) || name === 'var';
   for (const tok of tokens) {
     const wasPendingCustom = pendingCustom;
     pendingCustom = -1;
     if (tok.type === 'at-keyword') {
-      if (importDepth < 0 && asciiLowerCase(tok.value) === 'import') importDepth = stack.length;
+      const name = asciiLowerCase(tok.value);
+      if (importDepth < 0 && name === 'import') importDepth = stack.length;
+      if (propertyDepth < 0 && name === 'property') propertyPrelude = stack.length;
     } else if (tok.type === 'ident') {
       if (tok.value.startsWith('--')) pendingCustom = stack.length;
     } else if (tok.type === 'function') {
@@ -262,6 +272,8 @@ function scanTokens(tokens, checks) {
       if (v === ':' && wasPendingCustom === stack.length && customDepth < 0) customDepth = stack.length;
       if ((v === ';' || v === '{' || v === '}') && stack.length === importDepth) importDepth = -1;
       if ((v === ';' || v === '}') && stack.length === customDepth) customDepth = -1;
+      if (v === '{' && stack.length === propertyPrelude) propertyDepth = stack.length;
+      if ((v === ';' || v === '{' || v === '}') && stack.length === propertyPrelude) propertyPrelude = -1;
       if (v === '(' || v === '[' || v === '{') stack.push(v);
       else if (v in CLOSES && stack.length > 0) {
         const top = stack[stack.length - 1];
@@ -271,6 +283,8 @@ function scanTokens(tokens, checks) {
           if (counts(top)) urlFnDepth--;
           if (stack.length < importDepth) importDepth = -1;
           if (stack.length < customDepth) customDepth = -1;
+          if (stack.length < propertyPrelude) propertyPrelude = -1;
+          if (stack.length <= propertyDepth) propertyDepth = -1;
         }
       }
     } else if (tok.type === 'url') {
@@ -280,7 +294,7 @@ function scanTokens(tokens, checks) {
     } else if (tok.type === 'string' || tok.type === 'bad-string') {
       const enclosing = stack[stack.length - 1];
       if (URL_TAKING_FUNCTIONS.has(enclosing) || stack.length === importDepth) checks.reference(tok.value);
-      else if (urlFnDepth > 0 || importDepth >= 0 || customDepth >= 0) checks.candidate(tok.value);
+      else if (urlFnDepth > 0 || importDepth >= 0 || customDepth >= 0 || propertyDepth >= 0) checks.candidate(tok.value);
     }
   }
 }
