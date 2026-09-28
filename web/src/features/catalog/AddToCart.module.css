@@ -19,9 +19,10 @@
   transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease, transform 150ms ease;
 }
 
+/* --sf-filled-hover-bg: a template's readable hover fill (docs/templates.md, shared button-fill rules). */
 .button:hover:not(:disabled) {
-  background: var(--sf-primary-soft);
-  border-color: var(--sf-primary-soft);
+  background: var(--sf-filled-hover-bg, var(--sf-primary-soft));
+  border-color: var(--sf-filled-hover-bg, var(--sf-primary-soft));
 }
 
 .button:active:not(:disabled) {

@@ -247,7 +247,8 @@ pixel-identical guarantee. Concretely that is just two headings: `ProductGrid`'s
 own `-0.01em` tracking). `ProductList`'s `.title` and `WholesaleCatalogPage`'s `.title` are never
 touched by `heading.*` — they stay at their own literal `700` weight / negative tracking. A
 template that wants one consistent heading look across every page styles the parts directly in its
-`template.css`: `[data-sf-part="page-title"]` and `[data-sf-part="group-title"]`.
+`template.css`: `[data-sf-part="page-title"]`, `[data-sf-part="group-title"]` and
+`[data-sf-part="sheet-title"]`.
 
 ## 4. Parts (`data-sf-part`)
 
@@ -259,6 +260,7 @@ template that wants one consistent heading look across every page styles the par
 | `hero` | default `CatalogHero` grid `<section>` |
 | `page-title` | catalogue `<h1>` in `ProductGrid`, `ProductList`, `WholesaleCatalogPage`; product `<h1>` in `ProductDetailPage` |
 | `group-title` | menu-layout category `<h2>` in `ProductList` |
+| `sheet-title` | the product name `<h2>` in the menu layout's `ProductDetailSheet` |
 | `section-label` | default `SectionLabel` output |
 | `button` | every Mantine `Button` (theme default prop) **plus** every custom `<button>`/`<a>`/`<span>`/`<Link>` explicitly tagged `data-sf-part="button"` — `AddToCart`; `CartSummary` checkout (disabled `<button>` and `<Link>`); `MobileCartBar` checkout (disabled `<button>` and `<Link>`); `CheckoutPage` `.next` (Place order / Continue) and `.back` (Back); plus the primary CTA on `LoyaltyPage` (Redeem), `OrderDetailPage`, `WhatsappLogin` (three retry/continue states and the "Open WhatsApp" link), `PaymentSection`, `MethodPicker`, `OrderPlacedPage` (two), `PaymentCancelPage` (two), `LookupForm` (tracking submit), `VerifyPage` (submit) and `WholesaleBar` ("View basket") — added in review so every primary CTA gets the template's button treatment, not just the four original checkout-path buttons. Variant is Mantine's own `data-variant` (`filled` \| `default` \| `subtle`) on Mantine `Button`s; every custom element above carries an explicit `data-variant="filled"`, except `CheckoutPage` `.back`, which carries `data-variant="default"` |
 | `input` | every Mantine `Input` element (theme default prop); the three `classes.input` elements in `features/checkout/Field.tsx` (text input, select, textarea) |
@@ -288,7 +290,11 @@ button above — keyed on `:root[data-sf-btn-fill="outline-glow"]` and
 = `var(--sf-bg)` fill / `var(--sf-primary)` text / `1px solid var(--sf-primary)` border; ghost =
 transparent fill / `var(--sf-primary)` text / `1px solid var(--sf-line-strong)` border; both hover
 to `var(--sf-surface)`; disabled = `var(--sf-faint)` text / `var(--sf-line)` border. `solid` has no
-shared rule — the app's own accent fill is the modern look. **A template that restyles the hover or
+shared rule — the app's own accent fill is the modern look. Its hover fill (Mantine's `--button-hover`
+and `AddToCart`'s hover background and border) is `var(--sf-filled-hover-bg, var(--sf-primary-soft))`:
+unset, it stays modern's `--sf-primary-soft`; a solid-fill template whose `--sf-primary-soft` mix is
+unreadable under the `--sf-bg` label sets `--sf-filled-hover-bg` on its root (cyber-brutalism uses
+`var(--sf-text)`). **A template that restyles the hover or
 disabled state of a filled button must match these selectors' specificity, not just add a plain
 `:hover`/`:disabled` rule**, or the shared rule keeps winning:
 
@@ -374,7 +380,7 @@ export type SlotChildren = ReactNode;
 | `TopBar` | first child of `StorefrontShell` and `MenuShell` (not on `Chromeless`) | nothing |
 | `Footer` | `StorefrontShell`: replaces the footer. `MenuShell`: after `<main>`, before the contact strip | today's three-column footer + colophon (storefront layout only — nothing in the menu layout) |
 | `CatalogHero` | catalogue intro (grid/list/wholesale) | today's hero/welcome markup per surface |
-| `SectionLabel` | eyebrow above a heading | nothing for `label.style === 'plain'`; `[Title]` for `'bracket'`; `/01` (1-based, zero-padded) for `'numbered'` — mono, 11px, `--sf-primary`, `data-sf-part="section-label"` |
+| `SectionLabel` | eyebrow above a heading | nothing for `label.style === 'plain'`; `[Title]` for `'bracket'`; `/01` (1-based, zero-padded) for `'numbered'` groups, and `/00` for the page label, so the first group keeps `/01` — mono, 11px, `--sf-primary`, `data-sf-part="section-label"` |
 | `Overlay` | fixed decoration layer, last child of all three shells (must be `pointer-events: none`) | nothing |
 | `ButtonAdornment` | trailing adornment inside primary buttons | nothing |
 

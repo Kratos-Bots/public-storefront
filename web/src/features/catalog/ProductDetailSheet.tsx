@@ -101,7 +101,7 @@ function Detail({ product, onSelect }: { product: Product; onSelect: (product: P
     <>
       <div className={`${classes.identity} ${FADE}`}>
         <div className={classes.identityText}>
-          <h2 className={classes.name}>{product.displayName}</h2>
+          <h2 className={classes.name} data-sf-part="sheet-title">{product.displayName}</h2>
           <p className={classes.flags}>
             <span className={classes.sku}>{product.sku}</span>
             <StockChip status={status} />

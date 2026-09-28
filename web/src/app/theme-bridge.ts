@@ -32,7 +32,8 @@ function buttonVariantVars(variant: string | undefined, fill: ButtonFill): Recor
       if (fill === 'ghost') {
         return { '--button-bg': 'transparent', '--button-color': 'var(--sf-primary)', '--button-bd': '1px solid var(--sf-line-strong)', '--button-hover': 'var(--sf-surface)', '--button-hover-color': 'var(--sf-primary)' };
       }
-      return { '--button-bg': 'var(--sf-primary)', '--button-color': 'var(--sf-bg)', '--button-hover': 'var(--sf-primary-soft)', '--button-hover-color': 'var(--sf-bg)' };
+      // --sf-filled-hover-bg: a template's override for the solid hover fill (unset → modern's primary-soft).
+      return { '--button-bg': 'var(--sf-primary)', '--button-color': 'var(--sf-bg)', '--button-hover': 'var(--sf-filled-hover-bg, var(--sf-primary-soft))', '--button-hover-color': 'var(--sf-bg)' };
     case 'default':
       return { '--button-bg': 'transparent', '--button-bd': '1px solid var(--sf-line-strong)', '--button-color': 'var(--sf-text)', '--button-hover': 'var(--sf-surface)' };
     case 'subtle':

@@ -13,6 +13,19 @@
   padding: 1.25rem 0 0.75rem;
 }
 
+/* Template section label above the title: the gap belongs above the label (it labels the title
+   below, not the bar above). A default label is a direct child; a template's own label sits in its
+   display: contents slot wrapper. Modern renders no label, so none of these rules match there. */
+.page > [data-sf-part="section-label"]:first-child,
+.page > [data-sf-slot="SectionLabel"]:first-child > [data-sf-part="section-label"] {
+  margin-top: 1.25rem;
+}
+
+.page > [data-sf-part="section-label"] + .head,
+.page > [data-sf-slot="SectionLabel"] + .head {
+  padding-top: 0;
+}
+
 .title {
   min-width: 0;
   margin: 0;

@@ -64,7 +64,7 @@ describe('theme bridge', () => {
   it('feeds solid-fill Button variant/size colours through the vars resolver (modern)', () => {
     const button = buttonOf(resolve(theme));
     const filled = button.vars({}, { variant: 'filled', size: 'md' }, {});
-    expect(filled.root).toMatchObject({ '--button-radius': 'var(--sf-btn-radius)', '--button-bg': 'var(--sf-primary)', '--button-color': 'var(--sf-bg)', '--button-hover': 'var(--sf-primary-soft)', '--button-hover-color': 'var(--sf-bg)', '--button-fz': '12px' });
+    expect(filled.root).toMatchObject({ '--button-radius': 'var(--sf-btn-radius)', '--button-bg': 'var(--sf-primary)', '--button-color': 'var(--sf-bg)', '--button-hover': 'var(--sf-filled-hover-bg, var(--sf-primary-soft))', '--button-hover-color': 'var(--sf-bg)', '--button-fz': '12px' });
     const def = button.vars({}, { variant: 'default', size: 'md' }, {});
     expect(def.root).toMatchObject({ '--button-bg': 'transparent', '--button-bd': '1px solid var(--sf-line-strong)', '--button-color': 'var(--sf-text)' });
     expect(button.vars({}, { variant: 'filled', size: 'sm' }, {}).root['--button-fz']).toBe('11px');

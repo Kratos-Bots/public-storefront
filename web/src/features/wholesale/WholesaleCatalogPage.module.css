@@ -13,6 +13,17 @@
   padding: 1rem 0 0.5rem;
 }
 
+/* Template section label above the title (see ProductList.module.css); modern renders none. */
+.page > [data-sf-part="section-label"]:first-child,
+.page > [data-sf-slot="SectionLabel"]:first-child > [data-sf-part="section-label"] {
+  margin-top: 1rem;
+}
+
+.page > [data-sf-part="section-label"] + .head,
+.page > [data-sf-slot="SectionLabel"] + .head {
+  padding-top: 0;
+}
+
 .title {
   margin: 0;
   font-family: var(--sf-font-heading);

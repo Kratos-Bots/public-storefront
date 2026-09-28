@@ -64,7 +64,7 @@ describe('parts', () => {
     ['../src/features/catalog/ProductCard.tsx', ['data-sf-part="product-card"', 'data-sf-part="price"']],
     ['../src/features/catalog/ProductRow.tsx', ['data-sf-part="product-row"', 'data-sf-part="price"']],
     ['../src/features/catalog/ProductDetailPage.tsx', ['data-sf-part="page-title"', 'data-sf-part="price"']],
-    ['../src/features/catalog/ProductDetailSheet.tsx', ['data-sf-part="price"']],
+    ['../src/features/catalog/ProductDetailSheet.tsx', ['data-sf-part="price"', 'data-sf-part="sheet-title"']],
     ['../src/features/catalog/ProductGrid.tsx', ['data-sf-part="page-title"']],
     ['../src/features/catalog/ProductList.tsx', ['data-sf-part="page-title"', 'data-sf-part="group-title"']],
     ['../src/features/wholesale/WholesaleCatalogPage.tsx', ['data-sf-part="page-title"']],

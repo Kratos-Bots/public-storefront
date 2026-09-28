@@ -81,7 +81,8 @@ export function AddToCart({ product, size = 'lg', showPrice = true }: AddToCartP
       <span className={classes.label} aria-live="polite">
         {label}
       </span>
-      <Slot name="ButtonAdornment" variant="primary" cta={false} />
+      {/* The detail page / menu sheet CTA (lg) is a main CTA; the card quick-add (sm) is not. */}
+      <Slot name="ButtonAdornment" variant="primary" cta={size === 'lg'} />
     </button>
   );
 }
