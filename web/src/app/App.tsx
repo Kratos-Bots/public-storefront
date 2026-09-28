@@ -6,6 +6,8 @@ import { RouterProvider } from 'react-router';
 import { SETTINGS_KEY, useSettings, useSettingsQuery } from '@/app/settings.ts';
 import { closedGate, isClosedExemptPath } from '@/app/closed-gate.ts';
 import { applyDocumentTheme, buildMantineTheme, THEME_STORAGE_KEY } from '@/app/theme-bridge.ts';
+import { resolveTheme } from '@/templates/resolve.ts';
+import { lookupManifest } from '@/templates/registry.ts';
 import { router } from '@/app/router.tsx';
 import { EmptyState } from '@/components/EmptyState.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
@@ -99,13 +101,14 @@ function ThemedApp({ settings }: { settings: StorefrontSettings }) {
   // One key for both objects: the document only needs re-theming when their content
   // changes, not on every settings refetch.
   const themeKey = JSON.stringify({ theme, brand });
+  const resolved = useMemo(() => resolveTheme(theme, lookupManifest), [themeKey]);
   useEffect(() => {
-    applyDocumentTheme(theme, brand);
+    applyDocumentTheme(resolved, brand);
   }, [themeKey]);
-  const mantineTheme = useMemo(() => buildMantineTheme(theme), [theme]);
+  const mantineTheme = useMemo(() => buildMantineTheme(resolved), [resolved]);
 
   return (
-    <MantineProvider theme={mantineTheme} forceColorScheme={theme.scheme}>
+    <MantineProvider theme={mantineTheme} forceColorScheme={resolved.scheme}>
       <Notifications position="top-center" />
       <ClosedGate>
         <RouterProvider router={router} />

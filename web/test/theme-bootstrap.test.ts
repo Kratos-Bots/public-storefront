@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { THEME_BOOTSTRAP } from '@/app/theme-bootstrap.ts';
 import { cssVariablesFor, THEME_STORAGE_KEY } from '@/app/theme-bridge.ts';
+import { resolveTheme } from '@/templates/resolve.ts';
+import { lookupManifest } from '@/templates/registry.ts';
 import type { Theme, Brand } from '@/types/settings.ts';
 
 const theme: Theme = {
@@ -29,7 +31,7 @@ describe('theme bootstrap (inlined first-paint script)', () => {
     // eslint-disable-next-line no-new-func
     new Function(THEME_BOOTSTRAP)();
 
-    const expected = cssVariablesFor(theme, brand);
+    const expected = cssVariablesFor(resolveTheme(theme, lookupManifest), brand);
     const root = document.documentElement.style;
     expect(root.getPropertyValue('--sf-surface-2')).toBe(expected['--sf-surface-2']);
     expect(root.getPropertyValue('--sf-line')).toBe(expected['--sf-line']);
