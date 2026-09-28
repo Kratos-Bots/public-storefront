@@ -43,7 +43,7 @@ export function BentoCatalogHero({ surface, brand, tagline, welcomeMessage, prod
         <PackageIcon />
         <p className="bento-stat">
           <span className="bento-stat__num">{productCount}</span>
-          <span className="bento-stat__label">{productCount === 1 ? 'Product to browse' : 'Products to browse'}</span>
+          <span className="bento-stat__label">{productCount === 1 ? 'Product' : 'Products'}</span>
         </p>
       </div>
 
@@ -62,9 +62,9 @@ export function BentoCatalogHero({ surface, brand, tagline, welcomeMessage, prod
         <p className="bento-fact">
           <span className="bento-fact__status">
             <span className="bento-dot" aria-hidden />
-            {accepting ? 'Taking orders' : 'Ordering paused'}
+            {accepting ? 'Open' : 'Paused'}
           </span>
-          <span className="bento-fact__label">{accepting ? 'Checkout is open' : 'Browse now, order later'}</span>
+          <span className="bento-fact__label">{accepting ? 'Taking orders' : 'Ordering paused'}</span>
         </p>
       </div>
 

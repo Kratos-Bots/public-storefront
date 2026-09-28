@@ -134,8 +134,9 @@ describe('BentoCatalogHero', () => {
     expect(container.querySelector('.bento-hero__headline')).toHaveTextContent('Chargers and cables that last');
     expect(screen.getByText('Orders before 3pm ship today.')).toBeInTheDocument();
     expect(container.querySelector('.bento-stat__num')).toHaveTextContent('42');
-    expect(screen.getByText('Products to browse')).toBeInTheDocument();
+    expect(screen.getByText('Products')).toBeInTheDocument();
     expect(screen.getByText('Categories')).toBeInTheDocument();
+    expect(screen.getByText('Open')).toBeInTheDocument();
     expect(screen.getByText('Taking orders')).toBeInTheDocument();
     expect(cells(container)).toHaveLength(4);
   });
@@ -158,10 +159,11 @@ describe('BentoCatalogHero', () => {
   it('singular counts, no categories cell, and the ordering cell stretches into its place', () => {
     h.settings = settings({ ordering: false });
     const { container } = render(<BentoCatalogHero {...base()} surface="grid" {...hero} productCount={1} categoryCount={0} />);
-    expect(screen.getByText('Product to browse')).toBeInTheDocument();
+    expect(screen.getByText('Product')).toBeInTheDocument();
     expect(screen.queryByText('Categories')).toBeNull();
     const status = container.querySelector('[data-state]')!;
     expect(status).toHaveAttribute('data-state', 'paused');
+    expect(status).toHaveTextContent('Paused');
     expect(status).toHaveTextContent('Ordering paused');
     expect(status).toHaveClass('bento-cell--tall');
   });
