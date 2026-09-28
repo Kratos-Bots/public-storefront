@@ -2682,16 +2682,93 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ### Task 8: Admin preview images
 
 **Files:**
-- Create: `e2e/template-previews.spec.ts`
+- Create: `e2e/template-previews.spec.ts`, `e2e/mocks-policy.spec.ts`
+- Modify: `e2e/mocks.ts` (`E2E_REAL_FONTS=1` lets Google Fonts through; default unchanged)
 - Create (generated, committed): `web/src/templates/dark-luxury/preview.webp`, `web/src/templates/cyber-brutalism/preview.webp`
 - Modify: both `manifest.ts` (add `preview`)
 - Test: `web/test/template-dark-luxury.test.tsx`, `web/test/template-cyber-brutalism.test.tsx` (append)
 
 **Interfaces:**
 - Consumes: `presetTheme`, `installMocks`, `FIXED_NOW`; Plan 2 Task 9's catalog plugin (accepts `./preview.webp`, emits `/templates/<id>/preview.webp`).
-- Produces: `manifest.preview = './preview.webp'` for both templates; the images in `templates.json`.
+- Produces: `externalRequestPolicy(url, env?)` in `e2e/mocks.ts`; `manifest.preview = './preview.webp'` for both templates; the images in `templates.json`.
 
-- [ ] **Step 1: Write the opt-in capture spec** (no new dependencies — Chromium's canvas encodes WebP)
+- [ ] **Step 1: Real fonts on demand in the e2e mocks**
+
+`installMocks` aborts every request that leaves `localhost:5199` (mocks.ts L232), so Google Fonts never load and the preview images and visual review would show fallback faces. Add an opt-in pass-through for exactly the two Google Fonts hosts. With `E2E_REAL_FONTS` unset, behaviour is unchanged (fonts are aborted, the suite stays hermetic). With `E2E_REAL_FONTS=1`, only `fonts.googleapis.com` / `fonts.gstatic.com` go through; every other external request is still aborted.
+
+Write the failing test first. `e2e/mocks-policy.spec.ts`:
+
+```ts
+import { expect, test } from '@playwright/test';
+import { externalRequestPolicy, installMocks } from './mocks.ts';
+
+const CSS = 'https://fonts.googleapis.com/css2?family=Tektur:wght@400;700&display=swap';
+const WOFF = 'https://fonts.gstatic.com/s/tektur/v1/x.woff2';
+
+test.describe('external request policy (E2E_REAL_FONTS)', () => {
+  test('default: every external request is aborted, fonts included', () => {
+    expect(externalRequestPolicy(CSS, {})).toBe('abort');
+    expect(externalRequestPolicy(WOFF, {})).toBe('abort');
+    expect(externalRequestPolicy('https://example.com/x.js', {})).toBe('abort');
+  });
+
+  test('E2E_REAL_FONTS=1: only the two Google Fonts hosts pass', () => {
+    const env = { E2E_REAL_FONTS: '1' };
+    expect(externalRequestPolicy(CSS, env)).toBe('continue');
+    expect(externalRequestPolicy(WOFF, env)).toBe('continue');
+    expect(externalRequestPolicy('https://example.com/x.js', env)).toBe('abort');
+    expect(externalRequestPolicy('https://fonts.googleapis.com.evil.example/x.css', env)).toBe('abort');
+    expect(externalRequestPolicy('http://fonts.googleapis.com/css2', env)).toBe('abort'); // https only
+  });
+
+  test('any other value of the flag keeps fonts blocked', () => {
+    expect(externalRequestPolicy(CSS, { E2E_REAL_FONTS: 'true' })).toBe('abort');
+    expect(externalRequestPolicy(CSS, { E2E_REAL_FONTS: '0' })).toBe('abort');
+  });
+
+  test('default wiring: a page fetch to Google Fonts fails (no network used)', async ({ page }) => {
+    test.skip(process.env.E2E_REAL_FONTS === '1', 'checks the default (blocked) wiring only');
+    await installMocks(page, { layout: 'storefront' });
+    await page.goto('/');
+    const failed = await page.evaluate(async (url) => {
+      try { await fetch(url, { mode: 'no-cors' }); return false; } catch { return true; }
+    }, CSS);
+    expect(failed).toBe(true);
+  });
+});
+```
+
+Run: `npm run test:e2e -- mocks-policy.spec.ts` → FAIL (`externalRequestPolicy` is not exported).
+
+Then in `e2e/mocks.ts` add, above `installMocks`:
+
+```ts
+const GOOGLE_FONTS = /^https:\/\/fonts\.(googleapis|gstatic)\.com\//;
+
+/**
+ * What the catch-all route does with a request that leaves the dev server. Default: abort
+ * (hermetic). E2E_REAL_FONTS=1 lets the two Google Fonts hosts through so template
+ * screenshots and preview images use the real faces; nothing else is ever let out.
+ */
+export function externalRequestPolicy(url: string, env: Record<string, string | undefined> = process.env): 'continue' | 'abort' {
+  return env.E2E_REAL_FONTS === '1' && GOOGLE_FONTS.test(url) ? 'continue' : 'abort';
+}
+```
+
+and change the catch-all route (L232) from `route.abort()` to consult it:
+
+```ts
+  // Nothing outside the dev server and the (shimmed) challenge script should
+  // ever be reached — a real request would hang the run. Only exception: Google
+  // Fonts when E2E_REAL_FONTS=1 (see externalRequestPolicy).
+  await page.route(/^https?:\/\/(?!localhost:5199|challenges\.cloudflare\.com)/, (route) =>
+    externalRequestPolicy(route.request().url()) === 'continue' ? route.continue() : route.abort(),
+  );
+```
+
+Run: `npm run test:e2e -- mocks-policy.spec.ts` → 4 passed. Run `npm run test:e2e -- storefront.spec.ts templates-baseline.spec.ts` → all pass, which shows the default is unchanged (the baseline must not move).
+
+- [ ] **Step 2: Write the opt-in capture spec** (no new dependencies — Chromium's canvas encodes WebP)
 
 `e2e/template-previews.spec.ts`:
 
@@ -2709,7 +2786,7 @@ const TARGETS = [
 ];
 
 test.describe('template previews', () => {
-  test.skip(process.env.CAPTURE_PREVIEWS !== '1', 'set CAPTURE_PREVIEWS=1 to regenerate preview.webp');
+  test.skip(process.env.CAPTURE_PREVIEWS !== '1', 'set CAPTURE_PREVIEWS=1 (and E2E_REAL_FONTS=1) to regenerate preview.webp');
 
   for (const t of TARGETS) {
     test(`capture ${t.template}`, async ({ page }) => {
@@ -2736,11 +2813,11 @@ test.describe('template previews', () => {
 });
 ```
 
-- [ ] **Step 2: Generate the images**
+- [ ] **Step 3: Generate the images**
 
-Run (bash): `CAPTURE_PREVIEWS=1 npm run test:e2e -- template-previews.spec.ts` → 2 passed. **OPEN — needs a controller ruling:** Plan 2 dropped `E2E_REAL_FONTS` (preflight F6), and `installMocks` aborts every non-localhost request, so Google Fonts (Tektur, Share Tech Mono, JetBrains Mono) never load in e2e. These captures therefore use the fallback faces unless a real-fonts switch is added: for example, `installMocks` exempts `fonts.(googleapis|gstatic).com` from its catch-all abort when `E2E_REAL_FONTS=1`. Check each file exists, is 640×400 and under 150 KB, and **open both to eyeball them** (Read tool on the `.webp`). A normal `npm run test:e2e` reports these two as skipped.
+Run (bash): `CAPTURE_PREVIEWS=1 E2E_REAL_FONTS=1 npm run test:e2e -- template-previews.spec.ts` → 2 passed. Check each file exists, is 640×400 and under 150 KB, and **open both to eyeball them** (Read tool on the `.webp`). A normal `npm run test:e2e` reports these two as skipped.
 
-- [ ] **Step 3: Write the failing tests**
+- [ ] **Step 4: Write the failing tests**
 
 Append to `web/test/template-dark-luxury.test.tsx`:
 
@@ -2757,7 +2834,7 @@ Append the same block to `web/test/template-cyber-brutalism.test.tsx` with `cybe
 
 Run: `npm run test:web -- template-dark-luxury template-cyber-brutalism` → FAIL (`preview` undefined).
 
-- [ ] **Step 4: Declare the previews**
+- [ ] **Step 5: Declare the previews**
 
 In both `manifest.ts` files add, after `options: [...]`:
 
@@ -2765,7 +2842,7 @@ In both `manifest.ts` files add, after `options: [...]`:
   preview: './preview.webp',
 ```
 
-- [ ] **Step 5: Verify the catalog**
+- [ ] **Step 6: Verify the catalog**
 
 Run: `npm run test:web` → PASS. Run: `npm run build` → succeeds. Then:
 
@@ -2773,12 +2850,12 @@ Run: `npm run test:web` → PASS. Run: `npm run build` → succeeds. Then:
 node -e "const c=require('./web/dist/templates.json');console.log(c.templates.map(t=>t.id+' '+(t.preview||'-')).join('\n'))"
 ```
 
-Expected: `modern -`, `dark-luxury /templates/dark-luxury/preview.<hash>.webp` (or the exact path shape Plan 2's plugin emits), `cyber-brutalism /templates/cyber-brutalism/preview….webp`, and both files present under `web/dist/templates/`.
+Expected: `modern -`, `dark-luxury /templates/dark-luxury/preview.webp`, `cyber-brutalism /templates/cyber-brutalism/preview.webp` (unhashed — spec amendment 5), and both files present under `web/dist/templates/`.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-git add e2e/template-previews.spec.ts web/src/templates/dark-luxury/preview.webp web/src/templates/cyber-brutalism/preview.webp web/src/templates/dark-luxury/manifest.ts web/src/templates/cyber-brutalism/manifest.ts web/test/template-dark-luxury.test.tsx web/test/template-cyber-brutalism.test.tsx
+git add e2e/mocks.ts e2e/mocks-policy.spec.ts e2e/template-previews.spec.ts web/src/templates/dark-luxury/preview.webp web/src/templates/cyber-brutalism/preview.webp web/src/templates/dark-luxury/manifest.ts web/src/templates/cyber-brutalism/manifest.ts web/test/template-dark-luxury.test.tsx web/test/template-cyber-brutalism.test.tsx
 git commit -m "feat(templates): admin preview images for dark-luxury and cyber-brutalism
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
@@ -2795,7 +2872,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 
 - [ ] **Step 1: Capture with real fonts**
 
-Run (bash): `npm run test:e2e -- templates.spec.ts templates-decor.spec.ts` → all pass. **OPEN — needs a controller ruling:** Plan 2 dropped `E2E_REAL_FONTS` (preflight F6), and `installMocks` aborts every non-localhost request, so Google Fonts (Tektur, Share Tech Mono, JetBrains Mono) never load in e2e. These captures therefore use the fallback faces unless a real-fonts switch is added: for example, `installMocks` exempts `fonts.(googleapis|gstatic).com` from its catch-all abort when `E2E_REAL_FONTS=1`. Screenshots land in `docs/screenshots/templates/` (gitignored): `<template>-<preset>-<layout>-<width>-{1-catalog,2-detail,3-cart,4-checkout}.png`.
+Run (bash): `E2E_REAL_FONTS=1 npm run test:e2e -- templates.spec.ts templates-decor.spec.ts` → all pass (real Google Fonts via Task 8 Step 1). Screenshots land in `docs/screenshots/templates/` (gitignored): `<template>-<preset>-<layout>-<width>-{1-catalog,2-detail,3-cart,4-checkout}.png`.
 
 - [ ] **Step 2: Review every screenshot against the checklists**
 
@@ -2844,7 +2921,7 @@ examples of the contract: `web/src/templates/dark-luxury/` and
 `web/src/templates/cyber-brutalism/`.
 
 Preview images are regenerated with
-`CAPTURE_PREVIEWS=1 npm run test:e2e -- template-previews.spec.ts`.
+`CAPTURE_PREVIEWS=1 E2E_REAL_FONTS=1 npm run test:e2e -- template-previews.spec.ts`.
 ```
 
 - [ ] **Step 5: Full verification**

@@ -4128,7 +4128,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 **Files:**
 - Create: `e2e/templates.spec.ts`
 
-(`e2e/mocks.ts` is not touched. `installMocks` already aborts every request that leaves `localhost:5199` (mocks.ts L232), Google Fonts included, so the suite is hermetic as it stands.)
+(`e2e/mocks.ts` is not touched. `installMocks` already aborts every request that leaves `localhost:5199` (mocks.ts L232), Google Fonts included, so the suite is hermetic as it stands. Plan 3 Task 8 Step 1 adds the opt-in `E2E_REAL_FONTS=1` pass-through for the two Google Fonts hosts; the default stays blocked.)
 
 **Interfaces:**
 - Consumes: `e2e/flows.ts`, `/templates.json` from the dev server (Task 9).
