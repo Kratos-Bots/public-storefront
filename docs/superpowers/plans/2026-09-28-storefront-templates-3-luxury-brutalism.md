@@ -10,13 +10,13 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-28-storefront-templates-design.md` — §4.2, §4.3, §4.4 and the template parts of §6. Design briefs: `designs/dark-luxury/DESIGN.md`, `designs/cyber-brutalism/DESIGN.md`, plus the `dark-luxury` and `cyber-brutalism-design` skills.
 
-**Depends on:** Plan 2 (`2026-09-28-storefront-templates-2-engine.md`) fully landed on the same branch. Every name below — `defineTemplate`, `BASE_TOKENS`, `COLOR_KEYS`, `TemplateSlots`, the slot prop types, `useOrderingState`, `useCatalogStats`, `useServerClock`, `useCutoffInfo`, `useMobileCartBar`, `formatClock`, `utcOffsetLabel`, `Brand`, `ContactLinks`, `validateManifest`, `resolveTheme`, `lookupManifest`, `getTemplate`, `allTemplates`, the `--sf-*` variables, root attributes, `data-sf-part` values, `data-sf-cta="main"`, `data-sf-slot`, `e2e/flows.ts` (`addFirstToCart`, `FIXED_NOW`), `e2e/mocks.ts` (`installMocks`, `Layout`, `InstallMocksOptions`) and `TEMPLATE_CASES` in `e2e/templates.spec.ts` — comes from Plan 2's Contract reference and tasks, used verbatim.
+**Depends on:** Plan 2 (`2026-09-28-storefront-templates-2-engine.md`) fully landed on the same branch. Every name below — `defineTemplate`, `BASE_TOKENS`, `COLOR_KEYS`, `TemplateSlots`, the slot prop types, `useOrderingState`, `useCatalogStats`, `useServerClock`, `useCutoffInfo` (its `CutoffInfo` type is re-exported by the contract from `@/lib/server-clock.ts`, where it is declared — `next` carries `day`, `cutoff`, `shipsOn`, `isToday`, `at`, `msRemaining`), `useMobileCartBar`, `formatClock`, `utcOffsetLabel`, `Brand`, `ContactLinks`, `ArrowUpRightIcon`, `validateManifest`, `resolveTheme`, `lookupManifest`, `getTemplate`, `allTemplates`, the `--sf-*` variables, root attributes, `data-sf-part` values (the five custom buttons — `AddToCart`, `CartSummary` checkout, `MobileCartBar` checkout, `CheckoutPage` `.next` and `.back` — carry `data-sf-part="button"` with `data-variant`), `data-sf-cta="main"` (CartSummary, MobileCartBar and the CheckoutPage Place order / Continue button), `data-sf-slot`, `e2e/flows.ts` (`addFirstToCart`, `FIXED_NOW`), `e2e/mocks.ts` (`installMocks`, `Layout`, `InstallMocksOptions`) and `TEMPLATE_CASES` in `e2e/templates.spec.ts` — comes from Plan 2's Contract reference and tasks, used verbatim.
 
 ## Global Constraints
 
 - Repo `T:\Projects\ecommerce\ecommerce-storefront`, branch `feature/storefront-templates` (Plan 2 lands first). **Never stage `designs/`.** Stage by explicit path only.
 - Web imports use the `@/` alias with explicit `.ts`/`.tsx` extensions.
-- Template files may import **only** `@/templates/contract.ts` (slots, hooks, components, types), `@/templates/define.ts` (manifests — `manifest.ts` imports nothing else), `react`, and `./`-relative files inside their own folder (including `./template.css`). No `@/components/icons.tsx` — icons are inline SVG. Helpers live in `slots/` so every relative import is `./…` (no `../`). Enforced by Plan 2's `scripts/template-imports.mjs` vitest.
+- Template files may import **only** `@/templates/contract.ts` (slots, hooks, components, types), `@/templates/define.ts` (manifests — `manifest.ts` imports nothing else), `react`, and `./`-relative files inside their own folder (including `./template.css`). Icons come from the contract (`ArrowUpRightIcon` from `@/templates/contract.ts`) or are inline SVG in the template's own `slots/` — never import `@/components/icons.tsx` directly. Helpers live in `slots/` so every relative import is `./…` (no `../`). Enforced by Plan 2's `scripts/template-imports.mjs` vitest.
 - Every selector in a `template.css` starts with `:root[data-sf-template="<id>"]`. Keyframes are prefixed `sf-lux-` / `sf-cb-`. Template classes are prefixed `lux-` / `cb-`. Every non-`none` `animation` declaration sits inside `@media (prefers-reduced-motion: no-preference …)`.
 - Contract version 1; ids `dark-luxury`, `cyber-brutalism`; option keys per the manifests below; `nodeLabel` max 24.
 - Both templates: `editable: { colors: [...COLOR_KEYS], fonts: false, radius: false, density: true }`.
@@ -2709,7 +2709,7 @@ const TARGETS = [
 ];
 
 test.describe('template previews', () => {
-  test.skip(process.env.CAPTURE_PREVIEWS !== '1', 'set CAPTURE_PREVIEWS=1 (and E2E_REAL_FONTS=1) to regenerate preview.webp');
+  test.skip(process.env.CAPTURE_PREVIEWS !== '1', 'set CAPTURE_PREVIEWS=1 to regenerate preview.webp');
 
   for (const t of TARGETS) {
     test(`capture ${t.template}`, async ({ page }) => {
@@ -2738,7 +2738,7 @@ test.describe('template previews', () => {
 
 - [ ] **Step 2: Generate the images**
 
-Run (bash): `CAPTURE_PREVIEWS=1 E2E_REAL_FONTS=1 npm run test:e2e -- template-previews.spec.ts` → 2 passed. Check each file exists, is 640×400 and under 150 KB, and **open both to eyeball them** (Read tool on the `.webp`). A normal `npm run test:e2e` reports these two as skipped.
+Run (bash): `CAPTURE_PREVIEWS=1 npm run test:e2e -- template-previews.spec.ts` → 2 passed. **OPEN — needs a controller ruling:** Plan 2 dropped `E2E_REAL_FONTS` (preflight F6), and `installMocks` aborts every non-localhost request, so Google Fonts (Tektur, Share Tech Mono, JetBrains Mono) never load in e2e. These captures therefore use the fallback faces unless a real-fonts switch is added: for example, `installMocks` exempts `fonts.(googleapis|gstatic).com` from its catch-all abort when `E2E_REAL_FONTS=1`. Check each file exists, is 640×400 and under 150 KB, and **open both to eyeball them** (Read tool on the `.webp`). A normal `npm run test:e2e` reports these two as skipped.
 
 - [ ] **Step 3: Write the failing tests**
 
@@ -2795,7 +2795,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 
 - [ ] **Step 1: Capture with real fonts**
 
-Run (bash): `E2E_REAL_FONTS=1 npm run test:e2e -- templates.spec.ts templates-decor.spec.ts` → all pass. Screenshots land in `docs/screenshots/templates/` (gitignored): `<template>-<preset>-<layout>-<width>-{1-catalog,2-detail,3-cart,4-checkout}.png`.
+Run (bash): `npm run test:e2e -- templates.spec.ts templates-decor.spec.ts` → all pass. **OPEN — needs a controller ruling:** Plan 2 dropped `E2E_REAL_FONTS` (preflight F6), and `installMocks` aborts every non-localhost request, so Google Fonts (Tektur, Share Tech Mono, JetBrains Mono) never load in e2e. These captures therefore use the fallback faces unless a real-fonts switch is added: for example, `installMocks` exempts `fonts.(googleapis|gstatic).com` from its catch-all abort when `E2E_REAL_FONTS=1`. Screenshots land in `docs/screenshots/templates/` (gitignored): `<template>-<preset>-<layout>-<width>-{1-catalog,2-detail,3-cart,4-checkout}.png`.
 
 - [ ] **Step 2: Review every screenshot against the checklists**
 
@@ -2844,7 +2844,7 @@ examples of the contract: `web/src/templates/dark-luxury/` and
 `web/src/templates/cyber-brutalism/`.
 
 Preview images are regenerated with
-`CAPTURE_PREVIEWS=1 E2E_REAL_FONTS=1 npm run test:e2e -- template-previews.spec.ts`.
+`CAPTURE_PREVIEWS=1 npm run test:e2e -- template-previews.spec.ts`.
 ```
 
 - [ ] **Step 5: Full verification**
@@ -2867,7 +2867,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ## Contract notes for Plan 2 (resolved — Plan 2 was patched)
 
 1. **Blur removal** → Plan 2 added `tokens.glass: 'on' | 'off'` (root `data-sf-glass`) with shared `chassis.css` rules that make `.glass`/`.glass-soft` bars and `.mantine-Overlay-root` solid; `.glass`, `.glass-soft`, `.mantine-Overlay-root` are also documented as supported hooks. Brutalism sets `glass: 'off'` and its stylesheet no longer targets those selectors (Tasks 4 and 6).
-2. **Custom buttons and `button.fill`** → Plan 2 Task 7 adds shared `:root[data-sf-btn-fill="outline-glow"|"ghost"] [data-sf-part="button"][data-variant="filled"]` rules (fill, text, border, hover, disabled) covering `AddToCart`, `CartSummary` and `MobileCartBar` checkouts too. Luxury's filled-button rule keeps only its surface fill, text colour and glow/pulse (Task 3).
+2. **Custom buttons and `button.fill`** → Plan 2 Task 7 adds shared `:root[data-sf-btn-fill="outline-glow"|"ghost"] [data-sf-part="button"][data-variant="filled"]` rules (fill, text, border, hover, disabled) covering `AddToCart`, `CartSummary` and `MobileCartBar` checkouts and the checkout page's `.next` (Place order / Continue; `data-variant="filled"`, `data-sf-cta="main"`) and `.back` (`data-variant="default"`) buttons too (Plan 2 preflight ruling F2). Luxury's filled-button rule keeps only its surface fill, text colour and glow/pulse (Task 3); both templates reach the checkout buttons through `[data-sf-part="button"]` / `[data-sf-cta="main"]` alone — no page-specific class (such as `.next`) is ever targeted.
 3. **Token values** → Plan 2's `validateManifest` now checks every token and explicitly accepts numeric radii 0..64 (incl. `badge.radius: 0`), `'0'`/em tracking, `card.border: 'none'` and `button.font: 'body' | 'heading'`; its tests use this plan's exact luxury and brutalism token blocks.
 4. **Import scanner** → pinned by a Plan 2 Task 10 test covering `./x.ts`/`./x.tsx`/`../slots/x.tsx` in-folder imports, `import type { SVGProps } from 'react'` and inline `type` specifiers.
 5. **Icons** → `ArrowUpRightIcon` (props `GlyphProps`: `size?: number | string` plus pass-through SVG props) is re-exported from `@/templates/contract.ts`; this plan imports it and no longer ships its own `Arrow.tsx` (Task 5). It keeps the shop's 1.6 stroke rather than the brief's 1.5 so the glyph matches the rest of the storefront.

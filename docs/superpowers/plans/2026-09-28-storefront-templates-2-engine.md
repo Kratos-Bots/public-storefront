@@ -14,16 +14,18 @@
 
 ## Global Constraints
 
-- Repo: `T:\Projects\ecommerce\ecommerce-storefront`, branch `feature/storefront-templates` (already checked out). **Never stage `designs/`** (untracked, not ours to commit). Stage files by explicit path, never `git add -A`/`.`.
+- Repo: `T:\Projects\ecommerce\ecommerce-storefront`, branch `feature/storefront-templates` (already checked out). **Never stage `designs/`** (untracked, not ours to commit). Stage files by explicit path, never `git add -A`/`.`/a directory.
 - Web code: `@/` alias with explicit `.ts`/`.tsx` extensions on every import (existing style). Worker/scripts: plain ESM `.mjs`.
 - Tests: web `npm run test:web` (vitest, `web/test/**/*.test.{ts,tsx}`); scripts `npm run test:scripts` (`node --test scripts/*.test.mjs`); typecheck `npm run typecheck`; e2e `npm run test:e2e` (mocked, Vite on :5199).
 - **Modern must stay pixel-identical.** `e2e/templates-baseline.spec.ts` (Task 1) is the gate: it must pass unchanged after Tasks 4, 5, 6, 7 and 8. A failing baseline is a bug in the task, never a reason to `--update-snapshots`.
-- `contractVersion: 1`. Template id `/^[a-z0-9-]{1,40}$/`. Option key `/^[a-zA-Z0-9_-]{1,40}$/`, ≤ 30 options, text option `maxLength` 1–100. Font family `/^[A-Za-z0-9 ]{1,50}$/`, weights integers 100–900 in steps of 100. Token values: radius tokens `'theme' | 'pill' | integer 0..64`; tracking `'normal' | '0' | <signed decimal>em`; weights 100–900 step 100; card border/shadow `'none'` or a CSS value without `;{}` (≤ 200 chars); `glass` `'on' | 'off'`.
+- `contractVersion: 1`. Template id `/^[a-z0-9-]{1,40}$/`. Option key `/^[a-zA-Z0-9_-]{1,40}$/`, ≤ 30 options, text option `maxLength` 1–100, select `choices` 1–20. Font family `/^[A-Za-z0-9 ]{1,50}$/`, weights 1–9 integers 100–900 in steps of 100. Text caps: `name` ≤ 60, `description` ≤ 500, `author` ≤ 100, `version` ≤ 40 (these match Plan 1's catalog schema). Token values: radius tokens `'theme' | 'pill' | integer 0..64`; tracking `'normal' | '0' | <signed decimal>em`; weights 100–900 step 100; card border/shadow `'none'` or a CSS value without `;{}` (≤ 200 chars); `glass` `'on' | 'off'`.
+- **Stage by explicit file path in every `git add`** (the worktree is shared with other sessions). `git add` of an unchanged tracked path is a harmless no-op, so the lists below may name files a step turned out not to touch.
+- Template naming rules shared by the scripts (reserved folder names, id/SHA regexes, the import allowlist) live in **one** module, `scripts/template-rules.mjs` (Task 10); nothing re-declares them.
 - `templates.lock.json` `ref` must be a full 40-char lowercase commit SHA (`/^[0-9a-f]{40}$/`).
 - `templates.json` shape is `{ schemaVersion: 1, templates: CatalogTemplate[] }` exactly as defined in Task 9 — Plan 1 and Plan 4 consume it.
 - Option strings from the backend are rendered as React text only — never HTML, CSS or URLs.
 - Draft `customCss` is never applied through the preview channel.
-- No new runtime or dev dependencies (Vite's own `createServer` is used for the catalog plugin; no ESLint exists in `web/`, so the import restriction is enforced by a shared scanner — see Task 10).
+- No new runtime or dev dependencies (Vite's own `createServer` is used for the catalog plugin; no ESLint exists in `web/`, so the import restriction is enforced by a shared scanner — see Task 10; the `yaml` package is not installed, so Task 12's workflow test reads the YAML as text).
 - **UI/CSS tasks (6, 7, and the markup parts of 13) are implemented by a frontend-design subagent** (user preference); logic tasks may be done directly.
 - Every commit message ends with a blank line then `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`.
 
@@ -33,13 +35,14 @@
 2. **Stored template id not in this release** (rollback, removed import) or a `preset` id from another template → modern with its default preset, one console warning, colours still the stored ones. Pinned in Task 3 ("unknown template", "foreign preset").
 3. **Template chunk fails or hangs** (stale `index.html` after a redeploy 404s the old chunk hash; offline) → default slots render after the timeout, no blank page, late success still upgrades. Pinned in Task 6 (`templates-runtime.test.tsx`: "load failure", "timeout then late load").
 4. **localStorage absent, corrupted, or holding the previous release's `sf-theme-v1` payload** → bootstrap never throws; v1 is still painted. Pinned in Task 5 (`theme-bootstrap.test.ts`: "corrupt v2", "legacy v1").
-5. **Preview messages from a non-parent window, malformed, or carrying `customCss`**, and preview mode writing to localStorage → ignored / stripped / never persisted. Pinned in Task 8 (`preview-listener.test.ts`).
+5. **Preview messages from a non-parent window, malformed, or carrying `customCss`**, and preview mode writing to localStorage → ignored / stripped / never persisted. Message handling pinned in Task 8 (`preview-listener.test.ts`); `applyDocumentTheme(…, { persist: false })` pinned in Task 5 (`theme-bootstrap.test.ts`: "never persists in preview mode"); the end-to-end wiring (preview theme overrides the stored one, saved `customCss` kept, nothing written) pinned in Task 8 (`document-theme.test.tsx`).
+6. **A settings response that is minutes old when a clock slot mounts** (late chunk, shell switch, preview template switch) → the clock still shows server time now, because the anchor is the settings fetch time (recorded when the settings queryFn resolves — the response's `dataUpdatedAt`), not the mount time. Pinned in Task 6 (`server-clock.test.tsx`).
 
 ---
 
 ## Contract reference (consumed verbatim by Plan 3)
 
-Everything a template may touch. Templates import **only** from `@/templates/contract.ts` (slots, hooks, components, types), `@/templates/define.ts` (manifests — `manifest.ts` may import nothing else), `react`, `react/jsx-runtime`, relative files inside their own folder, and relative `.css`. Enforced by `scripts/template-imports.mjs` (Task 10).
+Everything a template may touch. Templates import **only** from `@/templates/contract.ts` (slots, hooks, components, types), `@/templates/define.ts` (manifests — `manifest.ts` may import nothing else), `react`, `react/jsx-runtime`, relative files inside their own folder, and relative `.css`. The allowlist lives in `scripts/template-rules.mjs` and is enforced by `scripts/template-imports.mjs` (Task 10).
 
 ### Folder and module shape
 
@@ -142,12 +145,136 @@ export interface TemplateManifest {
   preview?: string; // './preview.webp' | './preview.png' | './preview.jpg' | './preview.jpeg'
 }
 
-export function defineTemplate(manifest: TemplateManifest): TemplateManifest;
-export function validateManifest(value: unknown, folderId: string): string[];
-export const TEMPLATE_ID_RE: RegExp;   // /^[a-z0-9-]{1,40}$/
-export const OPTION_KEY_RE: RegExp;    // /^[a-zA-Z0-9_-]{1,40}$/
-export const FONT_FAMILY_RE: RegExp;   // /^[A-Za-z0-9 ]{1,50}$/
+export const TEMPLATE_ID_RE = /^[a-z0-9-]{1,40}$/;
+export const OPTION_KEY_RE = /^[a-zA-Z0-9_-]{1,40}$/;
+export const FONT_FAMILY_RE = /^[A-Za-z0-9 ]{1,50}$/;
+export const HEX_RE = /^#[0-9a-fA-F]{6}$/;
+const PREVIEW_RE = /^\.\/[A-Za-z0-9_-]+\.(webp|png|jpg|jpeg)$/;
+const RADII: readonly RadiusName[] = ['none', 'sm', 'md', 'lg', 'xl'];
+const MAX_OPTIONS = 30;
+const MAX_CHOICES = 20;
+const MAX_WEIGHTS = 9;
+/** Text caps — identical to Plan 1's catalog schema, so a manifest that builds is never dropped by the backend. */
+const TEXT_CAPS = { name: 60, version: 40, description: 500, author: 100 } as const;
+
+/** Identity — exists so manifests are type-checked against the contract. */
+export function defineTemplate(manifest: TemplateManifest): TemplateManifest {
+  return manifest;
+}
+
+const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+const isStr = (v: unknown): v is string => typeof v === 'string' && v.length > 0;
+
+function fontErrors(font: unknown, where: string): string[] {
+  if (font === null) return [];
+  if (!isObj(font) || !isStr(font.family) || !FONT_FAMILY_RE.test(font.family)) return [`${where}: font family must match ${FONT_FAMILY_RE}`];
+  const w = font.weights;
+  if (!Array.isArray(w) || w.length === 0 || w.length > MAX_WEIGHTS || !w.every((n) => Number.isInteger(n) && n >= 100 && n <= 900 && n % 100 === 0)) {
+    return [`${where}: font weights must be 1..${MAX_WEIGHTS} values of 100..900 in steps of 100`];
+  }
+  return [];
+}
+
+const TRACKING_RE = /^(normal|0|-?\d*\.?\d+em)$/;
+const CSS_VALUE_RE = /^[^;{}]{1,200}$/;
+const isWeight = (v: unknown) => typeof v === 'number' && Number.isInteger(v) && v >= 100 && v <= 900 && v % 100 === 0;
+const isRadiusToken = (v: unknown) => v === 'theme' || v === 'pill' || (typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 64);
+const oneOf = (v: unknown, allowed: readonly string[]) => typeof v === 'string' && allowed.includes(v);
+
+/** Token values end up as CSS custom properties / root attributes, so each one is checked against its allowed shape. */
+function tokenErrors(t: Record<string, unknown>): string[] {
+  const e: string[] = [];
+  const b = isObj(t.button) ? t.button : {};
+  const c = isObj(t.card) ? t.card : {};
+  const h = isObj(t.heading) ? t.heading : {};
+  const tr = isObj(b.tracking) ? b.tracking : {};
+  if (!isRadiusToken(b.radius)) e.push("tokens.button.radius must be 'theme', 'pill' or an integer 0..64");
+  if (!oneOf(b.fill, ['solid', 'outline-glow', 'ghost'])) e.push('tokens.button.fill must be solid | outline-glow | ghost');
+  if (!oneOf(b.transform, ['uppercase', 'none'])) e.push('tokens.button.transform must be uppercase | none');
+  for (const k of ['sm', 'md', 'lg'] as const) if (typeof tr[k] !== 'string' || !TRACKING_RE.test(tr[k] as string)) e.push(`tokens.button.tracking.${k} must be 'normal', '0' or an em value like '0.2em'`);
+  if (!isWeight(b.weight)) e.push('tokens.button.weight must be 100..900 in steps of 100');
+  if (!oneOf(b.font, ['mono', 'body', 'heading'])) e.push('tokens.button.font must be mono | body | heading');
+  if (!isRadiusToken(c.radius)) e.push("tokens.card.radius must be 'theme', 'pill' or an integer 0..64");
+  for (const k of ['border', 'shadow', 'shadowHover'] as const) if (typeof c[k] !== 'string' || !CSS_VALUE_RE.test(c[k] as string)) e.push(`tokens.card.${k} must be 'none' or a CSS value without ; { } (max 200 chars)`);
+  if (!isWeight(h.weight)) e.push('tokens.heading.weight must be 100..900 in steps of 100');
+  if (typeof h.tracking !== 'string' || !TRACKING_RE.test(h.tracking)) e.push("tokens.heading.tracking must be 'normal', '0' or an em value");
+  if (!oneOf(h.transform, ['uppercase', 'none'])) e.push('tokens.heading.transform must be uppercase | none');
+  if (!isObj(t.label) || !oneOf(t.label.style, ['plain', 'bracket', 'numbered'])) e.push('tokens.label.style must be plain | bracket | numbered');
+  if (!isObj(t.input) || !oneOf(t.input.style, ['underline', 'box'])) e.push('tokens.input.style must be underline | box');
+  if (!oneOf(t.chassis, ['glow', 'flat'])) e.push('tokens.chassis must be glow | flat');
+  if (!oneOf(t.glass, ['on', 'off'])) e.push('tokens.glass must be on | off');
+  if (!isObj(t.badge) || !isRadiusToken(t.badge.radius)) e.push("tokens.badge.radius must be 'theme', 'pill' or an integer 0..64");
+  return e;
+}
+
+/**
+ * Checks what TypeScript can't: regexes, cross-references and limits. Returns one message
+ * per problem, each prefixed with the folder id. An empty list means valid.
+ */
+export function validateManifest(value: unknown, folderId: string): string[] {
+  const e: string[] = [];
+  const err = (m: string) => e.push(`${folderId}: ${m}`);
+  if (!isObj(value)) { err('manifest is not an object (missing default export?)'); return e; }
+  const m = value as Partial<TemplateManifest>;
+  if (m.contractVersion !== CONTRACT_VERSION) err(`contractVersion must be ${CONTRACT_VERSION}`);
+  if (!isStr(m.id) || !TEMPLATE_ID_RE.test(m.id)) err(`id must match ${TEMPLATE_ID_RE}`);
+  else if (m.id !== folderId) err(`id "${m.id}" must equal its folder name "${folderId}"`);
+  for (const k of ['name', 'version', 'description', 'author'] as const) {
+    const v = m[k];
+    if (!isStr(v)) err(`${k} is required`);
+    else if (v.length > TEXT_CAPS[k]) err(`${k} must be at most ${TEXT_CAPS[k]} characters`);
+  }
+  const schemes = Array.isArray(m.schemes) ? m.schemes : [];
+  if (schemes.length === 0 || !schemes.every((s) => s === 'dark' || s === 'light')) err('schemes must list dark and/or light');
+
+  const presets = Array.isArray(m.presets) ? m.presets : [];
+  if (presets.length === 0) err('at least one preset is required');
+  const presetIds = new Set<string>();
+  for (const p of presets) {
+    const where = `preset "${isObj(p) ? String(p.id) : '?'}"`;
+    if (!isObj(p) || !isStr(p.id) || !TEMPLATE_ID_RE.test(p.id)) { err(`${where}: id must match ${TEMPLATE_ID_RE}`); continue; }
+    if (presetIds.has(p.id)) err(`${where}: duplicate preset id`);
+    presetIds.add(p.id);
+    if (!isStr(p.name)) err(`${where}: name is required`);
+    if (!schemes.includes(p.scheme as Scheme)) err(`${where}: scheme "${String(p.scheme)}" is not in schemes`);
+    const colors = isObj(p.colors) ? p.colors : {};
+    for (const k of COLOR_KEYS) if (typeof colors[k] !== 'string' || !HEX_RE.test(colors[k] as string)) err(`${where}: colors.${k} must be a 6-digit hex`);
+    const fonts = isObj(p.fonts) ? p.fonts : {};
+    for (const slot of ['heading', 'body', 'mono'] as const) e.push(...fontErrors(fonts[slot] ?? null, `${folderId}: ${where}.fonts.${slot}`));
+    if (!RADII.includes(p.radius as RadiusName)) err(`${where}: radius must be one of ${RADII.join(', ')}`);
+  }
+  if (!isStr(m.defaultPreset) || !presetIds.has(m.defaultPreset)) err(`defaultPreset "${String(m.defaultPreset)}" is not one of the presets`);
+
+  if (!isObj(m.tokens)) err('tokens are required');
+  else e.push(...tokenErrors(m.tokens).map((msg) => `${folderId}: ${msg}`));
+  const ed = m.editable;
+  if (!isObj(ed) || !Array.isArray(ed.colors) || !ed.colors.every((c) => COLOR_KEYS.includes(c))) err('editable.colors must be a subset of the colour keys');
+
+  const options = Array.isArray(m.options) ? m.options : [];
+  if (options.length > MAX_OPTIONS) err(`at most ${MAX_OPTIONS} options`);
+  const keys = new Set<string>();
+  for (const o of options) {
+    if (!isObj(o) || !isStr(o.key) || !OPTION_KEY_RE.test(o.key)) { err(`option key must match ${OPTION_KEY_RE}`); continue; }
+    if (keys.has(o.key)) err(`duplicate option key "${o.key}"`);
+    keys.add(o.key);
+    if (!isStr(o.label)) err(`option "${o.key}": label is required`);
+    if (o.type === 'boolean') { if (typeof o.default !== 'boolean') err(`option "${o.key}": default must be boolean`); }
+    else if (o.type === 'select') {
+      const choices = Array.isArray(o.choices) ? o.choices : [];
+      if (choices.length === 0 || choices.length > MAX_CHOICES) err(`option "${o.key}": choices must list 1..${MAX_CHOICES} entries`);
+      if (!choices.some((c) => isObj(c) && c.value === o.default)) err(`option "${o.key}": default must be one of its choices`);
+    } else if (o.type === 'text') {
+      const max = o.maxLength;
+      if (typeof max !== 'number' || !Number.isInteger(max) || max < 1 || max > 100) err(`option "${o.key}": maxLength must be 1..100`);
+      else if (typeof o.default !== 'string' || o.default.length > max) err(`option "${o.key}": default must be a string within maxLength`);
+    } else err(`option "${o.key}": unknown type "${String(o.type)}"`);
+  }
+  if (m.preview !== undefined && (typeof m.preview !== 'string' || !PREVIEW_RE.test(m.preview))) err(`preview must look like ./preview.webp (webp/png/jpg/jpeg)`);
+  return e;
+}
 ```
+
+This block is the whole of `define.ts` — Task 2 creates the file from it verbatim.
 
 ### `web/src/templates/slots.ts` (types only)
 
@@ -205,8 +332,9 @@ Defaults (modern): `TopBar`, `Overlay`, `ButtonAdornment` render nothing; `Foote
 export * from '@/templates/define.ts';
 export type * from '@/templates/slots.ts';
 export { useTemplate, useTemplateOptions, useStorefront, useCatalogStats, useOrderingState, formatClock, utcOffsetLabel } from '@/templates/hooks.ts';
-export type { TemplateInfo, StorefrontInfo, CatalogStats, OrderingState, CutoffInfo } from '@/templates/hooks.ts';
+export type { TemplateInfo, StorefrontInfo, CatalogStats, OrderingState } from '@/templates/hooks.ts';
 export { useServerClock, useCutoffInfo } from '@/lib/server-clock.ts';
+export type { CutoffInfo } from '@/lib/server-clock.ts';
 export { useMobileCartBar } from '@/features/cart/MobileCartBar.tsx';
 export { Brand } from '@/components/Brand.tsx';
 export { ContactLinks } from '@/components/ContactLinks.tsx';
@@ -229,8 +357,8 @@ interface CatalogStats { productCount: number | null; categoryCount: number | nu
 useCatalogStats(): CatalogStats
 interface OrderingState { enabled: boolean; ordering: boolean; accepting: boolean }    // accepting = enabled && ordering
 useOrderingState(): OrderingState
-useServerClock(intervalMs?: number /* default 1000 */): Date                            // server-anchored, ticks
-interface CutoffInfo { timezone: string; next: { cutoff: string; shipsOn: string; isToday: boolean; at: Date; msRemaining: number } | null }
+useServerClock(intervalMs?: number /* default 1000 */): Date                            // server-anchored (settings fetch time — the response's dataUpdatedAt), ticks
+interface CutoffInfo { timezone: string; next: { day: DayKey; cutoff: string; shipsOn: string; isToday: boolean; at: Date; msRemaining: number } | null }   // declared in lib/server-clock.ts
 useCutoffInfo(): CutoffInfo                                                               // re-evaluated every 30 s
 useMobileCartBar(): boolean                                                               // phone cart bar on screen
 formatClock(date: Date, timeZone: string): string        // 'HH:MM:SS', 24h; bad zone → UTC
@@ -252,7 +380,7 @@ utcOffsetLabel(date: Date, timeZone: string): string     // 'UTC+1' | 'UTC-5' | 
 | `data-sf-glass` | `on` \| `off` (`off`: shared rules in `chassis.css` strip `backdrop-filter` from `.glass`, `.glass-soft` and `.mantine-Overlay-root` and paint the two glass classes solid `var(--sf-bg)`) |
 | `data-mantine-color-scheme` | `dark` \| `light` |
 
-**Shared button-fill rules.** `mantine.css` carries fill recipes for every element tagged `[data-sf-part="button"][data-variant="filled"]` — Mantine `Button`s *and* the three custom buttons (`AddToCart`, `CartSummary` checkout, `MobileCartBar` checkout) — keyed on `:root[data-sf-btn-fill="outline-glow"]` and `:root[data-sf-btn-fill="ghost"]`. They mirror `buttonVariantVars`: outline-glow = `var(--sf-bg)` fill, `var(--sf-primary)` text, `1px solid var(--sf-primary)` border; ghost = transparent fill, `var(--sf-primary)` text, `1px solid var(--sf-line-strong)` border; both hover to `var(--sf-surface)`; disabled = `var(--sf-faint)` text, `var(--sf-line)` border. `solid` has no shared rule (modern pixels unchanged). A template only adds what is specific to it (e.g. luxury's glow and pulse).
+**Shared button-fill rules.** `mantine.css` carries fill recipes for every element tagged `[data-sf-part="button"][data-variant="filled"]` — Mantine `Button`s *and* the four custom filled buttons (`AddToCart`, `CartSummary` checkout, `MobileCartBar` checkout, `CheckoutPage` `.next` Place-order/Continue) — keyed on `:root[data-sf-btn-fill="outline-glow"]` and `:root[data-sf-btn-fill="ghost"]`. They mirror `buttonVariantVars`: outline-glow = `var(--sf-bg)` fill, `var(--sf-primary)` text, `1px solid var(--sf-primary)` border; ghost = transparent fill, `var(--sf-primary)` text, `1px solid var(--sf-line-strong)` border; both hover to `var(--sf-surface)`; disabled = `var(--sf-faint)` text, `var(--sf-line)` border. `solid` has no shared rule (modern pixels unchanged). A template only adds what is specific to it (e.g. luxury's glow and pulse).
 
 ### CSS variables
 
@@ -271,21 +399,23 @@ Tokens (new): `--sf-btn-radius --sf-btn-transform --sf-btn-weight --sf-btn-font 
 | `page-title` | catalogue `<h1>` in `ProductGrid`, `ProductList`, `WholesaleCatalogPage`; product `<h1>` in `ProductDetailPage` |
 | `group-title` | menu-layout category `<h2>` in `ProductList` |
 | `section-label` | default `SectionLabel` output |
-| `button` | every Mantine `Button` (theme default prop); `AddToCart` `<button>`; `CartSummary` checkout; `MobileCartBar` checkout. Variant is Mantine's own `data-variant` (`filled` \| `default` \| `subtle`); the three custom buttons carry `data-variant="filled"` |
-| `input` | every Mantine `Input` element (theme default prop); checkout `Fields.module.css` `.input` elements |
-| `card` | every element whose `className` is `classes.card` in `AuthCard.tsx`, `features/order-status/*.tsx`, `features/tracking/ParcelCard.tsx`, `CheckoutPage.tsx` |
+| `button` | every Mantine `Button` (theme default prop) plus five custom `<button>`/`<Link>` buttons: `AddToCart` `<button>`; `CartSummary` checkout (disabled `<button>` and `<Link>`); `MobileCartBar` checkout (disabled `<button>` and `<Link>`); `CheckoutPage` `.next` (Place order / Continue) and `.back` (Back). Variant is Mantine's own `data-variant` (`filled` \| `default` \| `subtle`); the custom buttons carry `data-variant="filled"`, except `CheckoutPage` `.back`, which carries `data-variant="default"` |
+| `input` | every Mantine `Input` element (theme default prop); the three `classes.input` elements in `features/checkout/Field.tsx` (text input ~L48, select ~L106, textarea ~L160) |
+| `card` | exactly these eleven roots: `features/auth/AuthCard.tsx` `<section>` (L21); `features/order-status/AddressCard.tsx` `<section>` (L17); `features/order-status/CryptoPaymentCard.tsx` root (L81); `features/order-status/ItemsCard.tsx` `<section>` (L19); `features/order-status/PaymentSection.tsx` the four `classes.card` elements (L57, L65, L88, L144); `features/order-status/ShipmentCard.tsx` `<section>` (L31); `features/tracking/ParcelCard.tsx` root (L42); `features/checkout/CheckoutPage.tsx` step card `<div>` (L600) |
 | `product-card` | `ProductCard` `<article>` |
 | `product-row` | `ProductRow` root element |
 | `price` | the main price element in `ProductCard`, `ProductRow`, `ProductDetailPage`, `ProductDetailSheet` |
 | `badge` | `StockChip` root, `StatusPill` root, header cart count `<span>` in both shells |
-| `sheet` | `Drawer.Content` in `components/Sheet.tsx` |
-| `drawer` | the cart `Drawer` content in `CartDrawer.tsx` |
+| `sheet` | `Drawer.Content` in `components/Sheet.tsx` (every sheet except the cart) |
+| `drawer` | the same `Drawer.Content` when `CartDrawer.tsx` opens it (`<Sheet part="drawer">`) |
 | `cart-bar` | `MobileCartBar` root `<div>` |
 | `notice` | each notice root in `NoticeBanners.tsx` |
 | `cutoff` | `CutoffBar` root `<section>` |
-| `stepper` | `ProgressStepper` root (tracking) |
+| `stepper` | `ProgressStepper` root `<div>` (tracking) and the checkout Mantine `<Stepper>` in `CheckoutPage.tsx` (~L578) |
 
-`data-sf-cta="main"` marks the single main call to action: `CartSummary` checkout, `MobileCartBar` checkout, `CheckoutPage` Place-order/Continue `Button`.
+`data-sf-cta="main"` marks the single main call to action: `CartSummary` checkout, `MobileCartBar` checkout, `CheckoutPage` `.next` button (Place order / Continue). All three also carry `data-sf-part="button" data-variant="filled"`, so templates style them through the shared parts — no page-specific class is ever targeted.
+
+**Heading tokens (`heading.*`) reach only headings whose modern values already equal the tokens:** `ProductGrid` `.title` (weight, tracking, transform) and `ProductDetailPage` `.name` (weight only — it keeps its `-0.01em` tracking). `ProductList` `.title` and `WholesaleCatalogPage` `.title` stay literal (700, negative tracking) so modern stays pixel-identical. A template that wants a heading look everywhere styles `[data-sf-part="page-title"]` and `[data-sf-part="group-title"]` in its `template.css`.
 
 Template CSS specificity: `:root[data-sf-template="x"] [data-sf-part="button"]` (0,3,0) beats module classes (0,1,0) and Mantine's `.mantine-Button-root` rules. Set real properties (`background`, `border`, `box-shadow`), not Mantine's `--button-*` variables (those are inline styles). The shared fill rules are also (0,4,0) (`:root[data-sf-btn-fill=…] [data-sf-part="button"][data-variant="filled"]`); a template's equally specific `:root[data-sf-template=…] [data-sf-part="button"][data-variant="filled"]` rule wins because the template chunk's CSS is injected after `mantine.css`.
 
@@ -309,10 +439,14 @@ Template CSS specificity: `:root[data-sf-template="x"] [data-sf-part="button"]` 
 | `web/src/templates/catalog.ts` | `toCatalog`/`buildCatalog` for `templates.json` |
 | `web/src/templates/defaults/*` | modern default slot components + `DEFAULT_SLOTS` |
 | `web/src/templates/modern/*` | the modern template |
-| `web/src/lib/server-clock.ts` | `useServerClock`, `useCutoffInfo` |
+| `web/src/lib/server-clock.ts` | `useServerClock`, `useCutoffInfo`, `CutoffInfo` (anchored to the settings fetch time recorded by `lib/settings-anchor.ts` — the response's `dataUpdatedAt`; `CutoffBar` uses it too) |
+| `web/src/lib/settings-anchor.ts` | `recordSettingsFetch`, `settingsFetchedAt` (written by the settings queryFn) |
 | `web/src/app/preview-listener.ts` | `isPreviewMode`, `subscribePreview`, `usePreviewTheme` |
-| `web/vite-plugins/templates-catalog.ts` | emits/serves `templates.json` + preview images, fails build on invalid manifests |
+| `web/src/app/document-theme.ts` | `useDocumentTheme(settings, win?)` — preview override + resolve + `applyDocumentTheme` (used by `ThemedApp`) |
+| `web/vite-plugins/templates-catalog.ts` | emits/serves `templates.json` + preview images, fails build on invalid manifests, logs them with `console.error` in dev |
+| `scripts/template-rules.mjs` (+`.d.mts`) | the single source of reserved folder names, id/SHA regexes and the import allowlist |
 | `scripts/templates-lock.mjs` | lock parsing/validation |
+| `scripts/release-workflow.test.mjs` | pins the release workflow's fetch-before-test order and the conditional deploy key |
 | `scripts/template-imports.mjs` (+`.d.mts`) | import-restriction scanner |
 | `scripts/fetch-templates.mjs` | vendors external templates at pinned SHAs |
 | `scripts/new-template.mjs` + `scripts/template-starter/*` | `npm run template:new <id>` |
@@ -439,7 +573,12 @@ Expected: 4 passed (no diff). If any shot flakes, find the moving part (timer, a
 - [ ] **Step 6: Commit**
 
 ```bash
-git add e2e/flows.ts e2e/storefront.spec.ts e2e/playwright.config.ts e2e/templates-baseline.spec.ts e2e/__baseline__
+git add e2e/flows.ts e2e/storefront.spec.ts e2e/playwright.config.ts e2e/templates-baseline.spec.ts \
+  e2e/__baseline__/storefront-mobile-catalog.png e2e/__baseline__/storefront-mobile-detail.png e2e/__baseline__/storefront-mobile-cart.png e2e/__baseline__/storefront-mobile-checkout.png \
+  e2e/__baseline__/storefront-desktop-catalog.png e2e/__baseline__/storefront-desktop-detail.png e2e/__baseline__/storefront-desktop-cart.png e2e/__baseline__/storefront-desktop-checkout.png \
+  e2e/__baseline__/menu-mobile-catalog.png e2e/__baseline__/menu-mobile-detail.png e2e/__baseline__/menu-mobile-cart.png e2e/__baseline__/menu-mobile-checkout.png \
+  e2e/__baseline__/menu-desktop-catalog.png e2e/__baseline__/menu-desktop-detail.png e2e/__baseline__/menu-desktop-cart.png e2e/__baseline__/menu-desktop-checkout.png
+git status --short e2e   # nothing under e2e/ left unstaged or untracked
 git commit -m "test(e2e): capture modern pixel baseline before the template engine
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
@@ -511,7 +650,6 @@ describe('validateManifest', () => {
     ['non-object', null, 'not an object'],
     ['contract version', { ...manifest(), contractVersion: 2 }, 'contractVersion'],
     ['folder mismatch', manifest({ id: 'other' }), 'folder'],
-    ['bad id', manifest({ id: 'Bad_Id' }), 'id'],
     ['no presets', manifest({ presets: [] }), 'preset'],
     ['unknown default preset', manifest({ defaultPreset: 'nope' }), 'defaultPreset'],
     ['preset scheme not supported', manifest({ presets: [{ ...manifest().presets[0]!, scheme: 'light' }] }), 'scheme'],
@@ -533,6 +671,28 @@ describe('validateManifest', () => {
   it('rejects more than 30 options', () => {
     const options = Array.from({ length: 31 }, (_, i) => ({ key: `o${i}`, type: 'boolean' as const, label: 'x', default: true }));
     expect(validateManifest(manifest({ options }), 'acme').join('\n')).toContain('30');
+  });
+  it('rejects a bad id with exactly one, fully specified message', () => {
+    expect(validateManifest(manifest({ id: 'Bad_Id' }), 'acme')).toEqual(['acme: id must match /^[a-z0-9-]{1,40}$/']);
+  });
+  it.each<[string, Partial<TemplateManifest>, string]>([
+    ['name', { name: 'n'.repeat(61) }, 'acme: name must be at most 60 characters'],
+    ['version', { version: '1'.repeat(41) }, 'acme: version must be at most 40 characters'],
+    ['description', { description: 'd'.repeat(501) }, 'acme: description must be at most 500 characters'],
+    ['author', { author: 'a'.repeat(101) }, 'acme: author must be at most 100 characters'],
+  ])('caps %s at Plan 1\'s catalog limit', (_field, over, message) => {
+    expect(validateManifest(manifest(over), 'acme')).toEqual([message]);
+  });
+  it('accepts text fields exactly at their caps', () => {
+    expect(validateManifest(manifest({ name: 'n'.repeat(60), version: '1'.repeat(40), description: 'd'.repeat(500), author: 'a'.repeat(100) }), 'acme')).toEqual([]);
+  });
+  it('caps select choices at 20 and font weights at 9', () => {
+    const choices = Array.from({ length: 21 }, (_, i) => ({ value: `v${i}`, label: `V${i}` }));
+    expect(validateManifest(manifest({ options: [{ key: 'm', type: 'select', label: 'M', default: 'v0', choices }] }), 'acme'))
+      .toEqual(['acme: option "m": choices must list 1..20 entries']);
+    const weights = [100, 200, 300, 400, 500, 600, 700, 800, 900, 900];
+    expect(validateManifest(manifest({ presets: [{ ...manifest().presets[0]!, fonts: { heading: { family: 'Inter', weights }, body: null, mono: null } }] }), 'acme'))
+      .toEqual(['acme: preset "gold".fonts.heading: font weights must be 1..9 values of 100..900 in steps of 100']);
   });
 });
 
@@ -581,128 +741,7 @@ Expected: FAIL — `Cannot find module '@/templates/define.ts'`.
 
 - [ ] **Step 4: Implement `define.ts`**
 
-Create `web/src/templates/define.ts` with the full type block from the Contract reference, plus:
-
-```ts
-export const TEMPLATE_ID_RE = /^[a-z0-9-]{1,40}$/;
-export const OPTION_KEY_RE = /^[a-zA-Z0-9_-]{1,40}$/;
-export const FONT_FAMILY_RE = /^[A-Za-z0-9 ]{1,50}$/;
-const HEX_RE = /^#[0-9a-fA-F]{6}$/;
-const PREVIEW_RE = /^\.\/[A-Za-z0-9_-]+\.(webp|png|jpg|jpeg)$/;
-const RADII: readonly RadiusName[] = ['none', 'sm', 'md', 'lg', 'xl'];
-const MAX_OPTIONS = 30;
-
-/** Identity — exists so manifests are type-checked against the contract. */
-export function defineTemplate(manifest: TemplateManifest): TemplateManifest {
-  return manifest;
-}
-
-const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
-const isStr = (v: unknown): v is string => typeof v === 'string' && v.length > 0;
-
-function fontErrors(font: unknown, where: string): string[] {
-  if (font === null) return [];
-  if (!isObj(font) || !isStr(font.family) || !FONT_FAMILY_RE.test(font.family)) return [`${where}: font family must match ${FONT_FAMILY_RE}`];
-  const w = font.weights;
-  if (!Array.isArray(w) || w.length === 0 || !w.every((n) => Number.isInteger(n) && n >= 100 && n <= 900 && n % 100 === 0)) {
-    return [`${where}: font weights must be a non-empty list of 100..900 in steps of 100`];
-  }
-  return [];
-}
-
-const TRACKING_RE = /^(normal|0|-?\d*\.?\d+em)$/;
-const CSS_VALUE_RE = /^[^;{}]{1,200}$/;
-const isWeight = (v: unknown) => typeof v === 'number' && Number.isInteger(v) && v >= 100 && v <= 900 && v % 100 === 0;
-const isRadiusToken = (v: unknown) => v === 'theme' || v === 'pill' || (typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 64);
-const oneOf = (v: unknown, allowed: readonly string[]) => typeof v === 'string' && allowed.includes(v);
-
-/** Token values end up as CSS custom properties / root attributes, so each one is checked against its allowed shape. */
-function tokenErrors(t: Record<string, unknown>): string[] {
-  const e: string[] = [];
-  const b = isObj(t.button) ? t.button : {};
-  const c = isObj(t.card) ? t.card : {};
-  const h = isObj(t.heading) ? t.heading : {};
-  const tr = isObj(b.tracking) ? b.tracking : {};
-  if (!isRadiusToken(b.radius)) e.push("tokens.button.radius must be 'theme', 'pill' or an integer 0..64");
-  if (!oneOf(b.fill, ['solid', 'outline-glow', 'ghost'])) e.push('tokens.button.fill must be solid | outline-glow | ghost');
-  if (!oneOf(b.transform, ['uppercase', 'none'])) e.push('tokens.button.transform must be uppercase | none');
-  for (const k of ['sm', 'md', 'lg'] as const) if (typeof tr[k] !== 'string' || !TRACKING_RE.test(tr[k] as string)) e.push(`tokens.button.tracking.${k} must be 'normal', '0' or an em value like '0.2em'`);
-  if (!isWeight(b.weight)) e.push('tokens.button.weight must be 100..900 in steps of 100');
-  if (!oneOf(b.font, ['mono', 'body', 'heading'])) e.push('tokens.button.font must be mono | body | heading');
-  if (!isRadiusToken(c.radius)) e.push("tokens.card.radius must be 'theme', 'pill' or an integer 0..64");
-  for (const k of ['border', 'shadow', 'shadowHover'] as const) if (typeof c[k] !== 'string' || !CSS_VALUE_RE.test(c[k] as string)) e.push(`tokens.card.${k} must be 'none' or a CSS value without ; { } (max 200 chars)`);
-  if (!isWeight(h.weight)) e.push('tokens.heading.weight must be 100..900 in steps of 100');
-  if (typeof h.tracking !== 'string' || !TRACKING_RE.test(h.tracking)) e.push("tokens.heading.tracking must be 'normal', '0' or an em value");
-  if (!oneOf(h.transform, ['uppercase', 'none'])) e.push('tokens.heading.transform must be uppercase | none');
-  if (!isObj(t.label) || !oneOf(t.label.style, ['plain', 'bracket', 'numbered'])) e.push('tokens.label.style must be plain | bracket | numbered');
-  if (!isObj(t.input) || !oneOf(t.input.style, ['underline', 'box'])) e.push('tokens.input.style must be underline | box');
-  if (!oneOf(t.chassis, ['glow', 'flat'])) e.push('tokens.chassis must be glow | flat');
-  if (!oneOf(t.glass, ['on', 'off'])) e.push('tokens.glass must be on | off');
-  if (!isObj(t.badge) || !isRadiusToken(t.badge.radius)) e.push("tokens.badge.radius must be 'theme', 'pill' or an integer 0..64");
-  return e;
-}
-
-/**
- * Checks what TypeScript can't: regexes, cross-references and limits. Returns one message
- * per problem, each prefixed with the folder id. An empty list means valid.
- */
-export function validateManifest(value: unknown, folderId: string): string[] {
-  const e: string[] = [];
-  const err = (m: string) => e.push(`${folderId}: ${m}`);
-  if (!isObj(value)) { err('manifest is not an object (missing default export?)'); return e; }
-  const m = value as Partial<TemplateManifest>;
-  if (m.contractVersion !== CONTRACT_VERSION) err(`contractVersion must be ${CONTRACT_VERSION}`);
-  if (!isStr(m.id) || !TEMPLATE_ID_RE.test(m.id)) err(`id must match ${TEMPLATE_ID_RE}`);
-  else if (m.id !== folderId) err(`id "${m.id}" must equal its folder name "${folderId}"`);
-  for (const k of ['name', 'version', 'description', 'author'] as const) if (!isStr(m[k])) err(`${k} is required`);
-  const schemes = Array.isArray(m.schemes) ? m.schemes : [];
-  if (schemes.length === 0 || !schemes.every((s) => s === 'dark' || s === 'light')) err('schemes must list dark and/or light');
-
-  const presets = Array.isArray(m.presets) ? m.presets : [];
-  if (presets.length === 0) err('at least one preset is required');
-  const presetIds = new Set<string>();
-  for (const p of presets) {
-    const where = `preset "${isObj(p) ? String(p.id) : '?'}"`;
-    if (!isObj(p) || !isStr(p.id) || !TEMPLATE_ID_RE.test(p.id)) { err(`${where}: id must match ${TEMPLATE_ID_RE}`); continue; }
-    if (presetIds.has(p.id)) err(`${where}: duplicate preset id`);
-    presetIds.add(p.id);
-    if (!isStr(p.name)) err(`${where}: name is required`);
-    if (!schemes.includes(p.scheme as Scheme)) err(`${where}: scheme "${String(p.scheme)}" is not in schemes`);
-    const colors = isObj(p.colors) ? p.colors : {};
-    for (const k of COLOR_KEYS) if (typeof colors[k] !== 'string' || !HEX_RE.test(colors[k] as string)) err(`${where}: colors.${k} must be a 6-digit hex`);
-    const fonts = isObj(p.fonts) ? p.fonts : {};
-    for (const slot of ['heading', 'body', 'mono'] as const) e.push(...fontErrors(fonts[slot] ?? null, `${folderId}: ${where}.fonts.${slot}`));
-    if (!RADII.includes(p.radius as RadiusName)) err(`${where}: radius must be one of ${RADII.join(', ')}`);
-  }
-  if (!isStr(m.defaultPreset) || !presetIds.has(m.defaultPreset)) err(`defaultPreset "${String(m.defaultPreset)}" is not one of the presets`);
-
-  if (!isObj(m.tokens)) err('tokens are required');
-  else e.push(...tokenErrors(m.tokens).map((msg) => `${folderId}: ${msg}`));
-  const ed = m.editable;
-  if (!isObj(ed) || !Array.isArray(ed.colors) || !ed.colors.every((c) => COLOR_KEYS.includes(c))) err('editable.colors must be a subset of the colour keys');
-
-  const options = Array.isArray(m.options) ? m.options : [];
-  if (options.length > MAX_OPTIONS) err(`at most ${MAX_OPTIONS} options`);
-  const keys = new Set<string>();
-  for (const o of options) {
-    if (!isObj(o) || !isStr(o.key) || !OPTION_KEY_RE.test(o.key)) { err(`option key must match ${OPTION_KEY_RE}`); continue; }
-    if (keys.has(o.key)) err(`duplicate option key "${o.key}"`);
-    keys.add(o.key);
-    if (!isStr(o.label)) err(`option "${o.key}": label is required`);
-    if (o.type === 'boolean') { if (typeof o.default !== 'boolean') err(`option "${o.key}": default must be boolean`); }
-    else if (o.type === 'select') {
-      const choices = Array.isArray(o.choices) ? o.choices : [];
-      if (!choices.some((c) => isObj(c) && c.value === o.default)) err(`option "${o.key}": default must be one of its choices`);
-    } else if (o.type === 'text') {
-      const max = o.maxLength;
-      if (typeof max !== 'number' || !Number.isInteger(max) || max < 1 || max > 100) err(`option "${o.key}": maxLength must be 1..100`);
-      else if (typeof o.default !== 'string' || o.default.length > max) err(`option "${o.key}": default must be a string within maxLength`);
-    } else err(`option "${o.key}": unknown type "${String(o.type)}"`);
-  }
-  if (m.preview !== undefined && (typeof m.preview !== 'string' || !PREVIEW_RE.test(m.preview))) err(`preview must look like ./preview.webp (webp/png/jpg/jpeg)`);
-  return e;
-}
-```
+Create `web/src/templates/define.ts` **exactly** as the Contract reference's `define.ts` block (it is the complete, compilable file: types, `BASE_TOKENS`, regexes including the exported `HEX_RE`, `defineTemplate`, `validateManifest` with the Plan 1 text caps). Do not add or re-declare anything.
 
 - [ ] **Step 5: Create `slots.ts`**
 
@@ -712,10 +751,11 @@ Create `web/src/templates/slots.ts` exactly as the Contract reference's `slots.t
 
 ```ts
 import { z } from 'zod';
-import { OPTION_KEY_RE, TEMPLATE_ID_RE } from '@/templates/define.ts';
+import { FONT_FAMILY_RE, HEX_RE, OPTION_KEY_RE, TEMPLATE_ID_RE } from '@/templates/define.ts';
 
-const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/);
-const fontName = z.string().regex(/^[A-Za-z0-9 ]{1,50}$/).nullable();
+// Every regex comes from define.ts — one definition shared with validateManifest.
+const hex = z.string().regex(HEX_RE);
+const fontName = z.string().regex(FONT_FAMILY_RE).nullable();
 
 /** The stored theme's shape (mirrors the backend's storefrontThemeSchema). */
 export const themeSchema = z.object({
@@ -761,7 +801,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 **Interfaces:**
 - Consumes: Task 2 types.
 - Produces:
-  - `registry.ts`: `MANIFEST_MODULES`, `DEFAULT_TEMPLATE_ID = 'modern'`, `interface TemplateEntry { manifest; builtIn: boolean; dir: string; load: () => Promise<TemplateModule> }`, `folderOf(path)`, `buildRegistry(mods, loaders, warn?)`, `REGISTRY`, `getTemplate(id, registry?)`, `lookupManifest(id)`, `allTemplates(registry?)`, `collectManifestErrors(mods)`.
+  - `registry.ts`: `MANIFEST_MODULES`, `LOADERS` (both globs exclude `./defaults/**`), `DEFAULT_TEMPLATE_ID = 'modern'`, `interface TemplateEntry { manifest; builtIn: boolean; dir: string; load: () => Promise<TemplateModule> }`, `folderOf(path)`, `buildRegistry(mods, loaders, warn?)`, `REGISTRY`, `getTemplate(id, registry?)`, `lookupManifest(id)`, `allTemplates(registry?)`, `collectManifestErrors(mods)`.
   - `resolve.ts`: `interface ResolvedFonts { heading: FontSpec|null; body: FontSpec|null; mono: FontSpec|null }`, `interface ResolvedTheme { templateId; presetId; manifest; fallback: boolean; scheme; colors: Record<ColorKey,string>; fonts: ResolvedFonts; radius: RadiusName; density: Density; customCss: string; options: OptionValues; tokens: TemplateTokens }`, `DEFAULT_WEIGHTS = [400,500,600,700]`, `resolveOptions(manifest, stored)`, `resolveTheme(stored: Theme, lookup: (id: string|undefined|null) => TemplateManifest): ResolvedTheme`.
   - `tokens.ts`: `radiusCss(t)`, `tokenVariables(tokens): Record<string,string>`, `rootAttributes(resolved): Record<string,string>`.
 
@@ -821,7 +861,7 @@ Note: `contract.ts` does not exist until Task 6. Until then, make `modern/index.
 
 ```ts
 import { describe, expect, it, vi } from 'vitest';
-import { buildRegistry, collectManifestErrors, folderOf, getTemplate, lookupManifest, REGISTRY } from '@/templates/registry.ts';
+import { buildRegistry, collectManifestErrors, folderOf, getTemplate, LOADERS, lookupManifest, MANIFEST_MODULES, REGISTRY } from '@/templates/registry.ts';
 import modern from '@/templates/modern/manifest.ts';
 
 const load = () => Promise.resolve({ slots: {} });
@@ -830,8 +870,11 @@ describe('folderOf', () => {
   it('reads built-in and external paths', () => {
     expect(folderOf('./modern/manifest.ts')).toEqual({ id: 'modern', dir: 'modern', builtIn: true });
     expect(folderOf('./external/acme/index.ts')).toEqual({ id: 'acme', dir: 'external/acme', builtIn: false });
-    expect(folderOf('./defaults/index.ts')).toEqual({ id: 'defaults', dir: 'defaults', builtIn: true });
     expect(folderOf('./contract.ts')).toBeNull();
+  });
+  it('the discovery globs never pick up the defaults/ folder', () => {
+    expect(Object.keys(MANIFEST_MODULES).some((p) => p.startsWith('./defaults/'))).toBe(false);
+    expect(Object.keys(LOADERS).some((p) => p.startsWith('./defaults/'))).toBe(false);
   });
 });
 
@@ -894,10 +937,11 @@ import type { TemplateModule } from '@/templates/slots.ts';
 
 export const DEFAULT_TEMPLATE_ID = 'modern';
 
-/** Eager: manifests are pure data and small; every template's is in the main bundle. */
-export const MANIFEST_MODULES = import.meta.glob<TemplateManifest>(['./*/manifest.ts', './external/*/manifest.ts'], { eager: true, import: 'default' });
+/** Eager: manifests are pure data and small; every template's is in the main bundle.
+ *  `defaults/` holds modern's slot components (statically imported by runtime.tsx) — never a template. */
+export const MANIFEST_MODULES = import.meta.glob<TemplateManifest>(['./*/manifest.ts', './external/*/manifest.ts', '!./defaults/**'], { eager: true, import: 'default' });
 /** Lazy: one chunk (JS + CSS) per template, fetched only for the active one. */
-const LOADERS = import.meta.glob<TemplateModule>(['./*/index.ts', './external/*/index.ts']);
+export const LOADERS = import.meta.glob<TemplateModule>(['./*/index.ts', './external/*/index.ts', '!./defaults/**']);
 
 export interface TemplateEntry {
   manifest: TemplateManifest;
@@ -1268,7 +1312,7 @@ Run: `npm run test:web -- templates-` → all PASS. Run: `npm run typecheck` →
 - [ ] **Step 9: Commit**
 
 ```bash
-git add web/src/templates/modern web/src/templates/registry.ts web/src/templates/resolve.ts web/src/templates/tokens.ts web/test/templates-registry.test.ts web/test/templates-resolve.test.ts web/test/templates-tokens.test.ts
+git add web/src/templates/modern/manifest.ts web/src/templates/modern/index.ts web/src/templates/modern/template.css web/src/templates/registry.ts web/src/templates/resolve.ts web/src/templates/tokens.ts web/test/templates-registry.test.ts web/test/templates-resolve.test.ts web/test/templates-tokens.test.ts
 git commit -m "feat(templates): modern template, registry, resolver and token variables
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
@@ -1550,11 +1594,30 @@ In `web/src/app/App.tsx` add imports `import { resolveTheme } from '@/templates/
 
 (rest of the JSX unchanged).
 
-- [ ] **Step 5: Verify**
+- [ ] **Step 5: Update the old bootstrap test to the new signature (required)**
 
-Run: `npm run test:web` → all PASS (the old `theme-bootstrap.test.ts` still passes: it only reads v1 and compares palette keys — if it fails on the `cssVariablesFor` call, change that call to `cssVariablesFor(resolveTheme(theme, lookupManifest), brand)`; Task 5 rewrites the file). Run: `npm run typecheck` → clean. Run: `npm run test:e2e -- templates-baseline.spec.ts` → 4 passed.
+`cssVariablesFor` now takes a `ResolvedTheme`, so the existing `web/test/theme-bootstrap.test.ts` no longer typechecks, and at runtime `tokenVariables(undefined)` throws. Task 5 rewrites this file; until then, make these exact changes:
 
-- [ ] **Step 6: Commit**
+1. Add the imports:
+
+```ts
+import { resolveTheme } from '@/templates/resolve.ts';
+import { lookupManifest } from '@/templates/registry.ts';
+```
+
+2. In the test `'sets the same --sf-* variables cssVariablesFor() computes, from seeded localStorage'`, replace `const expected = cssVariablesFor(theme, brand);` with:
+
+```ts
+    const expected = cssVariablesFor(resolveTheme(theme, lookupManifest), brand);
+```
+
+and keep the existing four palette assertions (`--sf-surface-2`, `--sf-line`, `--sf-faint`, `--sf-primary-soft`) and the scheme assertion unchanged. The v1 bootstrap sets no token variables, so only palette keys are compared.
+
+- [ ] **Step 6: Verify**
+
+Run: `npm run test:web` → all PASS. Run: `npm run typecheck` → clean. Run: `npm run test:e2e -- templates-baseline.spec.ts` → 4 passed.
+
+- [ ] **Step 7: Commit**
 
 ```bash
 git add web/src/app/theme-bridge.ts web/src/app/App.tsx web/test/theme-bridge.test.ts web/test/theme-bootstrap.test.ts
@@ -1798,16 +1861,18 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 **Files:**
 - Create: `web/src/templates/runtime.tsx`, `web/src/templates/hooks.ts`, `web/src/templates/contract.ts`
 - Create: `web/src/templates/defaults/index.ts`, `DefaultFooter.tsx`, `DefaultCatalogHero.tsx`, `DefaultSectionLabel.tsx`, `SectionLabel.module.css`
-- Create: `web/src/lib/server-clock.ts`
+- Create: `web/src/lib/server-clock.ts`, `web/src/lib/settings-anchor.ts`
+- Modify: `web/src/app/settings.ts` (queryFn records the fetch time)
+- Modify: `web/src/features/notices/CutoffBar.tsx` (drop its private anchor + tick; use `useCutoffInfo()`)
 - Modify: `web/src/app/App.tsx`, `web/src/main.tsx`
 - Modify: `web/src/layouts/StorefrontShell.tsx`, `web/src/layouts/MenuShell.tsx`, `web/src/layouts/Chromeless.tsx`
 - Modify: `web/src/features/catalog/ProductGrid.tsx`, `ProductList.tsx`, `web/src/features/wholesale/WholesaleCatalogPage.tsx`
 - Modify: `web/src/features/catalog/AddToCart.tsx`, `web/src/features/cart/CartSummary.tsx`, `web/src/features/cart/MobileCartBar.tsx`, `web/src/features/checkout/CheckoutPage.tsx`
 - Modify: `web/src/templates/modern/index.ts` (import from contract), `web/src/components/icons.tsx` (`GlyphProps` widened, `ArrowUpRightIcon` forwards SVG props)
-- Test: `web/test/templates-runtime.test.tsx`, `web/test/templates-hooks.test.ts`
+- Test: `web/test/templates-runtime.test.tsx`, `web/test/templates-hooks.test.ts`, `web/test/server-clock.test.tsx`; existing `web/test/cutoff-bar.test.tsx` must stay green unchanged
 
 **Interfaces:**
-- Consumes: `REGISTRY`/`getTemplate`, `ResolvedTheme`, slot types, `BASE_TOKENS`.
+- Consumes: `REGISTRY`/`getTemplate`, `ResolvedTheme`, slot types, `BASE_TOKENS`, the settings fetch time recorded by the settings queryFn (`lib/settings-anchor.ts`, created here).
 - Produces: `loadTemplateModule(id)`, `prefetchTemplate(id | null)`, `TemplateProvider({ resolved, fallback, children, load?, peek?, timeoutMs? })`, `useTemplateContext(): { resolved: ResolvedTheme | null; slots: TemplateSlots }`, `Slot<N>({ name, ...ownProps })`, `DEFAULT_SLOTS`, all hooks listed in the Contract reference, `contract.ts` barrel.
 
 - [ ] **Step 1: Write failing runtime tests**
@@ -1926,7 +1991,7 @@ describe('clock helpers', () => {
 
 - [ ] **Step 2: Run to see them fail**
 
-Run: `npm run test:web -- templates-runtime templates-hooks` → FAIL (modules missing).
+Run: `npm run test:web -- templates-runtime templates-hooks` → FAIL (modules missing). (`server-clock.test.tsx` is written in Step 5, and fails until `settings-anchor.ts` exists.)
 
 - [ ] **Step 3: Default slots**
 
@@ -2183,25 +2248,51 @@ export function Slot<N extends SlotName>(props: { name: N } & SlotOwnProps<N>) {
 }
 ```
 
-- [ ] **Step 5: Server clock and hooks**
+- [ ] **Step 5: Server clock (anchored at fetch time), CutoffBar on it, and hooks**
 
-In `web/src/lib/cutoffs.ts` nothing changes. Create `web/src/lib/server-clock.ts`:
+`web/src/lib/cutoffs.ts` does not change. The anchor for the drift correction is **the settings query's fetch time** — the instant its `queryFn` resolves, which is what React Query stamps as `dataUpdatedAt` — never the moment a component first renders. (A clock slot mounted minutes after the response would otherwise run behind by the response's age.) The fetch time is recorded in a tiny non-React module so that every existing test that mocks only `useSettings` (`cutoff-bar.test.tsx`, Plan 3's slot tests) keeps working. Without a recorded fetch it falls back to first render, which is today's CutoffBar behaviour.
+
+Create `web/src/lib/settings-anchor.ts`:
+
+```ts
+/**
+ * When each settings response arrived, keyed by its serverTime — the anchor for every
+ * server-clock reading (CutoffBar, template clocks). Written by the settings queryFn at the
+ * moment it resolves (React Query's dataUpdatedAt for that response). Plain module state,
+ * not React: the reader works under test mocks of useSettings.
+ */
+const fetchedAtByServerTime = new Map<string, number>();
+
+export function recordSettingsFetch(serverTime: string, at: number = Date.now()): void {
+  fetchedAtByServerTime.set(serverTime, at);
+  if (fetchedAtByServerTime.size > 8) fetchedAtByServerTime.delete(fetchedAtByServerTime.keys().next().value!);
+}
+
+export function settingsFetchedAt(serverTime: string): number | undefined {
+  return fetchedAtByServerTime.get(serverTime);
+}
+```
+
+In `web/src/app/settings.ts`, inside `useSettingsQuery`'s `queryFn`, directly after `const s = await fetchSettings();`, add `recordSettingsFetch(s.serverTime);` (import it from `@/lib/settings-anchor.ts`).
+
+Create `web/src/lib/server-clock.ts`:
 
 ```ts
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSettings } from '@/app/settings.ts';
 import { nextCutoff } from '@/lib/cutoffs.ts';
+import { settingsFetchedAt } from '@/lib/settings-anchor.ts';
+import type { DayKey } from '@/types/settings.ts';
 
-/** serverTime captured against the client clock at fetch — the CutoffBar's drift correction. */
+/** serverTime plus the client clock at the moment that response was fetched. */
 function useServerAnchor(): { serverTime: string; fetchedAt: number } {
   const { serverTime } = useSettings();
-  const anchoredTo = useRef(serverTime);
-  const fetchedAt = useRef(Date.now());
-  if (anchoredTo.current !== serverTime) {
-    anchoredTo.current = serverTime;
-    fetchedAt.current = Date.now();
-  }
-  return { serverTime, fetchedAt: fetchedAt.current };
+  const fallback = useRef<{ serverTime: string; at: number } | null>(null);
+  const recorded = settingsFetchedAt(serverTime);
+  if (recorded !== undefined) return { serverTime, fetchedAt: recorded };
+  // No recorded fetch (component tests that mock useSettings): anchor at first render.
+  if (fallback.current?.serverTime !== serverTime) fallback.current = { serverTime, at: Date.now() };
+  return { serverTime, fetchedAt: fallback.current.at };
 }
 
 function useTick(intervalMs: number): number {
@@ -2223,10 +2314,10 @@ export function useServerClock(intervalMs = 1000): Date {
 
 export interface CutoffInfo {
   timezone: string;
-  next: { cutoff: string; shipsOn: string; isToday: boolean; at: Date; msRemaining: number } | null;
+  next: { day: DayKey; cutoff: string; shipsOn: string; isToday: boolean; at: Date; msRemaining: number } | null;
 }
 
-/** The next dispatch cut-off, re-evaluated every 30 s (the CutoffBar's cadence). */
+/** The next dispatch cut-off, re-evaluated every 30 s. The single implementation — CutoffBar reads it too. */
 export function useCutoffInfo(): CutoffInfo {
   const { cutoffs } = useSettings();
   const { serverTime, fetchedAt } = useServerAnchor();
@@ -2235,10 +2326,73 @@ export function useCutoffInfo(): CutoffInfo {
     const n = nextCutoff(cutoffs, serverTime, fetchedAt, now);
     return {
       timezone: cutoffs.timezone || 'UTC',
-      next: n ? { cutoff: n.cutoff, shipsOn: n.shipsOn, isToday: n.isToday, at: n.at, msRemaining: n.msRemaining } : null,
+      next: n ? { day: n.day, cutoff: n.cutoff, shipsOn: n.shipsOn, isToday: n.isToday, at: n.at, msRemaining: n.msRemaining } : null,
     };
   }, [cutoffs, serverTime, fetchedAt, now]);
 }
+```
+
+Then **remove CutoffBar's private copy** of that logic. In `web/src/features/notices/CutoffBar.tsx`, replace everything from `const { cutoffs, serverTime } = useSettings();` down to and including the `useMemo(() => nextCutoff(…))` block with:
+
+```tsx
+  const { next } = useCutoffInfo();
+```
+
+(`if (!next) return null;` and the JSX that follows stay as they are; `next.day`, `next.at`, `next.cutoff`, `next.shipsOn`, `next.isToday` and `next.msRemaining` are all on `CutoffInfo.next`.) Imports become `import { type CSSProperties } from 'react';`, `import { formatCountdown } from '@/lib/cutoffs.ts';` and `import { useCutoffInfo } from '@/lib/server-clock.ts';`; drop `useSettings`, `useEffect`, `useMemo`, `useRef`, `useState` and `nextCutoff`. `web/test/cutoff-bar.test.tsx` must pass **unchanged**. It mocks only `useSettings`, so the anchor takes the first-render fallback, exactly as before.
+
+`web/test/server-clock.test.tsx`:
+
+```tsx
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { renderHook, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
+import type { StorefrontSettings } from '@/types/settings.ts';
+
+const state = vi.hoisted(() => ({ settings: {} as StorefrontSettings }));
+vi.mock('@/app/settings.ts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/app/settings.ts')>()),
+  useSettings: () => state.settings,
+}));
+vi.mock('@/api/settings.ts', () => ({ fetchSettings: async () => ({ ...state.settings, serverTime: '2026-08-24T12:00:00.000Z' }) }));
+
+import { useSettingsQuery } from '@/app/settings.ts';
+import { recordSettingsFetch, settingsFetchedAt } from '@/lib/settings-anchor.ts';
+import { useServerClock } from '@/lib/server-clock.ts';
+
+const T0 = Date.parse('2026-08-24T10:00:00.000Z'); // client clock when the response arrived
+state.settings = { serverTime: '2026-08-24T09:00:00.000Z', cutoffs: { timezone: 'UTC', days: {} }, enabled: true } as unknown as StorefrontSettings;
+
+afterEach(() => { vi.useRealTimers(); });
+
+describe('server clock anchor', () => {
+  it('a clock mounted 60 s after the fetch reads serverTime + 60 s, not serverTime', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    recordSettingsFetch('2026-08-24T09:00:00.000Z', T0);
+    vi.setSystemTime(T0 + 60_000);
+    const { result } = renderHook(() => useServerClock());
+    expect(result.current.toISOString()).toBe('2026-08-24T09:01:00.000Z');
+  });
+
+  it('without a recorded fetch (mocked settings) it anchors at first render', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    state.settings = { ...state.settings, serverTime: '2026-08-24T08:00:00.000Z' };
+    vi.setSystemTime(T0);
+    const { result } = renderHook(() => useServerClock());
+    expect(result.current.toISOString()).toBe('2026-08-24T08:00:00.000Z');
+  });
+
+  it('the settings queryFn records the fetch time of each response', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+    const before = Date.now();
+    const { result } = renderHook(() => useSettingsQuery(), { wrapper });
+    await waitFor(() => expect(result.current.data).toBeDefined());
+    const at = settingsFetchedAt('2026-08-24T12:00:00.000Z')!;
+    expect(at).toBeGreaterThanOrEqual(before);
+    expect(at).toBeLessThanOrEqual(result.current.dataUpdatedAt);
+  });
+});
 ```
 
 `web/src/templates/hooks.ts`:
@@ -2395,16 +2549,22 @@ Use `import { Slot } from '@/templates/runtime.tsx';` in each file below. Defaul
 - `AddToCart.tsx`: after the label `<span>` inside the `<button>`: `<Slot name="ButtonAdornment" variant="primary" cta={false} />`.
 - `CartSummary.tsx`: inside both checkout elements (the disabled `<button>` and the `<Link>`), after the text: `<Slot name="ButtonAdornment" variant="primary" cta />`.
 - `MobileCartBar.tsx`: same as CartSummary for its two checkout elements.
-- `CheckoutPage.tsx`: in the Button rendering `Place order…` / `Continue` (~L690–705), append `<Slot name="ButtonAdornment" variant="primary" cta />` as the last child in every branch.
+- `CheckoutPage.tsx`: the Place order / Continue control is a native `<button className={classes.next}>` (two of them in the `onReview ? … : …` branch, ~L686–705), not a Mantine `Button`. Append `<Slot name="ButtonAdornment" variant="primary" cta />` as the last child of each (inside the `submitting`/`chargeTotal` fragment for Place order). Task 7 adds its `data-sf-part`/`data-variant`/`data-sf-cta` attributes.
 
 - [ ] **Step 9: Verify**
 
-Run: `npm run test:web` → all PASS (existing product-grid/list/wholesale tests mock `useSettings` and render outside a provider — the no-provider context keeps them green). Run: `npm run typecheck` → clean. Run: `npm run test:e2e -- templates-baseline.spec.ts storefront.spec.ts` → all pass.
+Run: `npm run test:web` → all PASS. That includes the unchanged `cutoff-bar.test.tsx` and the existing product-grid/list/wholesale tests, which mock `useSettings` and render outside a provider; the no-provider context keeps them green. Run: `npm run typecheck` → clean. It proves the contract barrel's `CutoffInfo` re-export resolves to `lib/server-clock.ts`. Run: `npm run test:e2e -- templates-baseline.spec.ts storefront.spec.ts` → all pass.
 
 - [ ] **Step 10: Commit**
 
 ```bash
-git add web/src/components/icons.tsx web/src/templates/runtime.tsx web/src/templates/hooks.ts web/src/templates/contract.ts web/src/templates/defaults web/src/templates/modern/index.ts web/src/lib/server-clock.ts web/src/app/App.tsx web/src/main.tsx web/src/layouts/StorefrontShell.tsx web/src/layouts/MenuShell.tsx web/src/layouts/Chromeless.tsx web/src/features/catalog/ProductGrid.tsx web/src/features/catalog/ProductList.tsx web/src/features/wholesale/WholesaleCatalogPage.tsx web/src/features/catalog/AddToCart.tsx web/src/features/cart/CartSummary.tsx web/src/features/cart/MobileCartBar.tsx web/src/features/checkout/CheckoutPage.tsx web/test/templates-runtime.test.tsx web/test/templates-hooks.test.ts
+git add web/src/components/icons.tsx web/src/templates/runtime.tsx web/src/templates/hooks.ts web/src/templates/contract.ts \
+  web/src/templates/defaults/index.ts web/src/templates/defaults/DefaultFooter.tsx web/src/templates/defaults/DefaultCatalogHero.tsx web/src/templates/defaults/DefaultSectionLabel.tsx web/src/templates/defaults/SectionLabel.module.css \
+  web/src/templates/modern/index.ts web/src/lib/server-clock.ts web/src/lib/settings-anchor.ts web/src/app/settings.ts web/src/features/notices/CutoffBar.tsx \
+  web/src/app/App.tsx web/src/main.tsx web/src/layouts/StorefrontShell.tsx web/src/layouts/MenuShell.tsx web/src/layouts/Chromeless.tsx \
+  web/src/features/catalog/ProductGrid.tsx web/src/features/catalog/ProductList.tsx web/src/features/wholesale/WholesaleCatalogPage.tsx \
+  web/src/features/catalog/AddToCart.tsx web/src/features/cart/CartSummary.tsx web/src/features/cart/MobileCartBar.tsx web/src/features/checkout/CheckoutPage.tsx \
+  web/test/templates-runtime.test.tsx web/test/templates-hooks.test.ts web/test/server-clock.test.tsx
 git commit -m "feat(templates): template provider, slots with modern defaults, template hooks
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
@@ -2416,8 +2576,8 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 
 **Files:**
 - Modify: `web/src/styles/global.css`, `web/src/styles/mantine.css`, `web/src/styles/chassis.css`
-- Modify: CSS modules listed in the steps; TSX files listed in the parts table
-- Test: `web/test/vocabulary.test.ts`, `web/test/chassis.test.ts` (update), `web/test/templates-parts.test.ts` (new)
+- Modify: CSS modules listed in Step 5 (and in the Step 8 `git add` list); TSX files listed in Step 6
+- Test: `web/test/vocabulary.test.ts`, `web/test/templates-parts.test.ts` (new). (`web/test/chassis.test.ts` is not touched: its assertions stay true after the body-rule split. The new chassis assertions live in `templates-parts.test.ts`.)
 
 **Interfaces:**
 - Consumes: token variable names (Contract reference), `tokenVariables`, `BASE_TOKENS`.
@@ -2522,26 +2682,65 @@ describe('parts', () => {
     ['../src/features/catalog/AddToCart.tsx', ['data-sf-part="button"', 'data-variant="filled"']],
     ['../src/features/cart/CartSummary.tsx', ['data-sf-part="button"', 'data-sf-cta="main"']],
     ['../src/features/cart/MobileCartBar.tsx', ['data-sf-part="cart-bar"', 'data-sf-part="button"', 'data-sf-cta="main"']],
-    ['../src/features/checkout/CheckoutPage.tsx', ['data-sf-cta="main"', 'data-sf-part="card"']],
+    ['../src/features/checkout/CheckoutPage.tsx', ['data-sf-cta="main"', 'data-sf-part="button"', 'data-variant="filled"', 'data-variant="default"', 'data-sf-part="stepper"']],
+    ['../src/features/checkout/Field.tsx', ['data-sf-part="input"']],
     ['../src/features/catalog/StockChip.tsx', ['data-sf-part="badge"']],
     ['../src/features/account/StatusPill.tsx', ['data-sf-part="badge"']],
-    ['../src/components/Sheet.tsx', ['data-sf-part="sheet"']],
-    ['../src/features/cart/CartDrawer.tsx', ['data-sf-part="drawer"']],
+    ['../src/components/Sheet.tsx', ['data-sf-part={part}', "part = 'sheet'"]],
+    ['../src/features/cart/CartDrawer.tsx', ['part="drawer"']],
     ['../src/features/notices/NoticeBanners.tsx', ['data-sf-part="notice"']],
     ['../src/features/notices/CutoffBar.tsx', ['data-sf-part="cutoff"']],
     ['../src/features/tracking/ProgressStepper.tsx', ['data-sf-part="stepper"']],
-    ['../src/features/auth/AuthCard.tsx', ['data-sf-part="card"']],
-    ['../src/features/tracking/ParcelCard.tsx', ['data-sf-part="card"']],
   ])('%s carries its parts', (file, parts) => {
     const src = read(file);
     for (const part of parts) expect(src, part).toContain(part);
+  });
+
+  const count = (src: string, needle: string) => src.split(needle).length - 1;
+
+  it.each<[string, number]>([
+    ['../src/features/auth/AuthCard.tsx', 1],
+    ['../src/features/order-status/AddressCard.tsx', 1],
+    ['../src/features/order-status/CryptoPaymentCard.tsx', 1],
+    ['../src/features/order-status/ItemsCard.tsx', 1],
+    ['../src/features/order-status/PaymentSection.tsx', 4],
+    ['../src/features/order-status/ShipmentCard.tsx', 1],
+    ['../src/features/tracking/ParcelCard.tsx', 1],
+    ['../src/features/checkout/CheckoutPage.tsx', 1],
+  ])('%s tags exactly its %i card root(s) — eleven in all', (file, n) => {
+    expect(count(read(file), 'data-sf-part="card"')).toBe(n);
+  });
+
+  it('tags every checkout text field (input, select, textarea)', () => {
+    expect(count(read('../src/features/checkout/Field.tsx'), 'data-sf-part="input"')).toBe(3);
+  });
+
+  it('tags both checkout nav buttons and both main-CTA branches', () => {
+    const src = read('../src/features/checkout/CheckoutPage.tsx');
+    expect(count(src, 'data-sf-cta="main"')).toBe(2);          // Place order + Continue
+    expect(count(src, 'data-sf-part="button"')).toBe(3);        // .back + the two .next buttons
+  });
+});
+
+describe('custom button radius', () => {
+  const block = (css: string, sel: string) => css.match(new RegExp(`\\${sel}\\s*\\{[^}]*\\}`, 's'))?.[0] ?? '';
+  it.each([
+    ['../src/features/catalog/AddToCart.module.css', '.button'],
+    ['../src/features/cart/CartSummary.module.css', '.checkout'],
+    ['../src/features/cart/MobileCartBar.module.css', '.checkout'],
+    ['../src/features/checkout/CheckoutPage.module.css', '.next'],
+    ['../src/features/checkout/CheckoutPage.module.css', '.back'],
+  ])('%s %s follows the button radius token, not the card one', (file, sel) => {
+    const b = block(read(file), sel);
+    expect(b).toContain('border-radius: var(--sf-btn-radius)');
+    expect(b).not.toContain('--sf-card-radius');
   });
 });
 ```
 
 - [ ] **Step 2: Run to see them fail**
 
-Run: `npm run test:web -- vocabulary templates-parts chassis` → FAIL.
+Run: `npm run test:web -- vocabulary templates-parts` → FAIL.
 
 - [ ] **Step 3: Boot defaults in `global.css`**
 
@@ -2569,7 +2768,7 @@ In `mantine.css` `.sf-button`: `font-family: var(--sf-btn-font);`, `text-transfo
 :root[data-sf-input="box"] .sf-input:focus, :root[data-sf-input="box"] .sf-input:focus-within { border-color: var(--sf-primary); }
 
 /* Shared fill recipes (tokens.button.fill) for every filled button — Mantine Buttons and the
-   three custom module buttons (AddToCart, CartSummary checkout, MobileCartBar checkout), which
+   custom module buttons (AddToCart, CartSummary checkout, MobileCartBar checkout, CheckoutPage .next), which
    carry data-sf-part="button" data-variant="filled". Mirrors buttonVariantVars in theme-bridge.ts.
    'solid' has no rule: the modules' own accent fill is the modern look. Templates add only what
    is theirs (a glow, a pulse) with an equally specific rule that loads later. */
@@ -2636,19 +2835,44 @@ The `:root[data-sf-glass="off"] .glass` selectors (0,3,0) outrank the plain `.gl
 
 - [ ] **Step 5: Module refactor (mechanical; every substitution is value-identical in modern)**
 
-Run `grep -rn "border-radius" web/src --include=*.module.css` and apply:
-1. `var(--mantine-radius-default)` → `var(--sf-btn-radius)` in `AddToCart.module.css` `.button`, `CartSummary.module.css` `.checkout`, `MobileCartBar.module.css` `.checkout`.
+Run `grep -rnE "var\(--mantine-radius-default\)|border-radius: 999px" web/src --include=*.module.css` (36 files today; they are the CSS modules in the Step 8 `git add` list) and apply:
+1. **Buttons:** `var(--mantine-radius-default)` → `var(--sf-btn-radius)` in the five custom buttons: `features/catalog/AddToCart.module.css` `.button`, `features/cart/CartSummary.module.css` `.checkout`, `features/cart/MobileCartBar.module.css` `.checkout`, `features/checkout/CheckoutPage.module.css` `.next` and `.back`.
 2. Every other `var(--mantine-radius-default)` inside a `border-radius` declaration in a `*.module.css` → `var(--sf-card-radius)` (including the partial forms like `0 var(--mantine-radius-default) var(--mantine-radius-default) 0`).
-3. `border-radius: 999px` → `border-radius: var(--sf-pill-radius)` everywhere **except** the grab-handle rule in `components/Sheet.module.css` (the 999px directly under the handle selector, ~L19).
+3. `border-radius: 999px` → `border-radius: var(--sf-pill-radius)` everywhere **except** the grab-handle rule in `components/Sheet.module.css` (`.handle`, L19).
 4. Leave literal `0`, `2px` and `16px 16px 0 0` radii alone.
 
-Cards: in the `.card { … }` blocks of `order-status/OrderStatus.module.css`, `tracking/Tracking.module.css`, `auth/AuthCard.module.css` and `catalog/ProductCard.module.css`, replace `border: 1px solid var(--sf-line);` (only that exact declaration) with `border: var(--sf-card-border);` and add `box-shadow: var(--sf-card-shadow);`. In `ProductCard.module.css` add `.card:hover { box-shadow: var(--sf-card-shadow-hover); }`. `CheckoutPage.module.css` `.card` keeps its `var(--sf-line-strong)` border (not the card recipe) but gains `box-shadow: var(--sf-card-shadow);`.
+Cards: in the `.card { … }` blocks of `features/order-status/OrderStatus.module.css`, `features/tracking/Tracking.module.css` and `features/auth/AuthCard.module.css`, replace `border: 1px solid var(--sf-line);` (only that exact declaration) with `border: var(--sf-card-border);` and add `box-shadow: var(--sf-card-shadow);`. `features/catalog/ProductCard.module.css` `.card` has no border (it is a layout wrapper). Add only `box-shadow: var(--sf-card-shadow);` to it, plus a new rule `.card:hover { box-shadow: var(--sf-card-shadow-hover); }`. `features/checkout/CheckoutPage.module.css` `.card` keeps its `var(--sf-line-strong)` border (not the card recipe) but gains `box-shadow: var(--sf-card-shadow);`.
 
-Headings: in `ProductGrid.module.css` `.title`, `ProductList.module.css` `.title`, `WholesaleCatalogPage.module.css` `.title` and the `ProductDetailPage.module.css` rule for the product `<h1>` class: replace `font-weight: 600;` with `font-weight: var(--sf-heading-weight);` and, **only if the block has no `letter-spacing`/`text-transform`**, add `letter-spacing: var(--sf-heading-tracking); text-transform: var(--sf-heading-transform);`.
+Headings — tokens apply **only where modern's value already equals the token** (weight 600, tracking `normal`, transform `none`):
+- `features/catalog/ProductGrid.module.css` `.title` (weight 600, no letter-spacing, no transform): `font-weight: 600;` → `font-weight: var(--sf-heading-weight);` and add `letter-spacing: var(--sf-heading-tracking); text-transform: var(--sf-heading-transform);`.
+- `features/catalog/ProductDetailPage.module.css` `.name` (the product `<h1>`; weight 600, `letter-spacing: -0.01em`): `font-weight: 600;` → `font-weight: var(--sf-heading-weight);` only; its letter-spacing stays literal.
+- `features/catalog/ProductList.module.css` `.title` (700, `-0.02em`) and `features/wholesale/WholesaleCatalogPage.module.css` `.title` (700, `-0.01em`): **no change.** They keep their literals, so modern stays pixel-identical. Templates reach them through `[data-sf-part="page-title"]` / `[data-sf-part="group-title"]` (see the Contract reference's heading-token note; Task 14 documents it).
 
 - [ ] **Step 6: Attach parts**
 
-Add the attributes per the Contract reference parts table (also `data-variant="filled"` on the three custom buttons and `data-sf-cta="main"` on the three main CTAs). For `card`: `grep -rn "className={classes.card}" web/src/features/auth web/src/features/order-status web/src/features/tracking web/src/features/checkout` and add `data-sf-part="card"` to each hit. For `sheet`: add `data-sf-part="sheet"` to the `<Drawer.Content>` in `components/Sheet.tsx`; for `drawer`: the cart Drawer's content element in `CartDrawer.tsx` (`<Drawer.Content>` if it uses the compound API, otherwise pass `data-sf-part="drawer"` on the `Drawer` — Mantine forwards unknown props to the root).
+Add the attributes exactly as listed below; each line is a file and element. Every one is an attribute-only change.
+
+- Shells: `data-sf-part="header"` on the `<header>` and `data-sf-part="main"` on the `<main>` in `layouts/StorefrontShell.tsx` (L32, L70), `layouts/MenuShell.tsx` (L44, L92) and `layouts/Chromeless.tsx` (L11, L14). `data-sf-part="badge"` on the cart-count `<span className={classes.count}>` in StorefrontShell (L60) and MenuShell (L82).
+- Catalogue: `data-sf-part="product-card"` on the `ProductCard` `<article>`; `data-sf-part="product-row"` on the `ProductRow` root; `data-sf-part="price"` on the main price element in `ProductCard.tsx`, `ProductRow.tsx`, `ProductDetailPage.tsx`, `ProductDetailSheet.tsx`; `data-sf-part="page-title"` on the `<h1>` in `ProductGrid.tsx` (L89), `ProductList.tsx` (L85), `WholesaleCatalogPage.tsx` (L109) and `ProductDetailPage.tsx` (L92); `data-sf-part="group-title"` on the group `<h2>` in `ProductList.tsx` (L141); `data-sf-part="badge"` on the `StockChip` root `<span>` and the `features/account/StatusPill.tsx` root `<span>`.
+- Buttons (five custom ones):
+  - `features/catalog/AddToCart.tsx` `<button>`: `data-sf-part="button" data-variant="filled"`.
+  - `features/cart/CartSummary.tsx`, the disabled checkout `<button>` and the checkout `<Link>`: `data-sf-part="button" data-variant="filled" data-sf-cta="main"`.
+  - `features/cart/MobileCartBar.tsx`: `data-sf-part="cart-bar"` on the root `<div className={classes.bar}>`, and `data-sf-part="button" data-variant="filled" data-sf-cta="main"` on the disabled checkout `<button>` and the checkout `<Link>`.
+  - `features/checkout/CheckoutPage.tsx`: `data-sf-part="button" data-variant="default"` on the `.back` `<button>`. `data-sf-part="button" data-variant="filled" data-sf-cta="main"` on **both** `.next` `<button>`s (Place order, Continue).
+- Cards: `data-sf-part="card"` on exactly these eleven roots:
+  - `features/auth/AuthCard.tsx` `<section>` (L21)
+  - `features/order-status/AddressCard.tsx` `<section>` (L17)
+  - `features/order-status/CryptoPaymentCard.tsx` root (L81)
+  - `features/order-status/ItemsCard.tsx` `<section>` (L19)
+  - `features/order-status/PaymentSection.tsx` at L57, L65, L88 and L144
+  - `features/order-status/ShipmentCard.tsx` `<section>` (L31)
+  - `features/tracking/ParcelCard.tsx` root (L42)
+  - `features/checkout/CheckoutPage.tsx` step card `<div>` (L600)
+
+  (Line numbers are pre-change; match on the `classes.card` className.)
+- Inputs: `data-sf-part="input"` on the three `classes.input` elements in `features/checkout/Field.tsx` (L48 input, L106 select, L160 textarea). Mantine `Input`s are already tagged by the theme default prop (Task 4).
+- Sheet / drawer: `components/Sheet.tsx` gains an optional prop `part?: 'sheet' | 'drawer'` (destructured as `part = 'sheet'`), rendered as `data-sf-part={part}` on `<Drawer.Content>` (L52). `features/cart/CartDrawer.tsx` passes `part="drawer"` to its `<Sheet>`.
+- Notices / cutoff / stepper: `data-sf-part="notice"` on each notice root `<div>` in `features/notices/NoticeBanners.tsx` (L58); `data-sf-part="cutoff"` on the `CutoffBar` root `<section>`; `data-sf-part="stepper"` on the `features/tracking/ProgressStepper.tsx` root `<div className={classes.stepper}>` (L32) **and** on the checkout Mantine `<Stepper>` in `CheckoutPage.tsx` (~L578; Mantine forwards `data-*` to the root).
 
 - [ ] **Step 7: Verify pixels and tests**
 
@@ -2657,26 +2881,46 @@ Run: `npm run test:web` → PASS. Run: `npm run typecheck` → clean. Run: `npm 
 - [ ] **Step 8: Commit**
 
 ```bash
-git add web/src/styles web/src/features web/src/components web/src/layouts web/test/vocabulary.test.ts web/test/chassis.test.ts web/test/templates-parts.test.ts
+git add web/src/styles/global.css web/src/styles/mantine.css web/src/styles/chassis.css \
+  web/src/components/ContactLinks.module.css web/src/components/PageSkeleton.module.css web/src/components/Sheet.module.css web/src/components/Sheet.tsx \
+  web/src/features/account/Account.module.css web/src/features/account/StatusPill.tsx \
+  web/src/features/auth/AuthCard.module.css web/src/features/auth/AuthCard.tsx web/src/features/auth/WhatsappLogin.module.css \
+  web/src/features/cart/CartDrawer.module.css web/src/features/cart/CartDrawer.tsx web/src/features/cart/CartLine.module.css web/src/features/cart/CartPage.module.css \
+  web/src/features/cart/CartSummary.module.css web/src/features/cart/CartSummary.tsx web/src/features/cart/MobileCartBar.module.css web/src/features/cart/MobileCartBar.tsx \
+  web/src/features/catalog/AddToCart.module.css web/src/features/catalog/AddToCart.tsx web/src/features/catalog/CategoryNav.module.css web/src/features/catalog/FilterSheet.module.css \
+  web/src/features/catalog/ProductCard.module.css web/src/features/catalog/ProductCard.tsx web/src/features/catalog/ProductDetailPage.module.css web/src/features/catalog/ProductDetailPage.tsx \
+  web/src/features/catalog/ProductDetailSheet.module.css web/src/features/catalog/ProductDetailSheet.tsx web/src/features/catalog/ProductGrid.module.css web/src/features/catalog/ProductGrid.tsx \
+  web/src/features/catalog/ProductImage.module.css web/src/features/catalog/ProductList.tsx web/src/features/catalog/ProductRow.module.css web/src/features/catalog/ProductRow.tsx \
+  web/src/features/catalog/StockChip.module.css web/src/features/catalog/StockChip.tsx \
+  web/src/features/checkout/CheckoutPage.module.css web/src/features/checkout/CheckoutPage.tsx web/src/features/checkout/CouponField.module.css web/src/features/checkout/Field.tsx \
+  web/src/features/checkout/Fields.module.css web/src/features/checkout/QuoteSummary.module.css web/src/features/checkout/steps/Steps.module.css \
+  web/src/features/notices/CutoffBar.tsx web/src/features/notices/NoticeBanners.tsx \
+  web/src/features/order-status/OrderStatus.module.css web/src/features/order-status/AddressCard.tsx web/src/features/order-status/CryptoPaymentCard.tsx \
+  web/src/features/order-status/ItemsCard.tsx web/src/features/order-status/PaymentSection.tsx web/src/features/order-status/ShipmentCard.tsx \
+  web/src/features/payment-redirect/PaymentRedirect.module.css web/src/features/tracking/Tracking.module.css web/src/features/tracking/ParcelCard.tsx web/src/features/tracking/ProgressStepper.tsx \
+  web/src/features/verify/VerifyPage.module.css web/src/features/wholesale/WholesaleBar.module.css web/src/features/wholesale/WholesaleRow.module.css web/src/features/wholesale/WholesaleCatalogPage.tsx \
+  web/src/layouts/MenuShell.module.css web/src/layouts/StorefrontShell.module.css web/src/layouts/StorefrontShell.tsx web/src/layouts/MenuShell.tsx web/src/layouts/Chromeless.tsx \
+  web/test/vocabulary.test.ts web/test/templates-parts.test.ts
+git status --short web   # must show nothing left modified or untracked under web/
 git commit -m "refactor(web): read the modern look from template tokens and tag parts
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ```
 
-(`git add web/src/features web/src/components web/src/layouts` stages only modified tracked files there plus nothing untracked — check `git status` first; there must be no stray new files.)
+If `git status --short web` still lists a file, the step touched something outside this list. Add it explicitly by path (never by directory) and mention it in the commit body.
 
 ---
 
 ### Task 8: Live preview listener
 
 **Files:**
-- Create: `web/src/app/preview-listener.ts`
+- Create: `web/src/app/preview-listener.ts`, `web/src/app/document-theme.ts`
 - Modify: `web/src/app/App.tsx` (`ThemedApp`)
-- Test: `web/test/preview-listener.test.ts`
+- Test: `web/test/preview-listener.test.ts`, `web/test/document-theme.test.tsx`
 
 **Interfaces:**
 - Consumes: `previewMessageSchema`, `Theme`, `applyDocumentTheme(…, { persist })`.
-- Produces: `PREVIEW_PARAM = 'sf-preview'`, `isPreviewMode(win?)`, `subscribePreview(onTheme, win?)`, `usePreviewTheme(): Theme | null`. Protocol for Plan 4: storefront posts `{ type: 'sf-preview-ready' }` to `window.parent` (target `'*'`, no data); admin posts `{ type: 'sf-preview-theme', theme }` to the iframe.
+- Produces: `PREVIEW_PARAM = 'sf-preview'`, `isPreviewMode(win?)`, `subscribePreview(onTheme, win?)`, `usePreviewTheme(win?): Theme | null`, `useDocumentTheme(settings, win?): ResolvedTheme`. Protocol for Plan 4: storefront posts `{ type: 'sf-preview-ready' }` to `window.parent` (target `'*'`, no data); admin posts `{ type: 'sf-preview-theme', theme }` to the iframe.
 
 - [ ] **Step 1: Write failing tests**
 
@@ -2789,41 +3033,124 @@ export function subscribePreview(onTheme: (theme: Theme) => void, win: Window = 
   return () => win.removeEventListener('message', handler);
 }
 
-export function usePreviewTheme(): Theme | null {
+export function usePreviewTheme(win: Window = window): Theme | null {
   const [theme, setTheme] = useState<Theme | null>(null);
-  useEffect(() => subscribePreview(setTheme), []);
+  useEffect(() => subscribePreview(setTheme, win), [win]);
   return theme;
 }
 ```
 
-- [ ] **Step 4: Wire into `ThemedApp`**
+- [ ] **Step 4: One hook for the document theme — write its failing wiring test**
+
+`ThemedApp`'s theming (preview override → resolve → paint, never persisting in a preview frame) moves into one hook, so the wiring can be tested without mounting the router.
+
+`web/test/document-theme.test.tsx`:
 
 ```tsx
-function ThemedApp({ settings }: { settings: StorefrontSettings }) {
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { act, renderHook } from '@testing-library/react';
+import { useDocumentTheme } from '@/app/document-theme.ts';
+import { THEME_STORAGE_KEY } from '@/app/theme-bridge.ts';
+import type { StorefrontSettings, Theme } from '@/types/settings.ts';
+
+const stored: Theme = {
+  template: 'modern', preset: 'default', options: {},
+  scheme: 'dark', colors: { primary: '#ffffff', bg: '#0f3965', surface: '#15457a', text: '#f4f7fc', muted: '#a9c0e0', success: '#5fcc9b', warn: '#e3b97a', danger: '#e08278' },
+  fonts: { heading: null, body: null, mono: null }, radius: 'none', density: 'comfortable', customCss: '.saved{}',
+};
+const settings = {
+  theme: stored,
+  brand: { name: 'Acme', shortName: 'Acme', tagline: '', title: 'Acme', description: '', logoUrl: null, faviconUrl: null, logoHeight: 28, links: { whatsapp: null, telegram: null } },
+} as unknown as StorefrontSettings;
+
+function framedWindow(search: string) {
+  const listeners: Array<(e: MessageEvent) => void> = [];
+  const parent = { postMessage: vi.fn() };
+  const win = {
+    location: { search },
+    parent,
+    addEventListener: (_: string, fn: (e: MessageEvent) => void) => listeners.push(fn),
+    removeEventListener: (_: string, fn: (e: MessageEvent) => void) => listeners.splice(listeners.indexOf(fn), 1),
+  } as unknown as Window;
+  const send = (data: unknown) => listeners.forEach((fn) => fn({ data, source: parent } as MessageEvent));
+  return { win, send };
+}
+
+afterEach(() => { localStorage.clear(); document.documentElement.removeAttribute('style'); });
+
+describe('useDocumentTheme', () => {
+  it('outside a preview frame: paints the stored theme and persists it', () => {
+    const { result } = renderHook(() => useDocumentTheme(settings, framedWindow('').win));
+    expect(result.current.colors.bg).toBe('#0f3965');
+    expect(JSON.parse(localStorage.getItem(THEME_STORAGE_KEY)!).vars['--sf-bg']).toBe('#0f3965');
+  });
+
+  it('in a preview frame: the draft overrides the stored theme, keeps the saved customCss, and writes nothing', () => {
+    const { win, send } = framedWindow('?sf-preview=1');
+    const { result } = renderHook(() => useDocumentTheme(settings, win));
+    act(() => send({ type: 'sf-preview-theme', theme: { ...stored, colors: { ...stored.colors, bg: '#101010' }, customCss: 'body{display:none}' } }));
+    expect(result.current.colors.bg).toBe('#101010');
+    expect(result.current.customCss).toBe('.saved{}');
+    expect(document.documentElement.style.getPropertyValue('--sf-bg')).toBe('#101010');
+    expect(document.getElementById('sf-custom-css')?.textContent).toBe('.saved{}');
+    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBeNull();
+  });
+});
+```
+
+Run: `npm run test:web -- document-theme` → FAIL (module missing).
+
+- [ ] **Step 5: Implement `useDocumentTheme` and wire it into `ThemedApp`**
+
+`web/src/app/document-theme.ts`:
+
+```ts
+import { useEffect, useMemo } from 'react';
+import { applyDocumentTheme } from '@/app/theme-bridge.ts';
+import { isPreviewMode, usePreviewTheme } from '@/app/preview-listener.ts';
+import { lookupManifest } from '@/templates/registry.ts';
+import { resolveTheme, type ResolvedTheme } from '@/templates/resolve.ts';
+import type { StorefrontSettings } from '@/types/settings.ts';
+
+/**
+ * The theme the page shows: the admin's draft inside a preview frame (with the SAVED custom
+ * CSS — draft CSS is never applied), otherwise the stored theme. Paints the document and, outside a
+ * preview frame only, persists the first-paint payload.
+ */
+export function useDocumentTheme(settings: StorefrontSettings, win: Window = window): ResolvedTheme {
   const { brand } = settings;
-  const preview = usePreviewTheme();
+  const preview = usePreviewTheme(win);
   const theme = preview ? { ...preview, customCss: settings.theme.customCss } : settings.theme;
   const themeKey = JSON.stringify({ theme, brand });
   const resolved = useMemo(() => resolveTheme(theme, lookupManifest), [themeKey]);
   useEffect(() => {
     // A preview frame must never overwrite the real visitor payload.
-    applyDocumentTheme(resolved, brand, { persist: !isPreviewMode() });
+    applyDocumentTheme(resolved, brand, { persist: !isPreviewMode(win) });
   }, [themeKey]);
-  const mantineTheme = useMemo(() => buildMantineTheme(resolved), [resolved]);
-  // ...JSX from Task 6 unchanged
+  return resolved;
 }
 ```
 
-with `import { isPreviewMode, usePreviewTheme } from '@/app/preview-listener.ts';`.
+`ThemedApp` in `web/src/app/App.tsx` becomes:
 
-- [ ] **Step 5: Verify**
+```tsx
+function ThemedApp({ settings }: { settings: StorefrontSettings }) {
+  const resolved = useDocumentTheme(settings);
+  const mantineTheme = useMemo(() => buildMantineTheme(resolved), [resolved]);
+  // ...JSX from Task 6 unchanged (MantineProvider forceColorScheme={resolved.scheme} → TemplateProvider → …)
+}
+```
 
-Run: `npm run test:web` → PASS. `npm run typecheck` → clean. `npm run test:e2e -- templates-baseline.spec.ts` → pass.
+with `import { useDocumentTheme } from '@/app/document-theme.ts';`. Then remove the now-unused imports: `applyDocumentTheme`, `resolveTheme`, `lookupManifest`, and `useEffect` if nothing else uses it (`useBootCart` still does, so keep `useEffect`).
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 6: Verify**
+
+Run: `npm run test:web` → PASS (including `preview-listener` and `document-theme`). `npm run typecheck` → clean. `npm run test:e2e -- templates-baseline.spec.ts storefront.spec.ts` → pass.
+
+- [ ] **Step 7: Commit**
 
 ```bash
-git add web/src/app/preview-listener.ts web/src/app/App.tsx web/test/preview-listener.test.ts
+git add web/src/app/preview-listener.ts web/src/app/document-theme.ts web/src/app/App.tsx web/test/preview-listener.test.ts web/test/document-theme.test.tsx
 git commit -m "feat(templates): live preview channel for the admin Appearance editor
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
@@ -3015,11 +3342,23 @@ export function templatesCatalog(): Plugin {
       }
     },
     configureServer(server) {
+      // Dev: the build fails on invalid manifests; the dev server only skips them at runtime, so
+      // shout once at startup (and on every /templates.json request) instead of failing silently.
+      // Vitest reuses this config — skip there, the templates-catalog test covers it.
+      const reportErrors = (cat: CatalogBuild) => {
+        if (cat.errors.length > 0) console.error(`[templates] invalid templates (skipped at runtime, will fail the build):\n  ${cat.errors.join('\n  ')}`);
+      };
+      if (!process.env.VITEST) {
+        server.httpServer?.once('listening', () => {
+          loadCatalog(server).then(reportErrors, (err: unknown) => console.error('[templates] could not load the template catalog', err));
+        });
+      }
       server.middlewares.use(async (req, res, next) => {
         const url = (req.url ?? '').split('?')[0];
         try {
           if (url === '/templates.json') {
             const cat = await loadCatalog(server);
+            reportErrors(cat);
             res.setHeader('Content-Type', 'application/json');
             res.setHeader('Cache-Control', 'no-store');
             res.end(JSON.stringify(cat.json));
@@ -3055,7 +3394,8 @@ export function templatesCatalog(): Plugin {
 - [ ] **Step 6: Verify end to end**
 
 Run: `npm run test:web -- templates-catalog` → PASS. Run: `npm run build` → succeeds; then `node -e "const c=JSON.parse(require('fs').readFileSync('web/dist/templates.json','utf8'));console.log(c.schemaVersion,c.templates.map(t=>t.id))"` → `1 [ 'modern' ]`.
-Negative check: temporarily set `contractVersion: 2 as 1` in `modern/manifest.ts`, run `npm --prefix web run build` → fails with `Invalid templates:`; revert.
+Negative check: temporarily set `contractVersion: 2 as unknown as 1` in `modern/manifest.ts` (the double cast keeps `tsc -b` green, so the failure really comes from the plugin), run `npm --prefix web run build` → fails with `Invalid templates:`; revert.
+Dev negative check: temporarily add a second built-in folder `web/src/templates/zz-broken/` with a `manifest.ts` whose `defaultPreset` is `'nope'` plus an empty `index.ts` exporting `slots = {}`. Run `npm run dev:web` → the terminal prints `[templates] invalid templates (skipped at runtime, will fail the build):` naming `zz-broken`, and the page still loads. Delete the folder.
 Dev check: `npm run dev:web`, then `curl -s http://localhost:5173/templates.json` → the same JSON.
 
 - [ ] **Step 7: Commit**
@@ -3073,12 +3413,12 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 
 **Files:**
 - Create: `templates.lock.json`
-- Create: `scripts/templates-lock.mjs`, `scripts/template-imports.mjs`, `scripts/template-imports.d.mts`, `scripts/fetch-templates.mjs`
+- Create: `scripts/template-rules.mjs`, `scripts/template-rules.d.mts`, `scripts/templates-lock.mjs`, `scripts/template-imports.mjs`, `scripts/template-imports.d.mts`, `scripts/fetch-templates.mjs`
 - Test: `scripts/fetch-templates.test.mjs`, `web/test/template-imports.test.ts`
-- Modify: `package.json` (root), `web/package.json`, `.gitignore`
+- Modify: `package.json` (root; `templates:fetch` only — `template:new` is added by Task 11), `web/package.json`, `.gitignore`
 
 **Interfaces:**
-- Produces: `parseLock(text, builtIns): { id, repo, ref }[]` (throws `Error` listing every problem); `forbiddenImports(source, { fileDir, templateRoot, isManifest }): string[]`; `fetchTemplates({ lockPath, templatesDir, log }): string[]`; `validateTemplateDir(dir, id): string[]`; `builtInIds(templatesDir): string[]`.
+- Produces: `scripts/template-rules.mjs` — `RESERVED_DIRS` (`['external', 'defaults']`), `TEMPLATE_ID_RE`, `SHA_RE`, `CONTRACT_SPECIFIERS`, `DEFINE_SPECIFIERS`, `ALLOWED_PACKAGES` (the single source for every script and script test; the web side keeps its own `TEMPLATE_ID_RE` in `define.ts` because `web/src` may not import from `scripts/`); `parseLock(text, builtIns): { id, repo, ref }[]` (throws `Error` listing every problem); `forbiddenImports(source, { fileDir, templateRoot, isManifest }): string[]`; `fetchTemplates({ lockPath, templatesDir, log }): string[]`; `validateTemplateDir(dir, id): string[]`; `builtInIds(templatesDir): string[]`.
 
 Ruling: `web/` has no ESLint, so the spec's `no-restricted-imports` rule is implemented as `scripts/template-imports.mjs`, run by `fetch-templates.mjs` for imports (fails the fetch → fails CI before build) and by a vitest over every built-in template folder.
 
@@ -3097,6 +3437,7 @@ import { pathToFileURL } from 'node:url';
 import { parseLock } from './templates-lock.mjs';
 import { forbiddenImports } from './template-imports.mjs';
 import { fetchTemplates } from './fetch-templates.mjs';
+import { RESERVED_DIRS } from './template-rules.mjs';
 
 const SHA = 'a'.repeat(40);
 
@@ -3112,7 +3453,7 @@ test('parseLock rejects bad refs, ids, duplicates and built-in collisions', () =
   bad([{ id: 'acme', repo: '', ref: SHA }], 'repo');
   bad([{ id: 'acme', repo: 'r', ref: SHA }, { id: 'acme', repo: 'r2', ref: SHA }], 'duplicate');
   bad([{ id: 'modern', repo: 'r', ref: SHA }], 'built-in');
-  bad([{ id: 'external', repo: 'r', ref: SHA }], 'reserved');
+  for (const id of RESERVED_DIRS) bad([{ id, repo: 'r', ref: SHA }], 'reserved');
   assert.throws(() => parseLock('{nope', ['modern']), /not valid JSON/);
 });
 
@@ -3217,12 +3558,44 @@ test('names the template when git cannot fetch it', () => {
 
 Run: `npm run test:scripts` → FAIL (modules missing).
 
-- [ ] **Step 3: Implement `templates-lock.mjs`**
+- [ ] **Step 3: Implement `template-rules.mjs` (the single source) and `templates-lock.mjs`**
+
+`scripts/template-rules.mjs`:
 
 ```js
+/**
+ * The template naming and import rules, in one place. Imported by fetch-templates, templates-lock,
+ * template-imports, new-template (template:new) and their tests. The web side mirrors only
+ * TEMPLATE_ID_RE (web/src/templates/define.ts) because web/src may not import from scripts/.
+ */
+/** Folder names under web/src/templates that are never templates (and never valid template ids). */
+export const RESERVED_DIRS = Object.freeze(['external', 'defaults']);
+export const TEMPLATE_ID_RE = /^[a-z0-9-]{1,40}$/;
+/** A lock ref must be a full, lowercase commit SHA — no branches, no tags. */
 export const SHA_RE = /^[0-9a-f]{40}$/;
-export const ID_RE = /^[a-z0-9-]{1,40}$/;
-const RESERVED = new Set(['external', 'defaults']);
+/** What a template file may import (manifest.ts: DEFINE_SPECIFIERS only). */
+export const CONTRACT_SPECIFIERS = Object.freeze(['@/templates/contract', '@/templates/contract.ts']);
+export const DEFINE_SPECIFIERS = Object.freeze(['@/templates/define', '@/templates/define.ts']);
+export const ALLOWED_PACKAGES = Object.freeze(['react', 'react/jsx-runtime']);
+```
+
+`scripts/template-rules.d.mts`:
+
+```ts
+export declare const RESERVED_DIRS: readonly string[];
+export declare const TEMPLATE_ID_RE: RegExp;
+export declare const SHA_RE: RegExp;
+export declare const CONTRACT_SPECIFIERS: readonly string[];
+export declare const DEFINE_SPECIFIERS: readonly string[];
+export declare const ALLOWED_PACKAGES: readonly string[];
+```
+
+`scripts/templates-lock.mjs`:
+
+```js
+import { RESERVED_DIRS, SHA_RE, TEMPLATE_ID_RE as ID_RE } from './template-rules.mjs';
+
+const RESERVED = new Set(RESERVED_DIRS);
 
 /** Parses templates.lock.json. Throws one Error listing every problem. */
 export function parseLock(text, builtIns) {
@@ -3254,10 +3627,12 @@ export function parseLock(text, builtIns) {
 ```js
 import path from 'node:path';
 
+import { ALLOWED_PACKAGES, CONTRACT_SPECIFIERS, DEFINE_SPECIFIERS } from './template-rules.mjs';
+
 const SPEC_RE = /(?:^|[\s;])(?:import|export)\s+(?:type\s+)?(?:[^'"`;]*?\sfrom\s+)?['"]([^'"]+)['"]|import\(\s*['"]([^'"]+)['"]\s*\)/g;
-const CONTRACT = new Set(['@/templates/contract', '@/templates/contract.ts']);
-const DEFINE = new Set(['@/templates/define', '@/templates/define.ts']);
-const PACKAGES = new Set(['react', 'react/jsx-runtime']);
+const CONTRACT = new Set(CONTRACT_SPECIFIERS);
+const DEFINE = new Set(DEFINE_SPECIFIERS);
+const PACKAGES = new Set(ALLOWED_PACKAGES);
 
 /**
  * The import restriction for templates (web/ has no ESLint). Returns every specifier a template
@@ -3301,9 +3676,10 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseLock } from './templates-lock.mjs';
 import { forbiddenImports } from './template-imports.mjs';
+import { RESERVED_DIRS } from './template-rules.mjs';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
-const INTERNAL = new Set(['external', 'defaults']);
+const INTERNAL = new Set(RESERVED_DIRS);
 export const DEFAULTS = {
   lockPath: path.join(ROOT, 'templates.lock.json'),
   templatesDir: path.join(ROOT, 'web', 'src', 'templates'),
@@ -3413,9 +3789,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { forbiddenImports } from '../../scripts/template-imports.mjs';
+import { RESERVED_DIRS } from '../../scripts/template-rules.mjs';
 
 const templatesDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../src/templates');
-const folders = readdirSync(templatesDir).filter((n) => statSync(path.join(templatesDir, n)).isDirectory() && n !== 'defaults' && n !== 'external');
+const folders = readdirSync(templatesDir).filter((n) => statSync(path.join(templatesDir, n)).isDirectory() && !RESERVED_DIRS.includes(n));
 
 function files(dir: string): string[] {
   return readdirSync(dir).flatMap((n) => {
@@ -3443,11 +3820,10 @@ describe('built-in templates respect the import contract', () => {
 { "templates": [] }
 ```
 
-Root `package.json` scripts — add:
+Root `package.json` scripts — add (the `template:new` script arrives with its file in Task 11):
 
 ```json
     "templates:fetch": "node scripts/fetch-templates.mjs",
-    "template:new": "node scripts/new-template.mjs",
 ```
 
 `web/package.json` scripts — add:
@@ -3471,7 +3847,7 @@ Run: `npm run test:scripts` → PASS. Run: `npm run test:web -- template-imports
 - [ ] **Step 9: Commit**
 
 ```bash
-git add templates.lock.json scripts/templates-lock.mjs scripts/template-imports.mjs scripts/template-imports.d.mts scripts/fetch-templates.mjs scripts/fetch-templates.test.mjs web/test/template-imports.test.ts package.json web/package.json .gitignore
+git add templates.lock.json scripts/template-rules.mjs scripts/template-rules.d.mts scripts/templates-lock.mjs scripts/template-imports.mjs scripts/template-imports.d.mts scripts/fetch-templates.mjs scripts/fetch-templates.test.mjs web/test/template-imports.test.ts package.json web/package.json .gitignore
 git commit -m "feat(templates): build-time import of pinned template repos with an import contract
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
@@ -3484,8 +3860,10 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 **Files:**
 - Create: `scripts/new-template.mjs`, `scripts/new-template.test.mjs`
 - Create: `scripts/template-starter/manifest.ts.tpl`, `index.ts.tpl`, `template.css.tpl`, `README.md.tpl`
+- Modify: `package.json` (root) — add `"template:new": "node scripts/new-template.mjs",` to `scripts` (moved here from Task 10 so the script and its file land together)
 
 **Interfaces:**
+- Consumes: `RESERVED_DIRS`, `TEMPLATE_ID_RE` from `scripts/template-rules.mjs` (Task 10).
 - Produces: `newTemplate(id, { templatesDir, starterDir }): string` (returns the created folder). Starter files end in `.tpl` so the storefront's own typecheck never compiles them.
 
 - [ ] **Step 1: Write failing tests**
@@ -3500,6 +3878,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { newTemplate } from './new-template.mjs';
 import { forbiddenImports } from './template-imports.mjs';
+import { RESERVED_DIRS } from './template-rules.mjs';
 
 function ws() {
   const root = mkdtempSync(path.join(os.tmpdir(), 'sf-new-'));
@@ -3525,7 +3904,7 @@ test('scaffolds a template folder with the id and name filled in', () => {
 test('refuses bad ids, reserved names and existing folders', () => {
   const { root, templatesDir } = ws();
   assert.throws(() => newTemplate('Bad Id', { templatesDir }), /id/);
-  assert.throws(() => newTemplate('external', { templatesDir }), /reserved/);
+  for (const name of RESERVED_DIRS) assert.throws(() => newTemplate(name, { templatesDir }), /reserved/);
   assert.throws(() => newTemplate('modern', { templatesDir }), /exists/);
   rmSync(root, { recursive: true, force: true });
 });
@@ -3607,10 +3986,10 @@ Check it: `npm run typecheck && npm run test:web && npm run test:e2e -- template
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { ID_RE } from './templates-lock.mjs';
+import { RESERVED_DIRS, TEMPLATE_ID_RE as ID_RE } from './template-rules.mjs';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
-const RESERVED = new Set(['external', 'defaults']);
+const RESERVED = new Set(RESERVED_DIRS);
 
 const titleCase = (id) => id.split('-').filter(Boolean).map((w) => w[0].toUpperCase() + w.slice(1)).join(' ');
 
@@ -3639,14 +4018,17 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 }
 ```
 
-- [ ] **Step 5: Verify**
+- [ ] **Step 5: Add the script and verify**
+
+Add to the root `package.json` `scripts`: `"template:new": "node scripts/new-template.mjs",`.
 
 Run: `npm run test:scripts` → PASS. Smoke: `npm run template:new -- scratch-check`, then `npm run typecheck && npm run test:web -- templates-registry template-imports` → PASS with the scratch template registered; delete `web/src/templates/scratch-check/`.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add scripts/new-template.mjs scripts/new-template.test.mjs scripts/template-starter
+git add package.json scripts/new-template.mjs scripts/new-template.test.mjs \
+  scripts/template-starter/manifest.ts.tpl scripts/template-starter/index.ts.tpl scripts/template-starter/template.css.tpl scripts/template-starter/README.md.tpl
 git commit -m "feat(templates): template:new scaffold
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
@@ -3658,10 +4040,50 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 
 **Files:**
 - Modify: `.github/workflows/release.yml`
+- Test: `scripts/release-workflow.test.mjs` (picked up by `npm run test:scripts`)
 
-- [ ] **Step 1: Add the key and fetch steps**
+- [ ] **Step 1: Write the failing workflow test**
 
-Under `jobs.build`, add a job-level env (so a step's `if` can see it):
+The `yaml` package is not installed (it appears in `package-lock.json` only as an optional peer), and the plan adds no dependencies. So the test reads the workflow as text: each step is found by its own line, and order is compared by line index.
+
+`scripts/release-workflow.test.mjs`:
+
+```js
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+
+const yml = readFileSync(new URL('../.github/workflows/release.yml', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+const lines = yml.split('\n');
+/** Index of the first line matching `re` — fails the test when absent. */
+function lineOf(re, what) {
+  const i = lines.findIndex((l) => re.test(l));
+  assert.ok(i >= 0, `release.yml has no ${what}`);
+  return i;
+}
+
+test('templates are fetched after the web install and before tests and build', () => {
+  const webCi = lineOf(/^\s+- run: npm --prefix web ci\s*$/, '"npm --prefix web ci" step');
+  const fetch = lineOf(/^\s+- name: Fetch imported templates\s*$/, '"Fetch imported templates" step');
+  const fetchRun = lineOf(/^\s+run: node scripts\/fetch-templates\.mjs\s*$/, 'fetch-templates run line');
+  const tests = lineOf(/^\s+- run: npm test\s*$/, '"npm test" step');
+  const build = lineOf(/^\s+- run: npm run build\s*$/, '"npm run build" step');
+  assert.ok(webCi < fetch && fetch < fetchRun && fetchRun < tests && tests < build, `order: web ci ${webCi}, fetch ${fetch}, test ${tests}, build ${build}`);
+});
+
+test('the deploy-key step is conditional on TEMPLATES_DEPLOY_KEY and runs before the fetch', () => {
+  const key = lineOf(/^\s+- name: Load template deploy key\s*$/, '"Load template deploy key" step');
+  assert.match(lines[key + 1] ?? '', /^\s+if: env\.TEMPLATES_DEPLOY_KEY != ''\s*$/, 'the step\'s first key must be its `if:` guard');
+  assert.ok(key < lineOf(/^\s+- name: Fetch imported templates\s*$/, 'fetch step'));
+  assert.match(yml, /\n {4}env:\n {6}TEMPLATES_DEPLOY_KEY: \$\{\{ secrets\.TEMPLATES_DEPLOY_KEY \}\}\n/, 'job-level env must expose the secret so the step `if` can read it');
+});
+```
+
+Run: `npm run test:scripts` → FAIL (`release.yml has no "Fetch imported templates" step`).
+
+- [ ] **Step 2: Add the key and fetch steps**
+
+Under `jobs.build`, add a job-level env (so a step's `if` can see it), directly after `permissions: { contents: write }`:
 
 ```yaml
     env:
@@ -3686,14 +4108,14 @@ Insert after `- run: npm --prefix web ci` and **before** `- run: npm test`:
 
 (`npm run build` also runs the fetch through `web`'s `prebuild`; it is then a no-op "up to date".)
 
-- [ ] **Step 2: Validate the YAML**
+- [ ] **Step 3: Verify**
 
-Run: `node -e "require('fs').readFileSync('.github/workflows/release.yml','utf8')" && npx --yes yaml-lint .github/workflows/release.yml` — if `yaml-lint` is unavailable offline, instead run `node -e "const y=require('fs').readFileSync('.github/workflows/release.yml','utf8');if(!/Fetch imported templates[\s\S]*npm test/.test(y))throw new Error('order')"` to confirm the fetch step precedes the tests.
+Run: `npm run test:scripts` → PASS (both workflow tests plus the fetch/scaffold suites).
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
-git add .github/workflows/release.yml
+git add .github/workflows/release.yml scripts/release-workflow.test.mjs
 git commit -m "ci(release): fetch pinned templates (optional deploy key) before test and build
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
@@ -3705,25 +4127,14 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 
 **Files:**
 - Create: `e2e/templates.spec.ts`
-- Modify: `e2e/mocks.ts` (optional font blocking)
+
+(`e2e/mocks.ts` is not touched. `installMocks` already aborts every request that leaves `localhost:5199` (mocks.ts L232), Google Fonts included, so the suite is hermetic as it stands.)
 
 **Interfaces:**
 - Consumes: `e2e/flows.ts`, `/templates.json` from the dev server (Task 9).
 - Produces: `TEMPLATE_CASES` (Plan 3 appends entries) and helpers `expectNoHorizontalOverflow`, `expectCartBarUnobstructed`, `expectSlotTapTargets`.
 
-- [ ] **Step 1: Hermetic fonts**
-
-In `installMocks` in `e2e/mocks.ts`, before returning, add:
-
-```ts
-  // Google Fonts: blocked by default so the suite stays hermetic; E2E_REAL_FONTS=1 lets the
-  // template screenshots use the real faces.
-  if (process.env.E2E_REAL_FONTS !== '1') {
-    await page.route(/^https:\/\/fonts\.(googleapis|gstatic)\.com\//, (route) => route.abort());
-  }
-```
-
-- [ ] **Step 2: Write the matrix**
+- [ ] **Step 1: Write the matrix**
 
 `e2e/templates.spec.ts`:
 
@@ -3822,8 +4233,10 @@ for (const c of TEMPLATE_CASES) {
       await openProduct(page, layout, 'Alpine Extract 10ml');
       await expectNoHorizontalOverflow(page, 'detail');
       await page.screenshot({ path: `${SHOTS}${name}-2-detail.png` });
-      if (layout === 'menu') return;
 
+      // Both layouts continue to cart → checkout (the menu layout at 390 and 1280; the
+      // baseline spec proves the same flow works in the menu shell). addFirstToCart closes
+      // the menu's product dialog; MenuShell renders the same MobileCartBar on phones.
       await addFirstToCart(page, layout, mocks);
       if (phone) await expectCartBarUnobstructed(page);
       await openCart(page, phone ? 'mobile' : 'desktop');
@@ -3843,14 +4256,14 @@ for (const c of TEMPLATE_CASES) {
 
 Note: `openCart(page, 'mobile')` expects the cart **page** (phones and tablets under 62em); at 768px that holds because the drawer only appears from 62em (992px).
 
-- [ ] **Step 3: Run**
+- [ ] **Step 2: Run**
 
-Run: `npm run test:e2e -- templates.spec.ts` → 7 passed (1 guard + 4 storefront + 2 menu for modern). Screenshots in `docs/screenshots/templates/` (gitignored).
+Run: `npm run test:e2e -- templates.spec.ts` → 7 passed (1 guard + 4 storefront + 2 menu for modern; every one runs catalog → detail → cart → checkout). Screenshots are in `docs/screenshots/templates/` (gitignored): 4 per case, for both layouts.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
-git add e2e/templates.spec.ts e2e/mocks.ts
+git add e2e/templates.spec.ts
 git commit -m "test(e2e): template × viewport matrix with overflow, cart-bar and tap-target checks
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
@@ -3869,14 +4282,14 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 Write the document with these sections, filled from this plan (copy the tables and blocks, do not paraphrase them):
 
 1. **What a template is** — one paragraph + the folder/module shape block from the Contract reference.
-2. **Manifest** — the `define.ts` block; the validation rules from Global Constraints; how presets, `editable` locks (locked fields always take the active preset's value; density locked → comfortable) and options resolve.
-3. **Tokens** — the CSS variable list and the root attribute table, with modern's values (the `BASE_TOKENS` block).
-4. **Parts** — the parts table, the `data-variant` / `data-sf-cta="main"` notes, the **shared button-fill rules** paragraph, the specificity note, and the **supported hooks outside the parts table** (`.glass`, `.glass-soft`, `.mantine-Overlay-root`; prefer the `glass` token).
+2. **Manifest** — the manifest types from the `define.ts` block (types and `BASE_TOKENS`, not the validator body); the validation rules from Global Constraints, including the **limits table**: `name` ≤ 60, `description` ≤ 500, `author` ≤ 100, `version` ≤ 40, ≤ 30 options, select `choices` 1–20, text `maxLength` 1–100, `FontSpec.weights` 1–9 values (100–900, step 100), and that these match the backend's catalog schema (a manifest over a limit fails the build rather than being silently dropped by the backend). Also how presets, `editable` locks (locked fields always take the active preset's value; density locked → comfortable) and options resolve.
+3. **Tokens** — the CSS variable list and the root attribute table, with modern's values (the `BASE_TOKENS` block), and the **heading-token note** from the Contract reference. `heading.*` reaches only ProductGrid's title (all three values) and the product page title's weight. The list and wholesale titles keep their literals, so to restyle every title a template targets `[data-sf-part="page-title"]` / `[data-sf-part="group-title"]`.
+4. **Parts** — the parts table (including the five custom buttons, the eleven card roots, the checkout stepper and `<Sheet part="drawer">`), the `data-variant` / `data-sf-cta="main"` notes, the **shared button-fill rules** paragraph, the specificity note, and the **supported hooks outside the parts table** (`.glass`, `.glass-soft`, `.mantine-Overlay-root`; prefer the `glass` token).
 5. **Slots** — the `slots.ts` block, where each slot renders, the defaults, the `data-sf-slot` wrapper, and the cart-bar merge pattern.
 6. **Hooks and components** — the hook signature block and the component re-exports, including `ArrowUpRightIcon` and its `GlyphProps`.
 7. **Mobile rules (every template)** — verbatim: no horizontal scroll at 360px; tap targets ≥ 44px; decorations collapse or hide at the breakpoints the template declares; safe-area insets respected (`env(safe-area-inset-*)`); overlays `pointer-events: none`; `prefers-reduced-motion` honoured; inputs stay 16px (iOS zoom guard). Enforced by `e2e/templates.spec.ts`; add a `TEMPLATE_CASES` entry per preset.
 8. **Adding a built-in template** — `npm run template:new -- <id>`, edit, add e2e case, `npm test && npm run test:e2e`.
-9. **Importing a template from git** — repo root = template folder; add `{ id, repo, ref }` to `templates.lock.json` with a full SHA; `npm run templates:fetch`; private repos need the `TEMPLATES_DEPLOY_KEY` Actions secret (a read-only deploy key on the template repo); what the fetch rejects.
+9. **Importing a template from git** — the naming and import rules live in `scripts/template-rules.mjs` (reserved folder names `external`/`defaults`, id and SHA regexes, the import allowlist); repo root = template folder; add `{ id, repo, ref }` to `templates.lock.json` with a full SHA; `npm run templates:fetch`; private repos need the `TEMPLATES_DEPLOY_KEY` Actions secret (a read-only deploy key on the template repo); what the fetch rejects.
 10. **Trust** — "An imported template runs as first-party code in every client's storefront. Adding or bumping one in `templates.lock.json` is a code-review decision: read the diff at the new SHA before merging."
 11. **Catalog and preview** — `templates.json` shape (the Task 9 interface block), `/templates/<id>/preview.<ext>`, the preview message protocol from Task 8, and that draft custom CSS is never applied in preview.
 
@@ -3918,11 +4331,13 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 
 - **Import restriction without ESLint (spec §5.2):** `web/` has no ESLint; implemented as `scripts/template-imports.mjs`, enforced in the fetch step (external) and a vitest (built-ins). Manifests are further restricted to `@/templates/define.ts` so the catalog plugin can load them without React.
 - **`badge.radius` modern value:** the spec table said "theme radius"; today's pills are `999px`, so modern's `badge.radius` is `'pill'` (pixels win).
-- **`stepper` part:** checkout has no single stepper element; the part is attached to the tracking `ProgressStepper` only.
+- **`stepper` part:** attached to both the tracking `ProgressStepper` root and the checkout Mantine `<Stepper>` (preflight F17).
+- **Spec deviations** are ratified in the spec's "Implementation amendments (2026-09-28)" section (preflight F8); this plan implements that section.
+- **Preflight rulings F1–F20 applied (2026-09-28):** `CutoffInfo` re-exported from `lib/server-clock.ts`; CheckoutPage `.next`/`.back` are custom buttons; eleven explicit card roots; server clock anchored at the settings fetch time and shared with CutoffBar; heading tokens only where modern matches; no font-route step; `2 as unknown as 1`; dev `console.error` for invalid manifests; menu e2e through checkout; explicit `git add` paths; `define.ts` block is the complete file; `scripts/template-rules.mjs`; `!./defaults/**` globs; Plan 1 text/choice/weight caps in `validateManifest`.
 - **SectionLabel semantics:** an eyebrow *above* headings (not a heading replacement), so modern renders nothing and the DOM is unchanged; `label.style` drives the default for `bracket`/`numbered`, so Plan 3 may not need a custom SectionLabel at all.
 - **Overlay placement:** rendered inside the shells (not `App`) because it needs router-independent but settings-dependent context and must sit above the chassis; the luxury "orb behind the hero" belongs in its `CatalogHero` slot, not `Overlay`.
 - **Chunk-load failure:** tokens/palette still apply (manifests are in the main bundle); only slots and template CSS fall back. A late-arriving chunk upgrades the page.
 - **First paint:** v2 stores pre-computed variables/attributes, so the inline script has no theme logic to drift; v1 legacy branch kept for the first visit after upgrade.
 - **Screenshots location:** `docs/screenshots/templates/` is written by the matrix but gitignored (≈24 PNGs per preset); the committed regression gate is `e2e/__baseline__/` for modern.
-- **Contract additions for Plan 3:** `tokens.glass` (`data-sf-glass`) with shared solid-chrome rules; shared `outline-glow`/`ghost` fill rules so the three custom buttons follow `button.fill`; `validateManifest` checks every token value (numeric radii 0..64, `'0'`/em tracking, `'none'` borders, `body`/`heading` button fonts accepted); import scanner pinned for in-folder `.ts`/`.tsx` and type-only `react` imports; `ArrowUpRightIcon` re-exported from the contract with pass-through SVG props.
+- **Contract additions for Plan 3:** `tokens.glass` (`data-sf-glass`) with shared solid-chrome rules; shared `outline-glow`/`ghost` fill rules so the custom filled buttons (AddToCart, CartSummary, MobileCartBar, CheckoutPage `.next`) follow `button.fill`; `validateManifest` checks every token value (numeric radii 0..64, `'0'`/em tracking, `'none'` borders, `body`/`heading` button fonts accepted); import scanner pinned for in-folder `.ts`/`.tsx` and type-only `react` imports; `ArrowUpRightIcon` re-exported from the contract with pass-through SVG props.
 - **Preview origin:** the storefront can't know the admin origin, so it trusts `event.source === window.parent` + the zod shape; draft `customCss` is always dropped.

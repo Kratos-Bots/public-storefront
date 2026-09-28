@@ -398,3 +398,40 @@ Feature branch `feature/storefront-templates` in all three repos. Deploy order:
    modern-only fallback.
 
 Existing clients stay on `modern`, pixel-identical, until someone picks a template.
+
+---
+
+## Implementation amendments (2026-09-28)
+
+Ratified by the controller after the Plan 2 pre-flight review (ruling F8). Where the text above differs, **this section wins**. Plans 2, 3 and 4 implement the names below.
+
+1. **Token names and modern's badge radius (§1.3).**
+   - `button.case` is named `button.transform` (`'uppercase' | 'none'`).
+   - Button tracking has one value per Mantine size band: `button.tracking = { sm, md, lg }` → `--sf-btn-tracking-sm` / `--sf-btn-tracking-md` / `--sf-btn-tracking-lg` (modern `0.18em` / `0.2em` / `0.22em`), replacing the single `--sf-btn-tracking`.
+   - `badge.radius` is emitted as `--sf-pill-radius` (not `--sf-badge-radius`) and also drives every other `999px` pill in the CSS modules.
+   - Modern's `badge.radius` is `'pill'` (999px), not "theme radius", because today's pills are 999px and modern must stay pixel-identical.
+   - The contract adds `tokens.glass: 'on' | 'off'` (root `data-sf-glass`). `'off'` makes `.glass`/`.glass-soft` bars and `.mantine-Overlay-root` solid.
+   - `heading.*` reaches only headings whose modern values already equal the tokens (ProductGrid's title; the product page title's weight). Templates style the other titles through `data-sf-part="page-title"` / `"group-title"`.
+2. **Slot props (§1.6).**
+   - The common props are `{ brand, options, scheme, layout, tokens }`. There is no `settings` object: templates read store data through the contract hooks (`useStorefront`, `useCatalogStats`, `useOrderingState`, `useServerClock`, `useCutoffInfo`, `useMobileCartBar`).
+   - `CatalogHero` receives `{ surface: 'grid' | 'list' | 'wholesale', tagline, welcomeMessage, productCount, categoryCount }` instead of `{ itemCount }`.
+   - `SectionLabel` receives `{ index, title, level: 'page' | 'group' }`.
+   - Slots are rendered with a `<Slot name="…">` component, not a `useSlot(name)` hook.
+3. **Overlay placement (§1.6).** `Overlay` is rendered as the last child of each of the three shells (`StorefrontShell`, `MenuShell`, `Chromeless`), not by `App`.
+4. **Import allowlist and enforcement (§5.2).**
+   - Template files may import `@/templates/contract.ts`, `@/templates/define.ts` (the only import allowed in `manifest.ts`, which keeps manifests React-free for the build-time catalog load), `react`, `react/jsx-runtime`, relative files inside the template folder, and relative `.css`.
+   - `web/` has no ESLint, so the rule is enforced by a scanner (`scripts/template-imports.mjs`, with rules in `scripts/template-rules.mjs`) instead of `no-restricted-imports`. The scanner runs in `fetch-templates` for imports and in a vitest for built-ins.
+5. **Preview image path (§1.9).** Previews are emitted as `/templates/<id>/preview.<ext>` (`webp`/`png`/`jpg`/`jpeg`) without a content hash. The backend accepts any origin-relative path, and the catalog is captured per release tag.
+6. **First-paint storage key (§1.8).** The resolved-theme payload is stored under a new key, `sf-theme-v2` (`{ v: 2, templateId, vars, attrs, title, brandName, fontsHref }`), instead of reusing `sf-theme-v1`. The bootstrap still paints a legacy `sf-theme-v1` payload as modern on the first visit after the upgrade.
+7. **Invalid manifests in dev (§1.2).**
+   - `vite build` fails on any invalid manifest, and CI covers this through the `templates-catalog` vitest.
+   - The dev server keeps skipping invalid templates at runtime (with a warning), and **additionally** calls `console.error` to list every manifest error. It does this once at startup and again on every `/templates.json` request.
+8. **Menu-layout e2e (§6).**
+   - The template × viewport matrix runs the storefront layout at 360 / 390 / 768 / 1280 px.
+   - The menu layout runs at **390 and 1280 px**, through the full catalog → product → cart → checkout flow, rather than at all four widths.
+9. **Matrix screenshots (§6).** Per-template × viewport screenshots are saved under `docs/screenshots/templates/` but gitignored; the committed pixel gate is modern's baseline in `e2e/__baseline__/`.
+
+Also adopted from the review:
+- **Manifest limits.** `validateManifest` enforces `name` ≤ 60, `description` ≤ 500, `author` ≤ 100, `version` ≤ 40, select `choices` 1–20 and `FontSpec.weights` 1–9. These are the same limits as the backend's catalog schema, so a manifest that builds is never dropped on capture.
+- **Checkout buttons are template parts.** The checkout page's Place order / Continue and Back buttons carry `data-sf-part="button"` (plus `data-variant`), and Place order / Continue also carries `data-sf-cta="main"`. This way §4.2's main-CTA treatment and §4.3's button styles reach them.
+- **`stepper` part on both steppers.** The `stepper` part covers the checkout stepper as well as the tracking stepper.
