@@ -234,3 +234,41 @@ test.describe('dark-luxury', () => {
     expect(await style(title, 'font-size')).toBe('24px');
   });
 });
+
+test.describe('bento', () => {
+  test('phone: the board stays short, so the first product is in the first screen', async ({ page }) => {
+    await open(page, 'bento', 'tech-dark', 390);
+    await expect(page.locator('.bento-board')).toBeVisible();
+    // measure the settled layout, not the board's entrance stagger mid-slide
+    await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)));
+    const first = page.locator('[data-sf-part="product-grid"] > [data-sf-part="product-card"]').first();
+    const box = (await first.boundingBox())!;
+    expect(box.y, 'first product top edge').toBeLessThan(844 - 120);
+    // dispatch and contact repeat the cut-off bar and the footer — hidden on phones
+    for (const cell of await page.locator('.bento-cell--wide').all()) await expect(cell).toBeHidden();
+    // the fact strip is a single row: stock, categories and status share one top edge
+    const tops = await page.locator('.bento-board > .bento-cell:not(.bento-cell--hero):visible').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
+    expect(new Set(tops).size, `strip tops ${tops.join(',')}`).toBe(1);
+    expect(await noOverflow(page)).toBe(true);
+  });
+
+  test('phone: the featured product is a full-width 2×1 tile; tablet: a 2×2 tile', async ({ page }) => {
+    await open(page, 'bento', 'tech-dark', 390);
+    await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)));
+    const cards = page.locator('[data-sf-part="product-grid"] > [data-sf-part="product-card"]');
+    const [a, b] = [(await cards.nth(0).boundingBox())!, (await cards.nth(1).boundingBox())!];
+    expect(a.width).toBeGreaterThan(b.width * 1.9);
+    expect(a.height).toBeLessThan(b.height);
+    await page.setViewportSize({ width: 768, height: 1024 });
+    const [c, d] = [(await cards.nth(0).boundingBox())!, (await cards.nth(1).boundingBox())!];
+    expect(c.width).toBeGreaterThan(d.width * 1.9);
+    expect(c.height).toBeGreaterThan(d.height * 1.9);
+  });
+
+  test('the featured option off keeps every tile the same size', async ({ page }) => {
+    await open(page, 'bento', 'tech-dark', 1280, { options: { featured: false } });
+    const cards = page.locator('[data-sf-part="product-grid"] > [data-sf-part="product-card"]');
+    const [a, b] = [(await cards.nth(0).boundingBox())!, (await cards.nth(1).boundingBox())!];
+    expect(Math.abs(a.width - b.width)).toBeLessThan(2);
+  });
+});

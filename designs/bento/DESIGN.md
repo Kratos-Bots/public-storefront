@@ -62,16 +62,18 @@ Desktop:
 "ship  ship  talk   talk"
 ```
 
-Phone (2 columns):
+Phone — **designed first**; the desktop board above is the enhancement:
 
 ```
-"hero  hero"
-"stock cats"
-"stock open"
+"hero  hero  hero"       tagline 1.625rem, welcome beneath
+"stock cats  open"       one ~64px strip: "6 Products" (accent) · "2 Categories" · "● Open"
 ```
 
-On phones the `ship` and `talk` cells are hidden: the shell's cut-off bar and the footer already
-carry the same facts, and two more full-width rows would push the first product below the fold.
+The phone board is a wrapping flex row, not a grid, so a missing fact simply closes up. Icons
+are dropped at this size (the caption carries the meaning), the stat sits inline with its label
+instead of as a giant number, and the `ship` and `talk` cells are hidden: the shell's cut-off
+bar and the footer already carry the same facts. **The test: at 390×844 the first product tile
+is visible in the first screen**, under the header, a notice and the cut-off bar.
 
 A cell only renders when it has real data — no cut-off configured means no `ship` cell, no chat
 channels means no `talk` cell. The grid uses `grid-auto-flow: dense` so a missing cell never
@@ -157,8 +159,9 @@ starting point per store type, not a lock.
 
 | Role | Size | Weight |
 |---|---|---|
-| Board hero headline | `clamp(1.75rem, 4.5vw, 3.25rem)` | 700, -0.03em |
-| Stat number | `clamp(3rem, 7vw, 4.75rem)` | 800, -0.04em, accent-cell text |
+| Board hero headline | 1.625rem phone · `clamp(2rem, 4.2vw, 3.25rem)` ≥ 48em | 700, -0.03em |
+| Stat number | 1.75rem inline phone · `clamp(3rem, 6vw, 4.75rem)` ≥ 48em | 800, -0.04em, accent-cell text |
+| Quick-add label | 0.8125rem, sentence case | 600 |
 | Cell headline | 1rem–1.125rem | 600 |
 | Cell caption | 0.8125rem | 500, sentence case, muted |
 | Hero product name | 1.25rem | 700 |
@@ -196,11 +199,12 @@ and a nested radius must be smaller than its container's to look concentric.
 
 - **Hero (2×2)** — tagline as the headline, welcome message beneath. No button: the product grid
   is directly below, and the header already carries search and cart.
-- **Stock (1×2, accent)** — the product count as a giant number on an accent-filled cell. The
-  only accent-filled cell on the page.
+- **Stock (1×2, accent)** — the product count on an accent-filled cell: a giant number from
+  48em, an inline "6 Products" segment of the strip on phones. The only accent-filled cell.
 - **Categories (1×1)** — category count with the `layout-grid` icon.
-- **Open (1×1)** — ordering status: "Taking orders" (success) or "Ordering paused" (warn), from
-  the store's real ordering flag.
+- **Open (1×1)** — ordering status: "Open" / "Taking orders" (success dot) or "Paused" /
+  "Ordering paused" (warn dot), from the store's real ordering flag. The one-word status is what
+  fits the phone strip.
 - **Ship (2×1)** — the next dispatch cut-off and the day it ships, from the store's real
   dispatch schedule. Hidden when no schedule is configured, and on phones.
 - **Talk (2×1)** — the store's WhatsApp / Telegram links, each ≥ 44×44. Hidden on phones
@@ -209,7 +213,12 @@ and a nested radius must be smaller than its container's to look concentric.
 ### Product tile
 
 Photo well on top (square, `contain` — labels must not be cropped), then name, flags, and the
-price rail with the quick-add. The hero tile shows the same photo, larger.
+price rail with the quick-add. The hero tile shows the same photo, larger: on phones a 2×1 tile
+with the photo at 40% width, from 48em a 2×2 tile whose photo well grows into the spare height so
+the name always sits on the price with no dead band.
+
+The footer is one cell with hairline-separated sections on phones (three stacked boxes read as
+three unrelated things) and a row of three cells from 48em.
 
 ---
 
