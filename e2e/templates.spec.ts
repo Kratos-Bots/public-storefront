@@ -76,7 +76,7 @@ test('every template in the catalog has a matrix case', async ({ page }) => {
 });
 
 test('findSmallSlotTapTargets: fixed-position and pointer-events edge cases', async ({ page }) => {
-  // A minimal, app-free page: three fixed-position links inside a `[data-sf-slot]` wrapper.
+  // A minimal, app-free page: four fixed-position links inside a `[data-sf-slot]` wrapper.
   // `offsetParent` is null for ALL of these (position: fixed), which is exactly the bug this
   // proves is fixed — the old check used `offsetParent !== null` as its visibility test, so it
   // silently skipped every fixed element regardless of size.
@@ -85,13 +85,15 @@ test('findSmallSlotTapTargets: fixed-position and pointer-events edge cases', as
       <a id="tiny" href="#" style="position:fixed;top:0;left:0;width:100px;height:20px;">tiny</a>
       <a id="ok" href="#" style="position:fixed;top:40px;left:0;width:44px;height:44px;">ok</a>
       <a id="decor" href="#" style="position:fixed;top:100px;left:0;width:10px;height:10px;pointer-events:none;">decor</a>
+      <a id="narrow" href="#" style="position:fixed;top:200px;left:0;width:20px;height:60px;">n</a>
     </div>
   `);
   const small = await findSmallSlotTapTargets(page);
   expect(small.some((html) => html.includes('id="tiny"')), 'a visible 100×20 fixed link must be flagged').toBe(true);
   expect(small.some((html) => html.includes('id="ok"')), 'a 44×44 fixed link must not be flagged').toBe(false);
   expect(small.some((html) => html.includes('id="decor"')), 'a pointer-events:none element must not be flagged, even though it is 10×10').toBe(false);
-  expect(small.length, 'exactly one violation is expected').toBe(1);
+  expect(small.some((html) => html.includes('id="narrow"')), 'a 20×60 fixed link (too narrow, tall enough) must be flagged').toBe(true);
+  expect(small.length, 'exactly two violations are expected').toBe(2);
 });
 
 for (const c of TEMPLATE_CASES) {

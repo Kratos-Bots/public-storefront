@@ -32,6 +32,8 @@ test('scaffolds a template folder with the id and name filled in', () => {
 test('refuses bad ids, reserved names and existing folders', () => {
   const { root, templatesDir } = ws();
   assert.throws(() => newTemplate('Bad Id', { templatesDir }), /id/);
+  assert.throws(() => newTemplate('../x', { templatesDir }), /id/); // path traversal never reaches the filesystem
+  assert.ok(!existsSync(path.join(root, 'x')));
   for (const name of RESERVED_DIRS) assert.throws(() => newTemplate(name, { templatesDir }), /reserved/);
   assert.throws(() => newTemplate('modern', { templatesDir }), /exists/);
   rmSync(root, { recursive: true, force: true });
