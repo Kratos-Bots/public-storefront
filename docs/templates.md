@@ -613,3 +613,20 @@ theme is applied (`{ ...parsed.data.theme, customCss: '' }`) — the previously-
 custom CSS keeps applying instead, so a frameable preview page can never be used to exfiltrate typed
 input through arbitrary CSS. `applyDocumentTheme(theme, brand, { persist: false })` is used in
 preview mode, so nothing a preview ever applies is written to `localStorage`.
+
+## 12. Built-in templates
+
+| Id | Schemes | Presets | Locked | Options |
+|---|---|---|---|---|
+| `modern` | dark, light | Default | nothing | — |
+| `dark-luxury` | dark | Gold (default), Silver, Emerald, Crimson | fonts, radius, button style | `grain`, `orb`, `statusBadge` (all on) |
+| `cyber-brutalism` | dark, light | Acid Dark (default), Purple Light | fonts, radius (always square), button style | `systemBar`, `statusBar`, `crosshairs` (on), `nodeLabel` (text, `NODE_01`, ≤ 24) |
+
+Both non-default templates read real store data for their decoration: the ordering flag
+(luxury footer badge, brutalist readout), the catalogue size (hero badge, `SKU:`), and the
+next dispatch cut-off and its timezone (brutalist clock and readout). They are worked
+examples of the contract: `web/src/templates/dark-luxury/` and
+`web/src/templates/cyber-brutalism/`.
+
+Preview images are regenerated with
+`CAPTURE_PREVIEWS=1 E2E_REAL_FONTS=1 npm run test:e2e -- template-previews.spec.ts`.
