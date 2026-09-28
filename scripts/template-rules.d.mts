@@ -6,3 +6,4 @@ export declare const DEFINE_SPECIFIERS: readonly string[];
 export declare const ALLOWED_PACKAGES: readonly string[];
 export declare const REPO_RE: RegExp;
 export declare const SOURCE_FILE_RE: RegExp;
+export declare const STYLE_LANGUAGE_FILE_RE: RegExp;

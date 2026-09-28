@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { preprocessCss, tokenizeCss } from './css-tokenizer.mjs';
+import { decodeCssEscapes, preprocessCss, tokenizeCss } from './css-tokenizer.mjs';
 
 const ident = (value) => ({ type: 'ident', value });
 const punct = (value) => ({ type: 'punct', value });
@@ -135,4 +135,9 @@ test('content that must be ignored by callers still tokenizes without desyncing 
     fn('image-set'), str('https://evil.example/x.png'), { type: 'dimension', value: '1', unit: 'x' }, punct(')'),
     punct('}'),
   ]);
+});
+
+test('decodeCssEscapes applies the escape rules to a raw fragment', () => {
+  assert.equal(decodeCssEscapes(String.raw`.\2e/\2f\2f evil\9x\)`), '..///evil\tx)');
+  assert.equal(decodeCssEscapes('a\\\nb\\0 c\\'), 'ab�c�');
 });

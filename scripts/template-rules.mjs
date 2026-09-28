@@ -31,3 +31,5 @@ export const ALLOWED_PACKAGES = Object.freeze(['react', 'react/jsx-runtime']);
 export const REPO_RE = /^https:\/\/(?:[^@/\s]+@)?(?!-)[^/\s@]+\/\S*$|^ssh:\/\/(?:[^@/\s]+@)?(?!-)[^/\s@]+\/\S*$|^file:\/\/\S+$|^[A-Za-z0-9][\w.-]*@(?!-)[^:\s@]+:\S+$/;
 /** Every source file family a template may ship (.js/.jsx/.ts/.tsx/.mjs/.cjs/.mts/.cts, incl. .d.ts). */
 export const SOURCE_FILE_RE = /\.(m|c)?[jt]sx?$/;
+/** Stylesheet languages other than plain CSS. Templates may ship only .css (Vite would run these through their own preprocessors). */
+export const STYLE_LANGUAGE_FILE_RE = /\.(pcss|postcss|sss|scss|sass|less|styl|stylus)$/i;

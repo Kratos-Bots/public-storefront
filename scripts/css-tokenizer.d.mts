@@ -13,3 +13,4 @@ export interface TokenizeOptions {
 
 export declare function preprocessCss(source: string): string;
 export declare function tokenizeCss(source: string, options?: TokenizeOptions): CssToken[];
+export declare function decodeCssEscapes(text: string): string;

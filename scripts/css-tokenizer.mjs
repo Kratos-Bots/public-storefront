@@ -33,6 +33,21 @@ export function preprocessCss(source) {
     .replace(/\0|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '�');
 }
 
+/**
+ * Decodes CSS escapes in a raw text fragment that is not a whole token (used for raw `url(…)`
+ * text found outside the tokenizer): `\HHHHHH` + one optional whitespace, `\<newline>` dropped,
+ * `\<char>` -> char, a trailing `\` -> U+FFFD — the §4.3.7 rules.
+ */
+export function decodeCssEscapes(text) {
+  return preprocessCss(text).replace(/\\(?:([0-9a-fA-F]{1,6})[ \t\n]?|(\n)|([\s\S])|$)/g, (_m, hex, nl, ch) => {
+    if (nl) return '';
+    if (ch !== undefined) return ch;
+    if (hex === undefined) return '�';
+    const value = Number.parseInt(hex, 16);
+    return value === 0 || (value >= 0xd800 && value <= 0xdfff) || value > 0x10ffff ? '�' : String.fromCodePoint(value);
+  });
+}
+
 const isDigit = (c) => c >= 0x30 && c <= 0x39;
 const isHex = (c) => isDigit(c) || (c >= 0x41 && c <= 0x46) || (c >= 0x61 && c <= 0x66);
 const isLetter = (c) => (c >= 0x41 && c <= 0x5a) || (c >= 0x61 && c <= 0x7a);

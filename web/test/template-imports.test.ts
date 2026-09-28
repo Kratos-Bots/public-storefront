@@ -35,14 +35,15 @@ describe('built-in templates respect the import contract', () => {
 
 // Differential check of scripts/css-tokenizer.mjs (spec mode) against @csstools/css-tokenizer, a
 // css-syntax-3 tokenizer that is already installed here transitively (jsdom -> cssstyle). Test-only:
-// resolved at runtime so a future install without it skips this block instead of breaking the suite.
+// resolved at runtime so a future install without it skips this block (with a console warning) instead of breaking the suite.
 type OracleToken = [string, string, number, number, Record<string, unknown> | undefined];
 let oracle: ((input: { css: string }) => OracleToken[]) | null = null;
 try {
   const specifier = '@csstools/css-tokenizer';
   oracle = ((await import(/* @vite-ignore */ specifier)) as { tokenize: typeof oracle }).tokenize;
-} catch {
+} catch (err) {
   oracle = null;
+  console.warn(`[template-imports.test] SKIPPING the css-tokenizer differential test: @csstools/css-tokenizer could not be loaded (${String(err)}). Run \`npm install\` in web/ to restore it.`);
 }
 
 const lowerAscii = (s: string) => s.replace(/[A-Z]/g, (c) => c.toLowerCase());
@@ -122,7 +123,7 @@ function fuzzCorpus(count: number): string[] {
   return out;
 }
 
-describe.skipIf(!oracle)('css tokenizer matches a css-syntax-3 reference tokenizer', () => {
+describe.skipIf(!oracle)(`css tokenizer matches a css-syntax-3 reference tokenizer${oracle ? '' : ' (SKIPPED: @csstools/css-tokenizer not loadable)'}`, () => {
   it('on the bypass payload corpus and the built-in templates', () => {
     const templateCss = folders.flatMap((f) => files(path.join(templatesDir, f), (n) => n.endsWith('.css'))).map((f) => readFileSync(f, 'utf8'));
     for (const css of [...CORPUS, ...templateCss]) expect(ourKeys(css), JSON.stringify(css.slice(0, 120))).toEqual(oracleKeys(css));

@@ -7,7 +7,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parseLock } from './templates-lock.mjs';
 import { forbiddenCssImports, forbiddenImports } from './template-imports.mjs';
-import { fetchTemplates, findManifestId } from './fetch-templates.mjs';
+import { fetchTemplates, findManifestId, validateTemplateDir } from './fetch-templates.mjs';
 import { RESERVED_DIRS } from './template-rules.mjs';
 
 const SHA = 'a'.repeat(40);
@@ -179,9 +179,10 @@ test('forbiddenCssImports ignores ordinary CSS text that is not a URL-taking pos
   assert.deepEqual(forbiddenCssImports(`a::after { content: "/"; }`, ctx), []);
   assert.deepEqual(forbiddenCssImports(`a[href^="https://"] { color: red; }`, ctx), []);
   assert.deepEqual(forbiddenCssImports(`a[href^="mailto:"] { color: blue; }`, ctx), []);
-  // a string inside an untracked function (e.g. a pseudo-class, or var()'s fallback) is ignored too
+  // a string inside an untracked function (e.g. a pseudo-class) is ignored too
   assert.deepEqual(forbiddenCssImports(`a:not("https://evil.example") { color: red; }`, ctx), []);
-  assert.deepEqual(forbiddenCssImports(`a { color: var(--x, "https://evil.example"); }`, ctx), []);
+  // …but a var() fallback can be substituted into image-set(), so a remote-looking one is flagged (round 5)
+  assert.deepEqual(forbiddenCssImports(`a { color: var(--x, "https://evil.example"); }`, ctx), ['https://evil.example']);
 });
 
 const EVIL = 'https://evil.example/x.png';
@@ -242,6 +243,63 @@ test('forbiddenCssImports keeps ignoring ordinary CSS (round 4 regression guard)
     `a{background:url(./a.png?v=1#x)}`,
     `@media (min-width:40em){a{margin:calc(100% - .5rem)}}`,
   ]) assert.deepEqual(forbiddenCssImports(css, ctx), [], css);
+});
+
+test('forbiddenCssImports treats custom-property values, var() fallbacks and nested url-function strings as URL candidates (round 5)', () => {
+  const ctx = { fileDir: '/t/external/acme', templateRoot: '/t/external/acme' };
+  // Chromium-confirmed: a string carried through a custom property / var() into image-set() is fetched
+  assert.deepEqual(forbiddenCssImports(`:root{--a:"https://evil.example/v1.png"} .t{background-image:image-set(var(--a) 1x)}`, ctx), ['https://evil.example/v1.png']);
+  assert.deepEqual(forbiddenCssImports(`.t{background-image:image-set(var(--nope, "https://evil.example/v2.png") 1x)}`, ctx), ['https://evil.example/v2.png']);
+  assert.deepEqual(forbiddenCssImports(`.t{background-image:-webkit-image-set(var(--nope, "https://evil.example/v3.png") 1x)}`, ctx), ['https://evil.example/v3.png']);
+  assert.deepEqual(forbiddenCssImports(`:root{--a:"//evil.example/x.png"; --b: x "../../../s.png"; --c:"@/assets/x.png"; --d:"/etc/x.png"}`, ctx), ['//evil.example/x.png', '../../../s.png', '@/assets/x.png', '/etc/x.png']);
+  assert.deepEqual(forbiddenCssImports(`.t{background:image-set(foo("https://evil.example/n.png") 1x)}`, ctx), ['https://evil.example/n.png']);
+  // harmless text in those positions stays allowed
+  for (const css of [
+    `:root{--label:"Price: "; --sep:"/"; --crumb:"\\2192"; --font:"Tektur", sans-serif; --mail:"mailto:x@example.com"}`,
+    `a{content:var(--label, "Price: ")}`,
+    `a{background:image-set("./a.png" type("image/png") 1x, "./b.png" 2x)}`,
+    `:root{--img:url(./bg.png)} a{background:var(--img)}`,
+  ]) assert.deepEqual(forbiddenCssImports(css, ctx), [], css);
+});
+
+test('forbiddenCssImports only allows ./, ../ (inside the folder), data: and #fragment references (round 5)', () => {
+  const ctx = { fileDir: '/t/external/acme/slots', templateRoot: '/t/external/acme' };
+  assert.deepEqual(forbiddenCssImports(`a{background:url(@/assets/x.png)}`, ctx), ['@/assets/x.png']);
+  assert.deepEqual(forbiddenCssImports(`a{background:url("~pkg/x.png")}`, ctx), ['~pkg/x.png']);
+  assert.deepEqual(forbiddenCssImports(`a{background:url(pkg/x.png)}`, ctx), ['pkg/x.png']);
+  assert.deepEqual(forbiddenCssImports(`@import "pkg/x.css";`, ctx), ['pkg/x.css']);
+  assert.deepEqual(forbiddenCssImports(`a{background:image-set("x.png" 1x)}`, ctx), ['x.png']);
+  assert.deepEqual(forbiddenCssImports(`a{background:url(/assets/x.png)}`, ctx), ['/assets/x.png']);
+  for (const css of [`a{filter:url(#blur)}`, `a{background:url(../bg.png)}`, `a{background:url('./x.png')}`, `a{background:url(data:image/png;base64,AAAA)}`]) {
+    assert.deepEqual(forbiddenCssImports(css, ctx), [], css);
+  }
+});
+
+test('forbiddenCssImports rejects raw url( text anywhere, as Vite\'s regex rewriter would see it (round 5)', () => {
+  const ctx = { fileDir: '/t/external/acme', templateRoot: '/t/external/acme' };
+  assert.deepEqual(forbiddenCssImports(`a::before{content:"url(../../../secret.png)"}`, ctx), ['../../../secret.png']);
+  assert.deepEqual(forbiddenCssImports(`a::before{content:'see url( "../x.png" )'}`, ctx), ['../x.png']);
+  assert.deepEqual(forbiddenCssImports(`/* url(../../secret.png) */ a{color:red}`, ctx), ['../../secret.png']);
+  assert.deepEqual(forbiddenCssImports(`a::before{content:"URL(pkg/x.png)"}`, ctx), ['pkg/x.png']);
+  assert.deepEqual(forbiddenCssImports(`a::before{content:"Price: "} /* plain comment */`, ctx), []);
+  assert.deepEqual(forbiddenCssImports(`a::before{content:"url(./ok.png)"}`, ctx), []);
+});
+
+test('templates may ship only .css stylesheets: other style languages are rejected, as files and as imports (round 5)', () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'sf-tpl-style-'));
+  writeFileSync(path.join(dir, 'manifest.ts'), `import { defineTemplate } from '@/templates/define.ts';\nexport default defineTemplate({ id: 'acme' } as never);\n`);
+  writeFileSync(path.join(dir, 'index.ts'), `import './template.css';\n`);
+  writeFileSync(path.join(dir, 'template.css'), '');
+  assert.deepEqual(validateTemplateDir(dir, 'acme'), []);
+  const exts = ['pcss', 'postcss', 'sss', 'scss', 'sass', 'less', 'styl', 'stylus'];
+  mkdirSync(path.join(dir, 'slots'));
+  for (const ext of exts) writeFileSync(path.join(dir, 'slots', `x.${ext}`), '');
+  const errors = validateTemplateDir(dir, 'acme');
+  for (const ext of exts) assert.ok(errors.some((e) => e.includes(`x.${ext}`) && /only \.css/.test(e)), ext);
+  rmSync(dir, { recursive: true, force: true });
+
+  const ctx = { fileDir: '/t/external/acme', templateRoot: '/t/external/acme', isManifest: false, fileName: 'index.ts' };
+  assert.deepEqual(forbiddenImports(`import './a.scss';\nimport s from './b.less?inline';\nimport './c.STYL';\nimport './ok.css';`, ctx), ['./a.scss', './b.less?inline', './c.STYL']);
 });
 
 function sh(cwd, ...args) { return execFileSync('git', args, { cwd, encoding: 'utf8' }).trim(); }

@@ -6,7 +6,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import ts from 'typescript';
 import { parseLock } from './templates-lock.mjs';
 import { forbiddenCssImports, forbiddenImports, scriptKindFor } from './template-imports.mjs';
-import { RESERVED_DIRS, SOURCE_FILE_RE } from './template-rules.mjs';
+import { RESERVED_DIRS, SOURCE_FILE_RE, STYLE_LANGUAGE_FILE_RE } from './template-rules.mjs';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const INTERNAL = new Set(RESERVED_DIRS);
@@ -156,7 +156,10 @@ export function validateTemplateDir(dir, id) {
   }
   for (const file of collectFiles(dir, (name) => name.endsWith('.css'))) {
     const bad = forbiddenCssImports(readFileSync(file, 'utf8'), { fileDir: path.dirname(file), templateRoot: dir });
-    for (const spec of bad) errors.push(`${id}: ${where(file)} references "${spec}" — CSS may only reference data: URIs or files inside the template`);
+    for (const spec of bad) errors.push(`${id}: ${where(file)} references "${spec}" — CSS may only reference data: URIs, #fragments or ./ ../ files inside the template`);
+  }
+  for (const file of collectFiles(dir, (name) => STYLE_LANGUAGE_FILE_RE.test(name))) {
+    errors.push(`${id}: ${where(file)} is not a plain stylesheet — templates may ship only .css stylesheets (no Sass/Less/Stylus/PostCSS sources)`);
   }
   return errors;
 }
