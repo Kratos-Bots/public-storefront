@@ -67,6 +67,27 @@ export async function findSmallSlotTapTargets(page: Page): Promise<string[]> {
   );
 }
 
+/** Every product card's price and its quick-add button occupy separate boxes (the foot wraps when it must). */
+export async function expectCardPricesClear(page: Page): Promise<void> {
+  // Measured once the web fonts have landed (the fallback mono is narrower), on the glyphs themselves.
+  const overlaps = await page.evaluate(async () => {
+    await document.fonts.ready;
+    return [...document.querySelectorAll<HTMLElement>('[data-sf-part="product-card"]')].flatMap((card) => {
+      const price = card.querySelector('[data-sf-part="price"]');
+      const button = card.querySelector('[data-sf-part="button"]');
+      if (!price || !button) return [];
+      const text = document.createRange();
+      text.selectNodeContents(price);
+      const a = text.getBoundingClientRect();
+      const b = button.getBoundingClientRect();
+      const w = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+      const h = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+      return w > 0.5 && h > 0.5 ? [`${price.textContent} under ${button.textContent}`] : [];
+    });
+  });
+  expect(overlaps, 'card prices covered by their button').toEqual([]);
+}
+
 export async function expectSlotTapTargets(page: Page): Promise<void> {
   const small = await findSmallSlotTapTargets(page);
   expect(small, 'slot tap targets under 44px').toEqual([]);
@@ -117,6 +138,8 @@ for (const c of TEMPLATE_CASES) {
       await expect(page.locator('html')).toHaveAttribute('data-sf-template', c.template);
       await expectNoHorizontalOverflow(page, 'catalog');
       if (c.tapTargets) await expectSlotTapTargets(page);
+      // Modern is exempt: its narrow-tile foot is frozen by the committed pixel baseline (see ProductCard.module.css).
+      if (layout === 'storefront' && width === 360 && c.template !== 'modern') await expectCardPricesClear(page);
       await page.screenshot({ path: `${SHOTS}${name}-1-catalog.png`, fullPage: true });
 
       await openProduct(page, layout, 'Alpine Extract 10ml');
@@ -140,4 +163,17 @@ for (const c of TEMPLATE_CASES) {
 
   for (const w of WIDTHS) run('storefront', w);
   for (const w of MENU_WIDTHS) run('menu', w);
+
+  // The wholesale trade list replaces the catalogue under either layout; not in the screenshot matrix.
+  test(`${c.template}/${c.preset} · wholesale · 360px`, async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 844 });
+    await page.clock.setFixedTime(FIXED_NOW);
+    const tweak = await presetTheme(page, c.template, c.preset);
+    await installMocks(page, { layout: 'storefront', session: true, tweakSettings: (s) => { tweak(s); s.features.wholesale = true; } });
+    await page.goto('/');
+    await expect(page.getByRole('heading', { name: 'Trade list', level: 1 })).toBeVisible();
+    await expect(page.locator('html')).toHaveAttribute('data-sf-template', c.template);
+    await expectNoHorizontalOverflow(page, 'wholesale');
+    if (c.tapTargets) await expectSlotTapTargets(page);
+  });
 }
