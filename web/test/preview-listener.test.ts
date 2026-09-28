@@ -27,6 +27,12 @@ describe('preview listener', () => {
     expect(isPreviewMode(fakeWindow('?sf-preview=1', false).win)).toBe(false);
     expect(isPreviewMode(fakeWindow('').win)).toBe(false);
   });
+  it('decides once per window, so an in-frame navigation that drops the param stays in preview mode', () => {
+    const { win } = fakeWindow('?sf-preview=1');
+    expect(isPreviewMode(win)).toBe(true);
+    (win.location as { search: string }).search = '';
+    expect(isPreviewMode(win)).toBe(true);
+  });
   it('announces readiness and forwards valid themes with customCss dropped', () => {
     const { win, parent, send } = fakeWindow('?sf-preview=1');
     const onTheme = vi.fn();

@@ -605,7 +605,9 @@ this file on deploy so the admin's Appearance picker knows which templates a giv
 
 **Preview mode.** The admin's Appearance editor frames the live storefront at `/?sf-preview=1` and
 posts draft themes into it. `isPreviewMode()` requires both the query param and `window.parent !==
-window`; `subscribePreview()` then accepts a message only when `event.source === window.parent` and
+window`, and decides once per window (cached on first evaluation, primed when the module loads), so
+an in-frame SPA navigation that drops `?sf-preview=1` never turns a preview frame back into a
+persisting visitor page; `subscribePreview()` then accepts a message only when `event.source === window.parent` and
 it parses against the exact zod shape (`previewMessageSchema` in `theme-schema.ts`,
 `{ type: 'sf-preview-theme', theme: <the stored-theme shape> }`) — anything else (wrong origin,
 malformed payload) is silently ignored. The message's `customCss` is **always** dropped before the

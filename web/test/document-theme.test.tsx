@@ -47,6 +47,17 @@ describe('useDocumentTheme', () => {
     expect(localStorage.getItem(THEME_STORAGE_KEY)).toBeNull();
   });
 
+  it('in a preview frame: in-frame SPA navigation that drops ?sf-preview=1 still never persists a draft', () => {
+    const { win, send } = framedWindow('?sf-preview=1');
+    const { result } = renderHook(() => useDocumentTheme(settings, win));
+    act(() => send({ type: 'sf-preview-theme', theme: { ...stored, colors: { ...stored.colors, bg: '#101010' } } }));
+    // history.replaceState('/p/1') inside the frame: the query string is gone, the frame is not
+    (win.location as { search: string }).search = '';
+    act(() => send({ type: 'sf-preview-theme', theme: { ...stored, colors: { ...stored.colors, bg: '#202020' } } }));
+    expect(result.current.colors.bg).toBe('#202020');
+    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBeNull();
+  });
+
   it('re-applies when the window changes, so the persist decision follows the current window', () => {
     const { rerender } = renderHook(({ win }) => useDocumentTheme(settings, win), { initialProps: { win: framedWindow('?sf-preview=1').win } });
     expect(localStorage.getItem(THEME_STORAGE_KEY)).toBeNull(); // preview frame: nothing persisted

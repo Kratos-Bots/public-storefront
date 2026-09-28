@@ -4,14 +4,32 @@ import type { Theme } from '@/types/settings.ts';
 
 export const PREVIEW_PARAM = 'sf-preview';
 
-/** The admin's Appearance preview frames the live storefront at /?sf-preview=1. */
-export function isPreviewMode(win: Window = window): boolean {
+function detectPreviewMode(win: Window): boolean {
   try {
     return new URLSearchParams(win.location.search).get(PREVIEW_PARAM) === '1' && win.parent !== win;
   } catch {
     return false;
   }
 }
+
+const previewModeByWindow = new WeakMap<Window, boolean>();
+
+/**
+ * The admin's Appearance preview frames the live storefront at /?sf-preview=1. Decided once per
+ * window, on first evaluation: the first in-frame SPA navigation drops the query string, and a
+ * frame that forgot it was a preview would start persisting drafts to the visitor payload.
+ */
+export function isPreviewMode(win: Window = window): boolean {
+  let preview = previewModeByWindow.get(win);
+  if (preview === undefined) {
+    preview = detectPreviewMode(win);
+    previewModeByWindow.set(win, preview);
+  }
+  return preview;
+}
+
+// Primed at module load, before the router has had a chance to navigate away from the param.
+if (typeof window !== 'undefined') isPreviewMode(window);
 
 /**
  * Accepts draft themes from the framing admin. Only messages from window.parent, only the
