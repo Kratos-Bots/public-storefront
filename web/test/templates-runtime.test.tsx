@@ -5,9 +5,9 @@ import type { StorefrontSettings } from '@/types/settings.ts';
 const state = vi.hoisted(() => ({ settings: {} as StorefrontSettings }));
 vi.mock('@/app/settings.ts', () => ({ useSettings: () => state.settings }));
 
-import { Slot, TemplateProvider } from '@/templates/runtime.tsx';
+import { loadTemplateModule, Slot, TemplateProvider } from '@/templates/runtime.tsx';
 import { resolveTheme } from '@/templates/resolve.ts';
-import { lookupManifest } from '@/templates/registry.ts';
+import { getTemplate, lookupManifest } from '@/templates/registry.ts';
 import type { TemplateModule } from '@/templates/slots.ts';
 import { ArrowUpRightIcon } from '@/templates/contract.ts';
 
@@ -78,9 +78,113 @@ describe('TemplateProvider', () => {
     warn.mockRestore();
   });
 
+  it('timeout then eventual rejection → stays on default slots (no crash, fallback never returns)', async () => {
+    vi.useFakeTimers();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    let rejectLoad!: (err: Error) => void;
+    render(
+      <TemplateProvider resolved={resolved} fallback={<p>loading</p>} timeoutMs={100} load={() => new Promise((_r, rej) => { rejectLoad = rej; })} peek={() => undefined}>
+        <p>app</p><Slot name="TopBar" />
+      </TemplateProvider>,
+    );
+    await act(async () => { vi.advanceTimersByTime(150); });
+    expect(screen.getByText('app')).toBeInTheDocument();
+    expect(screen.queryByText(/^top /)).toBeNull();
+    await act(async () => rejectLoad(new Error('boom')));
+    expect(screen.getByText('app')).toBeInTheDocument();
+    expect(screen.queryByText('loading')).toBeNull();
+    expect(screen.queryByText(/^top /)).toBeNull();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('taking longer than'));
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('failed to load'), expect.anything());
+    warn.mockRestore();
+  });
+
   it('Slot outside a provider renders defaults (existing component tests keep working)', () => {
     render(<Slot name="SectionLabel" index={2} title="Oils" level="group" />);
     expect(document.body.textContent).toBe('');
+  });
+});
+
+describe('TemplateProvider template switch', () => {
+  it('never renders the fallback again once mounted, and the new id\'s slots take over once its module lands', async () => {
+    const altId = 'alt';
+    const altResolved = { ...resolved, templateId: altId };
+    const altCustom: TemplateModule = { slots: { TopBar: ({ brand, layout }) => <p>alt {brand.name} {layout}</p> } };
+    let resolveAlt!: (m: TemplateModule) => void;
+    const load = (tid: string) => (tid === altId ? new Promise<TemplateModule>((r) => { resolveAlt = r; }) : Promise.resolve(custom));
+    const peek = (tid: string) => (tid === resolved.templateId ? custom : undefined);
+
+    const { rerender } = render(
+      <TemplateProvider resolved={resolved} fallback={<p>loading</p>} load={load} peek={peek}>
+        <p>app</p>
+        <Slot name="TopBar" />
+      </TemplateProvider>,
+    );
+    expect(screen.getByText('top Acme storefront')).toBeInTheDocument();
+
+    rerender(
+      <TemplateProvider resolved={altResolved} fallback={<p>loading</p>} load={load} peek={peek}>
+        <p>app</p>
+        <Slot name="TopBar" />
+      </TemplateProvider>,
+    );
+    // Never falls back to the loading screen on a switch — the app stays mounted throughout.
+    expect(screen.queryByText('loading')).toBeNull();
+    expect(screen.getByText('app')).toBeInTheDocument();
+    // The old template's slot drops immediately; the new one hasn't landed yet → defaults.
+    expect(screen.queryByText(/^top /)).toBeNull();
+
+    await act(async () => resolveAlt(altCustom));
+    expect(screen.getByText('alt Acme storefront')).toBeInTheDocument();
+  });
+
+  it('a switch to a template whose chunk fails stays on default slots, without unmounting the app', async () => {
+    const altId = 'broken';
+    const altResolved = { ...resolved, templateId: altId };
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const load = (tid: string) => (tid === altId ? Promise.reject(new Error('404')) : Promise.resolve(custom));
+    const peek = (tid: string) => (tid === resolved.templateId ? custom : undefined);
+
+    const { rerender } = render(
+      <TemplateProvider resolved={resolved} fallback={<p>loading</p>} load={load} peek={peek}>
+        <p>app</p>
+        <Slot name="TopBar" />
+      </TemplateProvider>,
+    );
+    expect(screen.getByText('top Acme storefront')).toBeInTheDocument();
+
+    rerender(
+      <TemplateProvider resolved={altResolved} fallback={<p>loading</p>} load={load} peek={peek}>
+        <p>app</p>
+        <Slot name="TopBar" />
+      </TemplateProvider>,
+    );
+    expect(await screen.findByText('app')).toBeInTheDocument();
+    expect(screen.queryByText('loading')).toBeNull();
+    expect(screen.queryByText(/^top /)).toBeNull();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('failed to load'), expect.anything());
+    warn.mockRestore();
+  });
+});
+
+describe('loadTemplateModule', () => {
+  it('forgets a failed load, so a later call retries rather than replaying the rejection', async () => {
+    const entry = getTemplate('modern');
+    const originalLoad = entry.load;
+    let calls = 0;
+    entry.load = () => {
+      calls += 1;
+      return calls === 1 ? Promise.reject(new Error('boom')) : Promise.resolve({ slots: {} });
+    };
+    try {
+      await expect(loadTemplateModule('modern')).rejects.toThrow('boom');
+      // Let the internal `p.catch(() => pending.delete(key))` run before retrying.
+      await Promise.resolve().then(() => Promise.resolve());
+      await expect(loadTemplateModule('modern')).resolves.toEqual({ slots: {} });
+      expect(calls).toBe(2);
+    } finally {
+      entry.load = originalLoad;
+    }
   });
 });
 

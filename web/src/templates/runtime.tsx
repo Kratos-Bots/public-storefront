@@ -55,6 +55,14 @@ export function TemplateProvider({ resolved, fallback, children, load = loadTemp
     const mod = peek(id);
     return mod ? { id, slots: mod.slots ?? {} } : null;
   });
+  // Once true, the provider has rendered real children at least once — the first chunk
+  // resolved, failed, or timed out. A *later* template switch (settings refetch, admin
+  // preview) must never fall back to `fallback` again: that would unmount the whole app
+  // (Notifications/ClosedGate/RouterProvider) and wipe in-progress state such as a
+  // half-filled checkout form. Instead the switch renders `children` straight away with
+  // default slots until the new module lands or times out (see `slots` below).
+  const everMounted = useRef(loaded !== null);
+
   // Refs, not deps: callers (tests) pass inline functions, and re-running the effect on every
   // render would refetch and re-arm the timeout forever. Only a template switch re-runs it.
   const loadRef = useRef(load);
@@ -65,26 +73,33 @@ export function TemplateProvider({ resolved, fallback, children, load = loadTemp
   useEffect(() => {
     const already = peekRef.current(id);
     if (already) {
+      everMounted.current = true;
       setLoaded((cur) => (cur?.id === id ? cur : { id, slots: already.slots ?? {} }));
       return;
     }
     let live = true;
     const timer = setTimeout(() => {
       console.warn(`[templates] "${id}" is taking longer than ${timeoutMs}ms — rendering default slots for now`);
+      everMounted.current = true;
       if (live) setLoaded((cur) => (cur?.id === id ? cur : { id, slots: {} }));
     }, timeoutMs);
     loadRef.current(id).then(
-      (mod) => { if (live) setLoaded({ id, slots: mod.slots ?? {} }); },
+      (mod) => { everMounted.current = true; if (live) setLoaded({ id, slots: mod.slots ?? {} }); },
       (err: unknown) => {
         console.warn(`[templates] "${id}" failed to load — rendering default slots`, err);
+        everMounted.current = true;
         if (live) setLoaded({ id, slots: {} });
       },
     ).finally(() => clearTimeout(timer));
     return () => { live = false; clearTimeout(timer); };
   }, [id, timeoutMs]);
 
-  const value = useMemo(() => ({ resolved, slots: loaded?.id === id ? loaded.slots : {} }), [resolved, loaded, id]);
-  if (!loaded || loaded.id !== id) return <>{fallback}</>;
+  // The previous template's slots never carry over to a new id — its CSS/root attributes
+  // may not even be loaded yet, so a stale slot component could render against the wrong
+  // tokens. Default slots stand in until the new id's own module lands.
+  const slots = loaded?.id === id ? loaded.slots : {};
+  const value = useMemo(() => ({ resolved, slots }), [resolved, slots]);
+  if (!everMounted.current && (!loaded || loaded.id !== id)) return <>{fallback}</>;
   return <TemplateContext.Provider value={value}>{children}</TemplateContext.Provider>;
 }
 

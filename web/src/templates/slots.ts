@@ -26,8 +26,11 @@ export interface CatalogHeroProps extends SlotBaseProps {
 export interface SectionLabelProps extends SlotBaseProps { index: number; title: string; level: 'page' | 'group' }
 /** Fixed decoration layer, last child of all three shells. Must be pointer-events: none. */
 export type OverlayProps = SlotBaseProps;
-/** Trailing adornment inside primary buttons. cta = the page's single main call to action. */
-export interface ButtonAdornmentProps extends SlotBaseProps { variant: 'primary' | 'secondary'; cta: boolean }
+/** Trailing adornment inside primary buttons. cta = the page's single main call to action.
+ *  busy (optional) = the action behind this button is in flight (e.g. checkout's Place order
+ *  while the order is being submitted) — a template may swap in a spinner glyph; callers that
+ *  never have an in-flight state simply omit it. */
+export interface ButtonAdornmentProps extends SlotBaseProps { variant: 'primary' | 'secondary'; cta: boolean; busy?: boolean }
 
 export interface SlotPropsMap {
   TopBar: TopBarProps;

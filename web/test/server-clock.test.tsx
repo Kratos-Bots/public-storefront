@@ -16,9 +16,12 @@ import { recordSettingsFetch, settingsFetchedAt } from '@/lib/settings-anchor.ts
 import { useServerClock } from '@/lib/server-clock.ts';
 
 const T0 = Date.parse('2026-08-24T10:00:00.000Z'); // client clock when the response arrived
-state.settings = { serverTime: '2026-08-24T09:00:00.000Z', cutoffs: { timezone: 'UTC', days: {} }, enabled: true } as unknown as StorefrontSettings;
+const BASE_SETTINGS = { serverTime: '2026-08-24T09:00:00.000Z', cutoffs: { timezone: 'UTC', days: {} }, enabled: true } as unknown as StorefrontSettings;
+state.settings = BASE_SETTINGS;
 
-afterEach(() => { vi.useRealTimers(); });
+// A test that mutates the shared `state.settings` (e.g. to change `serverTime`) must not leak
+// that into a later test regardless of run order — reset to the baseline after every test.
+afterEach(() => { vi.useRealTimers(); state.settings = BASE_SETTINGS; });
 
 describe('server clock anchor', () => {
   it('a clock mounted 60 s after the fetch reads serverTime + 60 s, not serverTime', () => {

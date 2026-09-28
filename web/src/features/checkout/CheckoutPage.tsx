@@ -699,7 +699,7 @@ export function CheckoutPage() {
                 ) : (
                   'Place order'
                 )}
-                <Slot name="ButtonAdornment" variant="primary" cta />
+                <Slot name="ButtonAdornment" variant="primary" cta busy={submitting} />
               </button>
             ) : (
               <button type="button" className={classes.next} onClick={next}>

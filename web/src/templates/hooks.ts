@@ -14,7 +14,7 @@ export function useTemplate(): TemplateInfo {
   return {
     id: resolved?.templateId ?? 'modern',
     presetId: resolved?.presetId ?? 'default',
-    scheme: resolved?.scheme ?? settings.theme.scheme,
+    scheme: resolved?.scheme ?? settings.theme?.scheme ?? 'dark',
     options: resolved?.options ?? {},
     tokens: resolved?.tokens ?? BASE_TOKENS,
   };
