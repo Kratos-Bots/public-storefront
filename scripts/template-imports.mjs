@@ -1,6 +1,7 @@
 import path from 'node:path';
 import ts from 'typescript';
 
+import { tokenizeCss } from './css-tokenizer.mjs';
 import { ALLOWED_PACKAGES, CONTRACT_SPECIFIERS, DEFINE_SPECIFIERS } from './template-rules.mjs';
 
 const CONTRACT = new Set(CONTRACT_SPECIFIERS);
@@ -90,24 +91,9 @@ export function forbiddenImports(source, ctx) {
   return bad;
 }
 
-/** Strips /* … *\/ comments (replaced with a space, so tokens either side of a removed comment stay separated). */
-function stripCssComments(css) {
-  return css.replace(/\/\*[\s\S]*?\*\//g, ' ');
-}
-
-/**
- * Decodes CSS escapes: `\HHHHHH` (1–6 hex digits, one optional trailing whitespace char consumed
- * as part of the escape) and `\<char>` (a literal-escaped character). Without this, a hostile
- * template can hide `..`/`//` inside `\2e`/`\2f` hex escapes and slip past a plain-text scan.
- */
-function decodeCssEscapes(css) {
-  return css.replace(/\\([0-9a-fA-F]{1,6})[ \t\n\r\f]?|\\([\s\S])/g, (_m, hex, ch) => {
-    if (hex !== undefined) {
-      try { return String.fromCodePoint(Number.parseInt(hex, 16)); } catch { return ''; }
-    }
-    return ch ?? '';
-  });
-}
+/** Functions whose string argument(s) may carry a URL — 'url' covers the quoted url("x") grammar
+ *  form (the unquoted url(x) form arrives as its own `url`-type token, checked unconditionally). */
+const URL_TAKING_FUNCTIONS = new Set(['url', 'image-set', '-webkit-image-set', 'src']);
 
 function isRemoteOrAbsolute(ref) {
   if (/^data:/i.test(ref)) return false;
@@ -132,28 +118,57 @@ function leavesFolder(ref, { fileDir, templateRoot }) {
   return rel.startsWith('..') || path.posix.isAbsolute(rel);
 }
 
+/** `%HH` percent-decoding (a hostile template could hide `..`/`//` as `%2e%2e`/`%2f%2f`). Leaves an
+ *  unrecognised `%` alone rather than throwing, unlike decodeURIComponent. */
+function decodePercentEscapes(str) {
+  return str.replace(/%([0-9a-fA-F]{2})/g, (_m, hex) => String.fromCharCode(Number.parseInt(hex, 16)));
+}
+
 /**
- * CSS import restriction: any URL-like reference — `@import "…"`/`@import url(…)`, a bare
- * `url(…)` (quoted or not, anywhere, including nested inside `image-set()`/`-webkit-image-set()`),
- * or any other quoted string used as a function argument (`image-set("…")`, `src("…")`) — may
- * point only at a `data:` URI or a relative path that stays inside the template folder. Comments
- * are stripped and CSS escapes decoded first, so `@import`\/**\/`"x"`, `@IMPORT`, and hex-escaped
- * `..`/`//` (`\2e`, `\2f`) can't hide a reference from the scan. Rather than special-casing every
- * function name that can carry a URL, every quoted string in the file is checked — a non-path
- * quoted value (font-family, content, attribute selectors, …) never looks remote or escapes the
- * folder, so this doesn't false-positive on ordinary CSS text.
+ * CSS import restriction, built on a real tokenizer (scripts/css-tokenizer.mjs) rather than
+ * decode-then-regex: decoding CSS escapes across the whole file *before* finding string/paren
+ * boundaries is unsound (an escaped quote or `)` can turn into a real delimiter once decoded,
+ * desyncing every token after it — see the tokenizer module doc). Escapes and percent-encoding are
+ * decoded per-token, once its true boundaries are known.
+ *
+ * Only three kinds of position are ever checked: the target of an `@import` prelude (`@import "x"`
+ * or `@import url(x)`), every `url(...)` (quoted or not, anywhere, including nested inside another
+ * function), and a string that is a direct argument of a URL-taking function (`image-set`,
+ * `-webkit-image-set`, `src`). Everything else — `content`, `font-family`, attribute selectors,
+ * `grid-template-areas`, … — is never inspected, so ordinary CSS text never false-positives no
+ * matter what it contains (a scheme-looking prefix, `..`, `/`, anything).
  */
 export function forbiddenCssImports(source, ctx) {
   const bad = [];
   const seen = new Set();
-  const clean = decodeCssEscapes(stripCssComments(source));
   const check = (raw) => {
-    const ref = (raw ?? '').trim();
-    if (!ref || seen.has(ref)) return;
-    seen.add(ref);
-    if (isRemoteOrAbsolute(ref) || leavesFolder(ref, ctx)) bad.push(ref);
+    const decoded = decodePercentEscapes(raw ?? '').trim();
+    if (!decoded || seen.has(decoded)) return;
+    seen.add(decoded);
+    if (isRemoteOrAbsolute(decoded) || leavesFolder(decoded, ctx)) bad.push(decoded);
   };
-  for (const m of clean.matchAll(/\burl\(\s*(['"]?)([^'")]*)\1\s*\)/gi)) check(m[2]);
-  for (const m of clean.matchAll(/'([^'\\]*)'|"([^"\\]*)"/g)) check(m[1] ?? m[2]);
+
+  const tokens = tokenizeCss(source);
+  const parenStack = []; // one entry per open '(' — the enclosing function's lowercased name, or null
+  let pendingFunction = null;
+  let inImportPrelude = false;
+
+  for (const tok of tokens) {
+    if (tok.type === 'at-keyword') {
+      inImportPrelude = tok.value.toLowerCase() === 'import';
+      pendingFunction = null;
+    } else if (tok.type === 'function') {
+      pendingFunction = tok.value;
+    } else if (tok.type === 'punct') {
+      if (tok.value === '(') { parenStack.push(pendingFunction); pendingFunction = null; }
+      else if (tok.value === ')') parenStack.pop();
+      else if (tok.value === ';' || tok.value === '{' || tok.value === '}') inImportPrelude = false;
+    } else if (tok.type === 'url') {
+      check(tok.value);
+    } else if (tok.type === 'string') {
+      const enclosingFunction = parenStack[parenStack.length - 1];
+      if (inImportPrelude || (enclosingFunction && URL_TAKING_FUNCTIONS.has(enclosingFunction))) check(tok.value);
+    }
+  }
   return bad;
 }

@@ -73,30 +73,51 @@ function unwrapExpression(node) {
  * file, which a manifest could reorder (e.g. put `presets: [{ id: ... }]` first) to dodge the check.
  * `fileName` picks the parser mode (see scriptKindFor) — manifest.ts is always real TypeScript, so
  * old-style type assertions around the object (`<never>{...}`) parse correctly instead of as JSX.
- * Throws if the object literal declares `id` more than once: JS/the runtime would silently use the
- * last one, which is exactly the kind of ambiguity this check exists to rule out.
+ *
+ * Fails closed (throws) rather than guessing on anything that could make the *runtime* id disagree
+ * with what this function reports:
+ *  - `id` declared more than once as a plain identifier property — JS/the runtime uses the last one.
+ *  - a string-literal-named property (`'id': ...`) — legal and exactly equivalent to `id: ...` at
+ *    runtime, but a manifest that reaches for this form instead of the plain identifier gets no
+ *    benefit of the doubt.
+ *  - a computed property name (e.g. `['id']: ...`) — same reasoning; also can't rule out it's 'id'
+ *    without evaluating an arbitrary expression, which this function will never do.
+ *  - a spread (`...x`) anywhere in the object — could inject or override `id` from something this
+ *    function has no way to inspect.
  */
 export function findManifestId(source, fileName = 'manifest.ts') {
   const sf = ts.createSourceFile(fileName, source, ts.ScriptTarget.Latest, true, scriptKindFor(fileName));
   let found;
-  let duplicate = false;
+  let invalidReason = null;
   const visit = (node) => {
-    if (found !== undefined || duplicate) return;
+    if (found !== undefined || invalidReason) return;
     if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === 'defineTemplate' && node.arguments.length > 0) {
       const arg = unwrapExpression(node.arguments[0]);
       if (arg && ts.isObjectLiteralExpression(arg)) {
+        if (arg.properties.some((prop) => ts.isSpreadAssignment(prop))) {
+          invalidReason = 'manifest uses a spread (...) inside defineTemplate({...}) — the id cannot be statically verified, so it is rejected';
+          return;
+        }
+        if (arg.properties.some((prop) => ts.isPropertyAssignment(prop) && ts.isComputedPropertyName(prop.name))) {
+          invalidReason = "manifest uses a computed property name (e.g. ['id']) inside defineTemplate({...}) — the id cannot be statically verified, so it is rejected";
+          return;
+        }
+        if (arg.properties.some((prop) => ts.isPropertyAssignment(prop) && ts.isStringLiteralLike(prop.name) && prop.name.text === 'id')) {
+          invalidReason = "manifest declares 'id' as a string-literal property name instead of a plain identifier — rejected";
+          return;
+        }
         const idProps = arg.properties.filter((prop) => ts.isPropertyAssignment(prop) && ts.isIdentifier(prop.name) && prop.name.text === 'id');
-        if (idProps.length > 1) { duplicate = true; return; }
+        if (idProps.length > 1) { invalidReason = 'manifest declares `id` more than once in defineTemplate({...}) — the runtime would use the last one, which is rejected as ambiguous'; return; }
         const prop = idProps[0];
         if (prop && ts.isStringLiteralLike(prop.initializer)) found = prop.initializer.text;
       }
-      if (found === undefined && !duplicate) found = null;
+      if (found === undefined && !invalidReason) found = null;
       return;
     }
     ts.forEachChild(node, visit);
   };
   visit(sf);
-  if (duplicate) throw new Error('manifest declares `id` more than once in defineTemplate({...}) — the runtime would use the last one, which is rejected as ambiguous');
+  if (invalidReason) throw new Error(invalidReason);
   return found ?? undefined;
 }
 

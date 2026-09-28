@@ -159,6 +159,31 @@ test('forbiddenCssImports resists no-space/comment/case/escape bypasses and non-
   assert.deepEqual(forbiddenCssImports(`font-family: 'Space Grotesk', sans-serif;`, ctx), []);
 });
 
+test('forbiddenCssImports resists escape-based desync bypasses (round 3: decode-then-regex was unsound)', () => {
+  const ctx = { fileDir: '/t/external/acme', templateRoot: '/t/external/acme' };
+  // an escaped quote inside an *unquoted* url(...) token must decode without prematurely ending the token
+  assert.deepEqual(forbiddenCssImports(`body { background: url(https://evil.example/x.png#\\'); }`, ctx), ["https://evil.example/x.png#'"]);
+  assert.deepEqual(forbiddenCssImports(`body { background: url(https://evil.example/x.png?a=\\"); }`, ctx), ['https://evil.example/x.png?a="']);
+  assert.deepEqual(forbiddenCssImports(`body { background: url(https://evil.example/x.png?\\27); }`, ctx), ["https://evil.example/x.png?'"]);
+  // an escaped quote inside one string (here, a `content` value, which must stay ignored) must not
+  // desync the pairing of quotes in whatever follows — the actual attack payload is the image-set(...)
+  assert.deepEqual(forbiddenCssImports(`a{content:"\\""} b{background:image-set("https://evil.example/x.png" 1x)}`, ctx), ['https://evil.example/x.png']);
+  assert.deepEqual(forbiddenCssImports(`a{content:"\\22"} b{background:image-set("https://evil.example/x.png" 1x)}`, ctx), ['https://evil.example/x.png']);
+  // percent-encoded traversal (%2e = '.', %2f = '/') must decode before the containment check
+  assert.deepEqual(forbiddenCssImports(`body { background: url(%2e%2e/%2e%2e/secret.png); }`, ctx), ['../../secret.png']);
+});
+
+test('forbiddenCssImports ignores ordinary CSS text that is not a URL-taking position (round 3 false positives)', () => {
+  const ctx = { fileDir: '/t/external/acme', templateRoot: '/t/external/acme' };
+  assert.deepEqual(forbiddenCssImports(`a::before { content: "Price: "; }`, ctx), []);
+  assert.deepEqual(forbiddenCssImports(`a::after { content: "/"; }`, ctx), []);
+  assert.deepEqual(forbiddenCssImports(`a[href^="https://"] { color: red; }`, ctx), []);
+  assert.deepEqual(forbiddenCssImports(`a[href^="mailto:"] { color: blue; }`, ctx), []);
+  // a string inside an untracked function (e.g. a pseudo-class, or var()'s fallback) is ignored too
+  assert.deepEqual(forbiddenCssImports(`a:not("https://evil.example") { color: red; }`, ctx), []);
+  assert.deepEqual(forbiddenCssImports(`a { color: var(--x, "https://evil.example"); }`, ctx), []);
+});
+
 function sh(cwd, ...args) { return execFileSync('git', args, { cwd, encoding: 'utf8' }).trim(); }
 
 function fixtureRepo(files, { symlinks = {} } = {}) {
@@ -262,6 +287,15 @@ test('rejects a template whose index.ts hides a forbidden import behind a type a
 test('findManifestId rejects a manifest that declares `id` more than once', () => {
   const src = `import { defineTemplate } from '@/templates/define.ts';\nexport default defineTemplate({ contractVersion: 1, id: 'acme', id: 'evil' } as never);\n`;
   assert.throws(() => findManifestId(src, 'manifest.ts'), /more than once/);
+});
+
+test('findManifestId fails closed on a spread, a computed property name, or a string-literal id key', () => {
+  const wrap = (obj) => `import { defineTemplate } from '@/templates/define.ts';\nexport default defineTemplate({ contractVersion: 1, ${obj} } as never);\n`;
+  assert.throws(() => findManifestId(wrap(`id: 'acme', ...extra`), 'manifest.ts'), /spread/);
+  assert.throws(() => findManifestId(wrap(`['id']: 'acme'`), 'manifest.ts'), /computed property/);
+  assert.throws(() => findManifestId(wrap(`'id': 'acme'`), 'manifest.ts'), /string-literal property name/);
+  // a normal id alongside an unrelated computed/spread property is rejected too — presence alone is disqualifying
+  assert.throws(() => findManifestId(wrap(`id: 'acme', [computedKey]: 'x'`), 'manifest.ts'), /computed property/);
 });
 
 test('rejects a template whose manifest declares `id` more than once', () => {
