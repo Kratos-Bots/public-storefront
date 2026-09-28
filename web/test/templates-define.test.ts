@@ -30,6 +30,7 @@ describe('validateManifest', () => {
     ['preset scheme not supported', manifest({ presets: [{ ...manifest().presets[0]!, scheme: 'light' }] }), 'scheme'],
     ['bad hex', manifest({ presets: [{ ...manifest().presets[0]!, colors: { ...manifest().presets[0]!.colors, bg: 'red' } }] }), 'hex'],
     ['bad font family', manifest({ presets: [{ ...manifest().presets[0]!, fonts: { heading: { family: 'Bad;Font', weights: [400] }, body: null, mono: null } }] }), 'font'],
+    ['blank font family after trim', manifest({ presets: [{ ...manifest().presets[0]!, fonts: { heading: { family: '   ', weights: [400] }, body: null, mono: null } }] }), 'font'],
     ['bad font weight', manifest({ presets: [{ ...manifest().presets[0]!, fonts: { heading: { family: 'Inter', weights: [450] }, body: null, mono: null } }] }), 'weight'],
     ['unknown editable colour', manifest({ editable: { colors: ['nope' as never], fonts: true, radius: true, density: true } }), 'editable'],
     ['bad option key', manifest({ options: [{ key: 'bad key', type: 'boolean', label: 'x', default: true }] }), 'option key'],

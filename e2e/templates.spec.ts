@@ -13,6 +13,7 @@ interface TemplateCase {
 /** Every template in /templates.json needs at least one case (guarded below). Plan 3 appends. */
 export const TEMPLATE_CASES: TemplateCase[] = [
   { template: 'modern', preset: 'default', tapTargets: false },
+  { template: 'dark-luxury', preset: 'gold', tapTargets: true },
 ];
 
 const WIDTHS = [360, 390, 768, 1280] as const;

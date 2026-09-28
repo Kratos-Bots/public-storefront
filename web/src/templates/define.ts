@@ -112,7 +112,9 @@ const isStr = (v: unknown): v is string => typeof v === 'string' && v.length > 0
 
 function fontErrors(font: unknown, where: string): string[] {
   if (font === null) return [];
-  if (!isObj(font) || !isStr(font.family) || !FONT_FAMILY_RE.test(font.family)) return [`${where}: font family must match ${FONT_FAMILY_RE}`];
+  // Mirrors the backend's fontSpec.family: trim().min(1) — a family that is only whitespace
+  // matches FONT_FAMILY_RE (it allows spaces) but must still be rejected.
+  if (!isObj(font) || !isStr(font.family) || !FONT_FAMILY_RE.test(font.family) || !font.family.trim()) return [`${where}: font family must match ${FONT_FAMILY_RE}`];
   const w = font.weights;
   if (!Array.isArray(w) || w.length === 0 || w.length > MAX_WEIGHTS || !w.every((n) => Number.isInteger(n) && n >= 100 && n <= 900 && n % 100 === 0)) {
     return [`${where}: font weights must be 1..${MAX_WEIGHTS} values of 100..900 in steps of 100`];

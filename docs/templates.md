@@ -378,9 +378,11 @@ export type SlotChildren = ReactNode;
 | `Overlay` | fixed decoration layer, last child of all three shells (must be `pointer-events: none`) | nothing |
 | `ButtonAdornment` | trailing adornment inside primary buttons | nothing |
 
-A template-provided slot component is wrapped by `<Slot>` (`runtime.tsx`) in
-`<div data-sf-slot="<Name>" style="display:contents">` before rendering; a default slot renders
-unwrapped, so modern's DOM is byte-identical to before templates existed.
+A template-provided slot component is wrapped by `<Slot>` (`runtime.tsx`) in a
+`data-sf-slot="<Name>" style="display:contents"` element before rendering — a `<span>` for
+`ButtonAdornment` (it renders inside `<button>`, where only phrasing content is valid) and a
+`<div>` for every other slot; a default slot renders unwrapped, so modern's DOM is byte-identical
+to before templates existed.
 
 **Cart-bar merge pattern.** The mobile cart bar root (`MobileCartBar`) carries
 `data-sf-part="cart-bar"`. A template restyles it from its own `template.css`
