@@ -87,6 +87,19 @@ the kill switch, tracking/verify and the first-paint theme bootstrap. Screenshot
 [`docs/screenshots/e2e-contact-sheet.png`](docs/screenshots/e2e-contact-sheet.png), which is
 committed as the record of what the pass rendered.
 
+## Templates
+
+The storefront's look is a **template** (`web/src/templates/<id>/`) chosen per client in the
+admin (Storefront → Appearance): `modern` (default), plus any built-in or imported template.
+The full contract — manifest, tokens, parts, slots, hooks, mobile rules, git imports — is in
+[`docs/templates.md`](docs/templates.md).
+
+    npm run template:new -- <id>   # scaffold a built-in template
+    npm run templates:fetch        # vendor the repos pinned in templates.lock.json (runs before dev/build)
+
+The build emits `web/dist/templates.json`, which the backend captures on deploy so the admin
+knows which templates this release contains.
+
 ## What the Worker does — and does not do
 
 `worker/src/index.ts` is deliberately thin. In order, it handles:
