@@ -9,6 +9,7 @@ export const block = defineBlock<Props>({
   schema: z.object({ text: z.string().min(1).max(200), eyebrow: z.string().max(60), level: z.enum(['h2', 'h3', 'h4']), align: z.enum(['start', 'center']) }),
   defaultProps: { text: 'A heading', eyebrow: '', level: 'h2', align: 'start' },
   render: ({ text, eyebrow, level, align }) => {
+    if (!text.trim()) return null;
     const Tag = level;
     return (
       <div className={align === 'center' ? `${classes.root} ${classes.center}` : classes.root} data-sf-block="Heading">

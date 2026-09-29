@@ -36,20 +36,65 @@ export function defineBlock<P extends Record<string, unknown>>(def: BlockDef<P>)
   return def;
 }
 
-/** The block's props from stored data: whole-object parse, else field by field onto defaults. */
+/**
+ * How a failed field is filled. `neutral` (every stored doc, via the guard): '' for a string, [] for
+ * an array, the block's own default only for enums/numbers/booleans — never the insert-time
+ * placeholder copy, which a shopper must not see. `defaults`: `defaultProps` (a freshly inserted block).
+ */
+export type FieldFallback = 'neutral' | 'defaults';
+
+export interface ParsedBlockProps {
+  props: Record<string, unknown>;
+  /** Keys that fell back (`items`), and array items that were left out (`items[2]`), in order. */
+  fallbacks: string[];
+}
+
+function neutralValue(schema: z.ZodType, safeDefault: unknown): unknown {
+  if (schema instanceof z.ZodArray) return [];
+  if (schema instanceof z.ZodString || schema.safeParse('').success) return '';
+  return structuredClone(safeDefault);
+}
+
+/**
+ * The block's props from stored data: whole-object parse, else field by field. An array field keeps
+ * its valid items (each invalid one is reported as `key[i]`) before the whole field falls back.
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function parseBlockProps(def: BlockDef<any>, raw: Record<string, unknown>): Record<string, unknown> {
+export function parseBlockPropsDetailed(def: BlockDef<any>, raw: Record<string, unknown>, fallback: FieldFallback = 'neutral'): ParsedBlockProps {
   const whole = def.schema.safeParse(raw);
-  if (whole.success) return whole.data as Record<string, unknown>;
-  const out: Record<string, unknown> = structuredClone(def.defaultProps) as Record<string, unknown>;
+  if (whole.success) return { props: whole.data as Record<string, unknown>, fallbacks: [] };
+  const defaults = def.defaultProps as Record<string, unknown>;
+  const out: Record<string, unknown> = structuredClone(defaults);
+  const fallbacks: string[] = [];
   if (def.schema instanceof z.ZodObject) {
     const shape = def.schema.shape as Record<string, z.ZodType>;
     for (const key of Object.keys(shape)) {
-      const r = shape[key]!.safeParse(raw[key]);
-      if (r.success) out[key] = r.data;
+      const field = shape[key]!;
+      const value = raw[key];
+      const r = field.safeParse(value);
+      if (r.success) { out[key] = r.data; continue; }
+      if (field instanceof z.ZodArray && Array.isArray(value)) {
+        const kept: unknown[] = [];
+        const dropped: string[] = [];
+        value.forEach((item, i) => {
+          const ri = (field.element as z.ZodType).safeParse(item);
+          if (ri.success) kept.push(ri.data);
+          else dropped.push(`${key}[${i}]`);
+        });
+        const again = field.safeParse(kept);
+        if (again.success) { out[key] = again.data; fallbacks.push(...dropped); continue; }
+      }
+      fallbacks.push(key);
+      out[key] = fallback === 'neutral' ? neutralValue(field, defaults[key]) : structuredClone(defaults[key]);
     }
   }
-  return out;
+  return { props: out, fallbacks };
+}
+
+/** As parseBlockPropsDetailed with `defaults` fallbacks (the editor's view of a block); props only. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function parseBlockProps(def: BlockDef<any>, raw: Record<string, unknown>): Record<string, unknown> {
+  return parseBlockPropsDetailed(def, raw, 'defaults').props;
 }
 
 // ── field helpers ────────────────────────────────────────────────────────────

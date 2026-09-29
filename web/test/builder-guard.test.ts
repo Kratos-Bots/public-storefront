@@ -14,6 +14,11 @@ vi.mock('@/builder/registry.ts', async () => {
         name: 'Section', label: 'Section', category: 'content', layouts: 'all', routeBound: false, slots: ['content'],
         schema: z.object({ content: slot() }), defaultProps: { content: [] }, render: () => null,
       }),
+      Faq: defineBlock<{ id: string; title: string; items: { q: string }[] }>({
+        name: 'Faq', label: 'FAQ', category: 'content', layouts: 'all', routeBound: false, slots: [],
+        schema: z.object({ title: z.string(), items: z.array(z.object({ q: z.string().min(1) })).max(5) }),
+        defaultProps: { title: 'Questions', items: [{ q: 'Placeholder question?' }] }, render: () => null,
+      }),
       MenuOnly: defineBlock<{ id: string }>({
         name: 'MenuOnly', label: 'Menu only', category: 'content', layouts: ['menu'], routeBound: false, slots: [],
         schema: z.object({}), defaultProps: {}, render: () => null,
@@ -44,7 +49,7 @@ describe('validateDoc', () => {
   });
   it('drops unknown block types with one warning per type', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const r = validateDoc({ root, content: [{ type: 'Carousel', props: { id: 'a' } }, { type: 'Carousel', props: { id: 'b' } }, { type: 'Heading', props: { id: 'h' } }] }, 'page:about', 'storefront');
+    const r = validateDoc({ root, content: [{ type: 'Carousel', props: { id: 'a' } }, { type: 'Carousel', props: { id: 'b' } }, { type: 'Heading', props: { id: 'h', text: 'T', level: 'h2' } }] }, 'page:about', 'storefront');
     expect(r.doc!.content.map((x) => x.type)).toEqual(['Heading']);
     expect(r.issues.map((i) => i.rule)).toEqual(['drop:unknown-block', 'drop:unknown-block']);
     expect(warn).toHaveBeenCalledTimes(1);
@@ -55,9 +60,34 @@ describe('validateDoc', () => {
     const section = r.doc!.content[0]!;
     expect((section.props.content as { type: string }[]).map((x) => x.type)).toEqual(['Heading']);
   });
-  it('falls back per field on a bad prop', () => {
+  it('falls back per field to a NEUTRAL value, never the placeholder copy, and reports it', () => {
     const r = validateDoc({ root, content: [{ type: 'Heading', props: { id: 'h', text: 'x'.repeat(21), level: 'h3' } }] }, 'page:about', 'storefront');
-    expect(r.doc!.content[0]!.props).toEqual({ id: 'h', text: 'Heading', level: 'h3' });
+    expect(r.doc!.content[0]!.props).toEqual({ id: 'h', text: '', level: 'h3' });
+    expect(r.issues).toEqual([{ docKey: 'page:about', rule: 'field:Heading.text', blockId: 'h', message: expect.stringContaining('Heading') }]);
+    expect(r.issues[0]!.message).toContain('"text"');
+  });
+  it('an enum that fails falls back to the block default (not copy) and is reported', () => {
+    const r = validateDoc({ root, content: [{ type: 'Heading', props: { id: 'h', text: 'Hi', level: 'h9' } }] }, 'page:about', 'storefront');
+    expect(r.doc!.content[0]!.props).toEqual({ id: 'h', text: 'Hi', level: 'h2' });
+    expect(r.issues.map((i) => i.rule)).toEqual(['field:Heading.level']);
+  });
+  it('filters invalid array items and reports each; a non-array falls back to []', () => {
+    const items = [{ q: 'Kept' }, { q: '' }, 'junk', { q: 'Also kept' }];
+    const r = validateDoc({ root, content: [
+      { type: 'Faq', props: { id: 'f', title: 'Qs', items } },
+      { type: 'Faq', props: { id: 'g', title: 'Qs', items: 'nope' } },
+    ] }, 'page:about', 'storefront');
+    expect(r.doc!.content[0]!.props.items).toEqual([{ q: 'Kept' }, { q: 'Also kept' }]);
+    expect(r.doc!.content[1]!.props.items).toEqual([]);
+    expect(r.issues.map((i) => [i.rule, i.blockId])).toEqual([
+      ['field:Faq.items[1]', 'f'], ['field:Faq.items[2]', 'f'], ['field:Faq.items', 'g'],
+    ]);
+    expect(r.issues[0]!.message).toContain('item 2');
+  });
+  it('field issues are not informational (no drop: prefix), so the editor lists them and Publish blocks', () => {
+    const r = validateDoc({ root, content: [{ type: 'Heading', props: { id: 'h', text: 'x'.repeat(21), level: 'h3' } }] }, 'page:about', 'storefront');
+    expect(r.doc).not.toBeNull();
+    expect(r.issues.every((i) => !i.rule.startsWith('drop:'))).toBe(true);
   });
   it('drops a block outside its layouts', () => {
     const r = validateDoc({ root, content: [{ type: 'MenuOnly', props: { id: 'm' } }] }, 'page:about', 'storefront');
@@ -72,7 +102,7 @@ describe('validateDoc', () => {
   });
   it('replaces the whole doc when a rule fails, naming the rule once', () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const r = validateDoc({ root, content: [{ type: 'Heading', props: { id: 'h' } }] }, 'checkout', 'storefront');
+    const r = validateDoc({ root, content: [{ type: 'Heading', props: { id: 'h', text: 'T', level: 'h2' } }] }, 'checkout', 'storefront');
     expect(r.doc).toBeNull();
     expect(r.issues.map((i) => i.rule)).toEqual(['exactly-one:CheckoutFlow']);
     expect(error).toHaveBeenCalledTimes(1);
@@ -93,7 +123,7 @@ describe('validateDoc', () => {
     const bad = ['constructor', '__proto__', 'toString', 'valueOf', 'hasOwnProperty'];
     const content = [
       ...bad.map((type, i) => ({ type, props: { id: `p${i}`, content: [{ type: 'Heading', props: { id: `n${i}` } }] } })),
-      { type: 'Heading', props: { id: 'h' } },
+      { type: 'Heading', props: { id: 'h', text: 'T', level: 'h2' } },
     ];
     const r = validateDoc({ root, content }, 'page:about', 'storefront');
     expect(r.doc!.content.map((x) => x.type)).toEqual(['Heading']);

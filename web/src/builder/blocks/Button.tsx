@@ -7,8 +7,8 @@ import classes from '@/builder/blocks/Button.module.css';
 type Props = { id: string; label: string; href: string; variant: 'filled' | 'default' | 'subtle'; align: 'start' | 'center' | 'stretch' };
 
 function ButtonView({ label, href, variant, align }: Omit<Props, 'id'>) {
-  // Same gate SmartLink applies; a button with no safe destination renders nothing at all.
-  if (!href || !isSafeHref(href)) return null;
+  // Same gate SmartLink applies; a button with no safe destination (or no label) renders nothing at all.
+  if (!href || !isSafeHref(href) || !label.trim()) return null;
   const shared = { variant, size: 'md' as const, fullWidth: align === 'stretch', className: classes.button, 'data-sf-part': 'button' };
   return (
     <div className={classes[align]} data-sf-block="Button">

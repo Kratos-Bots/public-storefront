@@ -16,7 +16,8 @@ export const block = defineBlock<Props>({
     title: 'Questions',
     items: [{ question: 'How fast do you ship?', answerHtml: '<p>Most orders leave the same working day.</p>' }],
   },
-  render: ({ title, items }) => (
+  // No valid questions: nothing to show, not even the title.
+  render: ({ title, items }) => items.length === 0 ? null : (
     <section className={classes.root} data-sf-block="FAQ">
       {title ? <h2 className={classes.title}>{title}</h2> : null}
       {items.map((item, i) => (

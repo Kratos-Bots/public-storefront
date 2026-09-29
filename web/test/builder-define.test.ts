@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import {
   boolOverride, compactScope, defineBlock, iconOverride, isSafeHref, mediaSrc, override,
-  paletteToken, parseBlockProps, routeLink, slot, tokenVar,
+  paletteToken, parseBlockProps, parseBlockPropsDetailed, routeLink, slot, tokenVar,
 } from '@/builder/define.ts';
 import type { ComponentData } from '@/builder/types.ts';
 
@@ -32,6 +32,42 @@ describe('parseBlockProps', () => {
     const a = parseBlockProps(withSlot, { items: 'nope' });
     (a.items as unknown[]).push(1);
     expect(parseBlockProps(withSlot, { items: 'nope' }).items).toEqual([]);
+  });
+});
+
+describe('parseBlockPropsDetailed', () => {
+  const rich = defineBlock<{ id: string; title: string; src: string; size: 'sm' | 'lg'; n: number; on: boolean; links: { label: string }[] }>({
+    name: 'Rich', label: 'Rich', category: 'content', layouts: 'all', routeBound: false, slots: [],
+    schema: z.object({
+      title: z.string().min(1).max(10), src: mediaSrc(), size: z.enum(['sm', 'lg']), n: z.number().int().min(1), on: z.boolean(),
+      links: z.array(z.object({ label: z.string().min(1) })).max(3),
+    }),
+    defaultProps: { title: 'Placeholder', src: '', size: 'sm', n: 4, on: true, links: [{ label: 'Placeholder link' }] },
+    render: () => null,
+  });
+  const valid = { title: 'Ok', src: '', size: 'lg', n: 2, on: false, links: [{ label: 'A' }] };
+
+  it('reports nothing for a valid object', () => {
+    expect(parseBlockPropsDetailed(rich, valid)).toEqual({ props: valid, fallbacks: [] });
+  });
+  it('neutral: strings → "", arrays → [], enums/numbers/booleans → the schema-safe default', () => {
+    const r = parseBlockPropsDetailed(rich, { title: 'x'.repeat(11), src: 'https://evil.example/x.png', size: 'xl', n: 0, on: 'yes', links: 'nope' });
+    expect(r.props).toEqual({ title: '', src: '', size: 'sm', n: 4, on: true, links: [] });
+    expect(r.fallbacks).toEqual(['title', 'src', 'size', 'n', 'on', 'links']);
+  });
+  it('defaults mode (the editor) still uses defaultProps', () => {
+    expect(parseBlockPropsDetailed(rich, { ...valid, title: '' }, 'defaults').props.title).toBe('Placeholder');
+    expect(parseBlockProps(rich, { ...valid, title: '' }).title).toBe('Placeholder');
+  });
+  it('keeps the valid items of an array and reports each invalid one by index', () => {
+    const r = parseBlockPropsDetailed(rich, { ...valid, links: [{ label: 'A' }, { label: '' }, null, { label: 'B' }] });
+    expect(r.props.links).toEqual([{ label: 'A' }, { label: 'B' }]);
+    expect(r.fallbacks).toEqual(['links[1]', 'links[2]']);
+  });
+  it('falls back the whole array when its valid items still break the array rule', () => {
+    const r = parseBlockPropsDetailed(rich, { ...valid, links: [{ label: 'A' }, { label: 'B' }, { label: 'C' }, { label: 'D' }, { label: '' }] });
+    expect(r.props.links).toEqual([]);
+    expect(r.fallbacks).toEqual(['links']);
   });
 });
 

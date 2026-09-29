@@ -15,15 +15,19 @@ export const block = defineBlock<Props>({
     direction: z.enum(['row', 'column']),
   }),
   defaultProps: { items: [{ label: 'Shop', href: '/' }], ariaLabel: 'Site', direction: 'row' },
-  render: ({ items, ariaLabel, direction }) => (
-    <nav className={`${classes.nav} ${classes[direction]}`} aria-label={ariaLabel} data-sf-block="NavLinks">
-      <ul className={classes.list}>
-        {items.filter((l) => l.href).map((l, i) => (
-          <li key={i}>
-            <SmartLink href={l.href} className={classes.link}>{l.label}</SmartLink>
-          </li>
-        ))}
-      </ul>
-    </nav>
-  ),
+  render: ({ items, ariaLabel, direction }) => {
+    const links = items.filter((l) => l.href && l.label.trim());
+    if (links.length === 0) return null;
+    return (
+      <nav className={`${classes.nav} ${classes[direction]}`} aria-label={ariaLabel.trim() || undefined} data-sf-block="NavLinks">
+        <ul className={classes.list}>
+          {links.map((l, i) => (
+            <li key={i}>
+              <SmartLink href={l.href} className={classes.link}>{l.label}</SmartLink>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    );
+  },
 });

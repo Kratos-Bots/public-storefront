@@ -16,7 +16,7 @@ function SearchFieldView({ placeholder }: { placeholder: string }) {
       <SearchField
         className={classes.field}
         value={search}
-        placeholder={placeholder}
+        placeholder={placeholder.trim() || undefined}
         onChange={(value) => {
           setSearch(value);
           // The shell keeps the query across the navigation, so the catalogue opens filtered.

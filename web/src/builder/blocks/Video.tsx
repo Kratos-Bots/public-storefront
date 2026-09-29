@@ -24,7 +24,7 @@ export const block = defineBlock<Props>({
         <iframe
           className={classes.player}
           src={src}
-          title={title}
+          title={title.trim() || 'Video'}
           loading="lazy"
           allow="encrypted-media; picture-in-picture; fullscreen"
           allowFullScreen

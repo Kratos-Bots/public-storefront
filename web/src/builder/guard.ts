@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { parseBlockProps } from '@/builder/define.ts';
+import { parseBlockPropsDetailed } from '@/builder/define.ts';
 import { blockDef, checkRules } from '@/builder/rules.ts';
 import {
   EMPTY_ROOT, isComponentLike, isRecord, MAX_COMPONENTS, MAX_DEPTH,
@@ -26,6 +26,14 @@ interface Walk { docKey: DocKey; layout: LayoutKind; depth: number; drops: Issue
 
 function drop(w: Walk, issue: Omit<Issue, 'docKey'>): void {
   if (w.drops.length < MAX_DROP_ISSUES) w.drops.push({ docKey: w.docKey, ...issue });
+}
+
+/** `items[2]` → an item that was left out; `title` → a field that was left empty. */
+function fieldMessage(label: string, f: string): string {
+  const item = /^(.+)\[(\d+)\]$/.exec(f);
+  return item
+    ? `${label}: item ${Number(item[2]) + 1} of "${item[1]}" is not valid and is left out.`
+    : `${label}: the "${f}" field is not valid and is left blank (or at its default).`;
 }
 
 function cleanItems(items: unknown, w: Walk): ComponentData[] {
@@ -62,10 +70,12 @@ function cleanItems(items: unknown, w: Walk): ComponentData[] {
     w.budget.left -= 1;
     const props: Record<string, unknown> = { ...raw.props };
     for (const s of def.slots) props[s] = cleanItems(raw.props[s], { ...w, depth: w.depth + 1 });
-    const parsed = parseBlockProps(def, props);
+    // Neutral fallbacks: a broken field renders empty, never the block's placeholder copy.
+    const { props: parsed, fallbacks } = parseBlockPropsDetailed(def, props, 'neutral');
     let id = blockId;
     for (let n = 2; w.ids.has(id); n += 1) id = `${blockId}~${n}`;
     w.ids.add(id);
+    for (const f of fallbacks) drop(w, { rule: `field:${def.name}.${f}`, message: fieldMessage(def.label, f), blockId: id });
     out.push({ type: raw.type, props: { ...parsed, id } });
   }
   return out;
@@ -98,7 +108,9 @@ function run(doc: Record<string, unknown>, docKey: DocKey, layout: LayoutKind): 
 
 /**
  * Spec §5.3. `doc: null` ⇒ render the route's default. Issues whose `rule` starts with `drop:` are
- * informational (a block was removed, the doc still renders). Memoised per doc object, so a published
+ * informational (a block was removed, the doc still renders). `field:<Block>.<key>` (or `…<key>[i]`)
+ * issues also leave the doc rendering — the field shows empty, the array item is left out — but are
+ * NOT informational: the editor lists them and they block Publish. Memoised per doc object, so a published
  * set is validated once per page load.
  */
 export function validateDoc(doc: unknown, docKey: DocKey, layout: LayoutKind): GuardResult {

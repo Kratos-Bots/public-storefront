@@ -9,7 +9,8 @@ export const block = defineBlock<Props>({
   name: 'RichText', label: 'Text', category: 'content', layouts: 'all', routeBound: false, slots: [],
   schema: z.object({ bodyHtml: richtext(), width: z.enum(['narrow', 'full']) }),
   defaultProps: { bodyHtml: '<p>Tell shoppers something worth knowing.</p>', width: 'narrow' },
-  render: ({ bodyHtml, width }) => (
+  // Richtext may arrive as a React node inside the editor; only an empty string renders nothing.
+  render: ({ bodyHtml, width }) => (typeof bodyHtml === 'string' && !bodyHtml.trim()) ? null : (
     <RichHtml value={bodyHtml} block="RichText" className={width === 'narrow' ? `${classes.prose} ${classes.narrow}` : classes.prose} />
   ),
 });
