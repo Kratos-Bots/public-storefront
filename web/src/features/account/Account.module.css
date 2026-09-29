@@ -1010,3 +1010,15 @@
     transition: none;
   }
 }
+
+/* The classic-bot switch: the sign-out button's quiet voice, since it is the
+   same kind of act — leaving this surface — not a purchase. */
+.switchBot {
+  composes: logout;
+}
+
+.switchConfirm {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}

@@ -2,9 +2,15 @@ import { useState } from 'react';
 import { Button } from '@mantine/core';
 import { EmptyState } from '@/components/EmptyState.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
+import { ContactLinks } from '@/components/ContactLinks.tsx';
 import { Money } from '@/components/Money.tsx';
 import { formatDate } from '@/lib/format.ts';
 import { logout } from '@/api/auth.ts';
+import { setBotMode } from '@/api/profile.ts';
+import { useSettings } from '@/app/settings.ts';
+import { useEffectiveLayout } from '@/app/layout.ts';
+import { errorMessage } from '@/lib/errors.ts';
+import { isTelegramWebApp, tgClose } from '@/lib/telegram-webapp.ts';
 import { useSessionStore } from '@/stores/session.ts';
 import { useCartStore } from '@/stores/cart.ts';
 import { resetCartSync } from '@/features/cart/useServerCart.ts';
@@ -19,6 +25,55 @@ const CHANNELS: Array<{ key: keyof Profile['identities']; label: string }> = [
 ];
 
 /**
+ * Beta web app mode's way back to the classic bot. Two taps, not a dialog: the
+ * first says what will happen, the second does it. The backend flips the flag,
+ * resets this chat's menu button and drops a "back to the menu" message in the
+ * chat; the Mini App then closes so the shopper lands on that message.
+ */
+function ClassicBotSwitch() {
+  const [stage, setStage] = useState<'idle' | 'confirm' | 'busy'>('idle');
+  const [error, setError] = useState<string | null>(null);
+
+  const confirm = async () => {
+    setStage('busy');
+    setError(null);
+    try {
+      await setBotMode(true);
+      tgClose();
+    } catch (err) {
+      setError(errorMessage(err, "We couldn't switch you — try again"));
+      setStage('confirm');
+    }
+  };
+
+  return (
+    <section className={classes.section} aria-label="Classic bot">
+      <div className={classes.sectionHead}>
+        <h3 className={classes.sectionTitle}>Prefer the classic bot?</h3>
+      </div>
+      <p className={classes.note}>
+        Shop with buttons in the chat instead of this app. You can come back from the bot&rsquo;s menu any time.
+      </p>
+      {stage === 'idle' ? (
+        <button type="button" className={classes.switchBot} onClick={() => setStage('confirm')}>
+          Switch to the classic bot
+        </button>
+      ) : (
+        <div className={classes.switchConfirm}>
+          <button type="button" className={classes.switchBot} onClick={() => void confirm()} disabled={stage === 'busy'}>
+            {stage === 'busy' ? 'Switching…' : 'Yes, switch'}
+          </button>
+          <button type="button" className={classes.logout} onClick={() => setStage('idle')} disabled={stage === 'busy'}>
+            Cancel
+          </button>
+        </div>
+      )}
+      {error ? <p className={classes.note} role="alert">{error}</p> : null}
+    </section>
+  );
+}
+
+/**
  * Who the shop has you down as, and the way out. Signing out is a local act as
  * much as a server one: the token is revoked, the session and the account's cart
  * leave this browser, and the cart goes back to the local mode a guest shops in.
@@ -28,6 +83,9 @@ const CHANNELS: Array<{ key: keyof Profile['identities']; label: string }> = [
 export function ProfilePage() {
   const profile = useProfile();
   const [signingOut, setSigningOut] = useState(false);
+  const settings = useSettings();
+  const inTelegram = isTelegramWebApp();
+  const webapp = useEffectiveLayout() === 'webapp';
 
   const signOut = async () => {
     setSigningOut(true);
@@ -117,14 +175,29 @@ export function ProfilePage() {
         </p>
       </section>
 
-      <button
-        type="button"
-        className={classes.logout}
-        onClick={() => void signOut()}
-        disabled={signingOut}
-      >
-        {signingOut ? 'Signing out' : 'Sign out'}
-      </button>
+      {webapp ? (
+        <section className={classes.section} aria-label="Contact">
+          <div className={classes.sectionHead}>
+            <h3 className={classes.sectionTitle}>Talk to us</h3>
+          </div>
+          <ContactLinks variant="inline" />
+        </section>
+      ) : null}
+
+      {inTelegram && settings.telegramWebApp?.mode === 'beta' ? <ClassicBotSwitch /> : null}
+
+      {/* Inside Telegram the identity is the Telegram account: signing out would
+          only sign straight back in on the next launch. */}
+      {inTelegram ? null : (
+        <button
+          type="button"
+          className={classes.logout}
+          onClick={() => void signOut()}
+          disabled={signingOut}
+        >
+          {signingOut ? 'Signing out' : 'Sign out'}
+        </button>
+      )}
     </div>
   );
 }

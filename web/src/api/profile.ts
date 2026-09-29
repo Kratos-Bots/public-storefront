@@ -26,3 +26,8 @@ export async function fetchRedeemOptions(): Promise<RedeemOptions | null> {
 
 export const redeem = (optionId: number) =>
   unwrap<RedeemResult>(api.post('storefront/profile/redeem', { json: { optionId } }));
+
+/** Beta web app mode only: hand this shopper back to the classic bot (`true`) or
+ *  to the Mini App (`false`). The backend 422s in forced/off mode. */
+export const setBotMode = (classic: boolean) =>
+  unwrap<{ classic: boolean }>(api.post('storefront/account/bot-mode', { json: { classic } }));
