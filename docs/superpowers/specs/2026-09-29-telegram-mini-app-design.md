@@ -26,7 +26,7 @@ Success looks like:
 | # | Decision |
 |---|---|
 | D1 | `webapp` is a **third value of the existing layout setting**: `features.layout = 'storefront' \| 'menu' \| 'webapp'`. Inside Telegram the shell is always `webapp`, regardless of the chosen layout; choosing `webapp` in admin makes it the browser default too. |
-| D2 | Bot behaviour is a **bot setting** `bot_settings.storefront_webapp_mode = 'off' \| 'beta' \| 'forced'` (default `off`). Bot-only, so it lives in `bot_settings`, not `storefront_settings`. |
+| D2 | Bot behaviour is a **bot setting** `bot_settings.shop_webapp_mode = 'off' \| 'beta' \| 'forced'` (default `off`). Bot-only, so it lives in `bot_settings`, not `storefront_settings`. |
 | D3 | Shoppers can **opt out in `beta`**, never in `forced`. Stored per customer. |
 | D4 | In webapp mode the bot **replaces all shop menus**: it shows only the welcome message (Open shop, Contact, and — in `beta` — Use classic bot). Its only other messages are notifications. |
 | D5 | Auth is **`initData` verification** on a new backend route, not a bot-signed URL token, so every launch path (menu button, inline button, `t.me/<bot>/<app>` link, attachment menu) works. |
@@ -73,7 +73,7 @@ and many phones share a carrier NAT address.
 
 ### 3.2 Webapp mode setting
 
-- Seed `{ key: 'storefront_webapp_mode', value: 'off' }` in `src/db/seed.ts`, and add it to the
+- Seed `{ key: 'shop_webapp_mode', value: 'off' }` in `src/db/seed.ts`, and add it to the
   bot-settings schema/validation as enum `off | beta | forced`.
 - Helper `src/bot/webapp-mode.ts`:
   - `getWebAppMode(): Promise<'off' | 'beta' | 'forced'>` — returns `off` (and logs a warning once
