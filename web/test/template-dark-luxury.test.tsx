@@ -69,7 +69,7 @@ describe('dark-luxury locks', () => {
   });
 
   it('defaults every option on', () => {
-    expect(resolveTheme(stored, lookupManifest).options).toEqual({ grain: true, orb: true, statusBadge: true });
+    expect(resolveTheme(stored, lookupManifest).options).toEqual({ showPageTitle: true, showCatalogIntro: true, showSectionLabels: true, grain: true, orb: true, showFooter: true, statusBadge: true });
   });
 });
 
@@ -212,6 +212,17 @@ describe('LuxuryFooter', () => {
     expect(container.querySelector('.lux-footer--compact')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Shipping' })).toBeNull();
     rerender(<LuxuryFooter {...base({ statusBadge: false }, { layout: 'menu' })} supportLinks={links} hasChat={false} />);
+    expect(container).toBeEmptyDOMElement();
+  });
+});
+
+describe('LuxuryFooter showFooter', () => {
+  it('off removes the footer (badge included) in every layout', () => {
+    h.settings = settings();
+    const links = [{ label: 'Shipping', url: 'https://example.com/shipping' }];
+    const { container, rerender } = render(<LuxuryFooter {...base({ showFooter: false })} supportLinks={links} hasChat />);
+    expect(container).toBeEmptyDOMElement();
+    rerender(<LuxuryFooter {...base({ showFooter: false }, { layout: 'menu' })} supportLinks={links} hasChat />);
     expect(container).toBeEmptyDOMElement();
   });
 });

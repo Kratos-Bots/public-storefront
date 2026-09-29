@@ -160,7 +160,8 @@ storefront enforces every one of the backend's numbers, and is stricter where no
 | preset `name` | ≤ 60 characters |
 | `editable.colors` | colour keys, no duplicates (so ≤ 8) |
 | `editable.fonts` / `.radius` / `.density` | booleans (required) |
-| `options` | ≤ 30 entries |
+| `options` | ≤ 27 entries (the backend caps a catalog entry at 30; the three core options take the rest) |
+| option `key` | not `showPageTitle`, `showCatalogIntro` or `showSectionLabels` (reserved core options) |
 | option `label` | 1–80 characters |
 | option `help` | optional; a string of ≤ 200 characters |
 | select `choices` | 1–20 entries |
@@ -196,6 +197,24 @@ A store's stored theme (`Theme` in `types/settings.ts`) always names a `template
   object key by key, discarding any stored value whose type or shape doesn't match the option's
   declared `type` (boolean/select/text) — so a stale or foreign options blob degrades to defaults
   field-by-field, never wholesale.
+- **Core options**: every template — built-in and external — also carries three shared options,
+  declared once as `CORE_OPTIONS` in `define.ts` and prepended to each manifest's own `options[]`
+  by the registry (`withCoreOptions()` in `buildRegistry`, after validation). Because the catalog
+  (`catalog.ts` → `templates.json`) and `lookupManifest` both read the registry, the admin's
+  Template options card lists them for every template and `resolveOptions()` resolves them like
+  any other option — no backend or admin change. All are booleans defaulting to `true` (shown); the
+  keys are reserved, so a manifest that declares one fails validation.
+
+  | Key | Admin label | Hides |
+  |---|---|---|
+  | `showPageTitle` | Page title | The catalogue heading block in `ProductGrid`, `ProductList` and `WholesaleCatalogPage`: the page-level `SectionLabel`, the h1's visible styling and the tally ("N products", "6 LINES"). The h1 itself stays (class `sf-visually-hidden`, global.css) so screen readers and `getByRole('heading')` still find it. The wholesale "Whole list" link stays on its own slim row while a category is open. |
+  | `showCatalogIntro` | Catalogue intro | The `CatalogHero` slot on all three surfaces (custom or default). |
+  | `showSectionLabels` | Section labels | The `SectionLabel` slot at page and group level (custom or default). |
+
+  `CatalogHero` and `SectionLabel` are gated centrally in `<Slot>` (`runtime.tsx`), so a template's
+  slot never needs to check them; the page title is gated in the three views through
+  `useCoreOptions()` (`hooks.ts`, also exported from `contract.ts`), which treats anything but an
+  explicit `false` as shown.
 - A stored `template` id not present in this release, or a `preset` id not present in that
   template, resolves to `modern` (or that template's `defaultPreset`) with one `console.warn` — see
   `registry.ts`'s `getTemplate()`.
@@ -411,8 +430,8 @@ a manifest):
 ```ts
 export * from '@/templates/define.ts';
 export type * from '@/templates/slots.ts';
-export { useTemplate, useTemplateOptions, useStorefront, useCatalogStats, useOrderingState, formatClock, utcOffsetLabel } from '@/templates/hooks.ts';
-export type { TemplateInfo, StorefrontInfo, CatalogStats, OrderingState } from '@/templates/hooks.ts';
+export { useTemplate, useTemplateOptions, useCoreOptions, useStorefront, useCatalogStats, useOrderingState, formatClock, utcOffsetLabel } from '@/templates/hooks.ts';
+export type { TemplateInfo, CoreOptions, StorefrontInfo, CatalogStats, OrderingState } from '@/templates/hooks.ts';
 export { useServerClock, useCutoffInfo } from '@/lib/server-clock.ts';
 export type { CutoffInfo } from '@/lib/server-clock.ts';
 export { useMobileCartBar } from '@/features/cart/MobileCartBar.tsx';
@@ -429,6 +448,8 @@ Hook signatures:
 interface TemplateInfo { id: string; presetId: string; scheme: Scheme; options: OptionValues; tokens: TemplateTokens }
 useTemplate(): TemplateInfo
 useTemplateOptions(): OptionValues
+interface CoreOptions { showPageTitle: boolean; showCatalogIntro: boolean; showSectionLabels: boolean }
+useCoreOptions(): CoreOptions                                                           // only an explicit false hides
 interface StorefrontInfo { brand: Brand; features: Features; supportLinks: SupportLink[]; welcomeMessage: string | null; currency: string; enabled: boolean }
 useStorefront(): StorefrontInfo
 interface CatalogStats { productCount: number | null; categoryCount: number | null }   // null while loading
@@ -609,7 +630,9 @@ export interface CatalogTemplate {
 export interface TemplatesCatalog { schemaVersion: 1; templates: CatalogTemplate[] }
 ```
 
-Templates are sorted `modern` first, then other built-ins, then imported templates, each group
+Each entry's `options` starts with the three core options (`showPageTitle`, `showCatalogIntro`,
+`showSectionLabels`), then the template's own — the catalog is built from the registry, which adds
+them. Templates are sorted `modern` first, then other built-ins, then imported templates, each group
 alphabetical by name. A template's preview image (if it declares one) is copied to
 `templates/<id>/preview.<ext>` in the build output and served at `/templates/<id>/preview.<ext>` in
 dev; a manifest that declares a `preview` path whose file doesn't exist fails the build with a
@@ -633,10 +656,14 @@ preview mode, so nothing a preview ever applies is written to `localStorage`.
 
 | Id | Schemes | Presets | Locked | Options |
 |---|---|---|---|---|
-| `modern` | dark, light | Default | nothing | — |
-| `dark-luxury` | dark | Gold (default), Silver, Emerald, Crimson | fonts, radius | `grain`, `orb`, `statusBadge` (all on) |
-| `cyber-brutalism` | dark, light | Acid Dark (default), Purple Light | fonts, radius (always square) | `systemBar`, `statusBar`, `crosshairs` (on), `nodeLabel` (text, `NODE_01`, ≤ 24) |
-| `bento` | dark, light | one dark + one light per store type: Tech & electronics (`tech-dark` default), Fashion & apparel, Beauty & wellness, Home & lifestyle, Food & grocery, Monochrome | fonts, radius | `dispatch`, `contact`, `featured` (all on) |
+| `modern` | dark, light | Default | nothing | — (core options only) |
+| `dark-luxury` | dark | Gold (default), Silver, Emerald, Crimson | fonts, radius | `grain`, `orb`, `showFooter`, `statusBadge` (all on) |
+| `cyber-brutalism` | dark, light | Acid Dark (default), Purple Light | fonts, radius (always square) | `systemBar`, `statusBar`, `crosshairs`, `showFooter`, `buttonArrow` (on), `nodeLabel` (text, `NODE_01`, ≤ 24) |
+| `bento` | dark, light | one dark + one light per store type: Tech & electronics (`tech-dark` default), Fashion & apparel, Beauty & wellness, Home & lifestyle, Food & grocery, Monochrome | fonts, radius | `dispatch`, `contact`, `featured`, `showFooter` (all on) |
+
+Every template also has the three core options (section 2, "Presets, `editable` locks and options"). `showFooter` removes the template's
+`Footer` slot outright (the luxury status badge and the brutalist status strip live in it, so they
+go too); `buttonArrow` removes the brutalist ↗ `ButtonAdornment`.
 
 Button style (fill, case, weight, tracking) comes from each template's tokens and is never
 admin-editable, for any template.

@@ -77,7 +77,7 @@ describe('cyber-brutalism locks', () => {
     expect(r.fonts.heading?.family).toBe('Tektur');
     expect(r.fonts.mono).toEqual({ family: 'Share Tech Mono', weights: [400] });
     expect(r.density).toBe('compact');
-    expect(r.options).toEqual({ systemBar: true, statusBar: true, crosshairs: true, nodeLabel: 'LDN_02' });
+    expect(r.options).toEqual({ showPageTitle: true, showCatalogIntro: true, showSectionLabels: true, systemBar: true, statusBar: true, crosshairs: true, showFooter: true, buttonArrow: true, nodeLabel: 'LDN_02' });
   });
 });
 
@@ -222,6 +222,14 @@ describe('CyberFooter', () => {
     expect(container.querySelector('[data-cb="status"]')).toBeNull();
   });
 
+  it('showFooter off removes the footer and its status strip, in every layout', () => {
+    h.settings = settings();
+    const { container, rerender } = render(<CyberFooter {...base({ showFooter: false })} supportLinks={links} hasChat />);
+    expect(container).toBeEmptyDOMElement();
+    rerender(<CyberFooter {...base({ showFooter: false }, { layout: 'menu' })} supportLinks={links} hasChat />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
   it('menu layout: only the status strip, or nothing', () => {
     h.settings = settings();
     const { container, rerender } = render(<CyberFooter {...base({}, { layout: 'menu' })} supportLinks={links} hasChat={false} />);
@@ -252,6 +260,11 @@ describe('CyberButtonAdornment', () => {
     rerender(<CyberButtonAdornment {...base()} variant="primary" cta={false} />);
     expect(container.querySelector('svg.cb-arrow')).toHaveAttribute('data-cta', 'false');
     rerender(<CyberButtonAdornment {...base()} variant="secondary" cta={false} />);
+    expect(container).toBeEmptyDOMElement();
+  });
+  it('buttonArrow off drops the arrow', () => {
+    h.settings = settings();
+    const { container } = render(<CyberButtonAdornment {...base({ buttonArrow: false })} variant="primary" cta />);
     expect(container).toBeEmptyDOMElement();
   });
 });

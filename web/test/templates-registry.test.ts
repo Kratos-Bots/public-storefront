@@ -17,6 +17,24 @@ describe('folderOf', () => {
 });
 
 describe('buildRegistry', () => {
+  it('gives every registered template the core options, defaulting to shown', () => {
+    for (const { manifest } of REGISTRY.values()) {
+      for (const key of ['showPageTitle', 'showCatalogIntro', 'showSectionLabels']) {
+        expect(manifest.options.find((o) => o.key === key), `${manifest.id}.${key}`).toMatchObject({ type: 'boolean', default: true });
+      }
+    }
+    expect(lookupManifest('modern').options.map((o) => o.key)).toEqual(['showPageTitle', 'showCatalogIntro', 'showSectionLabels']);
+  });
+  it('skips a template that redeclares a core option key', () => {
+    const warn = vi.fn();
+    const reg = buildRegistry(
+      { './modern/manifest.ts': modern, './greedy/manifest.ts': { ...modern, id: 'greedy', options: [{ key: 'showPageTitle', type: 'boolean', label: 'x', default: false }] } },
+      { './modern/index.ts': load, './greedy/index.ts': load },
+      warn,
+    );
+    expect(reg.has('greedy')).toBe(false);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('reserved'));
+  });
   it('registers valid manifests and skips invalid ones with a warning', () => {
     const warn = vi.fn();
     const reg = buildRegistry(
