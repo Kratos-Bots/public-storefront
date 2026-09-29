@@ -17,13 +17,25 @@ describe('folderOf', () => {
 });
 
 describe('buildRegistry', () => {
-  it('gives every registered template the core options, defaulting to shown', () => {
+  it('gives every registered template the core options, defaulting to shown everywhere with the built-in wording', () => {
+    const defaults: [string, string, boolean | string][] = [
+      ['showPageTitle', 'boolean', true],
+      ['showCatalogIntro', 'boolean', true],
+      ['showSectionLabels', 'boolean', true],
+      ['showSku', 'boolean', true],
+      ['showCategoryPicker', 'boolean', true],
+      ['headerAccountIcon', 'select', 'all'],
+      ['headerCartIcon', 'select', 'all'],
+      ['showCutoffBar', 'boolean', true],
+      ['cutoffMessage', 'text', ''],
+      ['showCutoffCountdown', 'boolean', true],
+    ];
     for (const { manifest } of REGISTRY.values()) {
-      for (const key of ['showPageTitle', 'showCatalogIntro', 'showSectionLabels']) {
-        expect(manifest.options.find((o) => o.key === key), `${manifest.id}.${key}`).toMatchObject({ type: 'boolean', default: true });
+      for (const [key, type, def] of defaults) {
+        expect(manifest.options.find((o) => o.key === key), `${manifest.id}.${key}`).toMatchObject({ type, default: def });
       }
     }
-    expect(lookupManifest('modern').options.map((o) => o.key)).toEqual(['showPageTitle', 'showCatalogIntro', 'showSectionLabels']);
+    expect(lookupManifest('modern').options.map((o) => o.key)).toEqual(defaults.map(([key]) => key));
   });
   it('skips a template that redeclares a core option key', () => {
     const warn = vi.fn();

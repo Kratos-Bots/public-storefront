@@ -14,6 +14,7 @@ import { MobileCartBar, useMobileCartBar } from '@/features/cart/MobileCartBar.t
 import { SearchField } from '@/layouts/SearchField.tsx';
 import type { ShellSearchContext } from '@/layouts/shell-context.ts';
 import { Slot } from '@/templates/runtime.tsx';
+import { headerIconClass, useCoreOptions } from '@/templates/hooks.ts';
 import classes from '@/layouts/StorefrontShell.module.css';
 
 /** The image-led shell: header, notice + dispatch rails, content column, footer. */
@@ -26,11 +27,15 @@ export function StorefrontShell() {
   const hasChat = !!(brand.links.whatsapp || brand.links.telegram);
   // The tab is fixed to the foot of the phone; the shell owes it the clearance.
   const barShowing = useMobileCartBar();
+  const { headerAccountIcon, headerCartIcon } = useCoreOptions();
+  const accountClass = headerIconClass(headerAccountIcon);
+  const cartClass = headerIconClass(headerCartIcon);
 
   return (
     <div className={barShowing ? `${classes.shell} ${classes.withBar}` : classes.shell}>
       <Slot name="TopBar" />
       <header className={classes.header} data-sf-part="header">
+        <NoticeBanners pinned />
         <div className={classes.headerInner}>
           <Link to="/" className={classes.home} aria-label={`${brand.name} — home`}>
             <Brand size="md" />
@@ -39,22 +44,22 @@ export function StorefrontShell() {
           <SearchField className={classes.search} value={search} onChange={setSearch} />
 
           <div className={classes.actions}>
-            {features.accounts ? (
+            {features.accounts && accountClass !== null ? (
               loggedIn ? (
-                <Link to="/account" className={classes.action} aria-label="Your account">
+                <Link to="/account" className={`${classes.action} ${accountClass}`} aria-label="Your account">
                   <UserIcon size={18} />
                 </Link>
               ) : (
-                <Link to="/login" className={classes.signIn}>
+                <Link to="/login" className={`${classes.signIn} ${accountClass}`}>
                   Sign in
                 </Link>
               )
             ) : null}
 
-            {features.ordering ? (
+            {features.ordering && cartClass !== null ? (
               <Link
                 to="/cart"
-                className={classes.action}
+                className={`${classes.action} ${cartClass}`}
                 aria-label={`Cart, ${cartCount} item${cartCount === 1 ? '' : 's'}`}
               >
                 <BagIcon size={18} />

@@ -146,6 +146,9 @@
     gap: 2.5rem;
     margin-top: 1rem;
   }
+  .layout.noNav {
+    grid-template-columns: minmax(0, 1fr);
+  }
   .head {
     padding-top: 0.35rem;
   }

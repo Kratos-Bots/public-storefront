@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import { CloseButton } from '@mantine/core';
 import { useSettings } from '@/app/settings.ts';
 import type { Notice } from '@/types/settings.ts';
@@ -34,15 +34,52 @@ export function isLive(notice: Notice, now: number): boolean {
   return true;
 }
 
-/** Store-wide announcements, dismissible per notice id and remembered across visits. */
-export function NoticeBanners() {
+/** Absent on notices saved before the option existed — those were always dismissible. */
+export const isDismissible = (notice: Notice): boolean => notice.dismissible !== false;
+
+/**
+ * Publishes the pinned stack's height as `--sf-pin-h` on the root, so everything that sticks
+ * under the header (`top: var(--sf-bar-h)`) comes to rest under the notices too.
+ */
+function usePublishedHeight(ref: RefObject<HTMLElement | null>, active: boolean) {
+  useLayoutEffect(() => {
+    const el = ref.current;
+    const root = document.documentElement;
+    if (!active || !el) return;
+    const publish = () => root.style.setProperty('--sf-pin-h', `${el.offsetHeight}px`);
+    publish();
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(publish);
+    observer?.observe(el);
+    return () => {
+      observer?.disconnect();
+      root.style.removeProperty('--sf-pin-h');
+    };
+  }, [ref, active]);
+}
+
+export interface NoticeBannersProps {
+  /** The pinned notices, rendered inside the sticky header, instead of the ones under it. */
+  pinned?: boolean;
+}
+
+/**
+ * Store-wide announcements. Each shell mounts this twice: `pinned` inside its sticky header, so
+ * those notices stay at the top of the screen while the page scrolls, and plain under the header,
+ * where the rest scroll away with the page. A dismissible notice is remembered as closed per id
+ * across visits; one the store made non-dismissible always shows while it is live.
+ */
+export function NoticeBanners({ pinned = false }: NoticeBannersProps) {
   const { notices } = useSettings();
   const [dismissed, setDismissed] = useState(readDismissed);
+  const ref = useRef<HTMLElement>(null);
 
   // Evaluated per render rather than on a timer: a notice's window is re-checked
   // whenever settings refetch (every 30s at most), which is close enough for a banner.
   const now = Date.now();
-  const visible = notices.filter((n) => isLive(n, now) && !dismissed.includes(n.id));
+  const visible = notices.filter(
+    (n) => (n.pinned === true) === pinned && isLive(n, now) && !(isDismissible(n) && dismissed.includes(n.id)),
+  );
+  usePublishedHeight(ref, pinned && visible.length > 0);
 
   if (visible.length === 0) return null;
 
@@ -53,7 +90,11 @@ export function NoticeBanners() {
   };
 
   return (
-    <aside aria-label="Store notices">
+    <aside
+      ref={ref}
+      aria-label={pinned ? 'Pinned store notices' : 'Store notices'}
+      data-sf-part={pinned ? 'pinned-notices' : undefined}
+    >
       {visible.map((notice) => (
         <div
           key={notice.id}
@@ -65,13 +106,15 @@ export function NoticeBanners() {
               {notice.title ? <p className={classes.title}>{notice.title}</p> : null}
               <p className={classes.body}>{notice.body}</p>
             </div>
-            <CloseButton
-              size="sm"
-              variant="subtle"
-              classNames={{ root: classes.close }}
-              aria-label={notice.title ? `Dismiss: ${notice.title}` : 'Dismiss notice'}
-              onClick={() => dismiss(notice.id)}
-            />
+            {isDismissible(notice) ? (
+              <CloseButton
+                size="sm"
+                variant="subtle"
+                classNames={{ root: classes.close }}
+                aria-label={notice.title ? `Dismiss: ${notice.title}` : 'Dismiss notice'}
+                onClick={() => dismiss(notice.id)}
+              />
+            ) : null}
           </div>
         </div>
       ))}

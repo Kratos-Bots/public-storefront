@@ -330,7 +330,7 @@
   .aside {
     order: 0;
     position: sticky;
-    top: calc(var(--sf-bar-h, 56px) + 1rem);
+    top: calc(var(--sf-bar-h, 56px) + var(--sf-pin-h, 0px) + 1rem);
   }
 
   .nav {

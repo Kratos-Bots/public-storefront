@@ -30,7 +30,7 @@ export function ProductList() {
   const { categorySlug } = useParams();
   const [params, setParams] = useSearchParams();
   const catalog = useCatalog();
-  const { showPageTitle } = useCoreOptions();
+  const { showPageTitle, showCategoryPicker } = useCoreOptions();
 
   const products = useMemo(() => catalog.data?.products ?? [], [catalog.data]);
   const categories = useMemo(() => catalog.data?.categories ?? [], [catalog.data]);
@@ -175,7 +175,7 @@ export function ProductList() {
         onClose={closeProduct}
         onSelect={(product) => showProduct(product, true)}
       />
-      <FilterSheet tree={tree} total={products.length} activeId={active?.id ?? null} />
+      {showCategoryPicker ? <FilterSheet tree={tree} total={products.length} activeId={active?.id ?? null} /> : null}
     </div>
   );
 }

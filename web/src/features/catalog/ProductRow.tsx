@@ -6,6 +6,7 @@ import { StockChip } from '@/features/catalog/StockChip.tsx';
 import { MinusIcon, PlusIcon } from '@/components/icons.tsx';
 import { rowAnim } from '@/lib/motion.ts';
 import type { Product } from '@/types/catalog.ts';
+import { useCoreOptions } from '@/templates/hooks.ts';
 import classes from '@/features/catalog/ProductRow.module.css';
 
 export interface ProductRowProps {
@@ -26,6 +27,7 @@ export interface ProductRowProps {
  */
 export function ProductRow({ product, onSelect, index }: ProductRowProps) {
   const { currency, features } = useSettings();
+  const { showSku } = useCoreOptions();
   const quantity = useCartStore((s) => s.lines.find((l) => l.productId === product.id)?.quantity ?? 0);
   // Written through the cart's sync path, not the store: a signed-in shopper's
   // cart page adopts the server cart on open, so an edit that never reached
@@ -39,6 +41,9 @@ export function ProductRow({ product, onSelect, index }: ProductRowProps) {
     (lowest, tier) => (!lowest || tier.price < lowest.price ? tier : lowest),
     null,
   );
+
+  // With product codes hidden an ordinary line can have nothing to say under its name.
+  const hasMeta = showSku || product.minOrderQuantity != null || !!best || product.isPreorder || status !== 'in';
 
   const floor = Math.max(1, product.minOrderQuantity ?? 1);
   const atCeiling = product.maxOrderQuantity != null && quantity >= product.maxOrderQuantity;
@@ -55,19 +60,21 @@ export function ProductRow({ product, onSelect, index }: ProductRowProps) {
             {product.displayName}
           </button>
         </h3>
-        <p className={classes.meta}>
-          <span className={classes.sku}>{product.sku}</span>
-          {product.minOrderQuantity != null ? (
-            <span className={classes.limit}>Min {product.minOrderQuantity}</span>
-          ) : null}
-          {best ? (
-            <span className={classes.tier}>
-              {best.minQuantity}+ {formatMoney(best.price, currency)}
-            </span>
-          ) : null}
-          {product.isPreorder ? <span className={classes.preorder}>Pre-order</span> : null}
-          {status !== 'in' ? <StockChip status={status} /> : null}
-        </p>
+        {hasMeta ? (
+          <p className={classes.meta}>
+            {showSku ? <span className={classes.sku}>{product.sku}</span> : null}
+            {product.minOrderQuantity != null ? (
+              <span className={classes.limit}>Min {product.minOrderQuantity}</span>
+            ) : null}
+            {best ? (
+              <span className={classes.tier}>
+                {best.minQuantity}+ {formatMoney(best.price, currency)}
+              </span>
+            ) : null}
+            {product.isPreorder ? <span className={classes.preorder}>Pre-order</span> : null}
+            {status !== 'in' ? <StockChip status={status} /> : null}
+          </p>
+        ) : null}
       </div>
 
       <p className={classes.price} data-sf-part="price">{formatMoney(product.price, currency)}</p>

@@ -387,6 +387,29 @@
   outline-offset: 2px;
 }
 
+/* Product codes hidden: the meta line starts with the price, so the code's
+   track goes rather than leaving a column gap in front of it. */
+.noCode {
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+}
+
+.noCode .product {
+  grid-column: 1 / 4;
+}
+
+.noCode .unit {
+  grid-column: 1;
+}
+
+.noCode .bulk {
+  grid-column: 2;
+}
+
+.noCode .line,
+.noCode .qty {
+  grid-column: 4;
+}
+
 @media (min-width: 62em) {
   .group {
     display: table-row-group;

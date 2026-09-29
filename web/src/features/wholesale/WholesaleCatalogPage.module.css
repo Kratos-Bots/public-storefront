@@ -159,7 +159,7 @@
 
   .headRow th {
     position: sticky;
-    top: var(--sf-bar-h, 0px);
+    top: calc(var(--sf-bar-h, 0px) + var(--sf-pin-h, 0px));
     z-index: 2;
     padding: 0.5rem 0.5rem 0.4rem;
     background: var(--sf-bg-deep);

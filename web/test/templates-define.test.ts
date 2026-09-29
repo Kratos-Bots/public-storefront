@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BASE_TOKENS, CORE_OPTIONS, defineTemplate, validateManifest, withCoreOptions, type TemplateManifest, type TemplateTokens } from '@/templates/define.ts';
+import { BASE_TOKENS, CORE_OPTIONS, defineTemplate, MAX_TEMPLATE_OPTIONS, validateManifest, withCoreOptions, type TemplateManifest, type TemplateTokens } from '@/templates/define.ts';
 
 function manifest(overrides: Partial<TemplateManifest> = {}): TemplateManifest {
   return defineTemplate({
@@ -44,12 +44,13 @@ describe('validateManifest', () => {
     expect(errors.length).toBeGreaterThan(0);
     expect(errors.join('\n')).toContain(fragment);
   });
-  it('rejects more than 27 own options (30 minus the three core options)', () => {
-    const options = Array.from({ length: 28 }, (_, i) => ({ key: `o${i}`, type: 'boolean' as const, label: 'x', default: true }));
-    expect(validateManifest(manifest({ options }), 'acme').join('\n')).toContain('at most 27 options');
-    expect(validateManifest(manifest({ options: options.slice(0, 27) }), 'acme')).toEqual([]);
+  it('rejects more than 20 own options (30 minus the ten core options)', () => {
+    expect(MAX_TEMPLATE_OPTIONS).toBe(20);
+    const options = Array.from({ length: 21 }, (_, i) => ({ key: `o${i}`, type: 'boolean' as const, label: 'x', default: true }));
+    expect(validateManifest(manifest({ options }), 'acme').join('\n')).toContain('at most 20 options (10 more are added to every template)');
+    expect(validateManifest(manifest({ options: options.slice(0, 20) }), 'acme')).toEqual([]);
   });
-  it.each(['showPageTitle', 'showCatalogIntro', 'showSectionLabels'])('reserves the core option key %s', (key) => {
+  it.each(CORE_OPTIONS.map((o) => o.key))('reserves the core option key %s', (key) => {
     expect(validateManifest(manifest({ options: [{ key, type: 'boolean', label: 'x', default: false }] }), 'acme'))
       .toEqual([`acme: option key "${key}" is reserved — every template already has it as a core option`]);
   });
@@ -155,16 +156,42 @@ describe('validateManifest — tokens', () => {
 });
 
 describe('core options', () => {
-  it('are three booleans, shown by default', () => {
+  it('are ten options whose defaults leave the store as it was: shown, everywhere, built-in wording', () => {
     expect(CORE_OPTIONS.map((o) => [o.key, o.type, o.label, o.default])).toEqual([
       ['showPageTitle', 'boolean', 'Page title', true],
       ['showCatalogIntro', 'boolean', 'Catalogue intro', true],
       ['showSectionLabels', 'boolean', 'Section labels', true],
+      ['showSku', 'boolean', 'Product codes', true],
+      ['showCategoryPicker', 'boolean', 'Category picker', true],
+      ['headerAccountIcon', 'select', 'Header account icon', 'all'],
+      ['headerCartIcon', 'select', 'Header cart icon', 'all'],
+      ['showCutoffBar', 'boolean', 'Dispatch cut-off banner', true],
+      ['cutoffMessage', 'text', 'Cut-off banner wording', ''],
+      ['showCutoffCountdown', 'boolean', 'Cut-off countdown', true],
     ]);
+  });
+  it('offers the header icons on phones and desktop, desktop only, phones only or hidden', () => {
+    for (const key of ['headerAccountIcon', 'headerCartIcon']) {
+      const o = CORE_OPTIONS.find((c) => c.key === key)!;
+      expect(o.type === 'select' && o.choices.map((c) => c.value), key).toEqual(['all', 'desktop', 'mobile', 'none']);
+    }
+  });
+  it('caps the cut-off wording at 100 characters', () => {
+    expect(CORE_OPTIONS.find((o) => o.key === 'cutoffMessage')).toMatchObject({ type: 'text', maxLength: 100 });
+  });
+  it('pass the same checks as a template’s own options (label ≤80, help ≤200, select default among its choices)', () => {
+    for (const o of CORE_OPTIONS) {
+      expect(o.label.length, o.key).toBeLessThanOrEqual(80);
+      expect((o.help ?? '').length, o.key).toBeLessThanOrEqual(200);
+      if (o.type === 'select') expect(o.choices.map((c) => c.value), o.key).toContain(o.default);
+    }
+    // Renamed copies dodge the reserved-key check, so validateManifest applies every other rule to them.
+    const copies = CORE_OPTIONS.map((o) => ({ ...o, key: `core_${o.key}` }));
+    expect(validateManifest(manifest({ options: copies }), 'acme')).toEqual([]);
   });
   it('withCoreOptions prepends them, keeps the template’s own, and is idempotent', () => {
     const m = withCoreOptions(manifest());
-    expect(m.options.map((o) => o.key)).toEqual(['showPageTitle', 'showCatalogIntro', 'showSectionLabels', 'grain']);
+    expect(m.options.map((o) => o.key)).toEqual([...CORE_OPTIONS.map((o) => o.key), 'grain']);
     expect(withCoreOptions(m).options).toEqual(m.options);
     expect(manifest().options.map((o) => o.key)).toEqual(['grain']); // the input is not mutated
   });

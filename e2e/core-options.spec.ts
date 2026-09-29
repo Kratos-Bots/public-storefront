@@ -35,3 +35,66 @@ for (const [wholesale, title, rowPart] of [[true, 'Trade list', 'tr'], [false, '
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
 }
+
+/** v0.6.0 display options: a pinned, non-dismissible notice rides the sticky header, and the
+ *  sticky category rules come to rest under it rather than behind it. */
+test('menu, phone: a pinned notice stays on screen and the category rule rests below it', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 520 });
+  await page.clock.setFixedTime(FIXED_NOW);
+  await installMocks(page, {
+    layout: 'menu',
+    tweakSettings: (s) => {
+      s.notices = [
+        ...s.notices,
+        { id: 'pinned-holiday', style: 'warning', title: null, body: 'Closed Monday for the bank holiday.', startsAt: null, endsAt: null, active: true, pinned: true, dismissible: false },
+      ];
+    },
+  });
+  await page.goto('/');
+  const pinned = page.locator('[data-sf-part="pinned-notices"]');
+  await expect(pinned).toBeVisible();
+  await expect(pinned.getByRole('button', { name: /Dismiss/ })).toHaveCount(0);
+  // The ordinary notice still sits under the header and scrolls away.
+  await expect(page.getByRole('complementary', { name: 'Store notices', exact: true })).toBeVisible();
+
+  await page.mouse.wheel(0, 2000);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
+  const box = await pinned.boundingBox();
+  expect(box!.y).toBeLessThanOrEqual(1);
+  const headerBottom = await page.locator('[data-sf-part="header"]').evaluate((el) => el.getBoundingClientRect().bottom);
+  const stuck = await page.locator('[data-sf-part="group-title"]').evaluateAll((els) =>
+    els.map((el) => el.getBoundingClientRect().top).filter((top) => top >= 0 && top < 400),
+  );
+  expect(Math.min(...stuck)).toBeGreaterThanOrEqual(headerBottom - 1);
+  if (process.env.SF_SHOT_DIR) await page.screenshot({ path: `${process.env.SF_SHOT_DIR}/pinned-scrolled.png` });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
+test('menu, phone: product codes, category picker, account icon and cut-off countdown off; cart icon desktop-only', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.clock.setFixedTime(FIXED_NOW);
+  await installMocks(page, {
+    layout: 'menu',
+    tweakSettings: (s) => {
+      s.theme = {
+        ...s.theme,
+        options: {
+          showSku: false, showCategoryPicker: false, headerAccountIcon: 'none', headerCartIcon: 'desktop',
+          cutoffMessage: 'Order before {time} and it leaves {dispatch}', showCutoffCountdown: false,
+        },
+      };
+    },
+  });
+  await page.goto('/');
+  await expect(page.locator('[data-sf-part="product-row"]').first()).toBeVisible();
+  await expect(page.getByText('ALP-10')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /^Categories/ })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: /Your account|Sign in/ })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: /^Cart,/ })).toBeHidden();
+  const cutoff = page.locator('[data-sf-part="cutoff"]');
+  await expect(cutoff).toContainText(/Order before \d\d:\d\d and it leaves/);
+  await expect(cutoff).not.toContainText('left');
+
+  await page.setViewportSize({ width: 1280, height: 844 });
+  await expect(page.getByRole('link', { name: /^Cart,/ })).toBeVisible();
+});

@@ -16,11 +16,13 @@ import { EmptyState } from '@/components/EmptyState.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { deriveStockStatus, formatDate, formatMoney } from '@/lib/format.ts';
 import { FADE } from '@/lib/motion.ts';
+import { useCoreOptions } from '@/templates/hooks.ts';
 import classes from '@/features/catalog/ProductDetailPage.module.css';
 
 /** The single product page — the storefront layout's detail view. */
 export function ProductDetailPage() {
   const { brand, currency } = useSettings();
+  const { showSku } = useCoreOptions();
   const { id } = useParams();
   const productId = Number(id);
   const query = useProduct(productId);
@@ -90,7 +92,7 @@ export function ProductDetailPage() {
         <div className={classes.detail}>
           <header className={classes.head}>
             <h1 className={classes.name} data-sf-part="page-title">{product.displayName}</h1>
-            <p className={classes.sku}>{product.sku}</p>
+            {showSku ? <p className={classes.sku}>{product.sku}</p> : null}
           </header>
 
           <div className={classes.priceRow}>
