@@ -12,7 +12,11 @@ import {
   blockMenu, buildEditorConfig, EDITOR_FIELDS, editorHints, lockedPresent, prepareDoc, prepareProps,
 } from '@/builder/editor/config.ts';
 import { defaultDoc } from '@/builder/defaults/index.ts';
-import type { ComponentData, PuckDoc } from '@/builder/types.ts';
+import type { ComponentData, DocKey, PuckDoc } from '@/builder/types.ts';
+
+const NONE: ReadonlySet<string> = new Set();
+/** The exactly-one blocks the built-in default doc holds. */
+const dflt = (key: DocKey) => lockedPresent(defaultDoc(key, 'storefront')!, key);
 
 const offeredIn = (config: ReturnType<typeof buildEditorConfig>) =>
   Object.values(config.categories ?? {}).flatMap((c) => (c.visible === false ? [] : (c.components ?? []) as string[]));
@@ -22,7 +26,7 @@ const block = (type: string, props: Record<string, unknown> = {}, id = `${type}-
 
 describe('editor config', () => {
   it('registers every block valid for the layout, with its doc-scoped fields and defaults', () => {
-    const config = buildEditorConfig('catalog', 'storefront');
+    const config = buildEditorConfig('catalog', 'storefront', NONE);
     for (const def of Object.values(BLOCKS)) {
       if (def.layouts !== 'all' && !def.layouts.includes('storefront')) continue;
       expect(config.components[def.name], def.name).toMatchObject({
@@ -34,17 +38,17 @@ describe('editor config', () => {
   });
 
   it('scopes slot allow lists to the open doc', () => {
-    const catalog = buildEditorConfig('catalog', 'storefront').components.Section!.fields as Record<string, Field>;
+    const catalog = buildEditorConfig('catalog', 'storefront', NONE).components.Section!.fields as Record<string, Field>;
     const slot = Object.values(catalog).find((f) => f.type === 'slot') as { allow?: string[] };
     expect(slot.allow).toEqual(insertableBlocks('catalog', 'storefront'));
     expect(slot.allow).toContain('ProductGrid');
-    const about = buildEditorConfig('page:about', 'storefront').components.Section!.fields as Record<string, Field>;
+    const about = buildEditorConfig('page:about', 'storefront', NONE).components.Section!.fields as Record<string, Field>;
     expect((Object.values(about).find((f) => f.type === 'slot') as { allow?: string[] }).allow).not.toContain('ProductGrid');
   });
 
   it("hides the Header variant the layout can't render", () => {
     const variants = (layout: 'storefront' | 'webapp') => {
-      const f = (buildEditorConfig('shell', layout).components.Header!.fields as Record<string, Field>).variant as { options: Array<{ value: unknown }> };
+      const f = (buildEditorConfig('shell', layout, NONE).components.Header!.fields as Record<string, Field>).variant as { options: Array<{ value: unknown }> };
       return f.options.map((o) => o.value);
     };
     expect(variants('webapp')).not.toContain('storefront');
@@ -53,14 +57,14 @@ describe('editor config', () => {
   });
 
   it('locks exactly-one blocks on their own route', () => {
-    expect(buildEditorConfig('checkout', 'storefront').components.CheckoutFlow!.permissions).toEqual({ delete: false, duplicate: false });
-    expect(buildEditorConfig('cart', 'storefront').components.CheckoutFlow!.permissions).toBeUndefined();
-    expect(buildEditorConfig('shell', 'storefront').components.PageOutlet!.permissions).toEqual({ delete: false, duplicate: false });
-    expect(buildEditorConfig('catalog', 'storefront').components.ProductGrid!.permissions).toBeUndefined();
+    expect(buildEditorConfig('checkout', 'storefront', NONE).components.CheckoutFlow!.permissions).toEqual({ delete: false, duplicate: false });
+    expect(buildEditorConfig('cart', 'storefront', NONE).components.CheckoutFlow!.permissions).toBeUndefined();
+    expect(buildEditorConfig('shell', 'storefront', NONE).components.PageOutlet!.permissions).toEqual({ delete: false, duplicate: false });
+    expect(buildEditorConfig('catalog', 'storefront', NONE).components.ProductGrid!.permissions).toBeUndefined();
   });
 
   it('offers only insertable blocks in the drawer and hides the rest', () => {
-    const config = buildEditorConfig('page:about', 'storefront');
+    const config = buildEditorConfig('page:about', 'storefront', NONE);
     const offered = offeredIn(config);
     expect(offered).toContain('Heading');
     expect(offered).not.toContain('CheckoutFlow');
@@ -70,10 +74,12 @@ describe('editor config', () => {
   });
 
   it("doesn't offer an exactly-one block that is already on its page", () => {
-    expect(offeredIn(buildEditorConfig('checkout', 'storefront'))).not.toContain('CheckoutFlow');
-    expect(offeredIn(buildEditorConfig('shell', 'storefront'))).not.toContain('PageOutlet');
+    expect(offeredIn(buildEditorConfig('checkout', 'storefront', dflt('checkout')))).not.toContain('CheckoutFlow');
+    expect(offeredIn(buildEditorConfig('shell', 'storefront', dflt('shell')))).not.toContain('PageOutlet');
+    expect(blockMenu('cart', 'storefront', dflt('cart')).flatMap((g) => g.blocks.map((b) => b.name))).not.toContain('CartSummary');
     // Missing from a stored doc: offered again, so the page can be repaired.
     expect(offeredIn(buildEditorConfig('checkout', 'storefront', new Set()))).toContain('CheckoutFlow');
+    expect(blockMenu('cart', 'storefront', new Set(['CartContents'])).flatMap((g) => g.blocks.map((b) => b.name))).toContain('CartSummary');
     expect(blockMenu('checkout', 'storefront', new Set()).flatMap((g) => g.blocks.map((b) => b.name))).toContain('CheckoutFlow');
   });
 
@@ -84,19 +90,19 @@ describe('editor config', () => {
   });
 
   it('menus group by category in a stable order', () => {
-    const menu = blockMenu('catalog', 'storefront');
+    const menu = blockMenu('catalog', 'storefront', NONE);
     expect(menu[0]!.category).toBe('content');
     expect(menu.flatMap((g) => g.blocks.map((b) => b.name))).toContain('ProductGrid');
     expect(menu.every((g) => g.blocks.length > 0)).toBe(true);
   });
 
   it('gives page docs title/description/chrome fields and the shell none', () => {
-    expect(Object.keys(buildEditorConfig('cart', 'storefront').root!.fields ?? {})).toEqual(['title', 'description', 'chrome']);
-    expect(buildEditorConfig('shell', 'storefront').root!.fields).toEqual({});
+    expect(Object.keys(buildEditorConfig('cart', 'storefront', NONE).root!.fields ?? {})).toEqual(['title', 'description', 'chrome']);
+    expect(buildEditorConfig('shell', 'storefront', NONE).root!.fields).toEqual({});
   });
 
   it('keeps unpicked FeaturedProducts rows in the editor but never in what is emitted or previewed', () => {
-    const config = buildEditorConfig('page:about', 'storefront');
+    const config = buildEditorConfig('page:about', 'storefront', NONE);
     // No resolveData: Puck writes resolved props back into its state, which would delete the row the admin is about to pick.
     expect((config.components.FeaturedProducts as ComponentConfig).resolveData).toBeUndefined();
     const props = { title: 'Picks', source: 'picked', items: [{ productId: 4 }, {}, { productId: 0 }], categoryId: null, limit: 4 };
@@ -178,6 +184,26 @@ describe('EditorBlock', () => {
       warn.mockRestore();
       err.mockRestore();
     }
+  });
+
+  it("shows Puck's richtext nodes instead of falling back to the defaults", () => {
+    const body = createElement('p', null, 'Inline body');
+    const { container } = render(createElement(EditorBlock, {
+      def: BLOCKS.RichText!, props: { id: 'rt', bodyHtml: body, width: 'narrow', puck: {}, editMode: true }, docKey: 'page:about', layout: 'storefront',
+    }));
+    expect(screen.getByText('Inline body')).toBeInTheDocument();
+    expect(container).not.toHaveTextContent('Tell shoppers something worth knowing.');
+    cleanup();
+
+    const answer = createElement('p', null, 'Inline answer');
+    render(createElement(EditorBlock, {
+      def: BLOCKS.FAQ!,
+      props: { ...BLOCKS.FAQ!.defaultProps, id: 'faq', items: [{ question: 'Do you ship abroad?', answerHtml: answer }], puck: {}, editMode: true },
+      docKey: 'page:about', layout: 'storefront',
+    }));
+    expect(screen.getByText('Do you ship abroad?')).toBeInTheDocument();
+    expect(screen.getByText('Inline answer')).toBeInTheDocument();
+    expect(screen.queryByText('How fast do you ship?')).toBeNull();
   });
 
   it('draws the page outlet as a placeholder', () => {

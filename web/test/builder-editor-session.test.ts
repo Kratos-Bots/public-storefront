@@ -127,11 +127,17 @@ describe('builder session', () => {
     const fp = { type: 'FeaturedProducts', props: { id: 'fp', title: 'Picks', source: 'picked', items: [{ productId: 3 }, {}], categoryId: null, limit: 4 } };
     useEditorStore.getState().updateDoc('page:picks', page('Picks', [fp]), epoch);
     vi.advanceTimersByTime(CHANGE_DEBOUNCE_MS);
+    const posted = changes().length;
     const last = changes().at(-1)![0];
     expect(last.pageSet.pages['page:picks'].content[0].props.items).toEqual([{ productId: 3 }]);
     expect(last.issues).toEqual([]);
     // The editor keeps the row so it can still be picked.
     expect((useEditorStore.getState().docs['page:picks']!.content[0]!.props.items as unknown[])).toHaveLength(2);
+    // Another unpicked row changes nothing the admin sees: no change goes out.
+    const more = { ...fp, props: { ...fp.props, items: [...fp.props.items, {}] } };
+    useEditorStore.getState().updateDoc('page:picks', page('Picks', [more]), epoch);
+    vi.advanceTimersByTime(CHANGE_DEBOUNCE_MS * 2);
+    expect(changes()).toHaveLength(posted);
     stop();
   });
 

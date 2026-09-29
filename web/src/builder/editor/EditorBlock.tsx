@@ -2,7 +2,7 @@ import { Component, Suspense, type ReactNode } from 'react';
 import { parseBlockProps, type BlockDef, type BlockRenderContext } from '@/builder/define.ts';
 import type { DocKey, LayoutKind } from '@/builder/types.ts';
 import { stableStringify } from '@/builder/editor/page-set.ts';
-import { prepareProps } from '@/builder/editor/config.ts';
+import { prepareProps } from '@/builder/editor/prepare.ts';
 import styles from '@/builder/editor/EditorBlock.module.css';
 
 interface BoundaryProps {
@@ -36,6 +36,41 @@ class BlockBoundary extends Component<BoundaryProps, { failed: boolean }> {
   }
 }
 
+/**
+ * While editing, Puck hands `*Html` props to blocks as React nodes (its inline richtext editor),
+ * not strings. The schema only accepts strings, so each node is swapped for a marker before the
+ * parse and put back after it — wherever the marker ended up (array items may have been dropped).
+ * Markers are plain strings, so the parsed settings stay serialisable for the boundary's reset key.
+ */
+const RICHTEXT_MARK = '\u0000sfb-richtext:';
+
+const isPlain = (v: unknown): v is Record<string, unknown> =>
+  !!v && typeof v === 'object' && (Object.getPrototypeOf(v) === Object.prototype || Object.getPrototypeOf(v) === null);
+
+function stashRichtext(value: unknown, nodes: unknown[]): unknown {
+  if (Array.isArray(value)) return value.map((v) => stashRichtext(v, nodes));
+  if (!isPlain(value)) return value;
+  const out: Record<string, unknown> = {};
+  for (const [key, v] of Object.entries(value)) {
+    if (key.endsWith('Html') && v !== undefined && v !== null && typeof v !== 'string') {
+      nodes.push(v);
+      out[key] = `${RICHTEXT_MARK}${nodes.length - 1}`;
+    } else {
+      out[key] = stashRichtext(v, nodes);
+    }
+  }
+  return out;
+}
+
+function restoreRichtext(value: unknown, nodes: readonly unknown[]): unknown {
+  if (typeof value === 'string') return value.startsWith(RICHTEXT_MARK) ? nodes[Number(value.slice(RICHTEXT_MARK.length))] : value;
+  if (Array.isArray(value)) return value.map((v) => restoreRichtext(v, nodes));
+  if (!isPlain(value)) return value;
+  const out: Record<string, unknown> = {};
+  for (const [key, v] of Object.entries(value)) out[key] = restoreRichtext(v, nodes);
+  return out;
+}
+
 /** Rendered as its own component so the block's hooks and throws stay inside the boundary. */
 function BlockBody({ def, props, ctx }: { def: BlockDef<any>; props: Record<string, unknown>; ctx: BlockRenderContext }) {
   return <>{def.render({ ...props, puck: ctx } as never)}</>;
@@ -65,10 +100,12 @@ export function EditorBlock({ def, props, docKey, layout }: { def: BlockDef<any>
     slots[slot] = rest[slot];
     rest[slot] = [];
   }
-  const settings = parseBlockProps(def, prepareProps(def.name, rest));
+  const nodes: unknown[] = [];
+  const parsed = parseBlockProps(def, stashRichtext(prepareProps(def.name, rest), nodes) as Record<string, unknown>);
+  const settings = nodes.length > 0 ? (restoreRichtext(parsed, nodes) as Record<string, unknown>) : parsed;
   const ctx: BlockRenderContext = { editing: true, docKey, layout };
   return (
-    <BlockBoundary name={def.label} resetKey={stableStringify(settings)}>
+    <BlockBoundary name={def.label} resetKey={stableStringify(parsed)}>
       <Suspense fallback={<div className={styles.loading} aria-busy="true" aria-label={`Loading ${def.label}`} />}>
         <BlockBody def={def} props={{ ...settings, ...slots, id }} ctx={ctx} />
       </Suspense>

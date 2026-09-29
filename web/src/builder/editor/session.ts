@@ -6,16 +6,24 @@ import { createBridge, setActiveBridge, type Bridge } from '@/builder/editor/bri
 import { createFixtureInterceptor } from '@/builder/editor/fixture-api.ts';
 import { applyPreviewAs, enterFixtureMode } from '@/builder/editor/fixture-mode.ts';
 import { configureCatalogSource } from '@/builder/editor/custom-fields/pickers.ts';
-import { collectIssues, toPageSet, type DocMap } from '@/builder/editor/page-set.ts';
+import { collectIssues, stableStringify, toPageSet, type DocMap } from '@/builder/editor/page-set.ts';
 import { parseInbound } from '@/builder/editor/protocol.ts';
-import { prepareDoc } from '@/builder/editor/config.ts';
+import { prepareDoc } from '@/builder/editor/prepare.ts';
 import { useEditorStore } from '@/builder/editor/store.ts';
 
-/** What the admin receives: the sparse set with editor-only leftovers (unpicked rows) removed, and its issues. */
-function postDocs(bridge: Bridge, docs: DocMap, layout: LayoutKind): void {
+/**
+ * What the admin receives: the sparse set with editor-only leftovers (unpicked rows) removed, and
+ * its issues. Returns the change's signature; nothing is posted when it equals `last` (an edit that
+ * only touched editor-only state, such as adding a row not picked yet).
+ */
+function postDocs(bridge: Bridge, docs: DocMap, layout: LayoutKind, last: string | null): string {
   const emitted: DocMap = {};
   for (const [key, doc] of Object.entries(docs)) if (doc) emitted[key as DocKey] = prepareDoc(doc);
-  bridge.postChange(toPageSet(emitted, layout), collectIssues(emitted, layout));
+  const pageSet = toPageSet(emitted, layout);
+  const issues = collectIssues(emitted, layout);
+  const signature = stableStringify({ pageSet, issues });
+  if (signature !== last) bridge.postChange(pageSet, issues);
+  return signature;
 }
 
 /**
@@ -41,6 +49,8 @@ export function startBuilderSession(win: Window, client: QueryClient): () => voi
 
   // The store's load() replaces `docs`; the change it triggers is the baseline, posted explicitly below.
   let loading = false;
+  // Signature of the newest change handed to the bridge under the current load.
+  let lastPosted: string | null = null;
   const bridge = createBridge(win, {
     onLoad(msg) {
       builderOverrides.setState({ theme: msg.theme, layout: msg.layout });
@@ -52,7 +62,8 @@ export function startBuilderSession(win: Window, client: QueryClient): () => voi
       }
       if (!msg.readOnly) {
         const s = useEditorStore.getState();
-        postDocs(bridge, s.docs, s.layout);
+        // The baseline always goes out, whatever the previous load posted.
+        lastPosted = postDocs(bridge, s.docs, s.layout, null);
         bridge.flushChange();
       }
       // The admin (re)builds its frame on load; tell it which width we are showing.
@@ -73,7 +84,7 @@ export function startBuilderSession(win: Window, client: QueryClient): () => voi
     // Media queries only follow a real frame width, so the admin resizes the iframe itself.
     if (s.viewport !== prev.viewport) bridge.postViewport(s.viewport);
     if (loading || s.docs === prev.docs || s.readOnly || s.status !== 'ready') return;
-    postDocs(bridge, s.docs, s.layout);
+    lastPosted = postDocs(bridge, s.docs, s.layout, lastPosted);
   });
 
   // The bridge drops anything it can't parse without a word; in development, say so.
