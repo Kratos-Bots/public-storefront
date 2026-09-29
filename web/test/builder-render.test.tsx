@@ -3,10 +3,13 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { z } from 'zod';
 import type { ComponentData, PuckDoc } from '@/builder/types.ts';
 
+const flaky = vi.hoisted(() => ({ broken: true }));
+
 vi.mock('@/builder/registry.ts', async () => {
   const { defineBlock, slot } = await import('@/builder/define.ts');
   const { useBuilderMode } = await import('@/builder/mode.ts');
   function Thrower(): never { throw new Error('boom'); }
+  function Flaky() { if (flaky.broken) throw new Error('flaky'); return <p>recovered</p>; }
   function Mode() { return <i>{useBuilderMode().editing ? 'editing' : 'live'}</i>; }
   const base = { category: 'content' as const, layouts: 'all' as const, routeBound: false };
   return {
@@ -16,6 +19,7 @@ vi.mock('@/builder/registry.ts', async () => {
       Box: defineBlock<{ id: string; items: ComponentData[] }>({ ...base, name: 'Box', label: 'Box', slots: ['items'], schema: z.object({ items: slot() }), defaultProps: { items: [] }, render: ({ items }) => items({ className: 'box', as: 'section' }) }),
       Boom: defineBlock<{ id: string }>({ ...base, name: 'Boom', label: 'Boom', slots: [], schema: z.object({}), defaultProps: {}, render: () => <Thrower /> }),
       BoundBoom: defineBlock<{ id: string }>({ ...base, routeBound: true, name: 'BoundBoom', label: 'Bound', slots: [], schema: z.object({}), defaultProps: {}, render: () => <Thrower /> }),
+      Flaky: defineBlock<{ id: string }>({ ...base, name: 'Flaky', label: 'Flaky', slots: [], schema: z.object({}), defaultProps: {}, render: () => <Flaky /> }),
       Mode: defineBlock<{ id: string }>({ ...base, name: 'Mode', label: 'Mode', slots: [], schema: z.object({}), defaultProps: {}, render: () => <Mode /> }),
     },
   };
@@ -53,6 +57,21 @@ describe('RenderDoc', () => {
     );
     expect(screen.getByText('default page')).toBeInTheDocument();
     expect(screen.queryByText('owner copy')).toBeNull();
+  });
+  it('never resolves an inherited Object key as a block type', () => {
+    const { container } = render(<RenderDoc doc={d([c('constructor'), c('toString'), c('Text', { text: 'ok' }, 't')])} docKey="page:x" layout="storefront" />);
+    expect(container.innerHTML).toBe('<p>ok</p>');
+  });
+  it('a block that failed on one route gets a fresh attempt on the next', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    flaky.broken = true;
+    const { rerender } = render(<RenderDoc doc={d([c('Flaky')])} docKey="page:a" layout="storefront" />);
+    expect(screen.queryByText('recovered')).toBeNull();
+    flaky.broken = false;
+    rerender(<RenderDoc doc={d([c('Flaky')])} docKey="page:a" layout="storefront" />);
+    expect(screen.queryByText('recovered')).toBeNull();
+    rerender(<RenderDoc doc={d([c('Flaky')])} docKey="page:b" layout="storefront" />);
+    expect(screen.getByText('recovered')).toBeInTheDocument();
   });
   it('passes the builder mode through', () => {
     render(<BuilderModeProvider value={{ editing: true, previewAs: null }}><RenderDoc doc={d([c('Mode')])} docKey="page:x" layout="menu" /></BuilderModeProvider>);

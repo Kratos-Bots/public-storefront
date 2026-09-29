@@ -5,7 +5,7 @@ import { buildCategoryTree } from '@/features/catalog/category-tree.ts';
 import { categoryCounts } from '@/features/catalog/filter.ts';
 import { BASE_TOKENS, type HeaderIconMode, type OptionValues, type Scheme, type TemplateTokens } from '@/templates/define.ts';
 import { useTemplateContext } from '@/templates/runtime.tsx';
-import { CoreOptionsScopeContext } from '@/templates/core-scope.ts';
+import { CoreOptionsScopeContext, definedScope } from '@/templates/core-scope.ts';
 import type { Brand, Features, SupportLink } from '@/types/settings.ts';
 
 export interface TemplateInfo { id: string; presetId: string; scheme: Scheme; options: OptionValues; tokens: TemplateTokens }
@@ -51,7 +51,7 @@ export function useCoreOptions(): CoreOptions {
     showCutoffBar: o.showCutoffBar !== false,
     cutoffMessage: typeof o.cutoffMessage === 'string' ? o.cutoffMessage.trim() : '',
     showCutoffCountdown: o.showCutoffCountdown !== false,
-    ...scope,
+    ...definedScope(scope),
   };
 }
 

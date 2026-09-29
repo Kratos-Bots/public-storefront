@@ -24,4 +24,10 @@ describe('SmartLink', () => {
     expect(screen.getByRole('link', { name: 'B' })).toHaveAttribute('rel', 'noopener noreferrer');
     expect(screen.getByRole('link', { name: 'C' })).not.toHaveAttribute('rel');
   });
+  it.each(['javascript:alert(1)', 'data:text/html,x', '//evil.example', '/\\evil.example', '/\tx', ''])('renders %j inert', (href) => {
+    const { container } = render(<MemoryRouter><SmartLink href={href} className="k">Bad</SmartLink></MemoryRouter>);
+    expect(screen.queryByRole('link')).toBeNull();
+    expect(container.querySelector('a')).toBeNull();
+    expect(container.innerHTML).toBe('<span class="k">Bad</span>');
+  });
 });

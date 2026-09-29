@@ -1,19 +1,23 @@
 import { Component, useMemo, type ReactNode } from 'react';
-import { BLOCKS } from '@/builder/registry.ts';
+import { blockDef } from '@/builder/rules.ts';
 import { useBuilderMode } from '@/builder/mode.ts';
 import type { BlockRenderContext, SlotRender } from '@/builder/define.ts';
 import type { ComponentData, DocKey, LayoutKind, PuckDoc } from '@/builder/types.ts';
 
 const logged = new Set<string>();
 
-interface BlockBoundaryProps { name: string; blockId: string; rethrow: boolean; children: ReactNode }
-interface BlockBoundaryState { failed: boolean; error: unknown }
+interface BlockBoundaryProps { name: string; blockId: string; rethrow: boolean; resetKey: string; children: ReactNode }
+interface BlockBoundaryState { failed: boolean; error: unknown; forKey: string }
 
 /** Spec §5.6: a broken block renders nothing — unless it is a route-bound flow, which takes the page to its default. */
 export class BlockBoundary extends Component<BlockBoundaryProps, BlockBoundaryState> {
-  state: BlockBoundaryState = { failed: false, error: null };
-  static getDerivedStateFromError(error: unknown): BlockBoundaryState {
+  state: BlockBoundaryState = { failed: false, error: null, forKey: this.props.resetKey };
+  static getDerivedStateFromError(error: unknown): Partial<BlockBoundaryState> {
     return { failed: true, error };
+  }
+  /** A block that failed on one route gets a fresh attempt on the next (block ids are shared across routes). */
+  static getDerivedStateFromProps(props: BlockBoundaryProps, state: BlockBoundaryState): Partial<BlockBoundaryState> | null {
+    return props.resetKey !== state.forKey ? { failed: false, error: null, forKey: props.resetKey } : null;
   }
   componentDidCatch(error: unknown) {
     const key = `${this.props.name} (${this.props.blockId})`;
@@ -65,17 +69,18 @@ function slotRender(value: unknown, ctx: BlockRenderContext): SlotRender {
 }
 
 function BlockBody({ item, ctx }: { item: ComponentData; ctx: BlockRenderContext }) {
-  const def = BLOCKS[item.type]!;
+  const def = blockDef(item.type)!;
   const props: Record<string, unknown> = { ...item.props, puck: ctx };
   for (const s of def.slots) props[s] = slotRender(item.props[s], ctx);
   return <>{def.render(props as never)}</>;
 }
 
 function BlockNode({ item, ctx }: { item: ComponentData; ctx: BlockRenderContext }) {
-  const def = BLOCKS[item.type];
+  // Own-key lookup: an unguarded `type: "constructor"` must not resolve to Object.
+  const def = blockDef(item.type);
   if (!def) return null;
   return (
-    <BlockBoundary name={item.type} blockId={item.props.id} rethrow={def.routeBound}>
+    <BlockBoundary name={item.type} blockId={item.props.id} rethrow={def.routeBound} resetKey={ctx.docKey}>
       <BlockBody item={item} ctx={ctx} />
     </BlockBoundary>
   );

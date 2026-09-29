@@ -7,6 +7,7 @@ import { fetchPageSet } from '@/api/pages.ts';
 import { validateDoc } from '@/builder/guard.ts';
 import { defaultDoc } from '@/builder/defaults/index.ts';
 import { DocBoundary, RenderDoc } from '@/builder/render.tsx';
+import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import type { DocKey, LayoutKind, PageRootProps, PageSet, PuckDoc, RouteKey } from '@/builder/types.ts';
 
 export const pagesKey = (layout: LayoutKind) => ['pages', layout] as const;
@@ -83,9 +84,12 @@ function usePageMeta(root: PageRootProps | null): void {
 /** Every route element (spec §5.1): the page's document — published, or v0.6.0's default. */
 export function PuckPage({ routeKey }: { routeKey: RouteKey }) {
   const layout = useEffectiveLayout();
-  const { pageSet } = usePageSet(layout);
-  const resolved = resolveDoc(pageSet, routeKey, layout);
+  const { pageSet, isLoading } = usePageSet(layout);
+  // Wait for the published set (read once per page load) rather than paint the default and
+  // swap it a moment later. Under an override isLoading is always false.
+  const resolved = isLoading ? null : resolveDoc(pageSet, routeKey, layout);
   usePageMeta(resolved ? resolved.doc.root.props : null);
+  if (isLoading) return <PageSkeleton inline />;
   if (!resolved) return <Navigate to="/" replace />;
   const page = <RenderDoc doc={resolved.doc} docKey={routeKey} layout={layout} />;
   const fallback = resolved.isDefault ? null : defaultDoc(routeKey, layout);

@@ -85,6 +85,18 @@ describe('usePageSet', () => {
     expect(await screen.findByText('published')).toBeInTheDocument();
     expect(fetched.fn).toHaveBeenCalledWith('storefront');
   });
+  it('shows the skeleton, not the default page, while the published set is loading', () => {
+    fetched.fn.mockReturnValue(new Promise(() => {}));
+    mount('checkout', undefined, <Probe />);
+    expect(screen.getByText('loading')).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument();
+    expect(screen.queryByText('checkout flow')).toBeNull();
+  });
+  it('never shows the skeleton under an override', () => {
+    mount('checkout', null);
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.getByText('checkout flow')).toBeInTheDocument();
+  });
   it('treats a failed fetch as no published set', async () => {
     fetched.fn.mockResolvedValue(null);
     mount('checkout', undefined, <Probe />);
