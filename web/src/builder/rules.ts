@@ -66,6 +66,12 @@ export function blockDef(type: string): BlockDef<any> | undefined {
   return own(BLOCKS, type);
 }
 
+/**
+ * Blocks allowed at most once in any document. Two Headers would each publish their pinned-notice
+ * stack's height as `--sf-pin-h` on the root and fight over it.
+ */
+const AT_MOST_ONE: readonly string[] = ['Header'];
+
 const AT_LEAST_ONE: Partial<Record<FixedRouteKey, readonly string[]>> = {
   catalog: ['ProductGrid', 'ProductList', 'WholesaleTable'],
 };
@@ -123,6 +129,11 @@ export function checkRules(doc: PuckDoc, docKey: DocKey, layout: LayoutKind): Is
   for (const type of own(EXACTLY_ONE, docKey) ?? []) {
     if ((counts.get(type) ?? 0) !== 1) {
       issues.push({ docKey, rule: `exactly-one:${type}`, message: `This page needs exactly one ${label(type)} block.` });
+    }
+  }
+  for (const type of AT_MOST_ONE) {
+    if ((counts.get(type) ?? 0) > 1) {
+      issues.push({ docKey, rule: `at-most-one:${type}`, message: `This page can have only one ${label(type)} block.` });
     }
   }
   const anyOf = own(AT_LEAST_ONE, docKey);

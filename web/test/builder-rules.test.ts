@@ -75,6 +75,11 @@ describe('checkRules', () => {
       expect(countBlocks(d([c(t, { content: [c('Heading')] })])).get('Heading')).toBeUndefined();
     }
   });
+  it('shell: at most one Header (two pinned-notice stacks would fight over --sf-pin-h)', () => {
+    expect(checkRules(d([c('PageOutlet')]), 'shell', 'storefront')).toEqual([]);
+    expect(checkRules(d([c('Header'), c('Header'), c('PageOutlet')]), 'shell', 'storefront').map((i) => i.rule)).toEqual(['at-most-one:Header']);
+    expect(checkRules(d([c('Header'), c('Section', { content: [c('Header')] }), c('PageOutlet')]), 'shell', 'menu').map((i) => i.rule)).toEqual(['at-most-one:Header']);
+  });
   it('flags a block outside its layouts', () => {
     expect(checkRules(d([c('MenuOnly')]), 'page:about', 'storefront').map((i) => i.rule)).toEqual(['layout:MenuOnly']);
   });

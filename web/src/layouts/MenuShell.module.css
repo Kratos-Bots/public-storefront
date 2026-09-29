@@ -29,6 +29,14 @@
   position: static;
 }
 
+/* …and so do its pinned notices: page elements that stick at `--sf-bar-h + --sf-pin-h`
+   come to rest at the very top instead of under a header that is no longer there.
+   (Two-class specificity beats the desktop `.shell` bar height below.) */
+.shell:has(> .unstuck) {
+  --sf-bar-h: 0px;
+  --sf-pin-h: 0px;
+}
+
 .barInner {
   display: flex;
   align-items: center;

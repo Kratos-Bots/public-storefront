@@ -17,6 +17,12 @@
 .main { composes: main from './MenuShell.module.css'; }
 .unstuck { composes: unstuck from './MenuShell.module.css'; }
 
+/* Stated with this module's own names rather than trusting the composed MenuShell rule. */
+.shell:has(> .unstuck) {
+  --sf-bar-h: 0px;
+  --sf-pin-h: 0px;
+}
+
 /* Telegram fullscreen puts its own controls over the top of the page; both
    insets are 0 in a normal Mini App and in a browser. */
 .safeTop {

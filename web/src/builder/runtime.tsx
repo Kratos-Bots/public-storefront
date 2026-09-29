@@ -1,5 +1,5 @@
-import { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react';
-import { Navigate } from 'react-router';
+import { createContext, useContext, useEffect, useMemo, type ComponentType, type ReactNode } from 'react';
+import { Navigate, useMatches } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useSettings } from '@/app/settings.ts';
 import { useEffectiveLayout } from '@/app/layout.ts';
@@ -7,7 +7,14 @@ import { fetchPageSet } from '@/api/pages.ts';
 import { validateDoc } from '@/builder/guard.ts';
 import { defaultDoc } from '@/builder/defaults/index.ts';
 import { DocBoundary, RenderDoc } from '@/builder/render.tsx';
+import { countBlocks } from '@/builder/rules.ts';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
+import { Chromeless } from '@/layouts/Chromeless.tsx';
+import { StorefrontFrame } from '@/layouts/StorefrontShell.tsx';
+import { MenuFrame } from '@/layouts/MenuShell.tsx';
+import { WebAppFrame } from '@/layouts/WebAppShell.tsx';
+import { ShellStateContext, useShellStateValue } from '@/layouts/shell-context.ts';
+import { customPageKey, isFixedRouteKey } from '@/builder/types.ts';
 import type { DocKey, LayoutKind, PageRootProps, PageSet, PuckDoc, RouteKey } from '@/builder/types.ts';
 
 export const pagesKey = (layout: LayoutKind) => ['pages', layout] as const;
@@ -98,5 +105,58 @@ export function PuckPage({ routeKey }: { routeKey: RouteKey }) {
     <DocBoundary docKey={routeKey} fallback={<RenderDoc doc={fallback} docKey={routeKey} layout={layout} />}>
       {page}
     </DocBoundary>
+  );
+}
+
+/** The route key of the deepest matched route carrying `handle.routeKey` (router.tsx sets them). */
+export function useCurrentRouteKey(): RouteKey | null {
+  const matches = useMatches();
+  for (let i = matches.length - 1; i >= 0; i -= 1) {
+    const match = matches[i]!;
+    const key = (match.handle as { routeKey?: unknown } | undefined)?.routeKey;
+    if (key === 'page') return customPageKey(match.params.slug);
+    if (typeof key === 'string' && isFixedRouteKey(key)) return key;
+  }
+  return null;
+}
+
+type Frame = ComponentType<{ children: ReactNode; cartBar?: boolean }>;
+const FRAMES: Record<LayoutKind, Frame> = { storefront: StorefrontFrame, menu: MenuFrame, webapp: WebAppFrame };
+
+/**
+ * Replaces ShellSwitch (spec §5.1): the layout's frame and its system mounts (§5.4 — cart
+ * drawer, login modal, Telegram chrome, Overlay slot) around the shell document. A page whose
+ * root says `chrome: 'none'` gets the chromeless frame instead (v0.6.0's shared-order-link page).
+ * One ShellStateContext wraps header and page alike, so the header search reaches the outlet.
+ */
+export function PuckShell() {
+  const layout = useEffectiveLayout();
+  const { pageSet, isLoading } = usePageSet(layout);
+  const routeKey = useCurrentRouteKey();
+  const shellState = useShellStateValue();
+
+  // As PuckPage: wait for the published set rather than paint the default shell and swap it.
+  if (isLoading) return <PageSkeleton />;
+
+  const page = routeKey ? resolveDoc(pageSet, routeKey, layout) : null;
+  if (page?.doc.root.props.chrome === 'none') return <Chromeless />;
+
+  const shell = resolveDoc(pageSet, 'shell', layout);
+  if (!shell) throw new Error(`[builder] no default shell document for the ${layout} layout`);
+  const Frame = FRAMES[layout];
+  const body = <RenderDoc doc={shell.doc} docKey="shell" layout={layout} />;
+  const fallback = shell.isDefault ? null : defaultDoc('shell', layout);
+
+  return (
+    <ShellStateContext.Provider value={shellState}>
+      {/* The phone cart bar is a block owners can place; if the shell has none, the frame mounts it. */}
+      <Frame cartBar={!countBlocks(shell.doc).has('MobileCartBar')}>
+        {fallback ? (
+          <DocBoundary docKey="shell" fallback={<RenderDoc doc={fallback} docKey="shell" layout={layout} />}>{body}</DocBoundary>
+        ) : (
+          body
+        )}
+      </Frame>
+    </ShellStateContext.Provider>
   );
 }
