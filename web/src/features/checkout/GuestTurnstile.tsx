@@ -1,11 +1,14 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
+import { isBuilderMode } from '@/app/builder-gate.ts';
 
 const MINT_TIMEOUT_MS = 30_000;
 /** How long an unclaimed token is worth sending. Cloudflare expires tokens after
  *  five minutes; well inside that, a fresh challenge is cheaper than a `422`. */
 const STASH_TTL_MS = 120_000;
 const FAILED = "We couldn't verify your browser — please try again";
+/** What the page builder's frame sends instead: its quotes never leave the frame. */
+const PREVIEW_TOKEN = 'sf-builder-preview';
 
 export interface GuestTurnstileHandle {
   /**
@@ -42,7 +45,20 @@ interface Pending {
  *   handed to the next caller instead — once, and only while it is fresh.
  */
 export const GuestTurnstile = forwardRef<GuestTurnstileHandle, { siteKey: string }>(
-  function GuestTurnstile({ siteKey }, ref) {
+  function GuestTurnstile(props, ref) {
+    // The page builder's frame loads no third-party script; its fixture api answers the quote.
+    if (isBuilderMode()) return <PreviewTurnstile ref={ref} />;
+    return <LiveTurnstile ref={ref} {...props} />;
+  },
+);
+
+const PreviewTurnstile = forwardRef<GuestTurnstileHandle>(function PreviewTurnstile(_, ref) {
+  useImperativeHandle(ref, () => ({ mint: () => Promise.resolve(PREVIEW_TOKEN) }), []);
+  return null;
+});
+
+const LiveTurnstile = forwardRef<GuestTurnstileHandle, { siteKey: string }>(
+  function LiveTurnstile({ siteKey }, ref) {
     const widget = useRef<TurnstileInstance | undefined>(undefined);
     const pending = useRef<Pending | null>(null);
     const ready = useRef(false);

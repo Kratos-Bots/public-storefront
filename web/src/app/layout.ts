@@ -1,5 +1,5 @@
 import { useSettings } from '@/app/settings.ts';
-import { useBuilderLayout } from '@/app/builder-gate.ts';
+import { isBuilderMode, useBuilderLayout } from '@/app/builder-gate.ts';
 import { isTelegramWebApp } from '@/lib/telegram-webapp.ts';
 import type { LayoutKind } from '@/types/settings.ts';
 
@@ -17,6 +17,8 @@ export function effectiveLayout(chosen: LayoutKind | undefined, inTelegram: bool
 
 export function useEffectiveLayout(): LayoutKind {
   const { features } = useSettings();
-  const override = useBuilderLayout();
+  const builderLayout = useBuilderLayout();
+  // Only the builder frame may take the builder's layout — whatever the overrides store holds.
+  const override = isBuilderMode() ? builderLayout : null;
   return effectiveLayout(features?.layout, isTelegramWebApp(), override);
 }

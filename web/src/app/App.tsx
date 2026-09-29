@@ -115,7 +115,7 @@ export function usePrefetchPageSet(settings: StorefrontSettings): void {
   const layout = effectiveLayout(settings.features?.layout, isTelegramWebApp());
   // Nobody reads the set behind the closed page, nor in the builder, which injects a draft.
   // Only an explicit `enabled: false` closes the shop here — the gate itself decides the rest.
-  const skip = useShowsClosedPage(settings.enabled !== false) || window.location.pathname.startsWith(BUILDER_PATH);
+  const skip = useShowsClosedPage(settings.enabled !== false) || window.location.pathname.startsWith(BUILDER_PATH) || isBuilderMode();
   useEffect(() => {
     if (skip) return;
     void client.prefetchQuery({ queryKey: pagesKey(layout), queryFn: () => fetchPageSet(layout), staleTime: PAGES_QUERY.staleTime, retry: PAGES_QUERY.retry });

@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router';
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 import { TrackingLookupError, lookupTracking } from '@/api/tracking.ts';
 import { useSettings } from '@/app/settings.ts';
+import { isBuilderMode } from '@/app/builder-gate.ts';
 import { LookupForm } from '@/features/tracking/LookupForm.tsx';
 import { OrderHero } from '@/features/tracking/OrderHero.tsx';
 import { ParcelCard } from '@/features/tracking/ParcelCard.tsx';
@@ -33,6 +34,9 @@ type Phase = 'idle' | 'pending' | 'found' | 'notFound' | 'error' | 'blocked';
  */
 const TOKEN_WAIT_MS = 15_000;
 
+/** The page builder's frame runs no challenge: every lookup there is answered in the frame. */
+const PREVIEW_TOKEN = 'sf-builder-preview';
+
 /**
  * Where an order is, from nothing but its reference.
  *
@@ -57,7 +61,7 @@ export function TrackingPage() {
   const [awaitingToken, setAwaitingToken] = useState(false);
 
   const turnstileRef = useRef<TurnstileInstance | null>(null);
-  const tokenRef = useRef<string>('');
+  const tokenRef = useRef<string>(isBuilderMode() ? PREVIEW_TOKEN : '');
   /** A lookup is in flight. The token-wait timer must not arm during one: run()
    *  consumes the token as it starts, so an in-flight request looks exactly like
    *  "pending with no token". */
@@ -92,7 +96,7 @@ export function TrackingPage() {
       turnstileRef.current?.reset();
       return;
     }
-    tokenRef.current = ''; // single-use
+    tokenRef.current = isBuilderMode() ? PREVIEW_TOKEN : ''; // single-use
     inFlight.current = true;
     if (refresh) setIsRefreshing(true);
     else setPhase('pending');
@@ -281,8 +285,8 @@ export function TrackingPage() {
         </div>
       ) : null}
 
-      {/* Invisible: runs silently and resolves a token without any UI. */}
-      <Turnstile
+      {/* Invisible: runs silently and resolves a token without any UI. Never in the builder frame. */}
+      {isBuilderMode() ? null : <Turnstile
         ref={turnstileRef}
         siteKey={siteKey}
         options={{ size: 'invisible' }}
@@ -306,7 +310,7 @@ export function TrackingPage() {
             turnstileRef.current?.reset();
           }
         }}
-      />
+      />}
     </div>
   );
 }

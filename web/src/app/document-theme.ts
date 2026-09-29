@@ -13,7 +13,9 @@ import type { StorefrontSettings } from '@/types/settings.ts';
  */
 export function useDocumentTheme(settings: StorefrontSettings, win: Window = window): ResolvedTheme {
   const { brand } = settings;
-  const builder = useBuilderTheme();
+  const builderTheme = useBuilderTheme();
+  // Only the builder frame may take the builder's draft — whatever the overrides store holds.
+  const builder = isBuilderMode(win) ? builderTheme : null;
   const preview = usePreviewTheme(win);
   // The builder's draft (Pages tab) or the Appearance preview's — never with draft CSS.
   const draft = builder ?? preview;

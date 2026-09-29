@@ -81,4 +81,11 @@ describe('useDocumentTheme', () => {
     expect(localStorage.getItem(THEME_STORAGE_KEY)).toBeNull();
     act(() => builderOverrides.setState({ theme: null }));
   });
+
+  it('outside the builder frame: a builder theme left in the overrides store is ignored', () => {
+    act(() => builderOverrides.setState({ theme: { ...stored, colors: { ...stored.colors, bg: '#202020' }, customCss: '' } }));
+    const { result } = renderHook(() => useDocumentTheme(settings, framedWindow('').win));
+    expect(result.current.colors.bg).toBe('#0f3965');
+    act(() => builderOverrides.setState({ theme: null }));
+  });
 });
