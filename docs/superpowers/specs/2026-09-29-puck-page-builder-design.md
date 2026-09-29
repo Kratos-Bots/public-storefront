@@ -501,6 +501,15 @@ Storefront → admin (`targetOrigin` = origin of the first accepted `sf-builder-
   fill the panel) so media queries and `useMediaQuery` see the real breakpoint. Added after
   planning surfaced that Puck's own canvas iframe is disabled (§6).
 
+**Load identity (added after the admin's final review).** `sf-builder-load` also carries
+`loadId: string` (1–64 chars, new for every load, reload, layout switch, discard, restore and
+version preview), and every `sf-builder-change` carries `loadId` echoing the load it was produced
+from. The admin ignores a change whose `loadId` is not the current one, so a change debounced
+before a layout switch / discard / restore can never be written to the wrong draft. On every
+`sf-builder-load` the editor cancels any pending debounced change and immediately posts exactly one
+change built from the loaded data (also for `pageSet: null`; none for `readOnly`). `sf-builder-ready`
+is sent exactly once per frame boot.
+
 `pageSet: null` on load means "no draft or published set": the editor starts from the default docs
 and the first `sf-builder-change` carries a sparse set containing only `shell` (the default shell).
 `readOnly: true` (version preview) disables editing and suppresses `sf-builder-change`.
