@@ -1,4 +1,4 @@
-import { Component, Suspense, type ReactNode } from 'react';
+import { Component, Suspense, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { parseBlockProps, type BlockDef, type BlockRenderContext } from '@/builder/define.ts';
 import type { DocKey, LayoutKind } from '@/builder/types.ts';
 import { stableStringify } from '@/builder/editor/page-set.ts';
@@ -76,6 +76,40 @@ function BlockBody({ def, props, ctx }: { def: BlockDef<any>; props: Record<stri
   return <>{def.render({ ...props, puck: ctx } as never)}</>;
 }
 
+/** Nothing a person could see or click: no element and no text. */
+const isEmpty = (el: HTMLElement): boolean => el.firstElementChild === null && !(el.textContent ?? '').trim();
+
+/**
+ * Many blocks render nothing when their content is blank (an empty Heading, a quote-less
+ * Testimonial, a field the guard left blank). On the published page that is right; on the canvas
+ * the block would vanish and could no longer be clicked or selected. This watches what the block
+ * actually rendered — it may be a nested component returning null — and shows a small editor-only
+ * placeholder while it is empty. The wrapper is `display: contents`, so it never affects layout.
+ */
+function EmptyWatch({ label, children }: { label: string; children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [empty, setEmpty] = useState(false);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const check = () => setEmpty(isEmpty(el));
+    check();
+    const observer = new MutationObserver(check);
+    observer.observe(el, { childList: true, subtree: true, characterData: true });
+    return () => observer.disconnect();
+  }, []);
+  return (
+    <>
+      <div ref={ref} style={{ display: 'contents' }}>{children}</div>
+      {empty && (
+        <div className={styles.empty} data-sf-builder-empty="">
+          {label} shows nothing yet. Fill it in from the settings panel.
+        </div>
+      )}
+    </>
+  );
+}
+
 /**
  * One block on the Puck canvas. Its settings go through the same per-field parse the published
  * page uses (a half-typed value falls back to the default instead of crashing the block), while
@@ -107,7 +141,9 @@ export function EditorBlock({ def, props, docKey, layout }: { def: BlockDef<any>
   return (
     <BlockBoundary name={def.label} resetKey={stableStringify(parsed)}>
       <Suspense fallback={<div className={styles.loading} aria-busy="true" aria-label={`Loading ${def.label}`} />}>
-        <BlockBody def={def} props={{ ...settings, ...slots, id }} ctx={ctx} />
+        <EmptyWatch label={def.label}>
+          <BlockBody def={def} props={{ ...settings, ...slots, id }} ctx={ctx} />
+        </EmptyWatch>
       </Suspense>
     </BlockBoundary>
   );

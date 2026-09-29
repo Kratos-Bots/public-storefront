@@ -1,17 +1,21 @@
-import { useEffect, useId, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { useEditorStore } from '@/builder/editor/store.ts';
 import { usePuck, useGetPuck } from '@/builder/editor/use-puck.ts';
 import { useHints, useIssues, useLockedPresent } from '@/builder/editor/use-issues.ts';
-import { blockMenu, ROOT_ZONE } from '@/builder/editor/config.ts';
+import { blockMenu } from '@/builder/editor/config.ts';
+import { insertTarget, type InsertApi } from '@/builder/editor/insert-target.ts';
 import { docLabel } from '@/builder/editor/page-catalog.ts';
 import { isCustomKey } from '@/builder/editor/page-set.ts';
-import { PagePicker } from '@/builder/editor/PagePicker.tsx';
+import { focusPagePickerSoon, PagePicker } from '@/builder/editor/PagePicker.tsx';
+import { FloatingPanel } from '@/builder/editor/floating.tsx';
 import { VIEWPORT_OPTIONS } from '@/builder/editor/viewports.ts';
 import { CheckIcon, PanelLeftIcon, PanelRightIcon, PlusIcon, RedoIcon, TipIcon, UndoIcon, WarnIcon } from '@/builder/editor/icons.tsx';
 import { blockDef } from '@/builder/rules.ts';
 import type { PreviewAs } from '@/builder/mode.ts';
 import type { DocKey, Issue } from '@/builder/types.ts';
 import styles from '@/builder/editor/Editor.module.css';
+
+const domId = (reactId: string) => reactId.replace(/[^A-Za-z0-9_-]/g, '');
 
 // ── new page ─────────────────────────────────────────────────────────────────
 
@@ -25,6 +29,7 @@ function NewPage() {
     e.preventDefault();
     const problem = useEditorStore.getState().createPage(slug.trim(), title);
     if (problem) { setError(problem); return; }
+    focusPagePickerSoon();
     reset();
     dialog.current?.close();
   };
@@ -46,7 +51,7 @@ function NewPage() {
                 aria-label="Page address"
                 aria-describedby="sfb-new-page-hint"
                 value={slug}
-                onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/\s+/g, '-'))}
+                onChange={(e) => { setSlug(e.target.value.toLowerCase().replace(/\s+/g, '-')); setError(null); }}
                 placeholder="about-us"
                 maxLength={60}
                 autoComplete="off"
@@ -58,7 +63,14 @@ function NewPage() {
           </label>
           <label className={styles.stack}>
             <span className={styles.fieldLabel}>Title</span>
-            <input aria-label="Page title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="About us" maxLength={120} required />
+            <input
+              aria-label="Page title"
+              value={title}
+              onChange={(e) => { setTitle(e.target.value); setError(null); }}
+              placeholder="About us"
+              maxLength={120}
+              required
+            />
           </label>
           {error && <p className={styles.error} role="alert">{error}</p>}
           <div className={styles.dialogActions}>
@@ -71,8 +83,13 @@ function NewPage() {
   );
 }
 
-// ── add block / history ──────────────────────────────────────────────────────
+// ── add block ────────────────────────────────────────────────────────────────
 
+/**
+ * A button and a menu — not a native <select>: on Windows and in Firefox the arrow keys fire
+ * `change` on a closed select, which would insert a block per keypress. Arrow keys move, Enter
+ * inserts, Escape closes; focus returns to the button.
+ */
 function AddBlock() {
   const docKey = useEditorStore((s) => s.docKey);
   const layout = useEditorStore((s) => s.layout);
@@ -80,35 +97,93 @@ function AddBlock() {
   const dispatch = usePuck((s) => s.dispatch);
   const getPuck = useGetPuck();
   const groups = useMemo(() => blockMenu(docKey, layout, present), [docKey, layout, present]);
+  const [open, setOpen] = useState(false);
+  const [afterSelected, setAfterSelected] = useState(false);
+  const button = useRef<HTMLButtonElement>(null);
+  const menu = useRef<HTMLDivElement>(null);
+  const id = domId(useId());
+
+  const items = () => [...(menu.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])];
+  const show = () => {
+    setAfterSelected(getPuck().appState.ui.itemSelector !== null);
+    setOpen(true);
+  };
+  const hide = (refocus: boolean) => {
+    setOpen(false);
+    if (refocus) button.current?.focus();
+  };
+
+  // First item takes focus when the menu opens.
+  useEffect(() => {
+    if (open) items()[0]?.focus();
+  }, [open]);
+
+  const insert = (componentType: string) => {
+    const api = getPuck();
+    const target = insertTarget(api as unknown as InsertApi, componentType);
+    dispatch({ type: 'insert', componentType, destinationIndex: target.index, destinationZone: target.zone });
+    dispatch({ type: 'setUi', ui: { itemSelector: { index: target.index, zone: target.zone } }, recordHistory: false });
+    hide(true);
+  };
+
+  const onMenuKey = (e: KeyboardEvent<HTMLDivElement>) => {
+    const list = items();
+    if (list.length === 0) return;
+    const at = list.indexOf(document.activeElement as HTMLElement);
+    const move = (i: number) => { e.preventDefault(); list[(i + list.length) % list.length]?.focus(); };
+    if (e.key === 'ArrowDown') move(at + 1);
+    else if (e.key === 'ArrowUp') move(at < 0 ? list.length - 1 : at - 1);
+    else if (e.key === 'Home') move(0);
+    else if (e.key === 'End') move(list.length - 1);
+    else if (e.key === 'Tab') hide(false);
+  };
+
   return (
-    <label className={styles.addBlock}>
-      <PlusIcon />
-      <span className={styles.srOnly}>Add block</span>
-      <select
-        aria-label="Add block"
-        value=""
-        onChange={(e) => {
-          const componentType = e.target.value;
-          if (!componentType) return;
-          const { appState } = getPuck();
-          const sel = appState.ui.itemSelector;
-          // After the selected block (in its own slot), or at the end of the page.
-          const zone = sel?.zone ?? ROOT_ZONE;
-          const index = sel ? sel.index + 1 : appState.data.content.length;
-          dispatch({ type: 'insert', componentType, destinationIndex: index, destinationZone: zone });
-          dispatch({ type: 'setUi', ui: { itemSelector: { index, zone } }, recordHistory: false });
+    <>
+      <button
+        ref={button}
+        type="button"
+        className={styles.addBlock}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={open ? `${id}-menu` : undefined}
+        onClick={() => (open ? hide(false) : show())}
+        onKeyDown={(e) => {
+          if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && !open) { e.preventDefault(); show(); }
         }}
       >
-        <option value="">Add block…</option>
-        {groups.map((g) => (
-          <optgroup key={g.category} label={g.title}>
-            {g.blocks.map((b) => <option key={b.name} value={b.name}>{b.label}</option>)}
-          </optgroup>
-        ))}
-      </select>
-    </label>
+        <PlusIcon />
+        Add block
+      </button>
+      <FloatingPanel
+        anchor={button}
+        open={open}
+        onClose={(reason) => hide(reason === 'escape')}
+        className={styles.menuPanel}
+        id={`${id}-menu`}
+        role="menu"
+        aria-label="Blocks to add"
+      >
+        <div ref={menu} onKeyDown={onMenuKey}>
+          <p className={styles.menuHint}>{afterSelected ? 'Adds after the selected block.' : 'Adds at the end of the page.'}</p>
+          {groups.length === 0 && <p className={styles.menuHint}>Nothing more can go on this page.</p>}
+          {groups.map((g) => (
+            <div key={g.category} role="group" aria-labelledby={`${id}-${g.category}`} className={styles.menuGroup}>
+              <div id={`${id}-${g.category}`} className={styles.menuGroupTitle}>{g.title}</div>
+              {g.blocks.map((b) => (
+                <button key={b.name} type="button" role="menuitem" tabIndex={-1} className={styles.menuItem} data-block={b.name} onClick={() => insert(b.name)}>
+                  {b.label}
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+      </FloatingPanel>
+    </>
   );
 }
+
+// ── history / panels ─────────────────────────────────────────────────────────
 
 function History() {
   const back = usePuck((s) => s.history.back);
@@ -201,6 +276,12 @@ export function PreviewAsControls() {
 
 // ── reset / delete ───────────────────────────────────────────────────────────
 
+/** Reset a fixed page (or delete a custom one); the canvas remounts, so focus goes to the Page picker. */
+export function resetOrDelete(docKey: DocKey): void {
+  focusPagePickerSoon();
+  useEditorStore.getState().resetDoc(docKey);
+}
+
 function ResetPage() {
   const docKey = useEditorStore((s) => s.docKey);
   const touched = useEditorStore((s) => docKey in s.docs);
@@ -223,7 +304,7 @@ function ResetPage() {
   return (
     <span className={styles.confirm} role="group" aria-label={label}>
       <span className={styles.confirmText}>{custom ? 'Delete this page?' : 'Undo all changes to this page?'}</span>
-      <button type="button" className={styles.buttonDanger} onClick={() => { useEditorStore.getState().resetDoc(docKey); setConfirming(false); }}>
+      <button type="button" className={styles.buttonDanger} onClick={() => { setConfirming(false); resetOrDelete(docKey); }}>
         {custom ? 'Delete it' : 'Reset it'}
       </button>
       <button type="button" className={styles.buttonQuiet} onClick={() => setConfirming(false)}>Keep</button>
@@ -258,7 +339,7 @@ function useJump() {
     if (!selector) return;
     dispatch({ type: 'setUi', ui: { itemSelector: selector }, recordHistory: false });
     requestAnimationFrame(() => {
-      const el = document.querySelector(`[data-puck-component="${CSS.escape(blockId)}"]`);
+      const el = document.querySelector(`[data-puck-component="${blockId.replace(/["\\]/g, '\\$&')}"]`);
       const smooth = !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
       el?.scrollIntoView({ block: 'center', behavior: smooth ? 'smooth' : 'auto' });
     });
@@ -271,11 +352,9 @@ function IssuesMenu() {
   const docs = useEditorStore((s) => s.docs);
   const docKey = useEditorStore((s) => s.docKey);
   const jump = useJump();
-  const popover = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
-  const id = useId();
-  const popoverId = `sfb-issues-${id.replace(/:/g, '')}`;
+  const id = domId(useId());
 
   // Arriving from an issue on another page: select its block once this canvas is up.
   useEffect(() => {
@@ -287,27 +366,20 @@ function IssuesMenu() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [docKey]);
 
-  const place = () => {
-    const el = popover.current;
-    const btn = trigger.current;
-    if (!el || !btn) return;
-    const r = btn.getBoundingClientRect();
-    el.style.top = `${Math.round(r.bottom + 6)}px`;
-    el.style.right = `${Math.max(8, Math.round(window.innerWidth - r.right))}px`;
-  };
-
   const go = (target: { docKey: DocKey; blockId?: string }) => {
-    popover.current?.hidePopover?.();
+    setOpen(false);
     if (target.docKey !== docKey) {
       pendingJump = target;
       useEditorStore.getState().selectDoc(target.docKey);
+      // The store may refuse the page (gone, or not shown in this layout): don't leave a jump behind.
+      if (useEditorStore.getState().docKey !== target.docKey) pendingJump = null;
       return;
     }
     jump(target.blockId);
   };
 
   const count = issues.length;
-  const summary = count === 0 ? 'No issues' : `${count} issue${count === 1 ? '' : 's'}`;
+  const summary = count === 0 ? 'No issues' : `${count} issue${count === 1 ? '' : 's'}, publishing is blocked`;
   return (
     <>
       <button
@@ -315,28 +387,30 @@ function IssuesMenu() {
         type="button"
         className={styles.issuesButton}
         data-count={count}
-        popoverTarget={popoverId}
-        aria-label="Issues"
-        aria-describedby={`${popoverId}-summary`}
+        aria-haspopup="dialog"
         aria-expanded={open}
+        aria-controls={open ? `${id}-panel` : undefined}
+        // The name reads what the button shows ("Issues 2 issues, publishing is blocked 1 tip").
+        aria-labelledby={`${id}-label ${id}-count${hints.length > 0 ? ` ${id}-tips` : ''}`}
+        onClick={() => setOpen((o) => !o)}
       >
+        <span id={`${id}-label`} className={styles.srOnly}>Issues</span>
         {count === 0 ? <CheckIcon /> : <WarnIcon />}
-        <span id={`${popoverId}-summary`}>{count === 0 ? summary : `${summary}, publishing is blocked`}</span>
-        {hints.length > 0 && <span className={styles.tipCount}>{hints.length} tip{hints.length === 1 ? '' : 's'}</span>}
+        <span id={`${id}-count`}>{summary}</span>
+        {hints.length > 0 && <span id={`${id}-tips`} className={styles.tipCount}>{hints.length} tip{hints.length === 1 ? '' : 's'}</span>}
       </button>
-      <div
-        ref={popover}
-        id={popoverId}
-        popover="auto"
+      <FloatingPanel
+        anchor={trigger}
+        open={open}
+        onClose={(reason) => { setOpen(false); if (reason === 'escape') trigger.current?.focus(); }}
+        align="end"
         className={styles.issuesPanel}
-        onToggle={(e) => {
-          const nowOpen = (e.nativeEvent as ToggleEvent).newState === 'open';
-          if (nowOpen) place();
-          setOpen(nowOpen);
-        }}
+        id={`${id}-panel`}
+        role="dialog"
+        aria-labelledby={`${id}-issues`}
       >
-        <section aria-labelledby={`${popoverId}-issues`}>
-          <h2 id={`${popoverId}-issues`} className={styles.panelTitle}>
+        <section>
+          <h2 id={`${id}-issues`} className={styles.panelTitle}>
             {count === 0 ? 'Nothing blocks publishing' : 'Fix these to publish'}
           </h2>
           {count === 0 ? (
@@ -364,8 +438,8 @@ function IssuesMenu() {
           )}
         </section>
         {hints.length > 0 && (
-          <section aria-labelledby={`${popoverId}-tips`} className={styles.panelTips}>
-            <h2 id={`${popoverId}-tips`} className={styles.panelTitle}>Tips for this page</h2>
+          <section aria-labelledby={`${id}-tipsTitle`} className={styles.panelTips}>
+            <h2 id={`${id}-tipsTitle`} className={styles.panelTitle}>Tips for this page</h2>
             <ul className={styles.panelList}>
               {hints.map((hint) => (
                 <li key={hint.id}>
@@ -378,7 +452,7 @@ function IssuesMenu() {
             </ul>
           </section>
         )}
-      </div>
+      </FloatingPanel>
     </>
   );
 }

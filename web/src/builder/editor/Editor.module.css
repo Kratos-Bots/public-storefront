@@ -10,6 +10,7 @@
 .waiting,
 .readOnly,
 .issuesPanel,
+.menuPanel,
 .overlayBadge {
   --sfb-ink: #1d2433;
   --sfb-muted: #5b6475;
@@ -28,7 +29,13 @@
   --sfb-ok-line: #b5dcc6;
   --sfb-ok-wash: #edf7f1;
   --sfb-danger: #b3261e;
+  --sfb-danger-strong: #93201a;
+  --sfb-on-danger: #ffffff;
   --sfb-danger-wash: #fdeeed;
+  --sfb-shadow-sm: var(--sfb-shadow-sm);
+  --sfb-shadow-pop: 0 12px 32px rgb(29 36 51 / 0.16), 0 2px 6px rgb(29 36 51 / 0.08);
+  --sfb-shadow-dialog: 0 24px 48px rgb(29 36 51 / 0.22);
+  --sfb-backdrop: rgb(29 36 51 / 0.35);
   --sfb-radius: 6px;
   --sfb-control-h: 32px;
   --sfb-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%235b6475' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
@@ -42,7 +49,8 @@
 
 .bar *,
 .dialog *,
-.issuesPanel * {
+.issuesPanel *,
+.menuPanel * {
   box-sizing: border-box;
 }
 
@@ -243,12 +251,12 @@
 }
 
 .buttonDanger {
-  color: #fff;
+  color: var(--sfb-on-danger);
   background: var(--sfb-danger);
 }
 
 .buttonDanger:hover {
-  background: #93201a;
+  background: var(--sfb-danger-strong);
 }
 
 .iconButton {
@@ -274,34 +282,25 @@
 
 /* Add block: the one filled control in the bar — it is what the editor is for. */
 .addBlock {
-  position: relative;
   display: inline-flex;
   align-items: center;
+  gap: 6px;
+  block-size: var(--sfb-control-h);
+  padding: 0 12px 0 10px;
+  border: 1px solid transparent;
+  border-radius: var(--sfb-radius);
+  background: var(--sfb-accent-wash);
   color: var(--sfb-accent-strong);
-}
-
-.addBlock > svg {
-  position: absolute;
-  inset-inline-start: 10px;
-  pointer-events: none;
-}
-
-.bar .addBlock select {
-  padding-inline-start: 32px;
+  font: inherit;
   font-weight: 600;
-  color: var(--sfb-accent-strong);
-  background-color: var(--sfb-accent-wash);
-  border-color: transparent;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 120ms ease;
 }
 
-.bar .addBlock select:hover {
+.addBlock:hover,
+.addBlock[aria-expanded='true'] {
   border-color: var(--sfb-accent);
-}
-
-.bar .addBlock select option,
-.bar .addBlock select optgroup {
-  color: var(--sfb-ink);
-  font-weight: 400;
 }
 
 /* ── preview width + preview as ─────────────────────────────────────────── */
@@ -337,7 +336,7 @@
   background: var(--sfb-surface);
   color: var(--sfb-ink);
   font-weight: 600;
-  box-shadow: 0 0 0 1px var(--sfb-line), 0 1px 2px rgb(29 36 51 / 0.1);
+  box-shadow: 0 0 0 1px var(--sfb-line), var(--sfb-shadow-sm);
 }
 
 .previewAs {
@@ -400,19 +399,76 @@
   border-radius: 999px;
 }
 
-/* A popover (top layer): never clipped by Puck's layout; placed under its button by script. */
-.issuesPanel {
+/*
+ * Floating panels under header buttons (floating.tsx): in the top layer when the browser has the
+ * Popover API, otherwise fixed above Puck's layout. Placed under their button by script.
+ */
+.issuesPanel,
+.menuPanel {
   position: fixed;
   inset: auto;
   margin: 0;
-  inline-size: min(400px, calc(100vw - 16px));
-  max-block-size: min(60vh, 480px);
   overflow: auto;
   padding: 6px;
   background: var(--sfb-surface);
   border: 1px solid var(--sfb-line);
   border-radius: 10px;
-  box-shadow: 0 12px 32px rgb(29 36 51 / 0.16), 0 2px 6px rgb(29 36 51 / 0.08);
+  box-shadow: var(--sfb-shadow-pop);
+}
+
+.issuesPanel[data-layer='fixed'],
+.menuPanel[data-layer='fixed'] {
+  z-index: 1000;
+}
+
+.issuesPanel {
+  inline-size: min(400px, calc(100vw - 16px));
+  max-block-size: min(60vh, 480px);
+}
+
+.menuPanel {
+  inline-size: min(280px, calc(100vw - 16px));
+  max-block-size: min(70vh, 520px);
+}
+
+.menuHint {
+  margin: 0;
+  padding: 4px 8px 6px;
+  font-size: 12px;
+  color: var(--sfb-muted);
+}
+
+.menuGroup + .menuGroup {
+  margin-block-start: 4px;
+  padding-block-start: 4px;
+  border-block-start: 1px solid var(--sfb-line);
+}
+
+.menuGroupTitle {
+  padding: 4px 8px 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sfb-muted);
+}
+
+.menuItem {
+  display: block;
+  inline-size: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--sfb-radius);
+  background: transparent;
+  color: var(--sfb-ink);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.menuItem:hover,
+.menuItem:focus-visible {
+  background: var(--sfb-accent-wash);
+  color: var(--sfb-accent-strong);
+  outline: none;
 }
 
 .panelTitle {
@@ -506,11 +562,12 @@
   border: 0;
   border-radius: 12px;
   background: var(--sfb-surface);
-  box-shadow: 0 24px 48px rgb(29 36 51 / 0.22);
+  box-shadow: var(--sfb-shadow-dialog);
 }
 
 .dialog::backdrop {
-  background: rgb(29 36 51 / 0.35);
+  /* ::backdrop only inherits custom properties in newer engines; the fallback is the same token. */
+  background: var(--sfb-backdrop, rgb(29 36 51 / 0.35));
 }
 
 .dialogBody {
@@ -714,6 +771,7 @@
   .buttonPrimary,
   .buttonDanger,
   .iconButton,
+  .addBlock,
   .segmented button {
     transition: none;
   }

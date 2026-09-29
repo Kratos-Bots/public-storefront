@@ -5,11 +5,12 @@ import { DocBoundary, RenderDoc } from '@/builder/render.tsx';
 import { validateDoc } from '@/builder/guard.ts';
 import { defaultDoc } from '@/builder/defaults/index.ts';
 import { buildEditorConfig } from '@/builder/editor/config.ts';
-import { docFor } from '@/builder/editor/page-set.ts';
+import { docFor, isCustomKey } from '@/builder/editor/page-set.ts';
 import { isLockedOn } from '@/builder/editor/route-bound.ts';
 import { useEditorStore } from '@/builder/editor/store.ts';
-import { useIssues, useLockedPresent } from '@/builder/editor/use-issues.ts';
-import { EditorHeader, PreviewAsControls, ViewportToggle } from '@/builder/editor/EditorHeader.tsx';
+import { useCurrentDoc, useIssues, useLockedPresent } from '@/builder/editor/use-issues.ts';
+import { EditorHeader, PreviewAsControls, resetOrDelete, ViewportToggle } from '@/builder/editor/EditorHeader.tsx';
+import { restingMarkIds, restingMarksCss } from '@/builder/editor/resting-marks.ts';
 import { PagePicker } from '@/builder/editor/PagePicker.tsx';
 import { EyeIcon, LockIcon, WarnIcon } from '@/builder/editor/icons.tsx';
 import { PUCK_VIEWPORTS } from '@/builder/editor/viewports.ts';
@@ -74,8 +75,8 @@ function CanvasFailed() {
         <h2 className={styles.failedTitle}>This page can’t open in the editor</h2>
         <p>Something in its saved blocks stops the editor from showing it. Other pages are unaffected.</p>
         {touched && (
-          <button type="button" className={styles.buttonDanger} onClick={() => useEditorStore.getState().resetDoc(docKey)}>
-            Reset page to default
+          <button type="button" className={styles.buttonDanger} onClick={() => resetOrDelete(docKey)}>
+            {isCustomKey(docKey) ? 'Delete page' : 'Reset page to default'}
           </button>
         )}
       </div>
@@ -126,6 +127,15 @@ function ReadOnlyView() {
   );
 }
 
+/** Issue outlines and lock marks on the open doc, visible without hovering (see resting-marks.ts). */
+function RestingMarks() {
+  const doc = useCurrentDoc();
+  const docKey = useEditorStore((s) => s.docKey);
+  const issues = useIssues();
+  const css = useMemo(() => restingMarksCss(restingMarkIds(doc, docKey, issues)), [doc, docKey, issues]);
+  return css ? <style data-sf-builder-marks="">{css}</style> : null;
+}
+
 export function EditorCanvas() {
   const docKey = useEditorStore((s) => s.docKey);
   const layout = useEditorStore((s) => s.layout);
@@ -145,6 +155,7 @@ export function EditorCanvas() {
   const mount = `${docKey}|${epoch}`;
   return (
     <CanvasBoundary key={mount} fallback={<CanvasFailed />}>
+      <RestingMarks />
       <Puck
         key={mount}
         config={config}

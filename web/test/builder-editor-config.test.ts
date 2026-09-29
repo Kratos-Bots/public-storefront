@@ -206,6 +206,30 @@ describe('EditorBlock', () => {
     expect(screen.queryByText('How fast do you ship?')).toBeNull();
   });
 
+  it('keeps a custom catalogue intro with only an inline richtext body (no title) on the canvas', () => {
+    const body = createElement('p', null, 'Inline intro');
+    const { container } = render(createElement(EditorBlock, {
+      def: BLOCKS.CatalogHero!,
+      props: { ...BLOCKS.CatalogHero!.defaultProps, id: 'hero', variant: 'custom', title: '', bodyHtml: body, puck: {}, editMode: true },
+      docKey: 'catalog', layout: 'storefront',
+    }));
+    expect(screen.getByText('Inline intro')).toBeInTheDocument();
+    expect(container.querySelector('[data-sf-builder-block-error]')).toBeNull();
+    expect(container.querySelector('[data-sf-builder-empty]')).toBeNull();
+  });
+
+  it('shows an editor-only placeholder while a block renders nothing, and drops it once it has content', async () => {
+    const el = (text: string) => createElement(EditorBlock, {
+      def: BLOCKS.Heading!, props: { ...BLOCKS.Heading!.defaultProps, id: 'h', text, puck: {}, editMode: true }, docKey: 'page:about', layout: 'storefront',
+    });
+    const { container, rerender } = render(el('   '));
+    expect(container.querySelector('[data-sf-builder-empty]')).toHaveTextContent('Heading shows nothing yet');
+    rerender(el('Our story'));
+    expect(screen.getByText('Our story')).toBeInTheDocument();
+    // The watcher is a MutationObserver: it reports after the DOM change, not during the render.
+    await vi.waitFor(() => expect(container.querySelector('[data-sf-builder-empty]')).toBeNull());
+  });
+
   it('draws the page outlet as a placeholder', () => {
     const { container } = render(createElement(EditorBlock, { def: BLOCKS.PageOutlet!, props: { id: 'o' }, docKey: 'shell', layout: 'storefront' }));
     expect(container.querySelector('[data-sf-builder-outlet]')).toHaveTextContent('Page content appears here');

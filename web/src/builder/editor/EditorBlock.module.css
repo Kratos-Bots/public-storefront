@@ -90,3 +90,22 @@
     background: var(--sfb-wash);
   }
 }
+
+/* A block whose content is blank: kept visible and clickable on the canvas (never published). */
+.empty {
+  --sfb-muted: #5b6475;
+  --sfb-line-strong: #b8bfcc;
+  --sfb-wash: #f3f5f8;
+  --sfb-radius: 6px;
+
+  box-sizing: border-box;
+  margin: 8px 12px;
+  padding: 10px 12px;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--sfb-muted);
+  background: var(--sfb-wash);
+  border: 1px dashed var(--sfb-line-strong);
+  border-radius: var(--sfb-radius);
+}

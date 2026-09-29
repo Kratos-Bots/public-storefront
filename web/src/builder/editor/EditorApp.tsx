@@ -16,6 +16,12 @@ import styles from '@/builder/editor/Editor.module.css';
  */
 let stopSession: (() => void) | null = null;
 
+// Dev only: a hot-swapped copy of this module must not leave the old bridge and interceptor running.
+import.meta.hot?.dispose(() => {
+  stopSession?.();
+  stopSession = null;
+});
+
 function useBuilderSessionOnce(): void {
   const client = useQueryClient();
   stopSession ??= startBuilderSession(window, client);
@@ -27,7 +33,9 @@ export default function EditorApp() {
   useNavigationLock();
   const status = useEditorStore((s) => s.status);
   const previewAs = useEditorStore((s) => s.previewAs);
-  const mode = useMemo(() => ({ editing: true, previewAs }), [previewAs]);
+  const readOnly = useEditorStore((s) => s.readOnly);
+  // The read-only view shows the published page as shoppers see it: no editor-only hints.
+  const mode = useMemo(() => ({ editing: !readOnly, previewAs }), [readOnly, previewAs]);
 
   if (status === 'waiting') {
     return (
