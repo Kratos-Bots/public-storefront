@@ -7,6 +7,7 @@ import { getTemplate } from '@/templates/registry.ts';
 import type { ResolvedTheme } from '@/templates/resolve.ts';
 import type { SlotBaseProps, SlotName, SlotPropsMap, TemplateModule, TemplateSlots } from '@/templates/slots.ts';
 import { DEFAULT_SLOTS } from '@/templates/defaults/index.ts';
+import { CoreOptionsScopeContext } from '@/templates/core-scope.ts';
 
 const pending = new Map<string, Promise<TemplateModule>>();
 const settled = new Map<string, TemplateModule>();
@@ -123,9 +124,13 @@ export function Slot<N extends SlotName>(props: { name: N } & SlotOwnProps<N>) {
   const ctx = useTemplateContext();
   const settings = useSettings();
   const options = ctx.resolved?.options ?? {};
-  // Core options (define.ts CORE_OPTIONS) gate these two slots for every template, custom or default.
-  if (name === 'CatalogHero' && options.showCatalogIntro === false) return null;
-  if (name === 'SectionLabel' && options.showSectionLabels === false) return null;
+  const scope = useContext(CoreOptionsScopeContext);
+  // Core options (define.ts CORE_OPTIONS) gate these two slots for every template, custom or
+  // default; a page-builder block may override them for its own subtree.
+  const showIntro = scope.showCatalogIntro ?? options.showCatalogIntro !== false;
+  const showLabels = scope.showSectionLabels ?? options.showSectionLabels !== false;
+  if (name === 'CatalogHero' && !showIntro) return null;
+  if (name === 'SectionLabel' && !showLabels) return null;
   const custom = ctx.slots[name] as ComponentType<SlotPropsMap[N]> | undefined;
   const Component = (custom ?? DEFAULT_SLOTS[name]) as ComponentType<SlotPropsMap[N]>;
   const base: SlotBaseProps = {

@@ -1,10 +1,11 @@
-import { useMemo } from 'react';
+import { useContext, useMemo } from 'react';
 import { useSettings } from '@/app/settings.ts';
 import { useCatalog } from '@/features/catalog/use-catalog.ts';
 import { buildCategoryTree } from '@/features/catalog/category-tree.ts';
 import { categoryCounts } from '@/features/catalog/filter.ts';
 import { BASE_TOKENS, type HeaderIconMode, type OptionValues, type Scheme, type TemplateTokens } from '@/templates/define.ts';
 import { useTemplateContext } from '@/templates/runtime.tsx';
+import { CoreOptionsScopeContext } from '@/templates/core-scope.ts';
 import type { Brand, Features, SupportLink } from '@/types/settings.ts';
 
 export interface TemplateInfo { id: string; presetId: string; scheme: Scheme; options: OptionValues; tokens: TemplateTokens }
@@ -34,9 +35,11 @@ const ICON_MODES: readonly HeaderIconMode[] = ['all', 'desktop', 'mobile', 'none
 const iconMode = (v: unknown): HeaderIconMode => (ICON_MODES.includes(v as HeaderIconMode) ? (v as HeaderIconMode) : 'all');
 
 /** The core options every template carries (define.ts CORE_OPTIONS). Only an explicit false (or
- *  a non-default choice) hides — outside a provider, or before settings resolve, everything shows. */
+ *  a non-default choice) hides — outside a provider, or before settings resolve, everything shows.
+ *  A page-builder block may override any of them for its own subtree (core-scope.ts). */
 export function useCoreOptions(): CoreOptions {
   const o = useTemplateOptions();
+  const scope = useContext(CoreOptionsScopeContext);
   return {
     showPageTitle: o.showPageTitle !== false,
     showCatalogIntro: o.showCatalogIntro !== false,
@@ -48,6 +51,7 @@ export function useCoreOptions(): CoreOptions {
     showCutoffBar: o.showCutoffBar !== false,
     cutoffMessage: typeof o.cutoffMessage === 'string' ? o.cutoffMessage.trim() : '',
     showCutoffCountdown: o.showCutoffCountdown !== false,
+    ...scope,
   };
 }
 
