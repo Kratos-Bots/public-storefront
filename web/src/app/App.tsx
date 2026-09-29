@@ -15,6 +15,7 @@ import { ClosedPage } from '@/features/closed/ClosedPage.tsx';
 import { fetchCart } from '@/api/cart.ts';
 import { useCartStore } from '@/stores/cart.ts';
 import { useSessionStore } from '@/stores/session.ts';
+import { useTelegramAuthStore } from '@/stores/telegram.ts';
 import type { StorefrontSettings } from '@/types/settings.ts';
 import classes from '@/app/App.module.css';
 
@@ -49,6 +50,9 @@ function useBootCart() {
   useEffect(() => {
     if (started.current) return;
     started.current = true;
+    // Inside Telegram the sign-in adopts the right cart itself (telegram-session.ts);
+    // fetching here too would race it with whatever token was stored before launch.
+    if (useTelegramAuthStore.getState().status !== 'none') return;
     if (!useSessionStore.getState().token) return;
     void fetchCart()
       .then((cart) => useCartStore.getState().replaceFromServer(cart))
@@ -102,9 +106,10 @@ function ThemedApp({ settings }: { settings: StorefrontSettings }) {
 
 function SettingsBoundary() {
   const query = useSettingsQuery();
+  const telegramPending = useTelegramAuthStore((s) => s.status === 'pending');
   useBootCart();
 
-  if (query.data) return <ThemedApp settings={query.data} />;
+  if (query.data && !telegramPending) return <ThemedApp settings={query.data} />;
 
   if (query.isError) {
     const name = lastKnownBrandName();

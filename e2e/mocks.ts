@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import type { Page, Route } from '@playwright/test';
 import type { Catalog, Product } from '../web/src/types/catalog.ts';
-import type { CheckoutResult, PaymentMethod, Quote } from '../web/src/types/checkout.ts';
+import type { CheckoutPayment, CheckoutResult, PaymentMethod, Quote } from '../web/src/types/checkout.ts';
 import type { ServerCart, ServerCartLine, CartLineInput } from '../web/src/types/cart.ts';
 import type { OrderDetail, OrderSummary, PageMeta } from '../web/src/types/orders.ts';
 import type { Profile, RedeemOptions } from '../web/src/types/profile.ts';
@@ -48,7 +48,19 @@ const PIXEL_PNG = Buffer.from(
   'base64',
 );
 
-export type Layout = 'storefront' | 'menu';
+export type Layout = 'storefront' | 'menu' | 'webapp';
+
+/** What the stub hands the app as `Telegram.WebApp.initData`, verbatim. */
+export const TELEGRAM_INIT_DATA =
+  'query_id=AAE&user=%7B%22id%22%3A777000111%2C%22first_name%22%3A%22Ada%22%7D&auth_date=1790000000&hash=' + 'a'.repeat(64);
+
+const TELEGRAM_STUB = readFileSync(fileUrl('./telegram-stub.js'), 'utf8');
+
+/** Makes the page a Telegram Mini App launch. Call before navigating. */
+export async function installTelegramStub(page: Page): Promise<void> {
+  await page.addInitScript(`window.__TG_INIT_DATA__ = ${JSON.stringify(TELEGRAM_INIT_DATA)};`);
+  await page.addInitScript(TELEGRAM_STUB);
+}
 
 export interface InstallMocksOptions {
   /** Which settings fixture to serve. Ignored when `settings` is given outright. */
@@ -62,6 +74,12 @@ export interface InstallMocksOptions {
   session?: boolean;
   /** Mutate the settings fixture before it is served (flags, theme, kill switch). */
   tweakSettings?: (settings: StorefrontSettings) => void;
+  /** What the checkout routes answer with as `payment` (default: a crypto address). */
+  checkoutPayment?: CheckoutPayment;
+  /** The reference the checkout routes answer with (default `E2E1`). */
+  checkoutReference?: string;
+  /** The Mini App sign-in answers 401, as it does for stale or forged initData. */
+  telegramAuthFails?: boolean;
 }
 
 export interface MockState {
@@ -88,6 +106,10 @@ export interface MockState {
   guestQuotes: Array<Record<string, unknown>>;
   /** Bodies posted to the crypto-txid route, for assertions. */
   txids: Array<Record<string, unknown>>;
+  /** Bodies posted to the Mini App sign-in route. */
+  webappLogins: Array<Record<string, unknown>>;
+  /** Bodies posted to the classic-bot switch. */
+  botModes: Array<Record<string, unknown>>;
 }
 
 export interface MockHandle {
@@ -204,7 +226,11 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
   const trackingFixture = read<TrackingFixture>('tracking.json');
 
   const state: MockState = {
-    settings: options.settings ?? read<StorefrontSettings>(`settings.${layout}.json`),
+    settings: options.settings ?? (() => {
+      const s = read<StorefrontSettings>(`settings.${layout === 'webapp' ? 'menu' : layout}.json`);
+      s.features.layout = layout;
+      return s;
+    })(),
     catalog: options.catalog ?? read<Catalog>('catalog.json'),
     quote: options.quote ?? read<Quote>('quote.json'),
     order: options.order ?? read<PublicOrder>('public-order.json'),
@@ -221,6 +247,8 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     checkouts: [],
     guestQuotes: [],
     txids: [],
+    webappLogins: [],
+    botModes: [],
   };
 
   options.tweakSettings?.(state.settings);
@@ -322,11 +350,11 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     if ((path === 'storefront/checkout' || path === 'storefront/checkout/guest') && method === 'POST') {
       state.checkouts.push(body(route));
       const result: CheckoutResult = {
-        reference: ORDER_REF,
+        reference: options.checkoutReference ?? ORDER_REF,
         publicUrl: `${ORIGIN}${ORDER_PATH}`,
         status: 'pending',
         total: 46.03,
-        payment: {
+        payment: options.checkoutPayment ?? {
           type: 'crypto',
           paymentId: 9001,
           method: 'crypto_static',
@@ -442,6 +470,23 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
 
     if (path === 'storefront/profile/referral-code' && method === 'POST') {
       await envelope(route, { referrerNickname: 'Bea' });
+      return;
+    }
+
+    if (path === 'storefront/auth/telegram-webapp' && method === 'POST') {
+      state.webappLogins.push(body(route));
+      if (options.telegramAuthFails) {
+        await fail(route, 401, 'Telegram web app session expired');
+        return;
+      }
+      const result: LoginResult = { token: SESSION_TOKEN, customer: SESSION_CUSTOMER };
+      await envelope(route, result);
+      return;
+    }
+
+    if (path === 'storefront/account/bot-mode' && method === 'POST') {
+      state.botModes.push(body(route));
+      await envelope(route, { classic: body(route).classic === true });
       return;
     }
 

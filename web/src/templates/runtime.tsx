@@ -1,5 +1,7 @@
 import { createContext, createElement, useContext, useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from 'react';
 import { useSettings } from '@/app/settings.ts';
+import { effectiveLayout } from '@/app/layout.ts';
+import { isTelegramWebApp } from '@/lib/telegram-webapp.ts';
 import { BASE_TOKENS } from '@/templates/define.ts';
 import { getTemplate } from '@/templates/registry.ts';
 import type { ResolvedTheme } from '@/templates/resolve.ts';
@@ -126,7 +128,7 @@ export function Slot<N extends SlotName>(props: { name: N } & SlotOwnProps<N>) {
     brand: settings.brand,
     options: ctx.resolved?.options ?? {},
     scheme: ctx.resolved?.scheme ?? settings.theme?.scheme ?? 'dark',
-    layout: settings.features?.layout ?? 'storefront',
+    layout: effectiveLayout(settings.features?.layout, isTelegramWebApp()),
     tokens: ctx.resolved?.tokens ?? BASE_TOKENS,
   };
   // TS can't prove `{...base, ...own}` matches the specific `SlotPropsMap[N]` for a generic N

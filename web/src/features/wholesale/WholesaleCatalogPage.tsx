@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 import { Button } from '@mantine/core';
 import { Link, useParams } from 'react-router';
 import { useSettings } from '@/app/settings.ts';
+import { effectiveLayout } from '@/app/layout.ts';
+import { isTelegramWebApp } from '@/lib/telegram-webapp.ts';
 import { useCatalog } from '@/features/catalog/use-catalog.ts';
 import { buildCategoryTree, collectDescendantIds } from '@/features/catalog/category-tree.ts';
 import { categoryCounts, findCategoryBySlugOrId } from '@/features/catalog/filter.ts';
@@ -85,9 +87,9 @@ export function WholesaleCatalogPage() {
   }
 
   const query = search.trim();
-  // The menu shell keeps its search in the bar at every width; the storefront
-  // header drops it below 62em, so there the sheet carries its own.
-  const ownSearch = features.layout !== 'menu';
+  // The menu and web app shells keep their search in the bar at every width; the
+  // storefront header drops it below 62em, so there the sheet carries its own.
+  const ownSearch = effectiveLayout(features.layout, isTelegramWebApp()) === 'storefront';
 
   if (unknownCategory) {
     return (

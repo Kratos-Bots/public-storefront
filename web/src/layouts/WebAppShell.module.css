@@ -1,0 +1,45 @@
+/* The Mini App shell: MenuShell's compact bar and list column, narrowed to a
+   phone column everywhere. No footer, no contact strip, no cart drawer — the
+   primary action (Telegram's MainButton, or the in-page bar) is the foot. */
+.shell {
+  composes: shell from './MenuShell.module.css';
+  --sf-rail-max: 35rem;
+}
+
+.bar { composes: bar from './MenuShell.module.css'; }
+.barInner { composes: barInner from './MenuShell.module.css'; }
+.home { composes: home from './MenuShell.module.css'; }
+.search { composes: search from './MenuShell.module.css'; }
+.actions { composes: actions from './MenuShell.module.css'; }
+.action { composes: action from './MenuShell.module.css'; }
+.count { composes: count from './MenuShell.module.css'; }
+.mark { composes: mark from './MenuShell.module.css'; }
+.main { composes: main from './MenuShell.module.css'; }
+
+/* Telegram fullscreen puts its own controls over the top of the page; both
+   insets are 0 in a normal Mini App and in a browser. */
+.safeTop {
+  height: calc(var(--tg-safe-top, 0px) + var(--tg-content-safe-top, 0px));
+}
+
+/* Inside Telegram the insets above are the whole story — the browser's own
+   env() inset would count the notch twice. */
+.native .bar {
+  padding-top: 0;
+}
+
+/* The back chevron points left: ChevronIcon draws down. */
+.back svg {
+  transform: rotate(90deg);
+}
+
+/* Room for the in-page bar (browser only — Telegram's MainButton sits outside the WebView). */
+.withBar {
+  padding-bottom: calc(76px + var(--tg-safe-bottom, 0px));
+}
+
+/* Telegram keeps the WebView above its MainButton, but the home indicator can
+   still cover the last row. */
+.native {
+  padding-bottom: var(--tg-safe-bottom, 0px);
+}

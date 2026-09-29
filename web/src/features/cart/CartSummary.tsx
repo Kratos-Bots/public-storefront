@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
 import { useSettings } from '@/app/settings.ts';
+import { useEffectiveLayout } from '@/app/layout.ts';
 import { useSessionStore, selectIsLoggedIn } from '@/stores/session.ts';
 import { useCartStore, selectCount, selectHasMixedPreorder, selectSubtotal } from '@/stores/cart.ts';
 import { formatMoney } from '@/lib/format.ts';
@@ -29,6 +30,9 @@ export function CartSummary({ blocked, onNavigate }: CartSummaryProps) {
   const count = useCartStore(selectCount);
   const subtotal = useCartStore((s) => selectSubtotal(s.lines));
   const mixedPreorder = useCartStore(selectHasMixedPreorder);
+  // The web app's primary action is the checkout button there — a second one
+  // in the summary would be the same action twice, one thumb-width apart.
+  const primaryElsewhere = useEffectiveLayout() === 'webapp';
 
   return (
     <div className={classes.summary}>
@@ -50,7 +54,9 @@ export function CartSummary({ blocked, onNavigate }: CartSummaryProps) {
 
       <p className={classes.terms}>Shipping and discounts are calculated at checkout.</p>
 
-      {blocked ? (
+      {primaryElsewhere ? (
+        blocked ? <p className={classes.held}>Resolve the flagged items to continue.</p> : null
+      ) : blocked ? (
         <>
           <button
             type="button"

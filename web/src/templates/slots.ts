@@ -7,7 +7,7 @@ export interface SlotBaseProps {
   brand: Brand;
   options: OptionValues;   // resolved: manifest defaults ⊕ stored values
   scheme: Scheme;
-  layout: LayoutKind;      // 'storefront' | 'menu'
+  layout: LayoutKind;      // 'storefront' | 'menu' | 'webapp' (always 'webapp' inside Telegram)
   tokens: TemplateTokens;
 }
 /** Above the header, first child of both shells (not on the chromeless order page). */
