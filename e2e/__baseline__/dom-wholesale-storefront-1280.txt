@@ -1,23 +1,17 @@
 title: Northbound Supply
 
     <div id="root">
-<style data-mantine-ID="true">:root, :host{--mantine-font-family: "Inter Variable", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;--mantine-font-family-monospace: "Inter Variable", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;--mantine-font-family-headings: "Inter Variable", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;--mantine-ID-font-weight: 600;--mantine-ID-color-filled: var(--mantine-ID-brand-filled);--mantine-ID-color-filled-hover: var(--mantine-ID-brand-filled-hover);--mantine-ID-color-light: var(--mantine-ID-brand-light);--mantine-ID-color-light-hover: var(--mantine-ID-brand-light-hover);--mantine-ID-color-light-color: var(--mantine-ID-brand-light-color);--mantine-ID-color-0: var(--mantine-ID-brand-0);--mantine-ID-color-1: var(--mantine-ID-brand-1);--mantine-ID-color-2: var(--mantine-ID-brand-2);--mantine-ID-color-3: var(--mantine-ID-brand-3);--mantine-ID-color-4: var(--mantine-ID-brand-4);--mantine-ID-color-5: var(--mantine-ID-brand-5);--mantine-ID-color-6: var(--mantine-ID-brand-6);--mantine-ID-color-7: var(--mantine-ID-brand-7);--mantine-ID-color-8: var(--mantine-ID-brand-8);--mantine-ID-color-9: var(--mantine-ID-brand-9);--mantine-ID-brand-0: #fef7e4;--mantine-ID-brand-1: #f6edd5;--mantine-ID-brand-2: #e9d8b0;--mantine-ID-brand-3: #dbc387;--mantine-ID-brand-4: #d0b165;--mantine-ID-brand-5: #c8a44b;--mantine-ID-brand-6: #c6a041;--mantine-ID-brand-7: #ae8b32;--mantine-ID-brand-8: #9b7b29;--mantine-ID-brand-9: #876a1c;--mantine-h1-font-weight: 600;--mantine-h2-font-weight: 600;--mantine-h3-font-weight: 600;--mantine-h4-font-weight: 600;--mantine-h5-font-weight: 600;--mantine-h6-font-weight: 600;}
-
-:root[data-mantine-ID-scheme="dark"], :host([data-mantine-ID-scheme="dark"]){--mantine-ID-anchor: var(--mantine-ID-brand-4);--mantine-ID-dark-filled: var(--mantine-ID-dark-5);--mantine-ID-dark-filled-hover: var(--mantine-ID-dark-6);--mantine-ID-dark-outline: var(--mantine-ID-dark-1);--mantine-ID-dark-outline-hover: rgba(184, 184, 184, 0.05);--mantine-ID-gray-filled: var(--mantine-ID-gray-5);--mantine-ID-gray-filled-hover: var(--mantine-ID-gray-6);--mantine-ID-gray-outline: var(--mantine-ID-gray-1);--mantine-ID-gray-outline-hover: rgba(241, 243, 245, 0.05);--mantine-ID-red-filled: var(--mantine-ID-red-5);--mantine-ID-red-filled-hover: var(--mantine-ID-red-6);--mantine-ID-red-outline: var(--mantine-ID-red-1);--mantine-ID-red-outline-hover: rgba(255, 227, 227, 0.05);--mantine-ID-pink-filled: var(--mantine-ID-pink-5);--mantine-ID-pink-filled-hover: var(--mantine-ID-pink-6);--mantine-ID-pink-outline: var(--mantine-ID-pink-1);--mantine-ID-pink-outline-hover: rgba(255, 222, 235, 0.05);--mantine-ID-grape-filled: var(--mantine-ID-grape-5);--mantine-ID-grape-filled-hover: var(--mantine-ID-grape-6);--mantine-ID-grape-outline: var(--mantine-ID-grape-1);--mantine-ID-grape-outline-hover: rgba(243, 217, 250, 0.05);--mantine-ID-violet-filled: var(--mantine-ID-violet-5);--mantine-ID-violet-filled-hover: var(--mantine-ID-violet-6);--mantine-ID-violet-outline: var(--mantine-ID-violet-1);--mantine-ID-violet-outline-hover: rgba(229, 219, 255, 0.05);--mantine-ID-indigo-filled: var(--mantine-ID-indigo-5);--mantine-ID-indigo-filled-hover: var(--mantine-ID-indigo-6);--mantine-ID-indigo-outline: var(--mantine-ID-indigo-1);--mantine-ID-indigo-outline-hover: rgba(219, 228, 255, 0.05);--mantine-ID-blue-filled: var(--mantine-ID-blue-5);--mantine-ID-blue-filled-hover: var(--mantine-ID-blue-6);--mantine-ID-blue-outline: var(--mantine-ID-blue-1);--mantine-ID-blue-outline-hover: rgba(208, 235, 255, 0.05);--mantine-ID-cyan-filled: var(--mantine-ID-cyan-5);--mantine-ID-cyan-filled-hover: var(--mantine-ID-cyan-6);--mantine-ID-cyan-outline: var(--mantine-ID-cyan-1);--mantine-ID-cyan-outline-hover: rgba(197, 246, 250, 0.05);--mantine-ID-teal-filled: var(--mantine-ID-teal-5);--mantine-ID-teal-filled-hover: var(--mantine-ID-teal-6);--mantine-ID-teal-outline: var(--mantine-ID-teal-1);--mantine-ID-teal-outline-hover: rgba(195, 250, 232, 0.05);--mantine-ID-green-filled: var(--mantine-ID-green-5);--mantine-ID-green-filled-hover: var(--mantine-ID-green-6);--mantine-ID-green-outline: var(--mantine-ID-green-1);--mantine-ID-green-outline-hover: rgba(211, 249, 216, 0.05);--mantine-ID-lime-filled: var(--mantine-ID-lime-5);--mantine-ID-lime-filled-hover: var(--mantine-ID-lime-6);--mantine-ID-lime-outline: var(--mantine-ID-lime-1);--mantine-ID-lime-outline-hover: rgba(233, 250, 200, 0.05);--mantine-ID-yellow-filled: var(--mantine-ID-yellow-5);--mantine-ID-yellow-filled-hover: var(--mantine-ID-yellow-6);--mantine-ID-yellow-outline: var(--mantine-ID-yellow-1);--mantine-ID-yellow-outline-hover: rgba(255, 243, 191, 0.05);--mantine-ID-orange-filled: var(--mantine-ID-orange-5);--mantine-ID-orange-filled-hover: var(--mantine-ID-orange-6);--mantine-ID-orange-outline: var(--mantine-ID-orange-1);--mantine-ID-orange-outline-hover: rgba(255, 232, 204, 0.05);--mantine-ID-brand-text: var(--mantine-ID-brand-4);--mantine-ID-brand-filled: var(--mantine-ID-brand-5);--mantine-ID-brand-filled-hover: var(--mantine-ID-brand-6);--mantine-ID-brand-light: rgba(68, 53, 14, 1);--mantine-ID-brand-light-hover: rgba(95, 74, 20, 1);--mantine-ID-brand-light-color: var(--mantine-ID-brand-0);--mantine-ID-brand-outline: var(--mantine-ID-brand-1);--mantine-ID-brand-outline-hover: rgba(246, 237, 213, 0.05);}
-
-:root[data-mantine-ID-scheme="light"], :host([data-mantine-ID-scheme="light"]){--mantine-ID-anchor: var(--mantine-ID-brand-6);--mantine-ID-brand-text: var(--mantine-ID-brand-filled);--mantine-ID-brand-filled: var(--mantine-ID-brand-6);--mantine-ID-brand-filled-hover: var(--mantine-ID-brand-7);--mantine-ID-brand-light: var(--mantine-ID-brand-1);--mantine-ID-brand-light-hover: var(--mantine-ID-brand-2);--mantine-ID-brand-light-color: var(--mantine-ID-brand-9);--mantine-ID-brand-outline: var(--mantine-ID-brand-6);--mantine-ID-brand-outline-hover: rgba(198, 160, 65, 0.05);}</style>
-<style data-mantine-ID="classes">@media (max-width: 35.99375em) {.mantine-ID-from-xs {display: none !important;}}@media (min-width: 36em) {.mantine-ID-from-xs {display: none !important;}}@media (max-width: 47.99375em) {.mantine-ID-from-sm {display: none !important;}}@media (min-width: 48em) {.mantine-ID-from-sm {display: none !important;}}@media (max-width: 61.99375em) {.mantine-ID-from-md {display: none !important;}}@media (min-width: 62em) {.mantine-ID-from-md {display: none !important;}}@media (max-width: 74.99375em) {.mantine-ID-from-lg {display: none !important;}}@media (min-width: 75em) {.mantine-ID-from-lg {display: none !important;}}@media (max-width: 87.99375em) {.mantine-ID-from-xl {display: none !important;}}@media (min-width: 88em) {.mantine-ID-from-xl {display: none !important;}}</style>
-<div class="_shell_11mq1_7">
-<header class="_header_11mq1_33 glass" data-sf-part="header">
-<div class="_headerInner_11mq1_51">
-<a class="_home_11mq1_71" aria-label="Northbound Supply — home" href="/" data-discover="true">
-<span class="_root_1ihs6_5" style="--brand-h: calc(var(--sf-logo-h) * 1);">
-<span class="_wordmark_1ihs6_37">Northbound</span>
+<div class="_shell_H">
+<header class="_header_H glass" data-sf-part="header">
+<div class="_headerInner_H">
+<a class="_home_H" aria-label="Northbound Supply — home" href="/" data-discover="true">
+<span class="_root_H" style="--brand-h: calc(var(--sf-logo-h) * 1);">
+<span class="_wordmark_H">Northbound</span>
 </span>
 </a>
-<div class="_root_1bc86_5 _search_11mq1_111 m_46b77525 mantine-ID-root mantine-ID-root" data-variant="unstyled" data-size="sm">
-<div class="m_6c018570 mantine-ID-wrapper mantine-ID-wrapper" data-variant="unstyled" data-size="sm" data-with-left-section="true" style="--input-height: var(--input-height-sm); --input-fz: var(--mantine-font-size-sm); --input-left-section-width: calc(1.625rem * var(--mantine-ID));">
-<div data-position="left" class="_section_1bc86_49 m_82577fc2 mantine-ID-section mantine-ID-section">
+<div class="_root_H _search_H m_46b77525 mantine-InputWrapper-root mantine-TextInput-root" data-variant="unstyled" data-size="sm">
+<div class="m_6c018570 mantine-Input-wrapper mantine-TextInput-wrapper" data-variant="unstyled" data-size="sm" data-with-left-section="true" style="--input-height: var(--input-height-sm); --input-fz: var(--mantine-font-size-sm); --input-left-section-width: calc(1.625rem * var(--mantine-scale));">
+<div data-position="left" class="_section_H m_82577fc2 mantine-Input-section mantine-TextInput-section">
 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
 <circle cx="10.5" cy="10.5" r="6.5">
 </circle>
@@ -25,11 +19,11 @@ title: Northbound Supply
 </path>
 </svg>
 </div>
-<input class="sf-input _input_1bc86_25 m_8fb7ebe7 mantine-ID-input mantine-ID-input" data-variant="unstyled" data-sf-part="input" placeholder="Search products" aria-label="Search products" id="mantine-ID" value="">
+<input class="sf-input _input_H m_8fb7ebe7 mantine-Input-input mantine-TextInput-input" data-variant="unstyled" data-sf-part="input" placeholder="Search products" aria-label="Search products" id="mantine-ID" value="">
 </div>
 </div>
-<div class="_actions_11mq1_119">
-<a class="_action_11mq1_93 " aria-label="Your account" href="/account" data-discover="true">
+<div class="_actions_H">
+<a class="_action_H " aria-label="Your account" href="/account" data-discover="true">
 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
 <circle cx="12" cy="8" r="3.6">
 </circle>
@@ -37,7 +31,7 @@ title: Northbound Supply
 </path>
 </svg>
 </a>
-<a class="_action_11mq1_93 " aria-label="Cart, 0 items" href="/cart" data-discover="true">
+<a class="_action_H " aria-label="Cart, 0 items" href="/cart" data-discover="true">
 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
 <path d="M5 7h14l-1.3 12.1a1.5 1.5 0 0 1-1.5 1.4H7.8a1.5 1.5 0 0 1-1.5-1.4L5 7z">
 </path>
@@ -49,13 +43,13 @@ title: Northbound Supply
 </div>
 </header>
 <aside aria-label="Store notices">
-<div class="_notice_1unxb_7 _info_1unxb_17" data-sf-part="notice">
-<div class="_inner_1unxb_41">
-<div class="_text_1unxb_61">
-<p class="_title_1unxb_71">Free delivery</p>
-<p class="_body_1unxb_89">Free tracked delivery on every order over 75.00.</p>
+<div class="_notice_H _info_H" data-sf-part="notice">
+<div class="_inner_H">
+<div class="_text_H">
+<p class="_title_H">Free delivery</p>
+<p class="_body_H">Free tracked delivery on every order over 75.00.</p>
 </div>
-<button class="mantine-ID-auto mantine-ID m_220c80f2 _close_1unxb_111 m_86a44da5 mantine-ID-root m_87cf2631 mantine-ID-root" data-variant="subtle" data-size="sm" type="button" aria-label="Dismiss: Free delivery" style="--cb-size: var(--cb-size-sm);">
+<button class="mantine-focus-auto mantine-active m_220c80f2 _close_H m_86a44da5 mantine-CloseButton-root m_87cf2631 mantine-UnstyledButton-root" data-variant="subtle" data-size="sm" type="button" aria-label="Dismiss: Free delivery" style="--cb-size: var(--cb-size-sm);">
 <svg viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: var(--cb-icon-size, 70%); height: var(--cb-icon-size, 70%);">
 <path d="M11.7816 4.03157C12.0062 3.80702 12.0062 3.44295 11.7816 3.2184C11.5571 2.99385 11.193 2.99385 10.9685 3.2184L7.50005 6.68682L4.03164 3.2184C3.80708 2.99385 3.44301 2.99385 3.21846 3.2184C2.99391 3.44295 2.99391 3.80702 3.21846 4.03157L6.68688 7.49999L3.21846 10.9684C2.99391 11.193 2.99391 11.557 3.21846 11.7816C3.44301 12.0061 3.80708 12.0061 4.03164 11.7816L7.50005 8.31316L10.9685 11.7816C11.193 12.0061 11.5571 12.0061 11.7816 11.7816C12.0062 11.557 12.0062 11.193 11.7816 10.9684L8.31322 7.49999L11.7816 4.03157Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd">
 </path>
@@ -64,27 +58,27 @@ title: Northbound Supply
 </div>
 </div>
 </aside>
-<section class="_rail_1cksc_9 " aria-label="Dispatch cut-off" data-sf-part="cutoff">
-<div class="_inner_1cksc_21">
-<p class="_line_1cksc_41">Order by <time class="_time_1cksc_79" datetime="2026-08-24T14:00:00.000Z">15:00</time> for <span class="_ships_1cksc_95">same day</span> dispatch</p>
-<span class="_left_1cksc_105">5h 0m left</span>
+<section class="_rail_H " aria-label="Dispatch cut-off" data-sf-part="cutoff">
+<div class="_inner_H">
+<p class="_line_H">Order by <time class="_time_H" datetime="2026-08-24T14:00:00.000Z">15:00</time> for <span class="_ships_H">same day</span> dispatch</p>
+<span class="_left_H">5h 0m left</span>
 </div>
-<span class="_meter_1cksc_129" aria-hidden="true" style="--fill: 0.4166666666666667;">
+<span class="_meter_H" aria-hidden="true" style="--fill: 0.4166666666666667;">
 </span>
 </section>
-<main class="_main_11mq1_251" data-sf-part="main">
-<div class="_page_7l5fs_9">
-<div class="_head_7l5fs_17">
-<h1 class="_title_7l5fs_67" data-sf-part="page-title">Trade list</h1>
-<p class="_tally_7l5fs_87">
-<span class="_shown_7l5fs_117">6</span>
-<span class="_tallyUnit_7l5fs_127">lines</span>
+<main class="_main_H" data-sf-part="main">
+<div class="_page_H">
+<div class="_head_H">
+<h1 class="_title_H" data-sf-part="page-title">Trade list</h1>
+<p class="_tally_H">
+<span class="_shown_H">6</span>
+<span class="_tallyUnit_H">lines</span>
 </p>
 </div>
-<p class="_welcome_7l5fs_171">Small batches, packed in Leeds, dispatched the same day.</p>
-<div class="_root_1bc86_5 _search_7l5fs_191 m_46b77525 mantine-ID-root mantine-ID-root" data-variant="unstyled" data-size="sm">
-<div class="m_6c018570 mantine-ID-wrapper mantine-ID-wrapper" data-variant="unstyled" data-size="sm" data-with-left-section="true" style="--input-height: var(--input-height-sm); --input-fz: var(--mantine-font-size-sm); --input-left-section-width: calc(1.625rem * var(--mantine-ID));">
-<div data-position="left" class="_section_1bc86_49 m_82577fc2 mantine-ID-section mantine-ID-section">
+<p class="_welcome_H">Small batches, packed in Leeds, dispatched the same day.</p>
+<div class="_root_H _search_H m_46b77525 mantine-InputWrapper-root mantine-TextInput-root" data-variant="unstyled" data-size="sm">
+<div class="m_6c018570 mantine-Input-wrapper mantine-TextInput-wrapper" data-variant="unstyled" data-size="sm" data-with-left-section="true" style="--input-height: var(--input-height-sm); --input-fz: var(--mantine-font-size-sm); --input-left-section-width: calc(1.625rem * var(--mantine-scale));">
+<div data-position="left" class="_section_H m_82577fc2 mantine-Input-section mantine-TextInput-section">
 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
 <circle cx="10.5" cy="10.5" r="6.5">
 </circle>
@@ -92,88 +86,51 @@ title: Northbound Supply
 </path>
 </svg>
 </div>
-<input class="sf-input _input_1bc86_25 m_8fb7ebe7 mantine-ID-input mantine-ID-input" data-variant="unstyled" data-sf-part="input" placeholder="Search name or code" aria-label="Search products" id="mantine-ID" value="">
+<input class="sf-input _input_H m_8fb7ebe7 mantine-Input-input mantine-TextInput-input" data-variant="unstyled" data-sf-part="input" placeholder="Search name or code" aria-label="Search products" id="mantine-ID" value="">
 </div>
 </div>
-<table class="_table_7l5fs_199" role="table">
-<thead class="_thead_7l5fs_217" role="rowgroup">
-<tr class="_headRow_7l5fs_237" role="row">
-<th class="_hCode_7l5fs_341" scope="col" role="columnheader">Code</th>
+<table class="_table_H" role="table">
+<thead class="_thead_H" role="rowgroup">
+<tr class="_headRow_H" role="row">
+<th class="_hCode_H" scope="col" role="columnheader">Code</th>
 <th scope="col" role="columnheader">Product</th>
-<th class="_hUnit_7l5fs_343" scope="col" role="columnheader">Unit</th>
-<th class="_hBulk_7l5fs_345" scope="col" role="columnheader">Bulk</th>
-<th class="_hLine_7l5fs_347" scope="col" role="columnheader">Line</th>
-<th class="_hQty_7l5fs_349" scope="col" role="columnheader">Qty</th>
+<th class="_hUnit_H" scope="col" role="columnheader">Unit</th>
+<th class="_hBulk_H" scope="col" role="columnheader">Bulk</th>
+<th class="_hLine_H" scope="col" role="columnheader">Line</th>
+<th class="_hQty_H" scope="col" role="columnheader">Qty</th>
 </tr>
 </thead>
-<tbody class="_group_ttgcp_7  anim-row" role="rowgroup" style="--i: 0;">
-<tr class="_row_ttgcp_37  " role="row">
-<td class="_code_ttgcp_125" role="cell" title="ALP-10">ALP-10</td>
-<td class="_product_ttgcp_163" role="cell">
-<span class="_identity_ttgcp_157">
-<span class="_name_ttgcp_115">Alpine Extract 10ml</span>
+<tbody class="_group_H  anim-row" role="rowgroup" style="--i: 0;">
+<tr class="_row_H  " role="row">
+<td class="_code_H" role="cell" title="ALP-10">ALP-10</td>
+<td class="_product_H" role="cell">
+<span class="_identity_H">
+<span class="_name_H">Alpine Extract 10ml</span>
 </span>
 </td>
-<td class="_unit_ttgcp_117" role="cell">
-<span class="_unitPrice_ttgcp_117">£42.50</span>
-<span class="_each_ttgcp_381">/ea</span>
+<td class="_unit_H" role="cell">
+<span class="_unitPrice_H">£42.50</span>
+<span class="_each_H">/ea</span>
 </td>
-<td class="_bulk_ttgcp_393" role="cell">
-<button type="button" class="_chip_ttgcp_415 " aria-expanded="false" aria-label="Show the price breaks for Alpine Extract 10ml">Bulk<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
+<td class="_bulk_H" role="cell">
+<button type="button" class="_chip_H " aria-expanded="false" aria-label="Show the price breaks for Alpine Extract 10ml">Bulk<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
 <path d="m5 9 7 7 7-7">
 </path>
 </svg>
 </button>
 </td>
-<td class="_line_ttgcp_523" role="cell">
+<td class="_line_H" role="cell">
 </td>
-<td class="_qty_ttgcp_563" role="cell">
-<span class="_stepper_ttgcp_587">
-<button type="button" class="_step_ttgcp_587" disabled="" aria-label="One fewer Alpine Extract 10ml">
+<td class="_qty_H" role="cell">
+<span class="_stepper_H">
+<button type="button" class="_step_H" disabled="" aria-label="One fewer Alpine Extract 10ml">
 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
 <path d="M5.5 12h13">
 </path>
 </svg>
 </button>
-<input class="_input_ttgcp_683" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="0" aria-label="Alpine Extract 10ml quantity" type="text" value="">
-<button type="button" class="_step_ttgcp_587" aria-label="One more Alpine Extract 10ml">
-<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
-<path d="M12 5.5v13">
-</path>
-<path d="M5.5 12h13">
-</path>
-</svg>
-</button>
-</span>
-</td>
-</tr>
-</tbody>
-<tbody class="_group_ttgcp_7 _groupEnd_ttgcp_107 anim-row" role="rowgroup" style="--i: 1;">
-<tr class="_row_ttgcp_37  " role="row">
-<td class="_code_ttgcp_125" role="cell" title="BOR-25">BOR-25</td>
-<td class="_product_ttgcp_163" role="cell">
-<span class="_identity_ttgcp_157">
-<span class="_name_ttgcp_115">Borealis Drops 25ml</span>
-</span>
-</td>
-<td class="_unit_ttgcp_117" role="cell">
-<span class="_unitPrice_ttgcp_117">£68.00</span>
-<span class="_each_ttgcp_381">/ea</span>
-</td>
-<td class="_bulk_ttgcp_393" role="cell">
-</td>
-<td class="_line_ttgcp_523" role="cell">
-</td>
-<td class="_qty_ttgcp_563" role="cell">
-<span class="_stepper_ttgcp_587">
-<button type="button" class="_step_ttgcp_587" disabled="" aria-label="One fewer Borealis Drops 25ml">
-<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
-<path d="M5.5 12h13">
-</path>
-</svg>
-</button>
-<input class="_input_ttgcp_683" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="0" aria-label="Borealis Drops 25ml quantity" type="text" value="">
-<button type="button" class="_step_ttgcp_587" aria-label="One more Borealis Drops 25ml">
+<input class="_input_H" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="0" aria-label="Alpine Extract 10ml quantity" type="text" value="">
+<button type="button" class="_step_H" aria-label="One more Alpine Extract 10ml">
 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
 <path d="M12 5.5v13">
 </path>
@@ -185,32 +142,32 @@ title: Northbound Supply
 </td>
 </tr>
 </tbody>
-<tbody class="_group_ttgcp_7 _band_ttgcp_21  anim-row" role="rowgroup" style="--i: 2;">
-<tr class="_row_ttgcp_37  " role="row">
-<td class="_code_ttgcp_125" role="cell" title="CIT-05">CIT-05</td>
-<td class="_product_ttgcp_163" role="cell">
-<span class="_identity_ttgcp_157">
-<span class="_name_ttgcp_115">Citrine Capsules 60ct</span>
+<tbody class="_group_H _groupEnd_H anim-row" role="rowgroup" style="--i: 1;">
+<tr class="_row_H  " role="row">
+<td class="_code_H" role="cell" title="BOR-25">BOR-25</td>
+<td class="_product_H" role="cell">
+<span class="_identity_H">
+<span class="_name_H">Borealis Drops 25ml</span>
 </span>
 </td>
-<td class="_unit_ttgcp_117" role="cell">
-<span class="_unitPrice_ttgcp_117">£24.00</span>
-<span class="_each_ttgcp_381">/ea</span>
+<td class="_unit_H" role="cell">
+<span class="_unitPrice_H">£68.00</span>
+<span class="_each_H">/ea</span>
 </td>
-<td class="_bulk_ttgcp_393" role="cell">
+<td class="_bulk_H" role="cell">
 </td>
-<td class="_line_ttgcp_523" role="cell">
+<td class="_line_H" role="cell">
 </td>
-<td class="_qty_ttgcp_563" role="cell">
-<span class="_stepper_ttgcp_587">
-<button type="button" class="_step_ttgcp_587" disabled="" aria-label="One fewer Citrine Capsules 60ct">
+<td class="_qty_H" role="cell">
+<span class="_stepper_H">
+<button type="button" class="_step_H" disabled="" aria-label="One fewer Borealis Drops 25ml">
 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
 <path d="M5.5 12h13">
 </path>
 </svg>
 </button>
-<input class="_input_ttgcp_683" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="0" aria-label="Citrine Capsules 60ct quantity" type="text" value="">
-<button type="button" class="_step_ttgcp_587" aria-label="One more Citrine Capsules 60ct">
+<input class="_input_H" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="0" aria-label="Borealis Drops 25ml quantity" type="text" value="">
+<button type="button" class="_step_H" aria-label="One more Borealis Drops 25ml">
 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
 <path d="M12 5.5v13">
 </path>
@@ -222,60 +179,97 @@ title: Northbound Supply
 </td>
 </tr>
 </tbody>
-<tbody class="_group_ttgcp_7 _band_ttgcp_21 _groupEnd_ttgcp_107 anim-row" role="rowgroup" style="--i: 3;">
-<tr class="_row_ttgcp_37 _dim_ttgcp_115 " role="row">
-<td class="_code_ttgcp_125" role="cell" title="ECH-12">ECH-12</td>
-<td class="_product_ttgcp_163" role="cell">
-<span class="_identity_ttgcp_157">
-<span class="_name_ttgcp_115">Echo Balm 12ml</span>
-<span class="_status_ttgcp_203">
-<span class="_chip_p9183_7 _out_p9183_65" data-sf-part="badge">
-<span class="_dot_p9183_33" aria-hidden="true">
+<tbody class="_group_H _band_H  anim-row" role="rowgroup" style="--i: 2;">
+<tr class="_row_H  " role="row">
+<td class="_code_H" role="cell" title="CIT-05">CIT-05</td>
+<td class="_product_H" role="cell">
+<span class="_identity_H">
+<span class="_name_H">Citrine Capsules 60ct</span>
+</span>
+</td>
+<td class="_unit_H" role="cell">
+<span class="_unitPrice_H">£24.00</span>
+<span class="_each_H">/ea</span>
+</td>
+<td class="_bulk_H" role="cell">
+</td>
+<td class="_line_H" role="cell">
+</td>
+<td class="_qty_H" role="cell">
+<span class="_stepper_H">
+<button type="button" class="_step_H" disabled="" aria-label="One fewer Citrine Capsules 60ct">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
+<path d="M5.5 12h13">
+</path>
+</svg>
+</button>
+<input class="_input_H" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="0" aria-label="Citrine Capsules 60ct quantity" type="text" value="">
+<button type="button" class="_step_H" aria-label="One more Citrine Capsules 60ct">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
+<path d="M12 5.5v13">
+</path>
+<path d="M5.5 12h13">
+</path>
+</svg>
+</button>
+</span>
+</td>
+</tr>
+</tbody>
+<tbody class="_group_H _band_H _groupEnd_H anim-row" role="rowgroup" style="--i: 3;">
+<tr class="_row_H _dim_H " role="row">
+<td class="_code_H" role="cell" title="ECH-12">ECH-12</td>
+<td class="_product_H" role="cell">
+<span class="_identity_H">
+<span class="_name_H">Echo Balm 12ml</span>
+<span class="_status_H">
+<span class="_chip_H _out_H" data-sf-part="badge">
+<span class="_dot_H" aria-hidden="true">
 </span>Out of Stock</span>
 </span>
 </span>
 </td>
-<td class="_unit_ttgcp_117" role="cell">
-<span class="_unitPrice_ttgcp_117">£18.00</span>
-<span class="_each_ttgcp_381">/ea</span>
+<td class="_unit_H" role="cell">
+<span class="_unitPrice_H">£18.00</span>
+<span class="_each_H">/ea</span>
 </td>
-<td class="_bulk_ttgcp_393" role="cell">
+<td class="_bulk_H" role="cell">
 </td>
-<td class="_line_ttgcp_523" role="cell">
+<td class="_line_H" role="cell">
 </td>
-<td class="_qty_ttgcp_563" role="cell">
+<td class="_qty_H" role="cell">
 </td>
 </tr>
 </tbody>
-<tbody class="_group_ttgcp_7 _groupEnd_ttgcp_107 anim-row" role="rowgroup" style="--i: 4;">
-<tr class="_row_ttgcp_37  " role="row">
-<td class="_code_ttgcp_125" role="cell" title="DUN-01">DUN-01</td>
-<td class="_product_ttgcp_163" role="cell">
-<span class="_identity_ttgcp_157">
-<span class="_name_ttgcp_115">Dune Starter Kit</span>
-<span class="_status_ttgcp_203">
-<span class="_preorder_ttgcp_225">Pre-order</span>
+<tbody class="_group_H _groupEnd_H anim-row" role="rowgroup" style="--i: 4;">
+<tr class="_row_H  " role="row">
+<td class="_code_H" role="cell" title="DUN-01">DUN-01</td>
+<td class="_product_H" role="cell">
+<span class="_identity_H">
+<span class="_name_H">Dune Starter Kit</span>
+<span class="_status_H">
+<span class="_preorder_H">Pre-order</span>
 </span>
 </span>
 </td>
-<td class="_unit_ttgcp_117" role="cell">
-<span class="_unitPrice_ttgcp_117">£95.00</span>
-<span class="_each_ttgcp_381">/ea</span>
+<td class="_unit_H" role="cell">
+<span class="_unitPrice_H">£95.00</span>
+<span class="_each_H">/ea</span>
 </td>
-<td class="_bulk_ttgcp_393" role="cell">
+<td class="_bulk_H" role="cell">
 </td>
-<td class="_line_ttgcp_523" role="cell">
+<td class="_line_H" role="cell">
 </td>
-<td class="_qty_ttgcp_563" role="cell">
-<span class="_stepper_ttgcp_587">
-<button type="button" class="_step_ttgcp_587" disabled="" aria-label="One fewer Dune Starter Kit">
+<td class="_qty_H" role="cell">
+<span class="_stepper_H">
+<button type="button" class="_step_H" disabled="" aria-label="One fewer Dune Starter Kit">
 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
 <path d="M5.5 12h13">
 </path>
 </svg>
 </button>
-<input class="_input_ttgcp_683" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="0" aria-label="Dune Starter Kit quantity" type="text" value="">
-<button type="button" class="_step_ttgcp_587" aria-label="One more Dune Starter Kit">
+<input class="_input_H" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="0" aria-label="Dune Starter Kit quantity" type="text" value="">
+<button type="button" class="_step_H" aria-label="One more Dune Starter Kit">
 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
 <path d="M12 5.5v13">
 </path>
@@ -287,37 +281,37 @@ title: Northbound Supply
 </td>
 </tr>
 </tbody>
-<tbody class="_group_ttgcp_7 _band_ttgcp_21 _groupEnd_ttgcp_107 anim-row" role="rowgroup" style="--i: 5;">
-<tr class="_row_ttgcp_37  " role="row">
-<td class="_code_ttgcp_125" role="cell" title="FEN-30">FEN-30</td>
-<td class="_product_ttgcp_163" role="cell">
-<span class="_identity_ttgcp_157">
-<span class="_name_ttgcp_115">Fennec Tincture 30ml</span>
-<span class="_status_ttgcp_203">
-<span class="_chip_p9183_7 _low_p9183_57" data-sf-part="badge">
-<span class="_dot_p9183_33" aria-hidden="true">
+<tbody class="_group_H _band_H _groupEnd_H anim-row" role="rowgroup" style="--i: 5;">
+<tr class="_row_H  " role="row">
+<td class="_code_H" role="cell" title="FEN-30">FEN-30</td>
+<td class="_product_H" role="cell">
+<span class="_identity_H">
+<span class="_name_H">Fennec Tincture 30ml</span>
+<span class="_status_H">
+<span class="_chip_H _low_H" data-sf-part="badge">
+<span class="_dot_H" aria-hidden="true">
 </span>Low Stock</span>
 </span>
 </span>
 </td>
-<td class="_unit_ttgcp_117" role="cell">
-<span class="_unitPrice_ttgcp_117">£55.00</span>
-<span class="_each_ttgcp_381">/ea</span>
+<td class="_unit_H" role="cell">
+<span class="_unitPrice_H">£55.00</span>
+<span class="_each_H">/ea</span>
 </td>
-<td class="_bulk_ttgcp_393" role="cell">
+<td class="_bulk_H" role="cell">
 </td>
-<td class="_line_ttgcp_523" role="cell">
+<td class="_line_H" role="cell">
 </td>
-<td class="_qty_ttgcp_563" role="cell">
-<span class="_stepper_ttgcp_587">
-<button type="button" class="_step_ttgcp_587" disabled="" aria-label="One fewer Fennec Tincture 30ml">
+<td class="_qty_H" role="cell">
+<span class="_stepper_H">
+<button type="button" class="_step_H" disabled="" aria-label="One fewer Fennec Tincture 30ml">
 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
 <path d="M5.5 12h13">
 </path>
 </svg>
 </button>
-<input class="_input_ttgcp_683" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="0" aria-label="Fennec Tincture 30ml quantity" type="text" value="">
-<button type="button" class="_step_ttgcp_587" aria-label="One more Fennec Tincture 30ml">
+<input class="_input_H" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="0" aria-label="Fennec Tincture 30ml quantity" type="text" value="">
+<button type="button" class="_step_H" aria-label="One more Fennec Tincture 30ml">
 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
 <path d="M12 5.5v13">
 </path>
@@ -332,39 +326,39 @@ title: Northbound Supply
 </table>
 </div>
 </main>
-<footer class="_footer_11mq1_97" data-sf-part="footer">
-<div class="_footerInner_11mq1_281">
-<div class="_footerBrand_11mq1_297">
-<span class="_root_1ihs6_5" style="--brand-h: calc(var(--sf-logo-h) * 0.72);">
-<span class="_wordmark_1ihs6_37">Northbound</span>
+<footer class="_footer_H" data-sf-part="footer">
+<div class="_footerInner_H">
+<div class="_footerBrand_H">
+<span class="_root_H" style="--brand-h: calc(var(--sf-logo-h) * 0.72);">
+<span class="_wordmark_H">Northbound</span>
 </span>
-<p class="_tagline_11mq1_311">Small-batch supply, shipped from Leeds.</p>
+<p class="_tagline_H">Small-batch supply, shipped from Leeds.</p>
 </div>
 <nav aria-label="Support">
-<h2 class="_footerHead_11mq1_327">Support</h2>
-<ul class="_footerList_11mq1_347">
+<h2 class="_footerHead_H">Support</h2>
+<ul class="_footerList_H">
 <li>
-<a class="_footerLink_11mq1_97" href="https://example.invalid/delivery" target="_blank" rel="noopener noreferrer">Delivery and returns</a>
+<a class="_footerLink_H" href="https://example.invalid/delivery" target="_blank" rel="noopener noreferrer">Delivery and returns</a>
 </li>
 <li>
-<a class="_footerLink_11mq1_97" href="https://example.invalid/contact" target="_blank" rel="noopener noreferrer">Contact</a>
+<a class="_footerLink_H" href="https://example.invalid/contact" target="_blank" rel="noopener noreferrer">Contact</a>
 </li>
 </ul>
 </nav>
 <div>
-<h2 class="_footerHead_11mq1_327">Talk to us</h2>
-<div class="_inline_1mm2i_59">
-<a class="_link_1mm2i_1" href="https://wa.me/447700900123" target="_blank" rel="noopener noreferrer">
+<h2 class="_footerHead_H">Talk to us</h2>
+<div class="_inline_H">
+<a class="_link_H" href="https://wa.me/447700900123" target="_blank" rel="noopener noreferrer">
 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
 <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.79.5 3.47 1.36 4.92L2 22l5.32-1.4a9.86 9.86 0 0 0 4.72 1.2h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.83 9.83 0 0 0 12.04 2zm5.85 14.13c-.25.7-1.45 1.34-2 1.39-.51.05-1.13.07-1.83-.12-.42-.13-.97-.31-1.66-.6-2.93-1.27-4.84-4.22-4.99-4.41-.15-.2-1.19-1.59-1.19-3.04 0-1.45.76-2.16 1.03-2.45.27-.3.59-.37.79-.37l.57.01c.18.01.43-.07.67.51.25.6.84 2.06.91 2.21.07.15.12.32.02.52-.1.2-.15.32-.3.5-.15.18-.32.4-.45.54-.15.15-.31.31-.13.61.18.3.79 1.31 1.7 2.12 1.17 1.04 2.16 1.36 2.46 1.51.3.15.47.13.65-.07.18-.2.75-.87.95-1.17.2-.3.4-.25.67-.15.27.1 1.74.82 2.04.97.3.15.5.22.57.35.07.13.07.74-.18 1.44z">
 </path>
 </svg>
-<span class="_label_1mm2i_21">WhatsApp</span>
+<span class="_label_H">WhatsApp</span>
 </a>
 </div>
 </div>
 </div>
-<div class="_colophon_11mq1_389">
+<div class="_colophon_H">
 <span>Northbound Supply</span>
 <span>2026</span>
 </div>
@@ -374,37 +368,37 @@ title: Northbound Supply
     
   
 
-<div data-portal="true" data-mantine-ID-portal-node="true">
-<div class="m_b37d9ac7 mantine-ID-root" data-position="top-center" style="--notifications-z-index: 400; --notifications-container-width: calc(27.5rem * var(--mantine-ID));">
+<div data-portal="true" data-mantine-shared-portal-node="true">
+<div class="m_b37d9ac7 mantine-Notifications-root" data-position="top-center" style="--notifications-z-index: 400; --notifications-container-width: calc(27.5rem * var(--mantine-scale));">
 <div>
 </div>
 </div>
-<div class="m_b37d9ac7 mantine-ID-root" data-position="top-left" style="--notifications-z-index: 400; --notifications-container-width: calc(27.5rem * var(--mantine-ID));">
+<div class="m_b37d9ac7 mantine-Notifications-root" data-position="top-left" style="--notifications-z-index: 400; --notifications-container-width: calc(27.5rem * var(--mantine-scale));">
 <div>
 </div>
 </div>
-<div class="m_b37d9ac7 mantine-ID-root width-before-scroll-bar" data-position="top-right" style="--notifications-z-index: 400; --notifications-container-width: calc(27.5rem * var(--mantine-ID));">
+<div class="m_b37d9ac7 mantine-Notifications-root width-before-scroll-bar" data-position="top-right" style="--notifications-z-index: 400; --notifications-container-width: calc(27.5rem * var(--mantine-scale));">
 <div>
 </div>
 </div>
-<div class="m_b37d9ac7 mantine-ID-root width-before-scroll-bar" data-position="bottom-right" style="--notifications-z-index: 400; --notifications-container-width: calc(27.5rem * var(--mantine-ID));">
+<div class="m_b37d9ac7 mantine-Notifications-root width-before-scroll-bar" data-position="bottom-right" style="--notifications-z-index: 400; --notifications-container-width: calc(27.5rem * var(--mantine-scale));">
 <div>
 </div>
 </div>
-<div class="m_b37d9ac7 mantine-ID-root" data-position="bottom-left" style="--notifications-z-index: 400; --notifications-container-width: calc(27.5rem * var(--mantine-ID));">
+<div class="m_b37d9ac7 mantine-Notifications-root" data-position="bottom-left" style="--notifications-z-index: 400; --notifications-container-width: calc(27.5rem * var(--mantine-scale));">
 <div>
 </div>
 </div>
-<div class="m_b37d9ac7 mantine-ID-root" data-position="bottom-center" style="--notifications-z-index: 400; --notifications-container-width: calc(27.5rem * var(--mantine-ID));">
+<div class="m_b37d9ac7 mantine-Notifications-root" data-position="bottom-center" style="--notifications-z-index: 400; --notifications-container-width: calc(27.5rem * var(--mantine-scale));">
 <div>
 </div>
 </div>
 <div>
-<div class="m_f11b401e mantine-ID-root" id="mantine-ID" style="--drawer-size: calc(28.75rem * var(--mantine-ID)); --drawer-justify: flex-end; --mb-z-index: 200; --mb-padding: 0rem;">
+<div class="m_f11b401e mantine-Drawer-root" id="mantine-ID" style="--drawer-size: calc(28.75rem * var(--mantine-scale)); --drawer-justify: flex-end; --mb-z-index: 200; --mb-padding: 0rem;">
 </div>
 </div>
 <div>
-<div class="m_9df02822 mantine-ID-root" data-size="sm" data-centered="true" id="mantine-ID" style="--modal-radius: var(--mantine-ID-default); --modal-size: var(--modal-size-sm); --modal-y-offset: 5dvh; --mb-z-index: 200;">
+<div class="m_9df02822 mantine-Modal-root" data-size="sm" data-centered="true" id="mantine-ID" style="--modal-radius: var(--mantine-radius-default); --modal-size: var(--modal-size-sm); --modal-y-offset: 5dvh; --mb-z-index: 200;">
 </div>
 </div>
 </div>

@@ -1,15 +1,23 @@
 title: Northbound Supply
 
     <div id="root">
-<div class="_shell_H">
-<header class="_bar_H glass" data-sf-part="header">
-<div class="_barInner_H">
-<a class="_home_H" aria-label="Northbound Supply — home" href="/" data-discover="true">
+<div class="_shell_H _shell_H" data-sf-layout="webapp">
+<header class="_bar_H _bar_H glass" data-sf-part="header">
+<div class="_safeTop_H">
+</div>
+<div class="_barInner_H _barInner_H">
+<button type="button" class="_action_H _action_H _back_H" aria-label="Back">
+<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
+<path d="m5 9 7 7 7-7">
+</path>
+</svg>
+</button>
+<a class="_home_H _home_H" aria-label="Northbound Supply — home" href="/" data-discover="true">
 <span class="_root_H" style="--brand-h: calc(var(--sf-logo-h) * 0.72);">
 <span class="_wordmark_H">Northbound</span>
 </span>
 </a>
-<div class="_root_H _search_H m_46b77525 mantine-InputWrapper-root mantine-TextInput-root" data-variant="unstyled" data-size="sm">
+<div class="_root_H _search_H _search_H m_46b77525 mantine-InputWrapper-root mantine-TextInput-root" data-variant="unstyled" data-size="sm">
 <div class="m_6c018570 mantine-Input-wrapper mantine-TextInput-wrapper" data-variant="unstyled" data-size="sm" data-with-left-section="true" style="--input-height: var(--input-height-sm); --input-fz: var(--mantine-font-size-sm); --input-left-section-width: calc(1.625rem * var(--mantine-scale));">
 <div data-position="left" class="_section_H m_82577fc2 mantine-Input-section mantine-TextInput-section">
 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
@@ -22,8 +30,8 @@ title: Northbound Supply
 <input class="sf-input _input_H m_8fb7ebe7 mantine-Input-input mantine-TextInput-input" data-variant="unstyled" data-sf-part="input" placeholder="Search" aria-label="Search products" id="mantine-ID" value="">
 </div>
 </div>
-<div class="_actions_H">
-<a class="_action_H " aria-label="Your account" href="/account" data-discover="true">
+<div class="_actions_H _actions_H">
+<a class="_action_H _action_H " aria-label="Sign in" href="/login" data-discover="true">
 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
 <circle cx="12" cy="8" r="3.6">
 </circle>
@@ -31,7 +39,7 @@ title: Northbound Supply
 </path>
 </svg>
 </a>
-<a class="_action_H " aria-label="Cart, 0 items" href="/cart" data-discover="true">
+<a class="_action_H _action_H " aria-label="Cart, 0 items" href="/cart" data-discover="true">
 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
 <path d="M5 7h14l-1.3 12.1a1.5 1.5 0 0 1-1.5 1.4H7.8a1.5 1.5 0 0 1-1.5-1.4L5 7z">
 </path>
@@ -66,55 +74,42 @@ title: Northbound Supply
 <span class="_meter_H" aria-hidden="true" style="--fill: 0.4166666666666667;">
 </span>
 </section>
-<main class="_main_H" data-sf-part="main">
-<div class="_account_H">
-<header class="_letterhead_H">
-<span class="_eyebrow_H">Account</span>
-<h1 class="_name_H">Ada</h1>
-<p class="_meta_H">Member since 11 February 2026 · 4 orders</p>
-</header>
-<nav class="_tabs_H" aria-label="Account sections">
-<a aria-current="page" class="_tab_H _tabActive_H" href="/account/orders" data-discover="true">Orders</a>
-<a class="_tab_H" href="/account/loyalty" data-discover="true">Loyalty</a>
-<a class="_tab_H" href="/account/referrals" data-discover="true">Referrals</a>
-<a class="_tab_H" href="/account/profile" data-discover="true">Profile</a>
-</nav>
-<div class="anim-fade">
-<div class="_body_H">
-<div class="_sectionHead_H">
-<h2 class="_sectionTitle_H">Order history</h2>
-<span class="_sectionNote_H">2 orders</span>
+<main class="_main_H _main_H" data-sf-part="main">
+<div class="_page_H anim-fade">
+<span class="_ring_H _ringSuccess_H" aria-hidden="true">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
+<path d="m5 12.5 4.5 4.5L19 6.5">
+</path>
+</svg>
+</span>
+<p class="_eyebrow_H" data-tone="success">Payment received</p>
+<h1 class="_headline_H">Thanks — your order’s being confirmed</h1>
+<p class="_detail_H">We’re finalising your order now. You’ll hear from us as soon as it’s confirmed — keep this reference handy if you need to get in touch.</p>
+<div class="_referenceRow_H">
+<div class="_referenceBody_H">
+<p class="_referenceLabel_H">Reference</p>
+<p class="_referenceValue_H">E2E9</p>
 </div>
-<ul class="_orders_H">
-<li class="anim-row" style="--i: 0;">
-<a class="_order_H" href="/account/orders/E2E1" data-discover="true">
-<span class="_ref_H">E2E1</span>
-<span class="_total_H">
-<span style="font-variant-numeric: tabular-nums;">£46.03</span>
-</span>
-<span class="_date_H">24 August 2026</span>
-<span class="_status_H">
-<span class="_pill_H" data-sf-part="badge">Order received</span>
-</span>
-<span class="_due_H">Balance due <span style="font-variant-numeric: tabular-nums;">£46.03</span>
-</span>
+<button type="button" class="_copyButton_H" aria-label="Copy reference">
+<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
+<rect x="9" y="9" width="11" height="11">
+</rect>
+<path d="M15 9V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h4">
+</path>
+</svg>Copy</button>
+</div>
+<div class="_contact_H">
+<div class="_inline_H">
+<a class="_link_H" href="https://wa.me/447700900123?text=Hi+%E2%80%94+checking+in+about+my+order+E2E9." target="_blank" rel="noopener noreferrer">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+<path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.79.5 3.47 1.36 4.92L2 22l5.32-1.4a9.86 9.86 0 0 0 4.72 1.2h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.83 9.83 0 0 0 12.04 2zm5.85 14.13c-.25.7-1.45 1.34-2 1.39-.51.05-1.13.07-1.83-.12-.42-.13-.97-.31-1.66-.6-2.93-1.27-4.84-4.22-4.99-4.41-.15-.2-1.19-1.59-1.19-3.04 0-1.45.76-2.16 1.03-2.45.27-.3.59-.37.79-.37l.57.01c.18.01.43-.07.67.51.25.6.84 2.06.91 2.21.07.15.12.32.02.52-.1.2-.15.32-.3.5-.15.18-.32.4-.45.54-.15.15-.31.31-.13.61.18.3.79 1.31 1.7 2.12 1.17 1.04 2.16 1.36 2.46 1.51.3.15.47.13.65-.07.18-.2.75-.87.95-1.17.2-.3.4-.25.67-.15.27.1 1.74.82 2.04.97.3.15.5.22.57.35.07.13.07.74-.18 1.44z">
+</path>
+</svg>
+<span class="_label_H">WhatsApp</span>
 </a>
-</li>
-<li class="anim-row" style="--i: 1;">
-<a class="_order_H" href="/account/orders/K4M2QP" data-discover="true">
-<span class="_ref_H">K4M2QP</span>
-<span class="_total_H">
-<span style="font-variant-numeric: tabular-nums;">£128.90</span>
-</span>
-<span class="_date_H">2 July 2026</span>
-<span class="_status_H">
-<span class="_pill_H _toneSuccess_H" data-sf-part="badge">Delivered</span>
-</span>
-</a>
-</li>
-</ul>
 </div>
 </div>
+<a class="_back_H" href="/" data-discover="true">← Back to shop</a>
 </div>
 </main>
 </div>
@@ -145,10 +140,6 @@ title: Northbound Supply
 </div>
 <div class="m_b37d9ac7 mantine-Notifications-root" data-position="bottom-center" style="--notifications-z-index: 400; --notifications-container-width: calc(27.5rem * var(--mantine-scale));">
 <div>
-</div>
-</div>
-<div>
-<div class="m_f11b401e mantine-Drawer-root" id="mantine-ID" style="--drawer-size: calc(28.75rem * var(--mantine-scale)); --drawer-justify: flex-end; --mb-z-index: 200; --mb-padding: 0rem;">
 </div>
 </div>
 <div>

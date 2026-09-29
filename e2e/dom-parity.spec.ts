@@ -35,6 +35,7 @@ const CASES: RouteCase[] = [
   { name: 'account-referrals', path: '/account/referrals', layouts: ALL, session: true },
   { name: 'account-profile', path: '/account/profile', layouts: ALL, session: true },
   { name: 'order-status', path: ORDER_PATH, layouts: ALL, session: false },
+  { name: 'payment-success', path: '/payment/success?order=E2E9', layouts: ALL, session: false },
   { name: 'payment-cancel', path: '/payment/cancel', layouts: ALL, session: false },
   { name: 'order-placed', path: '/order-placed', layouts: ALL, session: false },
   { name: 'tracking', path: '/tracking', layouts: ALL, session: false },
@@ -44,18 +45,25 @@ const CASES: RouteCase[] = [
 
 const WIDTHS = [390, 1280] as const;
 
-/** Ids that React/Mantine derive from render order, and one tag per line so a diff reads. */
+/**
+ * Ids that React/Mantine derive from render order (attribute values only), CSS-module
+ * class names reduced to their local name (`_name_<filehash>_<cssline>` -> `_name_H`),
+ * and one tag per line so a diff reads.
+ */
 export function normalizeDom(html: string): string {
   return html
-    .replace(/(mantine-)[a-z0-9]{5,}/gi, '$1ID')
-    .replace(/«r[0-9a-z]+»|:r[0-9a-z]+:|_r_[0-9a-z]+_/g, 'RID')
+    .replace(/\b(id|for|aria-[a-z]+)="([^"]*)"/g, (_m, attr: string, val: string) =>
+      `${attr}="${val
+        .replace(/(mantine-)[a-z0-9]{5,}/gi, '$1ID')
+        .replace(/«r[0-9a-z]+»|:r[0-9a-z]+:|_r_[0-9a-z]+_/g, 'RID')}"`)
+    .replace(/(_[A-Za-z][\w-]*?)_[a-z0-9]{5}_\d+(?![\w-])/g, '$1_H')
     .replace(/></g, '>\n<');
 }
 
 async function snapshotOnce(page: Page): Promise<string> {
   return page.evaluate(() => {
     const body = document.body.cloneNode(true) as HTMLElement;
-    body.querySelectorAll('script').forEach((s) => s.remove());
+    body.querySelectorAll('script, style').forEach((s) => s.remove());
     return `title: ${document.title}\n${body.innerHTML}`;
   });
 }

@@ -1,45 +1,39 @@
 title: Order E2E1 — Northbound Supply
 
     <div id="root">
-<style data-mantine-ID="true">:root, :host{--mantine-font-family: "Inter Variable", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;--mantine-font-family-monospace: "Inter Variable", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;--mantine-font-family-headings: "Inter Variable", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;--mantine-ID-font-weight: 600;--mantine-ID-color-filled: var(--mantine-ID-brand-filled);--mantine-ID-color-filled-hover: var(--mantine-ID-brand-filled-hover);--mantine-ID-color-light: var(--mantine-ID-brand-light);--mantine-ID-color-light-hover: var(--mantine-ID-brand-light-hover);--mantine-ID-color-light-color: var(--mantine-ID-brand-light-color);--mantine-ID-color-0: var(--mantine-ID-brand-0);--mantine-ID-color-1: var(--mantine-ID-brand-1);--mantine-ID-color-2: var(--mantine-ID-brand-2);--mantine-ID-color-3: var(--mantine-ID-brand-3);--mantine-ID-color-4: var(--mantine-ID-brand-4);--mantine-ID-color-5: var(--mantine-ID-brand-5);--mantine-ID-color-6: var(--mantine-ID-brand-6);--mantine-ID-color-7: var(--mantine-ID-brand-7);--mantine-ID-color-8: var(--mantine-ID-brand-8);--mantine-ID-color-9: var(--mantine-ID-brand-9);--mantine-ID-brand-0: #fef7e4;--mantine-ID-brand-1: #f6edd5;--mantine-ID-brand-2: #e9d8b0;--mantine-ID-brand-3: #dbc387;--mantine-ID-brand-4: #d0b165;--mantine-ID-brand-5: #c8a44b;--mantine-ID-brand-6: #c6a041;--mantine-ID-brand-7: #ae8b32;--mantine-ID-brand-8: #9b7b29;--mantine-ID-brand-9: #876a1c;--mantine-h1-font-weight: 600;--mantine-h2-font-weight: 600;--mantine-h3-font-weight: 600;--mantine-h4-font-weight: 600;--mantine-h5-font-weight: 600;--mantine-h6-font-weight: 600;}
-
-:root[data-mantine-ID-scheme="dark"], :host([data-mantine-ID-scheme="dark"]){--mantine-ID-anchor: var(--mantine-ID-brand-4);--mantine-ID-dark-filled: var(--mantine-ID-dark-5);--mantine-ID-dark-filled-hover: var(--mantine-ID-dark-6);--mantine-ID-dark-outline: var(--mantine-ID-dark-1);--mantine-ID-dark-outline-hover: rgba(184, 184, 184, 0.05);--mantine-ID-gray-filled: var(--mantine-ID-gray-5);--mantine-ID-gray-filled-hover: var(--mantine-ID-gray-6);--mantine-ID-gray-outline: var(--mantine-ID-gray-1);--mantine-ID-gray-outline-hover: rgba(241, 243, 245, 0.05);--mantine-ID-red-filled: var(--mantine-ID-red-5);--mantine-ID-red-filled-hover: var(--mantine-ID-red-6);--mantine-ID-red-outline: var(--mantine-ID-red-1);--mantine-ID-red-outline-hover: rgba(255, 227, 227, 0.05);--mantine-ID-pink-filled: var(--mantine-ID-pink-5);--mantine-ID-pink-filled-hover: var(--mantine-ID-pink-6);--mantine-ID-pink-outline: var(--mantine-ID-pink-1);--mantine-ID-pink-outline-hover: rgba(255, 222, 235, 0.05);--mantine-ID-grape-filled: var(--mantine-ID-grape-5);--mantine-ID-grape-filled-hover: var(--mantine-ID-grape-6);--mantine-ID-grape-outline: var(--mantine-ID-grape-1);--mantine-ID-grape-outline-hover: rgba(243, 217, 250, 0.05);--mantine-ID-violet-filled: var(--mantine-ID-violet-5);--mantine-ID-violet-filled-hover: var(--mantine-ID-violet-6);--mantine-ID-violet-outline: var(--mantine-ID-violet-1);--mantine-ID-violet-outline-hover: rgba(229, 219, 255, 0.05);--mantine-ID-indigo-filled: var(--mantine-ID-indigo-5);--mantine-ID-indigo-filled-hover: var(--mantine-ID-indigo-6);--mantine-ID-indigo-outline: var(--mantine-ID-indigo-1);--mantine-ID-indigo-outline-hover: rgba(219, 228, 255, 0.05);--mantine-ID-blue-filled: var(--mantine-ID-blue-5);--mantine-ID-blue-filled-hover: var(--mantine-ID-blue-6);--mantine-ID-blue-outline: var(--mantine-ID-blue-1);--mantine-ID-blue-outline-hover: rgba(208, 235, 255, 0.05);--mantine-ID-cyan-filled: var(--mantine-ID-cyan-5);--mantine-ID-cyan-filled-hover: var(--mantine-ID-cyan-6);--mantine-ID-cyan-outline: var(--mantine-ID-cyan-1);--mantine-ID-cyan-outline-hover: rgba(197, 246, 250, 0.05);--mantine-ID-teal-filled: var(--mantine-ID-teal-5);--mantine-ID-teal-filled-hover: var(--mantine-ID-teal-6);--mantine-ID-teal-outline: var(--mantine-ID-teal-1);--mantine-ID-teal-outline-hover: rgba(195, 250, 232, 0.05);--mantine-ID-green-filled: var(--mantine-ID-green-5);--mantine-ID-green-filled-hover: var(--mantine-ID-green-6);--mantine-ID-green-outline: var(--mantine-ID-green-1);--mantine-ID-green-outline-hover: rgba(211, 249, 216, 0.05);--mantine-ID-lime-filled: var(--mantine-ID-lime-5);--mantine-ID-lime-filled-hover: var(--mantine-ID-lime-6);--mantine-ID-lime-outline: var(--mantine-ID-lime-1);--mantine-ID-lime-outline-hover: rgba(233, 250, 200, 0.05);--mantine-ID-yellow-filled: var(--mantine-ID-yellow-5);--mantine-ID-yellow-filled-hover: var(--mantine-ID-yellow-6);--mantine-ID-yellow-outline: var(--mantine-ID-yellow-1);--mantine-ID-yellow-outline-hover: rgba(255, 243, 191, 0.05);--mantine-ID-orange-filled: var(--mantine-ID-orange-5);--mantine-ID-orange-filled-hover: var(--mantine-ID-orange-6);--mantine-ID-orange-outline: var(--mantine-ID-orange-1);--mantine-ID-orange-outline-hover: rgba(255, 232, 204, 0.05);--mantine-ID-brand-text: var(--mantine-ID-brand-4);--mantine-ID-brand-filled: var(--mantine-ID-brand-5);--mantine-ID-brand-filled-hover: var(--mantine-ID-brand-6);--mantine-ID-brand-light: rgba(68, 53, 14, 1);--mantine-ID-brand-light-hover: rgba(95, 74, 20, 1);--mantine-ID-brand-light-color: var(--mantine-ID-brand-0);--mantine-ID-brand-outline: var(--mantine-ID-brand-1);--mantine-ID-brand-outline-hover: rgba(246, 237, 213, 0.05);}
-
-:root[data-mantine-ID-scheme="light"], :host([data-mantine-ID-scheme="light"]){--mantine-ID-anchor: var(--mantine-ID-brand-6);--mantine-ID-brand-text: var(--mantine-ID-brand-filled);--mantine-ID-brand-filled: var(--mantine-ID-brand-6);--mantine-ID-brand-filled-hover: var(--mantine-ID-brand-7);--mantine-ID-brand-light: var(--mantine-ID-brand-1);--mantine-ID-brand-light-hover: var(--mantine-ID-brand-2);--mantine-ID-brand-light-color: var(--mantine-ID-brand-9);--mantine-ID-brand-outline: var(--mantine-ID-brand-6);--mantine-ID-brand-outline-hover: rgba(198, 160, 65, 0.05);}</style>
-<style data-mantine-ID="classes">@media (max-width: 35.99375em) {.mantine-ID-from-xs {display: none !important;}}@media (min-width: 36em) {.mantine-ID-from-xs {display: none !important;}}@media (max-width: 47.99375em) {.mantine-ID-from-sm {display: none !important;}}@media (min-width: 48em) {.mantine-ID-from-sm {display: none !important;}}@media (max-width: 61.99375em) {.mantine-ID-from-md {display: none !important;}}@media (min-width: 62em) {.mantine-ID-from-md {display: none !important;}}@media (max-width: 74.99375em) {.mantine-ID-from-lg {display: none !important;}}@media (min-width: 75em) {.mantine-ID-from-lg {display: none !important;}}@media (max-width: 87.99375em) {.mantine-ID-from-xl {display: none !important;}}@media (min-width: 88em) {.mantine-ID-from-xl {display: none !important;}}</style>
-<div class="_shell_1tyci_5">
-<header class="_header_1tyci_19" data-sf-part="header">
-<span class="_root_1ihs6_5" style="--brand-h: calc(var(--sf-logo-h) * 1);">
-<span class="_wordmark_1ihs6_37">Northbound</span>
+<div class="_shell_H">
+<header class="_header_H" data-sf-part="header">
+<span class="_root_H" style="--brand-h: calc(var(--sf-logo-h) * 1);">
+<span class="_wordmark_H">Northbound</span>
 </span>
 </header>
-<main class="_main_1tyci_39" data-sf-part="main">
-<div class="_page_1yc5f_27 _pageWide_1yc5f_2073">
-<section class="_hero_1yc5f_47 anim-fade" aria-label="Order status">
-<p class="_eyebrow_1yc5f_63" data-tone="default">Order status</p>
-<h1 class="_headline_1yc5f_107">Order received</h1>
-<p class="_detail_1yc5f_127">We've got your order and we're getting it ready.</p>
-<p class="_meta_1yc5f_143">Placed 24 August 2026</p>
+<main class="_main_H" data-sf-part="main">
+<div class="_page_H _pageWide_H">
+<section class="_hero_H anim-fade" aria-label="Order status">
+<p class="_eyebrow_H" data-tone="default">Order status</p>
+<h1 class="_headline_H">Order received</h1>
+<p class="_detail_H">We've got your order and we're getting it ready.</p>
+<p class="_meta_H">Placed 24 August 2026</p>
 </section>
-<div class="_layout_1yc5f_467 _layoutWide_1yc5f_2081">
-<div class="_column_1yc5f_479">
-<p class="_deadline_1yc5f_801">Pay by <span class="_deadlineWhen_1yc5f_833">Aug 26, 2026, 10:05 AM</span> — after that the order cancels itself.</p>
-<section class="_card_1yc5f_497 _cardAction_1yc5f_523 anim-fade" aria-label="Crypto payment" data-sf-part="card">
-<div class="_cardHead_1yc5f_531">
-<div class="_cardHeadBody_1yc5f_545">
-<p class="_cardEyebrow_1yc5f_553 _cardEyebrowAction_1yc5f_573">Payment required</p>
-<h2 class="_cardTitle_1yc5f_581">Send 46.03 USDT</h2>
-<p class="_cardFigure_1yc5f_615">USDT · Polygon network · <span class="_nowrap_1yc5f_789">≈ £46.03</span>
+<div class="_layout_H _layoutWide_H">
+<div class="_column_H">
+<p class="_deadline_H">Pay by <span class="_deadlineWhen_H">Aug 26, 2026, 10:05 AM</span> — after that the order cancels itself.</p>
+<section class="_card_H _cardAction_H anim-fade" aria-label="Crypto payment" data-sf-part="card">
+<div class="_cardHead_H">
+<div class="_cardHeadBody_H">
+<p class="_cardEyebrow_H _cardEyebrowAction_H">Payment required</p>
+<h2 class="_cardTitle_H">Send 46.03 USDT</h2>
+<p class="_cardFigure_H">USDT · Polygon network · <span class="_nowrap_H">≈ £46.03</span>
 </p>
 </div>
-<span class="_pill_1yc5f_637">Awaiting payment</span>
+<span class="_pill_H">Awaiting payment</span>
 </div>
-<div class="_copyRow_1yc5f_1059">
-<div class="_copyBody_1yc5f_1079">
-<p class="_copyLabel_1yc5f_1087">Amount to send</p>
-<p class="_copyValue_1yc5f_1107">46.03 USDT</p>
+<div class="_copyRow_H">
+<div class="_copyBody_H">
+<p class="_copyLabel_H">Amount to send</p>
+<p class="_copyValue_H">46.03 USDT</p>
 </div>
-<button type="button" class="_copyButton_1yc5f_1131" aria-label="Copy amount to send">
+<button type="button" class="_copyButton_H" aria-label="Copy amount to send">
 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
 <rect x="9" y="9" width="11" height="11">
 </rect>
@@ -47,12 +41,12 @@ title: Order E2E1 — Northbound Supply
 </path>
 </svg>Copy</button>
 </div>
-<div class="_copyRow_1yc5f_1059">
-<div class="_copyBody_1yc5f_1079">
-<p class="_copyLabel_1yc5f_1087">USDT address (Polygon)</p>
-<p class="_copyValue_1yc5f_1107">0xE2E1a2b3c4d5e6f7089aabbccddeeff0011223344</p>
+<div class="_copyRow_H">
+<div class="_copyBody_H">
+<p class="_copyLabel_H">USDT address (Polygon)</p>
+<p class="_copyValue_H">0xE2E1a2b3c4d5e6f7089aabbccddeeff0011223344</p>
 </div>
-<button type="button" class="_copyButton_1yc5f_1131" aria-label="Copy usdt address (polygon)">
+<button type="button" class="_copyButton_H" aria-label="Copy usdt address (polygon)">
 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
 <rect x="9" y="9" width="11" height="11">
 </rect>
@@ -60,74 +54,74 @@ title: Order E2E1 — Northbound Supply
 </path>
 </svg>Copy</button>
 </div>
-<p class="_note_1yc5f_1381" data-tone="warn">Send exactly 46.03 USDT on the Polygon network. A different amount or network can delay or lose your payment.</p>
-<form class="_txidForm_1yc5f_1807">
-<label class="_txidLabel_1yc5f_1819" for="txid-9001">Transaction ID</label>
-<p class="_txidBlurb_1yc5f_1839">Once you’ve sent it, paste the transaction ID from your wallet and we’ll verify it on-chain.</p>
-<div class="_txidRow_1yc5f_1853">
-<input id="txid-9001" class="_txidInput_1yc5f_1865" placeholder="Paste transaction ID" autocomplete="off" spellcheck="false" maxlength="120" type="text" value="">
-<button type="submit" class="_ghost_1yc5f_1295 _txidSubmit_1yc5f_1911" disabled="">Submit</button>
+<p class="_note_H" data-tone="warn">Send exactly 46.03 USDT on the Polygon network. A different amount or network can delay or lose your payment.</p>
+<form class="_txidForm_H">
+<label class="_txidLabel_H" for="txid-9001">Transaction ID</label>
+<p class="_txidBlurb_H">Once you’ve sent it, paste the transaction ID from your wallet and we’ll verify it on-chain.</p>
+<div class="_txidRow_H">
+<input id="txid-9001" class="_txidInput_H" placeholder="Paste transaction ID" autocomplete="off" spellcheck="false" maxlength="120" type="text" value="">
+<button type="submit" class="_ghost_H _txidSubmit_H" disabled="">Submit</button>
 </div>
 </form>
 </section>
 <section class="anim-fade" aria-label="Change payment method">
-<button type="button" class="_disclosure_1yc5f_1721" aria-expanded="false">
+<button type="button" class="_disclosure_H" aria-expanded="false">
 <span>Change payment method</span>
-<span class="_disclosureSign_1yc5f_1783" aria-hidden="true">+</span>
+<span class="_disclosureSign_H" aria-hidden="true">+</span>
 </button>
 </section>
 </div>
-<div class="_column_1yc5f_479">
-<section class="_card_1yc5f_497 anim-fade" aria-label="Items" data-sf-part="card">
-<p class="_cardEyebrow_1yc5f_553">Items</p>
-<ul class="_items_1yc5f_843">
-<li class="_item_1yc5f_843">
-<span class="_itemName_1yc5f_871">Alpine Extract 10ml</span>
-<span class="_itemQty_1yc5f_887">1 × £42.50</span>
-<span class="_itemTotal_1yc5f_933">£42.50</span>
+<div class="_column_H">
+<section class="_card_H anim-fade" aria-label="Items" data-sf-part="card">
+<p class="_cardEyebrow_H">Items</p>
+<ul class="_items_H">
+<li class="_item_H">
+<span class="_itemName_H">Alpine Extract 10ml</span>
+<span class="_itemQty_H">1 × £42.50</span>
+<span class="_itemTotal_H">£42.50</span>
 </li>
 </ul>
-<dl class="_totals_1yc5f_957">
-<div class="_row_1yc5f_965">
-<dt class="_rowLabel_1yc5f_981">Subtotal</dt>
-<dd class="_rowFigure_1yc5f_1001">£42.50</dd>
+<dl class="_totals_H">
+<div class="_row_H">
+<dt class="_rowLabel_H">Subtotal</dt>
+<dd class="_rowFigure_H">£42.50</dd>
 </div>
-<div class="_row_1yc5f_965">
-<dt class="_rowLabel_1yc5f_981">Delivery</dt>
-<dd class="_rowFigure_1yc5f_1001">£4.95</dd>
+<div class="_row_H">
+<dt class="_rowLabel_H">Delivery</dt>
+<dd class="_rowFigure_H">£4.95</dd>
 </div>
-<div class="_row_1yc5f_965">
-<dt class="_rowLabel_1yc5f_981">Payment discount</dt>
-<dd class="_rowFigure_1yc5f_1001 _rowGood_1yc5f_1021">− £1.42</dd>
+<div class="_row_H">
+<dt class="_rowLabel_H">Payment discount</dt>
+<dd class="_rowFigure_H _rowGood_H">− £1.42</dd>
 </div>
-<div class="_row_1yc5f_965 _grand_1yc5f_1029">
-<dt class="_rowLabel_1yc5f_981">Total</dt>
-<dd class="_rowFigure_1yc5f_1001 _grandFigure_1yc5f_1041">£46.03</dd>
+<div class="_row_H _grand_H">
+<dt class="_rowLabel_H">Total</dt>
+<dd class="_rowFigure_H _grandFigure_H">£46.03</dd>
 </div>
 </dl>
 </section>
-<section class="_card_1yc5f_497 anim-fade" aria-label="Delivery address" data-sf-part="card">
-<p class="_cardEyebrow_1yc5f_553">Delivery address</p>
-<address class="_address_1yc5f_1923">
-<p class="_addressName_1yc5f_1933">Ada Sterling</p>
-<p class="_addressLine_1yc5f_1949">14 Kirkgate</p>
-<p class="_addressLine_1yc5f_1949">Leeds, West Yorkshire</p>
-<p class="_addressLine_1yc5f_1949">LS1 6BY</p>
-<p class="_addressLine_1yc5f_1949">GB</p>
+<section class="_card_H anim-fade" aria-label="Delivery address" data-sf-part="card">
+<p class="_cardEyebrow_H">Delivery address</p>
+<address class="_address_H">
+<p class="_addressName_H">Ada Sterling</p>
+<p class="_addressLine_H">14 Kirkgate</p>
+<p class="_addressLine_H">Leeds, West Yorkshire</p>
+<p class="_addressLine_H">LS1 6BY</p>
+<p class="_addressLine_H">GB</p>
 </address>
 </section>
 </div>
 </div>
-<footer class="_hero_1yc5f_47">
-<p class="_meta_1yc5f_143">Order E2E1</p>
-<p class="_detail_1yc5f_127">Questions about this order? Message us and quote that reference.</p>
-<div class="_inline_1mm2i_59">
-<a class="_link_1mm2i_1" href="https://wa.me/447700900123?text=I%27ve+just+placed+an+order%2C+here+is+my+Order+ID%3A+E2E1.+I%27d+like+to+pay." target="_blank" rel="noopener noreferrer">
+<footer class="_hero_H">
+<p class="_meta_H">Order E2E1</p>
+<p class="_detail_H">Questions about this order? Message us and quote that reference.</p>
+<div class="_inline_H">
+<a class="_link_H" href="https://wa.me/447700900123?text=I%27ve+just+placed+an+order%2C+here+is+my+Order+ID%3A+E2E1.+I%27d+like+to+pay." target="_blank" rel="noopener noreferrer">
 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
 <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.79.5 3.47 1.36 4.92L2 22l5.32-1.4a9.86 9.86 0 0 0 4.72 1.2h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.83 9.83 0 0 0 12.04 2zm5.85 14.13c-.25.7-1.45 1.34-2 1.39-.51.05-1.13.07-1.83-.12-.42-.13-.97-.31-1.66-.6-2.93-1.27-4.84-4.22-4.99-4.41-.15-.2-1.19-1.59-1.19-3.04 0-1.45.76-2.16 1.03-2.45.27-.3.59-.37.79-.37l.57.01c.18.01.43-.07.67.51.25.6.84 2.06.91 2.21.07.15.12.32.02.52-.1.2-.15.32-.3.5-.15.18-.32.4-.45.54-.15.15-.31.31-.13.61.18.3.79 1.31 1.7 2.12 1.17 1.04 2.16 1.36 2.46 1.51.3.15.47.13.65-.07.18-.2.75-.87.95-1.17.2-.3.4-.25.67-.15.27.1 1.74.82 2.04.97.3.15.5.22.57.35.07.13.07.74-.18 1.44z">
 </path>
 </svg>
-<span class="_label_1mm2i_21">WhatsApp</span>
+<span class="_label_H">WhatsApp</span>
 </a>
 </div>
 </footer>
@@ -138,28 +132,28 @@ title: Order E2E1 — Northbound Supply
     
   
 
-<div data-portal="true" data-mantine-ID-portal-node="true">
-<div class="m_b37d9ac7 mantine-ID-root" data-position="top-center" style="--notifications-z-index: 400; --notifications-container-width: calc(27.5rem * var(--mantine-ID));">
+<div data-portal="true" data-mantine-shared-portal-node="true">
+<div class="m_b37d9ac7 mantine-Notifications-root" data-position="top-center" style="--notifications-z-index: 400; --notifications-container-width: calc(27.5rem * var(--mantine-scale));">
 <div>
 </div>
 </div>
-<div class="m_b37d9ac7 mantine-ID-root" data-position="top-left" style="--notifications-z-index: 400; --notifications-container-width: calc(27.5rem * var(--mantine-ID));">
+<div class="m_b37d9ac7 mantine-Notifications-root" data-position="top-left" style="--notifications-z-index: 400; --notifications-container-width: calc(27.5rem * var(--mantine-scale));">
 <div>
 </div>
 </div>
-<div class="m_b37d9ac7 mantine-ID-root width-before-scroll-bar" data-position="top-right" style="--notifications-z-index: 400; --notifications-container-width: calc(27.5rem * var(--mantine-ID));">
+<div class="m_b37d9ac7 mantine-Notifications-root width-before-scroll-bar" data-position="top-right" style="--notifications-z-index: 400; --notifications-container-width: calc(27.5rem * var(--mantine-scale));">
 <div>
 </div>
 </div>
-<div class="m_b37d9ac7 mantine-ID-root width-before-scroll-bar" data-position="bottom-right" style="--notifications-z-index: 400; --notifications-container-width: calc(27.5rem * var(--mantine-ID));">
+<div class="m_b37d9ac7 mantine-Notifications-root width-before-scroll-bar" data-position="bottom-right" style="--notifications-z-index: 400; --notifications-container-width: calc(27.5rem * var(--mantine-scale));">
 <div>
 </div>
 </div>
-<div class="m_b37d9ac7 mantine-ID-root" data-position="bottom-left" style="--notifications-z-index: 400; --notifications-container-width: calc(27.5rem * var(--mantine-ID));">
+<div class="m_b37d9ac7 mantine-Notifications-root" data-position="bottom-left" style="--notifications-z-index: 400; --notifications-container-width: calc(27.5rem * var(--mantine-scale));">
 <div>
 </div>
 </div>
-<div class="m_b37d9ac7 mantine-ID-root" data-position="bottom-center" style="--notifications-z-index: 400; --notifications-container-width: calc(27.5rem * var(--mantine-ID));">
+<div class="m_b37d9ac7 mantine-Notifications-root" data-position="bottom-center" style="--notifications-z-index: 400; --notifications-container-width: calc(27.5rem * var(--mantine-scale));">
 <div>
 </div>
 </div>
