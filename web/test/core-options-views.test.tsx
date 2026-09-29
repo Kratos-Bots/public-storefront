@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
 import { MemoryRouter, Outlet, Route, Routes } from 'react-router';
-import type { ComponentType } from 'react';
+import { useState, type ComponentType } from 'react';
 import type { StorefrontSettings, Theme } from '@/types/settings.ts';
 import type { Catalog, Product } from '@/types/catalog.ts';
 
@@ -19,6 +19,7 @@ import { ProductGrid } from '@/features/catalog/ProductGrid.tsx';
 import { ProductList } from '@/features/catalog/ProductList.tsx';
 import { WholesaleCatalogPage } from '@/features/wholesale/WholesaleCatalogPage.tsx';
 import { useCartStore } from '@/stores/cart.ts';
+import { useUiStore } from '@/stores/ui.ts';
 import { TemplateProvider } from '@/templates/runtime.tsx';
 import { resolveTheme } from '@/templates/resolve.ts';
 import { lookupManifest } from '@/templates/registry.ts';
@@ -46,8 +47,10 @@ const THEME: Theme = {
 /** Modern's default slots plus a visible section label, so the label gate is observable. */
 const MODULE: TemplateModule = { slots: { SectionLabel: ({ title, level }) => <p>label {level} {title}</p> } };
 
+/** Holds the search the way the real shells do, so a sheet's own search field can filter. */
 function Shell() {
-  return <Outlet context={{ search: '', setSearch: () => {} }} />;
+  const [search, setSearch] = useState('');
+  return <Outlet context={{ search, setSearch }} />;
 }
 
 function mount(
@@ -55,8 +58,9 @@ function mount(
   options: Record<string, boolean>,
   layout: 'storefront' | 'menu' | 'webapp' = 'storefront',
   features: Partial<StorefrontSettings['features']> = {},
+  catalog: Catalog = CATALOG,
 ) {
-  state.catalog = CATALOG;
+  state.catalog = catalog;
   state.settings = {
     currency: 'GBP', welcomeMessage: 'Welcome in',
     brand: { name: 'Shop', title: 'Shop', tagline: 'Tag line', links: { whatsapp: null, telegram: null } },
@@ -149,5 +153,118 @@ describe('WholesaleCatalogPage basket bar', () => {
     withLine();
     mount(WholesaleCatalogPage, {}, 'webapp', { ordering: true, wholesale: true });
     expect(screen.queryByRole('link', { name: /^View basket/ })).toBeNull();
+  });
+});
+
+describe('showSku: the trade list', () => {
+  const headers = () => screen.getAllByRole('columnheader').map((h) => h.textContent);
+
+  it('by default carries the Code column, each code, and a search that names codes', () => {
+    mount(WholesaleCatalogPage, {}, 'storefront');
+    expect(headers()).toEqual(['Code', 'Product', 'Unit', 'Bulk']);
+    expect(screen.getByText('SKU-1')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Search name or code')).toBeInTheDocument();
+    expect(document.querySelector('[class*="noCode"]')).toBeNull();
+  });
+
+  it('hidden: one fewer column, no code cells, a plain "Search", and rows marked noCode', () => {
+    mount(WholesaleCatalogPage, { showSku: false }, 'storefront');
+    expect(headers()).toEqual(['Product', 'Unit', 'Bulk']);
+    expect(screen.queryByText('SKU-1')).toBeNull();
+    expect(screen.queryByText('SKU-2')).toBeNull();
+    expect(screen.queryByPlaceholderText('Search name or code')).toBeNull();
+    expect(screen.getByPlaceholderText('Search')).toBeInTheDocument();
+    const rows = screen.getAllByRole('row').slice(1); // past the head row
+    expect(rows).toHaveLength(2);
+    for (const row of rows) expect(row.className).toMatch(/noCode/);
+  });
+
+  it('hidden, with ordering on: the Line and Qty columns stay, Code alone goes', () => {
+    mount(WholesaleCatalogPage, { showSku: false }, 'storefront', { ordering: true, wholesale: true });
+    expect(headers()).toEqual(['Product', 'Unit', 'Bulk', 'Line', 'Qty']);
+  });
+
+  it.each([
+    ['shown', {}],
+    ['hidden', { showSku: false }],
+  ])('every row has as many cells as there are column headers (%s)', (_label, options) => {
+    mount(WholesaleCatalogPage, options, 'storefront');
+    const count = screen.getAllByRole('columnheader').length;
+    for (const row of screen.getAllByRole('row').slice(1)) {
+      expect(within(row).getAllByRole('cell')).toHaveLength(count);
+    }
+  });
+
+  it.each([
+    ['shown', {}, 4],
+    ['hidden', { showSku: false }, 3],
+  ])('the unrolled tier ladder lines up with the columns (%s)', (_label, options, count) => {
+    const tiered = { ...product(1, 'BPC-157 5mg'), pricingTiers: [{ id: 1, minQuantity: 10, price: 15 }] };
+    mount(WholesaleCatalogPage, options, 'storefront', {}, { ...CATALOG, products: [tiered, product(2, 'TB-500 5mg')] });
+    fireEvent.click(screen.getByRole('button', { name: 'Show the price breaks for BPC-157 5mg' }));
+    expect(screen.getAllByRole('columnheader')).toHaveLength(count);
+    const rungs = screen.getAllByText(/\+ units$/).map((cell) => cell.closest('tr')!);
+    expect(rungs.length).toBeGreaterThan(0);
+    for (const rung of rungs) expect(within(rung).getAllByRole('cell')).toHaveLength(count);
+  });
+
+  it('hidden codes are still searchable', () => {
+    mount(WholesaleCatalogPage, { showSku: false }, 'storefront');
+    fireEvent.change(screen.getByPlaceholderText('Search'), { target: { value: 'sku-2' } });
+    expect(screen.queryByText('BPC-157 5mg')).toBeNull();
+    expect(screen.getByText('TB-500 5mg')).toBeInTheDocument();
+    expect(screen.queryByText('SKU-2')).toBeNull(); // matched, still not shown
+  });
+});
+
+describe('showSku: the menu list rows', () => {
+  it('show each code by default and none when hidden', () => {
+    mount(ProductList, {}, 'menu');
+    expect(screen.getByText('SKU-1')).toBeInTheDocument();
+    cleanup();
+    mount(ProductList, { showSku: false }, 'menu');
+    expect(screen.queryByText('SKU-1')).toBeNull();
+    expect(screen.getByText('BPC-157 5mg')).toBeInTheDocument();
+  });
+});
+
+describe('showCategoryPicker', () => {
+  const navs = () => screen.queryAllByRole('navigation', { name: 'Categories' });
+  afterEach(() => useUiStore.setState({ filterOpen: false }));
+
+  it('ProductGrid: chips and rail by default, on the split layout', () => {
+    const { container } = mount(ProductGrid, {}, 'storefront');
+    expect(navs()).toHaveLength(2);
+    expect(screen.getByRole('heading', { level: 2, name: 'Categories' })).toBeInTheDocument();
+    expect(container.querySelector('[class*="noNav"]')).toBeNull();
+  });
+
+  it('ProductGrid hidden: no chips, no rail, and the layout goes full width', () => {
+    const { container } = mount(ProductGrid, { showCategoryPicker: false }, 'storefront');
+    expect(navs()).toHaveLength(0);
+    expect(screen.queryByRole('heading', { level: 2, name: 'Categories' })).toBeNull();
+    expect(container.querySelector('[class*="layout"]')!.className).toMatch(/noNav/);
+    expect(screen.getByText('BPC-157 5mg')).toBeInTheDocument();
+  });
+
+  it('ProductGrid: the filter drawer opens by default and is not there at all when hidden', () => {
+    useUiStore.setState({ filterOpen: true });
+    mount(ProductGrid, {}, 'storefront');
+    expect(navs()).toHaveLength(3); // chips, rail, drawer
+    cleanup();
+    mount(ProductGrid, { showCategoryPicker: false }, 'storefront');
+    expect(navs()).toHaveLength(0);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('ProductList: the filter sheet opens by default and is not there at all when hidden', () => {
+    useUiStore.setState({ filterOpen: true });
+    mount(ProductList, {}, 'menu');
+    expect(navs()).toHaveLength(1);
+    cleanup();
+    mount(ProductList, { showCategoryPicker: false }, 'menu');
+    expect(navs()).toHaveLength(0);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByText('BPC-157 5mg')).toBeInTheDocument();
   });
 });

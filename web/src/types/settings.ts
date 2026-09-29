@@ -1,5 +1,11 @@
 export type NoticeStyle = 'info' | 'warning' | 'promo';
-export interface Notice { id: string; style: NoticeStyle; title: string | null; body: string; startsAt: string | null; endsAt: string | null; active: boolean }
+export interface Notice {
+  id: string; style: NoticeStyle; title: string | null; body: string; startsAt: string | null; endsAt: string | null; active: boolean;
+  /** Held at the top of the screen, inside the sticky header. Absent on older backends — not pinned. */
+  pinned?: boolean;
+  /** Shoppers may close it. Absent on older backends — dismissible, as every notice used to be. */
+  dismissible?: boolean;
+}
 export type DayKey = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
 export interface CutoffDay { enabled: boolean; cutoff: string; shipsOn: string }
 export interface Cutoffs { timezone: string; days: Record<DayKey, CutoffDay> }

@@ -69,7 +69,7 @@ describe('dark-luxury locks', () => {
   });
 
   it('defaults every option on', () => {
-    expect(resolveTheme(stored, lookupManifest).options).toEqual({ showPageTitle: true, showCatalogIntro: true, showSectionLabels: true, grain: true, orb: true, showFooter: true, statusBadge: true });
+    expect(resolveTheme(stored, lookupManifest).options).toEqual({ showPageTitle: true, showCatalogIntro: true, showSectionLabels: true, showSku: true, showCategoryPicker: true, headerAccountIcon: 'all', headerCartIcon: 'all', showCutoffBar: true, cutoffMessage: '', showCutoffCountdown: true, grain: true, orb: true, showFooter: true, statusBadge: true });
   });
 });
 

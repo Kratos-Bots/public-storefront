@@ -94,7 +94,7 @@ describe('bento locks', () => {
   });
 
   it('defaults every option on', () => {
-    expect(resolveTheme(stored, lookupManifest).options).toEqual({ showPageTitle: true, showCatalogIntro: true, showSectionLabels: true, dispatch: true, contact: true, featured: true, showFooter: true });
+    expect(resolveTheme(stored, lookupManifest).options).toEqual({ showPageTitle: true, showCatalogIntro: true, showSectionLabels: true, showSku: true, showCategoryPicker: true, headerAccountIcon: 'all', headerCartIcon: 'all', showCutoffBar: true, cutoffMessage: '', showCutoffCountdown: true, dispatch: true, contact: true, featured: true, showFooter: true });
   });
 });
 

@@ -36,7 +36,7 @@ describe('templates catalog', () => {
   it('lists the core options first on every template, so the admin shows them everywhere', () => {
     const { json } = buildCatalog();
     for (const t of json.templates) {
-      expect(t.options.slice(0, 3), t.id).toEqual(CORE_OPTIONS);
+      expect(t.options.slice(0, CORE_OPTIONS.length), t.id).toEqual(CORE_OPTIONS);
       expect(new Set(t.options.map((o) => o.key)).size, t.id).toBe(t.options.length);
       expect(t.options.length, t.id).toBeLessThanOrEqual(30); // the backend catalog parser's cap
     }

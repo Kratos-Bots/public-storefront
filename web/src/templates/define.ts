@@ -103,17 +103,33 @@ const OPTION_HELP_MAX = 200;
 const CHOICE_VALUE_MAX = 100;
 const CHOICE_LABEL_MAX = 80;
 
+/** Where a header icon shows. The breakpoint is the shells' own desktop width, 62em. */
+export type HeaderIconMode = 'all' | 'desktop' | 'mobile' | 'none';
+const HEADER_ICON_CHOICES: readonly { value: HeaderIconMode; label: string }[] = [
+  { value: 'all', label: 'Phones and desktop' },
+  { value: 'desktop', label: 'Desktop only' },
+  { value: 'mobile', label: 'Phones only' },
+  { value: 'none', label: 'Hidden' },
+];
+
 /**
  * Core options: every template — built-in and external — gets these, prepended to its own
  * `options[]` by the registry (see `withCoreOptions`), so the admin's Template options card and
  * the generated templates.json list them for every template. The keys are reserved: a manifest
- * that declares one of them is invalid. All default to true (shown), so a store that never set
- * them looks exactly as before.
+ * that declares one of them is invalid. Every default leaves the store looking exactly as it did
+ * before the option existed: shown, everywhere, with the built-in wording.
  */
 export const CORE_OPTIONS: readonly TemplateOption[] = Object.freeze([
   { key: 'showPageTitle', type: 'boolean', label: 'Page title', help: 'The catalogue heading and its product count. Screen readers still announce the heading when it is hidden.', default: true },
   { key: 'showCatalogIntro', type: 'boolean', label: 'Catalogue intro', help: 'The introduction above the products: your tagline and welcome message.', default: true },
   { key: 'showSectionLabels', type: 'boolean', label: 'Section labels', help: 'The small labels above the page title and each category section, where this template shows them.', default: true },
+  { key: 'showSku', type: 'boolean', label: 'Product codes', help: 'The SKU beside each product in the catalogue, the trade list and product pages. Shoppers can still search by code.', default: true },
+  { key: 'showCategoryPicker', type: 'boolean', label: 'Category picker', help: 'The category chips and side index, and the categories button in the list layouts. Category links keep working.', default: true },
+  { key: 'headerAccountIcon', type: 'select', label: 'Header account icon', help: 'The account (or Sign in) button at the top of the page. Phones are narrower than 62em.', default: 'all', choices: [...HEADER_ICON_CHOICES] },
+  { key: 'headerCartIcon', type: 'select', label: 'Header cart icon', help: 'The cart button at the top of the page. The cart bar at the foot of the screen is not affected.', default: 'all', choices: [...HEADER_ICON_CHOICES] },
+  { key: 'showCutoffBar', type: 'boolean', label: 'Dispatch cut-off banner', help: 'The "Order by 15:00 for same day dispatch" line under the header. Shows only when a cut-off is scheduled.', default: true },
+  { key: 'cutoffMessage', type: 'text', label: 'Cut-off banner wording', help: 'Leave blank for "Order by {time} for {dispatch} dispatch". {time} is the cut-off, {dispatch} the day it ships.', default: '', maxLength: 100 },
+  { key: 'showCutoffCountdown', type: 'boolean', label: 'Cut-off countdown', help: 'The time left ("4h 12m left") and the meter along the banner.', default: true },
 ] satisfies TemplateOption[]);
 export const CORE_OPTION_KEYS: readonly string[] = Object.freeze(CORE_OPTIONS.map((o) => o.key));
 /** How many options a manifest may declare itself — the backend's cap minus the core options. */

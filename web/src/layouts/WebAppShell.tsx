@@ -16,6 +16,7 @@ import { SearchField } from '@/layouts/SearchField.tsx';
 import type { ShellSearchContext } from '@/layouts/shell-context.ts';
 import { isTelegramWebApp } from '@/lib/telegram-webapp.ts';
 import { Slot } from '@/templates/runtime.tsx';
+import { headerIconClass, useCoreOptions } from '@/templates/hooks.ts';
 import classes from '@/layouts/WebAppShell.module.css';
 
 /**
@@ -41,7 +42,10 @@ export function WebAppShell() {
   useTelegramChrome();
 
   const onCatalog = pathname === '/' || pathname.startsWith('/c/');
-  const canFilter = onCatalog && !features.wholesale;
+  const { showCategoryPicker, headerAccountIcon, headerCartIcon } = useCoreOptions();
+  const canFilter = onCatalog && !features.wholesale && showCategoryPicker;
+  const accountClass = headerIconClass(headerAccountIcon);
+  const cartClass = headerIconClass(headerCartIcon);
   const filtered = pathname.startsWith('/c/');
   const showBack = !native && !onCatalog;
 
@@ -53,6 +57,7 @@ export function WebAppShell() {
     <div className={shellClass} data-sf-layout="webapp">
       <header className={classes.bar} data-sf-part="header">
         <div className={classes.safeTop} />
+        <NoticeBanners pinned />
         <div className={classes.barInner}>
           {showBack ? (
             <button
@@ -85,20 +90,20 @@ export function WebAppShell() {
               </button>
             ) : null}
 
-            {features.accounts ? (
+            {features.accounts && accountClass !== null ? (
               <Link
                 to={loggedIn || native ? '/account' : '/login'}
-                className={classes.action}
+                className={`${classes.action} ${accountClass}`}
                 aria-label={loggedIn ? 'Your account' : 'Sign in'}
               >
                 <UserIcon size={17} />
               </Link>
             ) : null}
 
-            {features.ordering ? (
+            {features.ordering && cartClass !== null ? (
               <Link
                 to="/cart"
-                className={classes.action}
+                className={`${classes.action} ${cartClass}`}
                 aria-label={`Cart, ${cartCount} item${cartCount === 1 ? '' : 's'}`}
               >
                 <BagIcon size={17} />

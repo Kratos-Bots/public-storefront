@@ -8,6 +8,7 @@ import { TierLadder } from '@/features/wholesale/TierLadder.tsx';
 import { ChevronIcon, MinusIcon, PlusIcon } from '@/components/icons.tsx';
 import { rowAnim } from '@/lib/motion.ts';
 import type { Product } from '@/types/catalog.ts';
+import { useCoreOptions } from '@/templates/hooks.ts';
 import classes from '@/features/wholesale/WholesaleRow.module.css';
 
 export interface WholesaleRowProps {
@@ -31,6 +32,7 @@ export interface WholesaleRowProps {
  */
 export function WholesaleRow({ product, band, groupEnd, ordering, index }: WholesaleRowProps) {
   const { currency } = useSettings();
+  const { showSku } = useCoreOptions();
   const quantity = useCartStore(
     (s) => s.lines.find((l) => l.productId === product.id)?.quantity ?? 0,
   );
@@ -98,12 +100,16 @@ export function WholesaleRow({ product, band, groupEnd, ordering, index }: Whole
         style={index === undefined ? undefined : rowAnim(index).style}
         role="rowgroup"
       >
-        <tr className={`${classes.row} ${unavailable ? classes.dim : ''}`} role="row">
+        <tr className={`${classes.row} ${unavailable ? classes.dim : ''} ${showSku ? '' : classes.noCode}`} role="row">
           {/* On a tight phone the code is the part of the meta line that gives
               way (ellipsis); the whole code stays in the text and the title. */}
-          <td className={classes.code} role="cell" title={product.sku}>
-            {product.sku}
-          </td>
+          {/* The Code column goes with its header when the store hides product codes;
+              on a phone its meta-line track collapses to nothing. */}
+          {showSku ? (
+            <td className={classes.code} role="cell" title={product.sku}>
+              {product.sku}
+            </td>
+          ) : null}
 
           <td className={classes.product} role="cell">
             {/* The flex lives on an inner span, not the cell: a cell that is a flex
@@ -226,6 +232,7 @@ export function WholesaleRow({ product, band, groupEnd, ordering, index }: Whole
           inCart={inCart}
           groupEnd={groupEnd}
           ordering={ordering}
+          codeColumn={showSku}
         />
       ) : null}
     </>

@@ -12,6 +12,8 @@ export interface TierLadderProps {
   inCart: boolean;
   groupEnd: boolean;
   ordering: boolean;
+  /** The sheet has a Code column for the leading pad to sit under. */
+  codeColumn?: boolean;
 }
 
 /**
@@ -20,7 +22,7 @@ export interface TierLadderProps {
  * from what they are paying now to what the next break is worth. The rung in
  * force is named, not just tinted.
  */
-export function TierLadder({ id, product, quantity, band, inCart, groupEnd, ordering }: TierLadderProps) {
+export function TierLadder({ id, product, quantity, band, inCart, groupEnd, ordering, codeColumn = true }: TierLadderProps) {
   const { currency } = useSettings();
   const rungs = ladderRungs(product);
   const activeMin = activeRungMin(product, quantity);
@@ -45,7 +47,7 @@ export function TierLadder({ id, product, quantity, band, inCart, groupEnd, orde
             className={`${classes.rung} ${active ? classes.active : ''}`}
             role="row"
           >
-            <td className={classes.pad} role="cell" />
+            {codeColumn ? <td className={classes.pad} role="cell" /> : null}
             <td className={classes.threshold} role="cell">
               {rung.minQuantity}+ units
               {active ? <span className={classes.now}>your price</span> : null}

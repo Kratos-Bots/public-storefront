@@ -77,7 +77,7 @@ describe('cyber-brutalism locks', () => {
     expect(r.fonts.heading?.family).toBe('Tektur');
     expect(r.fonts.mono).toEqual({ family: 'Share Tech Mono', weights: [400] });
     expect(r.density).toBe('compact');
-    expect(r.options).toEqual({ showPageTitle: true, showCatalogIntro: true, showSectionLabels: true, systemBar: true, statusBar: true, crosshairs: true, showFooter: true, buttonArrow: true, nodeLabel: 'LDN_02' });
+    expect(r.options).toEqual({ showPageTitle: true, showCatalogIntro: true, showSectionLabels: true, showSku: true, showCategoryPicker: true, headerAccountIcon: 'all', headerCartIcon: 'all', showCutoffBar: true, cutoffMessage: '', showCutoffCountdown: true, systemBar: true, statusBar: true, crosshairs: true, showFooter: true, buttonArrow: true, nodeLabel: 'LDN_02' });
   });
 });
 
@@ -364,10 +364,10 @@ describe('cyber-brutalism template.css', () => {
     expect(find(ROOT)!.body).toContain('--sf-filled-hover-bg: var(--sf-text);');
   });
 
-  it('starts the viewport crosshair frame below the header bar, clear of the system bar', () => {
+  it('starts the viewport crosshair frame below the header bar and any pinned notices, clear of the system bar', () => {
     const frame = find(`${ROOT} .cb-frame`)!.body;
     expect(frame).toContain('inset: 12px');
-    expect(frame).toContain('top: calc(var(--sf-bar-h, 56px) + env(safe-area-inset-top, 0px) + 12px)');
+    expect(frame).toContain('top: calc(var(--sf-bar-h, 56px) + var(--sf-pin-h, 0px) + env(safe-area-inset-top, 0px) + 12px)');
   });
 
   it('hides generated decoration text from screen readers (empty alt text)', () => {

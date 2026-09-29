@@ -34,7 +34,7 @@ export function WholesaleCatalogPage() {
   const { search, setSearch } = useShellSearch();
   const { categorySlug } = useParams();
   const catalog = useCatalog();
-  const { showPageTitle } = useCoreOptions();
+  const { showPageTitle, showSku } = useCoreOptions();
 
   const products = useMemo(() => catalog.data?.products ?? [], [catalog.data]);
   const categories = useMemo(() => catalog.data?.categories ?? [], [catalog.data]);
@@ -144,7 +144,7 @@ export function WholesaleCatalogPage() {
           className={classes.search}
           value={search}
           onChange={setSearch}
-          placeholder="Search name or code"
+          placeholder={showSku ? 'Search name or code' : 'Search'}
         />
       ) : null}
 
@@ -173,9 +173,11 @@ export function WholesaleCatalogPage() {
         <table className={classes.table} role="table">
           <thead className={classes.thead} role="rowgroup">
             <tr className={classes.headRow} role="row">
-              <th className={classes.hCode} scope="col" role="columnheader">
-                Code
-              </th>
+              {showSku ? (
+                <th className={classes.hCode} scope="col" role="columnheader">
+                  Code
+                </th>
+              ) : null}
               <th className={classes.hProduct} scope="col" role="columnheader">
                 Product
               </th>

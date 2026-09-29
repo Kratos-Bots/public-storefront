@@ -15,6 +15,7 @@ import { CloseIcon } from '@/components/icons.tsx';
 import { deriveStockStatus, formatDate, formatMoney } from '@/lib/format.ts';
 import { FADE } from '@/lib/motion.ts';
 import type { Category, Product } from '@/types/catalog.ts';
+import { useCoreOptions } from '@/templates/hooks.ts';
 import classes from '@/features/catalog/ProductDetailSheet.module.css';
 
 /**
@@ -94,6 +95,7 @@ export function ProductDetailSheet({ productId, onClose, onSelect }: ProductDeta
 
 function Detail({ product, onSelect }: { product: Product; onSelect: (product: Product) => void }) {
   const { brand, currency } = useSettings();
+  const { showSku } = useCoreOptions();
   const status = deriveStockStatus(product.inStock, product.lowStockAlert);
   const eta = product.isPreorder && product.preorderEta ? formatDate(new Date(product.preorderEta).toISOString()) : '';
 
@@ -103,7 +105,7 @@ function Detail({ product, onSelect }: { product: Product; onSelect: (product: P
         <div className={classes.identityText}>
           <h2 className={classes.name} data-sf-part="sheet-title">{product.displayName}</h2>
           <p className={classes.flags}>
-            <span className={classes.sku}>{product.sku}</span>
+            {showSku ? <span className={classes.sku}>{product.sku}</span> : null}
             <StockChip status={status} />
             {product.isPreorder ? (
               <span className={classes.preorder}>{eta ? `Ships ${eta}` : 'Pre-order'}</span>

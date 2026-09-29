@@ -30,7 +30,7 @@ export function ProductGrid() {
   const { search, setSearch } = useShellSearch();
   const { categorySlug } = useParams();
   const catalog = useCatalog();
-  const { showPageTitle } = useCoreOptions();
+  const { showPageTitle, showCategoryPicker } = useCoreOptions();
 
   const products = useMemo(() => catalog.data?.products ?? [], [catalog.data]);
   const categories = useMemo(() => catalog.data?.categories ?? [], [catalog.data]);
@@ -72,8 +72,9 @@ export function ProductGrid() {
 
       <SearchField className={classes.search} value={search} onChange={setSearch} />
 
-      <div className={classes.layout}>
-        <CategoryNav tree={tree} total={products.length} activeId={active?.id ?? null} />
+      {/* Without the picker the column takes the full width: no rail, no chip row, no sheet. */}
+      <div className={showCategoryPicker ? classes.layout : `${classes.layout} ${classes.noNav}`}>
+        {showCategoryPicker ? <CategoryNav tree={tree} total={products.length} activeId={active?.id ?? null} /> : null}
 
         <div className={classes.column}>
           {/* The page-title core option hides the whole heading block (its label and count
@@ -138,7 +139,7 @@ export function ProductGrid() {
         </div>
       </div>
 
-      <FilterDrawer tree={tree} total={products.length} activeId={active?.id ?? null} />
+      {showCategoryPicker ? <FilterDrawer tree={tree} total={products.length} activeId={active?.id ?? null} /> : null}
     </div>
   );
 }

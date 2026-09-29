@@ -16,6 +16,7 @@ import { MobileCartBar, useMobileCartBar } from '@/features/cart/MobileCartBar.t
 import { SearchField } from '@/layouts/SearchField.tsx';
 import type { ShellSearchContext } from '@/layouts/shell-context.ts';
 import { Slot } from '@/templates/runtime.tsx';
+import { headerIconClass, useCoreOptions } from '@/templates/hooks.ts';
 import classes from '@/layouts/MenuShell.module.css';
 
 /** The dense shell: one compact bar, a narrow list column, contact strip at the foot of the catalog. */
@@ -30,7 +31,10 @@ export function MenuShell() {
   const onCatalog = pathname === '/' || pathname.startsWith('/c/');
   // Only the catalogue body carries the sheet this button opens — wholesale replaces
   // it, so the button would have nothing to show.
-  const canFilter = onCatalog && !features.wholesale;
+  const { showCategoryPicker, headerAccountIcon, headerCartIcon } = useCoreOptions();
+  const canFilter = onCatalog && !features.wholesale && showCategoryPicker;
+  const accountClass = headerIconClass(headerAccountIcon);
+  const cartClass = headerIconClass(headerCartIcon);
   // A category in the path is the only filter this layout has — the dot says one is on.
   const filtered = pathname.startsWith('/c/');
   // A running tab claims the foot as soon as there is something on the order —
@@ -45,6 +49,7 @@ export function MenuShell() {
     <div className={barShowing ? `${classes.shell} ${classes.withBar}` : classes.shell}>
       <Slot name="TopBar" />
       <header className={classes.bar} data-sf-part="header">
+        <NoticeBanners pinned />
         <div className={classes.barInner}>
           <Link to="/" className={classes.home} aria-label={`${brand.name} — home`}>
             <Brand size="sm" />
@@ -65,20 +70,20 @@ export function MenuShell() {
               </button>
             ) : null}
 
-            {features.accounts ? (
+            {features.accounts && accountClass !== null ? (
               <Link
                 to={loggedIn ? '/account' : '/login'}
-                className={classes.action}
+                className={`${classes.action} ${accountClass}`}
                 aria-label={loggedIn ? 'Your account' : 'Sign in'}
               >
                 <UserIcon size={17} />
               </Link>
             ) : null}
 
-            {features.ordering ? (
+            {features.ordering && cartClass !== null ? (
               <Link
                 to="/cart"
-                className={classes.action}
+                className={`${classes.action} ${cartClass}`}
                 aria-label={`Cart, ${cartCount} item${cartCount === 1 ? '' : 's'}`}
               >
                 <BagIcon size={17} />

@@ -3,7 +3,7 @@ import { useSettings } from '@/app/settings.ts';
 import { useCatalog } from '@/features/catalog/use-catalog.ts';
 import { buildCategoryTree } from '@/features/catalog/category-tree.ts';
 import { categoryCounts } from '@/features/catalog/filter.ts';
-import { BASE_TOKENS, type OptionValues, type Scheme, type TemplateTokens } from '@/templates/define.ts';
+import { BASE_TOKENS, type HeaderIconMode, type OptionValues, type Scheme, type TemplateTokens } from '@/templates/define.ts';
 import { useTemplateContext } from '@/templates/runtime.tsx';
 import type { Brand, Features, SupportLink } from '@/types/settings.ts';
 
@@ -24,12 +24,37 @@ export function useTemplateOptions(): OptionValues {
   return useTemplateContext().resolved?.options ?? {};
 }
 
-export interface CoreOptions { showPageTitle: boolean; showCatalogIntro: boolean; showSectionLabels: boolean }
-/** The core options every template carries (define.ts CORE_OPTIONS). Only an explicit false hides —
- *  outside a provider, or before settings resolve, everything shows. */
+export interface CoreOptions {
+  showPageTitle: boolean; showCatalogIntro: boolean; showSectionLabels: boolean;
+  showSku: boolean; showCategoryPicker: boolean;
+  headerAccountIcon: HeaderIconMode; headerCartIcon: HeaderIconMode;
+  showCutoffBar: boolean; cutoffMessage: string; showCutoffCountdown: boolean;
+}
+const ICON_MODES: readonly HeaderIconMode[] = ['all', 'desktop', 'mobile', 'none'];
+const iconMode = (v: unknown): HeaderIconMode => (ICON_MODES.includes(v as HeaderIconMode) ? (v as HeaderIconMode) : 'all');
+
+/** The core options every template carries (define.ts CORE_OPTIONS). Only an explicit false (or
+ *  a non-default choice) hides — outside a provider, or before settings resolve, everything shows. */
 export function useCoreOptions(): CoreOptions {
   const o = useTemplateOptions();
-  return { showPageTitle: o.showPageTitle !== false, showCatalogIntro: o.showCatalogIntro !== false, showSectionLabels: o.showSectionLabels !== false };
+  return {
+    showPageTitle: o.showPageTitle !== false,
+    showCatalogIntro: o.showCatalogIntro !== false,
+    showSectionLabels: o.showSectionLabels !== false,
+    showSku: o.showSku !== false,
+    showCategoryPicker: o.showCategoryPicker !== false,
+    headerAccountIcon: iconMode(o.headerAccountIcon),
+    headerCartIcon: iconMode(o.headerCartIcon),
+    showCutoffBar: o.showCutoffBar !== false,
+    cutoffMessage: typeof o.cutoffMessage === 'string' ? o.cutoffMessage.trim() : '',
+    showCutoffCountdown: o.showCutoffCountdown !== false,
+  };
+}
+
+/** Class for a header icon in `mode`, or null when it is not rendered at all (see global.css). */
+export function headerIconClass(mode: HeaderIconMode): string | null {
+  if (mode === 'none') return null;
+  return mode === 'desktop' ? 'sf-hide-mobile' : mode === 'mobile' ? 'sf-hide-desktop' : '';
 }
 
 export interface StorefrontInfo { brand: Brand; features: Features; supportLinks: SupportLink[]; welcomeMessage: string | null; currency: string; enabled: boolean }
