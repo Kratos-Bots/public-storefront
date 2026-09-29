@@ -37,6 +37,17 @@ describe('fixture interceptor', () => {
     expect((result as Request).headers.get('authorization')).toBeNull();
   });
 
+  it('refuses a personalised catalogue path whose public twin is not a live read', async () => {
+    const { result, notify } = await call(IN_ORDERS, 'storefront/catalog/secret/7');
+    expect(result).toMatchObject({ status: 400 });
+    expect(notify).toHaveBeenCalledTimes(1);
+    expect((await call(IN_ORDERS, 'storefront/catalog')).result).toBeInstanceOf(Request);
+  });
+
+  it('answers a malformed order reference with 404 instead of throwing', async () => {
+    expect((await call(IN_ORDERS, 'storefront/orders/%E0%A4%A')).result).toMatchObject({ status: 404 });
+  });
+
   it('keeps the original request\'s signal and method on a rewrite', async () => {
     const controller = new AbortController();
     const request = new Request(`${ORIGIN}/api/storefront/catalog`, { signal: controller.signal, headers: { Authorization: 'Bearer x' } });

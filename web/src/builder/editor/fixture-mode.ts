@@ -94,7 +94,9 @@ export function enterFixtureMode(): void {
     add: notifyPreviewOnly,
     setQuantity: notifyPreviewOnly,
     remove: notifyPreviewOnly,
-    clear: notifyPreviewOnly,
+    // Silent: OrderPlacedPage and PaymentSuccessPage clear the cart on mount, with no user action.
+    // No user-triggered path reaches it here (sign-out returns early, checkout is always refused).
+    clear: () => undefined,
     replaceFromServer: () => undefined,
     setMode: () => undefined,
   });
@@ -104,6 +106,9 @@ export function enterFixtureMode(): void {
 const LIVE_QUERY_ROOTS = new Set(['settings', 'catalog', 'product', 'pages']);
 
 export function applyPreviewAs(p: PreviewAs, client: QueryClient): void {
+  // Before enterFixtureMode the stores still persist to the shopper's storage: never write a
+  // fixture token there.
+  if (!entered) throw new Error('applyPreviewAs needs fixture mode: call enterFixtureMode() first');
   useSessionStore.setState(
     p.session === 'signed-out' ? { token: null, customer: null } : { token: FIXTURE_TOKEN, customer: FIXTURE_CUSTOMER },
   );

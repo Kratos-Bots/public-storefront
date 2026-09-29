@@ -63,6 +63,7 @@ import { MethodPicker } from '@/features/order-status/MethodPicker.tsx';
 import { TrackingPage } from '@/features/tracking/TrackingPage.tsx';
 import { loadTelegramSdk, TELEGRAM_SDK_SRC } from '@/lib/telegram-webapp.ts';
 import { useSessionStore } from '@/stores/session.ts';
+import { useCartStore } from '@/stores/cart.ts';
 import type { StorefrontSettings } from '@/types/settings.ts';
 
 const wrap = (children: ReactNode) => (
@@ -122,6 +123,23 @@ describe('ProfilePage sign-out', () => {
     expect(errors.mock.calls.flat().join(' ')).not.toMatch(/navigation/i);
     errors.mockRestore();
     useSessionStore.setState({ token: null, customer: null });
+  });
+});
+
+describe('ProfilePage sign-out for shoppers', () => {
+  // jsdom's window.location is unforgeable and its navigation is silent, so the reload itself
+  // can't be observed here; it is the unconditional statement right after these clears.
+  it('still clears the session and the cart', async () => {
+    g.builder = false;
+    useSessionStore.setState({ token: 'shopper-token', customer: { id: 7, nickname: 'Morgan' } });
+    useCartStore.setState({ mode: 'server', lines: [{ productId: 1, displayName: 'Northbound Field Kit', sku: 'NB-FK-01', unitPrice: 48, basePrice: 48, pricingTiers: [], quantity: 1, isPreorder: false, excludedFromFreeShipping: false, imageProductId: null }] });
+    render(wrap(<MemoryRouter><ProfilePage /></MemoryRouter>));
+    fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+    await waitFor(() => expect(useSessionStore.getState().token).toBeNull());
+    expect(useCartStore.getState()).toMatchObject({ lines: [], mode: 'local' });
+    expect(logout).toHaveBeenCalledTimes(1);
+    // The builder guard did not fire: the button stays in its signing-out state until the reload.
+    expect(screen.getByRole('button', { name: 'Signing out' })).toBeDisabled();
   });
 });
 

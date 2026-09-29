@@ -17,6 +17,15 @@ function respond(status: 200 | 400 | 401 | 404, dataOrError: unknown, meta?: unk
   return new Response(JSON.stringify(envelope), { status, headers: { 'content-type': 'application/json' } });
 }
 
+/** A malformed escape is just an unknown reference (404), never a throw inside beforeRequest. */
+function safeDecode(segment: string): string | null {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return null;
+  }
+}
+
 /** Live, shopper-independent reads the editor must show for real (spec §6). */
 const LIVE_GET = /^(?:storefront\/settings|catalog|catalog\/products\/\d+|storefront\/pages\/[a-z]+)$/;
 const PUBLIC_ORDER = /^orders\/([^/]+)\/([^/]+)(?:\/(.+))?$/;
@@ -43,8 +52,11 @@ export function createFixtureInterceptor(getPreviewAs: () => PreviewAs, notify: 
     };
 
     if (method === 'GET' && (path === 'storefront/catalog' || path.startsWith('storefront/catalog/'))) {
+      const publicPath = path.slice('storefront/'.length);
+      // Only a rewrite that lands on a live read (the same check a ky retry of it will meet).
+      if (!LIVE_GET.test(publicPath)) return refuse();
       const rewritten = new URL(request.url);
-      rewritten.pathname = `/api/${path.slice('storefront/'.length)}`;
+      rewritten.pathname = `/api/${publicPath}`;
       // Keeps method, headers (already tokenless), signal and everything else of the original.
       return new Request(rewritten, request);
     }
@@ -66,7 +78,7 @@ export function createFixtureInterceptor(getPreviewAs: () => PreviewAs, notify: 
       const accountOrder = ACCOUNT_ORDER.exec(path);
       if (accountOrder) {
         if (!signedIn) return respond(401, 'Unauthorized');
-        return as.session === 'signed-in-orders' && decodeURIComponent(accountOrder[1]!) === FIXTURE_ORDER_REF
+        return as.session === 'signed-in-orders' && safeDecode(accountOrder[1]!) === FIXTURE_ORDER_REF
           ? respond(200, FIXTURE_ORDER_DETAIL)
           : respond(404, 'Order not found');
       }

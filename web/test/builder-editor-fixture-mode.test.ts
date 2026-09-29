@@ -67,6 +67,9 @@ describe('fixture mode', () => {
   it('makes cart and session actions inert, and says so for the cart', () => {
     enterFixtureMode();
     applyPreviewAs({ session: 'signed-in', cart: 'items' }, new QueryClient());
+    // OrderPlacedPage / PaymentSuccessPage clear the cart on mount: no toast without a user action.
+    useCartStore.getState().clear();
+    expect(notificationsShow).not.toHaveBeenCalled();
     useCartStore.getState().remove(900101);
     useCartStore.getState().add({ id: 5 } as Product);
     useCartStore.getState().clear();
@@ -77,6 +80,15 @@ describe('fixture mode', () => {
     expect(useCartStore.getState().lines).toHaveLength(2);
     expect(useSessionStore.getState().token).toBe(FIXTURE_TOKEN);
     expect(notificationsShow).toHaveBeenCalledWith({ id: 'sf-builder-preview-only', message: PREVIEW_ONLY_MESSAGE });
+  });
+
+  it('applyPreviewAs refuses to run before fixture mode is entered', async () => {
+    vi.resetModules();
+    const fresh = await import('@/builder/editor/fixture-mode.ts');
+    const session = await import('@/stores/session.ts');
+    expect(() => fresh.applyPreviewAs({ session: 'signed-in', cart: 'items' }, new QueryClient())).toThrow(/fixture mode/);
+    expect(session.useSessionStore.getState().token).toBeNull();
+    expect(REAL_LOCAL.getItem('sf-session-v1')).toBeNull();
   });
 
   it('a fixture 401 does not sign the fixture out', async () => {
