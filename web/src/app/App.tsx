@@ -64,6 +64,19 @@ function useBootCart() {
   }, []);
 }
 
+/**
+ * Whether ClosedGate is showing the closed page instead of the router. Read at render time, not
+ * via useLocation — ClosedGate sits above RouterProvider, so it has no router context of its own.
+ */
+function useShowsClosedPage(enabled: boolean): boolean {
+  const closed = closedGate((s) => s.closed);
+  const exempt = isClosedExemptPath(window.location.pathname);
+  return (closed || !enabled) && !exempt;
+}
+
+/** The page builder's own route (Plan 3) injects a draft set; it never reads the published one. */
+const BUILDER_PREFIX = '/__builder';
+
 export function ClosedGate({ children }: { children: ReactNode }) {
   const closed = closedGate((s) => s.closed);
   const settings = useSettings();
@@ -87,9 +100,8 @@ export function ClosedGate({ children }: { children: ReactNode }) {
   // un-gate until something else re-renders ClosedGate (a settings refetch,
   // the poll above); landing on one directly — a fresh load, a pasted link,
   // the payment gateway's own redirect — always works.
-  const exempt = isClosedExemptPath(window.location.pathname);
-
-  return (closed || !settings.enabled) && !exempt ? <ClosedPage /> : <>{children}</>;
+  const showsClosed = useShowsClosedPage(Boolean(settings.enabled));
+  return showsClosed ? <ClosedPage /> : <>{children}</>;
 }
 
 /**
@@ -100,9 +112,13 @@ export function ClosedGate({ children }: { children: ReactNode }) {
 export function usePrefetchPageSet(settings: StorefrontSettings): void {
   const client = useQueryClient();
   const layout = effectiveLayout(settings.features?.layout, isTelegramWebApp());
+  // Nobody reads the set behind the closed page, nor in the builder, which injects a draft.
+  // Only an explicit `enabled: false` closes the shop here — the gate itself decides the rest.
+  const skip = useShowsClosedPage(settings.enabled !== false) || window.location.pathname.startsWith(BUILDER_PREFIX);
   useEffect(() => {
+    if (skip) return;
     void client.prefetchQuery({ queryKey: pagesKey(layout), queryFn: () => fetchPageSet(layout), staleTime: PAGES_QUERY.staleTime, retry: PAGES_QUERY.retry });
-  }, [client, layout]);
+  }, [client, layout, skip]);
 }
 
 function ThemedApp({ settings }: { settings: StorefrontSettings }) {

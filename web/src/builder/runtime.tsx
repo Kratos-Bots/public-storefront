@@ -140,7 +140,12 @@ export function PuckShell() {
   const onShellFallback = useCallback(() => setShellFailed(true), []);
 
   // As PuckPage: wait for the published set rather than paint the default shell and swap it.
-  if (isLoading) return <PageSkeleton />;
+  // A route whose default document is chromeless (the shared order link) paints its brand header
+  // at once, as v0.6.0 did; the page inside shows the inline skeleton until the set is in.
+  if (isLoading) {
+    const fallbackPage = routeKey && isFixedRouteKey(routeKey) ? defaultDoc(routeKey, layout) : null;
+    return fallbackPage?.root.props.chrome === 'none' ? <Chromeless /> : <PageSkeleton />;
+  }
 
   const page = routeKey ? resolveDoc(pageSet, routeKey, layout) : null;
   if (page?.doc.root.props.chrome === 'none') return <Chromeless />;
