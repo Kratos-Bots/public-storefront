@@ -1,0 +1,19 @@
+.section {
+  min-width: 0;
+  margin-block: 0.5rem;
+  padding-block: var(--section-pad);
+  background: var(--section-bg);
+  color: var(--section-fg);
+}
+
+/* A tinted rail band gets the card corners and an inset so text never touches the tint. */
+.rail.filled {
+  padding-inline: 1rem;
+  border-radius: var(--sf-card-radius);
+}
+
+/* Full bleed: escape the content column's inset (every shell publishes --sf-main-pad), keep it as padding. */
+.full {
+  margin-inline: calc(-1 * var(--sf-main-pad, 1rem));
+  padding-inline: var(--sf-main-pad, 1rem);
+}
