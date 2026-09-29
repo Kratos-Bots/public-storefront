@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { defaultPrimaryAction } from '@/features/webapp/default-action.ts';
 
-const base = { pathname: '/', count: 2, subtotalLabel: '£24.00', checkoutTo: '/checkout', ordering: true, wholesale: false, blocked: false };
+const base = { pathname: '/', count: 2, subtotalLabel: '£24.00', checkoutTo: '/checkout', ordering: true, blocked: false };
 
 describe('defaultPrimaryAction', () => {
   it('offers the cart from the catalogue once something is in it', () => {
@@ -26,11 +26,10 @@ describe('defaultPrimaryAction', () => {
     expect(defaultPrimaryAction({ ...base, pathname: '/checkout' })).toBeNull();
   });
 
-  it('has nothing to offer with an empty cart, ordering off, or wholesale', () => {
+  it('has nothing to offer with an empty cart or ordering off', () => {
     expect(defaultPrimaryAction({ ...base, count: 0 })).toBeNull();
     expect(defaultPrimaryAction({ ...base, pathname: '/cart', count: 0 })).toBeNull();
     expect(defaultPrimaryAction({ ...base, ordering: false })).toBeNull();
-    expect(defaultPrimaryAction({ ...base, wholesale: true })).toBeNull();
   });
 
   it('never points at the page the shopper is already on', () => {

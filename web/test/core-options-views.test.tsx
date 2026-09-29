@@ -18,6 +18,7 @@ vi.mock('@/features/catalog/use-catalog.ts', () => ({
 import { ProductGrid } from '@/features/catalog/ProductGrid.tsx';
 import { ProductList } from '@/features/catalog/ProductList.tsx';
 import { WholesaleCatalogPage } from '@/features/wholesale/WholesaleCatalogPage.tsx';
+import { useCartStore } from '@/stores/cart.ts';
 import { TemplateProvider } from '@/templates/runtime.tsx';
 import { resolveTheme } from '@/templates/resolve.ts';
 import { lookupManifest } from '@/templates/registry.ts';
@@ -49,12 +50,17 @@ function Shell() {
   return <Outlet context={{ search: '', setSearch: () => {} }} />;
 }
 
-function mount(View: ComponentType, options: Record<string, boolean>, layout: 'storefront' | 'menu' = 'storefront') {
+function mount(
+  View: ComponentType,
+  options: Record<string, boolean>,
+  layout: 'storefront' | 'menu' | 'webapp' = 'storefront',
+  features: Partial<StorefrontSettings['features']> = {},
+) {
   state.catalog = CATALOG;
   state.settings = {
     currency: 'GBP', welcomeMessage: 'Welcome in',
     brand: { name: 'Shop', title: 'Shop', tagline: 'Tag line', links: { whatsapp: null, telegram: null } },
-    features: { layout, ordering: false, guestCheckout: false, accounts: true, verify: false, tracking: false, wholesale: false, upsell: false },
+    features: { layout, ordering: false, guestCheckout: false, accounts: true, verify: false, tracking: false, wholesale: false, upsell: false, ...features },
   } as StorefrontSettings;
   const resolved = resolveTheme({ ...THEME, options }, lookupManifest);
   return render(
@@ -118,5 +124,30 @@ describe('ProductList group labels', () => {
     cleanup();
     mount(ProductList, { showSectionLabels: false }, 'menu');
     expect(screen.queryByText('label group Peptides')).toBeNull();
+  });
+});
+
+describe('WholesaleCatalogPage basket bar', () => {
+  function withLine() {
+    useCartStore.setState({
+      mode: 'local',
+      lines: [{
+        productId: 1, displayName: 'BPC-157 5mg', sku: 'SKU-1', unitPrice: 20, basePrice: 20, pricingTiers: [],
+        quantity: 2, isPreorder: false, excludedFromFreeShipping: false, imageProductId: null,
+      }],
+    });
+  }
+  afterEach(() => useCartStore.setState({ lines: [], mode: 'local' }));
+
+  it('rides the foot of the sheet in the list layouts', () => {
+    withLine();
+    mount(WholesaleCatalogPage, {}, 'menu', { ordering: true, wholesale: true });
+    expect(screen.getByRole('link', { name: /^View basket/ })).toBeInTheDocument();
+  });
+
+  it("stands down in the web app, whose primary action is the cart button there too", () => {
+    withLine();
+    mount(WholesaleCatalogPage, {}, 'webapp', { ordering: true, wholesale: true });
+    expect(screen.queryByRole('link', { name: /^View basket/ })).toBeNull();
   });
 });

@@ -91,7 +91,8 @@ export function WholesaleCatalogPage() {
   const query = search.trim();
   // The menu and web app shells keep their search in the bar at every width; the
   // storefront header drops it below 62em, so there the sheet carries its own.
-  const ownSearch = effectiveLayout(features.layout, isTelegramWebApp()) === 'storefront';
+  const layout = effectiveLayout(features.layout, isTelegramWebApp());
+  const ownSearch = layout === 'storefront';
 
   if (unknownCategory) {
     return (
@@ -210,7 +211,8 @@ export function WholesaleCatalogPage() {
         </table>
       )}
 
-      {features.ordering ? <WholesaleBar /> : null}
+      {/* The web app's primary action is its cart button, on this sheet as everywhere else. */}
+      {features.ordering && layout !== 'webapp' ? <WholesaleBar /> : null}
     </div>
   );
 }

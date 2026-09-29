@@ -29,7 +29,6 @@ export function useResolvedPrimaryAction(): PrimaryAction | null {
     subtotalLabel: formatMoney(subtotal, currency),
     checkoutTo: checkoutTarget(loggedIn, features.guestCheckout),
     ordering: features.ordering,
-    wholesale: features.wholesale,
     blocked: issues.some((i) => i.inactive || i.belowMin || i.aboveMax),
   });
   const label = fallback?.label ?? null;
