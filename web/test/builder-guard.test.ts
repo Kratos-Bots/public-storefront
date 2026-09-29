@@ -66,6 +66,11 @@ describe('validateDoc', () => {
     expect(r.issues).toEqual([{ docKey: 'page:about', rule: 'field:Heading.text', blockId: 'h', message: expect.stringContaining('Heading') }]);
     expect(r.issues[0]!.message).toContain('"text"');
   });
+  it('a key missing from the stored doc takes its default with no issue (a prop added in a later release)', () => {
+    const r = validateDoc({ root, content: [{ type: 'Heading', props: { id: 'h', text: 'Hi' } }] }, 'page:about', 'storefront');
+    expect(r.doc!.content[0]!.props).toEqual({ id: 'h', text: 'Hi', level: 'h2' });
+    expect(r.issues).toEqual([]);
+  });
   it('an enum that fails falls back to the block default (not copy) and is reported', () => {
     const r = validateDoc({ root, content: [{ type: 'Heading', props: { id: 'h', text: 'Hi', level: 'h9' } }] }, 'page:about', 'storefront');
     expect(r.doc!.content[0]!.props).toEqual({ id: 'h', text: 'Hi', level: 'h2' });

@@ -55,6 +55,12 @@ describe('parseBlockPropsDetailed', () => {
     expect(r.props).toEqual({ title: '', src: '', size: 'sm', n: 4, on: true, links: [] });
     expect(r.fallbacks).toEqual(['title', 'src', 'size', 'n', 'on', 'links']);
   });
+  it('a MISSING key takes its default silently (forward compat), even in neutral mode', () => {
+    const { title: _t, links: _l, ...rest } = valid;
+    const r = parseBlockPropsDetailed(rich, { ...rest, links: undefined });
+    expect(r.props).toEqual({ ...rest, title: 'Placeholder', links: [{ label: 'Placeholder link' }] });
+    expect(r.fallbacks).toEqual([]);
+  });
   it('defaults mode (the editor) still uses defaultProps', () => {
     expect(parseBlockPropsDetailed(rich, { ...valid, title: '' }, 'defaults').props.title).toBe('Placeholder');
     expect(parseBlockProps(rich, { ...valid, title: '' }).title).toBe('Placeholder');

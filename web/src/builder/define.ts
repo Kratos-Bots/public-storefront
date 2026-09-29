@@ -73,6 +73,9 @@ export function parseBlockPropsDetailed(def: BlockDef<any>, raw: Record<string, 
       const value = raw[key];
       const r = field.safeParse(value);
       if (r.success) { out[key] = r.data; continue; }
+      // Forward compat: a key the stored doc doesn't have (a prop added in a later release) takes
+      // its default silently. Only a PRESENT value that fails its schema is a reported fallback.
+      if (value === undefined) continue;
       if (field instanceof z.ZodArray && Array.isArray(value)) {
         const kept: unknown[] = [];
         const dropped: string[] = [];
