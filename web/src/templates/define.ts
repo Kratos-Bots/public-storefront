@@ -89,6 +89,7 @@ export const FONT_FAMILY_RE = /^[A-Za-z0-9 ]{1,50}$/;
 export const HEX_RE = /^#[0-9a-fA-F]{6}$/;
 const PREVIEW_RE = /^\.\/[A-Za-z0-9_-]+\.(webp|png|jpg|jpeg)$/;
 const RADII: readonly RadiusName[] = ['none', 'sm', 'md', 'lg', 'xl'];
+/** Backend cap on a catalog entry's `options[]` (core options included). */
 const MAX_OPTIONS = 30;
 const MAX_CHOICES = 20;
 const MAX_WEIGHTS = 9;
@@ -101,6 +102,28 @@ const OPTION_LABEL_MAX = 80;
 const OPTION_HELP_MAX = 200;
 const CHOICE_VALUE_MAX = 100;
 const CHOICE_LABEL_MAX = 80;
+
+/**
+ * Core options: every template — built-in and external — gets these, prepended to its own
+ * `options[]` by the registry (see `withCoreOptions`), so the admin's Template options card and
+ * the generated templates.json list them for every template. The keys are reserved: a manifest
+ * that declares one of them is invalid. All default to true (shown), so a store that never set
+ * them looks exactly as before.
+ */
+export const CORE_OPTIONS: readonly TemplateOption[] = Object.freeze([
+  { key: 'showPageTitle', type: 'boolean', label: 'Page title', help: 'The catalogue heading and its product count. Screen readers still announce the heading when it is hidden.', default: true },
+  { key: 'showCatalogIntro', type: 'boolean', label: 'Catalogue intro', help: 'The introduction above the products: your tagline and welcome message.', default: true },
+  { key: 'showSectionLabels', type: 'boolean', label: 'Section labels', help: 'The small labels above the page title and each category section, where this template shows them.', default: true },
+] satisfies TemplateOption[]);
+export const CORE_OPTION_KEYS: readonly string[] = Object.freeze(CORE_OPTIONS.map((o) => o.key));
+/** How many options a manifest may declare itself — the backend's cap minus the core options. */
+export const MAX_TEMPLATE_OPTIONS = MAX_OPTIONS - CORE_OPTIONS.length;
+
+/** The manifest as the app sees it: the core options first, then the template's own. Idempotent. */
+export function withCoreOptions(manifest: TemplateManifest): TemplateManifest {
+  const own = manifest.options.filter((o) => !CORE_OPTION_KEYS.includes(o.key));
+  return { ...manifest, options: [...CORE_OPTIONS.map((o) => ({ ...o })), ...own] };
+}
 
 /** Identity — exists so manifests are type-checked against the contract. */
 export function defineTemplate(manifest: TemplateManifest): TemplateManifest {
@@ -204,11 +227,12 @@ export function validateManifest(value: unknown, folderId: string): string[] {
   for (const k of ['fonts', 'radius', 'density'] as const) if (typeof ed[k] !== 'boolean') err(`editable.${k} must be a boolean`);
 
   const options = Array.isArray(m.options) ? m.options : [];
-  if (options.length > MAX_OPTIONS) err(`at most ${MAX_OPTIONS} options`);
+  if (options.length > MAX_TEMPLATE_OPTIONS) err(`at most ${MAX_TEMPLATE_OPTIONS} options (${CORE_OPTIONS.length} more are added to every template)`);
   const keys = new Set<string>();
   for (const o of options as unknown[]) {
     if (!isObj(o) || !isStr(o.key) || !OPTION_KEY_RE.test(o.key)) { err(`option key must match ${OPTION_KEY_RE}`); continue; }
-    if (keys.has(o.key)) err(`duplicate option key "${o.key}"`);
+    if (CORE_OPTION_KEYS.includes(o.key)) err(`option key "${o.key}" is reserved — every template already has it as a core option`);
+    else if (keys.has(o.key)) err(`duplicate option key "${o.key}"`);
     keys.add(o.key);
     if (!isStr(o.label)) err(`option "${o.key}": label is required`);
     else if (o.label.length > OPTION_LABEL_MAX) err(`option "${o.key}": label must be at most ${OPTION_LABEL_MAX} characters`);

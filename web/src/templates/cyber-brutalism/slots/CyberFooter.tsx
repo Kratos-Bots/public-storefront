@@ -19,7 +19,8 @@ function StatusStrip() {
  * layout keeps only the strip.
  */
 export function CyberFooter({ brand, layout, supportLinks, hasChat, options, scheme }: FooterProps) {
-  const barShowing = useMobileCartBar();
+  const barShowing = useMobileCartBar(); // a hook: called before the showFooter bail-out below
+  if (options.showFooter === false) return null; // the status strip is part of the footer
   const status = options.statusBar === true && !barShowing ? <StatusStrip /> : null;
 
   if (layout !== 'storefront') {

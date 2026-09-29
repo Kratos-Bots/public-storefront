@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildCatalog, toCatalog } from '@/templates/catalog.ts';
+import { CORE_OPTIONS } from '@/templates/define.ts';
 import { defineTemplate } from '@/templates/define.ts';
 import modern from '@/templates/modern/manifest.ts';
 import type { TemplateEntry } from '@/templates/registry.ts';
@@ -31,6 +32,14 @@ describe('templates catalog', () => {
     const { json, errors } = buildCatalog();
     expect(errors).toEqual([]);
     expect(json.templates[0]!.id).toBe('modern');
+  });
+  it('lists the core options first on every template, so the admin shows them everywhere', () => {
+    const { json } = buildCatalog();
+    for (const t of json.templates) {
+      expect(t.options.slice(0, 3), t.id).toEqual(CORE_OPTIONS);
+      expect(new Set(t.options.map((o) => o.key)).size, t.id).toBe(t.options.length);
+      expect(t.options.length, t.id).toBeLessThanOrEqual(30); // the backend catalog parser's cap
+    }
   });
 });
 

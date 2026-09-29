@@ -51,6 +51,22 @@ describe('WholesaleRow', () => {
     expect(screen.getByText('Min 10')).toBeInTheDocument();
   });
 
+  it('keeps the product cell to the name when no status fact applies', () => {
+    mount(product());
+    const cell = screen.getByText('BPC-157 5mg').closest('[role="cell"]')!;
+    expect(cell.textContent).toBe('BPC-157 5mg');
+  });
+
+  it('lists the status facts after the name, stock first, then pre-order, then the minimum', () => {
+    mount(product({ lowStockAlert: true, isPreorder: true, minOrderQuantity: 10 }));
+    const cell = screen.getByText('BPC-157 5mg').closest('[role="cell"]')!;
+    expect(cell.textContent).toBe('BPC-157 5mgLow StockPre-orderMin 10');
+    // The facts share one wrapper, apart from the name, so a phone can give them their own line.
+    const facts = screen.getByText('Min 10').parentElement!;
+    expect(facts).toBe(screen.getByText('Pre-order').parentElement);
+    expect(facts).not.toBe(screen.getByText('BPC-157 5mg').parentElement);
+  });
+
   it('+ from empty opens the line at the minimum order quantity', () => {
     mount(product({ minOrderQuantity: 10 }));
     fireEvent.click(screen.getByRole('button', { name: 'One more BPC-157 5mg' }));

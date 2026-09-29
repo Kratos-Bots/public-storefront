@@ -8,3 +8,6 @@ input, select, textarea { font-size: 16px; } /* iOS zoom guard */
 * { touch-action: manipulation; }
 .pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 1rem); }
 .pt-safe { padding-top: env(safe-area-inset-top); }
+/* Off screen, still in the accessibility tree (e.g. a page title the store owner hid). !important so a
+   template's own [data-sf-part] typography can never pull it back into view. */
+.sf-visually-hidden { position: absolute !important; width: 1px !important; height: 1px !important; margin: -1px !important; padding: 0 !important; border: 0 !important; overflow: hidden !important; clip-path: inset(50%) !important; white-space: nowrap !important; }

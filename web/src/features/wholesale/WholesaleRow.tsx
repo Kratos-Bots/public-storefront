@@ -44,6 +44,7 @@ export function WholesaleRow({ product, band, groupEnd, ordering, index }: Whole
   const discounted = saving > 0;
   const hasTiers = product.pricingTiers.length > 0;
   const inCart = quantity > 0;
+  const hasStatus = status !== 'in' || product.isPreorder || product.minOrderQuantity != null;
 
   const floor = Math.max(1, product.minOrderQuantity ?? 1);
   const max = product.maxOrderQuantity;
@@ -98,7 +99,9 @@ export function WholesaleRow({ product, band, groupEnd, ordering, index }: Whole
         role="rowgroup"
       >
         <tr className={`${classes.row} ${unavailable ? classes.dim : ''}`} role="row">
-          <td className={classes.code} role="cell">
+          {/* On a tight phone the code is the part of the meta line that gives
+              way (ellipsis); the whole code stays in the text and the title. */}
+          <td className={classes.code} role="cell" title={product.sku}>
             {product.sku}
           </td>
 
@@ -107,11 +110,19 @@ export function WholesaleRow({ product, band, groupEnd, ordering, index }: Whole
                 box gets wrapped in an anonymous one at 62em and loses its column. */}
             <span className={classes.identity}>
               <span className={classes.name}>{product.displayName}</span>
-              {product.minOrderQuantity != null ? (
-                <span className={classes.limit}>Min {product.minOrderQuantity}</span>
+              {/* The facts about the line, not its name: on a phone they take the
+                  row's third line, under the code and price; on the wide sheet
+                  they fall back in beside the name. Only rendered when one applies,
+                  so an ordinary line stays two lines tall. */}
+              {hasStatus ? (
+                <span className={classes.status}>
+                  {status !== 'in' ? <StockChip status={status} /> : null}
+                  {product.isPreorder ? <span className={classes.preorder}>Pre-order</span> : null}
+                  {product.minOrderQuantity != null ? (
+                    <span className={classes.limit}>Min {product.minOrderQuantity}</span>
+                  ) : null}
+                </span>
               ) : null}
-              {product.isPreorder ? <span className={classes.preorder}>Pre-order</span> : null}
-              {status !== 'in' ? <StockChip status={status} /> : null}
             </span>
           </td>
 

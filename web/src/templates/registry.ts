@@ -1,4 +1,4 @@
-import { validateManifest, type TemplateManifest } from '@/templates/define.ts';
+import { validateManifest, withCoreOptions, type TemplateManifest } from '@/templates/define.ts';
 import type { TemplateModule } from '@/templates/slots.ts';
 
 export const DEFAULT_TEMPLATE_ID = 'modern';
@@ -56,7 +56,10 @@ export function buildRegistry(
     if (map.has(f.id)) { warn(`[templates] skipping ${f.dir}: duplicate id "${f.id}"`); continue; }
     const load = loaders[path.replace(/manifest\.ts$/, 'index.ts')];
     if (!load) { warn(`[templates] skipping ${f.dir}: no index.ts`); continue; }
-    map.set(f.id, { manifest: manifest as TemplateManifest, builtIn: f.builtIn, dir: f.dir, load });
+    // The core options (page title, catalogue intro, section labels) join every valid manifest
+    // here — after validation, which rejects a template that declares them itself — so the
+    // resolver, the hooks and the generated templates.json all see them.
+    map.set(f.id, { manifest: withCoreOptions(manifest as TemplateManifest), builtIn: f.builtIn, dir: f.dir, load });
   }
   if (!map.has(DEFAULT_TEMPLATE_ID)) throw new Error(`[templates] the built-in "${DEFAULT_TEMPLATE_ID}" template is missing or invalid`);
   return map;

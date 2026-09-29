@@ -22,6 +22,41 @@ const custom: TemplateModule = { slots: { TopBar: ({ brand, layout }) => <p>top 
 
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 
+describe('core options gate the intro and section-label slots', () => {
+  const slots: TemplateModule = { slots: {
+    CatalogHero: ({ surface }) => <p>hero {surface}</p>,
+    SectionLabel: ({ title }) => <p>label {title}</p>,
+  } };
+  const tree = (r: typeof resolved, mod: TemplateModule) => (
+    <TemplateProvider resolved={r} fallback={null} load={() => Promise.resolve(mod)} peek={() => mod}>
+      <Slot name="CatalogHero" surface="grid" tagline="Tag" welcomeMessage="Welcome in" productCount={3} categoryCount={1} />
+      <Slot name="SectionLabel" index={1} title="All" level="group" />
+    </TemplateProvider>
+  );
+
+  it('shows both by default (custom slots)', () => {
+    render(tree(resolved, slots));
+    expect(screen.getByText('hero grid')).toBeInTheDocument();
+    expect(screen.getByText('label All')).toBeInTheDocument();
+  });
+
+  it('hides a custom hero and custom labels when their option is false', () => {
+    const r = resolveTheme({ ...state.settings.theme, options: { showCatalogIntro: false, showSectionLabels: false } }, lookupManifest);
+    render(tree(r, slots));
+    expect(screen.queryByText('hero grid')).toBeNull();
+    expect(screen.queryByText('label All')).toBeNull();
+  });
+
+  it('hides the default (modern) hero too', () => {
+    const shown = render(tree(resolved, { slots: {} }));
+    expect(screen.getByText('Welcome in')).toBeInTheDocument();
+    shown.unmount();
+    const r = resolveTheme({ ...state.settings.theme, options: { showCatalogIntro: false } }, lookupManifest);
+    render(tree(r, { slots: {} }));
+    expect(screen.queryByText('Welcome in')).toBeNull();
+  });
+});
+
 describe('TemplateProvider', () => {
   it('shows the fallback until the module loads, then custom slots (wrapped) and defaults (unwrapped)', async () => {
     let resolveLoad!: (m: TemplateModule) => void;
