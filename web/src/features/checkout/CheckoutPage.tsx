@@ -36,6 +36,9 @@ import { ShippingStep } from '@/features/checkout/steps/ShippingStep.tsx';
 import { PaymentStep } from '@/features/checkout/steps/PaymentStep.tsx';
 import { ReviewStep } from '@/features/checkout/steps/ReviewStep.tsx';
 import { DIAL_CODES } from '@/lib/dial-codes.ts';
+import { formatMoney } from '@/lib/format.ts';
+import { haptic, isTelegramWebApp, openExternalLink } from '@/lib/telegram-webapp.ts';
+import { usePrimaryAction } from '@/stores/primary-action.ts';
 import { FADE } from '@/lib/motion.ts';
 import { Slot } from '@/templates/runtime.tsx';
 import classes from '@/features/checkout/CheckoutPage.module.css';
@@ -112,6 +115,8 @@ export function CheckoutPage() {
   const loggedIn = useSessionStore(selectIsLoggedIn);
   const guest = !loggedIn && features.guestCheckout;
   const navigate = useNavigate();
+  // Inside Telegram the nav's primary button is Telegram's MainButton (Back stays in the page).
+  const inTelegram = isTelegramWebApp();
 
   const lines = useCartStore((s) => s.lines);
   const clearCart = useCartStore((s) => s.clear);
@@ -507,9 +512,19 @@ export function CheckoutPage() {
       const match = orderPath ? /^\/order\/([^/]+)\/([^/]+)$/.exec(orderPath) : null;
       if (match) saveOrder(decodeURIComponent(match[1]!), decodeURIComponent(match[2]!));
 
+      if (inTelegram) haptic.notify('success');
       const outcome = resolveCheckoutOutcome(result);
-      if (outcome.kind === 'external') window.location.assign(outcome.url);
-      else navigate(outcome.to, { replace: true });
+      if (outcome.kind === 'external' && inTelegram) {
+        // Some gateways refuse to run inside Telegram's WebView: pay in the
+        // browser, and leave the Mini App on the order so the shopper comes back
+        // to its status rather than an empty checkout.
+        openExternalLink(outcome.url);
+        navigate(orderPath ?? `/order-placed?${new URLSearchParams({ order: result.reference })}`, { replace: true });
+      } else if (outcome.kind === 'external') {
+        window.location.assign(outcome.url);
+      } else {
+        navigate(outcome.to, { replace: true });
+      }
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         notifications.show({
@@ -527,6 +542,26 @@ export function CheckoutPage() {
       setSubmitting(false);
     }
   }
+
+  // Registered before the early returns below — hooks can't sit behind them.
+  const lastStep = step === STEPS.length - 1;
+  const showsForm = !(guest && !settings.turnstile) && !(lines.length === 0 && !placed);
+  usePrimaryAction(
+    inTelegram && showsForm
+      ? {
+          label: !lastStep
+            ? 'Continue'
+            : submitting
+              ? 'Placing order…'
+              : chargeTotal !== null && chargeTotal > 0
+                ? `Place order · ${formatMoney(chargeTotal, currency)}`
+                : 'Place order',
+          onClick: lastStep ? () => void submit() : next,
+          disabled: submitting || locked || (lastStep && guest && verifying),
+          busy: submitting,
+        }
+      : null,
+  );
 
   // Guest checkout is two switches, not one: the feature flag AND a configured
   // Turnstile site key. With the flag on and no key the widget can never mount,
@@ -678,53 +713,57 @@ export function CheckoutPage() {
             ) : null}
           </div>
 
-          <div className={classes.nav}>
-            {step > 0 ? (
-              <button
-                type="button"
-                className={classes.back}
-                onClick={back}
-                data-sf-part="button"
-                data-variant="default"
-              >
-                Back
-              </button>
-            ) : null}
-            {onReview ? (
-              <button
-                type="button"
-                className={classes.next}
-                onClick={() => void submit()}
-                disabled={nextDisabled}
-                data-sf-part="button"
-                data-variant="filled"
-                data-sf-cta="main"
-              >
-                {submitting ? (
-                  'Placing order…'
-                ) : chargeTotal !== null && chargeTotal > 0 ? (
-                  <>
-                    Place order · <Money amount={chargeTotal} />
-                  </>
-                ) : (
-                  'Place order'
-                )}
-                <Slot name="ButtonAdornment" variant="primary" cta busy={submitting} />
-              </button>
-            ) : (
-              <button
-                type="button"
-                className={classes.next}
-                onClick={next}
-                data-sf-part="button"
-                data-variant="filled"
-                data-sf-cta="main"
-              >
-                Continue
-                <Slot name="ButtonAdornment" variant="primary" cta />
-              </button>
-            )}
-          </div>
+          {/* Inside Telegram the first step has nothing left in the nav — the MainButton
+              is Continue — so the sticky band would be an empty strip over the form. */}
+          {inTelegram && step === 0 ? null : (
+            <div className={classes.nav}>
+              {step > 0 ? (
+                <button
+                  type="button"
+                  className={classes.back}
+                  onClick={back}
+                  data-sf-part="button"
+                  data-variant="default"
+                >
+                  Back
+                </button>
+              ) : null}
+              {inTelegram ? null : onReview ? (
+                <button
+                  type="button"
+                  className={classes.next}
+                  onClick={() => void submit()}
+                  disabled={nextDisabled}
+                  data-sf-part="button"
+                  data-variant="filled"
+                  data-sf-cta="main"
+                >
+                  {submitting ? (
+                    'Placing order…'
+                  ) : chargeTotal !== null && chargeTotal > 0 ? (
+                    <>
+                      Place order · <Money amount={chargeTotal} />
+                    </>
+                  ) : (
+                    'Place order'
+                  )}
+                  <Slot name="ButtonAdornment" variant="primary" cta busy={submitting} />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className={classes.next}
+                  onClick={next}
+                  data-sf-part="button"
+                  data-variant="filled"
+                  data-sf-cta="main"
+                >
+                  Continue
+                  <Slot name="ButtonAdornment" variant="primary" cta />
+                </button>
+              )}
+            </div>
+          )}
 
           {onReview ? (
             <p className={classes.terms}>

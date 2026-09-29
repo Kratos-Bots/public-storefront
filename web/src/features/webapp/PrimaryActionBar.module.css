@@ -1,0 +1,27 @@
+/* The browser stand-in for Telegram's MainButton: the running tab's band, one
+   full-width button. Inside Telegram this renders nothing — the native button
+   sits in the same place, painted in the shop's primary. */
+.bar {
+  composes: bar from '../cart/MobileCartBar.module.css';
+}
+
+.inner {
+  composes: inner from '../cart/MobileCartBar.module.css';
+  max-width: var(--sf-rail-max, 35rem);
+}
+
+.action {
+  composes: checkout from '../cart/MobileCartBar.module.css';
+  margin-left: 0;
+}
+
+.action[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Telegram's own bottom inset (home indicator) when a browser tab is a Mini App
+   opened in an external browser — 0 everywhere else. */
+.safe {
+  height: var(--tg-safe-bottom, 0px);
+}
