@@ -1,0 +1,34 @@
+import { useLocation, useNavigate } from 'react-router';
+import { z } from 'zod';
+import { defineBlock } from '@/builder/define.ts';
+import { SearchField } from '@/layouts/SearchField.tsx';
+import { useShellSearch } from '@/layouts/shell-context.ts';
+import classes from '@/builder/blocks/SearchField.module.css';
+
+function SearchFieldView({ placeholder }: { placeholder: string }) {
+  // The same state the list blocks filter on (outlet context, else the shell provider).
+  const { search, setSearch } = useShellSearch();
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const onCatalog = pathname === '/' || pathname.startsWith('/c/');
+  return (
+    <div className={classes.root} data-sf-block="SearchField">
+      <SearchField
+        className={classes.field}
+        value={search}
+        placeholder={placeholder}
+        onChange={(value) => {
+          setSearch(value);
+          // The shell keeps the query across the navigation, so the catalogue opens filtered.
+          if (!onCatalog) navigate('/');
+        }}
+      />
+    </div>
+  );
+}
+
+export const block = defineBlock<{ id: string; placeholder: string }>({
+  name: 'SearchField', label: 'Search field', category: 'catalogue', layouts: 'all', routeBound: false, slots: [],
+  schema: z.object({ placeholder: z.string().min(1).max(60) }), defaultProps: { placeholder: 'Search products' },
+  render: ({ placeholder }) => <SearchFieldView placeholder={placeholder} />,
+});

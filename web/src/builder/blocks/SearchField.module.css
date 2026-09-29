@@ -1,0 +1,28 @@
+/* A search field placed in a page, not the header: its own hairline row, a thumb tall. */
+.root {
+  padding-block: 0.75rem;
+  max-width: 100%;
+}
+
+.field {
+  max-width: 32rem;
+  min-height: 44px;
+  border-bottom: 1px solid var(--sf-line-strong);
+}
+
+/* 16px stops iOS zooming on focus; the 44px row is the tap target. */
+.field input {
+  min-height: 44px;
+  height: 44px;
+  font-size: 16px;
+}
+
+.field:focus-within {
+  border-bottom-color: var(--sf-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .field {
+    transition: none;
+  }
+}
