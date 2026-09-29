@@ -44,6 +44,16 @@ describe('mediaTarget', () => {
     expect(mediaTarget('/media/users/1/avatar', '', 'https://b.test/')).toBeNull();
     expect(mediaTarget('/media/../api/v1/users', '', 'https://b.test/')).toBeNull();
   });
+  it('maps storefront-page media keys', () => {
+    const key = 'a'.repeat(32) + '.webp';
+    expect(mediaTarget(`/media/storefront-pages/media/${key}`, '', 'https://b.test/')?.toString())
+      .toBe(`https://b.test/api/v1/storefront-pages/media/${key}`);
+  });
+  it('rejects malformed storefront-page media keys', () => {
+    for (const bad of ['A'.repeat(32) + '.png', 'a'.repeat(31) + '.png', 'a'.repeat(32) + '.svg', 'a'.repeat(32) + '.jpeg', '../x.png']) {
+      expect(mediaTarget(`/media/storefront-pages/media/${bad}`, '', 'https://b.test/'), bad).toBeNull();
+    }
+  });
 });
 
 describe('fetch /media/*', () => {

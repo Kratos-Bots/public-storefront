@@ -3,6 +3,8 @@ import type { Env } from './index';
 const ALLOWED_PREFIXES = ['storefront/', 'catalog', 'orders/', 'verify/'];
 const CACHE_RULES: Array<[RegExp, number]> = [
   [/^storefront\/settings$/, 30],
+  // The published page set - same 30 s as settings, so a publish shows within half a minute.
+  [/^storefront\/pages\/(?:storefront|menu|webapp)$/, 30],
   [/^catalog$/, 60],
   [/^catalog\/products\/\d+$/, 60],
 ];
