@@ -12,14 +12,21 @@ export const CATALOG_KEY = ['catalog'] as const;
  * the API client clears the session, the audience flips to null, and the
  * public catalog loads.
  */
+export function catalogAudience(s: { token: string | null; customer: { id: number } | null }): number | null {
+  return s.token !== null ? (s.customer?.id ?? 0) : null;
+}
+
+/** The catalog query key for an audience; outside React, read the audience with `catalogAudience(useSessionStore.getState())`. */
+export const catalogKey = (audience: number | null) => [...CATALOG_KEY, audience] as const;
+
 function useCatalogAudience(): number | null {
-  return useSessionStore((s) => (s.token !== null ? (s.customer?.id ?? 0) : null));
+  return useSessionStore(catalogAudience);
 }
 
 export function useCatalog() {
   const audience = useCatalogAudience();
   return useQuery({
-    queryKey: [...CATALOG_KEY, audience] as const,
+    queryKey: catalogKey(audience),
     queryFn: () => fetchCatalog(audience !== null),
     staleTime: 60_000,
   });

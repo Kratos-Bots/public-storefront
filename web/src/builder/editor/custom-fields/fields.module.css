@@ -13,6 +13,9 @@
   --sfb-wash: #f3f5f8;
   --sfb-accent: #3355ff;
   --sfb-accent-wash: #eef1ff;
+  --sfb-accent-strong: #2443e0;
+  --sfb-on-accent: #ffffff;
+  --sfb-check: #e3e6ec;
   --sfb-danger: #b3261e;
   --sfb-radius: 6px;
 
@@ -108,7 +111,7 @@
   color: var(--sfb-ink);
 }
 
-.segmented button[aria-pressed='true'] {
+.segmented button[aria-checked='true'] {
   background: var(--sfb-surface);
   color: var(--sfb-ink);
   box-shadow: 0 0 0 1px var(--sfb-line);
@@ -133,20 +136,20 @@
 }
 
 .swatch[data-empty] {
-  background-color: #fff;
+  background-color: var(--sfb-surface);
   background-image:
-    linear-gradient(45deg, #e3e6ec 25%, transparent 25%, transparent 75%, #e3e6ec 75%),
-    linear-gradient(45deg, #e3e6ec 25%, transparent 25%, transparent 75%, #e3e6ec 75%);
+    linear-gradient(45deg, var(--sfb-check) 25%, transparent 25%, transparent 75%, var(--sfb-check) 75%),
+    linear-gradient(45deg, var(--sfb-check) 25%, transparent 25%, transparent 75%, var(--sfb-check) 75%);
   background-position: 0 0, 4px 4px;
   background-size: 8px 8px;
 }
 
-.swatch[aria-pressed='true'] {
+.swatch[aria-checked='true'] {
   box-shadow: 0 0 0 2px var(--sfb-surface), 0 0 0 4px var(--sfb-ink);
 }
 
 /* A tick as well as the ring, so the choice never rests on colour alone. */
-.swatch[aria-pressed='true']::after {
+.swatch[aria-checked='true']::after {
   content: '';
   position: absolute;
   inset-inline-end: -5px;
@@ -224,14 +227,14 @@
 .button {
   border: 1px solid var(--sfb-accent);
   background: var(--sfb-accent);
-  color: #fff;
+  color: var(--sfb-on-accent);
 }
 
 .button:hover {
-  background: #2443e0;
+  background: var(--sfb-accent-strong);
 }
 
-.field:disabled .button {
+.field[aria-busy='true'] .button {
   cursor: progress;
 }
 

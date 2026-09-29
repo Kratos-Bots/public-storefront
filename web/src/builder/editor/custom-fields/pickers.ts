@@ -1,7 +1,8 @@
 import type { QueryClient } from '@tanstack/react-query';
 import type { ExternalField } from '@puckeditor/core';
 import { fetchCatalog } from '@/api/catalog.ts';
-import { CATALOG_KEY } from '@/features/catalog/use-catalog.ts';
+import { catalogAudience, catalogKey } from '@/features/catalog/use-catalog.ts';
+import { useSessionStore } from '@/stores/session.ts';
 import type { Catalog, Category, Product } from '@/types/catalog.ts';
 
 let client: QueryClient | null = null;
@@ -10,12 +11,14 @@ export function configureCatalogSource(next: QueryClient | null): void {
   client = next;
 }
 
-const PUBLIC_CATALOG_KEY = [...CATALOG_KEY, null] as const;
 const MAX_ROWS = 100;
-const cached = (): Catalog | undefined => client?.getQueryData<Catalog>(PUBLIC_CATALOG_KEY);
+/** The same entry `useCatalog` uses for the current (possibly fixture) session, so canvas and pickers share one fetch. */
+const currentAudience = (): number | null => catalogAudience(useSessionStore.getState());
+const cached = (): Catalog | undefined => client?.getQueryData<Catalog>(catalogKey(currentAudience()));
 async function load(): Promise<Catalog | null> {
   if (!client) return null;
-  return client.fetchQuery({ queryKey: PUBLIC_CATALOG_KEY, queryFn: () => fetchCatalog(false), staleTime: 60_000 });
+  const audience = currentAudience();
+  return client.fetchQuery({ queryKey: catalogKey(audience), queryFn: () => fetchCatalog(audience !== null), staleTime: 60_000 });
 }
 const has = (q: string, ...texts: Array<string | null>) => texts.some((t) => !!t && t.toLowerCase().includes(q));
 

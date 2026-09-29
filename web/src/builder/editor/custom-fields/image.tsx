@@ -23,18 +23,22 @@ function ImageInput({ label, id, value, onChange, readOnly }: InputProps) {
   const [error, setError] = useState<string | null>(null);
   // Only the newest upload may land, and never after the field has gone.
   const attempt = useRef(0);
+  // The file input stays enabled while uploading (disabling the focused control drops focus to
+  // <body>); picks are ignored instead.
+  const busyRef = useRef(false);
   useEffect(() => () => { attempt.current += 1; }, []);
 
   const current = typeof value === 'string' ? value : '';
   const shown = MEDIA_SRC_RE.test(current);
 
   const upload = async (file: File | undefined) => {
-    if (!file) return;
+    if (!file || busyRef.current) return;
     const problem = checkImageFile(file);
     if (problem) { setError(problem); return; }
     const bridge = getActiveBridge();
     if (!bridge) { setError('The editor is not connected to the admin. Reload the page and try again.'); return; }
     const mine = ++attempt.current;
+    busyRef.current = true;
     setBusy(true);
     setError(null);
     try {
@@ -47,12 +51,12 @@ function ImageInput({ label, id, value, onChange, readOnly }: InputProps) {
       if (mine !== attempt.current) return;
       setError(err instanceof Error && err.message ? err.message : 'The upload failed. Try again.');
     } finally {
-      if (mine === attempt.current) setBusy(false);
+      if (mine === attempt.current) { busyRef.current = false; setBusy(false); }
     }
   };
 
   return (
-    <fieldset className={styles.field} id={id} disabled={readOnly || busy} aria-busy={busy || undefined}>
+    <fieldset className={styles.field} id={id} disabled={readOnly} aria-busy={busy || undefined}>
       <legend className={styles.label}>{label}</legend>
       {shown && !busy
         ? <img className={styles.thumb} src={current} alt="" />
@@ -69,6 +73,8 @@ function ImageInput({ label, id, value, onChange, readOnly }: InputProps) {
           className={styles.visuallyHidden}
           type="file"
           accept={IMAGE_TYPES.join(',')}
+          aria-disabled={busy || undefined}
+          onClick={(e) => { if (busyRef.current) e.preventDefault(); }}
           onChange={(e) => {
             const file = e.target.files?.[0];
             // Clear it so choosing the same file again still fires a change.
