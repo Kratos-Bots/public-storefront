@@ -19,8 +19,13 @@ import { FADE } from '@/lib/motion.ts';
 import { useCoreOptions } from '@/templates/hooks.ts';
 import classes from '@/features/catalog/ProductDetailPage.module.css';
 
+/** Which optional parts the page shows — the ProductDetail block's toggles. All on by default. */
+export interface ProductDetailSections { gallery: boolean; bulkPricing: boolean; provenance: boolean; upsells: boolean }
+const ALL_SECTIONS: ProductDetailSections = { gallery: true, bulkPricing: true, provenance: true, upsells: true };
+
 /** The single product page — the storefront layout's detail view. */
-export function ProductDetailPage() {
+export function ProductDetailPage({ sections }: { sections?: Partial<ProductDetailSections> }) {
+  const show = { ...ALL_SECTIONS, ...sections };
   const { brand, currency } = useSettings();
   const { showSku } = useCoreOptions();
   const { id } = useParams();
@@ -44,7 +49,7 @@ export function ProductDetailPage() {
   if (query.isError || !product) return <NotFound retry={() => void query.refetch()} />;
 
   const status = deriveStockStatus(product.inStock, product.lowStockAlert);
-  const hasImage = product.imageProductId !== null;
+  const hasImage = show.gallery && product.imageProductId !== null;
   const trail = ancestorChain(catalog.data?.categories ?? [], product.categoryId);
   // Before the catalogue arrives (or for a category it doesn't carry) fall back to
   // the flattened path the product itself came with, as plain text.
@@ -112,7 +117,7 @@ export function ProductDetailPage() {
 
           {product.description ? <p className={classes.description}>{product.description}</p> : null}
 
-          {product.pricingTiers.length > 0 ? (
+          {show.bulkPricing && product.pricingTiers.length > 0 ? (
             <section className={classes.section} aria-labelledby="bulk-heading">
               <h2 id="bulk-heading" className={classes.sectionHead}>
                 Buy more, pay less
@@ -121,7 +126,7 @@ export function ProductDetailPage() {
             </section>
           ) : null}
 
-          {product.provenance ? (
+          {show.provenance && product.provenance ? (
             <section className={classes.section} aria-labelledby="provenance-heading">
               <h2 id="provenance-heading" className={classes.sectionHead}>
                 Provenance
@@ -144,7 +149,7 @@ export function ProductDetailPage() {
         </div>
       </div>
 
-      <Upsells product={product} />
+      {show.upsells ? <Upsells product={product} /> : null}
     </article>
   );
 }
