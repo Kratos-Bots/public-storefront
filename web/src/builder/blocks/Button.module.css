@@ -1,0 +1,14 @@
+.start,
+.center,
+.stretch {
+  display: flex;
+  padding-block: 0.5rem;
+  min-width: 0;
+}
+.center { justify-content: center; }
+
+/* Mantine's md button is 42px — a thumb needs 44. */
+.button {
+  min-height: 44px;
+  max-width: 100%;
+}
