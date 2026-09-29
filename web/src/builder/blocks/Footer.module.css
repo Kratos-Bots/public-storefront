@@ -1,0 +1,32 @@
+/* The owner-composed footer: the same quiet band as modern's, columns from the page builder. */
+.footer {
+  margin-top: 3rem;
+  border-top: 1px solid var(--sf-line);
+  background: var(--sf-bg-deep);
+}
+
+.grid {
+  display: grid;
+  gap: 2rem;
+  grid-template-columns: minmax(0, 1fr);
+  max-width: var(--sf-rail-max, 1200px);
+  margin: 0 auto;
+  padding: 2rem var(--sf-main-pad, 1rem);
+}
+@media (min-width: 48em) {
+  .grid { grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); }
+}
+
+.col { min-width: 0; }
+
+.colophon {
+  max-width: var(--sf-rail-max, 1200px);
+  margin: 0 auto;
+  padding: 0.9rem var(--sf-main-pad, 1rem) calc(0.9rem + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--sf-line);
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--sf-faint);
+}
