@@ -1,0 +1,6 @@
+/* Dynamic values arrive as custom properties so the rule itself stays in the module. */
+.rule {
+  border: 0;
+  border-top: 1px solid var(--rule-color, var(--sf-line));
+  margin: var(--rule-space, 1.5rem) 0;
+}
