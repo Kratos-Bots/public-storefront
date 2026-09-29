@@ -496,6 +496,10 @@ Storefront → admin (`targetOrigin` = origin of the first accepted `sf-builder-
 - `{ type: 'sf-builder-ready', protocol: 1 }`
 - `{ type: 'sf-builder-change', pageSet: PageSet, issues: Issue[] }` (debounced 500 ms; also sent once right after load)
 - `{ type: 'sf-builder-upload-request', requestId: string, file: File }`
+- `{ type: 'sf-builder-viewport', width: 360 | 768 | 1280 | null }` — the editor's viewport toggle;
+  the admin resizes the iframe element to that width (centred, horizontally scrollable; `null` =
+  fill the panel) so media queries and `useMediaQuery` see the real breakpoint. Added after
+  planning surfaced that Puck's own canvas iframe is disabled (§6).
 
 `pageSet: null` on load means "no draft or published set": the editor starts from the default docs
 and the first `sf-builder-change` carries a sparse set containing only `shell` (the default shell).
