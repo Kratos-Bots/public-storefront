@@ -1,4 +1,5 @@
 import { BLOCKS } from '@/builder/registry.ts';
+import type { BlockDef } from '@/builder/define.ts';
 import type { ComponentData, DocKey, FixedRouteKey, Issue, LayoutKind, PuckDoc } from '@/builder/types.ts';
 
 const ACCOUNT: readonly DocKey[] = ['account.orders', 'account.order', 'account.loyalty', 'account.referrals', 'account.profile'];
@@ -54,6 +55,17 @@ const EXACTLY_ONE: Partial<Record<DocKey, readonly string[]>> = {
   tracking: ['TrackingLookup'],
 };
 
+/** Own-key lookup: an untrusted key like `constructor` or `__proto__` never resolves to an Object.prototype member. */
+function own<V>(table: Readonly<Record<string, V>>, key: string): V | undefined {
+  return Object.hasOwn(table, key) ? table[key] : undefined;
+}
+
+/** The registered block for an untrusted `type`, or undefined. Use this, never `BLOCKS[type]`. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function blockDef(type: string): BlockDef<any> | undefined {
+  return own(BLOCKS, type);
+}
+
 const AT_LEAST_ONE: Partial<Record<FixedRouteKey, readonly string[]>> = {
   catalog: ['ProductGrid', 'ProductList', 'WholesaleTable'],
 };
@@ -62,7 +74,7 @@ const AT_LEAST_ONE: Partial<Record<FixedRouteKey, readonly string[]>> = {
 function walk(items: readonly ComponentData[], visit: (c: ComponentData) => void): void {
   for (const item of items) {
     visit(item);
-    const def = BLOCKS[item.type];
+    const def = blockDef(item.type);
     if (!def) continue;
     for (const s of def.slots) {
       const children = item.props[s];
@@ -82,23 +94,22 @@ export function countBlocks(doc: PuckDoc): Map<string, number> {
  * Plan 3's editor filters its "Add block" menu and refuses drops with this.
  */
 export function allowedOn(type: string, docKey: DocKey): boolean {
-  const bound = PLACEMENT[type];
+  const def = blockDef(type);
+  if (!def) return false;
+  const bound = own(PLACEMENT, type);
   if (bound) return bound.includes(docKey);
   if (SHELL_ONLY.includes(type)) return docKey === 'shell';
-  if (docKey === 'shell') {
-    const category = BLOCKS[type]?.category;
-    return category === 'shell' || category === 'content';
-  }
+  if (docKey === 'shell') return def.category === 'shell' || def.category === 'content';
   return true;
 }
 
-const label = (type: string) => BLOCKS[type]?.label ?? type;
+const label = (type: string) => blockDef(type)?.label ?? type.slice(0, 60);
 
 export function checkRules(doc: PuckDoc, docKey: DocKey, layout: LayoutKind): Issue[] {
   const issues: Issue[] = [];
   const flagged = new Set<string>();
   walk(doc.content, (c) => {
-    const def = BLOCKS[c.type];
+    const def = blockDef(c.type);
     if (def && def.layouts !== 'all' && !def.layouts.includes(layout) && !flagged.has(`layout:${c.type}`)) {
       flagged.add(`layout:${c.type}`);
       issues.push({ docKey, rule: `layout:${c.type}`, message: `${label(c.type)} is not available in the ${layout} layout.`, blockId: c.props.id });
@@ -109,12 +120,12 @@ export function checkRules(doc: PuckDoc, docKey: DocKey, layout: LayoutKind): Is
     }
   });
   const counts = countBlocks(doc);
-  for (const type of EXACTLY_ONE[docKey] ?? []) {
+  for (const type of own(EXACTLY_ONE, docKey) ?? []) {
     if ((counts.get(type) ?? 0) !== 1) {
       issues.push({ docKey, rule: `exactly-one:${type}`, message: `This page needs exactly one ${label(type)} block.` });
     }
   }
-  const anyOf = AT_LEAST_ONE[docKey as FixedRouteKey];
+  const anyOf = own(AT_LEAST_ONE, docKey);
   if (anyOf && !anyOf.some((t) => (counts.get(t) ?? 0) > 0)) {
     issues.push({ docKey, rule: `at-least-one:${docKey}`, message: `This page needs a product grid, product list or trade list.` });
   }

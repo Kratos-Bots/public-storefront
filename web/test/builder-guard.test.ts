@@ -88,6 +88,27 @@ describe('validateDoc', () => {
     expect(JSON.stringify(r.doc)).not.toContain('"leaf"');
     expect(r.issues.some((i) => i.rule === 'drop:depth')).toBe(true);
   });
+  it('drops Object.prototype key types as unknown blocks without throwing', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const bad = ['constructor', '__proto__', 'toString', 'valueOf', 'hasOwnProperty'];
+    const content = [
+      ...bad.map((type, i) => ({ type, props: { id: `p${i}`, content: [{ type: 'Heading', props: { id: `n${i}` } }] } })),
+      { type: 'Heading', props: { id: 'h' } },
+    ];
+    const r = validateDoc({ root, content }, 'page:about', 'storefront');
+    expect(r.doc!.content.map((x) => x.type)).toEqual(['Heading']);
+    expect(r.issues.map((i) => i.rule)).toEqual(bad.map(() => 'drop:unknown-block'));
+  });
+  it('caps drop issues and truncates logged type names', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const long = `Zz${'q'.repeat(200)}`;
+    const content = Array.from({ length: 120 }, (_, i) => ({ type: i === 0 ? long : `Nope${i}`, props: { id: `x${i}` } }));
+    const r = validateDoc({ root, content }, 'page:about', 'storefront');
+    expect(r.doc!.content).toEqual([]);
+    expect(r.issues.length).toBe(50);
+    expect(r.issues.every((i) => i.message.length < 120)).toBe(true);
+    expect(String(warn.mock.calls[0]![0]).length).toBeLessThan(160);
+  });
   it('memoises per doc object', () => {
     const doc = { root, content: [] };
     expect(validateDoc(doc, 'page:about', 'storefront')).toBe(validateDoc(doc, 'page:about', 'storefront'));

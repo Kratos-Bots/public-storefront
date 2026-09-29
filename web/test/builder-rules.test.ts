@@ -67,6 +67,14 @@ describe('checkRules', () => {
       expect(allowedOn(t, 'shell')).toBe(false);
     }
   });
+  it('never resolves Object.prototype keys as blocks', () => {
+    for (const t of ['constructor', '__proto__', 'toString', 'valueOf', 'hasOwnProperty']) {
+      for (const k of ['shell', 'catalog', 'page:about'] as const) expect(allowedOn(t, k)).toBe(false);
+      expect(() => checkRules(d([c(t, { content: [c('Heading')] })]), 'page:about', 'storefront')).not.toThrow();
+      expect(checkRules(d([c(t)]), 'page:about', 'storefront').map((i) => i.rule)).toEqual([`placement:${t}`]);
+      expect(countBlocks(d([c(t, { content: [c('Heading')] })])).get('Heading')).toBeUndefined();
+    }
+  });
   it('flags a block outside its layouts', () => {
     expect(checkRules(d([c('MenuOnly')]), 'page:about', 'storefront').map((i) => i.rule)).toEqual(['layout:MenuOnly']);
   });

@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import { parseBlockProps } from '@/builder/define.ts';
-import { BLOCKS } from '@/builder/registry.ts';
-import { checkRules } from '@/builder/rules.ts';
+import { blockDef, checkRules } from '@/builder/rules.ts';
 import {
   EMPTY_ROOT, isComponentLike, isRecord, MAX_COMPONENTS, MAX_DEPTH,
   type ComponentData, type DocKey, type Issue, type LayoutKind, type PageRootProps, type PuckDoc,
@@ -16,38 +15,48 @@ const ROOT_SHAPE = {
 } as const;
 
 const warnedTypes = new Set<string>();
+/** Bounds on what a hostile or corrupt doc can make the guard emit. */
+const MAX_DROP_ISSUES = 50;
+const MAX_WARNED_TYPES = 100;
+const MAX_TYPE_CHARS = 60;
+const shortType = (t: string) => (t.length > MAX_TYPE_CHARS ? `${t.slice(0, MAX_TYPE_CHARS)}…` : t);
 const memo = new WeakMap<object, Map<string, GuardResult>>();
 
 interface Walk { docKey: DocKey; layout: LayoutKind; depth: number; drops: Issue[]; ids: Set<string>; budget: { left: number } }
+
+function drop(w: Walk, issue: Omit<Issue, 'docKey'>): void {
+  if (w.drops.length < MAX_DROP_ISSUES) w.drops.push({ docKey: w.docKey, ...issue });
+}
 
 function cleanItems(items: unknown, w: Walk): ComponentData[] {
   if (!Array.isArray(items)) return [];
   const out: ComponentData[] = [];
   for (const raw of items) {
     if (!isComponentLike(raw)) {
-      w.drops.push({ docKey: w.docKey, rule: 'drop:shape', message: 'A malformed block was removed.' });
+      drop(w, { rule: 'drop:shape', message: 'A malformed block was removed.' });
       continue;
     }
     const blockId = raw.props.id;
-    const def = BLOCKS[raw.type];
+    const def = blockDef(raw.type);
     if (!def) {
-      if (!warnedTypes.has(raw.type)) {
-        warnedTypes.add(raw.type);
-        console.warn(`[builder] unknown block "${raw.type}" dropped — saved by a newer release, or removed`);
+      const type = shortType(raw.type);
+      if (!warnedTypes.has(type) && warnedTypes.size < MAX_WARNED_TYPES) {
+        warnedTypes.add(type);
+        console.warn(`[builder] unknown block "${type}" dropped — saved by a newer release, or removed`);
       }
-      w.drops.push({ docKey: w.docKey, rule: 'drop:unknown-block', message: `Unknown block "${raw.type}" was removed.`, blockId });
+      drop(w, { rule: 'drop:unknown-block', message: `Unknown block "${type}" was removed.`, blockId });
       continue;
     }
     if (def.layouts !== 'all' && !def.layouts.includes(w.layout)) {
-      w.drops.push({ docKey: w.docKey, rule: 'drop:layout', message: `${def.label} is not available in this layout.`, blockId });
+      drop(w, { rule: 'drop:layout', message: `${def.label} is not available in this layout.`, blockId });
       continue;
     }
     if (w.depth > MAX_DEPTH) {
-      w.drops.push({ docKey: w.docKey, rule: 'drop:depth', message: `${def.label} is nested too deeply.`, blockId });
+      drop(w, { rule: 'drop:depth', message: `${def.label} is nested too deeply.`, blockId });
       continue;
     }
     if (w.budget.left <= 0) {
-      w.drops.push({ docKey: w.docKey, rule: 'drop:too-many', message: 'The page has too many blocks.', blockId });
+      drop(w, { rule: 'drop:too-many', message: 'The page has too many blocks.', blockId });
       continue;
     }
     w.budget.left -= 1;
