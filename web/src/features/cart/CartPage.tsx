@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, type ReactNode } from 'react';
 import { Button } from '@mantine/core';
 import { Link } from 'react-router';
 import { useCartStore, selectCount } from '@/stores/cart.ts';
@@ -14,7 +14,12 @@ import classes from '@/features/cart/CartPage.module.css';
  * cart of ten lines wants the whole screen anyway. A desktop visitor to `/cart`
  * is handed to the drawer by the router.
  */
-export function CartPage() {
+export interface CartPageProps {
+  /** The page builder's CartContents block renders its `summary` slot here; omitted = v0.6.0's foot. */
+  foot?: (ctx: { blocked: boolean; className: string }) => ReactNode;
+}
+
+export function CartPage({ foot }: CartPageProps) {
   const lines = useCartStore((s) => s.lines);
   const count = useCartStore(selectCount);
   const { setQuantity, remove, issues, isSyncing, refresh } = useServerCart();
@@ -65,9 +70,13 @@ export function CartPage() {
         ))}
       </ul>
 
-      <div className={classes.foot}>
-        <CartSummary blocked={blocked} />
-      </div>
+      {foot ? (
+        foot({ blocked, className: classes.foot })
+      ) : (
+        <div className={classes.foot}>
+          <CartSummary blocked={blocked} />
+        </div>
+      )}
     </div>
   );
 }
