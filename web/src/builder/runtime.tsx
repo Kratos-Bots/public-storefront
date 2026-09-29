@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ComponentType, type ReactNode } from 'react';
 import { Navigate, useMatches } from 'react-router';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useSettings } from '@/app/settings.ts';
 import { useEffectiveLayout } from '@/app/layout.ts';
 import { fetchPageSet } from '@/api/pages.ts';
@@ -20,10 +20,20 @@ import type { DocKey, LayoutKind, PageRootProps, PageSet, PuckDoc, RouteKey } fr
 export const pagesKey = (layout: LayoutKind) => ['pages', layout] as const;
 
 /**
- * Read once per page load: same 30 s stale time as settings, but never refetched on
- * window focus — a publish must not swap the page under a shopper mid-checkout.
+ * Read once per page load and never again: nothing (a remount, focus, a reconnect, time) refetches
+ * it — a publish must not swap the page under a shopper mid-checkout. A new set shows on reload.
  */
-export const PAGES_QUERY = { staleTime: 30_000, refetchOnWindowFocus: false, retry: false } as const;
+export const PAGES_QUERY = {
+  staleTime: Infinity, refetchOnMount: false, refetchOnReconnect: false, refetchOnWindowFocus: false, retry: false,
+} as const;
+
+/**
+ * The query function for a layout's set. fetchPageSet resolves null on any failure, so should the
+ * query ever run again (an invalidation), a failed read keeps the set this page load already has.
+ */
+export function pageSetQueryFn(client: QueryClient, layout: LayoutKind): () => Promise<PageSet | null> {
+  return async () => (await fetchPageSet(layout)) ?? client.getQueryData<PageSet | null>(pagesKey(layout)) ?? null;
+}
 
 const PageSetOverrideContext = createContext<{ pageSet: PageSet | null } | null>(null);
 
@@ -35,9 +45,10 @@ export function PageSetOverrideProvider({ pageSet, children }: { pageSet: PageSe
 
 export function usePageSet(layout: LayoutKind): { pageSet: PageSet | null; isLoading: boolean } {
   const override = useContext(PageSetOverrideContext);
+  const client = useQueryClient();
   const query = useQuery({
     queryKey: pagesKey(layout),
-    queryFn: () => fetchPageSet(layout),
+    queryFn: pageSetQueryFn(client, layout),
     ...PAGES_QUERY,
     enabled: override === null,
   });
@@ -143,6 +154,10 @@ export function PuckShell() {
   // A route whose default document is chromeless (the shared order link) paints its brand header
   // at once, as v0.6.0 did; the page inside shows the inline skeleton until the set is in.
   if (isLoading) {
+    // Accepted trade-off: this reads the route's DEFAULT doc, since the published one isn't in yet.
+    // A published doc that flips that route's chrome (say an order-status page set to chrome:
+    // 'shell') briefly shows the Chromeless skeleton before its shell frame paints: a short flash,
+    // once per page load, instead of a blank screen on every route while the set loads.
     const fallbackPage = routeKey && isFixedRouteKey(routeKey) ? defaultDoc(routeKey, layout) : null;
     return fallbackPage?.root.props.chrome === 'none' ? <Chromeless /> : <PageSkeleton />;
   }

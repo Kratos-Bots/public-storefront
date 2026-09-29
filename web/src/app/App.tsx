@@ -12,8 +12,7 @@ import { TemplateProvider } from '@/templates/runtime.tsx';
 import { router } from '@/app/router.tsx';
 import { effectiveLayout } from '@/app/layout.ts';
 import { isTelegramWebApp } from '@/lib/telegram-webapp.ts';
-import { fetchPageSet } from '@/api/pages.ts';
-import { PAGES_QUERY, pagesKey } from '@/builder/runtime.tsx';
+import { PAGES_QUERY, pageSetQueryFn, pagesKey } from '@/builder/runtime.tsx';
 import { EmptyState } from '@/components/EmptyState.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { ClosedPage } from '@/features/closed/ClosedPage.tsx';
@@ -118,7 +117,7 @@ export function usePrefetchPageSet(settings: StorefrontSettings): void {
   const skip = useShowsClosedPage(settings.enabled !== false) || window.location.pathname.startsWith(BUILDER_PATH) || isBuilderMode();
   useEffect(() => {
     if (skip) return;
-    void client.prefetchQuery({ queryKey: pagesKey(layout), queryFn: () => fetchPageSet(layout), staleTime: PAGES_QUERY.staleTime, retry: PAGES_QUERY.retry });
+    void client.prefetchQuery({ queryKey: pagesKey(layout), queryFn: pageSetQueryFn(client, layout), staleTime: PAGES_QUERY.staleTime, retry: PAGES_QUERY.retry });
   }, [client, layout, skip]);
 }
 

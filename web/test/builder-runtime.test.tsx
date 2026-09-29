@@ -116,3 +116,45 @@ describe('usePageSet', () => {
     expect(query.observers[0]!.options.refetchOnWindowFocus).toBe(false);
   });
 });
+
+describe('usePageSet reads the published set once per page load', () => {
+  function Probe() {
+    const { pageSet } = usePageSet('storefront');
+    return <p>{pageSet ? `published:${Object.keys(pageSet.pages).join(',')}` : 'none'}</p>;
+  }
+  const client = () => new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const at = (c: QueryClient) => <QueryClientProvider client={c}><Probe /></QueryClientProvider>;
+
+  it('does not refetch on a second mount a minute later', async () => {
+    fetched.fn.mockResolvedValue(set({ 'page:a': { root: root(), content: [] } }));
+    const c = client();
+    const first = render(at(c));
+    await screen.findByText('published:page:a');
+    first.unmount();
+    const now = Date.now();
+    vi.spyOn(Date, 'now').mockReturnValue(now + 61_000);
+    render(at(c));
+    expect(screen.getByText('published:page:a')).toBeInTheDocument();
+    await act(async () => { await Promise.resolve(); });
+    expect(fetched.fn).toHaveBeenCalledTimes(1);
+  });
+  it('declares no refetch triggers at all', async () => {
+    fetched.fn.mockResolvedValue(set({}));
+    const c = client();
+    render(at(c));
+    await screen.findByText('published:');
+    const { options } = c.getQueryCache().find({ queryKey: pagesKey('storefront') })!.observers[0]!;
+    expect(options).toMatchObject({ staleTime: Infinity, refetchOnMount: false, refetchOnReconnect: false, refetchOnWindowFocus: false, retry: false });
+  });
+  it('a failed fetch never replaces an already-loaded set', async () => {
+    fetched.fn.mockResolvedValueOnce(set({ 'page:a': { root: root(), content: [] } }));
+    const c = client();
+    render(at(c));
+    await screen.findByText('published:page:a');
+    fetched.fn.mockResolvedValue(null); // fetchPageSet's "failed" (it never rejects)
+    await act(() => c.refetchQueries({ queryKey: pagesKey('storefront') }));
+    expect(fetched.fn).toHaveBeenCalledTimes(2);
+    expect(c.getQueryData(pagesKey('storefront'))).not.toBeNull();
+    expect(screen.getByText('published:page:a')).toBeInTheDocument();
+  });
+});
