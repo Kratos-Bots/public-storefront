@@ -22,12 +22,16 @@
        name ................. [stepper]
        code · price  bulk     [stepper]
        status ...........    line total
-     The first three columns are the meta line (code, price, bulk chip); the
-     product cell spans all three and all three rows as a subgrid, so its name
-     takes row 1 and its status facts row 3 around the meta cells. Row 3 only
-     has height when there is a status or a line total — an empty row is 0px
-     because the row gap is 0 and spacing lives on the items. */
-  grid-template-columns: auto auto minmax(0, 1fr) auto;
+     The first three columns are the meta line (code, price, bulk chip) and the
+     fourth is slack; the product cell spans all four and all three rows as a
+     subgrid, so its name takes row 1 and its status facts row 3 around the meta
+     cells. Row 3 only has height when there is a status or a line total — an
+     empty row is 0px because the row gap is 0 and spacing lives on the items.
+     When the meta line runs out of room (a long code, a five-figure price, a
+     360px phone) the slack goes first, then the code gives way to an ellipsis:
+     it is the only track allowed below its content, so the price and the chip
+     keep their width and never slide under the stepper. */
+  grid-template-columns: minmax(0, max-content) auto auto minmax(0, 1fr) auto;
   grid-template-rows: auto auto auto;
   align-items: center;
   column-gap: 0.35rem;
@@ -35,6 +39,12 @@
   padding: 0.3rem 0.25rem 0.3rem 0.5rem;
   border-bottom: 1px solid var(--sf-line);
   border-left: 2px solid transparent;
+}
+
+/* Drop the UA's 1px cell padding: an empty line-total cell would otherwise
+   still open a 2px third line. Spacing below is set per cell. */
+.row > * {
+  padding: 0;
 }
 
 .inCart .row {
@@ -60,6 +70,9 @@
   letter-spacing: 0.1em;
   color: var(--sf-faint);
   white-space: nowrap;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Spans the whole left block; its own rows are the row's rows (subgrid), and
@@ -67,7 +80,7 @@
    It sits over the code cell in row 2 but draws nothing there, and the price
    and bulk cells come after it in the source, so they paint (and click) above. */
 .product {
-  grid-column: 1 / 4;
+  grid-column: 1 / 5;
   grid-row: 1 / 4;
   display: grid;
   grid-template-rows: subgrid;
@@ -247,10 +260,9 @@
 
 /* Under the stepper, on the status line — only once there is something on order. */
 .line {
-  grid-column: 4;
+  grid-column: 5;
   grid-row: 3;
   justify-self: end;
-  padding-top: 0.2rem;
   text-align: right;
   font-family: var(--sf-font-mono);
   font-size: 0.8125rem;
@@ -260,9 +272,15 @@
   white-space: nowrap;
 }
 
+/* Margin, not padding, and only with a total in it: an empty cell must add
+   nothing, so a row with no status and nothing on order stays two lines. */
+.line:not(:empty) {
+  margin-top: 0.2rem;
+}
+
 /* Spans the name and meta lines and centres on them. */
 .qty {
-  grid-column: 4;
+  grid-column: 5;
   grid-row: 1 / 3;
   justify-self: end;
   align-self: center;
@@ -421,8 +439,8 @@
     order: 3;
   }
 
-  .line {
-    padding-top: 0.3rem;
+  .code {
+    overflow: visible;
   }
 
   .bulk {

@@ -99,7 +99,9 @@ export function WholesaleRow({ product, band, groupEnd, ordering, index }: Whole
         role="rowgroup"
       >
         <tr className={`${classes.row} ${unavailable ? classes.dim : ''}`} role="row">
-          <td className={classes.code} role="cell">
+          {/* On a tight phone the code is the part of the meta line that gives
+              way (ellipsis); the whole code stays in the text and the title. */}
+          <td className={classes.code} role="cell" title={product.sku}>
             {product.sku}
           </td>
 
