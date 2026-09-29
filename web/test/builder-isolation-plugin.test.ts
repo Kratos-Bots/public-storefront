@@ -29,6 +29,39 @@ describe('builder isolation', () => {
     expect(findLeaks(bundle)).toEqual([`shared.js: ${id}`]);
   });
 
+  it('fails when a shopper lazy chunk statically imports a shared chunk holding Puck', () => {
+    const bundle = {
+      'index.js': chunk('index.js', { isEntry: true, dynamicImports: ['CartPage.js', 'EditorApp.js'] }),
+      'CartPage.js': chunk('CartPage.js', { imports: ['shared.js'] }),
+      'shared.js': chunk('shared.js', { moduleIds: ['/w/node_modules/@puckeditor/core/dist/x.mjs'] }),
+      'EditorApp.js': chunk('EditorApp.js', { imports: ['shared.js'], moduleIds: ['/w/src/builder/editor/EditorApp.tsx'] }),
+    };
+    expect(findLeaks(bundle)).toEqual(['shared.js: /w/node_modules/@puckeditor/core/dist/x.mjs']);
+  });
+
+  it('passes when the shared chunk is reachable only from the editor chunk', () => {
+    const bundle = {
+      'index.js': chunk('index.js', { isEntry: true, dynamicImports: ['CartPage.js', 'EditorApp.js'] }),
+      'CartPage.js': chunk('CartPage.js', {}),
+      'shared.js': chunk('shared.js', { moduleIds: ['C:\\w\\node_modules\\@tiptap\\core\\index.js'] }),
+      'EditorApp.js': chunk('EditorApp.js', { imports: ['shared.js'], moduleIds: ['C:\\w\\src\\builder\\editor\\EditorApp.tsx'] }),
+    };
+    expect(findLeaks(bundle)).toEqual([]);
+  });
+
+  it('matches Windows-path editor modules in a lazy shopper chunk', () => {
+    const id = 'C:\\w\\src\\builder\\editor\\protocol.ts';
+    const bundle = {
+      'index.js': chunk('index.js', { isEntry: true, dynamicImports: ['Lazy.js'] }),
+      'Lazy.js': chunk('Lazy.js', { moduleIds: [id] }),
+    };
+    expect(findLeaks(bundle)).toEqual([`Lazy.js: ${id}`]);
+  });
+
+  it('errors when there is no entry chunk', () => {
+    expect(findLeaks({ 'a.js': chunk('a.js', {}) })).toHaveLength(1);
+  });
+
   it('the plugin hook errors when a shopper-graph module imports @puckeditor/core', () => {
     const bundle = {
       'index.js': chunk('index.js', { isEntry: true, moduleIds: ['/w/src/blocks/Leaky.tsx', '/w/node_modules/@puckeditor/core/dist/index.mjs'] }),

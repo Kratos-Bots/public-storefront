@@ -5,15 +5,16 @@ at `/__builder?sf-builder=1`. It boots only when that parameter is present **and
 inside a frame (decided once per window, like the Appearance preview); anything else redirects
 to `/`. The build fails if `@puckeditor/core`, tiptap, dnd-kit or any `src/builder/editor/`
 module is statically reachable from the shopper entry (`vite-plugins/builder-isolation.ts`,
-tested in `test/builder-isolation-plugin.test.ts`, including a fixture where a shopper-graph
-module imports `@puckeditor/core`).
+tested in `test/builder-isolation-plugin.test.ts` against hand-built bundle fixtures). Shopper lazy
+chunks are checked too; only the chunk holding `EditorApp.tsx` is a boundary.
 
 ### Protocol (spec §13 A6)
 
 | Direction | Message |
 |---|---|
 | admin → storefront | `sf-builder-load { protocol: 1, loadId, layout, pageSet \| null, theme, readOnly }` |
-| admin → storefront | `sf-builder-theme { theme }` · `sf-builder-select-page { docKey }` |
+| admin → storefront | `sf-builder-theme { theme }` |
+| admin → storefront | `sf-builder-select-page { docKey }` (optional: the editor honours it; the current admin does not send it) |
 | admin → storefront | `sf-builder-upload-result { requestId, url \| null, error \| null }` |
 | storefront → admin | `sf-builder-ready { protocol: 1 }` (to `'*'`; once per frame boot) |
 | storefront → admin | `sf-builder-change { loadId, pageSet, issues }` (500 ms debounce; never when read-only) |
