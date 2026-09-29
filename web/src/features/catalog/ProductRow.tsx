@@ -1,5 +1,6 @@
 import { useSettings } from '@/app/settings.ts';
 import { useCartStore } from '@/stores/cart.ts';
+import { addToCart, setCartQuantity } from '@/features/cart/useServerCart.ts';
 import { deriveStockStatus, formatMoney } from '@/lib/format.ts';
 import { StockChip } from '@/features/catalog/StockChip.tsx';
 import { MinusIcon, PlusIcon } from '@/components/icons.tsx';
@@ -26,8 +27,11 @@ export interface ProductRowProps {
 export function ProductRow({ product, onSelect, index }: ProductRowProps) {
   const { currency, features } = useSettings();
   const quantity = useCartStore((s) => s.lines.find((l) => l.productId === product.id)?.quantity ?? 0);
-  const add = useCartStore((s) => s.add);
-  const setQuantity = useCartStore((s) => s.setQuantity);
+  // Written through the cart's sync path, not the store: a signed-in shopper's
+  // cart page adopts the server cart on open, so an edit that never reached
+  // PUT /cart would vanish there.
+  const add = addToCart;
+  const setQuantity = setCartQuantity;
 
   const status = deriveStockStatus(product.inStock, product.lowStockAlert);
   const unavailable = !product.isActive || (!product.isPreorder && status === 'out');

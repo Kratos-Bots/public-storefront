@@ -6,9 +6,12 @@ import type { Product } from '@/types/catalog.ts';
 
 const state = vi.hoisted(() => ({ settings: {} as StorefrontSettings }));
 vi.mock('@/app/settings.ts', () => ({ useSettings: () => state.settings }));
+const putCart = vi.hoisted(() => vi.fn(() => new Promise<never>(() => {})));
+vi.mock('@/api/cart.ts', () => ({ putCart, fetchCart: vi.fn(() => new Promise<never>(() => {})) }));
 
 import { ProductRow } from '@/features/catalog/ProductRow.tsx';
 import { useCartStore, type LocalLine } from '@/stores/cart.ts';
+import { resetCartSync, SYNC_DEBOUNCE_MS } from '@/features/cart/useServerCart.ts';
 
 function product(overrides: Partial<Product> = {}): Product {
   return {
@@ -45,9 +48,14 @@ function mount(p: Product, features: Partial<Features> = {}) {
 
 beforeEach(() => {
   useCartStore.setState({ lines: [], mode: 'local' });
+  resetCartSync();
+  putCart.mockClear();
 });
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
 
 describe('ProductRow', () => {
   it('shows the minimum as a chip', () => {
@@ -94,5 +102,20 @@ describe('ProductRow', () => {
     mount(product({ maxOrderQuantity: 15 }));
     fireEvent.click(screen.getByRole('button', { name: 'One more BPC-157 5mg' }));
     expect(useCartStore.getState().lines[0]!.quantity).toBe(11);
+  });
+
+  // A signed-in shopper (always, inside Telegram) has a server cart: the cart page
+  // adopts it on open, so a row edit that never reaches PUT /cart is thrown away.
+  it('quick-add and the stepper reach the server cart for a signed-in shopper', () => {
+    vi.useFakeTimers();
+    useCartStore.setState({ lines: [], mode: 'server' });
+    mount(product());
+    fireEvent.click(screen.getByRole('button', { name: 'Add BPC-157 5mg' }));
+    vi.advanceTimersByTime(SYNC_DEBOUNCE_MS);
+    expect(putCart).toHaveBeenLastCalledWith([{ productId: 7, quantity: 1 }]);
+
+    fireEvent.click(screen.getByRole('button', { name: 'One more BPC-157 5mg' }));
+    vi.advanceTimersByTime(SYNC_DEBOUNCE_MS);
+    expect(putCart).toHaveBeenLastCalledWith([{ productId: 7, quantity: 2 }]);
   });
 });
