@@ -125,6 +125,7 @@ Telegram WebApp's JWT-keyed catalog, not this proxy's concern.
 
 ## Releases
 
+- v0.5.0 — Telegram Mini App: opened from the bot, the storefront signs the shopper in from Telegram and uses the new `webapp` layout — the store's own template in a phone-first shell with Telegram's MainButton/BackButton, chrome painted in the store's colours, payment pages opened in the browser. `webapp` is also a layout choice for browsers (Admin → Storefront → Features). Needs the backend with `storefront_webapp_mode` and `/auth/telegram-webapp` deployed first, then the admin SPA.
 - v0.4.3 — `bento` redesigned phone-first: on a phone the shop board is the tagline plus one short strip (products, categories, open), so the first product is in the first screen; the footer is a single cell; quick-add labels are readable; the featured tile has no dead space on tablets and desktops. No backend change; redeploy each client on `bento` from the admin.
 - v0.4.2 — new built-in template `bento`: the catalogue opens on a shop board of real store facts (product count, categories, ordering status, next dispatch cut-off, chat links) and the first product gets a large tile; the accent follows what the store sells — Tech & electronics (default), Fashion & apparel, Beauty & wellness, Home & lifestyle, Food & grocery, Monochrome — each in dark and light. No backend change; redeploy each client from the admin so its template catalog picks up `bento`. Existing stores keep their current template.
 - v0.4.1 — storefront templates (v0.4.0 was never published; v0.4.1 adds the dark-luxury menu sheet-title fix): `modern` (the existing look, unchanged), `dark-luxury` (Gold / Silver / Emerald / Crimson) and `cyber-brutalism` (Acid Dark / Purple Light), chosen and customised in Admin → Storefront → Appearance with a live preview; each release ships `templates.json`, and templates can be imported at build time from git repos pinned in `templates.lock.json` (see [`docs/templates.md`](docs/templates.md)). Needs the backend with the template catalog endpoint deployed first; redeploy each client from the admin so its template catalog is captured, then deploy the admin SPA. Existing stores stay on `modern`.
@@ -149,6 +150,22 @@ npm run deploy   # npm run build && wrangler deploy
 `wrangler.jsonc` has no route/custom domain committed; add a `routes` entry to a local copy (or pass
 `--route`) first. **Deploy order matters**: the Worker has zero functionality without the backend's
 storefront surface already live and configured (see Prerequisites above).
+
+### Telegram Mini App
+
+The same deployment is the bot's Mini App — nothing extra to build. To switch a store on:
+
+1. Deploy in order: **backend → admin SPA → storefront** (the storefront reads
+   `telegramWebApp` from settings and posts to `/public/storefront/auth/telegram-webapp`;
+   an older backend 404s that route and shoppers inside Telegram see the sign-in error card).
+2. BotFather: `/setdomain` → the storefront hostname (the web Login Widget needs this too).
+   Optionally `/newapp` for a `t.me/<bot>/<app>` link; the menu button is set by the backend.
+3. Admin → Bot Settings → **Shop in web app (BETA)** → Beta. The bot then shows only a welcome
+   (Open shop / Contact / Use classic bot) and notifications.
+
+Inside Telegram the storefront always uses the `webapp` layout and signs the shopper in from
+`initData`; choosing **Web app** in Admin → Storefront → Features makes browsers use it too.
+Reviews, FAQ and Giveaways are not in the storefront yet — prefer Beta over Forced until they are.
 
 ## Release process
 
