@@ -14,7 +14,7 @@ describe('sanitizeRichtext', () => {
     expect(sanitizeRichtext('<a href="javascript:alert(1)">x</a>')).toBe('<a>x</a>');
     expect(sanitizeRichtext('<a href="//evil.example">x</a>')).toBe('<a>x</a>');
     expect(sanitizeRichtext('<a href="/\\evil.example">x</a>')).toBe('<a>x</a>');
-    for (const h of ['/&#9;/evil.example', '/&#10;/evil.example', '/&#13;/evil.example', '&#32;/x', '/\t/evil.example']) {
+    for (const h of ['/&#9;/evil.example', '/&#10;/evil.example', '/&#13;/evil.example', '/&#32;/evil.example', '/\t/evil.example']) {
       expect(sanitizeRichtext(`<a href="${h}">x</a>`), h).toBe('<a>x</a>');
     }
     expect(sanitizeRichtext('<a href="/pages/our-story" rel="x" target="_blank">x</a>')).toBe('<a href="/pages/our-story">x</a>');
