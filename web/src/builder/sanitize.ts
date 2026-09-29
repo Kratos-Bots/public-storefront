@@ -13,7 +13,8 @@ function instance(): ReturnType<typeof DOMPurify> {
   p.addHook('afterSanitizeAttributes', (node) => {
     if (node.nodeName !== 'A') return;
     const href = node.getAttribute('href');
-    if (href !== null && !SAFE_HREF.test(href)) node.removeAttribute('href');
+    // Browsers strip tab/CR/LF before parsing, so any control/whitespace char disqualifies the href.
+    if (href !== null && (/[\u0000- \u007f]/.test(href) || !SAFE_HREF.test(href))) node.removeAttribute('href');
     const kept = node.getAttribute('href');
     if (kept !== null && /^https:/i.test(kept)) node.setAttribute('rel', 'noopener noreferrer');
   });

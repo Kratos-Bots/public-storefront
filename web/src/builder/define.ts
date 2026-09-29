@@ -10,7 +10,7 @@ export type BlockCategory = 'shell' | 'catalogue' | 'product' | 'commerce' | 'po
 /** A slot prop at render time. No argument (or none of the three keys) = the children with no wrapper. */
 export type SlotRender = (p?: { className?: string; style?: CSSProperties; as?: ElementType }) => ReactNode;
 export interface BlockRenderContext { editing: boolean; docKey: DocKey; layout: LayoutKind }
-/** Slot props (typed `ComponentData[]` in P) arrive at render as `SlotRender`. */
+/** Slot props (declared as REQUIRED `ComponentData[]` in P; an optional slot won't map) arrive at render as `SlotRender`. */
 export type SlotProps<P> = { [K in keyof P]: P[K] extends ComponentData[] ? SlotRender : P[K] };
 
 export interface BlockDef<P extends Record<string, unknown>> {
@@ -63,6 +63,8 @@ export const richtext = () => z.string().max(20_000);
 /** '', a site-relative path (not `//` or `/\`, both protocol-relative in browsers), or an https:/mailto:/tel: URL. */
 export function isSafeHref(h: string): boolean {
   if (h === '') return true;
+  // Browsers strip tab/CR/LF from URLs, so `/<TAB>/x` would become `//x`: reject any control or whitespace char.
+  if (/[\u0000- \u007f]/.test(h)) return false;
   if (h.startsWith('/')) return !/^\/[/\\]/.test(h);
   return /^(https:\/\/|mailto:|tel:)/i.test(h);
 }

@@ -39,6 +39,7 @@ describe('field helpers', () => {
   it('routeLink accepts site paths and safe schemes only', () => {
     for (const ok of ['', '/', '/pages/our-story', 'https://shop.example/x', 'mailto:hi@shop.example', 'tel:+441234']) expect(routeLink().safeParse(ok).success, ok).toBe(true);
     for (const bad of ['//evil.example', '/\\evil.example', 'http://shop.example', 'javascript:alert(1)', 'pages/x', ' /x']) expect(routeLink().safeParse(bad).success, bad).toBe(false);
+    for (const bad of ['/\t/evil.example', '/\n/evil.example', '/\r/evil.example', ' /x', '/a b']) expect(isSafeHref(bad), JSON.stringify(bad)).toBe(false);
     expect(isSafeHref('/c/concentrates')).toBe(true);
     expect(isSafeHref('//evil.example')).toBe(false);
     expect(isSafeHref('/\\evil.example')).toBe(false);
