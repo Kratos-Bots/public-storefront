@@ -1,5 +1,5 @@
 import { lazy } from 'react';
-import { useMatch, useParams } from 'react-router';
+import { useMatch } from 'react-router';
 import { z } from 'zod';
 import { defineBlock } from '@/builder/define.ts';
 import { useProduct } from '@/features/catalog/use-catalog.ts';
@@ -7,10 +7,8 @@ import { useProduct } from '@/features/catalog/use-catalog.ts';
 const Upsells = lazy(() => import('@/features/catalog/Upsells.tsx').then((m) => ({ default: m.Upsells })));
 
 function UpsellsView({ productId }: { productId: number | null }) {
-  const params = useParams();
-  // A page route matches `*`, so read the product route's id from the path too.
-  const match = useMatch('/p/:id');
-  const raw = params.id ?? match?.params.id;
+  // Matched on the path itself: a page route is `*`, so route params carry no product id.
+  const raw = useMatch('/p/:id')?.params.id;
   const fromUrl = raw !== undefined && /^\d+$/.test(raw) ? Number(raw) : null;
   const query = useProduct(productId ?? fromUrl);
   if (!query.data) return null;

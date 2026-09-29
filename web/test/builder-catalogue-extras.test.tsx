@@ -33,9 +33,9 @@ function ShellState({ children }: { children: ReactNode }) {
 }
 function SearchEcho() { return <output>{`q=${useShellState().search}`}</output>; }
 
-function mount(content: ComponentData[], path = '/') {
+function mount(content: ComponentData[], path = '/', nested = false) {
   state.catalog = {
-    categories: [{ id: 1, name: 'Pantry', slug: 'pantry', parentId: null, sortOrder: 0, emoji: null }],
+    categories: [{ id: 1, name: 'Pantry', slug: 'pantry', parentId: null, sortOrder: 0, emoji: null }, ...(nested ? [{ id: 2, name: 'Grains', slug: 'grains', parentId: 1, sortOrder: 0, emoji: null }] : [])],
     products: [product(7, 'Trail Oats 1kg', { upsellProductIds: [8] }), product(8, 'Cold Brew Kit')],
   };
   state.settings = {
@@ -61,6 +61,14 @@ describe('catalogue extras', () => {
   it('CategoryNav lists the categories', async () => {
     mount([c('CategoryNav')], '/pages/x');
     expect((await screen.findAllByRole('navigation', { name: 'Categories' })).length).toBeGreaterThan(0);
+  });
+  it('CategoryNav sits in a gutter wrapper and drops the dead All-categories button', async () => {
+    const { container } = mount([c('CategoryNav')], '/pages/x', true);
+    await screen.findAllByRole('navigation', { name: 'Categories' });
+    const wrap = container.querySelector('[data-sf-block="CategoryNav"]');
+    expect(wrap).not.toBeNull();
+    expect(wrap!.className).toMatch(/wrap/);
+    expect(wrap!.querySelectorAll('nav').length).toBe(2);
   });
   it('SearchField typed away from the catalogue goes to the catalogue with the query', () => {
     mount([c('SearchField', { placeholder: 'Find it' })], '/pages/x');

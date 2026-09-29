@@ -19,10 +19,12 @@
 
 .field:focus-within {
   border-bottom-color: var(--sf-primary);
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .field {
+  .field.field {
     transition: none;
   }
 }

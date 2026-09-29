@@ -1,0 +1,22 @@
+/* The feature component assumes a 1rem-padded parent (its chip row bleeds out by 1rem) and a
+   grid cell (its rail is sticky). Placed as a block it gets neither, so this wrapper supplies
+   the gutter and keeps the bleed inside it: nothing can push a 360px page sideways. */
+.wrap {
+  box-sizing: border-box;
+  max-width: 100%;
+  padding-inline: 1rem;
+  overflow-x: clip;
+}
+
+/* "All categories" opens the list block's filter sheet, which a standalone nav has no
+   sheet for: the chips already reach every root, so the button is left out here. */
+.wrap button {
+  display: none;
+}
+
+@media (min-width: 62em) {
+  .wrap {
+    max-width: 20rem;
+    padding-inline: 0;
+  }
+}
