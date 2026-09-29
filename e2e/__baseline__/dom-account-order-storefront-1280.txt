@@ -163,7 +163,7 @@ title: Northbound Supply
 </li>
 </ul>
 </section>
-<a class="_cta_H" href="http://localhost:5198/order/K4M2QP/KEY2" target="_blank" rel="noopener noreferrer" data-sf-part="button" data-variant="filled">Open order page</a>
+<a class="_cta_H" href="http://ORIGIN/order/K4M2QP/KEY2" target="_blank" rel="noopener noreferrer" data-sf-part="button" data-variant="filled">Open order page</a>
 <p class="_note_H">The order page is where you pay, change payment method and follow the parcel — share it with us if you need help with this order.</p>
 </div>
 </div>

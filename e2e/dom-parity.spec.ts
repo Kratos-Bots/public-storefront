@@ -57,6 +57,7 @@ export function normalizeDom(html: string): string {
         .replace(/(mantine-)[a-z0-9]{5,}/gi, '$1ID')
         .replace(/«r[0-9a-z]+»|:r[0-9a-z]+:|_r_[0-9a-z]+_/g, 'RID')}"`)
     .replace(/(_[A-Za-z][\w-]*?)_[a-z0-9]{5}_\d+(?![\w-])/g, '$1_H')
+    .replace(/https?:\/\/(?:localhost|127\.0\.0\.1):\d+/g, 'http://ORIGIN')
     .replace(/></g, '>\n<');
 }
 
