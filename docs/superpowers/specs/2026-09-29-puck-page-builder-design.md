@@ -469,9 +469,9 @@ against `LayoutKind` (400 otherwise).
 | `GET /storefront-pages/media/:key` | — | raw image |
 | `GET /public/storefront/pages/:layout` | — | `{ version: number, data: PageSet } \| null` |
 
-Errors: `409` with `error.code = 'PAGESET_CONFLICT'` when `baseVersion < latestPublishedVersion`
+Errors (the envelope's `error` is a plain string in this codebase — compare it, there is no `error.code`): `409` with `error === 'PAGESET_CONFLICT'` when `baseVersion < latestPublishedVersion`
 (PUT and publish); `400` validation errors with the standard validation shape; publish with no
-draft → `400` with code `NO_DRAFT`. The storefront reaches the public route as
+draft → `400` with `error === 'NO_DRAFT'`. The storefront reaches the public route as
 `GET /api/storefront/pages/:layout` through its Worker (edge-cached 30 s like `storefront/settings`).
 Socket event (admin namespace): `storefront-pages:published` with payload `{ layout, version }`.
 
