@@ -390,3 +390,164 @@ client in this work — that is called out as a pending manual step.
 - **Editor needs a deployed storefront** — same limitation as the live preview; documented.
 - **Stored docs outlive blocks**: removing or renaming a block in a future release silently drops
   it from live pages (by design, §5.3). Renames must ship a doc migration in the guard.
+
+## 13. Implementation amendments and cross-plan contracts
+
+Added 2026-09-29 before planning. Where this section and §1–12 disagree, this section wins.
+
+### A1. Shoppers never load Puck at all
+
+`@puckeditor/core@0.23.0`'s `Render` chunk statically imports `@tiptap/html` and ~17 tiptap
+extensions. The shopper-side renderer is therefore **our own** `RenderDoc`
+(`web/src/builder/render.tsx`) over Puck's `Data` format; `@puckeditor/core` (pinned exactly
+`0.23.0`) is imported — as a value — **only** under `web/src/builder/editor/`. `import type` from
+it is allowed anywhere (erased). The §8 build check enforces "no `@puckeditor/core` module in any
+chunk reachable from the entry except the editor chunk's graph".
+
+Because we own the renderer, **slots render no wrapper element** unless the block passes
+`className`/`style`/`as` (then exactly that element). Guarantee 1 is upgraded: with no published
+set, the DOM of every page is identical to v0.6.0 wherever the default doc can reproduce it; any
+remaining difference must be justified per case in the commit message. Inside the editor, Puck
+adds its own wrappers — that is fine.
+
+### A2. Richtext convention (replaces the `{ __richtext, html }` envelope)
+
+Blocks use Puck's native `richtext` field, which stores an **HTML string**. Every richtext prop's
+key **ends in `Html`** (`bodyHtml`, `answerHtml`). The backend sanitises every string prop whose
+key ends in `Html` (at any depth, including inside arrays/objects) with `isomorphic-dompurify`
+using the §4.3 allowlist; the storefront sanitises again with `dompurify` (same allowlist, exported
+from `web/src/builder/sanitize.ts`) and renders with `dangerouslySetInnerHTML`. Inside `<Puck>` a
+richtext prop may arrive as a React node — block renders handle `string | ReactNode`.
+
+### A3. Media
+
+- Upload: `POST /api/v1/storefront-pages/media` (JWT admin, multipart field `file`, png/jpeg/webp/gif,
+  ≤ 5 MB) → `{ url: '/media/storefront-pages/media/<key>' }`, `<key>` =
+  `^[a-f0-9]{32}\.(png|jpg|webp|gif)$`, stored in S3 under `storefront-pages/<key>`.
+- Serve: `GET /api/v1/storefront-pages/media/:key` (public, no auth, long cache headers).
+- Worker: new rule in `worker/src/media.ts` `RULES`:
+  `/^\/media\/storefront-pages\/media\/([a-f0-9]{32}\.(?:png|jpg|webp|gif))$/` →
+  `api/v1/storefront-pages/media/<key>`.
+- Backend validation of `Url`/`url`/`href`/`src`-suffixed props additionally accepts exactly this
+  site-relative path form.
+
+### A4. Shared types (storefront `web/src/builder/types.ts`; backend mirrors them in zod)
+
+```ts
+export type LayoutKind = 'storefront' | 'menu' | 'webapp';
+export const FIXED_ROUTE_KEYS = ['catalog','product','cart','checkout','login','account.orders','account.order',
+  'account.loyalty','account.referrals','account.profile','order-status','payment-success','payment-cancel',
+  'order-placed','verify','tracking'] as const;
+export type FixedRouteKey = typeof FIXED_ROUTE_KEYS[number];
+export type RouteKey = FixedRouteKey | `page:${string}`;          // slug /^[a-z0-9-]{1,60}$/
+export type DocKey = RouteKey | 'shell';
+export interface ComponentData { type: string; props: { id: string; [k: string]: unknown } }
+export interface PageRootProps { title: string; description: string; chrome: 'shell' | 'none' }
+export interface PuckDoc { root: { props: PageRootProps }; content: ComponentData[]; zones?: Record<string, ComponentData[]> }
+export interface PageSet { schemaVersion: 1; shell: PuckDoc; pages: Partial<Record<RouteKey, PuckDoc>> }
+export interface Issue { docKey: DocKey; rule: string; message: string; blockId?: string }
+```
+
+Slot props hold `ComponentData[]`. Shell root props use the same `PageRootProps` shape (title/description
+ignored, `chrome` must be `'shell'`).
+
+### A5. HTTP contract (backend ⇄ admin, backend ⇄ storefront)
+
+All responses use the standard `{ success, data, error }` envelope. `:layout` is validated
+against `LayoutKind` (400 otherwise).
+
+| Method + path (under `/api/v1`) | Request | `data` |
+|---|---|---|
+| `GET /storefront-pages/:layout/draft` | — | `{ layout, source: 'draft' \| 'published' \| 'none', data: PageSet \| null, baseVersion: number, latestPublishedVersion: number, updatedAt: string \| null }` |
+| `PUT /storefront-pages/:layout/draft` | `{ data: PageSet, baseVersion: number }` | `{ baseVersion: number, updatedAt: string }` |
+| `DELETE /storefront-pages/:layout/draft` | — | `{ discarded: boolean }` |
+| `POST /storefront-pages/:layout/publish` | `{ baseVersion: number }` | `{ version: number, publishedAt: string }` |
+| `GET /storefront-pages/:layout/versions` | — | `Array<{ version: number, createdAt: string, createdBy: { id: number, name: string } \| null }>` |
+| `GET /storefront-pages/:layout/versions/:version` | — | `{ version, createdAt, data: PageSet }` |
+| `POST /storefront-pages/:layout/versions/:version/restore` | — | `{ version: number }` (the new version) |
+| `POST /storefront-pages/media` | multipart `file` | `{ url: string }` |
+| `GET /storefront-pages/media/:key` | — | raw image |
+| `GET /public/storefront/pages/:layout` | — | `{ version: number, data: PageSet } \| null` |
+
+Errors: `409` with `error.code = 'PAGESET_CONFLICT'` when `baseVersion < latestPublishedVersion`
+(PUT and publish); `400` validation errors with the standard validation shape; publish with no
+draft → `400` with code `NO_DRAFT`. The storefront reaches the public route as
+`GET /api/storefront/pages/:layout` through its Worker (edge-cached 30 s like `storefront/settings`).
+Socket event (admin namespace): `storefront-pages:published` with payload `{ layout, version }`.
+
+### A6. Editor postMessage protocol (admin ⇄ storefront `/__builder`)
+
+Every message is a plain object with a `type`. Storefront side parses with zod in
+`web/src/builder/editor/protocol.ts`; admin mirrors the shapes in
+`src/features/storefront-settings/pages/protocol.ts`. Unknown/malformed messages are ignored on
+both sides; the storefront only accepts `event.source === window.parent`, the admin only accepts
+`event.source === iframe.contentWindow` and `event.origin === storefrontOrigin`.
+
+Admin → storefront:
+
+- `{ type: 'sf-builder-load', protocol: 1, layout: LayoutKind, pageSet: PageSet | null, theme: Theme, readOnly: boolean }`
+- `{ type: 'sf-builder-theme', theme: Theme }`
+- `{ type: 'sf-builder-select-page', docKey: DocKey }`
+- `{ type: 'sf-builder-upload-result', requestId: string, url: string | null, error: string | null }`
+
+Storefront → admin (`targetOrigin` = origin of the first accepted `sf-builder-load`;
+`sf-builder-ready` alone uses `'*'` because it carries nothing):
+
+- `{ type: 'sf-builder-ready', protocol: 1 }`
+- `{ type: 'sf-builder-change', pageSet: PageSet, issues: Issue[] }` (debounced 500 ms; also sent once right after load)
+- `{ type: 'sf-builder-upload-request', requestId: string, file: File }`
+
+`pageSet: null` on load means "no draft or published set": the editor starts from the default docs
+and the first `sf-builder-change` carries a sparse set containing only `shell` (the default shell).
+`readOnly: true` (version preview) disables editing and suppresses `sf-builder-change`.
+
+### A7. Storefront internal module contract (`web/src/builder/`)
+
+```ts
+// define.ts — runtime-safe (no @puckeditor/core value imports)
+export type BlockCategory = 'shell' | 'catalogue' | 'product' | 'commerce' | 'post-order' | 'content';
+export type SlotRender = (p?: { className?: string; style?: CSSProperties; as?: ElementType }) => ReactNode;
+export interface BlockRenderContext { editing: boolean; docKey: DocKey; layout: LayoutKind }
+export interface BlockDef<P extends Record<string, unknown>> {
+  name: string; label: string; category: BlockCategory;
+  layouts: LayoutKind[] | 'all';
+  routeBound: boolean;                         // may only appear on its own route(s)
+  slots: readonly (keyof P & string)[];        // prop names holding ComponentData[]
+  schema: z.ZodType<Omit<P, 'id'>>;            // non-slot props; parse failures fall back per field
+  defaultProps: Omit<P, 'id'>;
+  render(props: SlotProps<P> & { puck: BlockRenderContext }): ReactNode;  // slot props arrive as SlotRender
+}
+export function defineBlock<P extends Record<string, unknown>>(def: BlockDef<P>): BlockDef<P>;
+// registry.ts
+export const BLOCKS: Record<string, BlockDef<any>>;
+// rules.ts
+export function checkRules(doc: PuckDoc, docKey: DocKey, layout: LayoutKind): Issue[];
+// guard.ts
+export function validateDoc(doc: unknown, docKey: DocKey, layout: LayoutKind): { doc: PuckDoc | null; issues: Issue[] };  // null ⇒ use default
+// defaults/index.ts
+export function defaultDoc(docKey: DocKey, layout: LayoutKind): PuckDoc | null;  // null for custom pages
+// render.tsx
+export function RenderDoc(p: { doc: PuckDoc; docKey: DocKey; layout: LayoutKind }): ReactNode;
+// runtime.tsx
+export function usePageSet(layout: LayoutKind): { pageSet: PageSet | null; isLoading: boolean };
+export function PuckShell(): ReactNode;     // replaces ShellSwitch
+export function PuckPage(p: { routeKey: RouteKey }): ReactNode;
+export function PageSetOverrideProvider(p: { pageSet: PageSet | null; children: ReactNode }): ReactNode; // editor/preview inject the draft
+// mode.ts
+export function useBuilderMode(): { editing: boolean; previewAs: PreviewAs | null };
+export type PreviewAs = { session: 'signed-out' | 'signed-in' | 'signed-in-orders'; cart: 'empty' | 'items' };
+// sanitize.ts
+export const RICHTEXT_ALLOWED_TAGS: readonly string[];
+export function sanitizeRichtext(html: string): string;
+```
+
+Editor-only: `web/src/builder/editor/fields/<BlockName>.ts` exports that block's Puck `fields`;
+`editor/config.ts` merges `BLOCKS` + fields into a Puck `Config`. Heavy functional components stay
+behind `lazy()` inside their block's render so route chunking is unchanged.
+
+### A8. Plans
+
+Four plans in `docs/superpowers/plans/` of this repo: `2026-09-29-puck-builder-1-backend.md`,
+`-2-renderer.md` (storefront: builder core, blocks, default docs, routing, Worker, parity gate),
+`-3-editor.md` (storefront `/__builder`), `-4-admin.md`. Plan 1 and plan 2 are independent;
+plan 3 needs plan 2; plan 4 needs only A5/A6 and can run against mocks before plans 1–3 land.
