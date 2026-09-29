@@ -1,4 +1,4 @@
-import { Suspense, useMemo, useState } from 'react';
+import { Suspense, type ReactNode } from 'react';
 import { Link, Outlet, useLocation } from 'react-router';
 import { useSettings } from '@/app/settings.ts';
 import { useSessionStore, selectIsLoggedIn } from '@/stores/session.ts';
@@ -14,21 +14,24 @@ import { LoginModal } from '@/features/auth/LoginModal.tsx';
 import { CartDrawer } from '@/features/cart/CartDrawer.tsx';
 import { MobileCartBar, useMobileCartBar } from '@/features/cart/MobileCartBar.tsx';
 import { SearchField } from '@/layouts/SearchField.tsx';
-import type { ShellSearchContext } from '@/layouts/shell-context.ts';
+import { ShellFooter } from '@/layouts/ShellFooter.tsx';
+import type { ShellHeaderProps } from '@/layouts/StorefrontShell.tsx';
+import { ShellStateContext, useShellState, useShellStateValue } from '@/layouts/shell-context.ts';
 import { Slot } from '@/templates/runtime.tsx';
 import { headerIconClass, useCoreOptions } from '@/templates/hooks.ts';
 import classes from '@/layouts/MenuShell.module.css';
 
-/** The dense shell: one compact bar, a narrow list column, contact strip at the foot of the catalog. */
-export function MenuShell() {
-  const { brand, features, supportLinks } = useSettings();
+const onCatalogPath = (pathname: string) => pathname === '/' || pathname.startsWith('/c/');
+
+/** TopBar slot + the one compact bar. */
+export function MenuHeader({ topBar = true, search: withSearch = true, sticky = true, nav }: ShellHeaderProps) {
+  const { brand, features } = useSettings();
   const loggedIn = useSessionStore(selectIsLoggedIn);
   const cartCount = useCartStore(selectCount);
   const openPanel = useUiStore((s) => s.open);
   const { pathname } = useLocation();
-  const [search, setSearch] = useState('');
-  const outletContext = useMemo<ShellSearchContext>(() => ({ search, setSearch }), [search]);
-  const onCatalog = pathname === '/' || pathname.startsWith('/c/');
+  const { search, setSearch } = useShellState();
+  const onCatalog = onCatalogPath(pathname);
   // Only the catalogue body carries the sheet this button opens — wholesale replaces
   // it, so the button would have nothing to show.
   const { showCategoryPicker, headerAccountIcon, headerCartIcon } = useCoreOptions();
@@ -37,25 +40,20 @@ export function MenuShell() {
   const cartClass = headerIconClass(headerCartIcon);
   // A category in the path is the only filter this layout has — the dot says one is on.
   const filtered = pathname.startsWith('/c/');
-  // A running tab claims the foot as soon as there is something on the order —
-  // the wholesale sheet's own sticky tab, or the cart bar on a phone — and both
-  // bands want `bottom: 0`. The tab wins, the way it replaces the contact strip
-  // in the chat menu this layout is ported from.
-  const barShowing = useMobileCartBar();
-  const showContact = onCatalog && !barShowing && !(features.wholesale && cartCount > 0);
-  const hasChat = !!(brand.links.whatsapp || brand.links.telegram);
 
   return (
-    <div className={barShowing ? `${classes.shell} ${classes.withBar}` : classes.shell}>
-      <Slot name="TopBar" />
-      <header className={classes.bar} data-sf-part="header">
+    <>
+      {topBar ? <Slot name="TopBar" /> : null}
+      <header className={sticky ? classes.bar : `${classes.bar} ${classes.unstuck}`} data-sf-part="header">
         <NoticeBanners pinned />
         <div className={classes.barInner}>
           <Link to="/" className={classes.home} aria-label={`${brand.name} — home`}>
             <Brand size="sm" />
           </Link>
 
-          <SearchField className={classes.search} value={search} onChange={setSearch} placeholder="Search" />
+          {nav}
+
+          {withSearch ? <SearchField className={classes.search} value={search} onChange={setSearch} placeholder="Search" /> : null}
 
           <div className={classes.actions}>
             {canFilter ? (
@@ -93,23 +91,49 @@ export function MenuShell() {
           </div>
         </div>
       </header>
+    </>
+  );
+}
 
-      <NoticeBanners />
-      <CutoffBar />
+/** The narrow list column: the routed page, with the shell's search handed down as outlet context. */
+export function MenuMain() {
+  const outletContext = useShellState();
+  return (
+    <main className={classes.main} data-sf-part="main">
+      <Suspense fallback={<PageSkeleton inline />}>
+        <Outlet context={outletContext} />
+      </Suspense>
+    </main>
+  );
+}
 
-      <main className={classes.main} data-sf-part="main">
-        <Suspense fallback={<PageSkeleton inline />}>
-          <Outlet context={outletContext} />
-        </Suspense>
-      </main>
-      <Slot name="Footer" supportLinks={supportLinks} hasChat={hasChat} />
+/**
+ * The contact strip at the foot. A running tab claims the foot as soon as there is
+ * something on the order — the wholesale sheet's own sticky tab, or the cart bar on a
+ * phone — and both bands want `bottom: 0`. The tab wins, the way it replaces the
+ * contact strip in the chat menu this layout is ported from.
+ */
+export function MenuContactStrip({ catalogOnly = true }: { catalogOnly?: boolean }) {
+  const { features } = useSettings();
+  const cartCount = useCartStore(selectCount);
+  const { pathname } = useLocation();
+  const barShowing = useMobileCartBar();
+  const show = (!catalogOnly || onCatalogPath(pathname)) && !barShowing && !(features.wholesale && cartCount > 0);
+  return show ? <ContactLinks variant="strip" /> : null;
+}
 
-      {showContact ? <ContactLinks variant="strip" /> : null}
+/** The shell root and the system mounts that sit after the page chrome (spec §5.4). */
+export function MenuFrame({ children, cartBar = true }: { children: ReactNode; cartBar?: boolean }) {
+  const { features } = useSettings();
+  const barShowing = useMobileCartBar();
+  return (
+    <div className={barShowing ? `${classes.shell} ${classes.withBar}` : classes.shell}>
+      {children}
 
       {features.ordering ? (
         <>
           <CartDrawer />
-          <MobileCartBar />
+          {cartBar ? <MobileCartBar /> : null}
         </>
       ) : null}
 
@@ -117,5 +141,25 @@ export function MenuShell() {
 
       <Slot name="Overlay" />
     </div>
+  );
+}
+
+/**
+ * The dense shell: one compact bar, a narrow list column, contact strip at the foot
+ * of the catalog. v0.6.0's composition, kept as the parity oracle. Production renders PuckShell.
+ */
+export function MenuShell() {
+  const state = useShellStateValue();
+  return (
+    <ShellStateContext.Provider value={state}>
+      <MenuFrame>
+        <MenuHeader />
+        <NoticeBanners />
+        <CutoffBar />
+        <MenuMain />
+        <ShellFooter />
+        <MenuContactStrip />
+      </MenuFrame>
+    </ShellStateContext.Provider>
   );
 }

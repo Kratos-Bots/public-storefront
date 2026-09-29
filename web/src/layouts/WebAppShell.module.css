@@ -15,6 +15,7 @@
 .count { composes: count from './MenuShell.module.css'; }
 .mark { composes: mark from './MenuShell.module.css'; }
 .main { composes: main from './MenuShell.module.css'; }
+.unstuck { composes: unstuck from './MenuShell.module.css'; }
 
 /* Telegram fullscreen puts its own controls over the top of the page; both
    insets are 0 in a normal Mini App and in a browser. */

@@ -24,6 +24,11 @@
   padding-top: env(safe-area-inset-top, 0px);
 }
 
+/* Header block with `sticky` off: scrolls away with the page. */
+.unstuck {
+  position: static;
+}
+
 .barInner {
   display: flex;
   align-items: center;

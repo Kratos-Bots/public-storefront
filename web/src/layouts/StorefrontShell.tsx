@@ -1,4 +1,4 @@
-import { Suspense, useMemo, useState } from 'react';
+import { Suspense, type ReactNode } from 'react';
 import { Link, Outlet } from 'react-router';
 import { useSettings } from '@/app/settings.ts';
 import { useSessionStore, selectIsLoggedIn } from '@/stores/session.ts';
@@ -12,36 +12,46 @@ import { LoginModal } from '@/features/auth/LoginModal.tsx';
 import { CartDrawer } from '@/features/cart/CartDrawer.tsx';
 import { MobileCartBar, useMobileCartBar } from '@/features/cart/MobileCartBar.tsx';
 import { SearchField } from '@/layouts/SearchField.tsx';
-import type { ShellSearchContext } from '@/layouts/shell-context.ts';
+import { ShellFooter } from '@/layouts/ShellFooter.tsx';
+import { ShellStateContext, useShellState, useShellStateValue } from '@/layouts/shell-context.ts';
 import { Slot } from '@/templates/runtime.tsx';
 import { headerIconClass, useCoreOptions } from '@/templates/hooks.ts';
 import classes from '@/layouts/StorefrontShell.module.css';
 
-/** The image-led shell: header, notice + dispatch rails, content column, footer. */
-export function StorefrontShell() {
-  const { brand, features, supportLinks } = useSettings();
+export interface ShellHeaderProps {
+  /** The template TopBar slot above the header (default on). */
+  topBar?: boolean;
+  /** The centre search field (default on; CSS still hides it below 62em). */
+  search?: boolean;
+  /** Sticky to the top of the viewport (default on). */
+  sticky?: boolean;
+  /** Rendered between the home link and the search field — the Header block's nav slot. */
+  nav?: ReactNode;
+}
+
+/** TopBar slot + the header bar. */
+export function StorefrontHeader({ topBar = true, search: withSearch = true, sticky = true, nav }: ShellHeaderProps) {
+  const { brand, features } = useSettings();
   const loggedIn = useSessionStore(selectIsLoggedIn);
   const cartCount = useCartStore(selectCount);
-  const [search, setSearch] = useState('');
-  const outletContext = useMemo<ShellSearchContext>(() => ({ search, setSearch }), [search]);
-  const hasChat = !!(brand.links.whatsapp || brand.links.telegram);
-  // The tab is fixed to the foot of the phone; the shell owes it the clearance.
-  const barShowing = useMobileCartBar();
+  const { search, setSearch } = useShellState();
   const { headerAccountIcon, headerCartIcon } = useCoreOptions();
   const accountClass = headerIconClass(headerAccountIcon);
   const cartClass = headerIconClass(headerCartIcon);
 
   return (
-    <div className={barShowing ? `${classes.shell} ${classes.withBar}` : classes.shell}>
-      <Slot name="TopBar" />
-      <header className={classes.header} data-sf-part="header">
+    <>
+      {topBar ? <Slot name="TopBar" /> : null}
+      <header className={sticky ? classes.header : `${classes.header} ${classes.unstuck}`} data-sf-part="header">
         <NoticeBanners pinned />
         <div className={classes.headerInner}>
           <Link to="/" className={classes.home} aria-label={`${brand.name} — home`}>
             <Brand size="md" />
           </Link>
 
-          <SearchField className={classes.search} value={search} onChange={setSearch} />
+          {nav}
+
+          {withSearch ? <SearchField className={classes.search} value={search} onChange={setSearch} /> : null}
 
           <div className={classes.actions}>
             {features.accounts && accountClass !== null ? (
@@ -69,22 +79,35 @@ export function StorefrontShell() {
           </div>
         </div>
       </header>
+    </>
+  );
+}
 
-      <NoticeBanners />
-      <CutoffBar />
+/** The content column: the routed page, with the shell's search handed down as outlet context. */
+export function StorefrontMain() {
+  const outletContext = useShellState();
+  return (
+    <main className={classes.main} data-sf-part="main">
+      <Suspense fallback={<PageSkeleton inline />}>
+        <Outlet context={outletContext} />
+      </Suspense>
+    </main>
+  );
+}
 
-      <main className={classes.main} data-sf-part="main">
-        <Suspense fallback={<PageSkeleton inline />}>
-          <Outlet context={outletContext} />
-        </Suspense>
-      </main>
-
-      <Slot name="Footer" supportLinks={supportLinks} hasChat={hasChat} />
+/** The shell root and the system mounts that sit after the page chrome (spec §5.4). */
+export function StorefrontFrame({ children, cartBar = true }: { children: ReactNode; cartBar?: boolean }) {
+  const { features } = useSettings();
+  // The tab is fixed to the foot of the phone; the shell owes it the clearance.
+  const barShowing = useMobileCartBar();
+  return (
+    <div className={barShowing ? `${classes.shell} ${classes.withBar}` : classes.shell}>
+      {children}
 
       {features.ordering ? (
         <>
           <CartDrawer />
-          <MobileCartBar />
+          {cartBar ? <MobileCartBar /> : null}
         </>
       ) : null}
 
@@ -92,5 +115,25 @@ export function StorefrontShell() {
 
       <Slot name="Overlay" />
     </div>
+  );
+}
+
+/**
+ * The image-led shell: header, notice + dispatch rails, content column, footer.
+ * v0.6.0's composition, kept verbatim as the parity oracle for the builder's
+ * default shell document (test/builder-shell.test.tsx) — production renders PuckShell.
+ */
+export function StorefrontShell() {
+  const state = useShellStateValue();
+  return (
+    <ShellStateContext.Provider value={state}>
+      <StorefrontFrame>
+        <StorefrontHeader />
+        <NoticeBanners />
+        <CutoffBar />
+        <StorefrontMain />
+        <ShellFooter />
+      </StorefrontFrame>
+    </ShellStateContext.Provider>
   );
 }
