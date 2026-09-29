@@ -17,3 +17,7 @@
   margin-inline: calc(-1 * var(--sf-main-pad, 1rem));
   padding-inline: var(--sf-main-pad, 1rem);
 }
+/* Full bleed is page-level only: inside a column or another section the negative margin would overflow. */
+:where([data-sf-block="Columns"], [data-sf-block="Section"]) .full {
+  margin-inline: 0;
+}

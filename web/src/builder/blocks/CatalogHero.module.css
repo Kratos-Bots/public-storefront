@@ -43,3 +43,10 @@
   border-radius: var(--sf-card-radius);
   background: var(--sf-surface);
 }
+
+.hint {
+  margin: 0;
+  padding: 0.5rem 0;
+  color: var(--sf-muted);
+  font-size: 0.875rem;
+}

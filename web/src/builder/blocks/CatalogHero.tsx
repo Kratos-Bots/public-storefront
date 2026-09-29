@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { useSettings } from '@/app/settings.ts';
+import { useBuilderMode } from '@/builder/mode.ts';
 import { defineBlock, mediaSrc, richtext } from '@/builder/define.ts';
 import { RichHtml } from '@/builder/blocks/_shared/RichHtml.tsx';
 import { useCatalogStats } from '@/templates/hooks.ts';
@@ -22,13 +23,19 @@ function TemplateHero({ surface }: { surface: Surface }) {
 }
 
 function CustomHero({ title, bodyHtml, imageSrc, imageAlt, align }: Pick<Props, 'title' | 'bodyHtml' | 'imageSrc' | 'imageAlt' | 'align'>) {
+  const { editing } = useBuilderMode();
   const image = imageSrc && imageAlt.trim() ? imageSrc : '';
+  const needsAlt = Boolean(imageSrc) && !imageAlt.trim();
+  if (!title && !bodyHtml.trim() && !image) {
+    return needsAlt && editing ? <p className={classes.hint} data-sf-block="CatalogHero">Describe the image for screen readers so it shows.</p> : null;
+  }
   return (
     <section className={`${classes.hero} ${align === 'center' ? classes.center : ''} ${image ? classes.withImage : ''}`.trim()} data-sf-block="CatalogHero">
       <div className={classes.text}>
         {title ? <h2 className={classes.title}>{title}</h2> : null}
         <RichHtml value={bodyHtml} className={classes.body} />
       </div>
+      {needsAlt && editing ? <p className={classes.hint}>Describe the image for screen readers so it shows.</p> : null}
       {image ? <img className={classes.image} src={image} alt={imageAlt} loading="lazy" decoding="async" /> : null}
     </section>
   );

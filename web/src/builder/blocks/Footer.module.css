@@ -17,6 +17,9 @@
   .grid { grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); }
 }
 
+/* No colophon: the grid is the last thing on the page, so clear the home indicator. */
+.gridLast { padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px)); }
+
 .col { min-width: 0; }
 
 .colophon {

@@ -53,3 +53,11 @@ describe('FeaturedProducts', () => {
     expect(document.querySelectorAll('[data-sf-part="product-card"]')).toHaveLength(1);
   });
 });
+
+describe('pickFeatured dedupe', () => {
+  it('keeps the first of repeated productIds', () => {
+    const ps = [product(1, 'A', 1), product(2, 'B', 1)];
+    const out = pickFeatured(ps, [], { source: 'picked', items: [{ productId: 1 }, { productId: 1 }, { productId: 2 }], categoryId: null, limit: 10 });
+    expect(out.map((p) => p.id)).toEqual([1, 2]);
+  });
+});

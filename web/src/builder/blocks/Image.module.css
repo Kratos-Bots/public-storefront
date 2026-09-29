@@ -7,6 +7,8 @@
 .rail { max-width: 100%; }
 /* Full bleed escapes the content column's own inset (published by every shell). */
 .full { margin-inline: calc(-1 * var(--sf-main-pad, 1rem)); }
+/* Page-level only: nested in a column or section the negative margin would overflow. */
+:where([data-sf-block="Columns"], [data-sf-block="Section"]) .full { margin-inline: 0; }
 
 .img {
   display: block;

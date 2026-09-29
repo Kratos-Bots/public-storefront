@@ -35,7 +35,7 @@
 }
 .q::-webkit-details-marker { display: none; }
 .q::after {
-  content: '+';
+  content: '+' / '';
   flex: none;
   font-family: var(--sf-font-mono);
   color: var(--sf-muted);

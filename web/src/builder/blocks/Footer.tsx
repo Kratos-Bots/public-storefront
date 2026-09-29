@@ -16,7 +16,7 @@ function ColumnsFooter({ columns, colophon, cols }: { columns: Props['columns'];
   const n = Number(columns);
   return (
     <footer className={classes.footer} data-sf-part="footer">
-      <div className={classes.grid} style={{ '--cols': columns } as CSSProperties}>
+      <div className={`${classes.grid} ${colophon ? '' : classes.gridLast}`.trim()} style={{ '--cols': columns } as CSSProperties}>
         {cols.slice(0, n).map((col, i) => (
           <div key={i} className={classes.col}>{col()}</div>
         ))}

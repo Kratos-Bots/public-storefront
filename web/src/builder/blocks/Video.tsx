@@ -7,7 +7,7 @@ type Props = { id: string; provider: 'youtube' | 'vimeo'; videoId: string; title
 const ID = { youtube: /^[A-Za-z0-9_-]{11}$/, vimeo: /^\d{6,12}$/ } as const;
 
 export function embedUrl(provider: Props['provider'], videoId: string): string | null {
-  if (!ID[provider].test(videoId)) return null;
+  if (!Object.hasOwn(ID, provider) || !ID[provider].test(videoId)) return null;
   return provider === 'youtube' ? `https://www.youtube-nocookie.com/embed/${videoId}` : `https://player.vimeo.com/video/${videoId}?dnt=1`;
 }
 

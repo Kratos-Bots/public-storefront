@@ -6,6 +6,8 @@
 .row {
   flex: 0 1 auto;
   overflow-x: auto;
+  /* overflow clips the 2px focus outline (+ offset) top and bottom; give it room. */
+  padding-block: 4px;
   scrollbar-width: none;
 }
 .row::-webkit-scrollbar { display: none; }

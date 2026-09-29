@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { MantineProvider } from '@mantine/core';
 import { MemoryRouter } from 'react-router';
 import { Suspense } from 'react';
@@ -84,5 +86,35 @@ describe('Video', () => {
   it('refuses an id that is not an id', () => {
     const { container } = mount([c('Video', { provider: 'youtube', videoId: 'x"><script>', title: 'Bad' })]);
     expect(container.querySelector('iframe')).toBeNull();
+  });
+});
+
+describe('content polish', () => {
+  it('Video: an inherited-key provider renders nothing', () => {
+    const { container } = mount([c('Video', { provider: 'constructor', videoId: 'aB3_dE-fG9h', title: 'x' })]);
+    expect(container.querySelector('iframe')).toBeNull();
+  });
+  it('CatalogHero custom: empty renders nothing; blank alt hints only in the editor', () => {
+    const empty = mount([c('CatalogHero', { variant: 'custom', surface: 'auto', title: '', bodyHtml: '', imageSrc: '', imageAlt: '', align: 'start' })]);
+    expect(empty.container.querySelector('[data-sf-block="CatalogHero"]')).toBeNull();
+    cleanup();
+    const shopper = mount([c('CatalogHero', { variant: 'custom', surface: 'auto', title: 'Hi', bodyHtml: '', imageSrc: KEY, imageAlt: '', align: 'start' })]);
+    expect(shopper.container.querySelector('img')).toBeNull();
+    expect(screen.queryByText(/Describe the image/)).toBeNull();
+    cleanup();
+    mount([c('CatalogHero', { variant: 'custom', surface: 'auto', title: 'Hi', bodyHtml: '', imageSrc: KEY, imageAlt: '', align: 'start' })], true);
+    expect(screen.getByText(/Describe the image/)).toBeInTheDocument();
+  });
+});
+
+describe('content polish CSS (jsdom cannot apply CSS: rule presence only)', () => {
+  const read = (f: string) => readFileSync(resolve(__dirname, '../src/builder/blocks', f), 'utf8');
+  it('declares the fixes', () => {
+    expect(read('Button.module.css')).toMatch(/white-space:\s*normal/);
+    expect(read('FAQ.module.css')).toContain("content: '+' / ''");
+    expect(read('Footer.module.css')).toMatch(/gridLast[^}]*safe-area-inset-bottom/);
+    expect(read('NavLinks.module.css')).toMatch(/padding-block:\s*4px/);
+    expect(read('Section.module.css')).toMatch(/\[data-sf-block="Columns"\][^{]*\.full\s*\{\s*margin-inline:\s*0/);
+    expect(read('Image.module.css')).toMatch(/\[data-sf-block="Columns"\][^{]*\.full\s*\{\s*margin-inline:\s*0/);
   });
 });
