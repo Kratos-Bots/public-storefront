@@ -112,6 +112,48 @@ describe('page-set model', () => {
     expect(issues.every((i) => i.docKey === 'checkout')).toBe(true);
   });
 
+  it.each(['menu', 'webapp'] as const)('reports no issues for the %s defaults', (layout) => {
+    expect(collectIssues(docsFromPageSet(null, layout), layout)).toEqual([]);
+  });
+
+  it('flags root title/description the backend would reject (limit:*)', () => {
+    const docs = docsFromPageSet(null, L);
+    const long = withDoc(docs, 'page:about' as const, {
+      root: { props: { title: 't'.repeat(121), description: 'd'.repeat(301), chrome: 'shell' } }, content: [],
+    }, L);
+    const issues = collectIssues(long, L).filter((i) => i.docKey === 'page:about');
+    expect(issues.map((i) => i.rule).sort()).toEqual(['limit:description', 'limit:title']);
+    const ok = withDoc(docs, 'page:about' as const, {
+      root: { props: { title: 't'.repeat(120), description: 'd'.repeat(300), chrome: 'shell' } }, content: [],
+    }, L);
+    expect(collectIssues(ok, L)).toEqual([]);
+  });
+
+  it('loading a stored set drops pages equal to their default and product outside the storefront', () => {
+    const product = normalizeDoc(defaultDoc('product', L), 'product');
+    const editedProduct: PuckDoc = { ...product, content: [...product.content, heading('Heading-p')] };
+    for (const layout of ['storefront', 'menu', 'webapp'] as const) {
+      const catalog = normalizeDoc(defaultDoc('catalog', layout), 'catalog');
+      const stored = { schemaVersion: 1 as const, shell: shell(), pages: { catalog, product: editedProduct } };
+      expect(Object.keys(docsFromPageSet(stored, layout)), layout).toEqual(layout === 'storefront' ? ['shell', 'product'] : ['shell']);
+    }
+  });
+
+  it('docFor never hands out a shared mutable empty page', () => {
+    const docs = docsFromPageSet(null, L);
+    const a = docFor(docs, 'page:missing', L);
+    a.content.push({ type: 'Spacer', props: { id: 's' } });
+    expect(docFor(docs, 'page:missing', L).content).toEqual([]);
+  });
+
+  it('warns once per *Html key, not once per value', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    normalizeDoc({ root: { props: {} }, content: [{ type: 'RichText', props: { id: 'a', onceOnlyHtml: 1 } }, { type: 'RichText', props: { id: 'b', onceOnlyHtml: 2 } }] }, 'page:x');
+    normalizeDoc({ root: { props: {} }, content: [{ type: 'RichText', props: { id: 'c', onceOnlyHtml: 3 } }] }, 'page:x');
+    expect(warn.mock.calls.filter((c) => String(c[0]).includes('onceOnlyHtml'))).toHaveLength(1);
+    warn.mockRestore();
+  });
+
   it('surfaces the at-most-one rules (a second Header / MobileCartBar in the shell)', () => {
     const docs = docsFromPageSet(null, L);
     const s = docs.shell!;

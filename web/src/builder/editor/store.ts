@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { PreviewAs } from '@/builder/mode.ts';
 import { isDocKey, type ViewportWidth } from '@/builder/editor/protocol.ts';
-import { docsFromPageSet, isCustomKey, newCustomPage, normalizeDoc, withDoc, withoutDoc, type DocMap } from '@/builder/editor/page-set.ts';
+import { docsFromPageSet, isCustomKey, isShownIn, newCustomPage, normalizeDoc, withDoc, withoutDoc, type DocMap } from '@/builder/editor/page-set.ts';
 import type { DocKey, LayoutKind, PageSet } from '@/builder/types.ts';
 
 export const DEFAULT_PREVIEW_AS: PreviewAs = { session: 'signed-in-orders', cart: 'items' };
@@ -26,7 +26,12 @@ export interface EditorState {
   viewport: ViewportWidth | null;
   load(input: { layout: LayoutKind; pageSet: PageSet | null; readOnly: boolean }): void;
   selectDoc(docKey: DocKey): void;
-  updateDoc(docKey: DocKey, raw: unknown): void;
+  /**
+   * Puck's onChange for the selected doc. Ignored unless `docKey` is the selected page, and ignored
+   * when `epoch` is given and is not the current one (a late onChange from a canvas mounted before a
+   * load/reset/new page). It never creates a custom page — only `createPage` does.
+   */
+  updateDoc(docKey: DocKey, raw: unknown, epoch?: number): void;
   resetDoc(docKey: DocKey): void;
   createPage(slug: string, title: string): string | null;
   setPreviewAs(patch: Partial<PreviewAs>): void;
@@ -46,7 +51,7 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
   load({ layout, pageSet, readOnly }) {
     const docs = docsFromPageSet(pageSet, layout);
     const current = get().docKey;
-    const keep = !(isCustomKey(current) && !docs[current]) && !(current === 'product' && layout !== 'storefront');
+    const keep = !(isCustomKey(current) && !docs[current]) && isShownIn(current, layout);
     set((s) => ({ status: 'ready', layout, readOnly, docs, docKey: keep ? current : 'catalog', epoch: s.epoch + 1 }));
   },
 
@@ -54,13 +59,16 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
     if (typeof docKey !== 'string' || !isDocKey(docKey)) return;
     const s = get();
     if (isCustomKey(docKey) && !s.docs[docKey]) return;
-    if (docKey === 'product' && s.layout !== 'storefront') return;
+    if (!isShownIn(docKey, s.layout)) return;
     if (docKey !== s.docKey) set({ docKey });
   },
 
-  updateDoc(docKey, raw) {
+  updateDoc(docKey, raw, epoch) {
     const s = get();
     if (s.readOnly || s.status !== 'ready') return;
+    if (docKey !== s.docKey || (epoch !== undefined && epoch !== s.epoch)) return;
+    if (!isShownIn(docKey, s.layout)) return;
+    if (isCustomKey(docKey) && !s.docs[docKey]) return;
     const docs = withDoc(s.docs, docKey, normalizeDoc(raw, docKey), s.layout);
     if (docs !== s.docs) set({ docs });
   },
@@ -70,7 +78,7 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
     if (s.readOnly || s.status !== 'ready') return;
     set({
       docs: withoutDoc(s.docs, docKey, s.layout),
-      docKey: isCustomKey(docKey) ? 'catalog' : s.docKey,
+      docKey: isCustomKey(docKey) && docKey === s.docKey ? 'catalog' : s.docKey,
       epoch: s.epoch + 1,
     });
   },

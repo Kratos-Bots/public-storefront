@@ -13,7 +13,9 @@ export type DocMap = Partial<Record<DocKey, PuckDoc>>;
 export type CustomKey = `page:${string}`;
 
 export const MAX_CUSTOM_PAGES = 50;
+/** Backend limits on a page's root props; the guard silently falls back past them, so the editor flags them. */
 const MAX_TITLE = 120;
+const MAX_DESCRIPTION = 300;
 
 export const isCustomKey = (key: string): key is CustomKey => key.startsWith('page:') && isDocKey(key);
 
@@ -34,16 +36,21 @@ export function normalizeDoc(doc: unknown, docKey: DocKey): PuckDoc {
 /**
  * Backend contract: every `*Html` prop is an HTML string (a non-string is a 400). Puck stores
  * richtext as a string, but hands blocks a React node while editing — if one ever leaks into
- * the data, it is unrecoverable as HTML, so it becomes '' (with one warning) rather than
+ * the data, it is unrecoverable as HTML, so it becomes '' (warned once per prop name) rather than
  * poisoning every later autosave. Applies at any depth: slots, arrays and objects.
  */
+const warnedHtmlKeys = new Set<string>();
+
 function stringifyRichtext<T>(value: T): T {
   if (Array.isArray(value)) return value.map(stringifyRichtext) as T;
   if (!value || typeof value !== 'object' || !isPlainObject(value)) return value;
   const out: Record<string, unknown> = {};
   for (const [key, v] of Object.entries(value as Record<string, unknown>)) {
     if (key.endsWith('Html') && typeof v !== 'string') {
-      console.warn(`[builder] ${key} was not an HTML string; cleared`);
+      if (!warnedHtmlKeys.has(key)) {
+        warnedHtmlKeys.add(key);
+        console.warn(`[builder] ${key} was not an HTML string; cleared`);
+      }
       out[key] = '';
     } else {
       out[key] = stringifyRichtext(v);
@@ -75,11 +82,19 @@ function defaultFor(docKey: DocKey, layout: LayoutKind): PuckDoc | null {
   return d ? normalizeDoc(d, docKey) : null;
 }
 
+/** Whether a doc key can be shown (and so edited or reset) in this layout. */
+export const isShownIn = (docKey: DocKey, layout: LayoutKind): boolean => docKey !== 'product' || layout === 'storefront';
+
+/**
+ * The editor's view of a stored set. Keeps it sparse: pages that can never be shown in this layout
+ * (`product` outside the storefront) and fixed pages equal to their default are dropped — the
+ * difference goes out with the baseline change that follows every load.
+ */
 export function docsFromPageSet(pageSet: PageSet | null, layout: LayoutKind): DocMap {
   if (!pageSet) return { shell: defaultFor('shell', layout)! };
-  const docs: DocMap = { shell: normalizeDoc(pageSet.shell, 'shell') };
+  let docs: DocMap = { shell: normalizeDoc(pageSet.shell, 'shell') };
   for (const [key, doc] of Object.entries(pageSet.pages)) {
-    if (doc && isDocKey(key) && key !== 'shell') docs[key] = normalizeDoc(doc, key);
+    if (doc && isDocKey(key) && key !== 'shell' && isShownIn(key, layout)) docs = withDoc(docs, key, normalizeDoc(doc, key), layout);
   }
   return docs;
 }
@@ -92,11 +107,11 @@ export function toPageSet(docs: DocMap, layout: LayoutKind): PageSet {
   return { schemaVersion: 1, shell: docs.shell ?? defaultFor('shell', layout)!, pages };
 }
 
-const EMPTY_PAGE: PuckDoc = { root: { props: { title: '', description: '', chrome: 'shell' } }, content: [] };
+const emptyPage = (): PuckDoc => ({ root: { props: { title: '', description: '', chrome: 'shell' } }, content: [] });
 
 /** What the canvas shows for a key: the edited doc, else the built-in default. */
 export function docFor(docs: DocMap, docKey: DocKey, layout: LayoutKind): PuckDoc {
-  return docs[docKey] ?? defaultFor(docKey, layout) ?? EMPTY_PAGE;
+  return docs[docKey] ?? defaultFor(docKey, layout) ?? emptyPage();
 }
 
 /**
@@ -130,6 +145,8 @@ export function withoutDoc(docs: DocMap, docKey: DocKey, layout: LayoutKind): Do
 /**
  * Every rule issue in the set, shell first. The guard's `drop:*` issues are informational (the doc
  * still renders; the drop is console-warned) and would block Publish in the admin, so they are left out.
+ * Root title/description over the backend's limits are added as `limit:*` issues: the backend rejects
+ * them, while the guard would silently render them blank.
  */
 export function collectIssues(docs: DocMap, layout: LayoutKind): Issue[] {
   const issues: Issue[] = [];
@@ -138,6 +155,13 @@ export function collectIssues(docs: DocMap, layout: LayoutKind): Issue[] {
   for (const key of keys) {
     for (const issue of validateDoc(docs[key], key, layout).issues) {
       if (!issue.rule.startsWith('drop:')) issues.push(issue);
+    }
+    const root = docs[key]?.root.props;
+    if (root && root.title.length > MAX_TITLE) {
+      issues.push({ docKey: key, rule: 'limit:title', message: `Keep the page title to ${MAX_TITLE} characters.` });
+    }
+    if (root && root.description.length > MAX_DESCRIPTION) {
+      issues.push({ docKey: key, rule: 'limit:description', message: `Keep the page description to ${MAX_DESCRIPTION} characters.` });
     }
   }
   return issues;

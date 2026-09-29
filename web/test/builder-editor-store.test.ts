@@ -57,6 +57,55 @@ describe('editor store', () => {
     expect(useEditorStore.getState().docs).toBe(before);
   });
 
+  it('updateDoc never creates a custom page (only createPage does)', () => {
+    useEditorStore.getState().load({ layout: 'storefront', pageSet: null, readOnly: false });
+    useEditorStore.getState().updateDoc('page:sneaky', { root: { props: { title: 'x' } }, content: [] });
+    expect(useEditorStore.getState().docs['page:sneaky']).toBeUndefined();
+  });
+
+  it('a late onChange after resetting a custom page does not resurrect it', () => {
+    useEditorStore.getState().load({ layout: 'storefront', pageSet: null, readOnly: false });
+    useEditorStore.getState().createPage('about', 'About');
+    const stale = { root: { props: { title: 'About', description: '', chrome: 'shell' } }, content: [{ type: 'Spacer', props: { id: 'Spacer-1' } }] };
+    useEditorStore.getState().resetDoc('page:about');
+    useEditorStore.getState().updateDoc('page:about', stale);
+    expect(useEditorStore.getState().docs['page:about']).toBeUndefined();
+  });
+
+  it('a late onChange for a page no longer selected is ignored; so is a stale epoch after a reset', () => {
+    useEditorStore.getState().load({ layout: 'storefront', pageSet: null, readOnly: false });
+    useEditorStore.getState().selectDoc('cart');
+    const base = docFor(useEditorStore.getState().docs, 'cart', 'storefront');
+    const edited = { ...base, content: [...base.content, { type: 'Spacer', props: { id: 'Spacer-9' } }] };
+    useEditorStore.getState().updateDoc('cart', edited);
+    expect(useEditorStore.getState().docs.cart).toBeDefined();
+    const staleEpoch = useEditorStore.getState().epoch;
+    useEditorStore.getState().resetDoc('cart');
+    expect(useEditorStore.getState().docs.cart).toBeUndefined();
+    useEditorStore.getState().updateDoc('cart', edited, staleEpoch);
+    expect(useEditorStore.getState().docs.cart).toBeUndefined();
+    useEditorStore.getState().selectDoc('catalog');
+    useEditorStore.getState().updateDoc('cart', edited);
+    expect(useEditorStore.getState().docs.cart).toBeUndefined();
+  });
+
+  it('refuses the product page outside the storefront layout', () => {
+    useEditorStore.getState().load({ layout: 'menu', pageSet: null, readOnly: false });
+    useEditorStore.getState().selectDoc('product');
+    expect(useEditorStore.getState().docKey).toBe('catalog');
+    useEditorStore.getState().updateDoc('product', { root: { props: {} }, content: [] });
+    expect(useEditorStore.getState().docs.product).toBeUndefined();
+  });
+
+  it('resetting a custom page that is not selected keeps the selection', () => {
+    useEditorStore.getState().load({ layout: 'storefront', pageSet: null, readOnly: false });
+    useEditorStore.getState().createPage('about', 'About');
+    useEditorStore.getState().selectDoc('cart');
+    useEditorStore.getState().resetDoc('page:about');
+    expect(useEditorStore.getState().docKey).toBe('cart');
+    expect(useEditorStore.getState().docs['page:about']).toBeUndefined();
+  });
+
   it('createPage selects the new page; resetDoc on it deletes it and returns to the catalogue', () => {
     useEditorStore.getState().load({ layout: 'storefront', pageSet: null, readOnly: false });
     expect(useEditorStore.getState().createPage('about', 'About')).toBeNull();
