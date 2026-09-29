@@ -100,6 +100,14 @@ The full contract — manifest, tokens, parts, slots, hooks, mobile rules, git i
 The build emits `web/dist/templates.json`, which the backend captures on deploy so the admin
 knows which templates this release contains.
 
+## Page builder
+
+Every page of every layout is a page-builder document rendered by the storefront's own
+renderer (`web/src/builder/`). Owners compose pages in Admin → Storefront → Pages; with nothing
+published, the built-in default documents reproduce the pre-builder storefront exactly. Block
+contract, rules, default documents and the editor protocol: [`docs/builder.md`](docs/builder.md).
+The build emits `web/dist/blocks.json`, the list of blocks this release can render.
+
 ## What the Worker does — and does not do
 
 `worker/src/index.ts` is deliberately thin. In order, it handles:
@@ -111,10 +119,12 @@ knows which templates this release contains.
   `{ success:false, error:"Not found" }`). Forwards method, body, `Content-Type`, `Authorization`,
   `Accept`; strips `Cookie`/`Host`/`X-Real-Ip` and any inbound `X-Forwarded-*`/`Cf-*`, then sets its
   own `X-Forwarded-For` (from `Cf-Connecting-Ip`) and `X-Forwarded-Proto: https`. GET responses are
-  edge-cached via the Cache API when the request is unauthenticated: `storefront/settings` for 30s,
-  `catalog` and `catalog/products/:id` for 60s; everything else bypasses the cache.
+  edge-cached via the Cache API when the request is unauthenticated: `storefront/settings` and
+  `storefront/pages/:layout` for 30s, `catalog` and `catalog/products/:id` for 60s; everything else
+  bypasses the cache.
 - **`/media/*`** — a second, narrower proxy for public images (product photos, storefront/settings
-  branding) with a 1-day edge cache and `Set-Cookie` stripped.
+  branding, page-builder uploads under `/media/storefront-pages/media/<key>`) with a 1-day edge
+  cache and `Set-Cookie` stripped.
 - Everything else falls through to `env.ASSETS.fetch(request)` — the SPA's static build, served
   with single-page-application fallback.
 
@@ -125,6 +135,7 @@ Telegram WebApp's JWT-keyed catalog, not this proxy's concern.
 
 ## Releases
 
+- v0.7.0 — Page builder. In Admin → Storefront → Pages, owners get a per-layout page builder: every page (catalogue, product, cart, checkout, sign-in, account, order status, payment pages, tracking, verification) in every layout is a page document the store can recompose — reorder and hide sections, add headings, text, images, buttons, columns, sections, FAQs, testimonials, videos and featured products, restyle the footer as columns, and add custom pages at `/pages/<slug>` linked from the header — with draft/publish and a 20-version history, all in the store's own template. Checkout, cart, sign-in and account flows are self-contained blocks that cannot be broken by an edit: a page that fails its rules falls back to the built-in version. A store that never publishes looks and behaves exactly as v0.6.0. Deploy the backend first (migration 0045 applies on start; it stores and serves page sets), then this storefront release (redeploy each client from the admin), then the admin SPA. Nothing has been verified against a deployed client yet.
 - v0.6.0 — More display options in Admin → Storefront → Appearance → Template options, on every template: hide product codes (SKUs); hide the category picker; show the header account and cart icons on phones and desktop, one only, or neither (in the web app the cart button at the foot already opens the cart); turn the dispatch cut-off banner off, reword it (`{time}` and `{dispatch}` fill in) or drop its countdown. Notices (Admin → Storefront → Selling → Notices) can be pinned so they stay at the top of the screen while shoppers scroll, and can be made non-dismissible. Everything defaults to how the store looks today. Deploy the backend first (it stores the two new notice fields), then the admin SPA, then redeploy each client from the admin so its template catalog picks up the new options.
 - v0.5.2 — Telegram Mini App cart fixes: products added from the list's `+`/stepper now reach the shopper's cart (they used to vanish on opening the cart, and never reached admin Live Carts); in wholesale mode the web app shows the same View cart / Checkout button as everywhere else in place of the trade list's own basket bar, so checkout is reachable again. No backend or admin change; redeploy each client from the admin.
 - v0.5.1 — The trade list (wholesale) row is designed phone-first: the name shares the top line with the quantity picker, the code, unit price and Bulk chip sit in a quiet line under it, and stock status, pre-order and minimum quantity get a line of their own only when there is something to say. New hide toggles in Admin → Storefront → Appearance → Template options: every template (imported ones too) can hide the page title, the catalogue intro and the section labels; bento and dark-luxury can hide their footer, cyber-brutalism its footer and button arrow. Everything defaults to shown. No backend or admin change; redeploy each client from the admin so its template catalog picks up the new options.

@@ -92,9 +92,9 @@ for (const layout of LAYOUTS) {
       await expect(productOpener(page, layout, 'Alpine Extract 10ml')).toBeVisible();
       await expect(page.getByRole('heading', { name: 'Small batches, shipped fast' })).toHaveCount(0);
       await expect(page.getByRole('link', { name: 'Our story' })).toHaveCount(0);
-      // One logical read per page load. The shared ky client retries a GET once on a 503
-      // (`retry: { limit: 1 }` in api/client.ts), so a 503 is two requests; a 404 is one.
-      expect(pageSetGets(mocks, layout), 'no retry storm').toBe(status === 503 ? 2 : 1);
+      // One logical read per page load: fetchPageSet passes `retry: 0`, overriding the shared ky client's
+      // one GET retry (`retry: { limit: 1 }` in api/client.ts), so 503 and 404 are both a single request.
+      expect(pageSetGets(mocks, layout), 'no retry storm').toBe(1);
       // A custom page cannot exist without the set: it goes home.
       await page.goto('/pages/our-story');
       await expect(page).toHaveURL(/\/$/);

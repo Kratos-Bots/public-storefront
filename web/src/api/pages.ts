@@ -12,11 +12,12 @@ export function toPageSet(body: unknown): PageSet | null {
 /**
  * The latest published set for a layout. Never rejects: a 404 (backend older than
  * v0.7.0), a 503 (kill switch), a network error or a malformed body all mean
- * "no published set", and every page renders its default document.
+ * "no published set", and every page renders its default document. `retry: 0`: the shared
+ * client retries a GET once, which would make a 503 two requests on every page load.
  */
 export async function fetchPageSet(layout: LayoutKind): Promise<PageSet | null> {
   try {
-    return toPageSet(await unwrap<unknown>(api.get(`storefront/pages/${layout}`)));
+    return toPageSet(await unwrap<unknown>(api.get(`storefront/pages/${layout}`, { retry: 0 })));
   } catch {
     return null;
   }
