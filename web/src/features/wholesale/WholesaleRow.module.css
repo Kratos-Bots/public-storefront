@@ -18,21 +18,33 @@
 
 .row {
   display: grid;
-  /* The name keeps a line to itself — it ends in the part that tells two of them
-     apart, and a 140px stepper in the same row would leave it a third of a
-     phone. The line total takes a line of its own, which only exists once there
-     is something on order: an empty cell collapses the row it is in. */
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  grid-template-areas:
-    'code product product'
-    'unit bulk    qty'
-    'line line    line';
+  /* Phone: the name leads, the stepper holds the right edge beside it.
+       name ................. [stepper]
+       code · price  bulk     [stepper]
+       status ...........    line total
+     The first three columns are the meta line (code, price, bulk chip) and the
+     fourth is slack; the product cell spans all four and all three rows as a
+     subgrid, so its name takes row 1 and its status facts row 3 around the meta
+     cells. Row 3 only has height when there is a status or a line total — an
+     empty row is 0px because the row gap is 0 and spacing lives on the items.
+     When the meta line runs out of room (a long code, a five-figure price, a
+     360px phone) the slack goes first, then the code gives way to an ellipsis:
+     it is the only track allowed below its content, so the price and the chip
+     keep their width and never slide under the stepper. */
+  grid-template-columns: minmax(0, max-content) auto auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto auto;
   align-items: center;
-  column-gap: 0.5rem;
-  row-gap: 0.1rem;
-  padding: 0.4rem 0.25rem 0.4rem 0.375rem;
+  column-gap: 0.35rem;
+  row-gap: 0;
+  padding: 0.3rem 0.25rem 0.3rem 0.5rem;
   border-bottom: 1px solid var(--sf-line);
   border-left: 2px solid transparent;
+}
+
+/* Drop the UA's 1px cell padding: an empty line-total cell would otherwise
+   still open a 2px third line. Spacing below is set per cell. */
+.row > * {
+  padding: 0;
 }
 
 .inCart .row {
@@ -49,7 +61,8 @@
 }
 
 .code {
-  grid-area: code;
+  grid-column: 1;
+  grid-row: 2;
   font-family: var(--sf-font-mono);
   font-variant-numeric: tabular-nums;
   font-size: 10px;
@@ -57,19 +70,65 @@
   letter-spacing: 0.1em;
   color: var(--sf-faint);
   white-space: nowrap;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
+/* Spans the whole left block; its own rows are the row's rows (subgrid), and
+   `.identity` steps aside so the name and the status land in rows 1 and 3.
+   It sits over the code cell in row 2 but draws nothing there, and the price
+   and bulk cells come after it in the source, so they paint (and click) above. */
 .product {
-  grid-area: product;
+  grid-column: 1 / 5;
+  grid-row: 1 / 4;
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-template-columns: minmax(0, 1fr);
+  align-self: stretch;
   min-width: 0;
 }
 
 .identity {
+  display: contents;
+}
+
+.product .name {
+  grid-row: 1;
+  align-self: center;
+  padding-bottom: 0.1rem;
+}
+
+.status {
+  grid-row: 3;
   display: flex;
-  align-items: baseline;
+  align-items: center;
   flex-wrap: wrap;
-  gap: 0.15rem 0.45rem;
+  gap: 0.1rem 0.4rem;
   min-width: 0;
+  padding-top: 0.2rem;
+}
+
+/* Separators between the facts; the stock chip always leads and brings its own dot. */
+.status > * + .preorder::before,
+.status > * + .limit::before {
+  content: '·';
+  margin-right: 0.35rem;
+  color: var(--sf-faint);
+  font-weight: 400;
+}
+
+/* No subgrid (old WebViews): the facts wrap under the name in row 1 instead. */
+@supports not (grid-template-rows: subgrid) {
+  .product {
+    grid-row: 1;
+    display: block;
+  }
+
+  .identity {
+    display: flex;
+    flex-direction: column;
+  }
 }
 
 /* Never truncated: the tail of a wholesale name — the strength, the size — is
@@ -107,8 +166,18 @@
 }
 
 .unit {
-  grid-area: unit;
+  grid-column: 2;
+  grid-row: 2;
   white-space: nowrap;
+}
+
+/* Code · price on a phone, where the two share a line; the wide sheet has columns. */
+.unit::before {
+  content: '·';
+  margin-right: 0.35rem;
+  font-family: var(--sf-font-mono);
+  font-size: 0.8125rem;
+  color: var(--sf-faint);
 }
 
 .unitPrice {
@@ -126,7 +195,12 @@
 }
 
 .bulk {
-  grid-area: bulk;
+  grid-column: 3;
+  grid-row: 2;
+  justify-self: start;
+  padding-left: 0.2rem;
+  /* The price line is sized by text, not by the chip's taller box. */
+  line-height: 1;
 }
 
 /* Small on the page, 44px to a thumb: the hit area is grown by a pseudo rather
@@ -184,8 +258,10 @@
   transform: rotate(180deg);
 }
 
+/* Under the stepper, on the status line — only once there is something on order. */
 .line {
-  grid-area: line;
+  grid-column: 5;
+  grid-row: 3;
   justify-self: end;
   text-align: right;
   font-family: var(--sf-font-mono);
@@ -196,17 +272,23 @@
   white-space: nowrap;
 }
 
-.line:not(:empty)::before {
-  content: '= ';
-  color: var(--sf-faint);
+/* Margin, not padding, and only with a total in it: an empty cell must add
+   nothing, so a row with no status and nothing on order stays two lines. */
+.line:not(:empty) {
+  margin-top: 0.2rem;
 }
 
+/* Spans the name and meta lines and centres on them. */
 .qty {
-  grid-area: qty;
+  grid-column: 5;
+  grid-row: 1 / 3;
   justify-self: end;
+  align-self: center;
+  display: flex;
+  align-items: center;
   /* Holds the row's height even when there is no stepper to put in it — an
      out-of-stock line should not break the rhythm of the column. */
-  min-height: 44px;
+  min-height: 40px;
 }
 
 .stepper {
@@ -218,8 +300,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   padding: 0;
   border: 1px solid var(--sf-line-strong);
   background: transparent;
@@ -258,8 +340,8 @@
 
 /* Typed, not tapped: a wholesale quantity is 250, and nobody taps that. */
 .input {
-  width: 3.25rem;
-  height: 44px;
+  width: 3rem;
+  height: 40px;
   padding: 0 0.15rem;
   border: 1px solid var(--sf-line-strong);
   border-inline: 0;
@@ -282,7 +364,7 @@
 }
 
 .remove {
-  min-height: 44px;
+  min-height: 40px;
   padding: 0 0.65rem;
   border: 1px solid var(--sf-line-strong);
   border-radius: var(--sf-card-radius);
@@ -313,6 +395,57 @@
   .row {
     display: table-row;
     border: 0;
+  }
+
+  /* Back to plain table cells: the phone grid's subgrid and flex displays would
+     be wrapped in anonymous table-cells here and lose their columns. */
+  .product,
+  .qty {
+    display: table-cell;
+  }
+
+  .identity {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.15rem 0.45rem;
+    min-width: 0;
+  }
+
+  .product .name {
+    padding-bottom: 0;
+  }
+
+  /* Beside the name, in the sheet's long-standing order: min, pre-order, stock. */
+  .status {
+    display: contents;
+  }
+
+  .status > * + .preorder::before,
+  .status > * + .limit::before,
+  .unit::before {
+    content: none;
+  }
+
+  .limit {
+    order: 1;
+  }
+
+  .preorder {
+    order: 2;
+  }
+
+  .status > :first-child:not(.preorder):not(.limit) {
+    order: 3;
+  }
+
+  .code {
+    overflow: visible;
+  }
+
+  .bulk {
+    padding-left: 0.5rem;
+    line-height: inherit;
   }
 
   .row > * {
@@ -359,10 +492,6 @@
 
   .qty {
     text-align: right;
-  }
-
-  .line:not(:empty)::before {
-    content: none;
   }
 
   /* A rail down the column so the eye can follow it past the lines that carry
