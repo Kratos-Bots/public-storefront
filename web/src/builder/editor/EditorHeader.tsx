@@ -9,6 +9,8 @@ import { isCustomKey } from '@/builder/editor/page-set.ts';
 import { focusPagePickerSoon, PagePicker } from '@/builder/editor/PagePicker.tsx';
 import { FloatingPanel } from '@/builder/editor/floating.tsx';
 import { VIEWPORT_OPTIONS } from '@/builder/editor/viewports.ts';
+import { cssString } from '@/builder/editor/resting-marks.ts';
+import { rememberPanels } from '@/builder/editor/panels.ts';
 import { CheckIcon, PanelLeftIcon, PanelRightIcon, PlusIcon, RedoIcon, TipIcon, UndoIcon, WarnIcon } from '@/builder/editor/icons.tsx';
 import { blockDef } from '@/builder/rules.ts';
 import type { PreviewAs } from '@/builder/mode.ts';
@@ -160,13 +162,14 @@ function AddBlock() {
         open={open}
         onClose={(reason) => hide(reason === 'escape')}
         className={styles.menuPanel}
-        id={`${id}-menu`}
-        role="menu"
-        aria-label="Blocks to add"
       >
-        <div ref={menu} onKeyDown={onMenuKey}>
-          <p className={styles.menuHint}>{afterSelected ? 'Adds after the selected block.' : 'Adds at the end of the page.'}</p>
-          {groups.length === 0 && <p className={styles.menuHint}>Nothing more can go on this page.</p>}
+        {/* Only menu items may live inside role="menu": the hints sit beside it and describe it. */}
+        <p id={`${id}-hint`} className={styles.menuHint}>
+          {groups.length === 0
+            ? 'Nothing more can go on this page.'
+            : afterSelected ? 'Adds after the selected block.' : 'Adds at the end of the page.'}
+        </p>
+        <div ref={menu} id={`${id}-menu`} role="menu" aria-label="Blocks to add" aria-describedby={`${id}-hint`} onKeyDown={onMenuKey}>
           {groups.map((g) => (
             <div key={g.category} role="group" aria-labelledby={`${id}-${g.category}`} className={styles.menuGroup}>
               <div id={`${id}-${g.category}`} className={styles.menuGroupTitle}>{g.title}</div>
@@ -213,6 +216,9 @@ function PanelToggles() {
   const toggle = (side: 'left' | 'right') => {
     const narrow = !window.matchMedia?.('(min-width: 638px)').matches;
     const visible = side === 'left' ? left : right;
+    rememberPanels(side === 'left'
+      ? { left: !visible, ...(narrow ? { right: false } : {}) }
+      : { right: !visible, ...(narrow ? { left: false } : {}) });
     dispatch({
       type: 'setUi',
       ui: side === 'left'
@@ -339,7 +345,7 @@ function useJump() {
     if (!selector) return;
     dispatch({ type: 'setUi', ui: { itemSelector: selector }, recordHistory: false });
     requestAnimationFrame(() => {
-      const el = document.querySelector(`[data-puck-component="${blockId.replace(/["\\]/g, '\\$&')}"]`);
+      const el = document.querySelector(`[data-puck-component="${cssString(blockId)}"]`);
       const smooth = !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
       el?.scrollIntoView({ block: 'center', behavior: smooth ? 'smooth' : 'auto' });
     });

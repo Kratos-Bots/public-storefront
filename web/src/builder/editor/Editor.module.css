@@ -32,7 +32,7 @@
   --sfb-danger-strong: #93201a;
   --sfb-on-danger: #ffffff;
   --sfb-danger-wash: #fdeeed;
-  --sfb-shadow-sm: var(--sfb-shadow-sm);
+  --sfb-shadow-sm: 0 1px 2px rgb(29 36 51 / 0.1);
   --sfb-shadow-pop: 0 12px 32px rgb(29 36 51 / 0.16), 0 2px 6px rgb(29 36 51 / 0.08);
   --sfb-shadow-dialog: 0 24px 48px rgb(29 36 51 / 0.22);
   --sfb-backdrop: rgb(29 36 51 / 0.35);
@@ -738,6 +738,10 @@
 .readOnlyCanvas {
   flex: 1;
   min-block-size: 0;
+  /* The shop's own ground and ink, as on the published page (global.css paints them on body). */
+  background: var(--sf-bg);
+  color: var(--sf-text);
+  font-family: var(--sf-font-body);
 }
 
 .failed {

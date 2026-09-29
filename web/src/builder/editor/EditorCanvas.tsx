@@ -1,6 +1,7 @@
 import { Component, useMemo, type ReactNode } from 'react';
 import { Puck, type Data, type Overrides, type UiState } from '@puckeditor/core';
-import '@puckeditor/core/puck.css';
+// Puck's styles without its @import of Inter from rsms.me: the frame loads nothing from third parties.
+import '@puckeditor/core/no-external.css';
 import { DocBoundary, RenderDoc } from '@/builder/render.tsx';
 import { validateDoc } from '@/builder/guard.ts';
 import { defaultDoc } from '@/builder/defaults/index.ts';
@@ -14,6 +15,7 @@ import { restingMarkIds, restingMarksCss } from '@/builder/editor/resting-marks.
 import { PagePicker } from '@/builder/editor/PagePicker.tsx';
 import { EyeIcon, LockIcon, WarnIcon } from '@/builder/editor/icons.tsx';
 import { PUCK_VIEWPORTS } from '@/builder/editor/viewports.ts';
+import { initialPanels } from '@/builder/editor/panels.ts';
 import styles from '@/builder/editor/Editor.module.css';
 
 function BlockOverlay({ children, componentId, componentType }: { children: ReactNode; hover: boolean; isSelected: boolean; componentId: string; componentType: string }) {
@@ -150,6 +152,12 @@ export function EditorCanvas() {
     return docFor(s.docs, s.docKey, s.layout) as unknown as Data;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [docKey, layout, epoch]);
+  // Also initial state, once per mount: a narrow frame opens with the Blocks panel closed.
+  const ui = useMemo<Partial<UiState>>(
+    () => ({ ...INITIAL_UI, ...initialPanels(window.innerWidth) }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [docKey, layout, epoch],
+  );
 
   if (readOnly) return <ReadOnlyView />;
   const mount = `${docKey}|${epoch}`;
@@ -165,7 +173,7 @@ export function EditorCanvas() {
         onChange={(next) => useEditorStore.getState().updateDoc(docKey, next, epoch)}
         iframe={{ enabled: false }}
         viewports={PUCK_VIEWPORTS}
-        ui={INITIAL_UI}
+        ui={ui}
         overrides={OVERRIDES}
         height="100dvh"
       />

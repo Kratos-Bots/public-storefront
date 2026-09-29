@@ -112,6 +112,10 @@ describe('editor chrome', () => {
     fireEvent.click(add);
     const menu = screen.getByRole('menu', { name: 'Blocks to add' });
     expect(add).toHaveAttribute('aria-expanded', 'true');
+    expect(add).toHaveAttribute('aria-controls', menu.id);
+    // Only menu items inside role="menu"; the placement hint describes it from outside.
+    expect(menu.querySelector('p')).toBeNull();
+    expect(menu).toHaveAccessibleDescription('Adds at the end of the page.');
     const items = within(menu).getAllByRole('menuitem');
     expect(items[0]).toHaveFocus();
     fireEvent.keyDown(items[0]!, { key: 'ArrowDown' });

@@ -103,7 +103,7 @@ function EmptyWatch({ label, children }: { label: string; children: ReactNode })
       <div ref={ref} style={{ display: 'contents' }}>{children}</div>
       {empty && (
         <div className={styles.empty} data-sf-builder-empty="">
-          {label} shows nothing yet. Fill it in from the settings panel.
+          {label} has nothing to show yet.
         </div>
       )}
     </>

@@ -223,7 +223,7 @@ describe('EditorBlock', () => {
       def: BLOCKS.Heading!, props: { ...BLOCKS.Heading!.defaultProps, id: 'h', text, puck: {}, editMode: true }, docKey: 'page:about', layout: 'storefront',
     });
     const { container, rerender } = render(el('   '));
-    expect(container.querySelector('[data-sf-builder-empty]')).toHaveTextContent('Heading shows nothing yet');
+    expect(container.querySelector('[data-sf-builder-empty]')).toHaveTextContent('Heading has nothing to show yet');
     rerender(el('Our story'));
     expect(screen.getByText('Our story')).toBeInTheDocument();
     // The watcher is a MutationObserver: it reports after the DOM change, not during the render.
@@ -233,5 +233,14 @@ describe('EditorBlock', () => {
   it('draws the page outlet as a placeholder', () => {
     const { container } = render(createElement(EditorBlock, { def: BLOCKS.PageOutlet!, props: { id: 'o' }, docKey: 'shell', layout: 'storefront' }));
     expect(container.querySelector('[data-sf-builder-outlet]')).toHaveTextContent('Page content appears here');
+  });
+
+  it('paints the shop ground and ink on the canvas (Puck is white; dark themes would vanish)', () => {
+    const root = buildEditorConfig('catalog', 'storefront', NONE).root!;
+    const { container } = render(createElement(() => (root.render as (p: { children: string }) => ReturnType<typeof createElement>)({ children: 'page' })));
+    const ground = container.querySelector<HTMLElement>('[data-sf-builder-canvas]')!;
+    expect(ground.style.background).toBe('var(--sf-bg)');
+    expect(ground.style.color).toBe('var(--sf-text)');
+    expect(ground).toHaveTextContent('page');
   });
 });
