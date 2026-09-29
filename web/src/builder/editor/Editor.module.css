@@ -1,0 +1,729 @@
+/*
+ * The page builder's own chrome (header, dialogs, issue list, read-only view). This is the admin's
+ * tool, not the shop: neutral --sfb-* tokens (shared with custom-fields/fields.module.css and
+ * EditorBlock.module.css), never the store's --sf-* palette, so it reads the same on every template
+ * and colour scheme. Sized for the admin's frame at 1280 and 768 px; wraps under ~1100 px.
+ */
+
+.bar,
+.dialog,
+.waiting,
+.readOnly,
+.issuesPanel,
+.overlayBadge {
+  --sfb-ink: #1d2433;
+  --sfb-muted: #5b6475;
+  --sfb-line: #d9dde5;
+  --sfb-line-strong: #b8bfcc;
+  --sfb-surface: #ffffff;
+  --sfb-wash: #f3f5f8;
+  --sfb-accent: #3355ff;
+  --sfb-accent-wash: #eef1ff;
+  --sfb-accent-strong: #2443e0;
+  --sfb-on-accent: #ffffff;
+  --sfb-warn-ink: #6b4a00;
+  --sfb-warn-line: #e2c27a;
+  --sfb-warn-wash: #fdf6e3;
+  --sfb-ok-ink: #1f5c3d;
+  --sfb-ok-line: #b5dcc6;
+  --sfb-ok-wash: #edf7f1;
+  --sfb-danger: #b3261e;
+  --sfb-danger-wash: #fdeeed;
+  --sfb-radius: 6px;
+  --sfb-control-h: 32px;
+  --sfb-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%235b6475' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+
+  box-sizing: border-box;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--sfb-ink);
+}
+
+.bar *,
+.dialog *,
+.issuesPanel * {
+  box-sizing: border-box;
+}
+
+.srOnly {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── header bar ─────────────────────────────────────────────────────────── */
+
+.bar {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 8px 12px;
+  background: var(--sfb-surface);
+  border-block-end: 1px solid var(--sfb-line);
+}
+
+.group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-inline-size: 0;
+}
+
+/* Hairlines between groups while they share one row. */
+.group + .group {
+  padding-inline-start: 12px;
+  border-inline-start: 1px solid var(--sfb-line);
+}
+
+.groupEnd {
+  margin-inline-start: auto;
+}
+
+@media (max-width: 1099px) {
+  .bar {
+    row-gap: 8px;
+  }
+  .group + .group {
+    padding-inline-start: 0;
+    border-inline-start: 0;
+  }
+}
+
+.caption {
+  font-size: 12px;
+  color: var(--sfb-muted);
+}
+
+/* Shared control look: native selects and inputs, restyled but still native. */
+.bar select,
+.dialog input {
+  block-size: var(--sfb-control-h);
+  border: 1px solid var(--sfb-line-strong);
+  border-radius: var(--sfb-radius);
+  background-color: var(--sfb-surface);
+  color: var(--sfb-ink);
+  font: inherit;
+}
+
+.bar select {
+  appearance: none;
+  padding: 0 28px 0 10px;
+  background-image: var(--sfb-chevron);
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  cursor: pointer;
+  max-inline-size: 100%;
+}
+
+.bar select:hover {
+  border-color: var(--sfb-muted);
+}
+
+.bar :is(button, select, input):focus-visible,
+.dialog :is(button, input):focus-visible,
+.issuesPanel button:focus-visible {
+  outline: 2px solid var(--sfb-accent);
+  outline-offset: 2px;
+}
+
+/* "Where am I": the layout, fused with the page picker. */
+.where {
+  display: inline-flex;
+  align-items: stretch;
+  block-size: var(--sfb-control-h);
+  max-inline-size: 100%;
+  border: 1px solid var(--sfb-line-strong);
+  border-radius: 8px;
+  background: var(--sfb-surface);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sfb-muted);
+  white-space: nowrap;
+  background: var(--sfb-wash);
+  border-inline-end: 1px solid var(--sfb-line);
+  border-start-start-radius: 7px;
+  border-end-start-radius: 7px;
+}
+
+.pagePick {
+  display: flex;
+  min-inline-size: 0;
+}
+
+.bar .pagePick select {
+  block-size: 100%;
+  min-inline-size: 180px;
+  max-inline-size: 280px;
+  border: 0;
+  border-radius: 0 7px 7px 0;
+  font-weight: 600;
+  text-overflow: ellipsis;
+}
+
+.readOnlyBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  block-size: var(--sfb-control-h);
+  padding: 0 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--sfb-accent-strong);
+  background: var(--sfb-accent-wash);
+  border-radius: var(--sfb-radius);
+  white-space: nowrap;
+}
+
+/* ── buttons ────────────────────────────────────────────────────────────── */
+
+.button,
+.buttonQuiet,
+.buttonPrimary,
+.buttonDanger,
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  block-size: var(--sfb-control-h);
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: var(--sfb-radius);
+  font: inherit;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.button {
+  color: var(--sfb-ink);
+  background: var(--sfb-surface);
+  border-color: var(--sfb-line-strong);
+}
+
+.button:hover {
+  background: var(--sfb-wash);
+}
+
+.buttonQuiet {
+  color: var(--sfb-muted);
+  background: transparent;
+}
+
+.buttonQuiet:hover:not(:disabled) {
+  color: var(--sfb-ink);
+  background: var(--sfb-wash);
+}
+
+.buttonPrimary {
+  color: var(--sfb-on-accent);
+  background: var(--sfb-accent);
+}
+
+.buttonPrimary:hover {
+  background: var(--sfb-accent-strong);
+}
+
+.buttonDanger {
+  color: #fff;
+  background: var(--sfb-danger);
+}
+
+.buttonDanger:hover {
+  background: #93201a;
+}
+
+.iconButton {
+  inline-size: var(--sfb-control-h);
+  padding: 0;
+  color: var(--sfb-ink);
+  background: transparent;
+}
+
+.iconButton:hover:not(:disabled) {
+  background: var(--sfb-wash);
+}
+
+:is(.button, .buttonQuiet, .iconButton):disabled {
+  color: var(--sfb-line-strong);
+  cursor: default;
+}
+
+.pair {
+  display: inline-flex;
+  gap: 2px;
+}
+
+/* Add block: the one filled control in the bar — it is what the editor is for. */
+.addBlock {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  color: var(--sfb-accent-strong);
+}
+
+.addBlock > svg {
+  position: absolute;
+  inset-inline-start: 10px;
+  pointer-events: none;
+}
+
+.bar .addBlock select {
+  padding-inline-start: 32px;
+  font-weight: 600;
+  color: var(--sfb-accent-strong);
+  background-color: var(--sfb-accent-wash);
+  border-color: transparent;
+}
+
+.bar .addBlock select:hover {
+  border-color: var(--sfb-accent);
+}
+
+.bar .addBlock select option,
+.bar .addBlock select optgroup {
+  color: var(--sfb-ink);
+  font-weight: 400;
+}
+
+/* ── preview width + preview as ─────────────────────────────────────────── */
+
+.segmented {
+  display: inline-flex;
+  padding: 2px;
+  gap: 2px;
+  background: var(--sfb-wash);
+  border: 1px solid var(--sfb-line);
+  border-radius: 8px;
+}
+
+.segmented button {
+  block-size: calc(var(--sfb-control-h) - 6px);
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--sfb-muted);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.segmented button:hover {
+  color: var(--sfb-ink);
+}
+
+.segmented button[aria-pressed='true'] {
+  background: var(--sfb-surface);
+  color: var(--sfb-ink);
+  font-weight: 600;
+  box-shadow: 0 0 0 1px var(--sfb-line), 0 1px 2px rgb(29 36 51 / 0.1);
+}
+
+.previewAs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── reset / delete ─────────────────────────────────────────────────────── */
+
+.confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding-inline-start: 8px;
+  border-radius: var(--sfb-radius);
+  background: var(--sfb-danger-wash);
+}
+
+.confirmText {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--sfb-danger);
+  white-space: nowrap;
+}
+
+/* ── issues ─────────────────────────────────────────────────────────────── */
+
+.issuesButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  block-size: var(--sfb-control-h);
+  padding: 0 10px;
+  border: 1px solid var(--sfb-warn-line);
+  border-radius: var(--sfb-radius);
+  background: var(--sfb-warn-wash);
+  color: var(--sfb-warn-ink);
+  font: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.issuesButton[data-count='0'] {
+  border-color: var(--sfb-ok-line);
+  background: var(--sfb-ok-wash);
+  color: var(--sfb-ok-ink);
+  font-weight: 500;
+}
+
+.tipCount {
+  padding: 0 6px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--sfb-muted);
+  background: var(--sfb-surface);
+  border: 1px solid var(--sfb-line);
+  border-radius: 999px;
+}
+
+/* A popover (top layer): never clipped by Puck's layout; placed under its button by script. */
+.issuesPanel {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  inline-size: min(400px, calc(100vw - 16px));
+  max-block-size: min(60vh, 480px);
+  overflow: auto;
+  padding: 6px;
+  background: var(--sfb-surface);
+  border: 1px solid var(--sfb-line);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgb(29 36 51 / 0.16), 0 2px 6px rgb(29 36 51 / 0.08);
+}
+
+.panelTitle {
+  margin: 0;
+  padding: 6px 8px 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--sfb-muted);
+}
+
+.panelEmpty {
+  margin: 0;
+  padding: 2px 8px 8px;
+  color: var(--sfb-muted);
+}
+
+.panelList {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.panelItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  inline-size: 100%;
+  padding: 8px;
+  border: 0;
+  border-radius: var(--sfb-radius);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.panelItem:hover {
+  background: var(--sfb-wash);
+}
+
+.panelItem > svg {
+  flex-shrink: 0;
+  margin-block-start: 1px;
+}
+
+.panelItem[data-kind='issue'] > svg {
+  color: var(--sfb-warn-ink);
+}
+
+.panelItem[data-kind='tip'] > svg {
+  color: var(--sfb-accent);
+}
+
+.panelItemBody {
+  display: grid;
+  gap: 2px;
+}
+
+.panelWhere {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.panelPart {
+  padding: 0 5px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--sfb-muted);
+  background: var(--sfb-wash);
+  border: 1px solid var(--sfb-line);
+  border-radius: 4px;
+}
+
+.panelTips {
+  margin-block-start: 6px;
+  padding-block-start: 6px;
+  border-block-start: 1px solid var(--sfb-line);
+}
+
+/* ── new page dialog ────────────────────────────────────────────────────── */
+
+.dialog {
+  inline-size: min(420px, calc(100vw - 32px));
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: var(--sfb-surface);
+  box-shadow: 0 24px 48px rgb(29 36 51 / 0.22);
+}
+
+.dialog::backdrop {
+  background: rgb(29 36 51 / 0.35);
+}
+
+.dialogBody {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+}
+
+.dialogTitle {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.dialogLead {
+  margin: -8px 0 0;
+  color: var(--sfb-muted);
+}
+
+.stack {
+  display: grid;
+  gap: 6px;
+}
+
+.fieldLabel {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.fieldHint {
+  font-size: 12px;
+  color: var(--sfb-muted);
+}
+
+.dialog input {
+  block-size: 36px;
+  inline-size: 100%;
+  padding: 0 10px;
+  font-size: 14px;
+}
+
+.prefixed {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--sfb-line-strong);
+  border-radius: var(--sfb-radius);
+  overflow: hidden;
+}
+
+.prefixed > span {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 4px 0 10px;
+  color: var(--sfb-muted);
+  background: var(--sfb-wash);
+  font-size: 14px;
+}
+
+.dialog .prefixed input {
+  flex: 1;
+  min-inline-size: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+.prefixed:focus-within {
+  outline: 2px solid var(--sfb-accent);
+  outline-offset: 2px;
+}
+
+.dialog .prefixed input:focus-visible {
+  outline: none;
+}
+
+.error {
+  margin: 0;
+  padding: 8px 10px;
+  color: var(--sfb-danger);
+  background: var(--sfb-danger-wash);
+  border-radius: var(--sfb-radius);
+}
+
+.dialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ── on-canvas block badges ─────────────────────────────────────────────── */
+
+.overlayBadge {
+  position: absolute;
+  inset-block-start: 4px;
+  inset-inline-start: 4px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  border-radius: 4px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.overlayBadge svg {
+  inline-size: 12px;
+  block-size: 12px;
+}
+
+.overlayBadge[data-kind='issue'] {
+  color: var(--sfb-warn-ink);
+  background: var(--sfb-warn-wash);
+  border: 1px solid var(--sfb-warn-line);
+}
+
+.overlayBadge[data-kind='lock'] {
+  color: var(--sfb-ink);
+  background: var(--sfb-surface);
+  border: 1px solid var(--sfb-line-strong);
+}
+
+/* ── waiting, read-only, failed ─────────────────────────────────────────── */
+
+.waiting {
+  min-block-size: 100dvh;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 12px;
+  color: var(--sfb-muted);
+  font-size: 14px;
+  background: var(--sfb-wash);
+}
+
+.waiting p {
+  margin: 0;
+}
+
+.waitingPulse {
+  inline-size: 10px;
+  block-size: 10px;
+  border-radius: 50%;
+  background: var(--sfb-accent);
+  animation: sfb-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes sfb-pulse {
+  0%, 100% { opacity: 0.25; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+.readOnly {
+  min-block-size: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--sfb-wash);
+}
+
+.readOnly .bar {
+  position: sticky;
+  inset-block-start: 0;
+}
+
+.readOnlyCanvas {
+  flex: 1;
+  min-block-size: 0;
+}
+
+.failed {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  inline-size: min(520px, calc(100% - 32px));
+  margin: 32px auto;
+  padding: 20px;
+  color: var(--sfb-warn-ink);
+  background: var(--sfb-warn-wash);
+  border: 1px solid var(--sfb-warn-line);
+  border-radius: 10px;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+}
+
+.failed p {
+  margin: 0;
+}
+
+.failedTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button,
+  .buttonQuiet,
+  .buttonPrimary,
+  .buttonDanger,
+  .iconButton,
+  .segmented button {
+    transition: none;
+  }
+  .waitingPulse {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+.iconButton[aria-pressed='true'] {
+  color: var(--sfb-accent-strong);
+  background: var(--sfb-accent-wash);
+}
