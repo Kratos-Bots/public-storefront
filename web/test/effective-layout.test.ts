@@ -17,4 +17,10 @@ describe('effectiveLayout', () => {
   it('falls back to storefront when an old backend sends no layout', () => {
     expect(effectiveLayout(undefined, false)).toBe('storefront');
   });
+
+  it('the builder override wins over the store and over Telegram', () => {
+    expect(effectiveLayout('storefront', false, 'menu')).toBe('menu');
+    expect(effectiveLayout('storefront', true, 'storefront')).toBe('storefront');
+    expect(effectiveLayout('menu', false, null)).toBe('menu');
+  });
 });

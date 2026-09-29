@@ -3,6 +3,7 @@ import { Navigate, Outlet, useParams, type RouteObject } from 'react-router';
 import { useMediaQuery } from '@mantine/hooks';
 import { useEffectiveLayout } from '@/app/layout.ts';
 import { Guard } from '@/app/guards.tsx';
+import { BuilderRoute } from '@/app/builder-route.tsx';
 import { PuckPage, PuckShell } from '@/builder/runtime.tsx';
 import { customPageKey, type FixedRouteKey } from '@/builder/types.ts';
 import { useUiStore } from '@/stores/ui.ts';
@@ -48,10 +49,12 @@ const page = (routeKey: FixedRouteKey) => ({ handle: { routeKey }, element: <Puc
 
 /**
  * Every page is a page-builder document (spec §5.1). PuckShell reads the deepest `handle.routeKey`
- * to pick the frame; the guards stay at route level exactly as v0.6.0 had them. Plan 3 prepends its
- * `/__builder` route here, outside the shell.
+ * to pick the frame; the guards stay at route level exactly as v0.6.0 had them. The page builder's
+ * `/__builder` route comes first, outside the shell.
  */
 export const routes: RouteObject[] = [
+  // The page builder (spec §6): outside the shell — it renders its own canvas.
+  { path: '/__builder/*', element: <BuilderRoute /> },
   {
     path: '/',
     element: <PuckShell />,

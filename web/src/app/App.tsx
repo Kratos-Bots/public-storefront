@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/reac
 import { RouterProvider } from 'react-router';
 import { SETTINGS_KEY, useSettings, useSettingsQuery } from '@/app/settings.ts';
 import { closedGate, isClosedExemptPath } from '@/app/closed-gate.ts';
+import { BUILDER_PATH, isBuilderMode } from '@/app/builder-gate.ts';
 import { buildMantineTheme, lastKnownBrandName } from '@/app/theme-bridge.ts';
 import { useDocumentTheme } from '@/app/document-theme.ts';
 import { TemplateProvider } from '@/templates/runtime.tsx';
@@ -54,6 +55,8 @@ function useBootCart() {
   useEffect(() => {
     if (started.current) return;
     started.current = true;
+    // The builder runs on fixtures; the admin's own shopper cart must not be fetched into it.
+    if (isBuilderMode()) return;
     // Inside Telegram the sign-in adopts the right cart itself (telegram-session.ts);
     // fetching here too would race it with whatever token was stored before launch.
     if (useTelegramAuthStore.getState().status !== 'none') return;
@@ -70,12 +73,10 @@ function useBootCart() {
  */
 function useShowsClosedPage(enabled: boolean): boolean {
   const closed = closedGate((s) => s.closed);
-  const exempt = isClosedExemptPath(window.location.pathname);
+  // The owner may build pages while the shop is closed (e.g. before launch).
+  const exempt = isClosedExemptPath(window.location.pathname) || isBuilderMode();
   return (closed || !enabled) && !exempt;
 }
-
-/** The page builder's own route (Plan 3) injects a draft set; it never reads the published one. */
-const BUILDER_PREFIX = '/__builder';
 
 export function ClosedGate({ children }: { children: ReactNode }) {
   const closed = closedGate((s) => s.closed);
@@ -114,7 +115,7 @@ export function usePrefetchPageSet(settings: StorefrontSettings): void {
   const layout = effectiveLayout(settings.features?.layout, isTelegramWebApp());
   // Nobody reads the set behind the closed page, nor in the builder, which injects a draft.
   // Only an explicit `enabled: false` closes the shop here — the gate itself decides the rest.
-  const skip = useShowsClosedPage(settings.enabled !== false) || window.location.pathname.startsWith(BUILDER_PREFIX);
+  const skip = useShowsClosedPage(settings.enabled !== false) || window.location.pathname.startsWith(BUILDER_PATH);
   useEffect(() => {
     if (skip) return;
     void client.prefetchQuery({ queryKey: pagesKey(layout), queryFn: () => fetchPageSet(layout), staleTime: PAGES_QUERY.staleTime, retry: PAGES_QUERY.retry });
