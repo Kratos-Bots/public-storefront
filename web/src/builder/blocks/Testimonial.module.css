@@ -1,0 +1,35 @@
+/* The storefront card recipe: hairline, 40% surface, the template's radius and shadow. */
+.card {
+  margin: 0.5rem 0;
+  padding: 1.25rem;
+  min-width: 0;
+  border: var(--sf-card-border);
+  border-radius: var(--sf-card-radius);
+  background: color-mix(in srgb, var(--sf-surface) 40%, transparent);
+  box-shadow: var(--sf-card-shadow);
+}
+
+.quote {
+  margin: 0;
+}
+.quote p {
+  margin: 0;
+  font-family: var(--sf-font-heading);
+  font-size: 1.125rem;
+  line-height: 1.45;
+  color: var(--sf-text);
+  overflow-wrap: anywhere;
+}
+
+.by {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  margin-top: 0.9rem;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+.author { color: var(--sf-text); }
+.detail { color: var(--sf-faint); }
