@@ -1,0 +1,33 @@
+.root {
+  min-width: 0;
+  padding-block: 0.75rem;
+}
+
+.title {
+  margin: 0 0 0.9rem;
+  font-family: var(--sf-font-heading);
+  font-weight: var(--sf-heading-weight);
+  letter-spacing: var(--sf-heading-tracking);
+  text-transform: var(--sf-heading-transform);
+  font-size: clamp(1.2rem, 1.05rem + 0.7vw, 1.6rem);
+  color: var(--sf-text);
+}
+
+/* Two cards across a phone, as many ~11rem columns as fit above. */
+.grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (min-width: 48em) {
+  .grid { grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: 1rem; }
+}
+
+.hint {
+  margin: 0;
+  padding: 1rem;
+  border: 1px dashed var(--sf-line-strong);
+  border-radius: var(--sf-card-radius);
+  color: var(--sf-muted);
+  font-size: 0.875rem;
+}
