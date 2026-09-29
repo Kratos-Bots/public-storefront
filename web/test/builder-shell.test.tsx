@@ -21,6 +21,8 @@ vi.mock('@/features/cart/MobileCartBar.tsx', () => ({ MobileCartBar: () => <i da
 vi.mock('@/features/webapp/PrimaryActionBar.tsx', () => ({ PrimaryActionBar: () => <i data-mark="primary-bar" />, usePrimaryBarShowing: () => false }));
 vi.mock('@/features/webapp/useTelegramChrome.ts', () => ({ useTelegramChrome: () => {}, isFirstHistoryEntry: () => true }));
 vi.mock('@/lib/telegram-webapp.ts', () => ({ isTelegramWebApp: () => false }));
+// Only the no-override skeleton test reaches the network; it must stay pending.
+vi.mock('@/api/pages.ts', () => ({ fetchPageSet: () => new Promise(() => {}) }));
 
 import { StorefrontShell } from '@/layouts/StorefrontShell.tsx';
 import { MenuShell } from '@/layouts/MenuShell.tsx';
@@ -205,9 +207,45 @@ describe('Header sticky: false', () => {
     // jsdom does not cascade CSS modules, so pin the rule itself: page elements that stick at
     // `--sf-bar-h + --sf-pin-h` must come to rest at the top once the header scrolls away.
     const css = readFileSync(resolve(__dirname, '../src/layouts', cssFile), 'utf8');
-    const rule = css.match(/\.shell:has\(> \.unstuck\)\s*\{([^}]*)\}/);
-    expect(rule, `${cssFile} has a .shell:has(> .unstuck) rule`).not.toBeNull();
+    const rule = css.match(/\.shell:has\(\.unstuck\)\s*\{([^}]*)\}/);
+    expect(rule, `${cssFile} has a .shell:has(.unstuck) rule`).not.toBeNull();
     expect(rule![1]).toMatch(/--sf-bar-h:\s*0px/);
     expect(rule![1]).toMatch(/--sf-pin-h:\s*0px/);
+  });
+});
+
+describe('PuckShell safety nets', () => {
+  it('waits on the published set with the full-page skeleton and no header', () => {
+    settings('storefront');
+    const router = createMemoryRouter([{ path: '/', element: <PuckShell />, children: [{ index: true, handle: { routeKey: 'catalog' }, element: <p>page</p> }] }]);
+    const { container } = render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MantineProvider env="test"><RouterProvider router={router} /></MantineProvider>
+      </QueryClientProvider>,
+    );
+    const skeleton = screen.getByRole('status', { name: 'Loading' });
+    // The full skeleton carries the header bar; the inline one (inside a page) does not.
+    expect(skeleton.className).not.toMatch(/inline/);
+    expect(skeleton.querySelector('[class*="_bar_"]')).not.toBeNull();
+    expect(container.querySelector('header')).toBeNull();
+    expect(screen.queryByText('page')).toBeNull();
+  });
+  it.each(['storefront', 'menu', 'webapp'] as const)('%s: a chrome: none page mounts no cart drawer, login modal, cart bar or Telegram bar', (layout) => {
+    settings(layout);
+    const set: PageSet = { schemaVersion: 1, shell: defaultDoc('shell', layout)!, pages: { 'page:plain': { root: root('none'), content: [] } } };
+    const { container } = mount(PuckShell, set, '/pages/plain');
+    expect(screen.getByText('custom')).toBeInTheDocument();
+    for (const mark of ['cart-drawer', 'login-modal', 'cart-bar', 'primary-bar']) {
+      expect(container.querySelector(`[data-mark="${mark}"]`), mark).toBeNull();
+    }
+  });
+  it.each([
+    'StorefrontShell.module.css',
+    'MenuShell.module.css',
+    'WebAppShell.module.css',
+  ])('%s: an unstuck Header zeroes the sticky offsets even when nested in a container', (cssFile) => {
+    const css = readFileSync(resolve(__dirname, '../src/layouts', cssFile), 'utf8');
+    expect(css).not.toMatch(/\.shell:has\(>\s*\.unstuck\)/);
+    expect(css).toMatch(/\.shell:has\(\.unstuck\)\s*\{[^}]*--sf-bar-h:\s*0px[^}]*--sf-pin-h:\s*0px/);
   });
 });

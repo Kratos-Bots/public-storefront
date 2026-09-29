@@ -18,7 +18,7 @@
 .unstuck { composes: unstuck from './MenuShell.module.css'; }
 
 /* Stated with this module's own names rather than trusting the composed MenuShell rule. */
-.shell:has(> .unstuck) {
+.shell:has(.unstuck) {
   --sf-bar-h: 0px;
   --sf-pin-h: 0px;
 }

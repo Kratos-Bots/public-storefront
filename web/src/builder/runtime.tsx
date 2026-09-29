@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, type ComponentType, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ComponentType, type ReactNode } from 'react';
 import { Navigate, useMatches } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useSettings } from '@/app/settings.ts';
@@ -134,6 +134,10 @@ export function PuckShell() {
   const { pageSet, isLoading } = usePageSet(layout);
   const routeKey = useCurrentRouteKey();
   const shellState = useShellStateValue();
+  // Set once the published shell has crashed and DocBoundary shows the default instead (it never
+  // resets for the shell, so neither does this): the bar decision must follow the doc on screen.
+  const [shellFailed, setShellFailed] = useState(false);
+  const onShellFallback = useCallback(() => setShellFailed(true), []);
 
   // As PuckPage: wait for the published set rather than paint the default shell and swap it.
   if (isLoading) return <PageSkeleton />;
@@ -146,13 +150,14 @@ export function PuckShell() {
   const Frame = FRAMES[layout];
   const body = <RenderDoc doc={shell.doc} docKey="shell" layout={layout} />;
   const fallback = shell.isDefault ? null : defaultDoc('shell', layout);
+  const onScreen = fallback && shellFailed ? fallback : shell.doc;
 
   return (
     <ShellStateContext.Provider value={shellState}>
       {/* The phone cart bar is a block owners can place; if the shell has none, the frame mounts it. */}
-      <Frame cartBar={!countBlocks(shell.doc).has('MobileCartBar')}>
+      <Frame cartBar={!countBlocks(onScreen).has('MobileCartBar')}>
         {fallback ? (
-          <DocBoundary docKey="shell" fallback={<RenderDoc doc={fallback} docKey="shell" layout={layout} />}>{body}</DocBoundary>
+          <DocBoundary docKey="shell" onFallback={onShellFallback} fallback={<RenderDoc doc={fallback} docKey="shell" layout={layout} />}>{body}</DocBoundary>
         ) : (
           body
         )}

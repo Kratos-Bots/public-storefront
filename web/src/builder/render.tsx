@@ -34,7 +34,7 @@ export class BlockBoundary extends Component<BlockBoundaryProps, BlockBoundarySt
   }
 }
 
-interface DocBoundaryProps { docKey: DocKey; fallback: ReactNode; children: ReactNode }
+interface DocBoundaryProps { docKey: DocKey; fallback: ReactNode; children: ReactNode; onFallback?: () => void }
 interface DocBoundaryState { failed: boolean; forKey: DocKey }
 
 /** Around a published document: on a throw, render the route's default instead (which may itself throw upward). */
@@ -48,6 +48,7 @@ export class DocBoundary extends Component<DocBoundaryProps, DocBoundaryState> {
   }
   componentDidCatch(error: unknown) {
     console.error(`[builder] "${this.props.docKey}" failed to render — showing the default page`, error);
+    this.props.onFallback?.();
   }
   render() {
     return this.state.failed ? this.props.fallback : this.props.children;

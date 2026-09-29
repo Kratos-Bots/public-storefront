@@ -68,9 +68,10 @@ export function blockDef(type: string): BlockDef<any> | undefined {
 
 /**
  * Blocks allowed at most once in any document. Two Headers would each publish their pinned-notice
- * stack's height as `--sf-pin-h` on the root and fight over it.
+ * stack's height as `--sf-pin-h` on the root and fight over it; two phone cart bars would stack
+ * two fixed tabs at the foot.
  */
-const AT_MOST_ONE: readonly string[] = ['Header'];
+const AT_MOST_ONE: readonly string[] = ['Header', 'MobileCartBar'];
 
 const AT_LEAST_ONE: Partial<Record<FixedRouteKey, readonly string[]>> = {
   catalog: ['ProductGrid', 'ProductList', 'WholesaleTable'],

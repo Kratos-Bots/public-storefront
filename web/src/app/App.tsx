@@ -9,6 +9,10 @@ import { buildMantineTheme, lastKnownBrandName } from '@/app/theme-bridge.ts';
 import { useDocumentTheme } from '@/app/document-theme.ts';
 import { TemplateProvider } from '@/templates/runtime.tsx';
 import { router } from '@/app/router.tsx';
+import { effectiveLayout } from '@/app/layout.ts';
+import { isTelegramWebApp } from '@/lib/telegram-webapp.ts';
+import { fetchPageSet } from '@/api/pages.ts';
+import { PAGES_QUERY, pagesKey } from '@/builder/runtime.tsx';
 import { EmptyState } from '@/components/EmptyState.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { ClosedPage } from '@/features/closed/ClosedPage.tsx';
@@ -88,9 +92,24 @@ export function ClosedGate({ children }: { children: ReactNode }) {
   return (closed || !settings.enabled) && !exempt ? <ClosedPage /> : <>{children}</>;
 }
 
+/**
+ * The page set rides alongside the template chunk: the layout is only known once settings are in,
+ * and TemplateProvider may still be holding the router back on its fallback. PuckShell/PuckPage
+ * then find the same query (same key, same layout rule) already in flight.
+ */
+export function usePrefetchPageSet(settings: StorefrontSettings): void {
+  const client = useQueryClient();
+  const layout = effectiveLayout(settings.features?.layout, isTelegramWebApp());
+  useEffect(() => {
+    void client.prefetchQuery({ queryKey: pagesKey(layout), queryFn: () => fetchPageSet(layout), staleTime: PAGES_QUERY.staleTime, retry: PAGES_QUERY.retry });
+  }, [client, layout]);
+}
+
 function ThemedApp({ settings }: { settings: StorefrontSettings }) {
   const resolved = useDocumentTheme(settings);
   const mantineTheme = useMemo(() => buildMantineTheme(resolved), [resolved]);
+
+  usePrefetchPageSet(settings);
 
   return (
     <MantineProvider theme={mantineTheme} forceColorScheme={resolved.scheme}>
