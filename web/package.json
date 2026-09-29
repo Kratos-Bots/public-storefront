@@ -20,6 +20,7 @@
     "@mantine/hooks": "^9.5.2",
     "@mantine/notifications": "^9.5.2",
     "@marsidev/react-turnstile": "^1.6.0",
+    "@puckeditor/core": "0.23.0",
     "@tanstack/react-query": "^5.90.0",
     "dompurify": "^3.4.16",
     "ky": "^1.14.3",
