@@ -47,6 +47,7 @@ export default defineTemplate({
     { key: 'dispatch', type: 'boolean', label: 'Dispatch cell', help: 'Shows the next order cut-off on the shop board. Hidden anyway when no dispatch schedule is set.', default: true },
     { key: 'contact', type: 'boolean', label: 'Contact cell', help: 'Shows your WhatsApp and Telegram links on the shop board. Hidden anyway when neither is set.', default: true },
     { key: 'featured', type: 'boolean', label: 'Feature the first product', help: 'The first product in each list gets a large tile.', default: true },
+    { key: 'showFooter', type: 'boolean', label: 'Footer', help: 'The row of cells at the foot of the page: brand, support links and contact.', default: true },
   ],
   preview: './preview.webp',
 });

@@ -24,6 +24,14 @@ export function useTemplateOptions(): OptionValues {
   return useTemplateContext().resolved?.options ?? {};
 }
 
+export interface CoreOptions { showPageTitle: boolean; showCatalogIntro: boolean; showSectionLabels: boolean }
+/** The core options every template carries (define.ts CORE_OPTIONS). Only an explicit false hides —
+ *  outside a provider, or before settings resolve, everything shows. */
+export function useCoreOptions(): CoreOptions {
+  const o = useTemplateOptions();
+  return { showPageTitle: o.showPageTitle !== false, showCatalogIntro: o.showCatalogIntro !== false, showSectionLabels: o.showSectionLabels !== false };
+}
+
 export interface StorefrontInfo { brand: Brand; features: Features; supportLinks: SupportLink[]; welcomeMessage: string | null; currency: string; enabled: boolean }
 export function useStorefront(): StorefrontInfo {
   const s = useSettings();

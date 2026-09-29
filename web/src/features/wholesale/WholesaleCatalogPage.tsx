@@ -16,6 +16,7 @@ import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { SearchField } from '@/layouts/SearchField.tsx';
 import { useShellSearch } from '@/layouts/shell-context.ts';
 import { Slot } from '@/templates/runtime.tsx';
+import { useCoreOptions } from '@/templates/hooks.ts';
 import classes from '@/features/wholesale/WholesaleCatalogPage.module.css';
 
 /**
@@ -33,6 +34,7 @@ export function WholesaleCatalogPage() {
   const { search, setSearch } = useShellSearch();
   const { categorySlug } = useParams();
   const catalog = useCatalog();
+  const { showPageTitle } = useCoreOptions();
 
   const products = useMemo(() => catalog.data?.products ?? [], [catalog.data]);
   const categories = useMemo(() => catalog.data?.categories ?? [], [catalog.data]);
@@ -108,20 +110,25 @@ export function WholesaleCatalogPage() {
 
   return (
     <div className={classes.page}>
-      <Slot name="SectionLabel" index={1} title={active ? active.name : 'Trade list'} level="page" />
-      <div className={classes.head}>
-        <h1 className={classes.title} data-sf-part="page-title">{active ? active.name : 'Trade list'}</h1>
-        <p className={classes.tally}>
-          <span className={classes.shown}>{visible.length}</span>
-          {visible.length === products.length ? (
-            <span className={classes.tallyUnit}>{products.length === 1 ? 'line' : 'lines'}</span>
-          ) : (
-            <>
-              <span className={classes.tallyUnit}>of</span>
-              <span>{products.length}</span>
-            </>
-          )}
-        </p>
+      {/* The page-title core option hides the heading block (label, title, tally) and leaves
+          the h1 in the accessibility tree only. "Whole list" is navigation, not decoration: it
+          stays, alone on a slim row, while a category is open. */}
+      {showPageTitle ? <Slot name="SectionLabel" index={1} title={active ? active.name : 'Trade list'} level="page" /> : null}
+      <div className={showPageTitle ? classes.head : active ? classes.headBare : undefined}>
+        <h1 className={showPageTitle ? classes.title : 'sf-visually-hidden'} data-sf-part="page-title">{active ? active.name : 'Trade list'}</h1>
+        {showPageTitle ? (
+          <p className={classes.tally}>
+            <span className={classes.shown}>{visible.length}</span>
+            {visible.length === products.length ? (
+              <span className={classes.tallyUnit}>{products.length === 1 ? 'line' : 'lines'}</span>
+            ) : (
+              <>
+                <span className={classes.tallyUnit}>of</span>
+                <span>{products.length}</span>
+              </>
+            )}
+          </p>
+        ) : null}
         {active ? (
           <Link className={classes.clear} to="/">
             Whole list

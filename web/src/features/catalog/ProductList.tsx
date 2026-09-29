@@ -15,6 +15,7 @@ import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { useShellSearch } from '@/layouts/shell-context.ts';
 import { FADE } from '@/lib/motion.ts';
 import { Slot } from '@/templates/runtime.tsx';
+import { useCoreOptions } from '@/templates/hooks.ts';
 import type { Product } from '@/types/catalog.ts';
 import classes from '@/features/catalog/ProductList.module.css';
 
@@ -29,6 +30,7 @@ export function ProductList() {
   const { categorySlug } = useParams();
   const [params, setParams] = useSearchParams();
   const catalog = useCatalog();
+  const { showPageTitle } = useCoreOptions();
 
   const products = useMemo(() => catalog.data?.products ?? [], [catalog.data]);
   const categories = useMemo(() => catalog.data?.categories ?? [], [catalog.data]);
@@ -82,21 +84,25 @@ export function ProductList() {
           is the whole answer, so nothing goes above it. */}
       {unknownCategory ? null : (
         <>
-          <Slot name="SectionLabel" index={1} title={active ? active.name : 'All products'} level="page" />
-          <div className={classes.head}>
-            <h1 className={classes.title} data-sf-part="page-title">{active ? active.name : 'All products'}</h1>
+          {/* The page-title core option hides the whole heading block (its label and tally
+              too), leaving the h1 in the accessibility tree only. */}
+          {showPageTitle ? <Slot name="SectionLabel" index={1} title={active ? active.name : 'All products'} level="page" /> : null}
+          <div className={showPageTitle ? classes.head : undefined}>
+            <h1 className={showPageTitle ? classes.title : 'sf-visually-hidden'} data-sf-part="page-title">{active ? active.name : 'All products'}</h1>
             {/* How much of the list you are looking at — a fraction only once it is one. */}
-            <p className={classes.tally}>
-              <span className={classes.shown}>{visible.length}</span>
-              {visible.length === products.length ? (
-                <span className={classes.tallyUnit}>{products.length === 1 ? 'product' : 'products'}</span>
-              ) : (
-                <>
-                  <span className={classes.tallyUnit}>of</span>
-                  <span>{products.length}</span>
-                </>
-              )}
-            </p>
+            {showPageTitle ? (
+              <p className={classes.tally}>
+                <span className={classes.shown}>{visible.length}</span>
+                {visible.length === products.length ? (
+                  <span className={classes.tallyUnit}>{products.length === 1 ? 'product' : 'products'}</span>
+                ) : (
+                  <>
+                    <span className={classes.tallyUnit}>of</span>
+                    <span>{products.length}</span>
+                  </>
+                )}
+              </p>
+            ) : null}
           </div>
           <Slot name="CatalogHero" surface="list" tagline={brand.tagline} welcomeMessage={welcomeMessage} productCount={products.length} categoryCount={tree.length} />
         </>

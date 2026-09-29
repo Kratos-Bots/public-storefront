@@ -122,11 +122,15 @@ export function Slot<N extends SlotName>(props: { name: N } & SlotOwnProps<N>) {
   const { name, ...own } = props;
   const ctx = useTemplateContext();
   const settings = useSettings();
+  const options = ctx.resolved?.options ?? {};
+  // Core options (define.ts CORE_OPTIONS) gate these two slots for every template, custom or default.
+  if (name === 'CatalogHero' && options.showCatalogIntro === false) return null;
+  if (name === 'SectionLabel' && options.showSectionLabels === false) return null;
   const custom = ctx.slots[name] as ComponentType<SlotPropsMap[N]> | undefined;
   const Component = (custom ?? DEFAULT_SLOTS[name]) as ComponentType<SlotPropsMap[N]>;
   const base: SlotBaseProps = {
     brand: settings.brand,
-    options: ctx.resolved?.options ?? {},
+    options,
     scheme: ctx.resolved?.scheme ?? settings.theme?.scheme ?? 'dark',
     layout: effectiveLayout(settings.features?.layout, isTelegramWebApp()),
     tokens: ctx.resolved?.tokens ?? BASE_TOKENS,

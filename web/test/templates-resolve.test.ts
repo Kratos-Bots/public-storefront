@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BASE_TOKENS, defineTemplate, type TemplateManifest } from '@/templates/define.ts';
 import { resolveTheme } from '@/templates/resolve.ts';
+import { lookupManifest } from '@/templates/registry.ts';
 import modern from '@/templates/modern/manifest.ts';
 import type { Theme } from '@/types/settings.ts';
 
@@ -83,5 +84,13 @@ describe('resolveTheme', () => {
   it('treats a missing customCss as empty', () => {
     const { customCss: _drop, ...rest } = stored;
     expect(resolveTheme(rest as Theme, lookup).customCss).toBe('');
+  });
+  it('every registered template resolves the core options, shown by default, hidden when stored false', () => {
+    for (const id of ['modern', 'bento', 'dark-luxury', 'cyber-brutalism']) {
+      const r = resolveTheme({ ...stored, template: id }, lookupManifest);
+      expect(r.options, id).toMatchObject({ showPageTitle: true, showCatalogIntro: true, showSectionLabels: true });
+      const hidden = resolveTheme({ ...stored, template: id, options: { showPageTitle: false, showCatalogIntro: false, showSectionLabels: false } }, lookupManifest);
+      expect(hidden.options, id).toMatchObject({ showPageTitle: false, showCatalogIntro: false, showSectionLabels: false });
+    }
   });
 });

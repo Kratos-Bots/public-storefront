@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BASE_TOKENS, defineTemplate, validateManifest, type TemplateManifest, type TemplateTokens } from '@/templates/define.ts';
+import { BASE_TOKENS, CORE_OPTIONS, defineTemplate, validateManifest, withCoreOptions, type TemplateManifest, type TemplateTokens } from '@/templates/define.ts';
 
 function manifest(overrides: Partial<TemplateManifest> = {}): TemplateManifest {
   return defineTemplate({
@@ -44,9 +44,14 @@ describe('validateManifest', () => {
     expect(errors.length).toBeGreaterThan(0);
     expect(errors.join('\n')).toContain(fragment);
   });
-  it('rejects more than 30 options', () => {
-    const options = Array.from({ length: 31 }, (_, i) => ({ key: `o${i}`, type: 'boolean' as const, label: 'x', default: true }));
-    expect(validateManifest(manifest({ options }), 'acme').join('\n')).toContain('30');
+  it('rejects more than 27 own options (30 minus the three core options)', () => {
+    const options = Array.from({ length: 28 }, (_, i) => ({ key: `o${i}`, type: 'boolean' as const, label: 'x', default: true }));
+    expect(validateManifest(manifest({ options }), 'acme').join('\n')).toContain('at most 27 options');
+    expect(validateManifest(manifest({ options: options.slice(0, 27) }), 'acme')).toEqual([]);
+  });
+  it.each(['showPageTitle', 'showCatalogIntro', 'showSectionLabels'])('reserves the core option key %s', (key) => {
+    expect(validateManifest(manifest({ options: [{ key, type: 'boolean', label: 'x', default: false }] }), 'acme'))
+      .toEqual([`acme: option key "${key}" is reserved — every template already has it as a core option`]);
   });
   it('rejects a bad id with exactly one, fully specified message', () => {
     expect(validateManifest(manifest({ id: 'Bad_Id' }), 'acme')).toEqual(['acme: id must match /^[a-z0-9-]{1,40}$/']);
@@ -146,5 +151,21 @@ describe('validateManifest — tokens', () => {
     ['bad chassis', { chassis: 'shiny' as never }, 'chassis'],
   ])('rejects %s', (_name, over, fragment) => {
     expect(validateManifest(tok(over), 'acme').join('\n')).toContain(fragment);
+  });
+});
+
+describe('core options', () => {
+  it('are three booleans, shown by default', () => {
+    expect(CORE_OPTIONS.map((o) => [o.key, o.type, o.label, o.default])).toEqual([
+      ['showPageTitle', 'boolean', 'Page title', true],
+      ['showCatalogIntro', 'boolean', 'Catalogue intro', true],
+      ['showSectionLabels', 'boolean', 'Section labels', true],
+    ]);
+  });
+  it('withCoreOptions prepends them, keeps the template’s own, and is idempotent', () => {
+    const m = withCoreOptions(manifest());
+    expect(m.options.map((o) => o.key)).toEqual(['showPageTitle', 'showCatalogIntro', 'showSectionLabels', 'grain']);
+    expect(withCoreOptions(m).options).toEqual(m.options);
+    expect(manifest().options.map((o) => o.key)).toEqual(['grain']); // the input is not mutated
   });
 });

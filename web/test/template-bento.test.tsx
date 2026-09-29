@@ -94,7 +94,7 @@ describe('bento locks', () => {
   });
 
   it('defaults every option on', () => {
-    expect(resolveTheme(stored, lookupManifest).options).toEqual({ dispatch: true, contact: true, featured: true });
+    expect(resolveTheme(stored, lookupManifest).options).toEqual({ showPageTitle: true, showCatalogIntro: true, showSectionLabels: true, dispatch: true, contact: true, featured: true, showFooter: true });
   });
 });
 
@@ -224,6 +224,12 @@ describe('BentoFooter', () => {
     expect(screen.getByRole('heading', { name: 'Support' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Shipping' })).toHaveAttribute('href', 'https://example.com/shipping');
     expect(screen.getByRole('heading', { name: 'Talk to us' })).toBeInTheDocument();
+  });
+
+  it('showFooter off removes the footer entirely', () => {
+    h.settings = settings({ whatsapp: 'https://wa.me/447700900000' });
+    const { container } = render(<BentoFooter {...base({ showFooter: false })} supportLinks={links} hasChat />);
+    expect(container).toBeEmptyDOMElement();
   });
 
   it('menu layout has no footer, same as modern', () => {

@@ -2,10 +2,11 @@ import { Brand, ContactLinks, type FooterProps } from '@/templates/contract.ts';
 
 /**
  * The footer as a row of cells on the same grid as the shop board: the brand cell is wide, support
- * and chat each take one. The menu layout has no footer, same as modern.
+ * and chat each take one. The menu layout has no footer, same as modern; the showFooter option
+ * turns it off everywhere.
  */
-export function BentoFooter({ brand, layout, supportLinks, hasChat }: FooterProps) {
-  if (layout !== 'storefront') return null;
+export function BentoFooter({ brand, layout, supportLinks, hasChat, options }: FooterProps) {
+  if (layout !== 'storefront' || options.showFooter === false) return null;
   const year = new Date().getFullYear();
 
   return (

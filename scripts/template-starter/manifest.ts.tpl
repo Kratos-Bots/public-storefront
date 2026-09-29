@@ -19,5 +19,5 @@ export default defineTemplate({
   defaultPreset: 'default',
   tokens: BASE_TOKENS,
   editable: { colors: [...COLOR_KEYS], fonts: true, radius: true, density: true },
-  options: [],
+  options: [], // your own toggles; every template also gets showPageTitle / showCatalogIntro / showSectionLabels (reserved keys)
 });

@@ -38,6 +38,8 @@ export default defineTemplate({
     { key: 'systemBar', type: 'boolean', label: 'System bar', help: 'SYS.TIME / NODE / SKU strip above the header.', default: true },
     { key: 'statusBar', type: 'boolean', label: 'Bottom status bar', help: '"CONNECTION SECURE · ACCESS GRANTED" strip at the foot of the page. Gives way to the cart bar on phones.', default: true },
     { key: 'crosshairs', type: 'boolean', label: 'Crosshair marks', help: '+ marks at the hero, footer and screen corners (hidden on small phones).', default: true },
+    { key: 'showFooter', type: 'boolean', label: 'Footer', help: 'The striped footer: brand, support links, contact and node row. Hiding it also removes the bottom status bar.', default: true },
+    { key: 'buttonArrow', type: 'boolean', label: 'Button arrow', help: 'The ↗ arrow on primary buttons.', default: true },
     { key: 'nodeLabel', type: 'text', label: 'Node label', help: 'Shown as NODE: … in the system bar and footer.', default: 'NODE_01', maxLength: 24 },
   ],
   preview: './preview.webp',

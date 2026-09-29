@@ -16,6 +16,7 @@ function StatusBadge() {
  * a compact panel carrying just the badge (or nothing when the badge is off).
  */
 export function LuxuryFooter({ brand, layout, supportLinks, hasChat, options }: FooterProps) {
+  if (options.showFooter === false) return null; // the badge lives in the footer, so it goes too
   const badge = options.statusBadge === true ? <StatusBadge /> : null;
   const year = new Date().getFullYear();
 

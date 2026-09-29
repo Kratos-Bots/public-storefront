@@ -15,6 +15,7 @@ import { SearchField } from '@/layouts/SearchField.tsx';
 import { useShellSearch } from '@/layouts/shell-context.ts';
 import { FADE, rowAnim } from '@/lib/motion.ts';
 import { Slot } from '@/templates/runtime.tsx';
+import { useCoreOptions } from '@/templates/hooks.ts';
 import classes from '@/features/catalog/ProductGrid.module.css';
 
 /** How many cards load their image eagerly — the first two rows on a phone. */
@@ -29,6 +30,7 @@ export function ProductGrid() {
   const { search, setSearch } = useShellSearch();
   const { categorySlug } = useParams();
   const catalog = useCatalog();
+  const { showPageTitle } = useCoreOptions();
 
   const products = useMemo(() => catalog.data?.products ?? [], [catalog.data]);
   const categories = useMemo(() => catalog.data?.categories ?? [], [catalog.data]);
@@ -74,14 +76,18 @@ export function ProductGrid() {
         <CategoryNav tree={tree} total={products.length} activeId={active?.id ?? null} />
 
         <div className={classes.column}>
-          <Slot name="SectionLabel" index={1} title={active ? active.name : 'All products'} level="page" />
-          <div className={classes.head}>
-            <h1 className={classes.title} data-sf-part="page-title">{active ? active.name : 'All products'}</h1>
+          {/* The page-title core option hides the whole heading block (its label and count
+              too), leaving the h1 in the accessibility tree only. */}
+          {showPageTitle ? <Slot name="SectionLabel" index={1} title={active ? active.name : 'All products'} level="page" /> : null}
+          <div className={showPageTitle ? classes.head : undefined}>
+            <h1 className={showPageTitle ? classes.title : 'sf-visually-hidden'} data-sf-part="page-title">{active ? active.name : 'All products'}</h1>
             {/* Micro-caps, so the shopper's own query stays out of it — the field
                 above and the empty state below both quote it in their own case. */}
-            <p className={classes.result}>
-              {query ? `${visible.length} matching` : `${visible.length} products`}
-            </p>
+            {showPageTitle ? (
+              <p className={classes.result}>
+                {query ? `${visible.length} matching` : `${visible.length} products`}
+              </p>
+            ) : null}
           </div>
 
           {unknownCategory ? (
