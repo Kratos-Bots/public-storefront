@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import type { Page, Route } from '@playwright/test';
 import type { Catalog, Product } from '../web/src/types/catalog.ts';
-import type { CheckoutResult, PaymentMethod, Quote } from '../web/src/types/checkout.ts';
+import type { CheckoutPayment, CheckoutResult, PaymentMethod, Quote } from '../web/src/types/checkout.ts';
 import type { ServerCart, ServerCartLine, CartLineInput } from '../web/src/types/cart.ts';
 import type { OrderDetail, OrderSummary, PageMeta } from '../web/src/types/orders.ts';
 import type { Profile, RedeemOptions } from '../web/src/types/profile.ts';
@@ -74,6 +74,10 @@ export interface InstallMocksOptions {
   session?: boolean;
   /** Mutate the settings fixture before it is served (flags, theme, kill switch). */
   tweakSettings?: (settings: StorefrontSettings) => void;
+  /** What the checkout routes answer with as `payment` (default: a crypto address). */
+  checkoutPayment?: CheckoutPayment;
+  /** The reference the checkout routes answer with (default `E2E1`). */
+  checkoutReference?: string;
   /** The Mini App sign-in answers 401, as it does for stale or forged initData. */
   telegramAuthFails?: boolean;
 }
@@ -346,11 +350,11 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     if ((path === 'storefront/checkout' || path === 'storefront/checkout/guest') && method === 'POST') {
       state.checkouts.push(body(route));
       const result: CheckoutResult = {
-        reference: ORDER_REF,
+        reference: options.checkoutReference ?? ORDER_REF,
         publicUrl: `${ORIGIN}${ORDER_PATH}`,
         status: 'pending',
         total: 46.03,
-        payment: {
+        payment: options.checkoutPayment ?? {
           type: 'crypto',
           paymentId: 9001,
           method: 'crypto_static',

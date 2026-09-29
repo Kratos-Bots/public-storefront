@@ -8,6 +8,7 @@ const m = vi.hoisted(() => ({
   mode: 'beta' as 'off' | 'beta' | 'forced',
   setBotMode: vi.fn(async (classic: boolean) => ({ classic })),
   tgClose: vi.fn(),
+  telegramLink: 'https://t.me/shop' as string | null,
 }));
 
 vi.mock('@/lib/telegram-webapp.ts', () => ({ isTelegramWebApp: () => m.inTelegram, tgClose: m.tgClose }));
@@ -17,7 +18,7 @@ vi.mock('@/app/settings.ts', () => ({
   useSettings: () => ({
     currency: 'GBP',
     telegramWebApp: { mode: m.mode },
-    brand: { name: 'Shop', links: { whatsapp: null, telegram: 'https://t.me/shop' } },
+    brand: { name: 'Shop', links: { whatsapp: null, telegram: m.telegramLink } },
     supportLinks: [],
   }),
 }));
@@ -48,6 +49,7 @@ function renderPage() {
 beforeEach(() => {
   m.inTelegram = true;
   m.mode = 'beta';
+  m.telegramLink = 'https://t.me/shop';
 });
 afterEach(() => {
   cleanup();
@@ -63,6 +65,13 @@ describe('ProfilePage in the Telegram Mini App', () => {
   it('shows contact links in place of the footer strip', () => {
     renderPage();
     expect(screen.getByTestId('contact')).toBeInTheDocument();
+  });
+
+  it('omits the Talk to us section when the brand has no chat links', () => {
+    m.telegramLink = null;
+    renderPage();
+    expect(screen.queryByTestId('contact')).toBeNull();
+    expect(screen.queryByText('Talk to us')).toBeNull();
   });
 
   it('switches to the classic bot after a confirmation, then closes the Mini App', async () => {

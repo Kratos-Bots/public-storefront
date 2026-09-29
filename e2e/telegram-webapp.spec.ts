@@ -10,12 +10,12 @@ const clickBack = (page: Page) => page.evaluate(() => (window as unknown as { __
 const mainHandlers = (page: Page) => page.evaluate(() => (window as unknown as { __tg: { mainHandlerCount(): number } }).__tg.mainHandlerCount());
 const callsNamed = async (page: Page, name: string) => (await tg(page)).calls.filter((c) => c[0] === name);
 
-async function openInTelegram(page: Page, opts: InstallMocksOptions = {}) {
+async function openInTelegram(page: Page, opts: InstallMocksOptions = {}, path = '/') {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.clock.setFixedTime(FIXED_NOW);
   await installTelegramStub(page);
   const mocks = await installMocks(page, { layout: 'storefront', ...opts });
-  await page.goto('/');
+  await page.goto(path);
   return mocks;
 }
 
@@ -111,6 +111,46 @@ test.describe('inside Telegram', () => {
     expect(mocks.state.checkouts.length).toBe(checkoutsBefore);
     await expect.poll(() => mainText(page)).toMatch(/^Checkout · /);
     expect(await mainHandlers(page)).toBe(1);
+  });
+
+  test('an external payment opens in the browser and returns to the account order', async ({ page }) => {
+    const gateway = 'https://pay.example.invalid/session/e2e';
+    const mocks = await openInTelegram(page, {
+      checkoutReference: 'K4M2QP',
+      checkoutPayment: { type: 'checkout_url', paymentId: 9003, method: 'stripe', amount: 46.03, url: gateway },
+    });
+    await expect.poll(() => mocks.state.webappLogins.length).toBe(1);
+    await openProduct(page, 'webapp', firstProductName(mocks));
+    await addFirstToCart(page, 'webapp', mocks);
+    await expect.poll(() => mainText(page)).toMatch(/^View cart · /);
+    await clickMain(page);
+    await expect(page).toHaveURL(/\/cart$/);
+    await expect.poll(() => mainText(page)).toMatch(/^Checkout · /);
+    await clickMain(page);
+    await expect(page).toHaveURL(/\/checkout$/);
+    await expect.poll(() => mainText(page)).toBe('Continue');
+    await fillCheckout(page, () => clickMain(page));
+    await expect.poll(() => mainText(page)).toMatch(/^Place order/);
+    await clickMain(page);
+
+    await expect.poll(() => mocks.state.checkouts.length).toBe(1);
+    await expect.poll(async () => (await callsNamed(page, 'openLink')).map((c) => c[1])).toEqual([gateway]);
+    // The Mini App itself never leaves for the gateway; it lands on the order inside the shell.
+    await expect(page).toHaveURL(/\/account\/orders\/K4M2QP$/);
+    expect(page.url()).not.toContain('pay.example');
+    await expect(page.getByRole('heading', { name: 'K4M2QP' })).toBeVisible();
+    await expect(page.locator('[data-sf-layout="webapp"]')).toBeVisible();
+    await expect.poll(() => tg(page).then((t) => t.back.isVisible)).toBe(true);
+  });
+
+  test("the bot's order deep link opens signed in, on the order", async ({ page }) => {
+    const mocks = await openInTelegram(page, {}, '/account/orders/K4M2QP');
+    await expect(page.getByRole('heading', { name: 'K4M2QP' })).toBeVisible();
+    await expect(page).toHaveURL(/\/account\/orders\/K4M2QP$/);
+    expect(mocks.state.webappLogins).toEqual([{ initData: TELEGRAM_INIT_DATA }]);
+    expect(mocks.requests().some((r) => r.startsWith('storefront/auth/login'))).toBe(false);
+    await expect(page.getByText(/WhatsApp/)).toHaveCount(0);
+    await expect.poll(() => tg(page).then((t) => t.back.isVisible)).toBe(true);
   });
 
   test('BackButton appears off the catalogue and goes back', async ({ page }) => {

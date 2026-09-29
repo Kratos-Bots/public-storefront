@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
-import { MemoryRouter } from 'react-router';
+import { MemoryRouter, useLocation } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { StorefrontSettings } from '@/types/settings.ts';
 import type { Quote } from '@/types/checkout.ts';
@@ -10,6 +10,13 @@ import type { LocalLine } from '@/stores/cart.ts';
 
 const state = vi.hoisted(() => ({ settings: {} as StorefrontSettings }));
 vi.mock('@/app/settings.ts', () => ({ useSettings: () => state.settings }));
+
+const tg = vi.hoisted(() => ({ inTelegram: false, openLink: vi.fn() }));
+vi.mock('@/lib/telegram-webapp.ts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/telegram-webapp.ts')>()),
+  isTelegramWebApp: () => tg.inTelegram,
+  openExternalLink: (url: string) => tg.openLink(url),
+}));
 
 vi.mock('@/api/checkout.ts', () => ({
   quote: vi.fn(),
@@ -78,6 +85,7 @@ vi.mock('@marsidev/react-turnstile', async () => {
 import { guestQuote, placeGuestOrder, placeOrder, quote } from '@/api/checkout.ts';
 import { ApiError } from '@/lib/errors.ts';
 import { useCartStore } from '@/stores/cart.ts';
+import { usePrimaryActionStore } from '@/stores/primary-action.ts';
 import { useSessionStore } from '@/stores/session.ts';
 import { CheckoutPage } from '@/features/checkout/CheckoutPage.tsx';
 
@@ -192,11 +200,18 @@ function makeQuote(overrides: Partial<Quote> = {}): Quote {
 
 let client: QueryClient;
 
+function LocationProbe() {
+  return <div data-testid="path">{useLocation().pathname}</div>;
+}
+
 function Wrapper({ children }: { children: ReactNode }) {
   return (
     <MantineProvider env="test">
       <QueryClientProvider client={client}>
-        <MemoryRouter initialEntries={['/checkout']}>{children}</MemoryRouter>
+        <MemoryRouter initialEntries={['/checkout']}>
+          {children}
+          <LocationProbe />
+        </MemoryRouter>
       </QueryClientProvider>
     </MantineProvider>
   );
@@ -224,27 +239,40 @@ function type(label: string | RegExp, value: string) {
 const continueButton = () => screen.getByRole('button', { name: /^continue$/i });
 const placeButton = () => screen.getByRole('button', { name: /place order/i });
 
+/** Inside Telegram the in-page buttons stand down; the MainButton is the store's override. */
+function pressPrimary(label: RegExp, fallback: () => HTMLElement) {
+  if (!tg.inTelegram) {
+    fireEvent.click(fallback());
+    return;
+  }
+  const action = usePrimaryActionStore.getState().override;
+  expect(action?.label).toMatch(label);
+  act(() => action!.onClick());
+}
+const pressContinue = () => pressPrimary(/^continue$/i, continueButton);
+const pressPlace = () => pressPrimary(/^place order/i, placeButton);
+
 /** Contact → Address → Shipping → Payment → Review, leaving the Review step on screen. */
 async function walkToReview() {
   type('First name', 'Ada');
   type('Surname', 'Lovelace');
   type('Email', 'ada@example.com');
-  fireEvent.click(continueButton());
+  pressContinue();
 
   type('Address line 1', '1 Main St');
   type('City', 'London');
   type(/postcode/i, 'SW1A 1AA');
   fireEvent.change(screen.getByLabelText('Country'), { target: { value: 'GB' } });
-  fireEvent.click(continueButton());
+  pressContinue();
   await settle();
 
   fireEvent.click(screen.getByRole('radio', { name: /Royal Mail Tracked 24/ }));
   await settle();
-  fireEvent.click(continueButton());
+  pressContinue();
   await settle();
 
   fireEvent.click(screen.getByRole('radio', { name: /Stripe/ }));
-  fireEvent.click(continueButton());
+  pressContinue();
   await settle();
 
   type('Order notes', 'Leave with neighbour');
@@ -254,6 +282,7 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.clearAllMocks();
   turnstile.minted = [];
+  tg.inTelegram = false;
   localStorage.clear();
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   useCartStore.setState({ lines: [line()], mode: 'server' });
@@ -318,6 +347,28 @@ describe('CheckoutPage — signed in', () => {
     );
     expect(useCartStore.getState().lines).toEqual([]);
     expect(localStorage.getItem('sf-checkout-v1')).toBeNull();
+  });
+
+  describe('external payment inside Telegram', () => {
+    const external = (reference: string, publicUrl: string | null) => ({
+      reference,
+      publicUrl,
+      status: 'pending',
+      total: 84.99,
+      payment: { type: 'checkout_url' as const, paymentId: 1, method: 'stripe', amount: 84.99, url: 'https://pay.example/session/1' },
+    });
+
+    it('opens the gateway in the browser and lands a signed-in shopper on the account order', async () => {
+      tg.inTelegram = true;
+      placeOrderMock.mockResolvedValue(external('K7 M2', null));
+      mount();
+      await walkToReview();
+      pressPlace();
+      await settle();
+
+      expect(tg.openLink).toHaveBeenCalledWith('https://pay.example/session/1');
+      expect(screen.getByTestId('path')).toHaveTextContent('/account/orders/K7%20M2');
+    });
   });
 
   it('holds the shopper on the contact step until the required fields are filled', () => {
@@ -449,5 +500,22 @@ describe('CheckoutPage — guest', () => {
     );
     const submitToken = placeGuestOrderMock.mock.calls[0]![0].turnstileToken;
     expect(quoteTokens).not.toContain(submitToken);
+  });
+  it('keeps the public order page after an external payment inside Telegram', async () => {
+    tg.inTelegram = true;
+    placeGuestOrderMock.mockResolvedValue({
+      reference: 'G8N3RQ',
+      publicUrl: `${window.location.origin}/order/G8N3RQ/key456`,
+      status: 'pending',
+      total: 84.99,
+      payment: { type: 'checkout_url', paymentId: 2, method: 'stripe', amount: 84.99, url: 'https://pay.example/session/2' },
+    });
+    mount();
+    await walkToReview();
+    pressPlace();
+    await settle();
+
+    expect(tg.openLink).toHaveBeenCalledWith('https://pay.example/session/2');
+    expect(screen.getByTestId('path')).toHaveTextContent('/order/G8N3RQ/key456');
   });
 });

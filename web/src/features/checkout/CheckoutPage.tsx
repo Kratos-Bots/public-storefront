@@ -517,9 +517,16 @@ export function CheckoutPage() {
       if (outcome.kind === 'external' && inTelegram) {
         // Some gateways refuse to run inside Telegram's WebView: pay in the
         // browser, and leave the Mini App on the order so the shopper comes back
-        // to its status rather than an empty checkout.
+        // to its status rather than an empty checkout. A signed-in shopper lands
+        // on their account order (inside the Mini App shell, with the BackButton);
+        // the chromeless public page has no way back to the shop. Guests keep it.
         openExternalLink(outcome.url);
-        navigate(orderPath ?? `/order-placed?${new URLSearchParams({ order: result.reference })}`, { replace: true });
+        navigate(
+          loggedIn
+            ? `/account/orders/${encodeURIComponent(result.reference)}`
+            : (orderPath ?? `/order-placed?${new URLSearchParams({ order: result.reference })}`),
+          { replace: true },
+        );
       } else if (outcome.kind === 'external') {
         window.location.assign(outcome.url);
       } else {

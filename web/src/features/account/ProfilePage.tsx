@@ -86,6 +86,7 @@ export function ProfilePage() {
   const settings = useSettings();
   const inTelegram = isTelegramWebApp();
   const webapp = useEffectiveLayout() === 'webapp';
+  const hasChatLinks = Boolean(settings.brand.links.whatsapp || settings.brand.links.telegram);
 
   const signOut = async () => {
     setSigningOut(true);
@@ -175,7 +176,7 @@ export function ProfilePage() {
         </p>
       </section>
 
-      {webapp ? (
+      {webapp && hasChatLinks ? (
         <section className={classes.section} aria-label="Contact">
           <div className={classes.sectionHead}>
             <h3 className={classes.sectionTitle}>Talk to us</h3>
