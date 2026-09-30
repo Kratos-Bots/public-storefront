@@ -15,6 +15,7 @@ import {
   useProfile,
   useRedeemOptions,
 } from '@/features/account/queries.ts';
+import { useText } from '@/text/runtime.tsx';
 import type { RedeemOption } from '@/types/profile.ts';
 import classes from '@/features/account/Account.module.css';
 
@@ -35,6 +36,7 @@ export function reachRatio(points: number, cost: number): number {
  * backend answers `404` there, which the api layer reads as "no such section".
  */
 export function LoyaltyPage() {
+  const { t } = useText();
   const { currency } = useSettings();
   const profile = useProfile();
   const options = useRedeemOptions();
@@ -46,7 +48,11 @@ export function LoyaltyPage() {
     onSuccess: async (result) => {
       setConfirming(null);
       notifications.show({
-        message: `${formatMoney(result.creditAwarded, currency)} credit added — you now have ${formatInteger(result.newPointsBalance)} points and ${formatMoney(result.newCreditBalance, currency)} in credit.`,
+        message: t('account.loyalty.redeemedToast', {
+          credit: formatMoney(result.creditAwarded, currency),
+          points: formatInteger(result.newPointsBalance),
+          balance: formatMoney(result.newCreditBalance, currency),
+        }),
       });
       await Promise.all([
         client.invalidateQueries({ queryKey: PROFILE_KEY }),
@@ -54,7 +60,7 @@ export function LoyaltyPage() {
       ]);
     },
     onError: (err) => {
-      notifications.show({ message: errorMessage(err, "We couldn't redeem that"), color: 'red' });
+      notifications.show({ message: errorMessage(err, t('account.loyalty.redeemFailed')), color: 'red' });
     },
   });
 
@@ -63,12 +69,12 @@ export function LoyaltyPage() {
   if (profile.isError) {
     return (
       <EmptyState
-        eyebrow="Loyalty"
-        title="We couldn't load your points"
-        description="Your balance is safe — this was a hiccup between your browser and us."
+        eyebrow={t('account.nav.loyalty')}
+        title={t('account.loyalty.loadFailedTitle')}
+        description={t('account.loyalty.loadFailedBody')}
         action={
           <Button variant="default" size="sm" onClick={() => void profile.refetch()}>
-            Try again
+            {t('common.actions.tryAgain')}
           </Button>
         }
       />
@@ -84,30 +90,30 @@ export function LoyaltyPage() {
     <div className={classes.body}>
       <div className={classes.meter}>
         <span className={classes.meterFigure}>{formatInteger(profile.data.loyaltyPoints)}</span>
-        <span className={classes.meterUnit}>Points</span>
+        <span className={classes.meterUnit}>{t('account.loyalty.points')}</span>
       </div>
 
       <div className={classes.row}>
-        <span className={classes.rowLabel}>Store credit</span>
+        <span className={classes.rowLabel}>{t('account.loyalty.storeCredit')}</span>
         <span className={classes.rowFigure}>
           <Money amount={profile.data.storeCreditBalance} />
         </span>
       </div>
 
       {profile.data.loyaltyPoints === 0 ? (
-        <p className={classes.note}>Points land on your orders — they&rsquo;ll show up here.</p>
+        <p className={classes.note}>{t('account.loyalty.noPoints')}</p>
       ) : null}
 
       {ladder ? (
-        <section className={classes.section} aria-label="Redeem points">
+        <section className={classes.section} aria-label={t('account.loyalty.redeemAria')}>
           {/* No balance repeated here: the meter states it three lines up, and the
               ladder's own copy of it can be a fetch behind the meter's. */}
           <div className={classes.sectionHead}>
-            <h3 className={classes.sectionTitle}>Redeem</h3>
+            <h3 className={classes.sectionTitle}>{t('account.loyalty.redeem')}</h3>
           </div>
 
           {ladder.options.length === 0 ? (
-            <p className={classes.note}>There&rsquo;s nothing to redeem for right now.</p>
+            <p className={classes.note}>{t('account.loyalty.nothingToRedeem')}</p>
           ) : (
             <ul className={classes.options}>
               {ladder.options.map((option) => {
@@ -117,7 +123,7 @@ export function LoyaltyPage() {
                     <div className={classes.optionHead}>
                       <span className={classes.optionLabel}>{option.label}</span>
                       <span className={classes.optionCost}>
-                        {formatInteger(option.pointsCost)} pts
+                        {t('account.loyalty.cost', { points: formatInteger(option.pointsCost) })}
                       </span>
                     </div>
 
@@ -135,8 +141,8 @@ export function LoyaltyPage() {
                     <div className={classes.optionFoot}>
                       <span className={classes.shortfall}>
                         {option.affordable
-                          ? `Worth ${formatMoney(option.creditValue, currency)}`
-                          : `${formatInteger(option.pointsCost - points)} points to go`}
+                          ? t('account.loyalty.worth', { credit: formatMoney(option.creditValue, currency) })
+                          : t('account.loyalty.pointsToGo', { points: formatInteger(option.pointsCost - points) })}
                       </span>
                       <button
                         type="button"
@@ -144,7 +150,7 @@ export function LoyaltyPage() {
                         disabled={!option.affordable || mutation.isPending}
                         onClick={() => setConfirming(option)}
                       >
-                        Redeem
+                        {t('account.loyalty.redeem')}
                       </button>
                     </div>
                   </li>
@@ -158,7 +164,7 @@ export function LoyaltyPage() {
       <Modal
         opened={confirming !== null}
         onClose={() => setConfirming(null)}
-        title="Confirm redemption"
+        title={t('account.loyalty.confirmTitle')}
         centered
         size="sm"
         radius="var(--mantine-radius-default)"
@@ -171,9 +177,11 @@ export function LoyaltyPage() {
         {confirming ? (
           <>
             <p className={classes.modalBody}>
-              {confirming.label} costs {formatInteger(confirming.pointsCost)} points, and adds{' '}
-              {formatMoney(confirming.creditValue, currency)} of credit to your account. Credit is
-              spent at checkout.
+              {t('account.loyalty.confirmBody', {
+                reward: confirming.label,
+                points: formatInteger(confirming.pointsCost),
+                credit: formatMoney(confirming.creditValue, currency),
+              })}
             </p>
             <div className={classes.modalActions}>
               <button
@@ -182,7 +190,7 @@ export function LoyaltyPage() {
                 onClick={() => setConfirming(null)}
                 disabled={mutation.isPending}
               >
-                Cancel
+                {t('account.loyalty.cancel')}
               </button>
               <button
                 type="button"
@@ -192,7 +200,7 @@ export function LoyaltyPage() {
                 data-sf-part="button"
                 data-variant="filled"
               >
-                {mutation.isPending ? 'Redeeming' : 'Redeem'}
+                {mutation.isPending ? t('account.loyalty.redeeming') : t('account.loyalty.redeem')}
               </button>
             </div>
           </>

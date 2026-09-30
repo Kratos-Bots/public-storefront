@@ -14,6 +14,7 @@ import {
 } from '@/features/order-status/status.ts';
 import { StatusPill } from '@/features/account/StatusPill.tsx';
 import { useOrder } from '@/features/account/queries.ts';
+import { useText } from '@/text/runtime.tsx';
 import type { OrderShipment } from '@/types/orders.ts';
 import type { ShipmentStatus } from '@/types/public-order.ts';
 import classes from '@/features/account/Account.module.css';
@@ -31,8 +32,8 @@ function paymentTone(status: string): Tone {
 }
 
 /** A shipment's status is a plain string on the wire; anything unmapped reads as shipped. */
-function shipmentLabel(shipment: OrderShipment): string {
-  return SHIPMENT_LABEL[shipment.status as ShipmentStatus] ?? 'Shipped';
+function shipmentLabel(shipment: OrderShipment, fallback: string): string {
+  return SHIPMENT_LABEL[shipment.status as ShipmentStatus] ?? fallback;
 }
 
 function shipmentTone(shipment: OrderShipment): Tone {
@@ -47,6 +48,7 @@ function shipmentTone(shipment: OrderShipment): Tone {
  * implementation of the most consequential screen in the shop.
  */
 export function OrderDetailPage() {
+  const { t, tp } = useText();
   const { ref } = useParams();
   const order = useOrder(ref);
 
@@ -56,21 +58,21 @@ export function OrderDetailPage() {
     const missing = order.error instanceof ApiError && order.error.status === 404;
     return (
       <EmptyState
-        eyebrow="Order"
-        title={missing ? "We can't find that order" : "We couldn't load that order"}
+        eyebrow={t('account.order.title')}
+        title={missing ? t('account.order.notFoundTitle') : t('account.order.loadFailedTitle')}
         description={
           missing
-            ? 'It may belong to another account, or the reference may be wrong.'
-            : 'The order is safe — this was a hiccup between your browser and us.'
+            ? t('account.order.notFoundBody')
+            : t('account.order.loadFailedBody')
         }
         action={
           missing ? (
             <Button component={Link} to="/account/orders" variant="default" size="sm">
-              All orders
+              {t('account.order.allOrders')}
             </Button>
           ) : (
             <Button variant="default" size="sm" onClick={() => void order.refetch()}>
-              Try again
+              {t('common.actions.tryAgain')}
             </Button>
           )
         }
@@ -83,29 +85,29 @@ export function OrderDetailPage() {
   return (
     <div className={classes.body}>
       <Link to="/account/orders" className={classes.back}>
-        ← All orders
+        {t('account.order.backToOrders')}
       </Link>
 
       <div className={classes.detailHead}>
         <h2 className={classes.detailRef}>{data.reference}</h2>
         <StatusPill tone={orderStatusTone(data.status)}>{orderStatusLabel(data.status)}</StatusPill>
-        <span className={classes.detailDate}>Placed {formatDate(data.createdAt)}</span>
+        <span className={classes.detailDate}>{t('account.order.placed')}{formatDate(data.createdAt)}</span>
       </div>
 
       {data.outstandingBalance > 0 ? (
         <p className={classes.band}>
-          <span>Balance due</span>
+          <span>{t('account.order.balanceDue')}</span>
           <span>
             <Money amount={data.outstandingBalance} />
           </span>
         </p>
       ) : null}
 
-      <section className={classes.section} aria-label="Items">
+      <section className={classes.section} aria-label={t('account.order.items')}>
         <div className={classes.sectionHead}>
-          <h3 className={classes.sectionTitle}>Items</h3>
+          <h3 className={classes.sectionTitle}>{t('account.order.items')}</h3>
           <span className={classes.sectionNote}>
-            {data.items.length} {data.items.length === 1 ? 'line' : 'lines'}
+            {tp('account.order.lines', data.items.length)}
           </span>
         </div>
         <ul className={classes.items}>
@@ -123,27 +125,27 @@ export function OrderDetailPage() {
         </ul>
 
         <div className={classes.row}>
-          <span className={classes.rowLabel}>Subtotal</span>
+          <span className={classes.rowLabel}>{t('common.totals.subtotal')}</span>
           <span className={classes.rowFigure}>
             <Money amount={data.subtotal} />
           </span>
         </div>
         <div className={classes.row}>
-          <span className={classes.rowLabel}>Shipping</span>
+          <span className={classes.rowLabel}>{t('common.totals.shipping')}</span>
           <span className={classes.rowFigure}>
             <Money amount={data.shippingAmount} />
           </span>
         </div>
         {data.discountAmount > 0 ? (
           <div className={classes.row}>
-            <span className={classes.rowLabel}>Discount</span>
+            <span className={classes.rowLabel}>{t('common.totals.discount')}</span>
             <span className={classes.rowFigure}>
               −<Money amount={data.discountAmount} />
             </span>
           </div>
         ) : null}
         <div className={`${classes.row} ${classes.grand}`}>
-          <span className={classes.rowLabel}>Total</span>
+          <span className={classes.rowLabel}>{t('common.totals.total')}</span>
           <span className={`${classes.rowFigure} ${classes.grandFigure}`}>
             <Money amount={data.totalAmount} />
           </span>
@@ -151,9 +153,9 @@ export function OrderDetailPage() {
       </section>
 
       {data.payments.length > 0 ? (
-        <section className={classes.section} aria-label="Payments">
+        <section className={classes.section} aria-label={t('account.order.payments')}>
           <div className={classes.sectionHead}>
-            <h3 className={classes.sectionTitle}>Payments</h3>
+            <h3 className={classes.sectionTitle}>{t('account.order.payments')}</h3>
           </div>
           <ul className={classes.items}>
             {data.payments.map((payment, i) => (
@@ -173,23 +175,23 @@ export function OrderDetailPage() {
       ) : null}
 
       {data.shipments.length > 0 ? (
-        <section className={classes.section} aria-label="Parcels">
+        <section className={classes.section} aria-label={t('account.order.parcels')}>
           <div className={classes.sectionHead}>
-            <h3 className={classes.sectionTitle}>Parcels</h3>
+            <h3 className={classes.sectionTitle}>{t('account.order.parcels')}</h3>
             <span className={classes.sectionNote}>
-              {data.shipments.length} {data.shipments.length === 1 ? 'parcel' : 'parcels'}
+              {tp('account.order.parcelCount', data.shipments.length)}
             </span>
           </div>
           <ul className={classes.items}>
             {data.shipments.map((shipment, i) => (
               <li key={`${shipment.trackingNumber ?? 'parcel'}-${i}`} className={classes.event}>
-                <span className={classes.eventName}>{shipment.carrier ?? 'Parcel'}</span>
+                <span className={classes.eventName}>{shipment.carrier ?? t('account.order.parcelFallback')}</span>
                 <span className={classes.eventWhen}>
                   {shipment.trackingNumber ??
-                    (shipment.shippedAt ? formatDate(shipment.shippedAt) : 'Awaiting dispatch')}
+                    (shipment.shippedAt ? formatDate(shipment.shippedAt) : t('account.order.awaitingDispatch'))}
                 </span>
                 <span className={classes.eventStatus}>
-                  <StatusPill tone={shipmentTone(shipment)}>{shipmentLabel(shipment)}</StatusPill>
+                  <StatusPill tone={shipmentTone(shipment)}>{shipmentLabel(shipment, t('account.order.shippedFallback'))}</StatusPill>
                 </span>
                 {shipment.trackingStatusDescription ? (
                   <p className={classes.eventDetail}>{shipment.trackingStatusDescription}</p>
@@ -201,7 +203,7 @@ export function OrderDetailPage() {
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    Track this parcel
+                    {t('account.order.trackParcel')}
                   </a>
                 ) : null}
               </li>
@@ -220,11 +222,10 @@ export function OrderDetailPage() {
             data-sf-part="button"
             data-variant="filled"
           >
-            Open order page
+            {t('account.order.openOrderPage')}
           </a>
           <p className={classes.note}>
-            The order page is where you pay, change payment method and follow the parcel — share it
-            with us if you need help with this order.
+            {t('account.order.orderPageNote')}
           </p>
         </>
       ) : null}

@@ -10,6 +10,7 @@ import { errorMessage } from '@/lib/errors.ts';
 import { setReferralCode } from '@/api/profile.ts';
 import { PROFILE_KEY, useProfile } from '@/features/account/queries.ts';
 import { referralShareLinks, referralShareText } from '@/features/account/referral-share.ts';
+import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/account/Account.module.css';
 
 /**
@@ -33,6 +34,7 @@ function canShare(): boolean {
  * route the bot's referral entry point expects.
  */
 export function ReferralsPage() {
+  const { t } = useText();
   const { brand } = useSettings();
   const profile = useProfile();
   const client = useQueryClient();
@@ -43,7 +45,7 @@ export function ReferralsPage() {
     mutationFn: (code: string) => setReferralCode(code),
     onSuccess: async (result) => {
       setDraft('');
-      notifications.show({ message: `You're now referred by ${result.referrerNickname}.` });
+      notifications.show({ message: t('account.referrals.referredToast', { name: result.referrerNickname }) });
       await client.invalidateQueries({ queryKey: PROFILE_KEY });
     },
   });
@@ -53,12 +55,12 @@ export function ReferralsPage() {
   if (profile.isError) {
     return (
       <EmptyState
-        eyebrow="Referrals"
-        title="We couldn't load your referrals"
-        description="Your code hasn't gone anywhere — this was a hiccup between your browser and us."
+        eyebrow={t('account.nav.referrals')}
+        title={t('account.referrals.loadFailedTitle')}
+        description={t('account.referrals.loadFailedBody')}
         action={
           <Button variant="default" size="sm" onClick={() => void profile.refetch()}>
-            Try again
+            {t('common.actions.tryAgain')}
           </Button>
         }
       />
@@ -76,7 +78,7 @@ export function ReferralsPage() {
   return (
     <div className={classes.body}>
       <div className={classes.plate}>
-        <span className={classes.plateLabel}>Your referral code</span>
+        <span className={classes.plateLabel}>{t('account.referrals.yourCode')}</span>
         <div className={classes.plateRow}>
           <span className={classes.code}>{data.referralCode}</span>
           {canCopy() ? (
@@ -84,9 +86,9 @@ export function ReferralsPage() {
               type="button"
               className={classes.copy}
               onClick={() => clipboard.copy(data.referralCode)}
-              aria-label={`Copy your referral code ${data.referralCode}`}
+              aria-label={t('account.referrals.copyAria', { code: data.referralCode })}
             >
-              {clipboard.copied ? 'Copied' : 'Copy'}
+              {clipboard.copied ? t('common.actions.copied') : t('common.actions.copy')}
             </button>
           ) : null}
         </div>
@@ -97,7 +99,7 @@ export function ReferralsPage() {
           <div className={classes.share}>
             {canShare() ? (
               <button type="button" className={classes.ghost} onClick={share}>
-                Share
+                {t('account.referrals.share')}
               </button>
             ) : null}
             {links.whatsapp ? (
@@ -107,7 +109,7 @@ export function ReferralsPage() {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                WhatsApp
+                {t('common.contact.whatsapp')}
               </a>
             ) : null}
             {links.telegram ? (
@@ -117,47 +119,46 @@ export function ReferralsPage() {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                Telegram
+                {t('common.contact.telegram')}
               </a>
             ) : null}
           </div>
           <p className={classes.note}>
-            The invite goes out with your code already in it — send it to whoever you want to bring
-            in.
+            {t('account.referrals.shareNote')}
           </p>
         </>
       ) : null}
 
-      <section className={classes.section} aria-label="Your referrals">
+      <section className={classes.section} aria-label={t('account.referrals.broughtInAria')}>
         <div className={classes.sectionHead}>
-          <h3 className={classes.sectionTitle}>What it has brought in</h3>
+          <h3 className={classes.sectionTitle}>{t('account.referrals.broughtInTitle')}</h3>
         </div>
         <div className={classes.counts}>
           <div className={classes.count}>
             <span className={classes.countFigure}>{data.referredPeopleCount}</span>
-            <span className={classes.countLabel}>People referred</span>
+            <span className={classes.countLabel}>{t('account.referrals.peopleReferred')}</span>
           </div>
           <div className={classes.count}>
             <span className={classes.countFigure}>{data.referralsCount}</span>
-            <span className={classes.countLabel}>Orders earned on</span>
+            <span className={classes.countLabel}>{t('account.referrals.ordersEarned')}</span>
           </div>
         </div>
       </section>
 
-      <section className={classes.section} aria-label="Who referred you">
+      <section className={classes.section} aria-label={t('account.referrals.referrerAria')}>
         <div className={classes.sectionHead}>
-          <h3 className={classes.sectionTitle}>Were you referred?</h3>
+          <h3 className={classes.sectionTitle}>{t('account.referrals.referrerTitle')}</h3>
         </div>
 
         {data.hasReferrer ? (
           <div className={classes.referrer}>
-            <span className={classes.rowLabel}>Referred by</span>
-            <span className={classes.rowFigure}>{data.referrerNickname ?? 'Someone at the shop'}</span>
+            <span className={classes.rowLabel}>{t('account.referrals.referredBy')}</span>
+            <span className={classes.rowFigure}>{data.referrerNickname ?? t('account.referrals.someone')}</span>
           </div>
         ) : (
           <>
             <p className={classes.note}>
-              Enter their code once and it stays on your account. You can&rsquo;t change it later.
+              {t('account.referrals.enterCodeNote')}
             </p>
             <form
               className={classes.form}
@@ -171,9 +172,9 @@ export function ReferralsPage() {
                 className={classes.input}
                 value={draft}
                 onChange={(e) => setDraft(e.currentTarget.value)}
-                aria-label="Referral code"
+                aria-label={t('account.referrals.codeAria')}
                 aria-invalid={claim.isError ? true : undefined}
-                placeholder="Their code"
+                placeholder={t('account.referrals.codePlaceholder')}
                 autoComplete="off"
                 spellCheck={false}
                 maxLength={64}
@@ -183,12 +184,12 @@ export function ReferralsPage() {
                 className={classes.ghost}
                 disabled={claim.isPending || draft.trim().length === 0}
               >
-                {claim.isPending ? 'Checking' : 'Apply'}
+                {claim.isPending ? t('account.referrals.checking') : t('account.referrals.apply')}
               </button>
             </form>
             {claim.isError ? (
               <span className={classes.error}>
-                {errorMessage(claim.error, "That code didn't work")}
+                {errorMessage(claim.error, t('account.referrals.codeFailed'))}
               </span>
             ) : null}
           </>

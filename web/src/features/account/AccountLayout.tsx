@@ -3,14 +3,15 @@ import { NavLink, Outlet, useLocation } from 'react-router';
 import { useSessionStore } from '@/stores/session.ts';
 import { formatDate } from '@/lib/format.ts';
 import { useProfile } from '@/features/account/queries.ts';
+import { textKey, useText } from '@/text/runtime.tsx';
 import { FADE } from '@/lib/motion.ts';
 import classes from '@/features/account/Account.module.css';
 
 const TABS = [
-  { to: '/account/orders', label: 'Orders' },
-  { to: '/account/loyalty', label: 'Loyalty' },
-  { to: '/account/referrals', label: 'Referrals' },
-  { to: '/account/profile', label: 'Profile' },
+  { to: '/account/orders', label: textKey('account.nav.orders') },
+  { to: '/account/loyalty', label: textKey('account.nav.loyalty') },
+  { to: '/account/referrals', label: textKey('account.nav.referrals') },
+  { to: '/account/profile', label: textKey('account.nav.profile') },
 ];
 
 /**
@@ -27,6 +28,7 @@ const TABS = [
  * that nests under it still uses the outlet.
  */
 export function AccountLayout({ children }: { children?: ReactNode }) {
+  const { t, tp } = useText();
   const profile = useProfile();
   const sessionNickname = useSessionStore((s) => s.customer?.nickname);
   const name = sessionNickname ?? profile.data?.nickname ?? null;
@@ -36,17 +38,19 @@ export function AccountLayout({ children }: { children?: ReactNode }) {
   return (
     <div className={classes.account}>
       <header className={classes.letterhead}>
-        <span className={classes.eyebrow}>Account</span>
-        <h1 className={classes.name}>{name ?? 'Your account'}</h1>
+        <span className={classes.eyebrow}>{t('account.layout.eyebrow')}</span>
+        <h1 className={classes.name}>{name ?? t('common.nav.yourAccount')}</h1>
         {standing ? (
           <p className={classes.meta}>
-            Member since {formatDate(standing.memberSince)} · {standing.totalOrders}{' '}
-            {standing.totalOrders === 1 ? 'order' : 'orders'}
+            {t('account.layout.standing', {
+              date: formatDate(standing.memberSince),
+              orders: tp('account.orders.count', standing.totalOrders),
+            })}
           </p>
         ) : null}
       </header>
 
-      <nav className={classes.tabs} aria-label="Account sections">
+      <nav className={classes.tabs} aria-label={t('account.nav.ariaLabel')}>
         {TABS.map((tab) => (
           <NavLink
             key={tab.to}
@@ -55,7 +59,7 @@ export function AccountLayout({ children }: { children?: ReactNode }) {
               isActive ? `${classes.tab} ${classes.tabActive}` : classes.tab
             }
           >
-            {tab.label}
+            {t(tab.label)}
           </NavLink>
         ))}
       </nav>

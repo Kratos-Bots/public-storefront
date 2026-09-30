@@ -7,6 +7,7 @@ import { formatDate } from '@/lib/format.ts';
 import { orderStatusLabel, orderStatusTone } from '@/features/order-status/status.ts';
 import { StatusPill } from '@/features/account/StatusPill.tsx';
 import { useOrders } from '@/features/account/queries.ts';
+import { useText } from '@/text/runtime.tsx';
 import { rowAnim } from '@/lib/motion.ts';
 import classes from '@/features/account/Account.module.css';
 
@@ -17,6 +18,7 @@ import classes from '@/features/account/Account.module.css';
  * on, so it is the only thing carrying an accent.
  */
 export function OrdersPage() {
+  const { t, tp } = useText();
   const orders = useOrders();
 
   if (orders.isPending) return <PageSkeleton inline />;
@@ -24,12 +26,12 @@ export function OrdersPage() {
   if (orders.isError) {
     return (
       <EmptyState
-        eyebrow="Orders"
-        title="We couldn't load your orders"
-        description="Your history is safe — this was a hiccup between your browser and us."
+        eyebrow={t('account.nav.orders')}
+        title={t('account.orders.loadFailedTitle')}
+        description={t('account.orders.loadFailedBody')}
         action={
           <Button variant="default" size="sm" onClick={() => void orders.refetch()}>
-            Try again
+            {t('common.actions.tryAgain')}
           </Button>
         }
       />
@@ -42,12 +44,12 @@ export function OrdersPage() {
   if (rows.length === 0) {
     return (
       <EmptyState
-        eyebrow="Orders"
-        title="No orders yet"
-        description="Everything you order shows up here, with what you paid and where it is."
+        eyebrow={t('account.nav.orders')}
+        title={t('account.orders.emptyTitle')}
+        description={t('account.orders.emptyBody')}
         action={
           <Button component={Link} to="/" variant="default" size="sm">
-            Browse the catalogue
+            {t('common.actions.browseCatalogue')}
           </Button>
         }
       />
@@ -57,9 +59,9 @@ export function OrdersPage() {
   return (
     <div className={classes.body}>
       <div className={classes.sectionHead}>
-        <h2 className={classes.sectionTitle}>Order history</h2>
+        <h2 className={classes.sectionTitle}>{t('account.orders.title')}</h2>
         <span className={classes.sectionNote}>
-          {total} {total === 1 ? 'order' : 'orders'}
+          {tp('account.orders.count', total)}
         </span>
       </div>
 
@@ -79,7 +81,7 @@ export function OrdersPage() {
               </span>
               {order.outstandingBalance > 0 ? (
                 <span className={classes.due}>
-                  Balance due <Money amount={order.outstandingBalance} />
+                  {t('account.orders.balanceDue')}<Money amount={order.outstandingBalance} />
                 </span>
               ) : null}
             </Link>
@@ -95,7 +97,7 @@ export function OrdersPage() {
             onClick={() => void orders.fetchNextPage()}
             disabled={orders.isFetchingNextPage}
           >
-            {orders.isFetchingNextPage ? 'Loading' : 'Load more'}
+            {orders.isFetchingNextPage ? t('account.orders.loadingMore') : t('account.orders.loadMore')}
           </button>
         </div>
       ) : null}
