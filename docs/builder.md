@@ -216,7 +216,7 @@ fall back to the route's default document.
 
 | Rule id | Meaning |
 |---|---|
-| `exactly-one:<Block>` | the route needs exactly one of the block(s) below (counted through slots) |
+| `exactly-one:<Block>` | the route needs exactly one of the block(s) below (counted through visible slots) |
 | `at-most-one:<Block>` | `Header` and `MobileCartBar`: never more than one in a document (two headers fight over `--sf-pin-h`; two phone bars stack) |
 | `at-least-one:catalog` | the catalogue needs a `ProductGrid`, `ProductList` or `WholesaleTable` |
 | `placement:<Block>` | the block is not allowed on this document (the `PLACEMENT` and `SHELL_ONLY` tables) |
@@ -233,6 +233,15 @@ fall back to the route's default document.
 **AT_LEAST_ONE**: `catalog` → any of `ProductGrid`, `ProductList`, `WholesaleTable`.
 
 **AT_MOST_ONE** (any document): `Header`, `MobileCartBar`.
+
+**Visible slots.** The counts (`exactly-one`, `at-most-one`, `at-least-one`, and `countBlocks`)
+walk only the slots a shopper sees. A block may declare `visibleSlots(props)`: `Columns` returns
+`col1`…`colN` for its `columns` count, and `Footer` returns none in its `template` variant and
+`col1`…`colN` in its `columns` variant; any other block shows all of its slots. So a
+`PageOutlet` moved into `col3` of a Columns that is then set to two columns counts as missing:
+the guard falls back to the default shell for shoppers, and the editor lists the `exactly-one`
+issue so Publish stays off. `placement` and `layout` still check every stored block, hidden
+slots included.
 
 **PLACEMENT** (only on the listed document; anywhere else, including custom pages, is refused):
 `PageOutlet` → `shell`; `ProductGrid`, `ProductList`, `WholesaleTable` → `catalog`;
@@ -304,7 +313,8 @@ images are **never garbage-collected**: removing an `Image` block leaves the fil
 - Uploaded images are never garbage-collected.
 - `Video` accepts YouTube ids and Vimeo ids of six or more digits; private (hash) Vimeo links are
   not supported.
-- Hidden `Footer` columns keep their content but do not render it.
+- Hidden `Columns` / `Footer` columns keep their content but do not render it, and blocks in
+  them do not count toward the rules (see Visible slots).
 
 ## The editor (`/__builder`)
 
@@ -325,7 +335,7 @@ chunks are checked too; only the chunk holding `EditorApp.tsx` is a boundary.
 | admin → storefront | `sf-builder-select-page { docKey }` (optional: the editor honours it; the current admin does not send it) |
 | admin → storefront | `sf-builder-upload-result { requestId, url \| null, error \| null }` |
 | storefront → admin | `sf-builder-ready { protocol: 1 }` (to `'*'`; once per frame boot) |
-| storefront → admin | `sf-builder-change { loadId, pageSet, issues }` (500 ms debounce; never when read-only) |
+| storefront → admin | `sf-builder-change { loadId, pageSet, issues }` (500 ms debounce, flushed at once when the frame blurs, is hidden or unloads; never when read-only) |
 | storefront → admin | `sf-builder-upload-request { requestId, file }` |
 | storefront → admin | `sf-builder-viewport { width: 360 \| 768 \| 1280 \| null }` (on every toggle change and after every load) |
 
@@ -333,6 +343,12 @@ Load identity: every `sf-builder-load` carries a `loadId`, and every `sf-builder
 the `loadId` of the load it derives from, so the admin can discard changes belonging to a
 superseded load. On each load the editor cancels any pending debounced change and posts exactly
 one change built from the loaded data (also when `pageSet` is `null`; none when `readOnly`).
+
+The debounce never holds back the owner's last edit: when the frame loses focus (the owner
+clicks Publish or anything else in the admin), is hidden, or unloads (`blur`, `visibilitychange`
+to hidden, `pagehide`), the pending change is sent immediately. The issues in a change, and the
+issue list in the editor's header, are both computed from the same prepared docs (editor-only
+leftovers such as an unpicked Featured row removed), so the two always agree.
 
 Only messages whose `source` is the parent frame are read; the first valid load pins the admin
 origin (it must be an `http(s)` origin), and later messages from any other origin are ignored.
@@ -345,6 +361,23 @@ Puck's own canvas iframe is disabled (the app's theme variables live on the docu
 its canvas always fills the frame. The header's **Fit / Phone / Tablet / Desktop** toggle posts
 `sf-builder-viewport`; the admin resizes the iframe element to that width (centred, scrollable),
 so CSS media queries and `useMediaQuery` respond exactly as they would on a real device width.
+
+**Fit** is editing. **Phone / Tablet / Desktop** are *exact previews*, and editing is paused
+while one shows: Puck's panels would otherwise eat into the width being previewed. The draft is
+rendered full-frame through the storefront's own runtime (the draft set in
+`PageSetOverrideProvider`, then `PuckShell` with the header, footer, cart drawer, cart bar and
+other system mounts around `PuckPage`, or `Chromeless` for a `chrome: 'none'` page), under a bar
+with a single **Back to editing** button. The Puck canvas stays mounted but hidden, so selection
+and undo history survive the round trip; nothing is posted while a preview shows, and anything
+that changed meanwhile goes out on the way back.
+
+**Hotkey guard.** While an exact preview shows, `guardHiddenCanvasHotkeys` (`preview-keys.ts`)
+holds back undo/redo (Ctrl/Cmd+Z, Shift+Ctrl/Cmd+Z, Ctrl/Cmd+Y) everywhere and Delete/Backspace
+outside text fields, so Puck's document-level shortcuts can't edit or delete blocks in the
+hidden canvas. The keys keep their default action (typing in a text field still works).
+
+The read-only version view uses the same full-runtime render at a width preset; at Fit it shows
+the page on the shop's ground without the shell.
 
 ### Fixture mode
 
@@ -363,7 +396,7 @@ block's zod schema (`derive-fields.ts`), by prop name first:
 
 | Prop name | Field |
 |---|---|
-| ends in `Html` | Puck `richtext` (stored as an HTML string, sanitised on save and render) |
+| ends in `Html` | Puck `richtext` limited to what the sanitiser keeps: paragraphs, headings h2–h4, bold, italic, underline, strike, inline code, quotes, lists, line breaks and links to `https:` / `mailto:` / `tel:` / site paths (no h1/h5/h6, code blocks, rules or alignment). Stored as an HTML string, sanitised on save and render |
 | `href` / ends in `Href` | route link: a fixed page, a custom page (`/pages/<slug>`), or an `https:` / `mailto:` / `tel:` address |
 | `src` / ends in `Src` | image uploaded through the admin (PNG, JPEG, WebP, GIF, ≤ 5 MB) |
 | ends in `Token` (enum) | palette swatches (`var(--sf-<token>)`) |
@@ -374,3 +407,24 @@ block's zod schema (`derive-fields.ts`), by prop name first:
 Otherwise the JSON-schema type decides: enum → radio (≤ 3 options) or select, boolean → On/Off,
 number → number (with min/max), string → text (textarea above 200 chars), array of objects →
 array, object → object. A test fails if any schema key of any block has no field.
+
+The page settings' **Page title** and **Search description** stop at the backend's limits (120
+and 300 characters) as the owner types, with a running count. In a route link, switching to
+**Web address** and leaving the empty box keeps the existing link; only deleting a typed address
+clears it.
+
+An image upload can outlive its field (the owner selects another block or switches page while
+the admin stores the file). The URL is then put into the block it was picked for — through the
+live canvas when that page is open, else into the stored draft — as long as the set hasn't been
+reloaded or reset and the block still exists. Otherwise a toast says "Upload finished — the image
+wasn't added because you left the page."
+
+### Trust boundary
+
+Any site can frame `/__builder?sf-builder=1`; the storefront doesn't restrict `frame-ancestors`
+to the admin. That is acceptable because the frame holds nothing worth stealing: it has no admin
+session or token, fixture mode refuses every mutation and swaps the frame's storage for memory,
+and the only data it sends a framer is the draft it was given plus, when the user picks a file
+in an image field, that file (uploads go to whoever sent the load). This is the same stance as
+the Appearance preview. A per-client `frame-ancestors` limited to the admin origin is a possible
+hardening.

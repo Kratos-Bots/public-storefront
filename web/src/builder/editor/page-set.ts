@@ -14,8 +14,8 @@ export type CustomKey = `page:${string}`;
 
 export const MAX_CUSTOM_PAGES = 50;
 /** Backend limits on a page's root props; the guard silently falls back past them, so the editor flags them. */
-const MAX_TITLE = 120;
-const MAX_DESCRIPTION = 300;
+export const MAX_TITLE = 120;
+export const MAX_DESCRIPTION = 300;
 
 export const isCustomKey = (key: string): key is CustomKey => key.startsWith('page:') && isDocKey(key);
 

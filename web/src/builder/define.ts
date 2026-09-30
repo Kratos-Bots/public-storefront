@@ -22,6 +22,12 @@ export interface BlockDef<P extends Record<string, unknown>> {
   routeBound: boolean;
   /** Prop names holding ComponentData[]. */
   slots: readonly (keyof P & string)[];
+  /**
+   * The slots this block actually renders for `props` (default: all of `slots`). Rules count only
+   * what a shopper can see, so a required block in a hidden column (Columns set to 2 with the
+   * block in col3) is reported missing instead of silently vanishing. `props` is untrusted.
+   */
+  visibleSlots?(props: Record<string, unknown>): readonly string[];
   /** Every prop except `id`; slot props use `slot()`. Parse failures fall back per field. */
   schema: z.ZodType<Omit<P, 'id'>>;
   defaultProps: Omit<P, 'id'>;

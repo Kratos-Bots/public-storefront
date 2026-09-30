@@ -212,3 +212,67 @@ describe('builder bridge', () => {
     expect(getActiveBridge()).toBeNull();
   });
 });
+
+describe('builder bridge: flush when the owner leaves the frame', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  /** A frame window with real, type-aware event targets (window + document). */
+  function eventWindow() {
+    const target = new EventTarget();
+    const doc = Object.assign(new EventTarget(), { visibilityState: 'visible' as DocumentVisibilityState });
+    const parent = { postMessage: vi.fn() };
+    const win = {
+      parent,
+      document: doc,
+      addEventListener: target.addEventListener.bind(target),
+      removeEventListener: target.removeEventListener.bind(target),
+    } as unknown as Window;
+    const send = (data: unknown) => {
+      const e = new Event('message');
+      Object.assign(e, { data, source: parent, origin: ADMIN });
+      target.dispatchEvent(e);
+    };
+    const changes = () => parent.postMessage.mock.calls.filter(([m]) => m.type === 'sf-builder-change');
+    return { win, doc, target, parent, send, changes };
+  }
+
+  it.each(['blur', 'pagehide'])('%s sends the pending change at once (no 500 ms wait)', (type) => {
+    const { win, target, send, changes } = eventWindow();
+    const bridge = createBridge(win, handlers());
+    send(LOAD);
+    bridge.postChange(PAGE_SET, []);
+    expect(changes()).toHaveLength(0);
+    target.dispatchEvent(new Event(type));
+    expect(changes()).toHaveLength(1);
+    expect(changes()[0]![0]).toMatchObject({ loadId: 'load-1' });
+    vi.advanceTimersByTime(CHANGE_DEBOUNCE_MS * 2);
+    expect(changes()).toHaveLength(1); // the debounce timer was cancelled, not re-sent
+    bridge.dispose();
+  });
+
+  it('visibilitychange flushes only when the frame becomes hidden', () => {
+    const { win, doc, send, changes } = eventWindow();
+    const bridge = createBridge(win, handlers());
+    send(LOAD);
+    bridge.postChange(PAGE_SET, []);
+    doc.dispatchEvent(new Event('visibilitychange'));
+    expect(changes()).toHaveLength(0);
+    doc.visibilityState = 'hidden';
+    doc.dispatchEvent(new Event('visibilitychange'));
+    expect(changes()).toHaveLength(1);
+    bridge.dispose();
+  });
+
+  it('nothing pending → a blur sends nothing; after dispose, leaving does nothing', () => {
+    const { win, target, send, parent } = eventWindow();
+    const bridge = createBridge(win, handlers());
+    send(LOAD);
+    target.dispatchEvent(new Event('blur'));
+    expect(parent.postMessage).toHaveBeenCalledTimes(1); // ready only
+    bridge.postChange(PAGE_SET, []);
+    bridge.dispose();
+    target.dispatchEvent(new Event('pagehide'));
+    expect(parent.postMessage).toHaveBeenCalledTimes(1);
+  });
+});

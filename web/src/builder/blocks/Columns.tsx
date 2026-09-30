@@ -14,6 +14,8 @@ export const block = defineBlock<Props>({
   name: 'Columns', label: 'Columns', category: 'content', layouts: 'all', routeBound: false, slots: ['col1', 'col2', 'col3', 'col4'],
   schema: z.object({ columns: z.enum(['2', '3', '4']), stackBelow: z.enum(['sm', 'md', 'lg']), gap: spacing(), col1: slot(), col2: slot(), col3: slot(), col4: slot() }),
   defaultProps: { columns: '2', stackBelow: 'md', gap: 'md', col1: [], col2: [], col3: [], col4: [] },
+  // Only the first `columns` columns render (an unparseable count falls back to the default, 2).
+  visibleSlots: (p) => ['col1', 'col2', 'col3', 'col4'].slice(0, ['2', '3', '4'].includes(p.columns as string) ? Number(p.columns) : 2),
   render: ({ columns, stackBelow, gap, col1, col2, col3, col4 }) => {
     const n = Number(columns);
     const style = { '--cols': columns, '--gap': SPACING[gap] } as CSSProperties;

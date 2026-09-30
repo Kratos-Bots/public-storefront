@@ -1,14 +1,14 @@
 import type { QueryClient } from '@tanstack/react-query';
 import { setApiInterceptor } from '@/api/client.ts';
 import { builderOverrides } from '@/app/builder-gate.ts';
-import type { DocKey, LayoutKind } from '@/builder/types.ts';
+import type { LayoutKind } from '@/builder/types.ts';
 import { createBridge, setActiveBridge, type Bridge } from '@/builder/editor/bridge.ts';
 import { createFixtureInterceptor } from '@/builder/editor/fixture-api.ts';
 import { applyPreviewAs, enterFixtureMode } from '@/builder/editor/fixture-mode.ts';
 import { configureCatalogSource } from '@/builder/editor/custom-fields/pickers.ts';
 import { collectIssues, stableStringify, toPageSet, type DocMap } from '@/builder/editor/page-set.ts';
 import { parseInbound } from '@/builder/editor/protocol.ts';
-import { prepareDoc } from '@/builder/editor/prepare.ts';
+import { prepareDocs } from '@/builder/editor/prepare.ts';
 import { useEditorStore } from '@/builder/editor/store.ts';
 
 /**
@@ -17,8 +17,7 @@ import { useEditorStore } from '@/builder/editor/store.ts';
  * only touched editor-only state, such as adding a row not picked yet).
  */
 function postDocs(bridge: Bridge, docs: DocMap, layout: LayoutKind, last: string | null): string {
-  const emitted: DocMap = {};
-  for (const [key, doc] of Object.entries(docs)) if (doc) emitted[key as DocKey] = prepareDoc(doc);
+  const emitted = prepareDocs(docs);
   const pageSet = toPageSet(emitted, layout);
   const issues = collectIssues(emitted, layout);
   const signature = stableStringify({ pageSet, issues });

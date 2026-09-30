@@ -1,7 +1,10 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { createMemoryRouter, Link, RouterProvider, useNavigate } from 'react-router';
-import { fixtureLocation, useNavigationLock } from '@/builder/editor/fixture-routes.tsx';
+import { FixtureRoutes, fixtureLocation, useNavigationLock } from '@/builder/editor/fixture-routes.tsx';
+import { useEditorStore } from '@/builder/editor/store.ts';
+
+vi.mock('@/features/catalog/use-catalog.ts', () => ({ useCatalog: () => ({ data: undefined }) }));
 import { FIXTURE_ACCESS_KEY, FIXTURE_ORDER_REF } from '@/builder/editor/fixtures.ts';
 
 function Harness() {
@@ -53,5 +56,22 @@ describe('fixture locations', () => {
     expect(fixtureLocation('order-status', null)).toEqual({ pattern: 'order/:ref/:accessKey', path: `order/${FIXTURE_ORDER_REF}/${FIXTURE_ACCESS_KEY}` });
     expect(fixtureLocation('page:about', null)).toEqual({ pattern: 'doc/:docKey', path: 'doc/page-about' });
     expect(fixtureLocation('account.orders', null)).toEqual({ pattern: 'doc/:docKey', path: 'doc/account.orders' });
+  });
+});
+
+describe('FixtureRoutes', () => {
+  it('keeps ?sf-builder=1 (and any other search) when it moves to the open doc fixture path', async () => {
+    useEditorStore.setState({ docKey: 'cart' });
+    const router = createMemoryRouter(
+      [{ path: '/__builder/*', element: <FixtureRoutes><p>canvas</p></FixtureRoutes> }],
+      { initialEntries: ['/__builder?sf-builder=1&x=2'] },
+    );
+    render(<RouterProvider router={router} />);
+    await screen.findByText('canvas');
+    expect(router.state.location.pathname).toBe('/__builder/doc/cart');
+    expect(router.state.location.search).toBe('?sf-builder=1&x=2');
+    await act(async () => useEditorStore.setState({ docKey: 'account.order' }));
+    expect(router.state.location.pathname).toBe(`/__builder/account/orders/${FIXTURE_ORDER_REF}`);
+    expect(router.state.location.search).toBe('?sf-builder=1&x=2');
   });
 });

@@ -34,6 +34,9 @@ export const block = defineBlock<Props>({
     col1: slot(), col2: slot(), col3: slot(), col4: slot(),
   }),
   defaultProps: { variant: 'template', columns: '3', colophon: true, col1: [], col2: [], col3: [], col4: [] },
+  // The template variant renders no columns; the columns variant renders the first `columns` (default 3).
+  visibleSlots: (p) => p.variant !== 'columns' ? []
+    : ['col1', 'col2', 'col3', 'col4'].slice(0, ['1', '2', '3', '4'].includes(p.columns as string) ? Number(p.columns) : 3),
   render: ({ variant, columns, colophon, col1, col2, col3, col4 }) =>
     variant === 'template' ? <ShellFooter /> : <ColumnsFooter columns={columns} colophon={colophon} cols={[col1, col2, col3, col4]} />,
 });

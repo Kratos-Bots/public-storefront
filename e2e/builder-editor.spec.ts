@@ -478,6 +478,44 @@ test.describe('page builder editor · issues and chrome', () => {
   }
 });
 
+test.describe('page builder editor · final review fixes', () => {
+  test('the richtext toolbar offers only what the sanitiser keeps', async ({ page }) => {
+    const { frame } = await openFramed(page);
+    await loadAndWait(page, frame, load());
+    await addBlock(frame, 'Text');
+    const menu = frame.locator('[class*="RichTextMenu"]').locator('visible=true').first();
+    await expect(menu).toBeVisible();
+    for (const name of ['Bold', 'Italic', 'Underline', 'Strikethrough', 'Inline code', 'Blockquote'])
+      await expect(menu.getByRole('button', { name, exact: true })).toBeVisible();
+    // Heading and list selects only: no alignment select (the sanitiser drops style="text-align").
+    await expect(menu.getByRole('button', { name: 'Select', exact: true })).toHaveCount(2);
+    const options = frame.locator('ul[data-puck-rte-menu]').locator('visible=true');
+    // Puck swaps its lazy-loaded heading select in after first paint, which can close a popover
+    // opened during the swap: open it until its whole option list reads back in one go.
+    await expect(async () => {
+      if ((await options.count()) === 0) await menu.getByRole('button', { name: 'Select', exact: true }).first().click();
+      const labels = (await options.first().locator('li').allInnerTexts()).map((t) => t.trim());
+      expect(labels.filter((t) => /^Heading/.test(t))).toEqual(['Heading 2', 'Heading 3', 'Heading 4']);
+    }).toPass({ timeout: 15_000 });
+    await expect(frame.getByText('Align left', { exact: true })).toHaveCount(0);
+  });
+
+  test('an edit is sent the moment the owner clicks into the admin, not 500 ms later', async ({ page }) => {
+    const { frame } = await openFramed(page);
+    const msg = load();
+    await loadAndWait(page, frame, msg);
+    await addBlock(frame, 'Heading');
+    await expect.poll(() => lastPage(page, msg.loadId, 'catalog')).toContain('"type":"Heading"');
+    await frame.getByRole('textbox', { name: 'Text' }).fill('Flushed on blur');
+    const typed = Date.now();
+    // Click the admin page outside the frame: the frame window blurs.
+    await page.mouse.click(1470, 920);
+    await expect.poll(() => lastPage(page, msg.loadId, 'catalog'), { timeout: 400, intervals: [25] }).toContain('Flushed on blur');
+    expect(Date.now() - typed).toBeLessThan(500);
+    await expectAdminAccepts(page);
+  });
+});
+
 test.describe('page builder editor · list items', () => {
   // The renderer drops list rows that fail the schema (empty question / label), so a blank new
   // row would be invisible on the canvas. New rows start filled in instead (fields/FAQ.ts, NavLinks.ts).

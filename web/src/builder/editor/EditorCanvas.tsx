@@ -8,7 +8,7 @@ import { defaultDoc } from '@/builder/defaults/index.ts';
 import { buildEditorConfig } from '@/builder/editor/config.ts';
 import { docFor, isCustomKey } from '@/builder/editor/page-set.ts';
 import { PageGround } from '@/builder/editor/page-ground.tsx';
-import { ExactPreview } from '@/builder/editor/ExactPreview.tsx';
+import { ExactPreview, ExactRuntime } from '@/builder/editor/ExactPreview.tsx';
 import type { DocKey, LayoutKind, PuckDoc } from '@/builder/types.ts';
 import { isLockedOn } from '@/builder/editor/route-bound.ts';
 import { useEditorStore } from '@/builder/editor/store.ts';
@@ -94,9 +94,10 @@ function ReadOnlyView() {
   const layout = useEditorStore((s) => s.layout);
   const docs = useEditorStore((s) => s.docs);
   const epoch = useEditorStore((s) => s.epoch);
+  const viewport = useEditorStore((s) => s.viewport);
   const doc = useMemo(() => shownDoc(docFor(docs, docKey, layout), docKey, layout), [docs, docKey, layout]);
   return (
-    <div className={styles.readOnly}>
+    <div className={styles.readOnly} data-exact={viewport !== null ? '' : undefined}>
       <header className={styles.bar}>
         <div className={styles.group}>
           <PagePicker />
@@ -110,23 +111,34 @@ function ReadOnlyView() {
           <PreviewAsControls />
         </div>
       </header>
-      <div className={styles.readOnlyCanvas}>
-        {/* Keyed on the loaded set and the page: a crash in one version never sticks to the next. */}
-        <DocBoundary
-          key={`${epoch}|${docKey}`}
-          docKey={docKey}
-          fallback={
-            <div className={styles.failed} role="alert">
-              <h2 className={styles.failedTitle}>This page can’t be shown</h2>
-              <p>Part of the published version failed to render. Shoppers see the default page instead.</p>
-            </div>
-          }
-        >
-          <PageGround docKey={docKey} layout={layout}>
-            <RenderDoc doc={doc} docKey={docKey} layout={layout} />
-          </PageGround>
-        </DocBoundary>
-      </div>
+      {viewport !== null ? (
+        // A width preset: the same exact, full-runtime render as while editing (shell, system
+        // mounts, the page's own chrome choice), so a published version is judged as shoppers see it.
+        <div className={styles.exactBody} data-sf-builder-exact={viewport} data-sf-builder-canvas="">
+          <ExactRuntime
+            failTitle="This page can’t be shown"
+            failBody="Part of the published version failed to render. Shoppers see the default page instead."
+          />
+        </div>
+      ) : (
+        <div className={styles.readOnlyCanvas}>
+          {/* Keyed on the loaded set and the page: a crash in one version never sticks to the next. */}
+          <DocBoundary
+            key={`${epoch}|${docKey}`}
+            docKey={docKey}
+            fallback={
+              <div className={styles.failed} role="alert">
+                <h2 className={styles.failedTitle}>This page can’t be shown</h2>
+                <p>Part of the published version failed to render. Shoppers see the default page instead.</p>
+              </div>
+            }
+          >
+            <PageGround docKey={docKey} layout={layout}>
+              <RenderDoc doc={doc} docKey={docKey} layout={layout} />
+            </PageGround>
+          </DocBoundary>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { createElement, type ReactNode } from 'react';
-import type { Config, Fields } from '@puckeditor/core';
+import type { Config, Field, Fields } from '@puckeditor/core';
 import { BLOCKS } from '@/builder/registry.ts';
 import type { BlockCategory, BlockDef } from '@/builder/define.ts';
 import { blockDef, countBlocks } from '@/builder/rules.ts';
@@ -8,6 +8,8 @@ import { insertableBlocks, isLockedOn, ROUTE_BOUND } from '@/builder/editor/rout
 import { scopeFields } from '@/builder/editor/derive-fields.ts';
 import { EditorBlock } from '@/builder/editor/EditorBlock.tsx';
 import { PageGround } from '@/builder/editor/page-ground.tsx';
+import { limitedTextField } from '@/builder/editor/custom-fields/limited-text.tsx';
+import { MAX_DESCRIPTION, MAX_TITLE } from '@/builder/editor/page-set.ts';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyBlock = BlockDef<any>;
@@ -30,8 +32,9 @@ export const EDITOR_FIELDS: Record<string, Fields> = Object.fromEntries(
 );
 
 const ROOT_FIELDS: Fields = {
-  title: { type: 'text', label: 'Page title (browser tab)' },
-  description: { type: 'textarea', label: 'Search description' },
+  // Capped at the backend's limits (page-set.ts MAX_TITLE / MAX_DESCRIPTION) as the owner types.
+  title: limitedTextField('Page title (browser tab)', MAX_TITLE) as Field,
+  description: limitedTextField('Search description', MAX_DESCRIPTION, { multiline: true }) as Field,
   chrome: { type: 'radio', label: 'Shop header and footer', options: [{ label: 'Show', value: 'shell' }, { label: 'Hide', value: 'none' }] },
 };
 

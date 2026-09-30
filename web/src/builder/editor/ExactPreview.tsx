@@ -4,8 +4,8 @@ import { Chromeless } from '@/layouts/Chromeless.tsx';
 import { DocBoundary } from '@/builder/render.tsx';
 import { PageSetOverrideProvider, PuckPage, PuckShell, resolveDoc } from '@/builder/runtime.tsx';
 import { BuilderModeProvider } from '@/builder/mode.ts';
-import { stableStringify, toPageSet, type DocMap } from '@/builder/editor/page-set.ts';
-import { prepareDoc } from '@/builder/editor/prepare.ts';
+import { stableStringify, toPageSet } from '@/builder/editor/page-set.ts';
+import { prepareDocs } from '@/builder/editor/prepare.ts';
 import { guardHiddenCanvasHotkeys } from '@/builder/editor/preview-keys.ts';
 import { useEditorStore } from '@/builder/editor/store.ts';
 import { EyeIcon } from '@/builder/editor/icons.tsx';
@@ -32,20 +32,6 @@ const routeKeyFor = (docKey: DocKey): RouteKey => (docKey === 'shell' ? 'catalog
  * canvas carries on with its selection and undo history.
  */
 export function ExactPreview({ width }: { width: ViewportWidth }) {
-  const docKey = useEditorStore((s) => s.docKey);
-  const layout = useEditorStore((s) => s.layout);
-  const docs = useEditorStore((s) => s.docs);
-  const previewAs = useEditorStore((s) => s.previewAs);
-  const mode = useMemo(() => ({ editing: false, previewAs }), [previewAs]);
-  const pageSet = useMemo(() => {
-    const prepared: DocMap = {};
-    for (const [key, doc] of Object.entries(docs)) if (doc) prepared[key as DocKey] = prepareDoc(doc);
-    return toPageSet(prepared, layout);
-  }, [docs, layout]);
-  const routeKey = routeKeyFor(docKey);
-  const page = resolveDoc(pageSet, routeKey, layout);
-  const chromeless = page?.doc.root.props.chrome === 'none';
-
   const back = useRef<HTMLButtonElement>(null);
   // Keyboard users land on the way back, not at the top of the document.
   useEffect(() => back.current?.focus({ preventScroll: true }), []);
@@ -65,31 +51,54 @@ export function ExactPreview({ width }: { width: ViewportWidth }) {
       </div>
       {/* Its own scroller, so the shop's sticky header sticks under this bar, not behind it. */}
       <div className={styles.exactBody} data-sf-builder-canvas="">
-        <BuilderModeProvider value={mode}>
-          <PageSetOverrideProvider pageSet={pageSet}>
-            <DocBoundary
-              key={stableStringify(pageSet)}
-              docKey={routeKey}
-              fallback={
-                <div className={styles.failed} role="alert">
-                  <h2 className={styles.failedTitle}>This page can’t be previewed</h2>
-                  <p>Part of the draft failed to render. Go back to editing and check its blocks.</p>
-                </div>
-              }
-            >
-              {page ? (
-                <Routes>
-                  <Route element={chromeless ? <Chromeless /> : <PuckShell />}>
-                    <Route index element={<PuckPage key={routeKey} routeKey={routeKey} />} />
-                  </Route>
-                </Routes>
-              ) : (
-                <p className={styles.failed} role="alert">This page no longer exists.</p>
-              )}
-            </DocBoundary>
-          </PageSetOverrideProvider>
-        </BuilderModeProvider>
+        <ExactRuntime
+          failTitle="This page can’t be previewed"
+          failBody="Part of the draft failed to render. Go back to editing and check its blocks."
+        />
       </div>
     </div>
+  );
+}
+
+/**
+ * The open doc of the loaded set, rendered by the storefront's own runtime (see ExactPreview):
+ * the width presets while editing, and the read-only version view at a width preset, both use it.
+ */
+export function ExactRuntime({ failTitle, failBody }: { failTitle: string; failBody: string }) {
+  const docKey = useEditorStore((s) => s.docKey);
+  const layout = useEditorStore((s) => s.layout);
+  const docs = useEditorStore((s) => s.docs);
+  const previewAs = useEditorStore((s) => s.previewAs);
+  const mode = useMemo(() => ({ editing: false, previewAs }), [previewAs]);
+  const pageSet = useMemo(() => toPageSet(prepareDocs(docs), layout), [docs, layout]);
+  const routeKey = routeKeyFor(docKey);
+  const page = resolveDoc(pageSet, routeKey, layout);
+  const chromeless = page?.doc.root.props.chrome === 'none';
+
+  return (
+    <BuilderModeProvider value={mode}>
+      <PageSetOverrideProvider pageSet={pageSet}>
+        <DocBoundary
+          key={stableStringify(pageSet)}
+          docKey={routeKey}
+          fallback={
+            <div className={styles.failed} role="alert">
+              <h2 className={styles.failedTitle}>{failTitle}</h2>
+              <p>{failBody}</p>
+            </div>
+          }
+        >
+          {page ? (
+            <Routes>
+              <Route element={chromeless ? <Chromeless /> : <PuckShell />}>
+                <Route index element={<PuckPage key={routeKey} routeKey={routeKey} />} />
+              </Route>
+            </Routes>
+          ) : (
+            <p className={styles.failed} role="alert">This page no longer exists.</p>
+          )}
+        </DocBoundary>
+      </PageSetOverrideProvider>
+    </BuilderModeProvider>
   );
 }

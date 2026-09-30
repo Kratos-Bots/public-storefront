@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { collectIssues, docFor, type DocMap } from '@/builder/editor/page-set.ts';
 import { editorHints, lockedPresent, type EditorHint } from '@/builder/editor/config.ts';
+import { prepareDocs } from '@/builder/editor/prepare.ts';
 import { useEditorStore } from '@/builder/editor/store.ts';
 import type { Issue, LayoutKind, PuckDoc } from '@/builder/types.ts';
 
@@ -12,12 +13,13 @@ let last: { docs: DocMap; layout: LayoutKind; issues: Issue[] } | null = null;
 
 function issuesFor(docs: DocMap, layout: LayoutKind): Issue[] {
   if (last && last.docs === docs && last.layout === layout) return last.issues;
-  const issues = collectIssues(docs, layout);
+  // From the PREPARED docs, exactly as the session posts them, so header and admin agree.
+  const issues = collectIssues(prepareDocs(docs), layout);
   last = { docs, layout, issues };
   return issues;
 }
 
-/** Every blocking issue in the set being edited (what the admin receives). */
+/** Every blocking issue in the set being edited (exactly what the admin receives). */
 export function useIssues(): Issue[] {
   const docs = useEditorStore((s) => s.docs);
   const layout = useEditorStore((s) => s.layout);

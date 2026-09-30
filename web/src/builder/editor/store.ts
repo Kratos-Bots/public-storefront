@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import type { PreviewAs } from '@/builder/mode.ts';
 import { isDocKey, type ViewportWidth } from '@/builder/editor/protocol.ts';
-import { docsFromPageSet, isCustomKey, isShownIn, newCustomPage, normalizeDoc, withDoc, withoutDoc, type DocMap } from '@/builder/editor/page-set.ts';
-import type { DocKey, LayoutKind, PageSet } from '@/builder/types.ts';
+import { docFor, docsFromPageSet, isCustomKey, isShownIn, newCustomPage, normalizeDoc, withDoc, withoutDoc, type DocMap } from '@/builder/editor/page-set.ts';
+import type { DocKey, LayoutKind, PageSet, PuckDoc } from '@/builder/types.ts';
 
 export const DEFAULT_PREVIEW_AS: PreviewAs = { session: 'signed-in-orders', cart: 'items' };
 
@@ -33,6 +33,13 @@ export interface EditorState {
    */
   updateDoc(docKey: DocKey, raw: unknown, epoch?: number): void;
   resetDoc(docKey: DocKey): void;
+  /**
+   * Edits a doc that is NOT on the canvas (Puck owns the open doc's state; see late-upload.ts for
+   * that case). Refused — returns false — when read-only, when `epoch` is no longer current (a
+   * load, reset or new page replaced the set), when the doc is the open one, or when `patch`
+   * returns null (say, the block is gone).
+   */
+  patchOffCanvas(docKey: DocKey, epoch: number, patch: (doc: PuckDoc) => PuckDoc | null): boolean;
   createPage(slug: string, title: string): string | null;
   setPreviewAs(patch: Partial<PreviewAs>): void;
   setViewport(width: ViewportWidth | null): void;
@@ -81,6 +88,17 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
       docKey: isCustomKey(docKey) && docKey === s.docKey ? 'catalog' : s.docKey,
       epoch: s.epoch + 1,
     });
+  },
+
+  patchOffCanvas(docKey, epoch, patch) {
+    const s = get();
+    if (s.readOnly || s.status !== 'ready' || epoch !== s.epoch || docKey === s.docKey) return false;
+    if (!isShownIn(docKey, s.layout) || (isCustomKey(docKey) && !s.docs[docKey])) return false;
+    const next = patch(docFor(s.docs, docKey, s.layout));
+    if (!next) return false;
+    const docs = withDoc(s.docs, docKey, normalizeDoc(next, docKey), s.layout);
+    if (docs !== s.docs) set({ docs });
+    return true;
   },
 
   createPage(slug, title) {

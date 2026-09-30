@@ -7,6 +7,7 @@ import { FIXED_ROUTE_KEYS, type DocKey, type LayoutKind } from '@/builder/types.
 import { insertableBlocks } from '@/builder/editor/route-bound.ts';
 import { routeLinkField } from '@/builder/editor/custom-fields/route-link.tsx';
 import { imageField } from '@/builder/editor/custom-fields/image.tsx';
+import { richtextField } from '@/builder/editor/custom-fields/richtext.tsx';
 import { humanizeValue, paletteTokenField } from '@/builder/editor/custom-fields/palette-token.tsx';
 import { categoryPickerField, productPickerField } from '@/builder/editor/custom-fields/pickers.ts';
 
@@ -101,7 +102,7 @@ export function fieldFor(key: string, raw: JsonSchema): Field | null {
   const s = unwrapNullable(raw);
   const label = humanizeKey(key);
   const values = enumValues(s);
-  if (key.endsWith('Html')) return { type: 'richtext', label };
+  if (key.endsWith('Html')) return richtextField(label);
   if (key === 'href' || key.endsWith('Href')) return routeLinkField(label) as Field;
   if (key === 'src' || key.endsWith('Src')) return imageField(label) as Field;
   if (key.endsWith('Token') && values) return paletteTokenField(label, values.map(String)) as Field;

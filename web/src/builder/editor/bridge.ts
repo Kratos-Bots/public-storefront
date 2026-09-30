@@ -18,7 +18,7 @@ export interface BridgeHandlers {
 export interface Bridge {
   /** Debounced 500 ms; only the newest change is sent, stamped with the current loadId. No-op before a load and while it is read-only. */
   postChange(pageSet: PageSet, issues: Issue[]): void;
-  /** Send a pending change now. */
+  /** Send a pending change now (also runs on the frame's blur, pagehide and visibilitychange→hidden). */
   flushChange(): void;
   /** The admin performs the authenticated upload; resolves to the stored URL. */
   requestUpload(file: File): Promise<string>;
@@ -96,6 +96,16 @@ export function createBridge(win: Window, handlers: BridgeHandlers): Bridge {
   };
 
   win.addEventListener('message', onMessage);
+  // The owner's next click is often in the admin (Publish, Save, switching tabs), which can act on
+  // the set before the 500 ms debounce fires: send the pending change the moment the frame loses
+  // focus, is hidden, or unloads.
+  const onLeave = (event: Event) => {
+    const hidden = event.type === 'visibilitychange' && win.document?.visibilityState === 'hidden';
+    if (event.type === 'blur' || event.type === 'pagehide' || hidden) flushChange();
+  };
+  win.addEventListener('blur', onLeave);
+  win.addEventListener('pagehide', onLeave);
+  win.document?.addEventListener('visibilitychange', onLeave);
   // Carries nothing, so it may go to '*': the admin answers with a load, whose origin we then pin.
   // Sent exactly once per bridge; session.ts creates one bridge per frame boot.
   win.parent.postMessage(readyMessage(), '*');
@@ -129,6 +139,9 @@ export function createBridge(win: Window, handlers: BridgeHandlers): Bridge {
       if (disposed) return;
       disposed = true;
       win.removeEventListener('message', onMessage);
+      win.removeEventListener('blur', onLeave);
+      win.removeEventListener('pagehide', onLeave);
+      win.document?.removeEventListener('visibilitychange', onLeave);
       cancelChange();
       for (const entry of uploads.values()) {
         clearTimeout(entry.timer);

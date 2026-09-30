@@ -101,6 +101,27 @@ describe('editor config', () => {
     expect(buildEditorConfig('shell', 'storefront', NONE).root!.fields).toEqual({});
   });
 
+  it('caps the root title at 120 and the description at 300 characters as the owner types', () => {
+    const fields = buildEditorConfig('cart', 'storefront', NONE).root!.fields as Record<string, Field>;
+    const onChange = vi.fn();
+    const renderField = (name: 'title' | 'description', value: string) => {
+      const f = fields[name] as Extract<Field, { type: 'custom' }>;
+      expect(f.type).toBe('custom');
+      return render(createElement(() => f.render({ field: f, name, id: `root_${name}`, value, onChange, readOnly: false } as never))).container;
+    };
+    const title = renderField('title', 'Northbound Supply').querySelector('input')!;
+    expect(title).toHaveAttribute('maxlength', '120');
+    expect(screen.getByLabelText('Page title (browser tab)')).toBe(title);
+    expect(screen.getByText('17 of 120 characters')).toBeInTheDocument();
+    cleanup();
+    const description = renderField('description', 'x'.repeat(301)).querySelector('textarea')!;
+    expect(description).toHaveAttribute('maxlength', '300');
+    // A stored value already over the limit shows in full, flagged, so it can be trimmed.
+    expect(description).toHaveValue('x'.repeat(301));
+    expect(description).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByText(/301 of 300 characters/)).toBeInTheDocument();
+  });
+
   it('keeps unpicked FeaturedProducts rows in the editor but never in what is emitted or previewed', () => {
     const config = buildEditorConfig('page:about', 'storefront', NONE);
     // No resolveData: Puck writes resolved props back into its state, which would delete the row the admin is about to pick.

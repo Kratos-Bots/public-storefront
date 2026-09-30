@@ -35,7 +35,8 @@ export function FixtureRoutes({ children }: { children: ReactNode }) {
   const target = `${BUILDER_PATH}/${path}`;
   return (
     <>
-      {location.pathname !== target && <Navigate to={target} replace />}
+      {/* Keep the search (?sf-builder=1…): a frame reload must come back in builder mode. */}
+      {location.pathname !== target && <Navigate to={{ pathname: target, search: location.search, hash: location.hash }} replace />}
       <Routes>
         {/* Trailing splat: the exact preview nests the shop's own shell and page routes here. */}
         <Route path={`${pattern}/*`} element={children} />

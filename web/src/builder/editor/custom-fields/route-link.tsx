@@ -23,6 +23,9 @@ function RouteLinkInput({ label, id, value, onChange, readOnly }: InputProps) {
   const [mode, setMode] = useState<LinkMode>(() => linkModeOf(current));
   const [draft, setDraft] = useState(() => (linkModeOf(current) === 'url' ? current : ''));
   const [error, setError] = useState<string | null>(null);
+  // Whether the owner has typed in the Address box since it last matched the value: only an edit
+  // to empty clears the link — merely visiting the empty box (after switching from a shop page) doesn't.
+  const [edited, setEdited] = useState(false);
   const uid = useId();
   const docs = useEditorStore((s) => s.docs);
   const pages = useMemo(
@@ -34,6 +37,7 @@ function RouteLinkInput({ label, id, value, onChange, readOnly }: InputProps) {
   // the chosen mode but empties the Address box, so a later blur can't re-commit the old address.
   useEffect(() => {
     setError(null);
+    setEdited(false);
     if (current === '') { setDraft(''); return; }
     const next = linkModeOf(current);
     setMode(next);
@@ -48,7 +52,11 @@ function RouteLinkInput({ label, id, value, onChange, readOnly }: InputProps) {
   };
 
   const commitDraft = () => {
-    if (draft.trim() === '') { setDraft(''); emit(''); return; }
+    if (draft.trim() === '') {
+      setDraft('');
+      if (edited) { setEdited(false); emit(''); }
+      return;
+    }
     const v = normalizeExternal(draft);
     if (v === null) { setError(ADDRESS_ERROR); return; }
     setDraft(v);
@@ -62,7 +70,7 @@ function RouteLinkInput({ label, id, value, onChange, readOnly }: InputProps) {
   const errorId = `${uid}-error`;
   const controlId = `${uid}-control`;
   const modeIndex = MODES.findIndex((m) => m.mode === mode);
-  const chooseMode = (m: LinkMode) => { setMode(m); setError(null); };
+  const chooseMode = (m: LinkMode) => { setMode(m); setError(null); setEdited(false); };
 
   return (
     <fieldset className={styles.field} id={id} disabled={readOnly}>
@@ -126,7 +134,7 @@ function RouteLinkInput({ label, id, value, onChange, readOnly }: InputProps) {
             value={draft}
             aria-invalid={error ? true : undefined}
             aria-describedby={error ? errorId : undefined}
-            onChange={(e) => setDraft(e.target.value)}
+            onChange={(e) => { setDraft(e.target.value); setEdited(true); }}
             onBlur={commitDraft}
             onKeyDown={(e) => {
               if (e.key === 'Enter') { e.preventDefault(); commitDraft(); }

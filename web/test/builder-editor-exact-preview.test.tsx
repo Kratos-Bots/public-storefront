@@ -6,6 +6,10 @@ import { createMemoryRouter, RouterProvider } from 'react-router';
 import type { StorefrontSettings } from '@/types/settings.ts';
 import type { PuckDoc } from '@/builder/types.ts';
 
+// EditorCanvas pulls in Puck, whose drag-and-drop layer needs ResizeObserver at import time.
+vi.hoisted(() => {
+  globalThis.ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} } as unknown as typeof ResizeObserver;
+});
 const state = vi.hoisted(() => ({ settings: {} as StorefrontSettings }));
 vi.mock('@/app/settings.ts', () => ({ useSettings: () => state.settings }));
 vi.mock('@/app/builder-gate.ts', async (orig) => ({ ...(await orig<typeof import('@/app/builder-gate.ts')>()), isBuilderMode: () => true }));
@@ -21,6 +25,7 @@ vi.mock('@/features/webapp/useTelegramChrome.ts', () => ({ useTelegramChrome: ()
 vi.mock('@/lib/telegram-webapp.ts', () => ({ isTelegramWebApp: () => false }));
 
 import { ExactPreview } from '@/builder/editor/ExactPreview.tsx';
+import { EditorCanvas } from '@/builder/editor/EditorCanvas.tsx';
 import { DEFAULT_PREVIEW_AS, useEditorStore } from '@/builder/editor/store.ts';
 import { builderOverrides } from '@/app/builder-gate.ts';
 import { defaultDoc } from '@/builder/defaults/index.ts';
@@ -93,6 +98,50 @@ describe('exact preview', () => {
     expect(screen.getByRole('heading', { name: 'First draft' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Back to editing' }));
     expect(useEditorStore.getState().viewport).toBeNull();
+  });
+});
+
+describe('read-only version at a width preset', () => {
+  beforeEach(() => {
+    settings();
+    builderOverrides.setState({ theme: null, layout: 'storefront' });
+    useEditorStore.setState({ status: 'waiting', layout: 'storefront', readOnly: false, docs: {}, docKey: 'catalog', epoch: 0, previewAs: DEFAULT_PREVIEW_AS, viewport: null });
+  });
+  afterEach(cleanup);
+
+  function mountReadOnly(viewport: 360 | 768 | 1280 | null) {
+    useEditorStore.getState().load({
+      layout: 'storefront', readOnly: true,
+      pageSet: { schemaVersion: 1, shell: defaultDoc('shell', 'storefront')!, pages: { 'page:about': page([{ type: 'Heading', props: { id: 'h1', text: 'Published story' } }]) } },
+    });
+    useEditorStore.getState().selectDoc('page:about');
+    useEditorStore.setState({ viewport });
+    const router = createMemoryRouter([{ path: '/__builder/doc/:docKey/*', element: <EditorCanvas /> }], { initialEntries: ['/__builder/doc/page-about'] });
+    return render(
+      <MantineProvider env="test">
+        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+          <RouterProvider router={router} />
+        </QueryClientProvider>
+      </MantineProvider>,
+    );
+  }
+
+  it('renders through the full runtime (shell + system mounts), like the editing presets', async () => {
+    const { container } = mountReadOnly(768);
+    expect(await screen.findByText('Published version · read only')).toBeInTheDocument();
+    const body = container.querySelector('[data-sf-builder-exact="768"]') as HTMLElement;
+    expect(body).not.toBeNull();
+    expect(within(body).getByRole('heading', { name: 'Published story' }).closest('main')).not.toBeNull();
+    expect(body.querySelector('[data-mark="cart-drawer"]')).not.toBeNull();
+    // No editing bar: the read-only header's width toggle is the way back to Fit.
+    expect(screen.queryByRole('button', { name: 'Back to editing' })).toBeNull();
+  });
+
+  it('Fit keeps the plain page view (no shop system mounts)', async () => {
+    const { container } = mountReadOnly(null);
+    expect(await screen.findByRole('heading', { name: 'Published story' })).toBeInTheDocument();
+    expect(container.querySelector('[data-sf-builder-exact]')).toBeNull();
+    expect(container.querySelector('[data-mark="cart-drawer"]')).toBeNull();
   });
 });
 

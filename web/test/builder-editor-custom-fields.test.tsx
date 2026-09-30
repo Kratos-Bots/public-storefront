@@ -130,6 +130,21 @@ describe('route link field', () => {
     expect(onChange).toHaveBeenCalledWith('');
   });
 
+  it('switching to Web address and leaving the empty box keeps an existing shop link', () => {
+    const onChange = renderField(routeLinkField('Link'), '/cart');
+    fireEvent.click(screen.getByRole('radio', { name: 'Web address' }));
+    const input = screen.getByLabelText('Address');
+    fireEvent.focus(input);
+    fireEvent.blur(input);
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onChange).not.toHaveBeenCalled();
+    // Typing then deleting everything is an edit to empty: that does clear the link.
+    fireEvent.change(input, { target: { value: 'h' } });
+    fireEvent.change(input, { target: { value: '' } });
+    fireEvent.blur(input);
+    expect(onChange).toHaveBeenCalledWith('');
+  });
+
   it('shows a link to a deleted custom page as missing', () => {
     renderField(routeLinkField('Link'), '/pages/gone');
     const select = screen.getByLabelText('Custom page') as HTMLSelectElement;

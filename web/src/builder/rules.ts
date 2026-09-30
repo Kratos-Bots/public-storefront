@@ -77,19 +77,35 @@ const AT_LEAST_ONE: Partial<Record<FixedRouteKey, readonly string[]>> = {
   catalog: ['ProductGrid', 'ProductList', 'WholesaleTable'],
 };
 
-/** Every component in the doc, depth-first through each block's declared slots. */
-function walk(items: readonly ComponentData[], visit: (c: ComponentData) => void): void {
+/**
+ * The slots of `item` a shopper sees: the block's `visibleSlots(props)` when it declares one (a
+ * 2-column Columns hides col3/col4), else all of its slots. Only names from `def.slots` count.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function shownSlots(def: BlockDef<any>, props: Record<string, unknown>): readonly string[] {
+  if (!def.visibleSlots) return def.slots;
+  const visible = def.visibleSlots(props);
+  return def.slots.filter((s) => visible.includes(s));
+}
+
+/**
+ * Every component in the doc, depth-first through each block's slots. `visibleOnly` (the default)
+ * follows only the slots that render, so a required block parked in a hidden column counts as
+ * missing; `false` reaches every stored block (placement and layout checks).
+ */
+function walk(items: readonly ComponentData[], visit: (c: ComponentData) => void, visibleOnly = true): void {
   for (const item of items) {
     visit(item);
     const def = blockDef(item.type);
     if (!def) continue;
-    for (const s of def.slots) {
+    for (const s of visibleOnly ? shownSlots(def, item.props) : def.slots) {
       const children = item.props[s];
-      if (Array.isArray(children)) walk(children as ComponentData[], visit);
+      if (Array.isArray(children)) walk(children as ComponentData[], visit, visibleOnly);
     }
   }
 }
 
+/** How many of each block a shopper sees (blocks in hidden slots — e.g. a hidden column — are not counted). */
 export function countBlocks(doc: PuckDoc): Map<string, number> {
   const counts = new Map<string, number>();
   walk(doc.content, (c) => counts.set(c.type, (counts.get(c.type) ?? 0) + 1));
@@ -125,7 +141,8 @@ export function checkRules(doc: PuckDoc, docKey: DocKey, layout: LayoutKind): Is
       flagged.add(`placement:${c.type}`);
       issues.push({ docKey, rule: `placement:${c.type}`, message: `${label(c.type)} can't be placed on this page.`, blockId: c.props.id });
     }
-  });
+  }, false);
+  // Counts (exactly-one, at-most-one, at-least-one) are of what renders: see `walk`.
   const counts = countBlocks(doc);
   for (const type of own(EXACTLY_ONE, docKey) ?? []) {
     if ((counts.get(type) ?? 0) !== 1) {

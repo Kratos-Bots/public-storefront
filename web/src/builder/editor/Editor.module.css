@@ -737,6 +737,13 @@
   inset-block-start: 0;
 }
 
+/* At a width preset the version scrolls in its own body (as the exact preview does), so the
+   shop's sticky header rests under this bar instead of sliding behind it. */
+.readOnly[data-exact] {
+  block-size: 100dvh;
+  min-block-size: 0;
+}
+
 .readOnlyCanvas {
   flex: 1;
   min-block-size: 0;

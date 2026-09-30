@@ -1,6 +1,8 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { CustomField } from '@puckeditor/core';
+import { notifications } from '@mantine/notifications';
 import { getActiveBridge } from '@/builder/editor/bridge.ts';
+import { placeLateUpload, uploadTarget } from '@/builder/editor/late-upload.ts';
 import { MEDIA_SRC_RE } from '@/builder/define.ts';
 import styles from '@/builder/editor/custom-fields/fields.module.css';
 
@@ -13,20 +15,28 @@ export function checkImageFile(file: File): string | null {
   return null;
 }
 
-interface InputProps { label: string; id: string; value: string; onChange: (v: string) => void; readOnly?: boolean }
+interface InputProps { label: string; id: string; name: string; value: string; onChange: (v: string) => void; readOnly?: boolean }
 
-function ImageInput({ label, id, value, onChange, readOnly }: InputProps) {
+/** Shown when an upload finishes after its field has gone and its block can't be reached. */
+export const LATE_UPLOAD_LOST = 'Upload finished — the image wasn’t added because you left the page.';
+
+function ImageInput({ label, id, name, value, onChange, readOnly }: InputProps) {
   const uid = useId();
   const inputId = `${uid}-file`;
   const statusId = `${uid}-status`;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Only the newest upload may land, and never after the field has gone.
+  // Only the newest upload may land. Once the field has gone, `onChange` would write to whatever
+  // block Puck has selected now, so a late result is placed by its target instead (late-upload.ts).
   const attempt = useRef(0);
+  const mounted = useRef(true);
   // The file input stays enabled while uploading (disabling the focused control drops focus to
   // <body>); picks are ignored instead.
   const busyRef = useRef(false);
-  useEffect(() => () => { attempt.current += 1; }, []);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
 
   const current = typeof value === 'string' ? value : '';
   const shown = MEDIA_SRC_RE.test(current);
@@ -38,6 +48,8 @@ function ImageInput({ label, id, value, onChange, readOnly }: InputProps) {
     const bridge = getActiveBridge();
     if (!bridge) { setError('The editor is not connected to the admin. Reload the page and try again.'); return; }
     const mine = ++attempt.current;
+    // Captured now: the block and doc this image was picked for.
+    const target = uploadTarget(id, name);
     busyRef.current = true;
     setBusy(true);
     setError(null);
@@ -45,13 +57,19 @@ function ImageInput({ label, id, value, onChange, readOnly }: InputProps) {
       // The bridge times the request out client-side (UPLOAD_TIMEOUT_MS) and rejects with a message.
       const url = await bridge.requestUpload(file);
       if (mine !== attempt.current) return;
+      if (!mounted.current) {
+        if (!MEDIA_SRC_RE.test(url) || !target || !placeLateUpload(target, url)) {
+          notifications.show({ id: 'sf-builder-late-upload', message: LATE_UPLOAD_LOST, color: 'yellow', position: 'bottom-center' });
+        }
+        return;
+      }
       if (!MEDIA_SRC_RE.test(url)) { setError('The upload returned an unexpected address. Try again.'); return; }
       onChange(url);
     } catch (err) {
-      if (mine !== attempt.current) return;
+      if (mine !== attempt.current || !mounted.current) return;
       setError(err instanceof Error && err.message ? err.message : 'The upload failed. Try again.');
     } finally {
-      if (mine === attempt.current) { busyRef.current = false; setBusy(false); }
+      if (mine === attempt.current && mounted.current) { busyRef.current = false; setBusy(false); }
     }
   };
 
@@ -100,5 +118,5 @@ function ImageInput({ label, id, value, onChange, readOnly }: InputProps) {
 }
 
 export function imageField(label: string): CustomField<string> {
-  return { type: 'custom', label, render: (p) => <ImageInput label={label} id={p.id} value={p.value} onChange={p.onChange} readOnly={p.readOnly} /> };
+  return { type: 'custom', label, render: (p) => <ImageInput label={label} id={p.id} name={p.name} value={p.value} onChange={p.onChange} readOnly={p.readOnly} /> };
 }

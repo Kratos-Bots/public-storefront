@@ -1,5 +1,6 @@
 import { blockDef } from '@/builder/rules.ts';
-import type { ComponentData, PuckDoc } from '@/builder/types.ts';
+import type { ComponentData, DocKey, PuckDoc } from '@/builder/types.ts';
+import type { DocMap } from '@/builder/editor/page-set.ts';
 
 type Props = Record<string, unknown>;
 
@@ -60,4 +61,14 @@ export function prepareDoc(doc: PuckDoc): PuckDoc {
     if (changed) zones = next;
   }
   return content === doc.content && zones === doc.zones ? doc : { ...doc, content, ...(zones ? { zones } : {}) };
+}
+
+/**
+ * `prepareDoc` over a whole set: exactly what the session emits to the admin. The header's issue
+ * list is computed from this too, so the editor and the admin always agree on what blocks Publish.
+ */
+export function prepareDocs(docs: DocMap): DocMap {
+  const out: DocMap = {};
+  for (const [key, doc] of Object.entries(docs)) if (doc) out[key as DocKey] = prepareDoc(doc);
+  return out;
 }

@@ -13,6 +13,7 @@ import { cssString } from '@/builder/editor/resting-marks.ts';
 import { rememberPanel, shouldAutoCloseBlocks, WIDE_FRAME_QUERY } from '@/builder/editor/panels.ts';
 import { CheckIcon, PanelLeftIcon, PanelRightIcon, PlusIcon, RedoIcon, TipIcon, UndoIcon, WarnIcon } from '@/builder/editor/icons.tsx';
 import { blockDef } from '@/builder/rules.ts';
+import { registerLiveCanvas } from '@/builder/editor/late-upload.ts';
 import type { PreviewAs } from '@/builder/mode.ts';
 import type { DocKey, Issue } from '@/builder/types.ts';
 import styles from '@/builder/editor/Editor.module.css';
@@ -476,9 +477,39 @@ function IssuesMenu() {
 
 // ── header ───────────────────────────────────────────────────────────────────
 
+/**
+ * Lets a finished upload whose field has gone (late-upload.ts) set its block's prop through this
+ * canvas's own Puck state. The header lives exactly as long as the Puck mount (keyed on doc and
+ * epoch), so the doc and epoch it was mounted for are read once.
+ */
+function useLiveCanvas() {
+  const getPuck = useGetPuck();
+  const [mount] = useState(() => {
+    const s = useEditorStore.getState();
+    return { docKey: s.docKey, epoch: s.epoch };
+  });
+  useEffect(() => registerLiveCanvas({
+    ...mount,
+    setProp(blockId, prop, value) {
+      const api = getPuck();
+      if (blockId === null) {
+        const root = api.appState.data.root;
+        api.dispatch({ type: 'replaceRoot', root: { ...root, props: { ...root.props, [prop]: value } } });
+        return true;
+      }
+      const selector = api.getSelectorForId(blockId);
+      const item = selector ? api.getItemBySelector(selector) : undefined;
+      if (!selector || !item) return false;
+      api.dispatch({ type: 'replace', destinationIndex: selector.index, destinationZone: selector.zone, data: { ...item, props: { ...item.props, [prop]: value } } });
+      return true;
+    },
+  }), [getPuck, mount]);
+}
+
 /** Replaces Puck's header (no Publish: the admin publishes). Rendered inside <Puck>. */
 export function EditorHeader(_props: { actions: ReactNode; children: ReactNode }) {
   const docKey = useEditorStore((s) => s.docKey);
+  useLiveCanvas();
   return (
     <header className={styles.bar} data-sf-builder-header="">
       <div className={styles.group}>
