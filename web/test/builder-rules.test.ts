@@ -4,20 +4,25 @@ import type { ComponentData, PuckDoc } from '@/builder/types.ts';
 
 vi.mock('@/builder/registry.ts', async () => {
   const { defineBlock, slot } = await import('@/builder/define.ts');
-  const b = (name: string, category: 'shell' | 'catalogue' | 'commerce' | 'content', routeBound = false, slots: string[] = [], layouts: 'all' | ('storefront' | 'menu' | 'webapp')[] = 'all') =>
+  const b = (name: string, category: 'shell' | 'catalogue' | 'commerce' | 'content', routeBound = false, slots: string[] = [], layouts: 'all' | ('storefront' | 'menu' | 'webapp')[] = 'all', style: false | { target: 'root' | 'wrap'; keys: string[] } = false) =>
     defineBlock<Record<string, unknown> & { id: string }>({
-      name, label: name, category, layouts, routeBound, slots,
+      name, label: name === 'ProductGrid' ? 'Product grid' : name, category, layouts, routeBound, slots, style: style as never,
       schema: z.object(Object.fromEntries(slots.map((s) => [s, slot()]))) as never,
       defaultProps: Object.fromEntries(slots.map((s) => [s, []])), render: () => null,
+      ...(name === 'Columns' ? { visibleSlots: (p: Record<string, unknown>) => ['col1', 'col2', 'col3'].slice(0, p.columns === '3' ? 3 : 2) } : {}),
     });
+  const hideable = { target: 'root' as const, keys: ['bg', 'hide'] };
   return {
     BLOCKS: {
       PageOutlet: b('PageOutlet', 'shell', true), Header: b('Header', 'shell'), NoticeBanners: b('NoticeBanners', 'shell'),
+      MobileCartBar: b('MobileCartBar', 'shell'),
       ProductGrid: b('ProductGrid', 'catalogue'), ProductList: b('ProductList', 'catalogue'),
       WholesaleTable: b('WholesaleTable', 'catalogue'),
       CheckoutFlow: b('CheckoutFlow', 'commerce', true), CartContents: b('CartContents', 'commerce', true, ['summary']),
-      CartSummary: b('CartSummary', 'commerce', true), Heading: b('Heading', 'content'),
-      Section: b('Section', 'content', false, ['content']), MenuOnly: b('MenuOnly', 'content', false, [], ['menu']),
+      CartSummary: b('CartSummary', 'commerce', true), Heading: b('Heading', 'content', false, [], 'all', hideable),
+      Section: b('Section', 'content', false, ['content'], 'all', hideable), MenuOnly: b('MenuOnly', 'content', false, [], ['menu']),
+      Columns: b('Columns', 'content', false, ['col1', 'col2', 'col3'], 'all', hideable),
+      Boxed: b('Boxed', 'content', false, ['content'], 'all', { target: 'wrap', keys: ['bg'] }),
     },
   };
 });
@@ -88,5 +93,39 @@ describe('checkRules', () => {
     expect(allowedOn('CheckoutFlow', 'cart')).toBe(false);
     expect(allowedOn('Heading', 'shell')).toBe(true);
     expect(allowedOn('ProductGrid', 'shell')).toBe(false);
+  });
+});
+
+describe('hidden-required (block-styling spec §10.2)', () => {
+  const rules = (doc: PuckDoc, key: Parameters<typeof checkRules>[1]) => checkRules(doc, key, 'storefront').map((i) => i.rule);
+  it('a hidden Section holding the catalogue grid breaks the catalogue', () => {
+    const issues = checkRules(d([c('Section', { blockStyle: { hide: 'mobile' }, content: [c('ProductGrid')] }, 's1')]), 'catalog', 'storefront');
+    expect(issues.map((i) => i.rule)).toEqual(['hidden-required:Section']);
+    expect(issues[0]!.message).toBe('Section is hidden below 992 px but holds the Product grid, which every shopper must see.');
+    expect(issues[0]!.blockId).toBe('s1');
+  });
+  it('desktop wording, and a nested hidden container', () => {
+    const issues = checkRules(d([c('Section', { content: [c('Section', { blockStyle: { hide: 'desktop' }, content: [c('ProductList')] }, 'inner')] })]), 'catalog', 'storefront');
+    expect(issues.map((i) => i.message)).toEqual(['Section is hidden from 992 px but holds the ProductList, which every shopper must see.']);
+  });
+  it('Columns hiding the PageOutlet on the shell', () => {
+    expect(rules(d([c('Columns', { columns: '2', blockStyle: { hide: 'mobile' }, col1: [c('PageOutlet')] })]), 'shell')).toEqual(['hidden-required:Columns']);
+  });
+  it('a hidden Section holding the MobileCartBar', () => {
+    expect(rules(d([c('PageOutlet'), c('Section', { blockStyle: { hide: 'desktop' }, content: [c('MobileCartBar')] })]), 'shell')).toEqual(['hidden-required:Section']);
+  });
+  it('a hidden Heading, or a hidden Section with only content, passes', () => {
+    expect(rules(d([c('Heading', { blockStyle: { hide: 'mobile' } }), c('ProductGrid')]), 'catalog')).toEqual([]);
+    expect(rules(d([c('Section', { blockStyle: { hide: 'mobile' }, content: [c('Heading')] }), c('ProductGrid')]), 'catalog')).toEqual([]);
+  });
+  it('a required block in a non-rendered column is exactly-one only, never hidden-required', () => {
+    expect(rules(d([c('Columns', { columns: '2', blockStyle: { hide: 'mobile' }, col3: [c('PageOutlet')] })]), 'shell')).toEqual(['exactly-one:PageOutlet']);
+  });
+  it('a hide the block does not accept (or an unknown value) counts for nothing', () => {
+    expect(rules(d([c('Boxed', { blockStyle: { hide: 'mobile' }, content: [c('ProductGrid')] })]), 'catalog')).toEqual([]);
+    expect(rules(d([c('Section', { blockStyle: { hide: 'always' }, content: [c('ProductGrid')] })]), 'catalog')).toEqual([]);
+  });
+  it('the cart: a hidden Section around CartContents', () => {
+    expect(rules(d([c('Section', { blockStyle: { hide: 'mobile' }, content: [c('CartContents', { summary: [c('CartSummary')] })] })]), 'cart')).toEqual(['hidden-required:Section']);
   });
 });

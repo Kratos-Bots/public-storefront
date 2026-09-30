@@ -1,6 +1,6 @@
 import { BLOCKS } from '@/builder/registry.ts';
 import type { BlockDef } from '@/builder/define.ts';
-import type { ComponentData, DocKey, FixedRouteKey, Issue, LayoutKind, PuckDoc } from '@/builder/types.ts';
+import { isRecord, type ComponentData, type DocKey, type FixedRouteKey, type Issue, type LayoutKind, type PuckDoc } from '@/builder/types.ts';
 
 const ACCOUNT: readonly DocKey[] = ['account.orders', 'account.order', 'account.loyalty', 'account.referrals', 'account.profile'];
 
@@ -128,6 +128,34 @@ export function allowedOn(type: string, docKey: DocKey): boolean {
 
 const label = (type: string) => blockDef(type)?.label ?? type.slice(0, 60);
 
+/** Blocks a shopper must always be able to reach, whatever the doc (spec §10.2). */
+const ALWAYS_REQUIRED: readonly string[] = ['PageOutlet', 'MobileCartBar'];
+
+function requiredOn(docKey: DocKey): ReadonlySet<string> {
+  const anyOf = own(AT_LEAST_ONE as Readonly<Record<string, readonly string[]>>, docKey) ?? [];
+  return new Set([...(own(EXACTLY_ONE, docKey) ?? []), ...anyOf, ...ALWAYS_REQUIRED]);
+}
+
+/** The block's own (allowed, valid) `hide`, or null. `props` is untrusted. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function hiddenAs(def: BlockDef<any>, props: Record<string, unknown>): 'mobile' | 'desktop' | null {
+  const style = props.blockStyle;
+  if (!def.style || !def.style.keys.includes('hide') || !isRecord(style)) return null;
+  return style.hide === 'mobile' || style.hide === 'desktop' ? style.hide : null;
+}
+
+/** The first required block inside `item`'s visible slots, at any depth. */
+function requiredInside(item: ComponentData, required: ReadonlySet<string>): string | null {
+  const def = blockDef(item.type);
+  if (!def) return null;
+  const hits: string[] = [];
+  for (const s of shownSlots(def, item.props)) {
+    const children = item.props[s];
+    if (Array.isArray(children)) walk(children as ComponentData[], (c) => { if (required.has(c.type)) hits.push(c.type); });
+  }
+  return hits[0] ?? null;
+}
+
 export function checkRules(doc: PuckDoc, docKey: DocKey, layout: LayoutKind): Issue[] {
   const issues: Issue[] = [];
   const flagged = new Set<string>();
@@ -158,5 +186,20 @@ export function checkRules(doc: PuckDoc, docKey: DocKey, layout: LayoutKind): Is
   if (anyOf && !anyOf.some((t) => (counts.get(t) ?? 0) > 0)) {
     issues.push({ docKey, rule: `at-least-one:${docKey}`, message: `This page needs a product grid, product list or trade list.` });
   }
+  // A hidden block may not hold anything a shopper must see (spec §10.2): walk what renders.
+  const required = requiredOn(docKey);
+  walk(doc.content, (c) => {
+    const def = blockDef(c.type);
+    const hide = def ? hiddenAs(def, c.props) : null;
+    if (!def || !hide) return;
+    const inner = requiredInside(c, required);
+    if (inner === null) return;
+    issues.push({
+      docKey,
+      rule: `hidden-required:${c.type}`,
+      message: `${label(c.type)} is hidden ${hide === 'mobile' ? 'below' : 'from'} 992 px but holds the ${label(inner)}, which every shopper must see.`,
+      blockId: c.props.id,
+    });
+  });
   return issues;
 }
