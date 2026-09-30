@@ -4,10 +4,10 @@ import { isDocKey, type ViewportWidth } from '@/builder/editor/protocol.ts';
 import { docFor, docsFromPageSet, isCustomKey, isShownIn, newCustomPage, normalizeDoc, withDoc, withoutDoc, type DocMap } from '@/builder/editor/page-set.ts';
 import type { DocKey, LayoutKind, PageSet, PuckDoc } from '@/builder/types.ts';
 import type { EditorText, LocaleStrings, PageText, SiteText, TextLanguage } from '@/text/types.ts';
-import { DEFAULT_LANGUAGE, emptyPageText, emptySiteText, withValue, type DraftValue, type TextIssue, type TextScope } from '@/builder/editor/text/model.ts';
+import { DEFAULT_LANGUAGE, emptyPageText, emptySiteText, noRoomFor, withValue, type DraftValue, type TextIssue, type TextScope } from '@/builder/editor/text/model.ts';
 import { rowFor } from '@/builder/editor/text/catalog.ts';
 import { isStoreLocale } from '@/builder/editor/text/languages.ts';
-import { textIssues } from '@/builder/editor/text/issues.ts';
+import { layerIssues, textIssues } from '@/builder/editor/text/issues.ts';
 import { COALESCE_MS, TEXT_HISTORY_MAX, type PuckHistoryView, type TextHistoryEntry } from '@/builder/editor/text/history.ts';
 
 export const DEFAULT_PREVIEW_AS: PreviewAs = { session: 'signed-in-orders', cart: 'items' };
@@ -68,8 +68,17 @@ export interface EditorState {
    * allowed: it cleans up leftovers).
    */
   setText(scope: TextScope, key: string, value: DraftValue | null, anchor: string | null, loadEpoch?: number): boolean;
-  /** Language or number format of the shared doc; a new language resets the format to built-in. */
+  /**
+   * Language or number format of the shared doc; a new language resets the format to built-in.
+   * Refused when a layer has no room for the new language (see `languageRoom`).
+   */
   setLanguage(patch: Partial<TextLanguage>, anchor: string | null, loadEpoch?: number): boolean;
+  /**
+   * Removes every line of one language from one or more layers, as one undo step: how the owner
+   * frees room under the language cap. The shared layer is skipped when it isn't editable; asking
+   * only for it then is refused.
+   */
+  clearLanguage(scope: TextScope | readonly TextScope[], locale: string, anchor: string | null, loadEpoch?: number): boolean;
   undoText(): boolean;
   redoText(): boolean;
   discardTextFuture(): void;
@@ -114,16 +123,32 @@ export const isTextReady = (s: TextState): boolean => s.sharedEditable || s.publ
 
 const EMPTY_STRINGS: LocaleStrings = Object.freeze({}) as LocaleStrings;
 
+/**
+ * The layers that could not take wording in `locale`: the backend keeps at most
+ * TEXT_LIMITS.locales languages per layer (spec §4.3). Empty = room everywhere. The shared layer
+ * counts only when it is editable.
+ */
+export function languageRoom(s: Pick<EditorState, 'sharedEditable' | 'siteText' | 'pageText'>, locale: string): TextScope[] {
+  const full: TextScope[] = [];
+  if (s.sharedEditable && s.siteText && noRoomFor(s.siteText.strings, locale)) full.push('shared');
+  if (noRoomFor(s.pageText.strings, locale)) full.push('layout');
+  return full;
+}
+
 let issueMemo: { inputs: unknown[]; issues: TextIssue[] } | null = null;
 /** Every blocking text issue (spec §7.1) — the header and the posted change use this one list. */
 export function textIssuesOf(s: Pick<EditorState, 'sharedEditable' | 'siteText' | 'published' | 'pageText'>): TextIssue[] {
   const { locale } = textLanguage(s);
   const inputs = [s.sharedEditable, s.siteText, s.pageText, locale];
   if (issueMemo && inputs.every((v, i) => v === issueMemo!.inputs[i])) return issueMemo.issues;
-  const issues = textIssues({
-    shared: s.sharedEditable && s.siteText ? s.siteText.strings[locale] ?? EMPTY_STRINGS : null,
-    layout: s.pageText.strings[locale] ?? EMPTY_STRINGS,
-  });
+  // Layer-wide issues first: they survive the change's 500-issue cap.
+  const issues = [
+    ...layerIssues({ shared: s.sharedEditable ? s.siteText : null, layout: s.pageText }),
+    ...textIssues({
+      shared: s.sharedEditable && s.siteText ? s.siteText.strings[locale] ?? EMPTY_STRINGS : null,
+      layout: s.pageText.strings[locale] ?? EMPTY_STRINGS,
+    }),
+  ];
   issueMemo = { inputs, issues };
   return issues;
 }
@@ -250,6 +275,8 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
     if (scope === 'shared' && (!s.sharedEditable || !s.siteText)) return false;
     if (value !== null && value !== '' && !rowFor(key)) return false;
     const { locale } = textLanguage(s);
+    // A layer already holding the most languages the backend keeps can't start another one.
+    if (value !== null && value !== '' && noRoomFor(scope === 'shared' ? s.siteText!.strings : s.pageText.strings, locale)) return false;
     let patch: Partial<EditorState>;
     if (scope === 'shared') {
       const strings = withValue(s.siteText!.strings, locale, key, value);
@@ -279,9 +306,36 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
     const formatLocale = patch.formatLocale !== undefined ? patch.formatLocale : locale !== cur.locale ? '' : cur.formatLocale;
     if (!isStoreLocale(locale) || (formatLocale !== '' && !isStoreLocale(formatLocale))) return false;
     if (locale === cur.locale && formatLocale === cur.formatLocale) return true;
+    if (locale !== cur.locale && languageRoom(s, locale).length > 0) return false;
     lastTextEdit = null;
     set({
       siteText: { ...s.siteText, language: { locale, formatLocale } },
+      textPast: pushCapped(s.textPast, { snap: { siteText: s.siteText, pageText: s.pageText }, anchor }),
+      textFuture: [],
+    });
+    return true;
+  },
+
+  clearLanguage(scope, locale, anchor, loadEpoch) {
+    const s = get();
+    if (s.readOnly || s.status !== 'ready' || (loadEpoch !== undefined && loadEpoch !== s.loadEpoch)) return false;
+    const scopes = (typeof scope === 'string' ? [scope] : scope).filter((sc) => sc === 'layout' || (s.sharedEditable && s.siteText));
+    if (scopes.length === 0) return false;
+    const without = (strings: Record<string, LocaleStrings>) =>
+      Object.hasOwn(strings, locale) ? Object.fromEntries(Object.entries(strings).filter(([l]) => l !== locale)) : strings;
+    const patch: Partial<EditorState> = {};
+    if (scopes.includes('shared')) {
+      const strings = without(s.siteText!.strings);
+      if (strings !== s.siteText!.strings) patch.siteText = { ...s.siteText!, strings };
+    }
+    if (scopes.includes('layout')) {
+      const strings = without(s.pageText.strings);
+      if (strings !== s.pageText.strings) patch.pageText = { strings };
+    }
+    if (Object.keys(patch).length === 0) return true;
+    lastTextEdit = null;
+    set({
+      ...patch,
       textPast: pushCapped(s.textPast, { snap: { siteText: s.siteText, pageText: s.pageText }, anchor }),
       textFuture: [],
     });

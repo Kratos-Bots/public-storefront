@@ -574,7 +574,14 @@ A value the backend would refuse (a half-typed `{`, a plural without "other") st
 with a blocking issue but is left out of the posted change, so an autosave never fails on it.
 Issues show on the row and under "Text" in the header's issue list, and block Publish. Without
 `siteText` in the load (an older admin), "All layouts" is disabled and shared wording is read
-from the public page-set read.
+from the public page-set read. If that read fails, the Text panel and "Text in this block" say so
+instead of editing (the language isn't known).
+
+The backend keeps wording in at most 10 languages per layer (shared, and each layout's
+overrides) and at most 256 KB of shared text. Picking an 11th language is refused, and a row
+can't take wording in a language its layer has no room for; the Language section then explains
+why and lists the other languages holding wording, each with **Clear wording** (one undo step).
+Stored text already over either cap is a blocking issue ("Languages" / "Amount of wording").
 
 Known gaps, seen in a real browser:
 

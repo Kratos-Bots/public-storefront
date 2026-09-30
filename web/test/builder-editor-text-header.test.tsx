@@ -60,6 +60,19 @@ describe('editor header: text', () => {
     expect(useTextUi.getState()).toMatchObject({ open: true, filter: 'issues', focus: { key } });
   });
 
+  it('a layer-wide text issue (too many languages) is listed by name and blocks publishing', async () => {
+    const locales = ['en', 'de', 'fr', 'es', 'it', 'pt', 'nl', 'sv', 'da', 'nb', 'fi'];
+    const strings = Object.fromEntries(locales.map((l) => [l, { [key]: `Words ${l}` }]));
+    S().load({ layout: 'storefront', pageSet: null, readOnly: false, siteText: { schemaVersion: 1, language: { locale: 'en', formatLocale: '' }, strings } });
+    renderCanvas();
+    await puckShown();
+    const issues = screen.getByRole('button', { name: /^Issues/ });
+    expect(issues).toHaveAccessibleName('Issues 1 issue, publishing is blocked');
+    fireEvent.click(issues);
+    const section = within(screen.getByRole('dialog', { name: 'Fix these to publish' })).getByRole('region', { name: 'Text' });
+    expect(within(section).getByRole('button', { name: /^Languages/ })).toHaveTextContent(/11 languages/);
+  });
+
   it('Undo and Redo cover text edits', async () => {
     renderCanvas();
     await puckShown();

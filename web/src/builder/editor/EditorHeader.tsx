@@ -18,6 +18,7 @@ import { TextOverlay } from '@/builder/editor/text/TextOverlay.tsx';
 import { useWideFrame } from '@/builder/editor/text/plugin.tsx';
 import { puckHistoryView, redoStep, setAnchorSource, undoStep } from '@/builder/editor/text/history.ts';
 import { rowFor } from '@/builder/editor/text/catalog.ts';
+import { LAYER_ISSUE_LABELS } from '@/builder/editor/text/issues.ts';
 import { blockDef } from '@/builder/rules.ts';
 import { registerLiveCanvas } from '@/builder/editor/late-upload.ts';
 import type { PreviewAs } from '@/builder/mode.ts';
@@ -594,7 +595,7 @@ function IssuesMenu() {
                     <WarnIcon />
                     <span className={styles.panelItemBody}>
                       <span className={styles.panelWhere}>
-                        <span>{rowFor(issue.key)?.label ?? issue.key}</span>
+                        <span>{rowFor(issue.key)?.label ?? LAYER_ISSUE_LABELS[issue.key] ?? issue.key}</span>
                         <span className={styles.panelPart}>{issue.scope === 'shared' ? 'All layouts' : `Only ${LAYOUT_LABELS[layout]}`}</span>
                       </span>
                       <span>{issue.message}</span>

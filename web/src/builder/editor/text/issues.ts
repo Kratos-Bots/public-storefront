@@ -1,7 +1,7 @@
 import { checkValue, type TextRule } from '@/text/resolve.ts';
-import type { LocaleStrings, TextValue } from '@/text/types.ts';
+import { TEXT_LIMITS, type LocaleStrings, type PageText, type SiteText, type TextValue } from '@/text/types.ts';
 import { rowFor } from '@/builder/editor/text/catalog.ts';
-import type { TextIssue, TextScope } from '@/builder/editor/text/model.ts';
+import { postedSiteTextBytes, wordingLanguages, type TextIssue, type TextScope } from '@/builder/editor/text/model.ts';
 
 /**
  * Text problems as the editor shows and posts them (spec §6.3, §7.1, §7.2). The rules are the
@@ -105,6 +105,42 @@ export function textIssues(input: { shared: LocaleStrings | null; layout: Locale
   };
   if (input.shared) scan('shared', input.shared);
   scan('layout', input.layout);
+  return out;
+}
+
+/**
+ * Issues about a whole layer, not one line (their `key` is never a text key, which always has a
+ * dot): too many languages, or shared wording over the backend's size cap. The backend would
+ * refuse every autosave of that layer, so they block — and say how to get out.
+ */
+export const LANGUAGES_ISSUE = 'languages';
+export const SIZE_ISSUE = 'size';
+export const LAYER_ISSUE_LABELS: Readonly<Record<string, string>> = { [LANGUAGES_ISSUE]: 'Languages', [SIZE_ISSUE]: 'Amount of wording' };
+export const isLayerIssue = (key: string): boolean => Object.hasOwn(LAYER_ISSUE_LABELS, key);
+
+export function layerIssues(input: { shared: SiteText | null; layout: PageText }): TextIssue[] {
+  const out: TextIssue[] = [];
+  const languages = (scope: TextScope, strings: PageText['strings']) => {
+    const n = wordingLanguages(strings).length;
+    if (n > TEXT_LIMITS.locales) {
+      out.push({
+        scope, key: LANGUAGES_ISSUE, rule: 'too-many-languages',
+        message: `Wording is saved in ${n} languages; the shop keeps at most ${TEXT_LIMITS.locales}. Clear the wording of a language you no longer use (Site text, Language).`,
+      });
+    }
+  };
+  if (input.shared) {
+    languages('shared', input.shared.strings);
+    const bytes = postedSiteTextBytes(input.shared);
+    if (bytes > TEXT_LIMITS.docBytes) {
+      const kb = Math.ceil(bytes / 1024);
+      out.push({
+        scope: 'shared', key: SIZE_ISSUE, rule: 'too-large',
+        message: `Wording for all layouts takes ${kb} KB; the shop keeps at most ${TEXT_LIMITS.docBytes / 1024} KB. Reset lines you don’t need, or clear a language’s wording.`,
+      });
+    }
+  }
+  languages('layout', input.layout.strings);
   return out;
 }
 

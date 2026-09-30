@@ -120,6 +120,25 @@ export function postablePageText(doc: PageText): PageText | undefined {
   return hasStrings(strings) ? { strings } : undefined;
 }
 
+/** Languages that hold wording in one layer: a locale with at least one line. */
+export function wordingLanguages(strings: StringsByLocale): Locale[] {
+  return Object.keys(strings).filter((l) => Object.keys(strings[l] ?? {}).length > 0);
+}
+
+/**
+ * The backend refuses a layer with wording in more than TEXT_LIMITS.locales languages (spec §4.3):
+ * true when `locale` would be one too many (the layer is full and `locale` isn't in it yet).
+ */
+export function noRoomFor(strings: StringsByLocale, locale: Locale): boolean {
+  const held = wordingLanguages(strings);
+  return held.length >= TEXT_LIMITS.locales && !held.includes(locale);
+}
+
+/** UTF-8 size of the shared doc as posted — what the backend's TEXT_LIMITS.docBytes measures. */
+export function postedSiteTextBytes(doc: SiteText): number {
+  return new TextEncoder().encode(JSON.stringify(postableSiteText(doc))).length;
+}
+
 export function valueStrings(value: DraftValue | undefined): string[] {
   if (value === undefined) return [];
   return typeof value === 'string' ? [value] : Object.values(value).filter((v): v is string => typeof v === 'string');

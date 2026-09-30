@@ -352,6 +352,53 @@ describe('Text panel', () => {
     expect(S().siteText!.language.formatLocale).toBe('de-AT');
   });
 
+  describe('the 10-language cap', () => {
+    const TEN = ['en', 'de', 'fr', 'es', 'it', 'pt', 'nl', 'sv', 'da', 'nb'];
+    const loadTen = (locale = 'en', extra: string[] = []) => {
+      const key = plainKey();
+      ready();
+      const strings = Object.fromEntries([...TEN, ...extra].map((l) => [l, { [key]: `Words ${l}` }]));
+      S().load({ layout: 'storefront', pageSet: null, readOnly: false, siteText: { schemaVersion: 1, language: { locale, formatLocale: '' }, strings } });
+      return key;
+    };
+
+    it('picking an 11th language is refused with the reason and a way to free one', () => {
+      loadTen();
+      render(<TextPanel />);
+      fireEvent.change(screen.getByRole('combobox', { name: 'Store language' }), { target: { value: 'fi' } });
+      expect(S().siteText!.language.locale).toBe('en');
+      expect(screen.getByRole('combobox', { name: 'Store language' })).toHaveValue('en');
+      const notice = screen.getByRole('region', { name: 'Room for languages' });
+      expect(notice).toHaveTextContent(/at most 10 languages/);
+      expect(within(notice).queryByRole('button', { name: /English/ })).toBeNull();   // not the active one
+      fireEvent.click(within(notice).getByRole('button', { name: 'Clear wording in Deutsch' }));
+      expect(S().siteText!.strings.de).toBeUndefined();
+      fireEvent.change(screen.getByRole('combobox', { name: 'Store language' }), { target: { value: 'fi' } });
+      expect(S().siteText!.language.locale).toBe('fi');
+    });
+
+    it('a full layer locks typing in a language it doesn\'t hold, and says why', () => {
+      const key = loadTen('fi');
+      render(<TextPanel />);
+      expect(screen.getByRole('region', { name: 'Room for languages' })).toHaveTextContent(/Suomi/);
+      render(<TextRow row={rowFor(key)!} />);
+      const inputs = screen.getAllByRole('textbox', { name: rowFor(key)!.label });
+      expect(inputs.at(-1)).toHaveAttribute('readonly');
+      expect(inputs.at(-1)!.getAttribute('title')).toMatch(/10 other languages/);
+    });
+
+    it('stored wording over the cap is counted under Issues and cleared from the notice', () => {
+      loadTen('en', ['fi']);
+      render(<TextPanel />);
+      expect(within(screen.getByRole('group', { name: 'Show' })).getByRole('button', { name: /^Issues/ })).toHaveTextContent('1');
+      const notice = screen.getByRole('region', { name: 'Room for languages' });
+      expect(notice).toHaveTextContent(/11 languages/);
+      fireEvent.click(within(notice).getByRole('button', { name: 'Clear wording in Suomi' }));
+      expect(S().siteText!.strings.fi).toBeUndefined();
+      expect(screen.queryByRole('region', { name: 'Room for languages' })).toBeNull();
+    });
+  });
+
   it('language controls are disabled without siteText, with the reason shown', () => {
     ready('absent');
     render(<TextPanel />);

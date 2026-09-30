@@ -1,6 +1,8 @@
 // web/test/builder-editor-store-text.test.ts
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { DEFAULT_PREVIEW_AS, TEXT_INITIAL, editorTextOf, isTextReady, setPuckHistorySource, textIssuesOf, textLanguage, useEditorStore } from '@/builder/editor/store.ts';
+import { DEFAULT_PREVIEW_AS, TEXT_INITIAL, editorTextOf, isTextReady, languageRoom, setPuckHistorySource, textIssuesOf, textLanguage, useEditorStore } from '@/builder/editor/store.ts';
+import { TEXT_LIMITS } from '@/text/types.ts';
+import { LANGUAGES_ISSUE, SIZE_ISSUE } from '@/builder/editor/text/issues.ts';
 import { COALESCE_MS, TEXT_HISTORY_MAX, type PuckHistoryView } from '@/builder/editor/text/history.ts';
 import { plainKey, pluralKey } from './helpers/text-keys.ts';
 
@@ -104,6 +106,80 @@ describe('editor store: text', () => {
     const a = textIssuesOf(S());
     expect(a.map((i) => [i.scope, i.rule])).toEqual([['shared', 'bad-brace'], ['layout', 'empty']]);
     expect(textIssuesOf(S())).toBe(a);
+  });
+});
+
+describe('editor store: the backend\'s language and size caps', () => {
+  beforeEach(reset);
+  const key = plainKey();
+  /** `n` languages holding one line each: en, then the first n-1 picker languages after it. */
+  const TEN = ['en', 'de', 'fr', 'es', 'it', 'pt', 'nl', 'sv', 'da', 'nb'];
+  const stringsIn = (locales: string[]) => Object.fromEntries(locales.map((l) => [l, { [key]: `Words ${l}` }]));
+  const site = (locales: string[], locale = 'en') => ({ schemaVersion: 1 as const, language: { locale, formatLocale: '' }, strings: stringsIn(locales) });
+
+  it('the cap is the backend\'s', () => {
+    expect(TEXT_LIMITS.locales).toBe(10);
+    expect(TEN).toHaveLength(TEXT_LIMITS.locales);
+  });
+
+  it('switching to a NEW language is refused while 10 languages hold shared wording; a held one is fine', () => {
+    S().load({ layout: 'storefront', pageSet: null, readOnly: false, siteText: site(TEN) });
+    expect(languageRoom(S(), 'fi')).toEqual(['shared']);
+    expect(S().setLanguage({ locale: 'fi' }, null)).toBe(false);
+    expect(textLanguage(S()).locale).toBe('en');
+    expect(languageRoom(S(), 'de')).toEqual([]);
+    expect(S().setLanguage({ locale: 'de' }, null)).toBe(true);
+  });
+
+  it('the same for this layout\'s overrides (pageSet.text)', () => {
+    S().load({ layout: 'storefront', pageSet: { schemaVersion: 1, shell: { root: { props: {} }, content: [] }, pages: {}, text: { strings: stringsIn(TEN) } } as never, readOnly: false, siteText: null });
+    expect(languageRoom(S(), 'fi')).toEqual(['layout']);
+    expect(S().setLanguage({ locale: 'fi' }, null)).toBe(false);
+  });
+
+  it('clearing a language\'s wording frees room; it is one undo step', () => {
+    S().load({ layout: 'storefront', pageSet: null, readOnly: false, siteText: site(TEN) });
+    expect(S().clearLanguage('shared', 'nb', null)).toBe(true);
+    expect(S().siteText!.strings.nb).toBeUndefined();
+    expect(S().setLanguage({ locale: 'fi' }, null)).toBe(true);
+    S().undoText();
+    S().undoText();
+    expect(S().siteText!.strings.nb![key]).toBe('Words nb');
+  });
+
+  it('typing in a language the layer has no room for is refused (the language came from elsewhere)', () => {
+    S().load({ layout: 'storefront', pageSet: null, readOnly: false, siteText: site(TEN, 'fi') });
+    expect(S().setText('shared', key, 'Suomeksi', null)).toBe(false);
+    expect(S().siteText!.strings.fi).toBeUndefined();
+    // Resetting is always allowed, and the layout layer still has room.
+    expect(S().setText('shared', key, null, null)).toBe(true);
+    expect(S().setText('layout', key, 'Vain täällä', null)).toBe(true);
+  });
+
+  it('stored wording already over the cap is a blocking issue, listed first', () => {
+    const eleven = [...TEN, 'fi'];
+    S().load({ layout: 'storefront', pageSet: { schemaVersion: 1, shell: { root: { props: {} }, content: [] }, pages: {}, text: { strings: stringsIn(eleven) } } as never, readOnly: false, siteText: site(eleven) });
+    S().setText('shared', key, 'Hi {', null);
+    const issues = textIssuesOf(S());
+    expect(issues.slice(0, 2).map((i) => [i.scope, i.key, i.rule])).toEqual([
+      ['shared', LANGUAGES_ISSUE, 'too-many-languages'],
+      ['layout', LANGUAGES_ISSUE, 'too-many-languages'],
+    ]);
+    expect(issues[0]!.message).toMatch(/11 languages.*at most 10/);
+    S().clearLanguage('shared', 'fi', null);
+    expect(textIssuesOf(S()).filter((i) => i.scope === 'shared' && i.key === LANGUAGES_ISSUE)).toEqual([]);
+  });
+
+  it('shared wording over the backend\'s 256 KB is a blocking issue, not a silent 400', () => {
+    // 10 languages x 14 lines x 1000 characters: 140 000 characters either way, but the backend
+    // counts UTF-8 bytes — 'é' is two.
+    const fill = (ch: string) => Object.fromEntries(TEN.map((l) => [l, Object.fromEntries(Array.from({ length: 14 }, (_, i) => [`zz.big.k${i}`, ch.repeat(1000)]))]));
+    S().load({ layout: 'storefront', pageSet: null, readOnly: false, siteText: { schemaVersion: 1, language: { locale: 'en', formatLocale: '' }, strings: fill('x') } });
+    expect(textIssuesOf(S()).some((i) => i.key === SIZE_ISSUE)).toBe(false);
+    S().load({ layout: 'storefront', pageSet: null, readOnly: false, siteText: { schemaVersion: 1, language: { locale: 'en', formatLocale: '' }, strings: fill('é') } });
+    const size = textIssuesOf(S()).find((i) => i.key === SIZE_ISSUE);
+    expect(size).toMatchObject({ scope: 'shared', rule: 'too-large' });
+    expect(size!.message).toMatch(/256 KB/);
   });
 });
 

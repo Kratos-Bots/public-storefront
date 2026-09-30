@@ -6,7 +6,7 @@ import { editorTextOf, textIssuesOf, useEditorStore } from '@/builder/editor/sto
 import { applyText, useEditorText, useLoadEpoch, useTextIssues, useTextReadiness } from '@/builder/editor/text/hooks.ts';
 import { useTextUi, type TextFilter } from '@/builder/editor/text/ui-store.ts';
 import { rowFor, rowMatches, textGroups, type TextRowDef } from '@/builder/editor/text/catalog.ts';
-import { unusedEntries } from '@/builder/editor/text/issues.ts';
+import { isLayerIssue, unusedEntries } from '@/builder/editor/text/issues.ts';
 import { valueStrings } from '@/builder/editor/text/model.ts';
 import { LAYOUT_LABELS } from '@/builder/editor/page-catalog.ts';
 import { cssString } from '@/builder/editor/resting-marks.ts';
@@ -75,7 +75,8 @@ export function TextPanel({ onClose }: { onClose?: () => void }) {
   // Lines that can't be changed are blocking issues with no row: they are listed under Unused.
   const blockedUnused = unused.filter((u) => u.rule === 'fixed');
   // Every issue with a row (active template or not) plus the unchangeable lines under Unused.
-  const issueCount = [...issueKeys].filter((k) => rowFor(k) !== null).length + blockedUnused.length;
+  // Layer-wide issues (too many languages, too much wording) are explained under Language.
+  const issueCount = [...issueKeys].filter((k) => rowFor(k) !== null || isLayerIssue(k)).length + blockedUnused.length;
   const listedUnused = filter === 'issues' ? blockedUnused : unused;
   const narrowed = query.trim() !== '' || filter !== 'all';
   const focusGroup = focus ? groups.find((g) => g.rows.some((r) => r.key === focus.key))?.id : undefined;

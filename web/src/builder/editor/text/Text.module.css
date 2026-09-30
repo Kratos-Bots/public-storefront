@@ -84,6 +84,24 @@
 .error:empty { display: none; }
 .counter { font-size: 12px; }
 
+/* The language cap: why a language can't be added, and the languages that can be cleared. */
+.room {
+  display: grid;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--sfb-line);
+  border-inline-start: 3px solid var(--sfb-danger);
+  border-radius: var(--sfb-radius);
+  background: var(--sfb-surface);
+}
+.roomTitle { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 13px; font-weight: 600; color: var(--sfb-danger); }
+.roomTitle svg { flex: none; inline-size: 14px; block-size: 14px; }
+.roomText { margin: 0; font-size: 12px; overflow-wrap: anywhere; }
+.roomList { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.roomList li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; column-gap: 8px; }
+.roomName { overflow-wrap: anywhere; }
+.roomCount { font-size: 12px; color: var(--sfb-muted); }
+
 /* ---- controls ---- */
 .input, .search, .forms input, .field select, .field input {
   inline-size: 100%;

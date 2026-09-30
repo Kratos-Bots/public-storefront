@@ -120,6 +120,11 @@ export function applyText(scope: TextScope, key: string, value: DraftValue | nul
   return useEditorStore.getState().setText(scope, key, value, currentAnchor(), loadEpoch);
 }
 
+/** Clears one language's wording from every layer this load can edit (one undo step). */
+export function applyClearLanguage(locale: string, loadEpoch?: number): boolean {
+  return useEditorStore.getState().clearLanguage(['shared', 'layout'], locale, currentAnchor(), loadEpoch);
+}
+
 export function applyLanguage(patch: Partial<TextLanguage>, loadEpoch?: number): boolean {
   return useEditorStore.getState().setLanguage(patch, currentAnchor(), loadEpoch);
 }

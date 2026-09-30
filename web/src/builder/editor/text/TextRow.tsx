@@ -1,7 +1,8 @@
 // web/src/builder/editor/text/TextRow.tsx
 import { memo, useId, useMemo, useRef, useState } from 'react';
 import type { TextValue } from '@/text/types.ts';
-import { editorTextOf, textIssuesOf, textLanguage, useEditorStore } from '@/builder/editor/store.ts';
+import { editorTextOf, languageRoom, textIssuesOf, textLanguage, useEditorStore } from '@/builder/editor/store.ts';
+import { TEXT_LIMITS } from '@/text/types.ts';
 import { LAYOUT_LABELS } from '@/builder/editor/page-catalog.ts';
 import { WarnIcon } from '@/builder/editor/icons.tsx';
 import { applyText, useLoadEpoch, type TextCell } from '@/builder/editor/text/hooks.ts';
@@ -14,6 +15,7 @@ import styles from '@/builder/editor/text/Text.module.css';
 const domId = (reactId: string) => reactId.replace(/[^A-Za-z0-9_-]/g, '');
 export const SHARED_LOCKED = 'Shared wording can’t be changed from this version of the admin.';
 export const READ_ONLY = 'This version is read-only.';
+export const NO_ROOM = `This already has wording in ${TEXT_LIMITS.locales} other languages, the most the shop keeps. Clear one under Language to type in this one.`;
 export const TEXT_LOADING = 'Loading the shop’s wording…';
 export const TEXT_UNREADABLE = 'The shop’s wording couldn’t be read, so text can’t be edited here. Reload the editor to try again.';
 
@@ -87,6 +89,8 @@ function RowForLoad({ row, compact = false, loadEpoch }: { row: TextRowDef; comp
   const layout = useEditorStore((s) => s.layout);
   const readOnly = useEditorStore((s) => s.readOnly);
   const locale = useEditorStore((s) => textLanguage(s).locale);
+  /** Layers that can't take wording in the active language (the backend's language cap). */
+  const full = useEditorStore((s) => languageRoom(s, textLanguage(s).locale).join(' '));
   const id = domId(useId());
   const [scope, setScope] = useState<TextScope>(() => (cell.layout !== undefined || !cell.sharedEditable ? 'layout' : 'shared'));
   /** The load the current edit started under: captured on focus, else the load this row mounted in. */
@@ -97,7 +101,8 @@ function RowForLoad({ row, compact = false, loadEpoch }: { row: TextRowDef; comp
   const layoutLabel = LAYOUT_LABELS[layout];
   const stored = scope === 'shared' ? cell.shared : cell.layout;
   const under: DraftValue | TextValue = scope === 'layout' ? cell.below.value : row.def;
-  const locked = readOnly || (scope === 'shared' && !cell.sharedEditable);
+  const noRoom = full.split(' ').includes(scope);
+  const locked = readOnly || (scope === 'shared' && !cell.sharedEditable) || noRoom;
   const scopeIssues = cell.issues.filter((i) => i.scope === scope);
   const fromLabel = cell.effective.from === 'default' ? 'Built-in' : cell.effective.from === 'shared' ? 'Shared' : layoutLabel;
   const forms = row.plural ? pluralFormsFor(locale) : [];
@@ -130,7 +135,7 @@ function RowForLoad({ row, compact = false, loadEpoch }: { row: TextRowDef; comp
   const described = compact ? `${id}-issues` : `${id}-note ${id}-issues`;
   const Input = row.multiline ? 'textarea' : 'input';
   const length = active ? (storedForms[active as PluralForm] ?? '').length : row.plural ? summary(stored ?? '').length : storedText.length;
-  const lockReason = readOnly ? READ_ONLY : SHARED_LOCKED;
+  const lockReason = readOnly ? READ_ONLY : scope === 'shared' && !cell.sharedEditable ? SHARED_LOCKED : NO_ROOM;
 
   return (
     <div className={styles.row} data-text-key={row.key} data-compact={compact ? '' : undefined} data-sfb-text="">
