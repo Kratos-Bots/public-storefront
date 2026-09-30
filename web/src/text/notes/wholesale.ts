@@ -1,6 +1,7 @@
 /** Editor-only notes for area `wholesale`: where each line appears, in shopper words (Text panel). */
 export default {
-  'page.title': 'Heading of the wholesale trade list, and the small label on its empty and error messages',
+  'page.title': 'Heading of the wholesale trade list',
+  'page.eyebrow': "Small label above the trade list's load-error and empty-list messages",
   'page.categoryEyebrow': "Small label above the unknown-category message on the trade list",
   'page.searchEyebrow': 'Small label above the "Nothing matches" message on the trade list',
   'page.loadFailedHint': "Text under the \"couldn't load\" heading on the trade list",

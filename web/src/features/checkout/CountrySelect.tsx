@@ -17,7 +17,10 @@ export { regionName } from '@/lib/format.ts';
  */
 const optionsByLocale = new Map<string, Array<{ iso: string; name: string }>>();
 export function countryOptions(): Array<{ iso: string; name: string }> {
-  const k = (getFormatProfile().regions ?? []).join(',');
+  // Names depend on the regions locale, their order on the collation — key on both (en + formatLocale
+  // 'en' has the legacy regions but a different collation).
+  const { regions, collation } = getFormatProfile();
+  const k = `${(regions ?? []).join(',')}|${collation ?? ''}`;
   let list = optionsByLocale.get(k);
   if (!list) {
     list = Object.keys(DIAL_CODES).map((iso) => ({ iso, name: regionName(iso) })).sort((a, b) => compareNames(a.name, b.name));

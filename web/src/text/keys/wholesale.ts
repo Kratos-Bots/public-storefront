@@ -3,6 +3,7 @@ import { defineTextArea } from '@/text/define.ts';
 /** Area `wholesale`: the trade-list sheet, its basket bar, price-break ladder and rows (editable-text spec §6.1). */
 export default defineTextArea('wholesale', {
   'page.title': { en: 'Trade list', max: 60 },
+  'page.eyebrow': { en: 'Trade list', max: 40 },
   'page.categoryEyebrow': { en: 'Category', max: 40 },
   'page.searchEyebrow': { en: 'Search', max: 40 },
   'page.loadFailedHint': { en: 'The list is still there — this was a hiccup between your browser and us.', max: 200 },

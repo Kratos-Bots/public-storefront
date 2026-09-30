@@ -78,7 +78,7 @@ export function WholesaleCatalogPage() {
   if (catalog.isError) {
     return (
       <EmptyState
-        eyebrow={t('wholesale.page.title')}
+        eyebrow={t('wholesale.page.eyebrow')}
         title={t('common.list.loadFailed')}
         description={t('wholesale.page.loadFailedHint')}
         action={
@@ -164,7 +164,7 @@ export function WholesaleCatalogPage() {
           />
         ) : (
           <EmptyState
-            eyebrow={t('wholesale.page.title')}
+            eyebrow={t('wholesale.page.eyebrow')}
             title={t('common.list.emptyCategory')}
             description={t('wholesale.page.emptyHint')}
           />

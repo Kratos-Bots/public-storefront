@@ -660,7 +660,9 @@
     "Tracking number",
     "Track this parcel",
     "Parcel ${} of ${}",
-    "Parcel"
+    "Parcel",
+    "Shipped ${}",
+    "Delivered ${}"
   ],
   "features/order-status/StateScreens.tsx": [
     "Loading your order",

@@ -47,6 +47,10 @@ describe('scanSource coverage (Task 15)', () => {
     expect(rules(`notifications.show({ message: 'Saved it', color: 'red' }); s.refine(f, { message: 'Pick one', path: ['coin'] });`))
       .toEqual(['text-call:Saved it', 'text-call:Pick one']);
   });
+  it('skips only color and path in call arguments: a field called name, type or id still carries a message', () => {
+    expect(rules(`setErrors({ name: 'Enter your name', type: 'Pick a type', id: 'Enter an ID' });`))
+      .toEqual(['text-call:Enter your name', 'text-call:Pick a type', 'text-call:Enter an ID']);
+  });
 });
 
 describe('renderedJsxText', () => {

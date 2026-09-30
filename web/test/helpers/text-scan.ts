@@ -87,10 +87,17 @@ function leaves(e: ts.Expression, consts?: Consts, depth = 0): Array<{ node: ts.
   return [];
 }
 
-/** leaves(), plus object-literal values and array elements, recursively (call arguments). Non-text properties (`color`, `path`, …) are skipped. */
+/**
+ * Properties of a call argument that never hold shopper text: a toast `color`, a zod issue `path`.
+ * Deliberately not NON_TEXT_PROPS — `setErrors({ name: 'Enter your name' })` keys messages by field
+ * name, so `name`, `type`, `id`… must still be reported.
+ */
+const CALL_ARG_NON_TEXT = new Set(['color', 'path']);
+
+/** leaves(), plus object-literal values and array elements, recursively (call arguments), skipping CALL_ARG_NON_TEXT. */
 function deepLeaves(e: ts.Expression): Array<{ node: ts.Node; text: string }> {
   if (ts.isObjectLiteralExpression(e)) {
-    return e.properties.flatMap((p) => (ts.isPropertyAssignment(p) && !NON_TEXT_PROPS.has(p.name.getText()) ? deepLeaves(p.initializer) : []));
+    return e.properties.flatMap((p) => (ts.isPropertyAssignment(p) && !CALL_ARG_NON_TEXT.has(p.name.getText()) ? deepLeaves(p.initializer) : []));
   }
   if (ts.isArrayLiteralExpression(e)) return e.elements.flatMap((x) => deepLeaves(x));
   return leaves(e);

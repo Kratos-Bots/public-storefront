@@ -1,13 +1,13 @@
 import { expect, test, type Page } from '@playwright/test';
-import { installMocks, type Layout, type MockHandle, type MockText } from './mocks.ts';
+import { installMocks, type InstallMocksOptions, type Layout, type MockHandle, type MockText } from './mocks.ts';
 import { addFirstToCart, FIXED_NOW, onlyVisible, openProduct } from './flows.ts';
 
 const PRODUCT = 'Alpine Extract 10ml';
 
 /** Signed in, one Alpine Extract in the cart, then the cart page. */
-async function cartWithOne(page: Page, layout: Layout, text?: MockText): Promise<MockHandle> {
+async function cartWithOne(page: Page, layout: Layout, text?: MockText, extra: InstallMocksOptions = {}): Promise<MockHandle> {
   await page.clock.setFixedTime(FIXED_NOW);
-  const mocks = await installMocks(page, { layout, session: true, text });
+  const mocks = await installMocks(page, { ...extra, layout, session: true, text });
   await page.goto('/');
   await openProduct(page, layout, PRODUCT);
   await addFirstToCart(page, layout, mocks);
@@ -80,10 +80,17 @@ test.describe('published site text', () => {
   });
 
   test('a 503 renders the defaults', async ({ page }) => {
-    await page.clock.setFixedTime(FIXED_NOW);
-    await installMocks(page, { layout: 'storefront', session: true, pagesFail: 503, text: { shared: { 'common.totals.subtotal': 'Sub-total' } } });
-    await page.goto('/');
-    await expect(onlyVisible(page.getByRole('link', { name: /^Cart, / }))).toBeVisible();
+    // The text the route would have served must not appear: the failed read falls back to the defaults.
+    await cartWithOne(page, 'storefront', { shared: { 'common.totals.subtotal': 'Sub-total' } }, { pagesFail: 503 });
+    await expect(subtotalLabel(page, 'Subtotal')).toBeVisible();
+    await expect(page.getByText('Sub-total')).toHaveCount(0);
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  });
+
+  test('a read with text: null (nothing published) renders the defaults', async ({ page }) => {
+    await cartWithOne(page, 'storefront', undefined, { textNull: true });
+    await expect(subtotalLabel(page, 'Subtotal')).toBeVisible();
+    await expect(onlyVisible(page.getByText('1 item', { exact: true }))).toBeVisible();
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   });
 

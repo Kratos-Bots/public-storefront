@@ -7,12 +7,15 @@ import { useText } from '@/text/runtime.tsx';
 /**
  * Every dial code, not just the shop's shipping countries — a shopper's phone
  * country and their delivery country are independent (expats, gifts, forwarding
- * addresses). Memoised per format-profile locale; the list itself never changes.
+ * addresses). Memoised per format-profile regions and collation; the list itself never changes.
  */
 type PrefixOption = { iso: string; name: string; dial: string };
 const prefixByLocale = new Map<string, PrefixOption[]>();
 export function prefixOptions(): PrefixOption[] {
-  const k = (getFormatProfile().regions ?? []).join(',');
+  // Names depend on the regions locale, their order on the collation — key on both (en + formatLocale
+  // 'en' has the legacy regions but a different collation).
+  const { regions, collation } = getFormatProfile();
+  const k = `${(regions ?? []).join(',')}|${collation ?? ''}`;
   let list = prefixByLocale.get(k);
   if (!list) {
     list = Object.entries(DIAL_CODES)

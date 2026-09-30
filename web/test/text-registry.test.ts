@@ -75,6 +75,13 @@ describe('text registry (spec §6.6)', () => {
     const patterns = [...SITE_WIDE_TEXT, ...Object.values(BLOCKS).flatMap((b) => b.text ?? [])];
     expect(keys.filter((k) => !TEXT_ENTRIES[k]!.fixed && !patterns.some((p) => matchesTextPattern(k, p)))).toEqual([]);
   });
+  it('the trade list heading and its eyebrow are separate keys (Task 11 deferred)', () => {
+    expect(TEXT_ENTRIES['wholesale.page.eyebrow']?.en).toBe('Trade list');
+    expect(TEXT_ENTRIES['wholesale.page.title']?.en).toBe('Trade list');
+  });
+  it('CheckoutFlow lists common.status.checking (coupon field, Task 15 deferred)', () => {
+    expect(BLOCKS.CheckoutFlow!.text!.some((p) => matchesTextPattern('common.status.checking', p))).toBe(true);
+  });
   it('no dead pattern: every site-wide and block text pattern matches some key', () => {
     const all = [...SITE_WIDE_TEXT.map((p) => ['site-wide', p] as const), ...Object.values(BLOCKS).flatMap((b) => (b.text ?? []).map((p) => [b.name, p] as const))];
     expect(all.filter(([, p]) => !keys.some((k) => matchesTextPattern(k, p))).map(([b, p]) => `${b}: ${p}`)).toEqual([]);

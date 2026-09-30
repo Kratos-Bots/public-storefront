@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { formatProfileFor, LEGACY_PROFILE } from '@/text/format-profile.ts';
 import { formatDate, formatDateTime, formatInteger, formatMoney, formatAmountPlain, regionName, setFormatProfile } from '@/lib/format.ts';
 import { countryOptions } from '@/features/checkout/CountrySelect.tsx';
+import { prefixOptions } from '@/features/checkout/PhoneField.tsx';
 import { formatStamp } from '@/features/tracking/status.ts';
 import { nextCutoff } from '@/lib/cutoffs.ts';
 import { formatClock } from '@/templates/hooks.ts';
@@ -62,5 +63,18 @@ describe('a non-English profile switches every shopper formatter', () => {
     setFormatProfile(formatProfileFor({ locale: 'ar', formatLocale: 'ar-EG' }));
     expect(nextCutoff(cutoffs, now.toISOString(), 1000, 1000)).toEqual(legacy);
     expect(formatClock(now, 'Europe/London')).toBe(clock);
+  });
+});
+
+describe('country and dial-code lists are cached per regions AND collation', () => {
+  it('the same region names under another collation re-sort (no cache collision)', () => {
+    const last = (xs: Array<{ iso: string }>) => xs[xs.length - 1]!.iso;
+    setFormatProfile(LEGACY_PROFILE);
+    const legacyCountries = countryOptions();
+    const legacyPrefixes = prefixOptions();
+    setFormatProfile({ ...LEGACY_PROFILE, collation: 'sv' }); // Swedish sorts Å after Z
+    expect(last(countryOptions())).not.toBe(last(legacyCountries));
+    expect(last(prefixOptions())).not.toBe(last(legacyPrefixes));
+    expect(countryOptions().map((c) => c.name).slice(-3)).toContain('Åland Islands');
   });
 });

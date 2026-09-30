@@ -88,6 +88,8 @@ export interface InstallMocksOptions {
   /** Published site text served alongside the page set. Omitted = today's body
    *  exactly (`null`, or `{ version: 1, data: set }`) with no `text` field. */
   text?: MockText;
+  /** Serve the text-era body with `text: null` (nothing published yet) instead of a text object. */
+  textNull?: boolean;
 }
 
 /** The published site text the pages route serves (spec §4.6), active locale only. */
@@ -133,6 +135,8 @@ export interface MockState {
   pagesFail: 503 | 404 | null;
   /** Published site text; `null` = the pages route serves the pre-text body. */
   text: MockText | null;
+  /** The pages route answers `{ version, data, text: null }`. */
+  textNull: boolean;
 }
 
 export interface MockHandle {
@@ -275,6 +279,7 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     pages: options.pages ?? {},
     pagesFail: options.pagesFail ?? null,
     text: options.text ?? null,
+    textNull: options.textNull ?? false,
   };
 
   options.tweakSettings?.(state.settings);
@@ -337,6 +342,10 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
         return;
       }
       const set = state.pages[pages[1] as Layout] ?? null;
+      if (state.textNull) {
+        await envelope(route, { version: set ? 1 : 0, data: set, text: null });
+        return;
+      }
       if (!state.text) {
         await envelope(route, set ? { version: 1, data: set } : null);
         return;

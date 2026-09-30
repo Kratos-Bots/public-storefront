@@ -7,7 +7,7 @@ const CheckoutPage = lazy(() => import('@/features/checkout/CheckoutPage.tsx').t
 /** Contact → address → shipping → payment → review. Self-contained; not rearrangeable (spec non-goal). */
 export const block = defineBlock<{ id: string }>({
   name: 'CheckoutFlow', label: 'Checkout', category: 'commerce', layouts: 'all', routeBound: true, slots: [],
-  text: ['checkout.*', 'cart.summary.items', 'common.totals.*', 'common.product.*', 'common.actions.*'],
+  text: ['checkout.*', 'cart.summary.items', 'common.totals.*', 'common.product.*', 'common.actions.*', 'common.status.checking'],
   schema: z.object({}), defaultProps: {},
   render: () => <CheckoutPage />,
 });
