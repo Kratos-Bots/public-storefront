@@ -1,5 +1,6 @@
 import { BLOCKS } from '@/builder/registry.ts';
-import { allowedOn } from '@/builder/rules.ts';
+import { allowedOn, requiredParts } from '@/builder/rules.ts';
+import { FAMILY_DOCS, familyAllowedOn, type PartFamily } from '@/builder/parts.ts';
 import type { CardKey, DocKey, FixedRouteKey, LayoutKind } from '@/builder/types.ts';
 
 type Entry = { blocks: readonly string[]; exactlyOne: boolean };
@@ -54,4 +55,19 @@ export function insertableBlocks(docKey: DocKey, layout: LayoutKind): string[] {
     .filter((d) => d.layouts === 'all' || d.layouts.includes(layout))
     .filter((d) => allowedOn(d.name, docKey))
     .map((d) => d.name);
+}
+
+/** The part family whose container lives on `docKey` (its drawer group, its "Add block" home), or null. */
+export function familyOfDoc(docKey: DocKey): PartFamily | null {
+  for (const [family, keys] of Object.entries(FAMILY_DOCS) as Array<[PartFamily, readonly DocKey[]]>) if (keys.includes(docKey)) return family;
+  return null;
+}
+
+/** Required parts of every container that lives on `docKey` (locked against delete/duplicate there). */
+export function requiredPartsOn(docKey: DocKey, layout: LayoutKind): ReadonlySet<string> {
+  const out = new Set<string>();
+  for (const def of Object.values(BLOCKS)) {
+    if (def.container && familyAllowedOn(def.container.family, docKey)) for (const r of requiredParts(def.name, layout)) out.add(r);
+  }
+  return out;
 }

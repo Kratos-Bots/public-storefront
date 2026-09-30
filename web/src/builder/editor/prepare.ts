@@ -47,9 +47,23 @@ function prepareStyle(name: string, props: Props): Props {
   return next;
 }
 
+/**
+ * Product-parts spec §8: legacy toggles are read only while slots are absent; once every slot is
+ * stored they go. Never adds or empties a slot; the same object when nothing changes.
+ */
+function prepareLegacy(name: string, props: Props): Props {
+  const def = blockDef(name);
+  const legacy = def?.container?.legacyProps;
+  if (!def || !legacy || !def.slots.every((s) => Array.isArray(props[s]))) return props;
+  if (!legacy.some((k) => Object.hasOwn(props, k))) return props;
+  const next: Props = { ...props };
+  for (const k of legacy) delete next[k];
+  return next;
+}
+
 export function prepareProps(name: string, props: Props): Props {
   const fn = Object.hasOwn(PREPARE, name) ? PREPARE[name] : undefined;
-  return prepareStyle(name, fn ? fn(props) : props);
+  return prepareStyle(name, prepareLegacy(name, fn ? fn(props) : props));
 }
 
 function prepareList(items: ComponentData[]): ComponentData[] {

@@ -91,7 +91,9 @@ describe('editor config', () => {
 
   it('menus group by category in a stable order', () => {
     const menu = blockMenu('catalog', 'storefront', NONE);
-    expect(menu[0]!.category).toBe('content');
+    // Parts first where a family container lives (product-parts §11); content first elsewhere.
+    expect(menu[0]!.category).toBe('part');
+    expect(blockMenu('page:about', 'storefront', NONE)[0]!.category).toBe('content');
     expect(menu.flatMap((g) => g.blocks.map((b) => b.name))).toContain('ProductGrid');
     expect(menu.every((g) => g.blocks.length > 0)).toBe(true);
   });

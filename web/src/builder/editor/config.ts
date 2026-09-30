@@ -1,10 +1,11 @@
 import { createElement, type ReactNode } from 'react';
 import type { Config, Field, Fields } from '@puckeditor/core';
 import { BLOCKS } from '@/builder/registry.ts';
-import type { BlockCategory, BlockDef } from '@/builder/define.ts';
+import { parseBlockProps, type BlockCategory, type BlockDef } from '@/builder/define.ts';
+import { containsType, type PartFamily } from '@/builder/parts.ts';
 import { blockDef, countBlocks } from '@/builder/rules.ts';
-import type { ComponentData, DocKey, LayoutKind, PuckDoc } from '@/builder/types.ts';
-import { insertableBlocks, isLockedOn, ROUTE_BOUND } from '@/builder/editor/route-bound.ts';
+import { isCardKey, type ComponentData, type DocKey, type LayoutKind, type PuckDoc } from '@/builder/types.ts';
+import { familyOfDoc, insertableBlocks, isLockedOn, requiredPartsOn, ROUTE_BOUND } from '@/builder/editor/route-bound.ts';
 import { scopeFields } from '@/builder/editor/derive-fields.ts';
 import { EditorBlock } from '@/builder/editor/EditorBlock.tsx';
 import { PageGround } from '@/builder/editor/page-ground.tsx';
@@ -25,7 +26,12 @@ export const CATEGORY_TITLES: Record<BlockCategory, string> = {
   'post-order': 'After the order',
   part: 'Parts',
 };
-const CATEGORY_ORDER: BlockCategory[] = ['content', 'catalogue', 'shell', 'product', 'commerce', 'post-order'];
+/** Parts first: on a doc with a container they are what the owner arranges (spec §11). */
+const CATEGORY_ORDER: BlockCategory[] = ['part', 'content', 'catalogue', 'shell', 'product', 'commerce', 'post-order'];
+/** The drawer's parts group, named by the family whose container lives on the doc. */
+export const PART_TITLES: Record<PartFamily, string> = {
+  product: 'Product page parts', catalogue: 'Catalogue parts', 'card-tile': 'Card parts', 'card-row': 'Card parts',
+};
 
 const FIELD_MODULES = import.meta.glob<{ fields: Fields }>('./fields/*.ts', { eager: true });
 export const EDITOR_FIELDS: Record<string, Fields> = Object.fromEntries(
@@ -65,7 +71,7 @@ export function blockMenu(docKey: DocKey, layout: LayoutKind, present: ReadonlyS
   for (const name of lockedOn(docKey)) if (present.has(name)) insertable.delete(name);
   return CATEGORY_ORDER.map((category) => ({
     category,
-    title: CATEGORY_TITLES[category],
+    title: category === 'part' ? PART_TITLES[familyOfDoc(docKey) ?? 'product'] : CATEGORY_TITLES[category],
     blocks: inLayout(layout).filter((d) => d.category === category && insertable.has(d.name)).map((d) => ({ name: d.name, label: d.label })),
   })).filter((g) => g.blocks.length > 0);
 }
@@ -84,7 +90,18 @@ export interface EditorHint {
   blockId?: string;
 }
 
-const LIST_BLOCKS = new Set(['ProductGrid', 'ProductList', 'WholesaleTable']);
+/** The catalogue containers: their intro is the `CatalogIntro` part (spec §11). */
+const LIST_CONTAINERS = new Set(['ProductGrid', 'ProductList']);
+
+/** Does this list show its own intro? A container through its `CatalogIntro` part; slots not stored yet = the default arrangement, which has one. */
+function showsListIntro(c: ComponentData): boolean {
+  if (c.props.intro === 'hide') return false;
+  if (c.type === 'WholesaleTable') return true;
+  if (!LIST_CONTAINERS.has(c.type)) return false;
+  const slots = (blockDef(c.type)?.slots ?? []).map((s) => c.props[s]);
+  if (slots.every((v) => !Array.isArray(v))) return true;
+  return slots.some((v) => Array.isArray(v) && containsType(v as ComponentData[], 'CatalogIntro'));
+}
 /** Pages whose tab title names the product or order on show; a root title replaces it. */
 const ITEM_TITLE_DOCS: ReadonlySet<DocKey> = new Set<DocKey>(['product', 'order-status']);
 
@@ -105,7 +122,7 @@ export function editorHints(doc: PuckDoc, docKey: DocKey): EditorHint[] {
   let categoryNav: ComponentData | undefined;
   walk(doc.content, (c) => {
     if (c.type === 'CatalogHero' && c.props.variant === 'custom') customHero ??= c;
-    if (LIST_BLOCKS.has(c.type) && c.props.intro !== 'hide') listWithIntro = true;
+    if (showsListIntro(c)) listWithIntro = true;
     if (c.type === 'CategoryNav') categoryNav ??= c;
   });
   if (docKey === 'catalog' && customHero && listWithIntro) {
@@ -153,13 +170,23 @@ const LOCKED = { delete: false, duplicate: false } as const;
  */
 export function buildEditorConfig(docKey: DocKey, layout: LayoutKind, present: ReadonlySet<string>): Config {
   const components: Config['components'] = {};
+  const required = requiredPartsOn(docKey, layout);
   for (const def of inLayout(layout)) {
+    const container = def.container;
     components[def.name] = {
       label: def.label,
       fields: scopeFields(def.name, EDITOR_FIELDS[def.name] ?? {}, docKey, layout),
       defaultProps: def.defaultProps,
-      // A required route block can't be deleted or copied; the canvas is one doc, so it can't leave its route either.
-      ...(isLockedOn(def.name, docKey) ? { permissions: { ...LOCKED } } : {}),
+      // A required route block or part can't be deleted or copied; the canvas is one doc, so it can't
+      // leave its route either. Any other part shows at most once (spec §11), so it can't be copied.
+      ...(isLockedOn(def.name, docKey) || required.has(def.name) ? { permissions: { ...LOCKED } }
+        : def.part ? { permissions: { duplicate: false } } : {}),
+      // A container dropped from the drawer arrives with empty slots: give it its default arrangement once.
+      ...(container ? {
+        resolveData: (data: { props: Props }, params: { trigger: string }) => (params.trigger === 'insert'
+          ? { ...data, props: { ...data.props, ...container.defaultSlots(parseBlockProps(def, data.props), { layout, id: String(data.props.id) }) } }
+          : data),
+      } : {}),
       render: (props: Props) => createElement(EditorBlock, { def, props, docKey, layout }),
     };
   }
@@ -173,7 +200,8 @@ export function buildEditorConfig(docKey: DocKey, layout: LayoutKind, present: R
     components,
     categories,
     root: {
-      fields: docKey === 'shell' ? {} : ROOT_FIELDS,
+      // No page of its own: the shell, a card design, and the product sheet outside the storefront.
+      fields: docKey === 'shell' || isCardKey(docKey) || (docKey === 'product' && layout !== 'storefront') ? {} : ROOT_FIELDS,
       defaultProps: { title: '', description: '', chrome: 'shell' },
       // The shop's ground, ink and content column (page-ground.tsx): what a shopper's page stands on.
       render: ({ children }: { children: ReactNode }) => createElement(PageGround, { docKey, layout, children }),

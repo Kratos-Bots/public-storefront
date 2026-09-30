@@ -133,6 +133,9 @@ function AddBlock() {
     const target = insertTarget(api as unknown as InsertApi, componentType);
     dispatch({ type: 'insert', componentType, destinationIndex: target.index, destinationZone: target.zone });
     dispatch({ type: 'setUi', ui: { itemSelector: { index: target.index, zone: target.zone } }, recordHistory: false });
+    // A bare `insert` action skips resolveData (the drawer's drop runs it): a container needs it
+    // to arrive with its default arrangement rather than empty slots (spec §11).
+    if (blockDef(componentType)?.container) getPuck().resolveDataBySelector({ index: target.index, zone: target.zone }, 'insert');
     hide(true);
   };
 
@@ -459,7 +462,9 @@ function ResetPage() {
 /** A block to select once the canvas for another doc has mounted (jumping across pages). */
 let pendingJump: { docKey: DocKey; blockId?: string } | null = null;
 
-const BLOCK_RULE_RE = /^(?:field|placement|layout|at-most-one|exactly-one):([A-Za-z0-9]+)/;
+/** Rules whose id names a block first: `part-required:ProductDetail.ProductTitle` → the container. */
+export const BLOCK_RULE_RE =
+  /^(?:field|placement|layout|at-most-one|exactly-one|part-required|part-unique|part-requires|part-placement|slot-accepts|hidden-required):([A-Za-z0-9]+)/;
 
 /** What part of the page an issue is about: a block's name, the page settings, or nothing more. */
 function issuePart(issue: Issue): string | null {

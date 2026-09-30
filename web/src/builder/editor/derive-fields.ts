@@ -3,7 +3,7 @@ import type { Field, Fields, SlotField } from '@puckeditor/core';
 import { BLOCKS } from '@/builder/registry.ts';
 import type { BlockDef } from '@/builder/define.ts';
 import { allowedOn } from '@/builder/rules.ts';
-import { FIXED_ROUTE_KEYS, type DocKey, type LayoutKind } from '@/builder/types.ts';
+import { CARD_KINDS, cardKey, FIXED_ROUTE_KEYS, isCardKey, type DocKey, type LayoutKind } from '@/builder/types.ts';
 import { insertableBlocks } from '@/builder/editor/route-bound.ts';
 import { routeLinkField } from '@/builder/editor/custom-fields/route-link.tsx';
 import { imageField } from '@/builder/editor/custom-fields/image.tsx';
@@ -160,8 +160,10 @@ export function deriveFields(def: AnyBlock): { fields: Fields; uncovered: string
   const fields: Fields = {};
   const uncovered: string[] = [];
   const slots = new Set<string>(def.slots);
+  // Product-parts §8: legacy toggles are read only while slots are absent — never edited.
+  const legacy = new Set<string>(def.container?.legacyProps ?? []);
   for (const [key, prop] of Object.entries(toJson(def).properties ?? {})) {
-    if (slots.has(key)) continue; // a slot is `ComponentData[]`, not an editable array
+    if (slots.has(key) || legacy.has(key)) continue; // a slot is `ComponentData[]`, not an editable array
     const f = fieldFor(key, prop);
     if (f) fields[key] = f;
     else uncovered.push(key);
@@ -178,6 +180,9 @@ const EVERY_DOC: readonly DocKey[] = ['shell', ...FIXED_ROUTE_KEYS, 'page:any'];
 const ALL_LAYOUTS: readonly LayoutKind[] = ['storefront', 'menu', 'webapp'];
 const inLayout = (d: AnyBlock, layout: LayoutKind) => d.layouts === 'all' || d.layouts.includes(layout);
 
+/** Where a block may sit: every doc a slot can be on, card designs included (they take only frames and parts). */
+const BLOCK_HOMES: readonly DocKey[] = [...EVERY_DOC, ...CARD_KINDS.map(cardKey)];
+
 /** Blocks accepted on every one of `docs` in every one of `layouts`. */
 function acceptedOnAll(docs: readonly DocKey[], layouts: readonly LayoutKind[]): string[] {
   return Object.values(BLOCKS)
@@ -193,18 +198,35 @@ export function slotAllowEverywhere(): string[] {
   return acceptedOnAll(EVERY_DOC, ALL_LAYOUTS);
 }
 
+const notRouteOrContainer = (n: string): boolean => !BLOCKS[n]!.routeBound && !BLOCKS[n]!.container;
+
+/**
+ * Spec §3.4: a container slot takes its family's parts, content and non-route blocks —
+ * `slotAccepts` narrows it to exactly the listed types.
+ */
+function containerSlotAllow(def: AnyBlock, slot: string, candidates: readonly string[]): string[] {
+  const only = def.container?.slotAccepts && Object.hasOwn(def.container.slotAccepts, slot) ? def.container.slotAccepts[slot]! : null;
+  return candidates.filter((n) => (only ? only.includes(n) : notRouteOrContainer(n)));
+}
+
+/** A slot inside a container (the container's own, or a part's — a group's) never holds a route block or a container. */
+function slotList(def: AnyBlock, slot: string | undefined, candidates: readonly string[]): string[] {
+  if (def.container) return slot ? containerSlotAllow(def, slot, candidates) : candidates.filter(notRouteOrContainer);
+  return def.part ? candidates.filter(notRouteOrContainer) : [...candidates];
+}
+
 /**
  * The static allow list for `name`'s slots. A slot's children count toward the doc they sit in, so
  * without knowing the doc a slot may accept only what every doc and layout the block itself can be
  * in accepts: `slotAllowEverywhere()` for a block that goes anywhere, more for a route block (the
  * cart's CartContents.summary takes CartSummary). `scopeFields` narrows or widens it to one doc.
  */
-export function slotAllowFor(name: string): string[] {
+export function slotAllowFor(name: string, slot?: string): string[] {
   const def = Object.hasOwn(BLOCKS, name) ? BLOCKS[name] : undefined;
   if (!def) return [];
-  const docs = EVERY_DOC.filter((k) => allowedOn(name, k));
+  const docs = BLOCK_HOMES.filter((k) => allowedOn(name, k));
   const layouts = ALL_LAYOUTS.filter((l) => inLayout(def, l));
-  return docs.length === 0 || layouts.length === 0 ? [] : acceptedOnAll(docs, layouts);
+  return docs.length === 0 || layouts.length === 0 ? [] : slotList(def, slot, acceptedOnAll(docs, layouts));
 }
 
 /**
@@ -215,10 +237,7 @@ export function blockFields(name: string, overrides: Fields = {}): Fields {
   const def = Object.hasOwn(BLOCKS, name) ? BLOCKS[name] : undefined;
   if (!def) throw new Error(`Unknown block ${name}`);
   const { fields } = deriveFields(def);
-  if (def.slots.length > 0) {
-    const allow = slotAllowFor(name);
-    for (const slot of def.slots) fields[slot] = { ...(fields[slot] as SlotField), allow: [...allow] };
-  }
+  for (const slot of def.slots) fields[slot] = { ...(fields[slot] as SlotField), allow: slotAllowFor(name, slot) };
   const out: Fields = { ...fields, ...overrides };
   // The Style group always comes last, after any overrides (block-styling spec §9.1).
   if (def.style) out.blockStyle = styleField(def) as Field;
@@ -241,7 +260,9 @@ export function scopeFields(name: string, fields: Fields, docKey: DocKey, layout
     const allow = insertableBlocks(docKey, layout);
     for (const slot of def.slots) {
       const f = out[slot] as Field | undefined;
-      if (f?.type === 'slot') out[slot] = { ...f, allow: [...allow] };
+      // In a card doc every slot sits inside the frame: none offers the frame again.
+      const list = def.container || def.part ? slotList(def, slot, allow) : isCardKey(docKey) ? allow.filter(notRouteOrContainer) : [...allow];
+      if (f?.type === 'slot') out[slot] = { ...f, allow: list };
     }
   }
   const variant = out.variant as Field | undefined;
