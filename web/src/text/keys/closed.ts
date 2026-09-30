@@ -1,4 +1,6 @@
 import { defineTextArea } from '@/text/define.ts';
 
-/** Area `closed` (editable-text spec §6.1). Seeded by Task 4, filled by its extraction task. */
-export default defineTextArea('closed', {});
+/** Area `closed`: the page shown while the shop is closed; every key is fixed (editable-text spec §6.1, §6.2). */
+export default defineTextArea('closed', {
+  'eyebrow': { en: 'Currently closed', note: 'Small heading on the page shown while the shop is closed (not editable)', fixed: true },
+});

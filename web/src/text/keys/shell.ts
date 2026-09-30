@@ -1,4 +1,6 @@
 import { defineTextArea } from '@/text/define.ts';
 
-/** Area `shell` (editable-text spec §6.1). Seeded by Task 4, filled by its extraction task. */
-export default defineTextArea('shell', {});
+/** Area `shell`: header, footer and navigation around every page (editable-text spec §6.1). */
+export default defineTextArea('shell', {
+  'nav.ariaLabel': { en: 'Site', note: 'Screen-reader name of a Links block left without its own label', max: 40 },
+});
