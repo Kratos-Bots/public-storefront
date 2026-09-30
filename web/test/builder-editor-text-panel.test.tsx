@@ -292,6 +292,29 @@ describe('Text panel', () => {
     expect(panel.querySelectorAll('[data-text-key]').length).toBe(1);
   });
 
+  it('an issue on another template’s line is counted, listed under Issues, and can be fixed and reset', () => {
+    ready();
+    const key = 'templates.bento.hero.open';
+    expect(rowFor(key)).not.toBeNull();
+    act(() => { S().setText('shared', key, 'Hi {', null); });
+    render(<TextPanel />);   // no template context: the active template is 'modern'
+    const panel = screen.getByRole('region', { name: 'Site text' });
+    const issuesButton = within(panel).getByRole('button', { name: /^Issues/ });
+    expect(issuesButton).toHaveAccessibleName('Issues 1');
+    fireEvent.click(issuesButton);
+    const rows = [...panel.querySelectorAll('[data-text-key]')].map((r) => r.getAttribute('data-text-key'));
+    expect(rows).toEqual([key]);
+    expect(within(panel).getByRole('button', { name: /Other templates/ })).toBeInTheDocument();
+    const input = within(panel).getByRole('textbox', { name: rowFor(key)!.label });
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'Now open' } });
+    expect(S().siteText!.strings.en![key]).toBe('Now open');
+    expect(within(panel).getByRole('textbox', { name: rowFor(key)!.label })).toBe(input);   // pinned while edited
+    fireEvent.click(within(panel).getByRole('button', { name: 'Reset' }));
+    expect(S().siteText!.strings).toEqual({});
+    expect(within(panel).getByRole('button', { name: 'Issues' })).toHaveAccessibleName('Issues');
+  });
+
   it('the filter group has All, Edited, This layout and Issues', () => {
     ready();
     render(<TextPanel />);

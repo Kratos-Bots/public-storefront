@@ -19,6 +19,7 @@ const FILTERS: Array<{ id: TextFilter; label: string }> = [
   { id: 'all', label: 'All' }, { id: 'edited', label: 'Edited' }, { id: 'layout', label: 'This layout' }, { id: 'issues', label: 'Issues' },
 ];
 const FOCUS_TRIES = 5;
+const OTHER_TEMPLATES = 'other-templates';
 /** Rows mounted at once while a search or filter forces every group open; "Show more" adds a page. */
 export const ROW_PAGE = 60;
 
@@ -36,7 +37,7 @@ const passesQuery = (r: TextRowDef, query: string, text: EditorText) =>
 export function TextPanel({ onClose }: { onClose?: () => void }) {
   const id = useId().replace(/[^A-Za-z0-9_-]/g, '');
   const templateId = useTemplateContext().resolved?.templateId ?? 'modern';
-  const groups = useMemo(() => textGroups(templateId), [templateId]);
+  const templateGroups = useMemo(() => textGroups(templateId), [templateId]);
   const filter = useTextUi((s) => s.filter);
   const query = useTextUi((s) => s.query);
   const focus = useTextUi((s) => s.focus);
@@ -58,12 +59,23 @@ export function TextPanel({ onClose }: { onClose?: () => void }) {
   useEffect(() => { setPinned(null); setLimit(ROW_PAGE); }, [filter, query]);
 
   const issueKeys = useMemo(() => new Set(issues.map((i) => i.key)), [issues]);
-  const rowKeys = useMemo(() => new Set<string>(groups.flatMap((g) => g.rows.map((r) => r.key))), [groups]);
+  const rowKeys = useMemo(() => new Set<string>(templateGroups.flatMap((g) => g.rows.map((r) => r.key))), [templateGroups]);
+  /**
+   * Lines of templates other than the active one are not listed, but an issue on one still blocks
+   * publishing: those rows (and the one being fixed, while pinned) get their own group.
+   */
+  const groups = useMemo(() => {
+    const keys = [...issueKeys];
+    if (pinned && !keys.includes(pinned)) keys.push(pinned);
+    const rows = keys.filter((k) => !rowKeys.has(k)).map((k) => rowFor(k)).filter((r): r is TextRowDef => r !== null);
+    return rows.length === 0 ? templateGroups : [...templateGroups, { id: OTHER_TEMPLATES, title: 'Other templates', rows }];
+  }, [templateGroups, issueKeys, rowKeys, pinned]);
   const keep = (r: TextRowDef) => r.key === pinned || (passesFilter(r, filter, text, issueKeys) && passesQuery(r, query, text));
   const unused = useMemo(() => unusedEntries({ shared: sharedEditable ? text.shared : null, layout: text.layout }), [sharedEditable, text]);
   // Lines that can't be changed are blocking issues with no row: they are listed under Unused.
   const blockedUnused = unused.filter((u) => u.rule === 'fixed');
-  const issueCount = [...issueKeys].filter((k) => rowKeys.has(k)).length + blockedUnused.length;
+  // Every issue with a row (active template or not) plus the unchangeable lines under Unused.
+  const issueCount = [...issueKeys].filter((k) => rowFor(k) !== null).length + blockedUnused.length;
   const listedUnused = filter === 'issues' ? blockedUnused : unused;
   const narrowed = query.trim() !== '' || filter !== 'all';
   const focusGroup = focus ? groups.find((g) => g.rows.some((r) => r.key === focus.key))?.id : undefined;
