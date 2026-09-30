@@ -18,7 +18,7 @@ import classes from '@/features/account/Account.module.css';
  * on, so it is the only thing carrying an accent.
  */
 export function OrdersPage() {
-  const { t, tp } = useText();
+  const { t, tn, tp } = useText();
   const orders = useOrders();
 
   if (orders.isPending) return <PageSkeleton inline />;
@@ -81,7 +81,7 @@ export function OrdersPage() {
               </span>
               {order.outstandingBalance > 0 ? (
                 <span className={classes.due}>
-                  {t('account.orders.balanceDue')}<Money amount={order.outstandingBalance} />
+                  {tn('account.orders.balanceDue', { amount: <Money amount={order.outstandingBalance} /> })}
                 </span>
               ) : null}
             </Link>

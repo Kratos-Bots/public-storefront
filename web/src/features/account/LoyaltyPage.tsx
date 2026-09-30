@@ -109,7 +109,7 @@ export function LoyaltyPage() {
           {/* No balance repeated here: the meter states it three lines up, and the
               ladder's own copy of it can be a fetch behind the meter's. */}
           <div className={classes.sectionHead}>
-            <h3 className={classes.sectionTitle}>{t('account.loyalty.redeem')}</h3>
+            <h3 className={classes.sectionTitle}>{t('account.loyalty.redeemTitle')}</h3>
           </div>
 
           {ladder.options.length === 0 ? (
