@@ -85,6 +85,18 @@ export interface InstallMocksOptions {
   pages?: Partial<Record<Layout, PageSet | null>>;
   /** Make the pages route fail (503 or 404) so specs can exercise the built-in fallback. */
   pagesFail?: 503 | 404;
+  /** Published site text served alongside the page set. Omitted = today's body
+   *  exactly (`null`, or `{ version: 1, data: set }`) with no `text` field. */
+  text?: MockText;
+}
+
+/** The published site text the pages route serves (spec §4.6), active locale only. */
+export interface MockText {
+  version?: number;                 // default 1
+  locale?: string;                  // default 'en'
+  formatLocale?: string;            // default ''
+  shared?: Record<string, unknown>; // active-locale shared strings
+  layout?: Partial<Record<Layout, Record<string, unknown>>>; // per-layout overrides
 }
 
 export interface MockState {
@@ -119,6 +131,8 @@ export interface MockState {
   pages: Partial<Record<Layout, PageSet | null>>;
   /** When set, the pages route answers this error status instead of the fixture. */
   pagesFail: 503 | 404 | null;
+  /** Published site text; `null` = the pages route serves the pre-text body. */
+  text: MockText | null;
 }
 
 export interface MockHandle {
@@ -260,6 +274,7 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     botModes: [],
     pages: options.pages ?? {},
     pagesFail: options.pagesFail ?? null,
+    text: options.text ?? null,
   };
 
   options.tweakSettings?.(state.settings);
@@ -322,7 +337,21 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
         return;
       }
       const set = state.pages[pages[1] as Layout] ?? null;
-      await envelope(route, set ? { version: 1, data: set } : null);
+      if (!state.text) {
+        await envelope(route, set ? { version: 1, data: set } : null);
+        return;
+      }
+      await envelope(route, {
+        version: set ? 1 : 0,
+        data: set,
+        text: {
+          version: state.text.version ?? 1,
+          locale: state.text.locale ?? 'en',
+          formatLocale: state.text.formatLocale ?? '',
+          shared: state.text.shared ?? {},
+          layout: state.text.layout?.[pages[1] as Layout] ?? {},
+        },
+      });
       return;
     }
 
