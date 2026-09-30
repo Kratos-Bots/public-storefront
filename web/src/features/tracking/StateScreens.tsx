@@ -1,6 +1,7 @@
 import { ContactLinks } from '@/components/ContactLinks.tsx';
 import { EmptyState } from '@/components/EmptyState.tsx';
 import { formatRelative } from '@/features/tracking/status.ts';
+import { useText } from '@/text/runtime.tsx';
 import type { TrackingLookup } from '@/types/tracking.ts';
 import classes from '@/features/tracking/Tracking.module.css';
 
@@ -9,8 +10,9 @@ import classes from '@/features/tracking/Tracking.module.css';
  * rail, facts, first card — so nothing jumps when the lookup lands.
  */
 export function PendingSkeleton() {
+  const { t } = useText();
   return (
-    <div className={classes.skeleton} role="status" aria-label="Loading tracking">
+    <div className={classes.skeleton} role="status" aria-label={t('tracking.states.loading')}>
       <div className={classes.heroTop}>
         <span className={classes.block} style={{ width: 112, height: 11 }} />
         <span className={classes.block} style={{ width: 88, height: 20 }} />
@@ -50,9 +52,10 @@ export function PendingSkeleton() {
  * for waiting on something it cannot hurry.
  */
 export function VerifyingNote() {
+  const { t } = useText();
   return (
     <div className={classes.verifying} role="status">
-      <p className={classes.verifyingLabel}>Checking you're human</p>
+      <p className={classes.verifyingLabel}>{t('tracking.states.verifying')}</p>
       <span className={classes.sweep} aria-hidden />
     </div>
   );
@@ -65,19 +68,16 @@ export function VerifyingNote() {
  * widget that never mounted, so the action is a reload.
  */
 export function VerifyBlockedScreen({ onReload }: { onReload: () => void }) {
+  const { t } = useText();
   return (
     <div className={classes.screen} data-tone="warn">
       <p className={classes.screenHead} data-tone="warn">
-        Verification unavailable
+        {t('tracking.states.blockedHead')}
       </p>
-      <p className={classes.screenText}>
-        We couldn't finish the security check that protects order lookups, so we can't fetch your
-        tracking. A privacy extension or network filter blocking Cloudflare challenges is the usual
-        cause.
-      </p>
+      <p className={classes.screenText}>{t('tracking.states.blockedBody')}</p>
       <div className={classes.screenAction}>
         <button className={classes.ghost} type="button" onClick={onReload}>
-          Reload page
+          {t('tracking.states.reload')}
         </button>
       </div>
       <div className={classes.screenContact}>
@@ -88,15 +88,13 @@ export function VerifyBlockedScreen({ onReload }: { onReload: () => void }) {
 }
 
 export function NotFoundScreen() {
+  const { t } = useText();
   return (
     <div className={classes.screen} data-tone="warn">
       <p className={classes.screenHead} data-tone="warn">
-        No order found
+        {t('tracking.states.notFoundHead')}
       </p>
-      <p className={classes.screenText}>
-        We couldn't find an order with that number. Check it against your confirmation — it's six
-        characters, letters and numbers.
-      </p>
+      <p className={classes.screenText}>{t('tracking.states.notFoundBody')}</p>
       <div className={classes.screenContact}>
         <ContactLinks />
       </div>
@@ -110,16 +108,14 @@ export function NotFoundScreen() {
  * for three of them.
  */
 export function ErrorScreen({ status, onRetry }: { status: number; onRetry: () => void }) {
+  const { t } = useText();
   if (status === 503) {
     return (
       <div className={classes.screen} data-tone="warn">
         <p className={classes.screenHead} data-tone="warn">
-          Tracking unavailable
+          {t('tracking.states.offHead')}
         </p>
-        <p className={classes.screenText}>
-          Order tracking isn't switched on right now. Message us with your order number and we'll
-          look it up for you.
-        </p>
+        <p className={classes.screenText}>{t('tracking.states.offBody')}</p>
         <div className={classes.screenContact}>
           <ContactLinks />
         </div>
@@ -131,15 +127,12 @@ export function ErrorScreen({ status, onRetry }: { status: number; onRetry: () =
     return (
       <div className={classes.screen} data-tone="warn">
         <p className={classes.screenHead} data-tone="warn">
-          Too many lookups
+          {t('tracking.states.rateHead')}
         </p>
-        <p className={classes.screenText}>
-          This connection has made a lot of lookups in the last few minutes. Wait a minute, then try
-          again.
-        </p>
+        <p className={classes.screenText}>{t('tracking.states.rateBody')}</p>
         <div className={classes.screenAction}>
           <button className={classes.ghost} type="button" onClick={onRetry}>
-            Try again
+            {t('common.actions.tryAgain')}
           </button>
         </div>
       </div>
@@ -150,15 +143,12 @@ export function ErrorScreen({ status, onRetry }: { status: number; onRetry: () =
     return (
       <div className={classes.screen} data-tone="warn">
         <p className={classes.screenHead} data-tone="warn">
-          Verification didn't go through
+          {t('tracking.states.challengeHead')}
         </p>
-        <p className={classes.screenText}>
-          The security check that protects order lookups didn't complete. Try again — we'll run a
-          fresh one.
-        </p>
+        <p className={classes.screenText}>{t('tracking.states.challengeBody')}</p>
         <div className={classes.screenAction}>
           <button className={classes.ghost} type="button" onClick={onRetry}>
-            Try again
+            {t('common.actions.tryAgain')}
           </button>
         </div>
       </div>
@@ -168,14 +158,12 @@ export function ErrorScreen({ status, onRetry }: { status: number; onRetry: () =
   return (
     <div className={classes.screen} data-tone="danger">
       <p className={classes.screenHead} data-tone="danger">
-        Connection error
+        {t('tracking.states.connectionHead')}
       </p>
-      <p className={classes.screenText}>
-        We couldn't reach the tracking service. Try again in a moment.
-      </p>
+      <p className={classes.screenText}>{t('tracking.states.connectionBody')}</p>
       <div className={classes.screenAction}>
         <button className={classes.ghost} type="button" onClick={onRetry}>
-          Try again
+          {t('common.actions.tryAgain')}
         </button>
       </div>
     </div>
@@ -184,19 +172,20 @@ export function ErrorScreen({ status, onRetry }: { status: number; onRetry: () =
 
 /** The order is real and nothing has been dispatched — the majority case. */
 export function NothingShippedScreen({ data }: { data: TrackingLookup }) {
+  const { t } = useText();
   const terminal = data.status === 'cancelled' || data.status === 'refunded';
   return (
     <div className={classes.nothing} data-tone={terminal ? 'danger' : undefined}>
       <div className={classes.nothingHead}>
-        <p className={classes.refLabel}>{terminal ? 'This order' : 'No parcels yet'}</p>
+        <p className={classes.refLabel}>{terminal ? t('tracking.states.thisOrder') : t('tracking.states.noParcels')}</p>
         <p className={classes.timelineCount}>{formatRelative(data.createdAt)}</p>
       </div>
       <p className={classes.screenText}>
         {terminal
-          ? `This order was ${data.status}. Nothing will be dispatched.`
+          ? t('tracking.states.cancelledBody', { status: data.status })
           : data.isPreorder
-            ? "This is a pre-order, so it ships once stock lands. We'll send a tracking number then."
-            : "Your order hasn't been dispatched yet. A tracking number appears here as soon as it's on its way."}
+            ? t('tracking.states.preorderBody')
+            : t('tracking.states.notDispatchedBody')}
       </p>
       {/* No spec sheet here: the hero above already carries the status, the
           placed date and the item count. */}
@@ -211,12 +200,11 @@ export function NothingShippedScreen({ data }: { data: TrackingLookup }) {
 
 /** The courier network is unconfigured or unreachable — shipments still render. */
 export function DegradedNotice() {
+  const { t } = useText();
   return (
     <div className={classes.degraded}>
-      <p className={classes.screenHead}>Live updates paused</p>
-      <p className={classes.degradedText}>
-        We can't reach the courier network right now. The shipment details below are still accurate.
-      </p>
+      <p className={classes.screenHead}>{t('tracking.states.degradedHead')}</p>
+      <p className={classes.degradedText}>{t('tracking.states.degradedBody')}</p>
     </div>
   );
 }
@@ -227,12 +215,13 @@ export function DegradedNotice() {
  * offer the way through.
  */
 export function TrackingUnavailableScreen() {
+  const { t } = useText();
   return (
     <>
       <EmptyState
-        eyebrow="Tracking"
-        title="Tracking isn't available right now"
-        description="Order lookups are switched off on this shop. Message us with your order number and we'll check on it for you."
+        eyebrow={t('tracking.states.disabledEyebrow')}
+        title={t('tracking.states.disabledTitle')}
+        description={t('tracking.states.disabledBody')}
       />
       <div className={classes.centreContact}>
         <ContactLinks />

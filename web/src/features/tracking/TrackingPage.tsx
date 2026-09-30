@@ -20,6 +20,7 @@ import {
   VerifyingNote,
 } from '@/features/tracking/StateScreens.tsx';
 import { allTerminal, furthestStage } from '@/features/tracking/status.ts';
+import { useText } from '@/text/runtime.tsx';
 import type { TrackingLookup } from '@/types/tracking.ts';
 import classes from '@/features/tracking/Tracking.module.css';
 
@@ -46,6 +47,7 @@ const PREVIEW_TOKEN = 'sf-builder-preview';
  * failure the others create.
  */
 export function TrackingPage() {
+  const { t } = useText();
   const { reference } = useParams<{ reference?: string }>();
   const ref = reference?.trim().toUpperCase() ?? '';
   const settings = useSettings();
@@ -206,18 +208,16 @@ export function TrackingPage() {
     <div className={classes.page}>
       {compact ? (
         <div className={classes.strip}>
-          <p className={classes.stripLabel}>Order tracking</p>
+          <p className={classes.stripLabel}>{t('tracking.lookup.strip')}</p>
           <Link className={classes.stripLink} to="/tracking">
-            Track another →
+            {t('tracking.lookup.another')}
           </Link>
         </div>
       ) : (
         <div className={classes.masthead}>
-          <p className={classes.eyebrow}>Delivery</p>
-          <h1 className={classes.title}>Track your order</h1>
-          <p className={classes.lead}>
-            See where your parcel is and every scan along the way.
-          </p>
+          <p className={classes.eyebrow}>{t('tracking.lookup.eyebrow')}</p>
+          <h1 className={classes.title}>{t('tracking.lookup.title')}</h1>
+          <p className={classes.lead}>{t('tracking.lookup.lead')}</p>
         </div>
       )}
 

@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { listSavedOrders } from '@/stores/saved-orders.ts';
 import { FADE } from '@/lib/motion.ts';
+import { textKey, useText } from '@/text/runtime.tsx';
 import classes from '@/features/tracking/Tracking.module.css';
 
 /** Same shape the backend accepts, so a reference it would reject never costs a request. */
@@ -22,6 +23,7 @@ export interface LookupFormProps {
  * reloaded.
  */
 export function LookupForm({ initial = '' }: LookupFormProps) {
+  const { t, msg } = useText();
   const [value, setValue] = useState(initial);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -35,7 +37,7 @@ export function LookupForm({ initial = '' }: LookupFormProps) {
     e.preventDefault();
     const reference = value.trim().toUpperCase();
     if (!REFERENCE_RE.test(reference)) {
-      setError('Check that reference');
+      setError(textKey('tracking.lookup.invalidReference'));
       return;
     }
     navigate(`/tracking/${encodeURIComponent(reference)}`);
@@ -46,10 +48,10 @@ export function LookupForm({ initial = '' }: LookupFormProps) {
       {/* The error sits beside the label rather than inside it: in the label it
           would become part of the field's accessible name. */}
       <div className={classes.fieldHead}>
-        <label htmlFor={inputId}>Order number</label>
+        <label htmlFor={inputId}>{t('tracking.lookup.label')}</label>
         {error ? (
           <span id={errorId} className={classes.fieldError} role="alert">
-            {error}
+            {msg(error)}
           </span>
         ) : null}
       </div>
@@ -62,7 +64,7 @@ export function LookupForm({ initial = '' }: LookupFormProps) {
           setValue(e.target.value);
           if (error) setError(null);
         }}
-        placeholder="A7K2QM"
+        placeholder={t('tracking.lookup.placeholder')}
         autoComplete="off"
         spellCheck={false}
         autoCapitalize="characters"
@@ -71,7 +73,7 @@ export function LookupForm({ initial = '' }: LookupFormProps) {
       />
 
       <p className={classes.hint} id={hintId}>
-        Six characters, on your order confirmation.
+        {t('tracking.lookup.hint')}
       </p>
 
       <button
@@ -80,12 +82,12 @@ export function LookupForm({ initial = '' }: LookupFormProps) {
         data-sf-part="button"
         data-variant="filled"
       >
-        Track order
+        {t('tracking.lookup.submit')}
       </button>
 
       {recent.length > 0 ? (
         <div className={classes.recent}>
-          <p className={classes.recentLabel}>Recent</p>
+          <p className={classes.recentLabel}>{t('tracking.lookup.recent')}</p>
           <div className={classes.chips}>
             {recent.map((o) => (
               <button

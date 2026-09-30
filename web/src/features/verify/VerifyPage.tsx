@@ -8,11 +8,12 @@ import { ContactLinks } from '@/components/ContactLinks.tsx';
 import { CheckIcon } from '@/components/icons.tsx';
 import { dateTimeFormat } from '@/lib/format.ts';
 import { FADE } from '@/lib/motion.ts';
+import { textKey, useText } from '@/text/runtime.tsx';
 import classes from '@/features/verify/VerifyPage.module.css';
 
 const schema = z.object({
-  verificationCode: z.string().trim().min(1, 'Required'),
-  authCode: z.string().trim().regex(/^\d+$/, 'Digits only'),
+  verificationCode: z.string().trim().min(1, { error: () => textKey('checkout.errors.required') }),
+  authCode: z.string().trim().regex(/^\d+$/, { error: () => textKey('verify.errors.digitsOnly') }),
 });
 
 type Status = 'idle' | 'pending' | 'verified' | 'invalid' | 'error';
@@ -33,6 +34,7 @@ function formatDate(iso: string): string {
  * genuine but expired, or a pair that doesn't match anything on file.
  */
 export function VerifyPage() {
+  const { t, msg } = useText();
   const [verificationCode, setVerificationCode] = useState('');
   const [authCode, setAuthCode] = useState('');
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -86,18 +88,18 @@ export function VerifyPage() {
   return (
     <div className={classes.page}>
       <div className={classes.masthead}>
-        <p className={classes.eyebrow}>Authenticity</p>
-        <h1 className={classes.title}>Verify a product</h1>
-        <p className={classes.lead}>Enter the codes printed on your product label to confirm it's genuine.</p>
+        <p className={classes.eyebrow}>{t('verify.page.eyebrow')}</p>
+        <h1 className={classes.title}>{t('verify.page.title')}</h1>
+        <p className={classes.lead}>{t('verify.page.lead')}</p>
       </div>
 
       <form className={classes.form} onSubmit={(e) => void onSubmit(e)}>
         <div className={classes.field}>
           <div className={classes.fieldHead}>
-            <label htmlFor={codeId}>Verification code</label>
+            <label htmlFor={codeId}>{t('verify.form.codeLabel')}</label>
             {errors.verificationCode ? (
               <span id={codeErrorId} className={classes.fieldError} role="alert">
-                {errors.verificationCode}
+                {msg(errors.verificationCode)}
               </span>
             ) : null}
           </div>
@@ -107,7 +109,7 @@ export function VerifyPage() {
             type="text"
             value={verificationCode}
             onChange={(e) => edit(setVerificationCode, e.target.value)}
-            placeholder="AB3D-SKU12"
+            placeholder={t('verify.form.codePlaceholder')}
             autoComplete="off"
             spellCheck={false}
             autoCapitalize="off"
@@ -118,10 +120,10 @@ export function VerifyPage() {
 
         <div className={classes.field}>
           <div className={classes.fieldHead}>
-            <label htmlFor={authId}>Authentication code</label>
+            <label htmlFor={authId}>{t('verify.form.authLabel')}</label>
             {errors.authCode ? (
               <span id={authErrorId} className={classes.fieldError} role="alert">
-                {errors.authCode}
+                {msg(errors.authCode)}
               </span>
             ) : null}
           </div>
@@ -148,7 +150,7 @@ export function VerifyPage() {
           data-sf-part="button"
           data-variant="filled"
         >
-          {status === 'pending' ? 'Checking…' : 'Verify product'}
+          {status === 'pending' ? t('common.status.checking') : t('verify.form.submit')}
         </button>
       </form>
 
@@ -157,13 +159,14 @@ export function VerifyPage() {
       {status === 'error' ? <ErrorCard /> : null}
 
       <Link to="/" className={classes.back}>
-        ← Back to shop
+        {t('common.actions.backToShop')}
       </Link>
     </div>
   );
 }
 
 function VerifiedCard({ result }: { result: VerificationResult }) {
+  const { t } = useText();
   const expiry = new Date(result.expiryDate);
   const expired = !Number.isNaN(expiry.getTime()) && expiry.getTime() < Date.now();
 
@@ -174,17 +177,17 @@ function VerifiedCard({ result }: { result: VerificationResult }) {
           <CheckIcon size={11} />
         </span>
         <p className={classes.screenHead} data-tone="success">
-          Authentic Product
+          {t('verify.result.verifiedHead')}
         </p>
       </div>
-      <p className={classes.screenText}>This code matches a genuine unit from our records.</p>
+      <p className={classes.screenText}>{t('verify.result.verifiedBody')}</p>
       <dl className={classes.facts}>
-        <Row label="Issued" value={formatDate(result.createdAt)} />
-        <Row label="Expires" value={formatDate(result.expiryDate)} danger={expired} />
+        <Row label={t('verify.result.issued')} value={formatDate(result.createdAt)} />
+        <Row label={t('verify.result.expires')} value={formatDate(result.expiryDate)} danger={expired} />
       </dl>
       {expired ? (
         <p className={classes.screenNote} data-tone="danger">
-          Note: this unit is past its expiry date.
+          {t('verify.result.expiredNote')}
         </p>
       ) : null}
     </div>
@@ -192,18 +195,14 @@ function VerifiedCard({ result }: { result: VerificationResult }) {
 }
 
 function InvalidCard() {
+  const { t } = useText();
   return (
     <div className={`${classes.screen} ${FADE}`} data-tone="danger">
       <p className={classes.screenHead} data-tone="danger">
-        Not Verified
+        {t('verify.result.invalidHead')}
       </p>
-      <p className={classes.screenText}>
-        We couldn't match this code pair to a genuine unit. Double-check both codes exactly as printed
-        on the label.
-      </p>
-      <p className={classes.screenSub}>
-        If they're correct and still don't verify, contact us and our team will check manually.
-      </p>
+      <p className={classes.screenText}>{t('verify.result.invalidBody')}</p>
+      <p className={classes.screenSub}>{t('verify.result.invalidHint')}</p>
       <div className={classes.screenContact}>
         <ContactLinks />
       </div>
@@ -212,14 +211,13 @@ function InvalidCard() {
 }
 
 function ErrorCard() {
+  const { t } = useText();
   return (
     <div className={`${classes.screen} ${FADE}`} data-tone="warn">
       <p className={classes.screenHead} data-tone="warn">
-        Connection Error
+        {t('verify.result.errorHead')}
       </p>
-      <p className={classes.screenText}>
-        We couldn't reach the verification service. Try again in a moment, or contact us below.
-      </p>
+      <p className={classes.screenText}>{t('verify.result.errorBody')}</p>
       <div className={classes.screenContact}>
         <ContactLinks />
       </div>

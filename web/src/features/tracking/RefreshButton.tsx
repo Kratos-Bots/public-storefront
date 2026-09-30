@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { RotateIcon } from '@/components/icons.tsx';
 import { formatRelative, refreshReadyAt } from '@/features/tracking/status.ts';
+import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/tracking/Tracking.module.css';
 
 export interface RefreshButtonProps {
@@ -20,6 +21,7 @@ export interface RefreshButtonProps {
  * the visitor is trying to read.
  */
 export function RefreshButton({ checkedAt, busy, onRefresh }: RefreshButtonProps) {
+  const { t } = useText();
   const [now, setNow] = useState(() => Date.now());
   const readyAt = refreshReadyAt(checkedAt, now);
   const waiting = readyAt !== null;
@@ -38,7 +40,7 @@ export function RefreshButton({ checkedAt, busy, onRefresh }: RefreshButtonProps
   return (
     <div className={classes.refresh}>
       <p className={classes.refreshNote}>
-        {checkedAt ? `Checked ${formatRelative(checkedAt, now)}` : 'Not checked yet'}
+        {checkedAt ? t('tracking.refresh.checked', { when: formatRelative(checkedAt, now) }) : t('tracking.refresh.notChecked')}
       </p>
       <button
         className={classes.ghost}
@@ -46,10 +48,10 @@ export function RefreshButton({ checkedAt, busy, onRefresh }: RefreshButtonProps
         onClick={onRefresh}
         disabled={waiting || busy}
         data-counting={counting ? 'true' : undefined}
-        aria-label={counting ? `Refresh available in ${countdown}` : undefined}
+        aria-label={counting ? t('tracking.refresh.availableIn', { countdown }) : undefined}
       >
         <RotateIcon size={12} />
-        {busy ? 'Checking…' : waiting ? countdown : 'Refresh'}
+        {busy ? t('common.status.checking') : waiting ? countdown : t('tracking.refresh.label')}
       </button>
     </div>
   );

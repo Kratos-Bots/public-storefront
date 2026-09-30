@@ -1,7 +1,8 @@
 import { formatDate } from '@/lib/format.ts';
 import { orderStatusLabel } from '@/features/order-status/status.ts';
-import { formatRelative, parcelLabel, parcelTone } from '@/features/tracking/status.ts';
+import { formatRelative, parcelLabelKey, parcelTone } from '@/features/tracking/status.ts';
 import { FADE } from '@/lib/motion.ts';
+import { useText } from '@/text/runtime.tsx';
 import type { TrackingLookup } from '@/types/tracking.ts';
 import classes from '@/features/tracking/Tracking.module.css';
 
@@ -15,6 +16,7 @@ export interface Fact {
  * "and then what", and the handful of facts the payload actually knows.
  */
 export function OrderHero({ data }: { data: TrackingLookup }) {
+  const { t, tn } = useText();
   const tracked = data.parcels.filter((p) => p.tracking?.outcome === 'ok');
   // Keyed on parcel count as well as resolved-tracking count. On resolved count
   // alone, a three-parcel order where two lookups failed and the third is
@@ -24,7 +26,7 @@ export function OrderHero({ data }: { data: TrackingLookup }) {
   // One parcel → its own status leads. Several, or none resolved → the order
   // status leads. Never derived from the newest event: the server already
   // settles terminal states and dateless scans.
-  const headline = single ? parcelLabel(single.tracking!.status) : orderStatusLabel(data.status);
+  const headline = single ? t(parcelLabelKey(single.tracking!.status)) : orderStatusLabel(data.status);
   const tone = single ? parcelTone(single.tracking!.status) : 'neutral';
 
   const status = single?.tracking?.status ?? null;
@@ -34,31 +36,31 @@ export function OrderHero({ data }: { data: TrackingLookup }) {
   const settled = status === 'DELIVERED' || status === 'RETURNED' || status === 'EXCEPTION';
 
   const subline = deliveredAt
-    ? `Delivered ${formatDate(deliveredAt)}`
+    ? t('tracking.hero.deliveredOn', { date: formatDate(deliveredAt) })
     : settled
       ? null
       : destination
-        ? `Heading to ${destination.name ?? destination.code}`
+        ? t('tracking.hero.headingTo', { place: destination.name ?? destination.code })
         : data.parcels.length > 1
-          ? `${data.parcels.length} parcels dispatched`
+          ? t('tracking.hero.parcelsDispatched', { count: data.parcels.length })
           : null;
 
   const facts: Fact[] = [
-    { label: 'Placed', value: formatDate(data.createdAt) },
-    { label: 'Items', value: String(data.itemCount) },
-    ...(lastScan ? [{ label: 'Last scan', value: formatRelative(lastScan) }] : []),
+    { label: t('tracking.hero.factPlaced'), value: formatDate(data.createdAt) },
+    { label: t('tracking.hero.factItems'), value: String(data.itemCount) },
+    ...(lastScan ? [{ label: t('tracking.hero.factLastScan'), value: formatRelative(lastScan) }] : []),
     // Parcel count, not resolved-tracking count: a parcel whose lookup failed is
     // still a parcel, and under-reporting here is how a multi-parcel order ends
     // up looking like a single-parcel one.
-    ...(data.parcels.length > 1 ? [{ label: 'Parcels', value: String(data.parcels.length) }] : []),
-    ...(data.isPreorder ? [{ label: 'Type', value: 'Pre-order' }] : []),
+    ...(data.parcels.length > 1 ? [{ label: t('tracking.hero.factParcels'), value: String(data.parcels.length) }] : []),
+    ...(data.isPreorder ? [{ label: t('tracking.hero.factType'), value: t('common.product.preorder') }] : []),
   ];
 
   return (
-    <section className={`${classes.hero} ${FADE}`} aria-label="Order tracking summary">
+    <section className={`${classes.hero} ${FADE}`} aria-label={t('tracking.hero.summaryAria')}>
       <div className={classes.heroTop}>
         <p className={classes.heroRef}>
-          Order <span className={classes.heroRefValue}>{data.reference}</span>
+          {tn('tracking.hero.orderRef', { reference: <span className={classes.heroRefValue}>{data.reference}</span> })}
         </p>
         {/* Only while a parcel status is leading — otherwise this chip would
             repeat the headline word for word. */}
