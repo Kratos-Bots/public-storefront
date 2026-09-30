@@ -39,7 +39,7 @@ function prepareStyle(name: string, props: Props): Props {
   const def = blockDef(name);
   // An unregistered type never reaches the admin (the guard drops it); leave its props alone.
   if (!def) return props;
-  const { style } = parseBlockStyle(def.style ?? false, props.blockStyle);
+  const { style } = parseBlockStyle(def.style, props.blockStyle);
   if (style && sameStyle(props.blockStyle, style)) return props;
   const next: Props = { ...props };
   if (style) next.blockStyle = style;

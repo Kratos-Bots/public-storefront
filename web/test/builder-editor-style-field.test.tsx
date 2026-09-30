@@ -120,6 +120,30 @@ describe('styleField', () => {
     show(heading, { border: 'thin' });
     expect(within(screen.getByRole('radiogroup', { name: 'Border colour' })).getAllByRole('radio')[1]).toBeEnabled();
   });
+  it('a waiting border row points at the note that says why', () => {
+    show(heading, undefined);
+    for (const name of ['Border colour', 'Border style']) {
+      const group = screen.getByRole('radiogroup', { name });
+      expect(group).toHaveAccessibleDescription('Pick a border width first.');
+    }
+    cleanup();
+    show(heading, { border: 'thin' });
+    expect(screen.getByRole('radiogroup', { name: 'Border colour' })).not.toHaveAttribute('aria-describedby');
+  });
+  it('puts no id on the panel (Puck mounts fields twice; ids must stay unique)', () => {
+    show(heading, undefined);
+    expect(document.querySelector('[data-sf-style-panel]')).not.toHaveAttribute('id');
+  });
+  it('warns on the Header Visibility row that its pinned notices hide with it', () => {
+    const header = make('Header', styleSupport('pass', ['bg', 'shadow', ...VIS]));
+    show(header, undefined);
+    const group = screen.getByRole('radiogroup', { name: 'Visibility' });
+    expect(group).toHaveAccessibleDescription(/pinned notices.*Telegram web app.*cart and back buttons/);
+    cleanup();
+    show(heading, undefined);
+    expect(screen.getByRole('radiogroup', { name: 'Visibility' })).not.toHaveAttribute('aria-describedby');
+    expect(screen.queryByText(/pinned notices/)).toBeNull();
+  });
   it('arrow keys move through a chip row and select', () => {
     const onChange = show(heading, { padTop: 'sm' });
     const row = screen.getByRole('radiogroup', { name: 'Padding top' });

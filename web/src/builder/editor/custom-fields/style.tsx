@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import { useId, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import type { CustomField } from '@puckeditor/core';
 import type { AnyBlock } from '@/builder/define.ts';
 import type { BlockStyle, StyleKey, StyleSupport } from '@/builder/style/model.ts';
@@ -61,9 +61,18 @@ function SideDiagram({ side }: { side: NonNullable<(typeof SIDE)[StyleKey]> }) {
   );
 }
 
-interface RowProps { styleKey: StyleKey; value: string | undefined; disabled: boolean; onPick: (v: string | undefined) => void }
+/** Said under the Header's Visibility row: the pinned notices and the web app's cart/back chrome ride on it. */
+const HEADER_HIDE_WARNING = 'Hiding the header also hides its pinned notices (and, in the Telegram web app layout, the cart and back buttons).';
 
-function Row({ styleKey, value, disabled, onPick }: RowProps) {
+interface RowProps {
+  styleKey: StyleKey; value: string | undefined; disabled: boolean; onPick: (v: string | undefined) => void;
+  /** A one-line warning under the row, read as the radiogroup's description. */
+  warning?: string;
+}
+
+function Row({ styleKey, value, disabled, onPick, warning }: RowProps) {
+  const noteId = useId();
+  const note = disabled ? 'Pick a border width first.' : warning;
   const label = STYLE_LABELS[styleKey];
   const options: StyleOption[] = optionsFor(styleKey);
   const checked = options.findIndex((o) => o.value === value);
@@ -90,6 +99,7 @@ function Row({ styleKey, value, disabled, onPick }: RowProps) {
           role="radiogroup"
           aria-label={label}
           aria-disabled={disabled || undefined}
+          aria-describedby={note ? noteId : undefined}
           className={colour ? fieldStyles.swatches : styleKey === 'hide' ? styles.stack : styles.chips}
           onKeyDown={(e) => { if (!disabled) onRadioGroupKeyDown(e, options.length, checked, (i) => onPick(options[i]!.value)); }}
         >
@@ -118,7 +128,7 @@ function Row({ styleKey, value, disabled, onPick }: RowProps) {
           })}
         </div>
       </div>
-      {disabled ? <p className={styles.note}>Pick a border width first.</p> : null}
+      {note ? <p id={noteId} className={disabled ? styles.note : styles.warn}>{note}</p> : null}
     </div>
   );
 }
@@ -138,9 +148,9 @@ function ContrastHint({ bg, fg }: { bg?: string; fg?: string }) {
   return <p className={styles.warn} role="status">{low ? `Low contrast (${formatRatio(ratio)})` : null}</p>;
 }
 
-interface PanelProps { id: string; name: string; support: StyleSupport; value: BlockStyle | undefined; onChange: (v: BlockStyle | undefined) => void; readOnly: boolean }
+interface PanelProps { name: string; support: StyleSupport; value: BlockStyle | undefined; onChange: (v: BlockStyle | undefined) => void; readOnly: boolean }
 
-function StylePanel({ id, name, support, value, onChange, readOnly }: PanelProps) {
+function StylePanel({ name, support, value, onChange, readOnly }: PanelProps) {
   const [open, setOpen] = useState(() => openByType.get(name) ?? false);
   const summary = useRef<HTMLElement>(null);
   const count = countSet(value, support);
@@ -148,7 +158,7 @@ function StylePanel({ id, name, support, value, onChange, readOnly }: PanelProps
   // Controlled: React owns `open` (Enter/Space on a summary fire click too), remembered per block type.
   const toggle = () => { const next = !open; openByType.set(name, next); setOpen(next); };
   return (
-    <details className={`${fieldStyles.field} ${styles.panel}`} id={id} data-sf-style-panel="" open={open}>
+    <details className={`${fieldStyles.field} ${styles.panel}`} data-sf-style-panel="" open={open}>
       <summary ref={summary} className={styles.summary} onClick={(e) => { e.preventDefault(); toggle(); }}>
         {count > 0 ? `Style · ${count} set` : 'Style'}
       </summary>
@@ -161,7 +171,8 @@ function StylePanel({ id, name, support, value, onChange, readOnly }: PanelProps
           <section key={g.title} className={styles.group} aria-label={g.title}>
             <h4 className={styles.groupTitle}>{g.title}</h4>
             {g.keys.map((k) => (
-              <Row key={k} styleKey={k} value={value?.[k]} disabled={NEEDS_WIDTH.has(k) && value?.border === undefined} onPick={pick(k)} />
+              <Row key={k} styleKey={k} value={value?.[k]} disabled={NEEDS_WIDTH.has(k) && value?.border === undefined} onPick={pick(k)}
+                warning={name === 'Header' && k === 'hide' ? HEADER_HIDE_WARNING : undefined} />
             ))}
             {g.title === 'Colours' ? <ContrastHint bg={value?.bg} fg={value?.fg} /> : null}
           </section>
@@ -178,8 +189,8 @@ export function styleField(def: AnyBlock): CustomField<BlockStyle | undefined> {
   return {
     type: 'custom',
     label: 'Style',
-    render: ({ id, value, onChange, readOnly }) => (
-      <StylePanel id={id} name={def.name} support={support} value={value} onChange={onChange} readOnly={Boolean(readOnly)} />
+    render: ({ value, onChange, readOnly }) => (
+      <StylePanel name={def.name} support={support} value={value} onChange={onChange} readOnly={Boolean(readOnly)} />
     ),
   };
 }

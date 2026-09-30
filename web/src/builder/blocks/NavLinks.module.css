@@ -56,7 +56,7 @@
 }
 
 /* An owner's Alignment (block style) moves the links, not just their text. */
-.nav[data-sfs-align='center'] .list { justify-content: center; }
-.nav[data-sfs-align='end'] .list { justify-content: flex-end; }
+.nav[data-sfs-align='center'] .list { justify-content: safe center; }
+.nav[data-sfs-align='end'] .list { justify-content: safe flex-end; }
 .column[data-sfs-align='center'] .list { align-items: center; }
 .column[data-sfs-align='end'] .list { align-items: flex-end; }

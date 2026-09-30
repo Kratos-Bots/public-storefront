@@ -75,6 +75,9 @@ describe('text blocks read the style variables (spec §4, §8)', () => {
   });
   it('NavLinks and Testimonial honour align in their flex rows', () => {
     expect(css('NavLinks')).toContain(".nav[data-sfs-align='center'] .list");
+    // A row wider than its column must not push its first link off the start edge.
+    expect(css('NavLinks')).toMatch(/\.nav\[data-sfs-align='center'\] \.list \{ justify-content: safe center; \}/);
+    expect(css('NavLinks')).toMatch(/\.nav\[data-sfs-align='end'\] \.list \{ justify-content: safe flex-end; \}/);
     expect(css('Testimonial')).toContain(".card[data-sfs-align='center'] .by");
   });
 });
