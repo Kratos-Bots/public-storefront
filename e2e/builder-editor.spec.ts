@@ -115,20 +115,25 @@ async function expectAdminAccepts(page: Page) {
   }
 }
 
-interface Framed { frame: FrameLocator; mocks: MockHandle; thirdParty: string[] }
+/** Requests only the editor chunk makes (dev-server module paths and Puck's prebundle). */
+const isEditorCode = (url: string) => url.includes('/src/builder/editor/') || url.includes('@puckeditor');
+
+interface Framed { frame: FrameLocator; mocks: MockHandle; thirdParty: string[]; editorCode: string[] }
 
 async function openFramed(page: Page, width = 1440): Promise<Framed> {
   const mocks = await installMocks(page);
   // Registered after installMocks' catch-all abort, so it takes precedence for the admin origin.
   await page.route(`${ADMIN}/**`, (route) => route.fulfill({ status: 200, contentType: 'text/html', body: parentHtml(width) }));
   const thirdParty: string[] = [];
+  const editorCode: string[] = [];
   page.on('request', (r) => {
+    if (isEditorCode(r.url())) editorCode.push(r.url());
     if (!r.url().startsWith(`${ORIGIN}/`) && !r.url().startsWith(`${ADMIN}/`) && !r.url().startsWith('data:')) thirdParty.push(r.url());
   });
   await page.setViewportSize({ width: Math.max(width, 1280) + 40, height: 940 });
   await page.goto(`${ADMIN}/pages`);
   await expect.poll(async () => (await messages(page, 'sf-builder-ready')).length, { timeout: 30_000 }).toBeGreaterThan(0);
-  return { frame: page.frameLocator('#sf'), mocks, thirdParty };
+  return { frame: page.frameLocator('#sf'), mocks, thirdParty, editorCode };
 }
 
 /** Load, and wait for the editor to be up (the baseline change, or the read-only badge). */
@@ -159,7 +164,7 @@ test.use({ launchOptions: { args: ['--disable-features=LocalNetworkAccessChecks'
 
 test.describe('page builder editor · protocol', () => {
   test('ready once; a load gets one baseline change then the viewport; Add block reports a Heading', async ({ page }) => {
-    const { frame, thirdParty } = await openFramed(page);
+    const { frame, thirdParty, editorCode } = await openFramed(page);
     const msg = load();
     await loadAndWait(page, frame, msg);
 
@@ -183,6 +188,9 @@ test.describe('page builder editor · protocol', () => {
     await expectAdminAccepts(page);
     // The editor frame fetches nothing from third parties (Puck's stock CSS imports a web font).
     expect(thirdParty).toEqual([]);
+    // Positive control for the gate tests: framed, the editor's own modules and Puck do load.
+    expect(editorCode.some((u) => u.includes('/src/builder/editor/EditorApp.tsx'))).toBe(true);
+    expect(editorCode.some((u) => u.includes('@puckeditor'))).toBe(true);
   });
 
   test('a new load drops the change still debouncing from the old one', async ({ page }) => {
@@ -190,12 +198,18 @@ test.describe('page builder editor · protocol', () => {
     const first = load();
     await loadAndWait(page, frame, first);
 
-    // Add a block, then switch layout before the 500 ms debounce can fire.
+    // Add a block (on the canvas, so its change is now debouncing), then switch layout before
+    // the 500 ms debounce can fire.
     await addBlock(frame, 'Heading');
+    await expect(frame.locator('[data-sf-builder-canvas] [data-sf-block="Heading"]')).toBeVisible();
     const second = load({ layout: 'menu' });
     await post(page, second);
     await expect.poll(async () => (await changesFor(page, second.loadId)).length).toBe(1);
     await page.waitForTimeout(1_500);
+    // Load B is answered like any load: its baseline, then the viewport, and nothing else.
+    const tail = await allMessages(page);
+    const at = tail.findIndex((m) => m.type === 'sf-builder-change' && m.loadId === second.loadId);
+    expect(tail.slice(at + 1)).toEqual([{ type: 'sf-builder-viewport', width: null }]);
 
     // The Heading's change was still debouncing: it was dropped, not sent under either load.
     expect(JSON.stringify(await changesFor(page, first.loadId))).not.toContain('"type":"Heading"');
@@ -222,17 +236,59 @@ test.describe('page builder editor · protocol', () => {
     await expectAdminAccepts(page);
   });
 
-  test('the width toggle asks the admin to resize the frame', async ({ page }) => {
+  test('a width preset resizes the frame and shows the exact page; Back to editing restores the editor', async ({ page }) => {
     const { frame } = await openFramed(page);
-    await loadAndWait(page, frame, load());
+    const msg = load();
+    await loadAndWait(page, frame, msg);
     await expect.poll(async () => (await messages(page, 'sf-builder-viewport')).map((m) => m.width)).toEqual([null]);
+
+    // Something to come back to: a Heading, with undo history.
+    await addBlock(frame, 'Heading');
+    const heading = frame.locator('[data-sf-builder-canvas] [data-sf-block="Heading"]');
+    await expect(heading).toBeVisible();
+    await expect(frame.getByRole('button', { name: 'Undo' })).toBeEnabled();
+    await expect.poll(() => lastPage(page, msg.loadId, 'catalog')).toContain('"type":"Heading"');
+    const changesBefore = (await changesFor(page, msg.loadId)).length;
+
     const widths = frame.getByRole('group', { name: 'Preview width' });
+    await widths.getByRole('button', { name: 'Tablet' }).click();
+    await expect.poll(async () => (await messages(page, 'sf-builder-viewport')).at(-1)).toEqual({ type: 'sf-builder-viewport', width: 768 });
+    // The stand-in admin resizes the frame, as the real one does.
+    await expect.poll(() => page.locator('#sf').evaluate((el) => el.getBoundingClientRect().width)).toBe(768);
+    const bar = frame.getByRole('region', { name: 'Exact preview' });
+    await expect(bar).toContainText('Previewing at 768 px');
+    // No Puck chrome: no header controls, no sidebars or rail; the page fills the frame.
+    await expect(frame.getByRole('button', { name: 'Add block' })).toBeHidden();
+    await expect(frame.getByRole('button', { name: 'Blocks panel' })).toBeHidden();
+    await expect(frame.getByRole('button', { name: 'Outline' })).toBeHidden();
+    const preview = frame.locator('[data-sf-builder-exact="768"]');
+    await expect(preview).toBeVisible();
+    expect(await preview.evaluate((el) => Math.round(el.getBoundingClientRect().width))).toBe(768);
+    expect(await preview.evaluate(() => window.innerWidth)).toBe(768);
+    // The draft is what shows: the new Heading, with no Puck wrappers.
+    await expect(preview.locator('[data-sf-block="Heading"]')).toBeVisible();
+    await expect(preview.locator('[data-puck-component]')).toHaveCount(0);
+    await page.screenshot({ path: `${SHOTS}exact-preview-768.png` });
+
+    await bar.getByRole('button', { name: 'Back to editing' }).click();
+    await expect.poll(async () => (await messages(page, 'sf-builder-viewport')).at(-1)).toEqual({ type: 'sf-builder-viewport', width: null });
+    await expect(frame.getByRole('button', { name: 'Add block' })).toBeVisible();
+    await expect(bar).toBeHidden();
+    // The same canvas: the Heading is still there and still undoable; Fit is pressed.
+    await expect(heading).toBeVisible();
+    await expect(frame.getByRole('button', { name: 'Undo' })).toBeEnabled();
+    await expect(widths.getByRole('button', { name: 'Fit' })).toHaveAttribute('aria-pressed', 'true');
+    // Previewing posted no change.
+    await page.waitForTimeout(800);
+    expect((await changesFor(page, msg.loadId)).length).toBe(changesBefore);
+
+    // Phone: 360 on the way in, null on the way out.
     await widths.getByRole('button', { name: 'Phone' }).click();
     await expect.poll(async () => (await messages(page, 'sf-builder-viewport')).at(-1)).toEqual({ type: 'sf-builder-viewport', width: 360 });
-    await expect(widths.getByRole('button', { name: 'Phone' })).toHaveAttribute('aria-pressed', 'true');
-    await widths.getByRole('button', { name: 'Fit' }).click();
+    await expect(frame.getByRole('region', { name: 'Exact preview' })).toContainText('Previewing at 360 px');
+    await page.screenshot({ path: `${SHOTS}exact-preview-360.png` });
+    await frame.getByRole('button', { name: 'Back to editing' }).click();
     await expect.poll(async () => (await messages(page, 'sf-builder-viewport')).at(-1)).toEqual({ type: 'sf-builder-viewport', width: null });
-    await expect(widths.getByRole('button', { name: 'Fit' })).toHaveAttribute('aria-pressed', 'true');
     await expectAdminAccepts(page);
   });
 
@@ -300,6 +356,49 @@ test.describe('page builder editor · fixture mode', () => {
     // No shopper data from the fixtures reached the live shop's API.
     expect(mocks.requests().filter((r) => /storefront\/(orders|profile|cart)/.test(r))).toEqual([]);
     expect(await realStorage(page)).toEqual({ local: [], session: [] });
+  });
+});
+
+test.describe('page builder editor · fixture checkout', () => {
+  test('placing an order in the preview is refused on the spot and nothing is posted', async ({ page }) => {
+    const { frame, mocks } = await openFramed(page);
+    const mutations: string[] = [];
+    page.on('request', (r) => {
+      if (r.url().startsWith(`${ORIGIN}/api/`) && r.method() !== 'GET') mutations.push(`${r.method()} ${r.url()}`);
+    });
+    // Read-only: on the editing canvas Puck owns the pointer, so the checkout is clicked here.
+    await post(page, load({ readOnly: true }));
+    await expect(frame.getByText('Published version · read only')).toBeVisible();
+    await frame.getByLabel('Preview as — cart').selectOption('items');
+    await frame.getByLabel('Page', { exact: true }).selectOption('checkout');
+
+    const next = () => frame.getByRole('button', { name: 'Continue' }).click();
+    await frame.getByRole('textbox', { name: 'First name' }).fill('Ada');
+    await frame.getByRole('textbox', { name: 'Surname' }).fill('Sterling');
+    await frame.getByRole('textbox', { name: 'Email' }).fill('ada@example.invalid');
+    await next();
+    await frame.getByRole('textbox', { name: 'Address line 1' }).fill('14 Kirkgate');
+    await frame.getByRole('textbox', { name: 'City' }).fill('Leeds');
+    await frame.getByRole('textbox', { name: 'ZIP / Postcode' }).fill('LS1 6BY');
+    await next();
+    await frame.getByText('Tracked 24').click();
+    await next();
+    await frame.locator('label').filter({ hasText: 'Bank transfer' }).first().click();
+    await next();
+
+    await frame.getByRole('button', { name: /^Place order/ }).click();
+    // The toast, and the checkout's own error line with the same words.
+    const toast = frame.locator('#sf-builder-preview-only');
+    await expect(toast).toContainText('Preview only — nothing was sent.');
+    await expect(frame.locator('#root').getByText('Preview only — nothing was sent.')).toBeVisible();
+    // At the bottom of the frame, clear of the sticky bar at the top.
+    expect((await toast.boundingBox())!.y).toBeGreaterThan(450);
+    await page.screenshot({ path: `${SHOTS}fixture-place-order.png` });
+
+    await page.waitForTimeout(800);
+    // The quote is answered from fixtures inside the frame: nothing, least of all a checkout POST, leaves it.
+    expect(mutations).toEqual([]);
+    expect(mocks.requests().filter((r) => !r.startsWith('GET '))).toEqual([]);
   });
 });
 
@@ -413,7 +512,7 @@ test.describe('page builder gate', () => {
       await installMocks(page);
       const editor: string[] = [];
       page.on('request', (r) => {
-        if (r.url().includes('/src/builder/editor/') || r.url().includes('@puckeditor')) editor.push(r.url());
+        if (isEditorCode(r.url())) editor.push(r.url());
       });
       await page.goto(path);
       await expect(page).toHaveURL(`${ORIGIN}/`);
