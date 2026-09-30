@@ -104,6 +104,22 @@ export function withPartAdded(item: ComponentData, type: string, layout: LayoutK
   return withSlot(item, home, [node, ...asItems(item.props[home])]);
 }
 
+/**
+ * How many of the owner's own blocks (anything that is not a part or a part group, nested ones
+ * included) sit in the container's slots — what "Reset arrangement" would remove.
+ */
+export function ownerBlockCount(item: ComponentData): number {
+  let n = 0;
+  const walk = (items: readonly ComponentData[]) => {
+    for (const c of items) {
+      if (!blockDef(c.type)?.part) n += 1;
+      for (const s of slotsOf(c)) walk(asItems(c.props[s]));
+    }
+  };
+  for (const s of blockDef(item.type)?.slots ?? []) walk(asItems(item.props[s]));
+  return n;
+}
+
 /** The container with every slot back to `defaultSlots`; every other prop kept. */
 export function withDefaultArrangement(item: ComponentData, layout: LayoutKind): ComponentData {
   return { ...item, props: { ...item.props, ...defaultsOf(item, layout) } };

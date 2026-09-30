@@ -1,4 +1,4 @@
-import { useId, useMemo } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useSettingsQuery } from '@/app/settings.ts';
 import { blockDef } from '@/builder/rules.ts';
 import type { ComponentData, LayoutKind } from '@/builder/types.ts';
@@ -6,8 +6,8 @@ import { ROOT_ZONE } from '@/builder/editor/config.ts';
 import { forEachComponent } from '@/builder/editor/page-set.ts';
 import { useEditorStore } from '@/builder/editor/store.ts';
 import { useGetPuck, usePuck } from '@/builder/editor/use-puck.ts';
-import { CARD_LINKS, partStates, withDefaultArrangement, withPartAdded, type PartState } from '@/builder/editor/container-parts.ts';
-import { LockIcon, PlusIcon, TipIcon } from '@/builder/editor/icons.tsx';
+import { CARD_LINKS, ownerBlockCount, partStates, withDefaultArrangement, withPartAdded, type PartState } from '@/builder/editor/container-parts.ts';
+import { LockIcon, PlusIcon, TipIcon, WarnIcon } from '@/builder/editor/icons.tsx';
 import styles from '@/builder/editor/ContainerPanel.module.css';
 
 // Editor-only copy (spec §7.1, §11).
@@ -37,27 +37,56 @@ export function ContainerPanel() {
   const layout = useEditorStore((s) => s.layout);
   const wholesale = useSettingsQuery().data?.features?.wholesale === true;
   const id = useId().replace(/[^A-Za-z0-9_-]/g, '');
+  const rootRef = useRef<HTMLDivElement>(null);
+  const resetRef = useRef<HTMLButtonElement>(null);
+  const [status, setStatus] = useState('');
+  // The part just added: its row takes focus once it has re-rendered (its Add button is gone).
+  const [focusPart, setFocusPart] = useState<string | null>(null);
 
   const type = selected?.type ?? '';
-  const isContainer = !!blockDef(type)?.container && typeof selected?.props?.id === 'string';
+  const selectedId = typeof selected?.props?.id === 'string' ? selected.props.id : null;
+  const isContainer = !!blockDef(type)?.container && selectedId !== null;
   const parts = useMemo(() => (selected && isContainer ? partStates(selected, layout) : []), [selected, isContainer, layout]);
+  const owned = useMemo(() => (selected && isContainer ? ownerBlockCount(selected) : 0), [selected, isContainer]);
   const links = Object.hasOwn(CARD_LINKS, type) ? CARD_LINKS[type]! : [];
+
+  // A different block selected: an earlier announcement no longer applies.
+  useEffect(() => { setStatus(''); setFocusPart(null); }, [selectedId]);
+  useEffect(() => {
+    if (!focusPart) return;
+    rootRef.current?.querySelector<HTMLElement>(`[data-part-type="${CSS.escape(focusPart)}"] [data-part-label]`)?.focus();
+    setFocusPart(null);
+  }, [focusPart, parts]);
+
   if (!selected || (!isContainer && links.length === 0)) return null;
 
-  const commit = (next: ComponentData) => {
-    const sel = getPuck().getSelectorForId(String(next.props.id));
-    if (!sel) return;
-    dispatch({ type: 'replace', destinationIndex: sel.index, destinationZone: sel.zone ?? ROOT_ZONE, data: next });
+  /** One `replace` built from the item Puck holds now (not the rendered one), so no edit is lost. */
+  const commit = (build: (current: ComponentData) => ComponentData): boolean => {
+    const api = getPuck();
+    const sel = selectedId ? api.getSelectorForId(selectedId) : undefined;
+    const current = sel ? (api.getItemBySelector(sel) as ComponentData | undefined) : undefined;
+    if (!sel || !current) return false;
+    dispatch({ type: 'replace', destinationIndex: sel.index, destinationZone: sel.zone ?? ROOT_ZONE, data: build(current) });
+    return true;
   };
-  const add = (part: string) => {
+  const add = (p: PartState) => {
     const taken = new Set<string>();
     forEachComponent(getPuck().appState.data.content as ComponentData[], (c) => { if (typeof c.props.id === 'string') taken.add(c.props.id); });
-    commit(withPartAdded(selected, part, layout, taken));
+    if (!commit((current) => withPartAdded(current, p.type, layout, taken))) return;
+    setStatus(`${p.label} added`);
+    setFocusPart(p.type);
+  };
+  const reset = () => {
+    if (!commit((current) => withDefaultArrangement(current, layout))) return;
+    setStatus('Arrangement reset');
+    resetRef.current?.focus();
   };
   const shown = isContainer ? notices(type, layout, wholesale) : [];
+  const ownedText = owned === 1 ? 'Also removes 1 block you added' : `Also removes ${owned} blocks you added`;
 
   return (
-    <div className={styles.root} data-sfb-container-panel="">
+    <div ref={rootRef} className={styles.root} data-sfb-container-panel="">
+      <p className={styles.visuallyHidden} role="status" aria-live="polite">{status}</p>
       {isContainer && (
         <section className={styles.section} aria-labelledby={`${id}-parts`}>
           <h3 id={`${id}-parts`} className={styles.title}>Parts</h3>
@@ -66,14 +95,14 @@ export function ContainerPanel() {
           ))}
           <ul role="list" aria-label="Parts" className={styles.list}>
             {parts.map((p) => (
-              <li key={p.type} className={styles.part} data-state={p.present ? 'on' : 'off'}>
+              <li key={p.type} className={styles.part} data-state={p.present ? 'on' : 'off'} data-part-type={p.type}>
                 <span className={styles.node} aria-hidden="true" />
                 <span className={styles.text}>
-                  <span className={styles.label}>{p.label}</span>
+                  <span className={styles.label} data-part-label="" tabIndex={-1}>{p.label}</span>
                   <span className={styles.state}>{p.required && p.present && <LockIcon />}{stateText(p)}</span>
                 </span>
                 {!p.present && (
-                  <button type="button" className={styles.add} aria-label={`Add ${p.label}`} onClick={() => add(p.type)}>
+                  <button type="button" className={styles.add} aria-label={`Add ${p.label}`} onClick={() => add(p)}>
                     <PlusIcon />Add
                   </button>
                 )}
@@ -81,9 +110,16 @@ export function ContainerPanel() {
             ))}
           </ul>
           <div className={styles.reset}>
-            <button type="button" className={styles.secondary} aria-describedby={`${id}-reset`} onClick={() => commit(withDefaultArrangement(selected, layout))}>
+            <button
+              ref={resetRef}
+              type="button"
+              className={styles.secondary}
+              aria-describedby={owned > 0 ? `${id}-owned ${id}-reset` : `${id}-reset`}
+              onClick={reset}
+            >
               Reset arrangement
             </button>
+            {owned > 0 && <p id={`${id}-owned`} className={styles.warn}><WarnIcon />{ownedText}</p>}
             <p id={`${id}-reset`} className={styles.hint}>{RESET_HINT}</p>
           </div>
         </section>

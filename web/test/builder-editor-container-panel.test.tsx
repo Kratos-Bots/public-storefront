@@ -6,13 +6,19 @@ import type { ComponentData } from '@/builder/types.ts';
 // Puck mocked: the panel reads the selected item, dispatches, and looks up the item's selector.
 const puck = vi.hoisted(() => ({
   selectedItem: null as ComponentData | null,
+  /** What Puck holds now (getItemBySelector); null = the selected item. */
+  current: null as ComponentData | null,
   content: [] as ComponentData[],
   dispatch: vi.fn(),
   getSelectorForId: vi.fn((_id: string) => ({ index: 0, zone: undefined as string | undefined })),
 }));
 vi.mock('@/builder/editor/use-puck.ts', () => ({
   usePuck: (sel: (s: unknown) => unknown) => sel({ selectedItem: puck.selectedItem, dispatch: puck.dispatch }),
-  useGetPuck: () => () => ({ getSelectorForId: puck.getSelectorForId, appState: { data: { content: puck.content } } }),
+  useGetPuck: () => () => ({
+    getSelectorForId: puck.getSelectorForId,
+    getItemBySelector: () => puck.current ?? puck.selectedItem,
+    appState: { data: { content: puck.content } },
+  }),
 }));
 const settings = vi.hoisted(() => ({ wholesale: false }));
 vi.mock('@/app/settings.ts', () => ({
@@ -22,7 +28,7 @@ vi.mock('@/app/settings.ts', () => ({
 import { defaultDoc } from '@/builder/defaults/index.ts';
 import { containsType } from '@/builder/parts.ts';
 import { DEFAULT_PREVIEW_AS, TEXT_INITIAL, useEditorStore } from '@/builder/editor/store.ts';
-import { CARD_LINKS, partStates, withDefaultArrangement, withPartAdded } from '@/builder/editor/container-parts.ts';
+import { CARD_LINKS, ownerBlockCount, partStates, withDefaultArrangement, withPartAdded } from '@/builder/editor/container-parts.ts';
 import { ContainerPanel } from '@/builder/editor/ContainerPanel.tsx';
 
 const items = (v: unknown) => v as ComponentData[];
@@ -146,8 +152,11 @@ describe('<ContainerPanel />', () => {
   beforeEach(() => {
     useEditorStore.setState({ status: 'ready', layout: 'storefront', readOnly: false, docs: {}, docKey: 'product', epoch: 0, previewAs: DEFAULT_PREVIEW_AS, viewport: null, ...TEXT_INITIAL });
     puck.selectedItem = null;
+    puck.current = null;
     puck.content = [];
     puck.dispatch.mockReset();
+    // Like Puck: the replaced item becomes the selected one.
+    puck.dispatch.mockImplementation((a: { data: ComponentData }) => { puck.selectedItem = a.data; puck.content = [a.data]; });
     puck.getSelectorForId.mockReset();
     puck.getSelectorForId.mockImplementation(() => ({ index: 0, zone: undefined }));
     settings.wholesale = false;
@@ -207,6 +216,65 @@ describe('<ContainerPanel />', () => {
     });
   });
 
+  it('Add moves focus to the added part and announces it', () => {
+    select(trimmed());
+    render(<ContainerPanel />);
+    const status = screen.getByRole('status');
+    expect(status).toHaveTextContent('');
+    fireEvent.click(screen.getByRole('button', { name: 'Add Bulk pricing' }));
+    expect(document.activeElement).not.toBe(document.body);
+    expect(document.activeElement).toHaveTextContent('Bulk pricing');
+    expect(status).toHaveTextContent('Bulk pricing added');
+  });
+
+  it('Reset keeps focus on the button and announces it', () => {
+    select(trimmed());
+    render(<ContainerPanel />);
+    fireEvent.click(screen.getByRole('button', { name: 'Reset arrangement' }));
+    expect(document.activeElement).not.toBe(document.body);
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Reset arrangement' }));
+    expect(screen.getByRole('status')).toHaveTextContent('Arrangement reset');
+  });
+
+  it('Add and Reset read the item Puck holds at click time, not the rendered one', () => {
+    const item = trimmed();
+    select(item);
+    render(<ContainerPanel />);
+    const newer = { ...item, props: { ...item.props, sku: 'show' } };
+    puck.current = newer;
+    fireEvent.click(screen.getByRole('button', { name: 'Add Description' }));
+    expect(puck.dispatch.mock.calls[0]![0].data).toEqual(withPartAdded(newer, 'ProductDescription', 'storefront', allIds([item])));
+    puck.current = newer;
+    fireEvent.click(screen.getByRole('button', { name: 'Reset arrangement' }));
+    expect(puck.dispatch.mock.calls[1]![0].data).toEqual(withDefaultArrangement(newer, 'storefront'));
+  });
+
+  it("Reset warns how many of the owner's blocks it removes, in one replace", () => {
+    const pd = trimmed();
+    const section = { type: 'Section', props: { id: 's1', content: [{ type: 'RichText', props: { id: 'r1' } }] } };
+    const item = { ...pd, props: { ...pd.props, below: [section, { type: 'Heading', props: { id: 'h1' } }] } };
+    expect(ownerBlockCount(item)).toBe(3);
+    select(item);
+    render(<ContainerPanel />);
+    const reset = screen.getByRole('button', { name: 'Reset arrangement' });
+    expect(screen.getByText('Also removes 3 blocks you added')).toBeInTheDocument();
+    expect(reset).toHaveAccessibleDescription(/Also removes 3 blocks you added/);
+    fireEvent.click(reset);
+    expect(puck.dispatch).toHaveBeenCalledTimes(1);
+  });
+
+  it('Reset with one owner block uses the singular; none shows no warning', () => {
+    const pd = trimmed();
+    expect(ownerBlockCount(pd)).toBe(0);
+    select({ ...pd, props: { ...pd.props, below: [{ type: 'Heading', props: { id: 'h1' } }] } });
+    render(<ContainerPanel />);
+    expect(screen.getByText('Also removes 1 block you added')).toBeInTheDocument();
+    cleanup();
+    select(pd);
+    render(<ContainerPanel />);
+    expect(screen.queryByText(/Also removes/)).toBeNull();
+  });
+
   it('dispatches nothing when the item has no selector', () => {
     select(trimmed());
     puck.getSelectorForId.mockImplementation(() => undefined as never);
@@ -229,6 +297,15 @@ describe('<ContainerPanel />', () => {
     settings.wholesale = true;
     useEditorStore.setState({ docKey: 'catalog' });
     select(defaultDoc('catalog', 'storefront')!.content.find((c) => c.type === 'ProductGrid')!);
+    render(<ContainerPanel />);
+    expect(screen.getByRole('note')).toHaveTextContent('Wholesale mode is on: shoppers see the trade list here. This arrangement shows when wholesale mode is off.');
+  });
+
+  it('with wholesale mode on, a product list shows the wholesale notice too', () => {
+    settings.wholesale = true;
+    useEditorStore.setState({ docKey: 'catalog' });
+    const list = { type: 'ProductList', props: { id: 'pl', content: [] } };
+    select(list);
     render(<ContainerPanel />);
     expect(screen.getByRole('note')).toHaveTextContent('Wholesale mode is on: shoppers see the trade list here. This arrangement shows when wholesale mode is off.');
   });
