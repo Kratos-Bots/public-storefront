@@ -129,11 +129,21 @@ const EMPTY_STRINGS: LocaleStrings = Object.freeze({}) as LocaleStrings;
  * counts only when it is editable.
  */
 export function languageRoom(s: Pick<EditorState, 'sharedEditable' | 'siteText' | 'pageText'>, locale: string): TextScope[] {
-  const full: TextScope[] = [];
-  if (s.sharedEditable && s.siteText && noRoomFor(s.siteText.strings, locale)) full.push('shared');
-  if (noRoomFor(s.pageText.strings, locale)) full.push('layout');
+  const shared = s.sharedEditable ? s.siteText?.strings ?? null : null;
+  const layout = s.pageText.strings;
+  // Every mounted row asks on each store change: one answer per (layer maps, locale), not one scan each.
+  if (!roomMemo || roomMemo.shared !== shared || roomMemo.layout !== layout) roomMemo = { shared, layout, byLocale: new Map() };
+  let full = roomMemo.byLocale.get(locale);
+  if (!full) {
+    full = [];
+    if (shared && noRoomFor(shared, locale)) full.push('shared');
+    if (noRoomFor(layout, locale)) full.push('layout');
+    roomMemo.byLocale.set(locale, full);
+  }
   return full;
 }
+
+let roomMemo: { shared: SiteText['strings'] | null; layout: PageText['strings']; byLocale: Map<string, TextScope[]> } | null = null;
 
 let issueMemo: { inputs: unknown[]; issues: TextIssue[] } | null = null;
 /** Every blocking text issue (spec §7.1) — the header and the posted change use this one list. */

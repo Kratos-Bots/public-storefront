@@ -6,7 +6,7 @@ import { editorTextOf, textIssuesOf, useEditorStore } from '@/builder/editor/sto
 import { applyText, useEditorText, useLoadEpoch, useTextIssues, useTextReadiness } from '@/builder/editor/text/hooks.ts';
 import { useTextUi, type TextFilter } from '@/builder/editor/text/ui-store.ts';
 import { rowFor, rowMatches, textGroups, type TextRowDef } from '@/builder/editor/text/catalog.ts';
-import { isLayerIssue, unusedEntries } from '@/builder/editor/text/issues.ts';
+import { LANGUAGES_ISSUE, SIZE_ISSUE, isLayerIssue, unusedEntries } from '@/builder/editor/text/issues.ts';
 import { valueStrings } from '@/builder/editor/text/model.ts';
 import { LAYOUT_LABELS } from '@/builder/editor/page-catalog.ts';
 import { cssString } from '@/builder/editor/resting-marks.ts';
@@ -98,7 +98,9 @@ export function TextPanel({ onClose }: { onClose?: () => void }) {
     let tries = 0;
     // The group opens on the next render: look for the row for a few frames before giving up.
     const seek = () => {
-      const el = root.current?.querySelector(`[data-text-key="${cssString(focus.key)}"]`);
+      // "Amount of wording" is explained in the Room notice, the same one "Languages" points at.
+      const target = focus.key === SIZE_ISSUE ? LANGUAGES_ISSUE : focus.key;
+      const el = root.current?.querySelector(`[data-text-key="${cssString(target)}"]`);
       if (!el) { if (++tries < FOCUS_TRIES) raf = requestAnimationFrame(seek); return; }
       const smooth = !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
       el.scrollIntoView?.({ block: 'center', behavior: smooth ? 'smooth' : 'auto' });
