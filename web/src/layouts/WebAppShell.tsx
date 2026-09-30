@@ -22,7 +22,7 @@ import { useText } from '@/text/runtime.tsx';
 import classes from '@/layouts/WebAppShell.module.css';
 
 /** Telegram owns the top chrome in this layout, so there is never a TopBar slot here. */
-export function WebAppHeader({ search: withSearch = true, sticky = true, nav }: Omit<ShellHeaderProps, 'topBar'>) {
+export function WebAppHeader({ search: withSearch = true, sticky = true, nav, styleAttrs }: Omit<ShellHeaderProps, 'topBar'>) {
   const { brand, features } = useSettings();
   const { t, tp } = useText();
   const loggedIn = useSessionStore(selectIsLoggedIn);
@@ -42,7 +42,7 @@ export function WebAppHeader({ search: withSearch = true, sticky = true, nav }: 
   const showBack = !native && !onCatalog;
 
   return (
-    <header className={sticky ? classes.bar : `${classes.bar} ${classes.unstuck}`} data-sf-part="header">
+    <header className={sticky ? classes.bar : `${classes.bar} ${classes.unstuck}`} data-sf-part="header" {...styleAttrs}>
       <div className={classes.safeTop} />
       <NoticeBanners pinned />
       <div className={classes.barInner}>

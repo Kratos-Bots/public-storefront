@@ -25,7 +25,7 @@ import classes from '@/layouts/MenuShell.module.css';
 const onCatalogPath = (pathname: string) => pathname === '/' || pathname.startsWith('/c/');
 
 /** TopBar slot + the one compact bar. */
-export function MenuHeader({ topBar = true, search: withSearch = true, sticky = true, nav }: ShellHeaderProps) {
+export function MenuHeader({ topBar = true, search: withSearch = true, sticky = true, nav, styleAttrs }: ShellHeaderProps) {
   const { brand, features } = useSettings();
   const { t, tp } = useText();
   const loggedIn = useSessionStore(selectIsLoggedIn);
@@ -46,7 +46,7 @@ export function MenuHeader({ topBar = true, search: withSearch = true, sticky = 
   return (
     <>
       {topBar ? <Slot name="TopBar" /> : null}
-      <header className={sticky ? classes.bar : `${classes.bar} ${classes.unstuck}`} data-sf-part="header">
+      <header className={sticky ? classes.bar : `${classes.bar} ${classes.unstuck}`} data-sf-part="header" {...styleAttrs}>
         <NoticeBanners pinned />
         <div className={classes.barInner}>
           <Link to="/" className={classes.home} aria-label={t('shell.header.homeAriaLabel', { shop: brand.name })}>

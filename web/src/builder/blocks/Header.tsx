@@ -6,6 +6,7 @@ import { CoreOptionsScope } from '@/builder/blocks/_shared/CoreOptionsScope.tsx'
 import { StorefrontHeader } from '@/layouts/StorefrontShell.tsx';
 import { MenuHeader } from '@/layouts/MenuShell.tsx';
 import { WebAppHeader } from '@/layouts/WebAppShell.tsx';
+import { styleSupport, VIS } from '@/builder/style/model.ts';
 
 type Variant = 'auto' | 'storefront' | 'menu' | 'webapp';
 type Props = {
@@ -20,6 +21,8 @@ type Props = {
  */
 export const block = defineBlock<Props>({
   name: 'Header', label: 'Header', category: 'shell', layouts: 'all', routeBound: false, slots: ['nav'],
+  // `pass`: a wrapper would end `position: sticky`; padding/border would change `--sf-bar-h`.
+  style: styleSupport('pass', ['bg', 'shadow', ...VIS]),
   text: ['shell.header.*', 'shell.webapp.*', 'catalog.search.*', 'common.nav.*', 'common.actions.signIn', ...TOP_BAR_TEXT],
   schema: z.object({
     variant: z.enum(['auto', 'storefront', 'menu', 'webapp']),
@@ -34,11 +37,11 @@ export const block = defineBlock<Props>({
     return (
       <CoreOptionsScope value={scope}>
         {v === 'storefront' ? (
-          <StorefrontHeader topBar={topBar} search={search} sticky={sticky} nav={navNode} />
+          <StorefrontHeader topBar={topBar} search={search} sticky={sticky} nav={navNode} styleAttrs={puck.style} />
         ) : v === 'menu' ? (
-          <MenuHeader topBar={topBar} search={search} sticky={sticky} nav={navNode} />
+          <MenuHeader topBar={topBar} search={search} sticky={sticky} nav={navNode} styleAttrs={puck.style} />
         ) : (
-          <WebAppHeader search={search} sticky={sticky} nav={navNode} />
+          <WebAppHeader search={search} sticky={sticky} nav={navNode} styleAttrs={puck.style} />
         )}
       </CoreOptionsScope>
     );

@@ -273,3 +273,34 @@ describe('PuckShell safety nets', () => {
     expect(css).toMatch(/\.shell:has\(\.unstuck\)\s*\{[^}]*--sf-bar-h:\s*0px[^}]*--sf-pin-h:\s*0px/);
   });
 });
+
+describe('PuckShell · a styled Header (block-styling spec §4 pass target)', () => {
+  it.each(['storefront', 'menu', 'webapp'] as const)('%s: attributes land on <header data-sf-part="header"> only', (layout) => {
+    settings(layout);
+    const shell = defaultDoc('shell', layout)!;
+    const content = shell.content.map((b) => (b.type === 'Header'
+      ? { ...b, props: { ...b.props, blockStyle: { bg: 'surface-2', shadow: 'raised', padTop: 'lg' } } }
+      : b));
+    const { container } = mount(PuckShell, { schemaVersion: 1, shell: { ...shell, content }, pages: {} });
+    const marked = [...container.querySelectorAll('[data-sf-style]')];
+    expect(marked).toHaveLength(1);
+    expect(marked[0]!.tagName).toBe('HEADER');
+    expect(marked[0]!.getAttribute('data-sf-part')).toBe('header');
+    expect(marked[0]!.getAttribute('data-sfs-bg')).toBe('surface-2');
+    expect(marked[0]!.getAttribute('data-sfs-shadow')).toBe('raised');
+    expect(marked[0]!.hasAttribute('data-sfs-pt')).toBe(false);
+  });
+  it('an unstyled published Header renders exactly the default shell', () => {
+    settings('storefront');
+    const plain = normalize(mount(PuckShell, null).container.innerHTML);
+    cleanup();
+    const shell = defaultDoc('shell', 'storefront')!;
+    const content = shell.content.map((b) => (b.type === 'Header' ? { ...b, props: { ...b.props, blockStyle: {} } } : b));
+    expect(normalize(mount(PuckShell, { schemaVersion: 1, shell: { ...shell, content }, pages: {} }).container.innerHTML)).toBe(plain);
+  });
+  it('PageOutlet and MobileCartBar are not stylable', async () => {
+    const { BLOCKS } = await import('@/builder/registry.ts');
+    expect(BLOCKS.PageOutlet!.style).toBe(false);
+    expect(BLOCKS.MobileCartBar!.style).toBe(false);
+  });
+});

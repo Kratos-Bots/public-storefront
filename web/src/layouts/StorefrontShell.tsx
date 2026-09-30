@@ -18,6 +18,7 @@ import { Slot } from '@/templates/runtime.tsx';
 import { headerIconClass, useCoreOptions } from '@/templates/hooks.ts';
 import { useText } from '@/text/runtime.tsx';
 import classes from '@/layouts/StorefrontShell.module.css';
+import type { StyleAttrs } from '@/builder/define.ts';
 
 export interface ShellHeaderProps {
   /** The template TopBar slot above the header (default on). */
@@ -28,10 +29,12 @@ export interface ShellHeaderProps {
   sticky?: boolean;
   /** Rendered between the home link and the search field — the Header block's nav slot. */
   nav?: ReactNode;
+  /** A styled Header block's attributes (block-styling spec §4 `pass`), spread onto <header>. */
+  styleAttrs?: StyleAttrs;
 }
 
 /** TopBar slot + the header bar. */
-export function StorefrontHeader({ topBar = true, search: withSearch = true, sticky = true, nav }: ShellHeaderProps) {
+export function StorefrontHeader({ topBar = true, search: withSearch = true, sticky = true, nav, styleAttrs }: ShellHeaderProps) {
   const { brand, features } = useSettings();
   const { t, tp } = useText();
   const loggedIn = useSessionStore(selectIsLoggedIn);
@@ -44,7 +47,7 @@ export function StorefrontHeader({ topBar = true, search: withSearch = true, sti
   return (
     <>
       {topBar ? <Slot name="TopBar" /> : null}
-      <header className={sticky ? classes.header : `${classes.header} ${classes.unstuck}`} data-sf-part="header">
+      <header className={sticky ? classes.header : `${classes.header} ${classes.unstuck}`} data-sf-part="header" {...styleAttrs}>
         <NoticeBanners pinned />
         <div className={classes.headerInner}>
           <Link to="/" className={classes.home} aria-label={t('shell.header.homeAriaLabel', { shop: brand.name })}>
