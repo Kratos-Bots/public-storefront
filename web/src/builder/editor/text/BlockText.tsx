@@ -6,6 +6,7 @@ import { blockTextRows, rowMatches, type TextRowDef } from '@/builder/editor/tex
 import { useTextUi } from '@/builder/editor/text/ui-store.ts';
 import { useTextReadiness } from '@/builder/editor/text/hooks.ts';
 import { WarnIcon } from '@/builder/editor/icons.tsx';
+import { ContainerPanel } from '@/builder/editor/ContainerPanel.tsx';
 import { TEXT_LOADING, TEXT_UNREADABLE, TextRow } from '@/builder/editor/text/TextRow.tsx';
 import styles from '@/builder/editor/text/Text.module.css';
 import placement from '@/builder/editor/text/TextPlacement.module.css';
@@ -16,7 +17,7 @@ export const BLOCK_TEXT_SEARCH_OVER = 20;
 /** Puck does not export ItemSelector; this is the same type. */
 type ItemSelector = NonNullable<UiState['itemSelector']>;
 
-/** Puck `overrides.fields`: the block's own fields, then the text it shows (spec §7.3). */
+/** Puck `overrides.fields`: the block's own fields, its parts / card links (product-parts §11), then the text it shows (spec §7.3). */
 export function FieldsWithText({ children }: { children: ReactNode; isLoading: boolean; itemSelector?: ItemSelector | null }) {
   const type = usePuck((s) => s.selectedItem?.type ?? null);
   const templateId = useTemplateContext().resolved?.templateId ?? 'modern';
@@ -24,6 +25,7 @@ export function FieldsWithText({ children }: { children: ReactNode; isLoading: b
   return (
     <>
       {children}
+      <ContainerPanel />
       {rows.length > 0 && <BlockTextSection key={type} rows={rows} />}
     </>
   );

@@ -1,0 +1,167 @@
+/*
+ * A container's Parts panel under Puck's fields (~260 px right column). The admin's tool, not the
+ * shop: neutral --sfb-* tokens, never --sf-*. The list is the container's arrangement in order, so
+ * a thin rail threads the rows: a filled node for a part on the page, a hollow one for a gap.
+ */
+.root {
+  --sfb-ink: #1d2433;
+  --sfb-muted: #5b6475;
+  --sfb-line: #d9dde5;
+  --sfb-line-strong: #b8bfcc;
+  --sfb-surface: #ffffff;
+  --sfb-wash: #f3f5f8;
+  --sfb-accent: #3355ff;
+  --sfb-accent-wash: #eef1ff;
+  --sfb-accent-strong: #2443e0;
+  --sfb-warn-ink: #6b4a00;
+  --sfb-warn-line: #e2c27a;
+  --sfb-warn-wash: #fdf6e3;
+  --sfb-radius: 6px;
+
+  box-sizing: border-box;
+  min-inline-size: 0;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--sfb-ink);
+  background: var(--sfb-surface);
+}
+.root * { box-sizing: border-box; }
+.root p, .root h3, .root ul { margin: 0; }
+
+.section {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px 16px;
+  border-block-start: 1px solid var(--sfb-line);
+}
+
+/* Same voice as "Text in this block" beside it. */
+.title {
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.04em;
+  color: var(--sfb-muted);
+}
+
+.notice {
+  display: grid;
+  grid-template-columns: 16px 1fr;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--sfb-warn-line);
+  border-radius: var(--sfb-radius);
+  background: var(--sfb-warn-wash);
+  color: var(--sfb-warn-ink);
+}
+.notice svg { margin-block-start: 1px; }
+
+/* ---- the arrangement ---- */
+.list {
+  position: relative;
+  display: grid;
+  padding: 0;
+  list-style: none;
+}
+.list::before {
+  content: '';
+  position: absolute;
+  inset-block: 22px;
+  inset-inline-start: 5px;
+  border-inline-start: 1px solid var(--sfb-line);
+}
+.part {
+  position: relative;
+  display: grid;
+  grid-template-columns: 11px minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 10px;
+  min-block-size: 44px;
+  padding-block: 4px;
+}
+.node {
+  inline-size: 11px;
+  block-size: 11px;
+  border-radius: 50%;
+  background: var(--sfb-ink);
+  box-shadow: 0 0 0 3px var(--sfb-surface);
+}
+.part[data-state='off'] .node {
+  background: var(--sfb-surface);
+  border: 1.5px dashed var(--sfb-line-strong);
+}
+
+.text {
+  display: grid;
+  min-inline-size: 0;
+}
+.label {
+  overflow-wrap: anywhere;
+  font-weight: 500;
+}
+.part[data-state='off'] .label { color: var(--sfb-muted); }
+.state {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--sfb-muted);
+}
+.state svg { inline-size: 12px; block-size: 12px; }
+
+/* ---- buttons ---- */
+.add,
+.secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-block-size: 44px;
+  padding: 0 12px;
+  border-radius: var(--sfb-radius);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+.add {
+  min-inline-size: 44px;
+  border: 1px solid transparent;
+  background: var(--sfb-accent-wash);
+  color: var(--sfb-accent-strong);
+}
+.add:hover { border-color: var(--sfb-accent); }
+.add svg { inline-size: 14px; block-size: 14px; }
+.secondary {
+  border: 1px solid var(--sfb-line-strong);
+  background: var(--sfb-surface);
+  color: var(--sfb-ink);
+}
+.secondary:hover { background: var(--sfb-wash); border-color: var(--sfb-muted); }
+.add:focus-visible,
+.secondary:focus-visible {
+  outline: 2px solid var(--sfb-accent);
+  outline-offset: 1px;
+}
+
+.reset {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  padding-block-start: 4px;
+}
+.hint {
+  font-size: 12px;
+  color: var(--sfb-muted);
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .add, .secondary { transition: none; }
+}
