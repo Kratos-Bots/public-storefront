@@ -18,6 +18,8 @@ import { restingMarkIds, restingMarksCss } from '@/builder/editor/resting-marks.
 import { PagePicker } from '@/builder/editor/PagePicker.tsx';
 import { EyeIcon, LockIcon, WarnIcon } from '@/builder/editor/icons.tsx';
 import { PUCK_VIEWPORTS } from '@/builder/editor/viewports.ts';
+import { CanvasTextScope } from '@/builder/editor/text/scope.tsx';
+import { usePublishedTextSync } from '@/builder/editor/text/hooks.ts';
 import { initialPanels } from '@/builder/editor/panels.ts';
 import styles from '@/builder/editor/Editor.module.css';
 
@@ -133,9 +135,11 @@ function ReadOnlyView() {
               </div>
             }
           >
-            <PageGround docKey={docKey} layout={layout}>
-              <RenderDoc doc={doc} docKey={docKey} layout={layout} />
-            </PageGround>
+            <CanvasTextScope>
+              <PageGround docKey={docKey} layout={layout}>
+                <RenderDoc doc={doc} docKey={docKey} layout={layout} />
+              </PageGround>
+            </CanvasTextScope>
           </DocBoundary>
         </div>
       )}
@@ -158,6 +162,8 @@ function RestingMarks() {
 }
 
 export function EditorCanvas() {
+  // Before the read-only return: a published version without siteText still needs the shared wording.
+  usePublishedTextSync();
   const docKey = useEditorStore((s) => s.docKey);
   const layout = useEditorStore((s) => s.layout);
   const epoch = useEditorStore((s) => s.epoch);
@@ -186,19 +192,21 @@ export function EditorCanvas() {
       {viewport !== null && <ExactPreview width={viewport} />}
       <div className={styles.puckHost} hidden={viewport !== null}>
         <RestingMarks />
-        <Puck
-          key={mount}
-          config={config}
-          data={data}
-          // The mount epoch travels with every change, so a late onChange from a canvas that a load,
-          // reset or new page replaced is ignored by the store.
-          onChange={(next) => useEditorStore.getState().updateDoc(docKey, next, epoch)}
-          iframe={{ enabled: false }}
-          viewports={PUCK_VIEWPORTS}
-          ui={ui}
-          overrides={OVERRIDES}
-          height="100dvh"
-        />
+        <CanvasTextScope>
+          <Puck
+            key={mount}
+            config={config}
+            data={data}
+            // The mount epoch travels with every change, so a late onChange from a canvas that a load,
+            // reset or new page replaced is ignored by the store.
+            onChange={(next) => useEditorStore.getState().updateDoc(docKey, next, epoch)}
+            iframe={{ enabled: false }}
+            viewports={PUCK_VIEWPORTS}
+            ui={ui}
+            overrides={OVERRIDES}
+            height="100dvh"
+          />
+        </CanvasTextScope>
       </div>
     </CanvasBoundary>
   );

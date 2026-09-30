@@ -8,6 +8,7 @@ import { stableStringify, toPageSet } from '@/builder/editor/page-set.ts';
 import { prepareDocs } from '@/builder/editor/prepare.ts';
 import { guardHiddenCanvasHotkeys } from '@/builder/editor/preview-keys.ts';
 import { useEditorStore } from '@/builder/editor/store.ts';
+import { useEditorText } from '@/builder/editor/text/hooks.ts';
 import { EyeIcon } from '@/builder/editor/icons.tsx';
 import type { ViewportWidth } from '@/builder/editor/protocol.ts';
 import type { DocKey, RouteKey } from '@/builder/types.ts';
@@ -70,14 +71,16 @@ export function ExactRuntime({ failTitle, failBody }: { failTitle: string; failB
   const docs = useEditorStore((s) => s.docs);
   const previewAs = useEditorStore((s) => s.previewAs);
   const mode = useMemo(() => ({ editing: false, previewAs }), [previewAs]);
-  const pageSet = useMemo(() => toPageSet(prepareDocs(docs), layout), [docs, layout]);
+  const pageText = useEditorStore((s) => s.pageText);
+  const text = useEditorText();
+  const pageSet = useMemo(() => toPageSet(prepareDocs(docs), layout, pageText), [docs, layout, pageText]);
   const routeKey = routeKeyFor(docKey);
   const page = resolveDoc(pageSet, routeKey, layout);
   const chromeless = page?.doc.root.props.chrome === 'none';
 
   return (
     <BuilderModeProvider value={mode}>
-      <PageSetOverrideProvider pageSet={pageSet}>
+      <PageSetOverrideProvider pageSet={pageSet} text={text}>
         <DocBoundary
           key={stableStringify(pageSet)}
           docKey={routeKey}
