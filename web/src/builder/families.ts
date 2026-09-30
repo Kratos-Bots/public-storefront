@@ -40,6 +40,11 @@ export interface CatalogueData {
 }
 export const CatalogueFamily = createFamily<CatalogueData>('catalogue');
 
+/** The ProductGrid container's slots (spec §5.2). */
+export interface GridSlots { top: SlotRender; rail: SlotRender; main: SlotRender }
+/** The ProductList container's one slot (spec §5.2). */
+export interface ListSlots { content: SlotRender }
+
 /** Exactly the props ProductCard / ProductRow take today (spec §5.3). Tiles always carry an index (default 0). */
 export interface CardData { product: Product; index?: number; eager: boolean; hasSiblingImages: boolean; onSelect?: (product: Product) => void }
 export const CardTileFamily = createFamily<CardData>('card-tile');
