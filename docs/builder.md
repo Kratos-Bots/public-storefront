@@ -567,7 +567,8 @@ keys get one box per plural category of the store language, with a live example.
 Selecting a block shows **Text in this block** under its fields (from the block's `text`
 patterns). The canvas re-resolves on every keystroke; only posting is debounced. Text edits share
 Undo/Redo with block edits (`editor/text/history.ts` anchors each text step to Puck's history
-entry). Ctrl/⌘+Z in a Text field undoes text, never a hidden block.
+entry). Ctrl/⌘+Z in a Text field undoes text, never a hidden block: when the next step is a
+text step it takes that; otherwise the field keeps the browser's own undo.
 
 A value the backend would refuse (a half-typed `{`, a plural without "other") stays on screen
 with a blocking issue but is left out of the posted change, so an autosave never fails on it.

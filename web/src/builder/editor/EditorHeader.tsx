@@ -237,28 +237,40 @@ function History() {
     return () => { setAnchorSource(null); setPuckHistorySource(null); };
   }, [getPuck]);
   // Puck's own hotkeys listen on document and would undo a block while the owner types in a text
-  // field. Take the keys first when focus is in the text UI or the next step is a text step.
+  // field. Take the keys first when the next step is a text step. Inside the text UI nothing else
+  // is taken: with no text step (a block step, or nothing), the field keeps its own native undo.
+  const onKey = (e: globalThis.KeyboardEvent) => {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+    const key = e.key.toLowerCase();
+    const z = key === 'z' || e.code === 'KeyZ';
+    const isUndo = z && !e.shiftKey;
+    const isRedo = (z && e.shiftKey) || key === 'y' || e.code === 'KeyY';
+    if (!isUndo && !isRedo) return;
+    const s = useEditorStore.getState();
+    if (s.viewport !== null) return; // the exact preview's guard owns these keys (preview-keys.ts)
+    const target = e.target as Element | null;
+    const inText = typeof target?.closest === 'function' && target.closest('[data-sfb-text]') !== null;
+    const step = isUndo ? undoStep(s.textPast.at(-1), view()) : redoStep(s.textFuture.at(-1), view());
+    if (step === 'discard') {
+      // A text redo the owner branched away from: drop it, as the Redo button does. In a field the
+      // key then stays the field's own redo; elsewhere it is spent on the drop, like one click.
+      s.discardTextFuture();
+      if (inText) return;
+    } else if (step !== 'text') {
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    if (step === 'text') { if (isUndo) undo(); else redo(); }
+  };
+  // One listener per mount; it calls the latest handler through a ref.
+  const onKeyRef = useRef(onKey);
+  onKeyRef.current = onKey;
   useEffect(() => {
-    const onKey = (e: globalThis.KeyboardEvent) => {
-      if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
-      const key = e.key.toLowerCase();
-      const z = key === 'z' || e.code === 'KeyZ';
-      const isUndo = z && !e.shiftKey;
-      const isRedo = (z && e.shiftKey) || key === 'y' || e.code === 'KeyY';
-      if (!isUndo && !isRedo) return;
-      const s = useEditorStore.getState();
-      if (s.viewport !== null) return; // the exact preview's guard owns these keys (preview-keys.ts)
-      const target = e.target as Element | null;
-      const inText = typeof target?.closest === 'function' && target.closest('[data-sfb-text]') !== null;
-      const step = isUndo ? undoStep(s.textPast.at(-1), view()) : redoStep(s.textFuture.at(-1), view());
-      if (!inText && step !== 'text') return;
-      e.preventDefault();
-      e.stopPropagation();
-      if (isUndo) undo(); else redo();
-    };
-    window.addEventListener('keydown', onKey, true);
-    return () => window.removeEventListener('keydown', onKey, true);
-  });
+    const listener = (e: globalThis.KeyboardEvent) => onKeyRef.current(e);
+    window.addEventListener('keydown', listener, true);
+    return () => window.removeEventListener('keydown', listener, true);
+  }, []);
   return (
     <span className={styles.pair}>
       <button type="button" className={styles.iconButton} aria-label="Undo" title="Undo" disabled={!canUndo} onClick={undo}>

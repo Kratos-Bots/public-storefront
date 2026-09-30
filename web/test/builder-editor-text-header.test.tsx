@@ -90,6 +90,86 @@ describe('editor header: text', () => {
     holder.remove();
   });
 
+  function textField() {
+    const field = document.createElement('input');
+    const holder = document.createElement('div');
+    holder.setAttribute('data-sfb-text', '');
+    holder.appendChild(field);
+    document.body.appendChild(holder);
+    field.focus();
+    return { field, remove: () => holder.remove() };
+  }
+  const keydown = (init: KeyboardEventInit) => new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ctrlKey: true, ...init });
+  async function insertHeading(n: number) {
+    const headings = () => (S().docs.catalog?.content ?? []).filter((c) => c.type === 'Heading').length;
+    fireEvent.click(screen.getByRole('button', { name: 'Add block' }));
+    await act(async () => fireEvent.click(within(screen.getByRole('menu')).getByRole('menuitem', { name: 'Heading' })));
+    await vi.waitFor(() => expect(headings()).toBe(n), { timeout: 5_000 });
+    // Let Puck record the insert (debounced).
+    await act(async () => { await new Promise((r) => setTimeout(r, 400)); });
+  }
+
+  it('Ctrl+Z inside a text field with nothing to undo keeps the field’s native undo', async () => {
+    renderCanvas();
+    await puckShown();
+    const { field, remove } = textField();
+    const event = keydown({ key: 'z', code: 'KeyZ' });
+    act(() => { field.dispatchEvent(event); });
+    expect(event.defaultPrevented).toBe(false);
+    remove();
+  });
+
+  it('Ctrl+Z inside a text field whose next step is a block keeps native undo and leaves the block', async () => {
+    renderCanvas();
+    await puckShown();
+    await insertHeading(1);
+    const { field, remove } = textField();
+    const event = keydown({ key: 'z', code: 'KeyZ' });
+    act(() => { field.dispatchEvent(event); });
+    expect(event.defaultPrevented).toBe(false);
+    await act(async () => { await new Promise((r) => setTimeout(r, 50)); });
+    expect((S().docs.catalog?.content ?? []).filter((c) => c.type === 'Heading')).toHaveLength(1);
+    remove();
+  }, 20_000);
+
+  it('Ctrl+Shift+Z drops a branched-away text redo like the Redo button', async () => {
+    renderCanvas();
+    await puckShown();
+    await insertHeading(1);
+    // A text redo anchored to Puck's first entry, now behind the current one: redoStep = 'discard'.
+    const snap = { siteText: S().siteText, pageText: S().pageText };
+    act(() => { useEditorStore.setState({ textFuture: [{ snap, anchor: null }] }); });
+    const outside = keydown({ key: 'z', code: 'KeyZ', shiftKey: true });
+    act(() => { document.body.dispatchEvent(outside); });
+    expect(outside.defaultPrevented).toBe(true);
+    expect(S().textFuture).toHaveLength(0);
+
+    // In a field: the stale redo still goes, but the key stays the field's own.
+    act(() => { useEditorStore.setState({ textFuture: [{ snap, anchor: null }] }); });
+    const { field, remove } = textField();
+    const inside = keydown({ key: 'y', code: 'KeyY' });
+    act(() => { field.dispatchEvent(inside); });
+    expect(inside.defaultPrevented).toBe(false);
+    expect(S().textFuture).toHaveLength(0);
+    remove();
+  }, 20_000);
+
+  it('the undo-key listener is added once, not on every render', async () => {
+    const spy = vi.spyOn(window, 'addEventListener');
+    try {
+      renderCanvas();
+      await puckShown();
+      const count = () => spy.mock.calls.filter(([type, , opts]) => type === 'keydown' && opts === true).length;
+      const before = count();
+      act(() => { applyText('shared', key, 'One'); });
+      act(() => { S().undoText(); });
+      act(() => { S().redoText(); });
+      expect(count()).toBe(before);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it('while an exact preview shows, the keys are left to the preview guard', async () => {
     renderCanvas();
     await puckShown();
