@@ -4,6 +4,10 @@ import { act, cleanup, render, renderHook, screen } from '@testing-library/react
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
+vi.hoisted(() => {
+  // BlockText pulls in Puck, which reads ResizeObserver at import time.
+  globalThis.ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} } as unknown as typeof ResizeObserver;
+});
 vi.mock('@/api/pages.ts', async (orig) => ({
   ...(await orig<typeof import('@/api/pages.ts')>()),
   fetchPublished: vi.fn(async () => ({ pageSet: null, text: { version: 3, locale: 'de', formatLocale: '', shared: {}, layout: {} } })),
@@ -11,7 +15,9 @@ vi.mock('@/api/pages.ts', async (orig) => ({
 
 import { fetchPublished } from '@/api/pages.ts';
 import { DEFAULT_PREVIEW_AS, TEXT_INITIAL, editorTextOf, useEditorStore } from '@/builder/editor/store.ts';
-import { applyLanguage, applyText, useEditorText, usePublishedTextSync, useTextCell, useTextIssues } from '@/builder/editor/text/hooks.ts';
+import { applyLanguage, applyText, useEditorText, usePublishedTextSync, useTextCell, useTextIssues, useTextReadiness } from '@/builder/editor/text/hooks.ts';
+import { BlockTextSection } from '@/builder/editor/text/BlockText.tsx';
+import { rowFor } from '@/builder/editor/text/catalog.ts';
 import { useTextUi } from '@/builder/editor/text/ui-store.ts';
 import { CanvasTextScope } from '@/builder/editor/text/scope.tsx';
 import { setAnchorSource } from '@/builder/editor/text/history.ts';
@@ -107,6 +113,45 @@ describe('editor text hooks', () => {
       await vi.waitFor(() => expect(S().published).toEqual({ language: { locale: 'en', formatLocale: '' }, shared: {} }));
     } finally {
       mock.mockReset();
+      mock.mockImplementation(async () => ({ pageSet: null, text: { version: 3, locale: 'de', formatLocale: '', shared: {}, layout: {} } }));
+    }
+  });
+
+  it('a failed published read (older admin) is reported per load, not left loading forever', async () => {
+    const mock = vi.mocked(fetchPublished);
+    mock.mockImplementationOnce(async () => { throw new Error('offline'); });
+    try {
+      S().load({ layout: 'storefront', pageSet: null, readOnly: false });
+      const { result } = renderHook(() => { usePublishedTextSync(); return useTextReadiness(); }, { wrapper });
+      expect(result.current).toBe('loading');
+      await vi.waitFor(() => expect(result.current).toBe('failed'));
+      expect(S().published).toBeNull();
+      // The next load reads afresh.
+      act(() => { S().load({ layout: 'storefront', pageSet: null, readOnly: false }); });
+      await vi.waitFor(() => expect(result.current).toBe('ready'));
+    } finally {
+      mock.mockImplementation(async () => ({ pageSet: null, text: { version: 3, locale: 'de', formatLocale: '', shared: {}, layout: {} } }));
+    }
+  });
+
+  it('"Text in this block" waits for text readiness; a failed read shows a notice, never an \'en\' editor', async () => {
+    const mock = vi.mocked(fetchPublished);
+    let fail: (e: Error) => void = () => {};
+    mock.mockImplementationOnce(() => new Promise((_r, reject) => { fail = reject; }));
+    try {
+      S().load({ layout: 'storefront', pageSet: null, readOnly: false });
+      function Harness() { usePublishedTextSync(); return <BlockTextSection rows={[rowFor(key)!]} />; }
+      render(<Harness />, { wrapper });
+      expect(screen.queryByRole('textbox')).toBeNull();
+      expect(screen.getByRole('status')).toHaveTextContent(/Loading the shop’s wording/);
+      await vi.waitFor(() => expect(mock).toHaveBeenCalled());
+      await act(async () => { fail(new Error('offline')); });
+      await vi.waitFor(() => expect(screen.getByText(/couldn’t be read/)).toBeInTheDocument());
+      expect(screen.queryByRole('textbox')).toBeNull();
+      // Once the language is known, the rows are editable.
+      act(() => { S().setPublishedText({ language: { locale: 'de', formatLocale: '' }, shared: {} }); });
+      expect(screen.getByRole('textbox', { name: rowFor(key)!.label })).toBeInTheDocument();
+    } finally {
       mock.mockImplementation(async () => ({ pageSet: null, text: { version: 3, locale: 'de', formatLocale: '', shared: {}, layout: {} } }));
     }
   });

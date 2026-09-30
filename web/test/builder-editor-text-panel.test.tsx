@@ -6,6 +6,7 @@ import { DEFAULT_PREVIEW_AS, TEXT_INITIAL, useEditorStore } from '@/builder/edit
 import { useTextUi } from '@/builder/editor/text/ui-store.ts';
 import { TextRow } from '@/builder/editor/text/TextRow.tsx';
 import { TextPanel } from '@/builder/editor/text/TextPanel.tsx';
+import { markPublishedReadFailed } from '@/builder/editor/text/hooks.ts';
 import { allRows, rowFor } from '@/builder/editor/text/catalog.ts';
 import { defaultOf, placeholderKey, plainKey, pluralKey } from './helpers/text-keys.ts';
 
@@ -130,6 +131,16 @@ describe('Text panel rows', () => {
     render(<TextRow row={rowFor(key)!} />);
     const list = document.querySelector(`[data-text-key="${key}"] ul`);
     expect(list).toHaveAttribute('aria-live', 'polite');
+  });
+
+  it('the panel explains a failed published read instead of loading forever', () => {
+    useEditorStore.setState({ status: 'waiting', layout: 'storefront', readOnly: false, docs: {}, docKey: 'catalog', epoch: 0, previewAs: DEFAULT_PREVIEW_AS, viewport: null, ...TEXT_INITIAL });
+    S().load({ layout: 'storefront', pageSet: null, readOnly: false });
+    render(<TextPanel />);
+    expect(screen.getByRole('status')).toHaveTextContent(/Loading the shop’s wording/);
+    act(() => { markPublishedReadFailed(S().loadEpoch); });
+    expect(screen.getByText(/couldn’t be read/)).toBeInTheDocument();
+    expect(screen.queryByRole('textbox')).toBeNull();
   });
 
   it('a plural missing its “other” form says so', () => {

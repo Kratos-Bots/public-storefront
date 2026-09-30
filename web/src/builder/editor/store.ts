@@ -43,6 +43,8 @@ export interface EditorState {
   pageText: PageText;
   /** Without siteText: the published shared layer and language, read-only (text/hooks.ts fills it). */
   published: PublishedShared | null;
+  /** Without siteText: the published read failed under this load (text can't be edited; reset by load). */
+  publishedFailed: boolean;
   /**
    * Text undo stack, oldest first, at most TEXT_HISTORY_MAX. Each entry is anchored to Puck's
    * history entry current when it was made (text/history.ts decides the unified order).
@@ -73,6 +75,8 @@ export interface EditorState {
   discardTextFuture(): void;
   /** Ignored when `loadEpoch` is given and not the current one (a fetch started under an earlier load). */
   setPublishedText(p: PublishedShared, loadEpoch?: number): void;
+  /** Ignored when `loadEpoch` is not the current one. */
+  setPublishedFailed(loadEpoch: number): void;
   selectDoc(docKey: DocKey): void;
   /**
    * Puck's onChange for the selected doc. Ignored unless `docKey` is the selected page, and ignored
@@ -95,7 +99,7 @@ export interface EditorState {
 
 /** The text part of a fresh store (also what tests reset to). */
 export const TEXT_INITIAL = {
-  siteText: null, sharedEditable: false, pageText: emptyPageText(), published: null, textPast: [], textFuture: [], loadEpoch: 0,
+  siteText: null, sharedEditable: false, pageText: emptyPageText(), published: null, publishedFailed: false, textPast: [], textFuture: [], loadEpoch: 0,
 } satisfies Partial<EditorState>;
 
 type TextState = Pick<EditorState, 'sharedEditable' | 'siteText' | 'published'>;
@@ -169,6 +173,7 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
       sharedEditable: editable,
       pageText: pageSet?.text ? { strings: pageSet.text.strings } : emptyPageText(),
       published: null,
+      publishedFailed: false,
       textPast: [],
       textFuture: [],
       loadEpoch: s.loadEpoch + 1,
@@ -315,7 +320,12 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
 
   setPublishedText(published, loadEpoch) {
     if (loadEpoch !== undefined && loadEpoch !== get().loadEpoch) return;
-    set({ published });
+    set({ published, publishedFailed: false });
+  },
+
+  setPublishedFailed(loadEpoch) {
+    if (loadEpoch !== get().loadEpoch || get().publishedFailed) return;
+    set({ publishedFailed: true });
   },
 }));
 

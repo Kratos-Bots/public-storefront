@@ -3,16 +3,16 @@ import { useEffect, useId, useMemo, useRef, useState, type FocusEvent } from 're
 import type { EditorText } from '@/text/types.ts';
 import { useTemplateContext } from '@/templates/runtime.tsx';
 import { editorTextOf, textIssuesOf, useEditorStore } from '@/builder/editor/store.ts';
-import { applyText, useEditorText, useLoadEpoch, useTextIssues, useTextReady } from '@/builder/editor/text/hooks.ts';
+import { applyText, useEditorText, useLoadEpoch, useTextIssues, useTextReadiness } from '@/builder/editor/text/hooks.ts';
 import { useTextUi, type TextFilter } from '@/builder/editor/text/ui-store.ts';
 import { rowFor, rowMatches, textGroups, type TextRowDef } from '@/builder/editor/text/catalog.ts';
 import { unusedEntries } from '@/builder/editor/text/issues.ts';
 import { valueStrings } from '@/builder/editor/text/model.ts';
 import { LAYOUT_LABELS } from '@/builder/editor/page-catalog.ts';
 import { cssString } from '@/builder/editor/resting-marks.ts';
-import { CloseIcon } from '@/builder/editor/icons.tsx';
+import { CloseIcon, WarnIcon } from '@/builder/editor/icons.tsx';
 import { LanguageSection } from '@/builder/editor/text/LanguageSection.tsx';
-import { TextRow, summary } from '@/builder/editor/text/TextRow.tsx';
+import { TEXT_LOADING, TEXT_UNREADABLE, TextRow, summary } from '@/builder/editor/text/TextRow.tsx';
 import styles from '@/builder/editor/text/Text.module.css';
 
 const FILTERS: Array<{ id: TextFilter; label: string }> = [
@@ -43,7 +43,7 @@ export function TextPanel({ onClose }: { onClose?: () => void }) {
   const focus = useTextUi((s) => s.focus);
   const text = useEditorText();
   const issues = useTextIssues();
-  const ready = useTextReady();
+  const readiness = useTextReadiness();
   const loadEpoch = useLoadEpoch();
   const sharedEditable = useEditorStore((s) => s.sharedEditable);
   const readOnly = useEditorStore((s) => s.readOnly);
@@ -138,8 +138,10 @@ export function TextPanel({ onClose }: { onClose?: () => void }) {
           </button>
         )}
       </header>
-      {!ready ? (
-        <p className={styles.loading} role="status">Loading the shop’s wording…</p>
+      {readiness === 'loading' ? (
+        <p className={styles.loading} role="status">{TEXT_LOADING}</p>
+      ) : readiness === 'failed' ? (
+        <p className={styles.unavailable} role="status"><WarnIcon />{TEXT_UNREADABLE}</p>
       ) : (
         <>
           <LanguageSection />

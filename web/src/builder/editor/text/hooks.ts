@@ -45,6 +45,9 @@ export function usePublishedTextSync(): void {
     retry: false,
   });
   useEffect(() => {
+    if (enabled && missing && query.isError) markPublishedReadFailed(loadEpoch);
+  }, [enabled, missing, query.isError, loadEpoch]);
+  useEffect(() => {
     if (!enabled || !missing || !query.isSuccess) return;
     const t = query.data.text;
     useEditorStore.getState().setPublishedText(
@@ -60,6 +63,23 @@ export function useTextIssues(): TextIssue[] {
 }
 
 export const useTextReady = (): boolean => useEditorStore(isTextReady);
+
+/** The published read failed under this load: text stays uneditable for it (never guessed as 'en'). */
+export function markPublishedReadFailed(loadEpoch: number): void {
+  useEditorStore.getState().setPublishedFailed(loadEpoch);
+}
+
+export type TextReadiness = 'ready' | 'loading' | 'failed';
+/**
+ * Text can be edited once the language is known (`useTextReady`). Until then it is loading — or,
+ * when the published read failed under this load, failed: the UI says so instead of editing the
+ * default language, which may not be the shop's.
+ */
+export function useTextReadiness(): TextReadiness {
+  const ready = useTextReady();
+  const failed = useEditorStore((s) => s.publishedFailed);
+  return ready ? 'ready' : failed ? 'failed' : 'loading';
+}
 
 export interface TextCell {
   /**

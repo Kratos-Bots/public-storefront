@@ -54,6 +54,18 @@
 }
 .iconButton:hover { background: var(--sfb-wash); color: var(--sfb-ink); }
 .loading { color: var(--sfb-muted); }
+/* The wording couldn't be read: no rows, a plain explanation with the warning mark. */
+.unavailable {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--sfb-line);
+  border-radius: var(--sfb-radius);
+  overflow-wrap: anywhere;
+}
+.unavailable > svg { flex: none; margin-block-start: 2px; color: var(--sfb-danger); }
 
 /* ---- language ---- */
 .language {

@@ -14,6 +14,8 @@ import styles from '@/builder/editor/text/Text.module.css';
 const domId = (reactId: string) => reactId.replace(/[^A-Za-z0-9_-]/g, '');
 export const SHARED_LOCKED = 'Shared wording can’t be changed from this version of the admin.';
 export const READ_ONLY = 'This version is read-only.';
+export const TEXT_LOADING = 'Loading the shop’s wording…';
+export const TEXT_UNREADABLE = 'The shop’s wording couldn’t be read, so text can’t be edited here. Reload the editor to try again.';
 
 type Forms = Partial<Record<PluralForm, string>>;
 const isForms = (v: DraftValue | TextValue | undefined): v is Forms => typeof v === 'object' && v !== null;

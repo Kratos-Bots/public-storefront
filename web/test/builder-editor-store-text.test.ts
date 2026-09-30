@@ -357,6 +357,17 @@ describe('editor store: stale text edits across a load', () => {
     expect(S().setLanguage({ locale: 'de' }, null, S().loadEpoch)).toBe(true);
   });
 
+  it('a failed published read belongs to its load: an earlier load's is ignored, a new load clears it', () => {
+    S().load({ layout: 'storefront', pageSet: null, readOnly: false });
+    const first = S().loadEpoch;
+    S().setPublishedFailed(first);
+    expect(S().publishedFailed).toBe(true);
+    S().load({ layout: 'storefront', pageSet: null, readOnly: false });
+    expect(S().publishedFailed).toBe(false);
+    S().setPublishedFailed(first);
+    expect(S().publishedFailed).toBe(false);
+  });
+
   it('page resets and new pages do not invalidate a text edit (only a load does)', () => {
     S().load({ layout: 'storefront', pageSet: null, readOnly: false, siteText: null });
     const at = S().loadEpoch;

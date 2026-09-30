@@ -4,7 +4,9 @@ import { useTemplateContext } from '@/templates/runtime.tsx';
 import { usePuck } from '@/builder/editor/use-puck.ts';
 import { blockTextRows, rowMatches, type TextRowDef } from '@/builder/editor/text/catalog.ts';
 import { useTextUi } from '@/builder/editor/text/ui-store.ts';
-import { TextRow } from '@/builder/editor/text/TextRow.tsx';
+import { useTextReadiness } from '@/builder/editor/text/hooks.ts';
+import { WarnIcon } from '@/builder/editor/icons.tsx';
+import { TEXT_LOADING, TEXT_UNREADABLE, TextRow } from '@/builder/editor/text/TextRow.tsx';
 import styles from '@/builder/editor/text/Text.module.css';
 import placement from '@/builder/editor/text/TextPlacement.module.css';
 
@@ -27,15 +29,19 @@ export function FieldsWithText({ children }: { children: ReactNode; isLoading: b
   );
 }
 
-function BlockTextSection({ rows }: { rows: readonly TextRowDef[] }) {
+/** Exported for tests. Like the Text panel, rows wait until the store language is known. */
+export function BlockTextSection({ rows }: { rows: readonly TextRowDef[] }) {
   const id = useId().replace(/[^A-Za-z0-9_-]/g, '');
+  const readiness = useTextReadiness();
   const [query, setQuery] = useState('');
   const many = rows.length > BLOCK_TEXT_SEARCH_OVER;
   const shown = many ? rows.filter((r) => rowMatches(r, query)) : rows;
   return (
     <section className={`${styles.root} ${placement.blockText}`} data-sfb-text="" data-sfb-block-text="" aria-labelledby={`${id}-t`}>
       <h3 id={`${id}-t`} className={placement.blockTitle}>Text in this block</h3>
-      {many && (
+      {readiness === 'loading' && <p className={styles.loading} role="status">{TEXT_LOADING}</p>}
+      {readiness === 'failed' && <p className={styles.unavailable} role="status"><WarnIcon />{TEXT_UNREADABLE}</p>}
+      {readiness === 'ready' && many && (
         <div className={`${styles.tools} ${placement.blockTools}`} data-sfb-block-tools="">
           <input
             type="search"
@@ -48,8 +54,8 @@ function BlockTextSection({ rows }: { rows: readonly TextRowDef[] }) {
           <button type="button" className={styles.reset} onClick={() => useTextUi.getState().show({ query })}>Open in Text panel</button>
         </div>
       )}
-      {many && shown.length === 0 && <p className={styles.empty}>No lines match.</p>}
-      {shown.map((r) => <TextRow key={r.key} row={r} compact />)}
+      {readiness === 'ready' && many && shown.length === 0 && <p className={styles.empty}>No lines match.</p>}
+      {readiness === 'ready' && shown.map((r) => <TextRow key={r.key} row={r} compact />)}
     </section>
   );
 }
