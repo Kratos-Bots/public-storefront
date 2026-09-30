@@ -267,6 +267,22 @@ DOM is byte-identical to v0.7.0.
   `defaultPrimaryAction(input, t)`) and rendering from key maps (`t(shipmentLabelKey(status))`).
   `test/text-snapshot-guard.test.ts` enforces this; a reviewed exception carries
   `// text-snapshot-ok: <reason>` on or above the line.
+- **What the snapshot guard does not catch** (review for these by hand):
+  - *Subscribed but not nearest.* A component that calls `useText()` passes the guard even if it
+    also reads the snapshot. It re-renders on a change, but the snapshot is the *deepest* provider,
+    not its nearest — wrong when providers nest (the editor frame inside the app). Pass the `t` from
+    `useText()` instead (`statusView(order, t)`, `orderStatusLabel(status, t)`).
+  - *Arrow functions inside render.* Only a component or hook body and its `useMemo` callbacks count
+    as render; every other nested function is treated as call-time, so a read in
+    `{rows.map((o) => orderStatusLabel(o.status))}` is not flagged.
+  - *Render helpers not named like components.* Only functions bound to a `Capitalised` or `useX`
+    name are scanned; a `renderRow()` helper called from JSX is not.
+  - *Imports it cannot follow.* Readers are matched by name across `web/src` (no scope analysis):
+    namespace (`import * as s`) and default imports are not followed, and a local that shadows a
+    reader's name is treated as the reader.
+  - *Memo deps by name.* The `useMemo` check only looks for an identifier `t` in the deps array; a
+    renamed binding (`const { t: text } = useText()`) or `t` passed under another name is not
+    recognised either way.
 - `@/text/snapshot.ts` imports nothing outside `@/text/*`, so importing it never enters the
   `runtime → builder/published → api/client → lib/errors` cycle; `runtime.tsx` re-exports it for
   components. Non-React modules import it directly.
