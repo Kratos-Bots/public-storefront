@@ -1,17 +1,21 @@
 import { useEffect, useId, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
-import { useEditorStore } from '@/builder/editor/store.ts';
+import { setPuckHistorySource, useEditorStore } from '@/builder/editor/store.ts';
 import { usePuck, useGetPuck } from '@/builder/editor/use-puck.ts';
 import { useHints, useIssues, useLockedPresent } from '@/builder/editor/use-issues.ts';
 import { blockMenu } from '@/builder/editor/config.ts';
 import { insertTarget, type InsertApi } from '@/builder/editor/insert-target.ts';
-import { docLabel } from '@/builder/editor/page-catalog.ts';
+import { docLabel, LAYOUT_LABELS } from '@/builder/editor/page-catalog.ts';
 import { isCustomKey } from '@/builder/editor/page-set.ts';
 import { focusPagePickerSoon, PagePicker } from '@/builder/editor/PagePicker.tsx';
 import { FloatingPanel } from '@/builder/editor/floating.tsx';
 import { VIEWPORT_OPTIONS } from '@/builder/editor/viewports.ts';
 import { cssString } from '@/builder/editor/resting-marks.ts';
 import { rememberPanel, shouldAutoCloseBlocks, WIDE_FRAME_QUERY } from '@/builder/editor/panels.ts';
-import { CheckIcon, PanelLeftIcon, PanelRightIcon, PlusIcon, RedoIcon, TipIcon, UndoIcon, WarnIcon } from '@/builder/editor/icons.tsx';
+import { CheckIcon, PanelLeftIcon, PanelRightIcon, PlusIcon, RedoIcon, TextIcon, TipIcon, UndoIcon, WarnIcon } from '@/builder/editor/icons.tsx';
+import { useTextIssues } from '@/builder/editor/text/hooks.ts';
+import { useTextUi } from '@/builder/editor/text/ui-store.ts';
+import { puckHistoryView, redoStep, setAnchorSource, undoStep } from '@/builder/editor/text/history.ts';
+import { rowFor } from '@/builder/editor/text/catalog.ts';
 import { blockDef } from '@/builder/rules.ts';
 import { registerLiveCanvas } from '@/builder/editor/late-upload.ts';
 import type { PreviewAs } from '@/builder/mode.ts';
@@ -189,20 +193,90 @@ function AddBlock() {
 
 // ── history / panels ─────────────────────────────────────────────────────────
 
-function History() {
-  const back = usePuck((s) => s.history.back);
-  const forward = usePuck((s) => s.history.forward);
+/**
+ * One timeline for block and text edits (spec §7.4): Puck owns block history, the store owns text
+ * snapshots anchored to Puck's entries (text/history.ts decides which to step).
+ *
+ * Every read of Puck's history goes through `getPuck()` at call time — Puck updates that store
+ * synchronously from its app store, so it is live — never a value captured at render, which is
+ * stale inside Puck's onChange and the microtask after it.
+ */
+function useUnifiedHistory() {
+  const getPuck = useGetPuck();
   const hasPast = usePuck((s) => s.history.hasPast);
   const hasFuture = usePuck((s) => s.history.hasFuture);
+  const textPast = useEditorStore((s) => s.textPast.length > 0);
+  const textFuture = useEditorStore((s) => s.textFuture.length > 0);
+  const view = () => puckHistoryView(getPuck().history);
+  const undo = () => {
+    const s = useEditorStore.getState();
+    const step = undoStep(s.textPast.at(-1), view());
+    if (step === 'text') s.undoText();
+    else if (step === 'doc') getPuck().history.back();
+  };
+  const redo = () => {
+    const s = useEditorStore.getState();
+    const step = redoStep(s.textFuture.at(-1), view());
+    if (step === 'text') s.redoText();
+    else if (step === 'doc') getPuck().history.forward();
+    else if (step === 'discard') s.discardTextFuture();
+  };
+  return { undo, redo, view, canUndo: hasPast || textPast, canRedo: hasFuture || textFuture };
+}
+
+function History() {
+  const getPuck = useGetPuck();
+  const { undo, redo, view, canUndo, canRedo } = useUnifiedHistory();
+  // Text edits are stamped with the Puck entry current when they were made, and the store reads
+  // Puck's history to tell a canvas undo/redo from a new block edit. Both read Puck live.
+  useEffect(() => {
+    setAnchorSource(() => puckHistoryView(getPuck().history).anchor);
+    setPuckHistorySource(() => puckHistoryView(getPuck().history));
+    return () => { setAnchorSource(null); setPuckHistorySource(null); };
+  }, [getPuck]);
+  // Puck's own hotkeys listen on document and would undo a block while the owner types in a text
+  // field. Take the keys first when focus is in the text UI or the next step is a text step.
+  useEffect(() => {
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+      const key = e.key.toLowerCase();
+      const z = key === 'z' || e.code === 'KeyZ';
+      const isUndo = z && !e.shiftKey;
+      const isRedo = (z && e.shiftKey) || key === 'y' || e.code === 'KeyY';
+      if (!isUndo && !isRedo) return;
+      const s = useEditorStore.getState();
+      if (s.viewport !== null) return; // the exact preview's guard owns these keys (preview-keys.ts)
+      const target = e.target as Element | null;
+      const inText = typeof target?.closest === 'function' && target.closest('[data-sfb-text]') !== null;
+      const step = isUndo ? undoStep(s.textPast.at(-1), view()) : redoStep(s.textFuture.at(-1), view());
+      if (!inText && step !== 'text') return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (isUndo) undo(); else redo();
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  });
   return (
     <span className={styles.pair}>
-      <button type="button" className={styles.iconButton} aria-label="Undo" title="Undo" disabled={!hasPast} onClick={() => back()}>
+      <button type="button" className={styles.iconButton} aria-label="Undo" title="Undo" disabled={!canUndo} onClick={undo}>
         <UndoIcon />
       </button>
-      <button type="button" className={styles.iconButton} aria-label="Redo" title="Redo" disabled={!hasFuture} onClick={() => forward()}>
+      <button type="button" className={styles.iconButton} aria-label="Redo" title="Redo" disabled={!canRedo} onClick={redo}>
         <RedoIcon />
       </button>
     </span>
+  );
+}
+
+/** Opens the Text panel (every wording on the site); pressed while it shows. */
+function TextButton() {
+  const open = useTextUi((s) => s.open);
+  return (
+    <button type="button" className={styles.button} aria-pressed={open} onClick={() => (open ? useTextUi.getState().hide() : useTextUi.getState().show())}>
+      <TextIcon />
+      Text
+    </button>
   );
 }
 
@@ -366,7 +440,9 @@ function useJump() {
 
 function IssuesMenu() {
   const issues = useIssues();
+  const textIssues = useTextIssues();
   const hints = useHints();
+  const layout = useEditorStore((s) => s.layout);
   const docs = useEditorStore((s) => s.docs);
   const docKey = useEditorStore((s) => s.docKey);
   const jump = useJump();
@@ -396,7 +472,7 @@ function IssuesMenu() {
     jump(target.blockId);
   };
 
-  const count = issues.length;
+  const count = issues.length + textIssues.length;
   const summary = count === 0 ? 'No issues' : `${count} issue${count === 1 ? '' : 's'}, publishing is blocked`;
   return (
     <>
@@ -431,9 +507,8 @@ function IssuesMenu() {
           <h2 id={`${id}-issues`} className={styles.panelTitle}>
             {count === 0 ? 'Nothing blocks publishing' : 'Fix these to publish'}
           </h2>
-          {count === 0 ? (
-            <p className={styles.panelEmpty}>Every page in this layout passes its checks.</p>
-          ) : (
+          {count === 0 && <p className={styles.panelEmpty}>Every page in this layout passes its checks.</p>}
+          {issues.length > 0 && (
             <ul className={styles.panelList}>
               {issues.map((issue, i) => {
                 const part = issuePart(issue);
@@ -455,6 +530,32 @@ function IssuesMenu() {
             </ul>
           )}
         </section>
+        {textIssues.length > 0 && (
+          <section aria-labelledby={`${id}-text`} className={styles.panelTips}>
+            <h2 id={`${id}-text`} className={styles.panelTitle}>Text</h2>
+            <ul className={styles.panelList}>
+              {textIssues.map((issue) => (
+                <li key={`${issue.scope}-${issue.key}-${issue.rule}`}>
+                  <button
+                    type="button"
+                    className={styles.panelItem}
+                    data-kind="issue"
+                    onClick={() => { setOpen(false); useTextUi.getState().show({ key: issue.key, filter: 'issues' }); }}
+                  >
+                    <WarnIcon />
+                    <span className={styles.panelItemBody}>
+                      <span className={styles.panelWhere}>
+                        <span>{rowFor(issue.key)?.label ?? issue.key}</span>
+                        <span className={styles.panelPart}>{issue.scope === 'shared' ? 'All layouts' : `Only ${LAYOUT_LABELS[layout]}`}</span>
+                      </span>
+                      <span>{issue.message}</span>
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
         {hints.length > 0 && (
           <section aria-labelledby={`${id}-tipsTitle`} className={styles.panelTips}>
             <h2 id={`${id}-tipsTitle`} className={styles.panelTitle}>Tips for this page</h2>
@@ -518,6 +619,7 @@ export function EditorHeader(_props: { actions: ReactNode; children: ReactNode }
       </div>
       <div className={styles.group}>
         <AddBlock />
+        <TextButton />
         <History />
         <PanelToggles />
       </div>
