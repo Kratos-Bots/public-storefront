@@ -5,8 +5,8 @@ import { renderBlock } from '@/builder/style/apply.tsx';
 import { BOX } from '@/builder/style/model.ts';
 import type { BlockRenderContext } from '@/builder/define.ts';
 
-const SHELL_WRAP = ['Upsells', 'TopBar', 'NoticeBanners', 'CutoffBar', 'ContactStrip', 'Footer'];
-const FLOWS = ['ProductGrid', 'ProductList', 'WholesaleTable', 'ProductDetail', 'CartContents', 'CartSummary', 'CheckoutFlow',
+const SHELL_WRAP = ['Upsells', 'TopBar', 'NoticeBanners', 'CutoffBar', 'Footer'];
+const FLOWS = ['ProductGrid', 'ProductList', 'ProductDetail', 'CartContents', 'CartSummary', 'CheckoutFlow',
   'LoginOptions', 'OrdersList', 'OrderDetail', 'Loyalty', 'Referrals', 'Profile', 'OrderStatus', 'PaymentSuccess',
   'PaymentCancel', 'OrderPlaced', 'VerifyForm', 'TrackingLookup', 'AccountNav'];
 const ctx: BlockRenderContext = { editing: false, docKey: 'catalog', layout: 'storefront' };
@@ -46,5 +46,33 @@ describe('flows can never be hidden or given text controls (spec §2 #6, #8)', (
   it('a hide on a flow never reaches the DOM', () => {
     const out = renderBlock(BLOCKS.CheckoutFlow!, props('CheckoutFlow', { hide: 'mobile' }), ctx) as ReactElement<Record<string, unknown>>;
     expect(isValidElement(out) && out.type === 'div').toBe(false);
+  });
+});
+
+describe('WholesaleTable · wrap with geometry-safe keys only (sticky full-bleed WholesaleBar)', () => {
+  it('drops the keys that would offset or clip the band', () => {
+    const style = BLOCKS.WholesaleTable!.style;
+    expect(style).toMatchObject({ target: 'wrap' });
+    expect(style && [...style.keys]).toEqual(['bg', 'padTop', 'marginTop', 'marginBottom', 'shadow']);
+  });
+  it('styled: one wrapper; unstyled: none', () => {
+    const def = BLOCKS.WholesaleTable!;
+    expect(renderBlock(def, props('WholesaleTable'), ctx)).not.toMatchObject({ type: 'div' });
+    const out = renderBlock(def, props('WholesaleTable', { bg: 'surface', padX: 'md' }), ctx) as ReactElement<Record<string, unknown>>;
+    expect(out.props).toMatchObject({ 'data-sf-style': 'WholesaleTable', 'data-sfs-bg': 'surface' });
+    expect(out.props).not.toHaveProperty('data-sfs-px');
+  });
+});
+
+describe('ContactStrip · pass onto the sticky strip (no wrapper)', () => {
+  it('declares pass with BOX and hide', () => {
+    const style = BLOCKS.ContactStrip!.style;
+    expect(style).toMatchObject({ target: 'pass' });
+    expect(style && [...style.keys]).toEqual([...BOX, 'hide']);
+  });
+  it('the marker lands on the stripBar element itself', () => {
+    const out = renderBlock(BLOCKS.ContactStrip!, props('ContactStrip', { bg: 'surface' }), ctx) as ReactElement<Record<string, unknown>>;
+    expect(out.type).not.toBe('div');
+    expect(out.props).toMatchObject({ styleAttrs: { 'data-sf-style': 'ContactStrip', 'data-sfs-bg': 'surface' } });
   });
 });

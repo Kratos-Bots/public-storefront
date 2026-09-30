@@ -1,3 +1,4 @@
+import type { StyleAttrs } from '@/builder/define.ts';
 import { Suspense, type ReactNode } from 'react';
 import { Link, Outlet, useLocation } from 'react-router';
 import { useSettings } from '@/app/settings.ts';
@@ -115,13 +116,13 @@ export function MenuMain() {
  * phone — and both bands want `bottom: 0`. The tab wins, the way it replaces the
  * contact strip in the chat menu this layout is ported from.
  */
-export function MenuContactStrip({ catalogOnly = true }: { catalogOnly?: boolean }) {
+export function MenuContactStrip({ catalogOnly = true, styleAttrs }: { catalogOnly?: boolean; styleAttrs?: StyleAttrs }) {
   const { features } = useSettings();
   const cartCount = useCartStore(selectCount);
   const { pathname } = useLocation();
   const barShowing = useMobileCartBar();
   const show = (!catalogOnly || onCatalogPath(pathname)) && !barShowing && !(features.wholesale && cartCount > 0);
-  return show ? <ContactLinks variant="strip" /> : null;
+  return show ? <ContactLinks variant="strip" styleAttrs={styleAttrs} /> : null;
 }
 
 /** The shell root and the system mounts that sit after the page chrome (spec §5.4). */
