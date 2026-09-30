@@ -116,7 +116,7 @@ describe('catalogue blocks · block styles', () => {
       { type: 'FeaturedProducts', props: { id: 'f', title: 'Staff picks', source: 'picked', items: [{ productId: 7 }], categoryId: null, limit: 4, blockStyle: { shadow: 'card' } } },
     ], '/pages/x');
     await screen.findAllByRole('navigation', { name: 'Categories' });
-    const byName = Object.fromEntries(markers(container).map((m) => [m.getAttribute('data-sf-style'), m]));
+    const byName: Record<string, Element> = Object.fromEntries(markers(container).map((m) => [m.getAttribute('data-sf-style') ?? '', m] as const));
     expect(Object.keys(byName).sort()).toEqual(['CategoryNav', 'FeaturedProducts', 'SearchField']);
     for (const [name, el] of Object.entries(byName)) expect(el.getAttribute('data-sf-block')).toBe(name);
     expect(byName.SearchField!.hasAttribute('data-sfs-text')).toBe(false);
