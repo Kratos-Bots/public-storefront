@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { installMocks, type Layout } from './mocks.ts';
 import { addFirstToCart, FIXED_NOW, fillCheckout, onlyVisible, openProduct } from './flows.ts';
 import { presetTheme } from './template-theme.ts';
-import { hiddenGridSet, maximumStyleSet, styledCatalogSet, styledFlowSet, styledHeaderSet } from './page-sets.ts';
+import { hiddenGridSet, hiddenHeaderSet, maximumStyleSet, styledCatalogSet, styledFlowSet, styledHeaderSet, styledWholesaleSet } from './page-sets.ts';
 
 /** Same cases as templates.spec.ts / builder.spec.ts (a spec may not import another spec). */
 const CASES: Array<[string, string]> = [
@@ -134,3 +134,39 @@ for (const layout of ['storefront', 'menu'] as const satisfies readonly Layout[]
     expect(errors.some((e) => e.includes('hidden-required:Section'))).toBe(true);
   });
 }
+
+test('a Header hidden on phones leaves no sticky offset: the group head comes to rest at the top (390)', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 400 });
+  await page.clock.setFixedTime(FIXED_NOW);
+  await installMocks(page, { layout: 'menu', session: true, pages: { menu: hiddenHeaderSet('menu') } });
+  await page.goto('/');
+  await expect(page.locator('header[data-sf-part="header"][data-sfs-hide="mobile"]')).toBeHidden();
+  const head = page.locator('[data-sf-part="group-title"]').first();
+  await expect(head).toBeVisible();
+  expect(await head.evaluate((el) => getComputedStyle(el).top)).toBe('0px');
+  // Scroll just past the head's resting place: stuck, it sits at the very top, not 52 px down.
+  const y = await head.evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
+  await page.evaluate((to) => window.scrollTo(0, to), y + 20);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(y);
+  await expect.poll(() => head.evaluate((el) => Math.round(el.getBoundingClientRect().top))).toBe(0);
+});
+
+test('a styled WholesaleTable keeps its cart bar full-bleed (390)', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.clock.setFixedTime(FIXED_NOW);
+  await installMocks(page, {
+    layout: 'menu', session: true, pages: { menu: styledWholesaleSet('menu') },
+    tweakSettings: (s) => { s.features.wholesale = true; },
+  });
+  await page.goto('/');
+  const table = page.locator('[data-sf-style="WholesaleTable"]');
+  await expect(table).toBeVisible();
+  expect(await cs(page, '[data-sf-style="WholesaleTable"]', 'background-color')).toBe(await tokenColour(page, 'surface-2'));
+  await page.getByRole('button', { name: 'One more Fennec Tincture 30ml' }).first().click();
+  const bar = table.getByRole('link', { name: /basket/i }).locator('..');
+  await expect(bar).toBeVisible();
+  const rect = await bar.evaluate((el) => { const r = el.getBoundingClientRect(); return { x: r.x, width: r.width }; });
+  expect(rect.x).toBe(0);
+  expect(rect.width).toBe(390);
+  await noOverflow(page, 'styled trade list');
+});

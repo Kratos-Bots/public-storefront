@@ -70,8 +70,13 @@ describe('block-style.css (spec §5.2)', () => {
     expect(body('[data-sfs-max="text"]')).toMatch(/max-width:\s*min\(68ch, 100%\)/);
   });
 
+  it('bg alone never insets the WholesaleTable, whose cart bar is full-bleed', () => {
+    const inset = rules.find((r) => r.selector.includes('[data-sfs-bg]:not(') && /padding-inline:\s*1rem/.test(r.body));
+    expect(inset?.selector).toMatch(/:not\([^)]*\[data-sf-style="WholesaleTable"\][^)]*\)/);
+  });
+
   it('bg alone insets the text (never on the header part); align places a max-width box', () => {
-    expect(rules.some((r) => r.selector.includes('[data-sfs-bg]:not([data-sfs-px], [data-sf-part])') && /padding-inline:\s*1rem/.test(r.body))).toBe(true);
+    expect(rules.some((r) => r.selector.includes('[data-sfs-bg]:not([data-sfs-px], [data-sf-part], [data-sf-style="WholesaleTable"])') && /padding-inline:\s*1rem/.test(r.body))).toBe(true);
     expect(rules.some((r) => r.selector.includes('[data-sfs-max][data-sfs-align="center"]') && /margin-inline:\s*auto/.test(r.body))).toBe(true);
     expect(rules.some((r) => r.selector.includes('[data-sfs-max][data-sfs-align="end"]') && /margin-inline-start:\s*auto/.test(r.body))).toBe(true);
   });

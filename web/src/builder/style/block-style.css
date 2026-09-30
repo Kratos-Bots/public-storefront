@@ -317,7 +317,7 @@
 :root:root [data-sf-style][data-sfs-max="wide"] {
   max-width: min(60rem, 100%);
 }
-:root [data-sf-style][data-sfs-bg]:not([data-sfs-px], [data-sf-part]) {
+:root [data-sf-style][data-sfs-bg]:not([data-sfs-px], [data-sf-part], [data-sf-style="WholesaleTable"]) {
   padding-inline: 1rem;
 }
 :root [data-sf-style][data-sfs-max][data-sfs-align="center"] {

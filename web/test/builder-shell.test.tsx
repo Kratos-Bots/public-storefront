@@ -272,6 +272,23 @@ describe('PuckShell safety nets', () => {
     expect(css).not.toMatch(/\.shell:has\(>\s*\.unstuck\)/);
     expect(css).toMatch(/\.shell:has\(\.unstuck\)\s*\{[^}]*--sf-bar-h:\s*0px[^}]*--sf-pin-h:\s*0px/);
   });
+  it.each([
+    'StorefrontShell.module.css',
+    'MenuShell.module.css',
+    'WebAppShell.module.css',
+  ])('%s: a Header hidden at a breakpoint zeroes the sticky offsets at that breakpoint only (keyed on data-sfs-hide, so the editor ghost keeps them)', (cssFile) => {
+    const css = readFileSync(resolve(__dirname, '../src/layouts', cssFile), 'utf8');
+    for (const [query, value] of [['max-width: 61.99em', 'mobile'], ['min-width: 62em', 'desktop']] as const) {
+      const block = new RegExp(
+        `@media \\(${query}\\)\\s*\\{\\s*\\.shell:has\\(\\[data-sf-part='header'\\]\\[data-sfs-hide='${value}'\\]\\)\\s*\\{([^}]*)\\}`,
+      );
+      const m = css.match(block);
+      expect(m, `${cssFile} zeroes offsets for a ${value}-hidden header`).not.toBeNull();
+      expect(m![1]).toMatch(/--sf-bar-h:\s*0px/);
+      expect(m![1]).toMatch(/--sf-pin-h:\s*0px/);
+    }
+    expect(css).not.toMatch(/\[data-sfs-ghost/);
+  });
 });
 
 describe('PuckShell · a styled Header (block-styling spec §4 pass target)', () => {

@@ -36,6 +36,23 @@
   --sf-pin-h: 0px;
 }
 
+/* A Header block hidden at a breakpoint (Style → Visibility) leaves nothing to stick
+   under there, so its pinned notices and sticky page heads come to rest at the top too.
+   Keyed on the published `data-sfs-hide` only: the editor's ghosted header
+   (`data-sfs-ghost`) is still drawn, so it keeps its offsets. */
+@media (max-width: 61.99em) {
+  .shell:has([data-sf-part='header'][data-sfs-hide='mobile']) {
+    --sf-bar-h: 0px;
+    --sf-pin-h: 0px;
+  }
+}
+@media (min-width: 62em) {
+  .shell:has([data-sf-part='header'][data-sfs-hide='desktop']) {
+    --sf-bar-h: 0px;
+    --sf-pin-h: 0px;
+  }
+}
+
 .headerInner {
   display: flex;
   align-items: center;

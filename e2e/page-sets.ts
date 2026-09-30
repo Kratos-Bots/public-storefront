@@ -165,6 +165,24 @@ export function styledHeaderSet(layout: Layout): PageSet {
   };
 }
 
+/** A Header hidden below 62em over a long catalogue: nothing is left to stick under on a phone. */
+export function hiddenHeaderSet(layout: Layout): PageSet {
+  return {
+    schemaVersion: 1,
+    shell: shell(layout, c('Footer'), [STORY_LINK], [], { blockStyle: { hide: 'mobile' } }),
+    pages: { catalog: doc([c('Spacer', { size: 'xl' }, 'sp-0'), listBlock(layout)]) },
+  };
+}
+
+/** The trade list with a background: its cart bar must still meet both screen edges. */
+export function styledWholesaleSet(layout: Layout): PageSet {
+  return {
+    schemaVersion: 1,
+    shell: shell(layout, c('Footer')),
+    pages: { catalog: doc([c('WholesaleTable', { blockStyle: { bg: 'surface-2', padTop: 'sm' } }, 'styled-trade')]) },
+  };
+}
+
 export function styledFlowSet(layout: Layout): PageSet {
   return {
     schemaVersion: 1,

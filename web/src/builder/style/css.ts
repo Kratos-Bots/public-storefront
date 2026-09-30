@@ -55,7 +55,9 @@ export function renderBlockStyleCss(): string {
     if (key === 'hide') continue;
     for (const value of STYLE_KEYS[key]) out.push(rule(sel(key, value), declarations(key, value)));
   }
-  out.push(rule(':root [data-sf-style][data-sfs-bg]:not([data-sfs-px], [data-sf-part])', ['padding-inline: 1rem']));
+  // A bare background insets the block's text, except on the header part (its own inner
+  // rail) and the WholesaleTable (its cart bar escapes the column full-bleed).
+  out.push(rule(':root [data-sf-style][data-sfs-bg]:not([data-sfs-px], [data-sf-part], [data-sf-style="WholesaleTable"])', ['padding-inline: 1rem']));
   out.push(rule(':root [data-sf-style][data-sfs-max][data-sfs-align="center"]', ['margin-inline: auto']));
   out.push(rule(':root [data-sf-style][data-sfs-max][data-sfs-align="end"]', ['margin-inline-start: auto']));
   out.push(media('(max-width: 61.99em)', [rule(sel('hide', 'mobile'), ['display: none !important'], '  ')]));
