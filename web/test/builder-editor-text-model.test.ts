@@ -78,7 +78,9 @@ describe('text model', () => {
     expect(withValue(s, 'constructor', 'a.b', null)).toBe(s);
     const j = JSON.parse('{"en":{"__proto__":"x"}}');
     expect(Object.keys(withValue(j, 'en', 'a.b', 'y').en)).toEqual(['__proto__', 'a.b']);
-    expect(Object.keys(postableSiteText({ schemaVersion: 1, language: { locale: 'en', formatLocale: '' }, strings: j }).strings.en)).toEqual(['__proto__']);
+    expect(Object.keys(postableSiteText({ schemaVersion: 1, language: { locale: 'en', formatLocale: '' }, strings: j }).strings)).toEqual([]);
+    const bad = { en: { 'bad key': 'x', constructor: 'x', 'a.constructor': 'x', 'a.b': 'ok' }, 'not a locale': { 'a.b': 'x' }, de: { 'a.c': 'y' } };
+    expect(postableSiteText({ schemaVersion: 1, language: { locale: 'en', formatLocale: '' }, strings: bad }).strings).toEqual({ en: { 'a.b': 'ok' }, de: { 'a.c': 'y' } });
   });
 
   it('valueStrings flattens a value for search', () => {

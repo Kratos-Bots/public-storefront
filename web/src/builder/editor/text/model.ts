@@ -1,4 +1,4 @@
-import { TEXT_LIMITS, type Locale, type LocaleStrings, type PageText, type SiteText, type TextLanguage, type TextValue } from '@/text/types.ts';
+import { KEY_RE, TEXT_LIMITS, isLocale, type Locale, type LocaleStrings, type PageText, type SiteText, type TextLanguage, type TextValue } from '@/text/types.ts';
 
 /**
  * The editor's view of text values (spec §3, §7.4). Pure: no store, no registry. What the backend
@@ -95,10 +95,14 @@ export function isPostable(value: unknown): boolean {
   return withinPlaceholderCap(Object.values(value) as string[]);
 }
 
+const FORBIDDEN_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+const isPostableKey = (k: string): boolean => k.length <= TEXT_LIMITS.key && KEY_RE.test(k) && !k.split('.').some((p) => FORBIDDEN_KEYS.has(p));
+
 function postableStrings(strings: StringsByLocale): StringsByLocale {
   const out: StringsByLocale = dict();
   for (const [locale, map] of Object.entries(strings)) {
-    const kept: LocaleStrings = dict(Object.entries(map).filter(([, v]) => isPostable(v)) as [string, TextValue][]);
+    if (!isLocale(locale)) continue;
+    const kept: LocaleStrings = dict(Object.entries(map).filter(([k, v]) => isPostableKey(k) && isPostable(v)) as [string, TextValue][]);
     if (Object.keys(kept).length > 0) Object.defineProperty(out, locale, { value: kept, writable: true, enumerable: true, configurable: true });
   }
   return out;
