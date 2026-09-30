@@ -1,4 +1,5 @@
 import { defaultDoc } from '@/builder/defaults/index.ts';
+import type { PageText } from '@/text/types.ts';
 import { validateDoc } from '@/builder/guard.ts';
 import { isDocKey } from '@/builder/editor/protocol.ts';
 import {
@@ -99,12 +100,15 @@ export function docsFromPageSet(pageSet: PageSet | null, layout: LayoutKind): Do
   return docs;
 }
 
-export function toPageSet(docs: DocMap, layout: LayoutKind): PageSet {
+/** `text` = this layout's overrides as they should be sent; omitted when undefined or empty (spec §7.4). */
+export function toPageSet(docs: DocMap, layout: LayoutKind, text?: PageText): PageSet {
   const pages: PageSet['pages'] = {};
   for (const [key, doc] of Object.entries(docs)) {
     if (key !== 'shell' && doc) pages[key as keyof PageSet['pages']] = doc;
   }
-  return { schemaVersion: 1, shell: docs.shell ?? defaultFor('shell', layout)!, pages };
+  const set: PageSet = { schemaVersion: 1, shell: docs.shell ?? defaultFor('shell', layout)!, pages };
+  if (text && Object.values(text.strings).some((m) => Object.keys(m).length > 0)) set.text = text;
+  return set;
 }
 
 const emptyPage = (): PuckDoc => ({ root: { props: { title: '', description: '', chrome: 'shell' } }, content: [] });
