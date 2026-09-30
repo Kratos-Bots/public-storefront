@@ -11,11 +11,11 @@ import { useEditorStore } from '@/builder/editor/store.ts';
 import { useEditorText } from '@/builder/editor/text/hooks.ts';
 import { EyeIcon } from '@/builder/editor/icons.tsx';
 import type { ViewportWidth } from '@/builder/editor/protocol.ts';
-import type { DocKey, RouteKey } from '@/builder/types.ts';
+import { isCardKey, type DocKey, type RouteKey } from '@/builder/types.ts';
 import styles from '@/builder/editor/Editor.module.css';
 
 /** The shell doc has no page of its own: preview it around the catalogue, the shop's front door. */
-const routeKeyFor = (docKey: DocKey): RouteKey => (docKey === 'shell' ? 'catalog' : docKey);
+const routeKeyFor = (docKey: DocKey): RouteKey => (docKey === 'shell' || isCardKey(docKey) ? 'catalog' : docKey);
 
 /**
  * A width preset (Phone / Tablet / Desktop) is an exact preview: the admin has sized the frame to

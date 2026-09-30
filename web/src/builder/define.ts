@@ -5,6 +5,7 @@ import type { HeaderIconMode } from '@/templates/define.ts';
 import { isComponentLike, type ComponentData, type DocKey, type LayoutKind } from '@/builder/types.ts';
 import type { StringKey, TextKeyPattern } from '@/text/registry.ts';
 import { parseBlockStyle, type StyleSupport } from '@/builder/style/model.ts';
+import type { ContainerSpec, PartFamily } from '@/builder/parts.ts';
 export type { StyleKey, StyleSupport, StyleTarget } from '@/builder/style/model.ts';
 
 /** `data-sf-style` + `data-sfs-*` attributes for a styled block (block-styling spec §5.1). */
@@ -12,9 +13,13 @@ export type StyleAttrs = Readonly<Record<`data-sf${string}`, string>>;
 
 // Runtime-safe: nothing here may value-import @puckeditor/core (spec §13 A1).
 
-export type BlockCategory = 'shell' | 'catalogue' | 'product' | 'commerce' | 'post-order' | 'content';
-/** A slot prop at render time. No argument (or none of the three keys) = the children with no wrapper. */
-export type SlotRender = (p?: { className?: string; style?: CSSProperties; as?: ElementType }) => ReactNode;
+export type BlockCategory = 'shell' | 'catalogue' | 'product' | 'commerce' | 'post-order' | 'content' | 'part';
+/**
+ * A slot prop at render time. No argument (or none of the three keys) = the children with no wrapper.
+ * `items` = the stored children, so a container can choose classes from what a slot holds without
+ * rendering it (spec §3.2).
+ */
+export type SlotRender = ((p?: { className?: string; style?: CSSProperties; as?: ElementType }) => ReactNode) & { readonly items: readonly ComponentData[] };
 export interface BlockRenderContext {
   editing: boolean; docKey: DocKey; layout: LayoutKind;
   /** A `root`/`pass` block spreads this onto the element it owns (`{...puck.style}`); absent when unstyled. */
@@ -56,6 +61,10 @@ export interface BlockDef<P extends Record<string, unknown>> {
    * element). `false` = not stylable. Keys may be added in a later release, never removed.
    */
   style: StyleSupport | false;
+  /** A container (product-parts §3.2): owns data, its slots hold its family's parts. Never with `part`. */
+  container?: ContainerSpec;
+  /** A part (§3.2): renders one thing from its family's context; lives only inside that family's container. */
+  part?: { family: PartFamily };
 }
 
 export function defineBlock<P extends Record<string, unknown>>(def: BlockDef<P>): BlockDef<P> {

@@ -4,6 +4,7 @@ import { useBuilderMode } from '@/builder/mode.ts';
 import type { BlockRenderContext, SlotRender } from '@/builder/define.ts';
 import type { ComponentData, DocKey, LayoutKind, PuckDoc } from '@/builder/types.ts';
 import { renderBlock } from '@/builder/style/apply.tsx';
+import { FAMILY_DOC } from '@/builder/parts.ts';
 
 const logged = new Set<string>();
 
@@ -60,14 +61,34 @@ function renderItems(items: readonly ComponentData[], ctx: BlockRenderContext): 
   return items.map((item) => <BlockNode key={`${item.type}:${item.props.id}`} item={item} ctx={ctx} />);
 }
 
-function slotRender(value: unknown, ctx: BlockRenderContext): SlotRender {
+/** A slot prop at render time, with the stored items attached (spec §3.2). */
+export function slotRender(value: unknown, ctx: BlockRenderContext): SlotRender {
   const items = Array.isArray(value) ? (value as ComponentData[]) : [];
-  return (p) => {
+  const fn = (p?: Parameters<SlotRender>[0]) => {
     const children = renderItems(items, ctx);
     if (!p || (p.className === undefined && p.style === undefined && p.as === undefined)) return <>{children}</>;
     const As = p.as ?? 'div';
     return <As className={p.className} style={p.style}>{children}</As>;
   };
+  return Object.assign(fn, { items });
+}
+
+export function slotRenders(slots: Readonly<Record<string, readonly ComponentData[]>>, ctx: BlockRenderContext): Record<string, SlotRender> {
+  const out: Record<string, SlotRender> = {};
+  for (const [name, items] of Object.entries(slots)) out[name] = slotRender(items, ctx);
+  return out;
+}
+
+/**
+ * A container's default arrangement as slot renders: the feature components' no-argument entry
+ * points (tests, v0.7.0 call sites) draw exactly what the default document draws.
+ */
+export function defaultSlotRenders(type: string, layout: LayoutKind, props: Record<string, unknown> = {}): Record<string, SlotRender> {
+  const def = blockDef(type);
+  const spec = def?.container;
+  if (!spec) return {};
+  const id = `${type}-default`;
+  return slotRenders(spec.defaultSlots(props, { layout, id }), { editing: false, docKey: FAMILY_DOC[spec.family], layout });
 }
 
 function BlockBody({ item, ctx }: { item: ComponentData; ctx: BlockRenderContext }) {

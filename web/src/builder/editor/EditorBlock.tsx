@@ -1,7 +1,8 @@
 import { Component, Suspense, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { parseBlockProps, type BlockDef, type BlockRenderContext } from '@/builder/define.ts';
-import type { DocKey, LayoutKind } from '@/builder/types.ts';
+import type { ComponentData, DocKey, LayoutKind } from '@/builder/types.ts';
 import { stableStringify } from '@/builder/editor/page-set.ts';
+import { usePuck } from '@/builder/editor/use-puck.ts';
 import { prepareProps } from '@/builder/editor/prepare.ts';
 import { renderBlock } from '@/builder/style/apply.tsx';
 import styles from '@/builder/editor/EditorBlock.module.css';
@@ -75,6 +76,37 @@ function restoreRichtext(value: unknown, nodes: readonly unknown[]): unknown {
 /** Rendered as its own component so the block's hooks and throws stay inside the boundary. */
 function BlockBody({ def, props, ctx }: { def: BlockDef<any>; props: Record<string, unknown>; ctx: BlockRenderContext }) {
   return <>{renderBlock(def, props, ctx)}</>;
+}
+
+/** Puck's slot functions carry no items: attach the stored arrays, read from Puck's own state (spec §3.2). */
+function withItems(slots: Record<string, unknown>, stored: ComponentData | undefined): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [name, fn] of Object.entries(slots)) {
+    const value = stored?.props[name];
+    const items = Array.isArray(value) ? (value as ComponentData[]) : [];
+    out[name] = typeof fn === 'function' ? Object.assign((p?: unknown) => (fn as (p?: unknown) => unknown)(p), { items }) : fn;
+  }
+  return out;
+}
+
+/**
+ * The block's stored data from Puck's state, or undefined outside `<Puck>` (unit tests render
+ * EditorBlock bare). Puck's hook throws before its store subscription when there is no `<Puck>`,
+ * and a mounted block never gains or loses one, so the hook order is stable per mount.
+ */
+function useStoredItem(id: unknown): ComponentData | undefined {
+  try {
+    return usePuck((s) => (typeof id === 'string' ? (s.getItemById(id) as ComponentData | undefined) : undefined));
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith('usePuck must be used inside <Puck>')) return undefined;
+    throw error;
+  }
+}
+
+/** Only slotted blocks read Puck's state, so slot-less blocks never touch it. */
+function SlottedBody({ id, slots, children }: { id: unknown; slots: Record<string, unknown>; children: (slots: Record<string, unknown>) => ReactNode }) {
+  const stored = useStoredItem(id);
+  return <>{children(withItems(slots, stored))}</>;
 }
 
 /**
@@ -151,7 +183,9 @@ export function EditorBlock({ def, props, docKey, layout }: { def: BlockDef<any>
     <BlockBoundary name={def.label} resetKey={stableStringify(parsed)}>
       <Suspense fallback={<div className={styles.loading} aria-busy="true" aria-label={`Loading ${def.label}`} />}>
         <EmptyWatch label={def.label}>
-          <BlockBody def={def} props={{ ...settings, ...slots, id }} ctx={ctx} />
+          {def.slots.length === 0
+            ? <BlockBody def={def} props={{ ...settings, ...slots, id }} ctx={ctx} />
+            : <SlottedBody id={id} slots={slots}>{(s) => <BlockBody def={def} props={{ ...settings, ...s, id }} ctx={ctx} />}</SlottedBody>}
         </EmptyWatch>
       </Suspense>
     </BlockBoundary>

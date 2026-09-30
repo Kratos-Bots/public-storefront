@@ -14,7 +14,7 @@ import { StorefrontFrame } from '@/layouts/StorefrontShell.tsx';
 import { MenuFrame } from '@/layouts/MenuShell.tsx';
 import { WebAppFrame } from '@/layouts/WebAppShell.tsx';
 import { ShellStateContext, useShellStateValue } from '@/layouts/shell-context.ts';
-import { customPageKey, isFixedRouteKey } from '@/builder/types.ts';
+import { customPageKey, isCardKey, isFixedRouteKey } from '@/builder/types.ts';
 import type { DocKey, LayoutKind, PageRootProps, PageSet, PuckDoc, RouteKey } from '@/builder/types.ts';
 import { TextLayerProvider } from '@/text/runtime.tsx';
 import type { EditorText } from '@/text/types.ts';
@@ -47,7 +47,7 @@ export interface ResolvedDoc { doc: PuckDoc; isDefault: boolean }
 
 /** The published doc if it passes the guard, else the route's default; null only for an unknown custom page. */
 export function resolveDoc(pageSet: PageSet | null, docKey: DocKey, layout: LayoutKind): ResolvedDoc | null {
-  const stored = pageSet ? (docKey === 'shell' ? pageSet.shell : pageSet.pages[docKey]) : undefined;
+  const stored = !pageSet || isCardKey(docKey) ? undefined : docKey === 'shell' ? pageSet.shell : pageSet.pages[docKey];
   if (stored) {
     const { doc } = validateDoc(stored, docKey, layout);
     if (doc) return { doc, isDefault: false };

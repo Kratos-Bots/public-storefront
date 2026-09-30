@@ -45,7 +45,7 @@ describe('Plan 2 contract the editor builds on (spec §13 A7)', () => {
   });
 
   it('registers exactly the §7 blocks, each under its own name', () => {
-    expect(Object.keys(BLOCKS).sort()).toEqual([...SPEC_BLOCKS].sort());
+    expect(Object.keys(BLOCKS).filter((n) => !BLOCKS[n]!.part).sort()).toEqual([...SPEC_BLOCKS].sort());
     for (const [key, def] of Object.entries(BLOCKS)) expect(def.name).toBe(key);
   });
 

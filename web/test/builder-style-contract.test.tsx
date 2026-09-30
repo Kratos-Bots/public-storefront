@@ -80,7 +80,7 @@ const FLOOR: Record<string, { target: StyleTarget; keys: readonly StyleKey[] } |
 
 describe('style support contract (spec §4, §12)', () => {
   it('every registered block declares style, and the table covers them all', () => {
-    expect(Object.keys(FLOOR).sort()).toEqual(Object.keys(BLOCKS).sort());
+    expect(Object.keys(FLOOR).sort()).toEqual(Object.keys(BLOCKS).filter((n) => !BLOCKS[n]!.part).sort());
     for (const def of Object.values(BLOCKS)) expect(def.style, def.name).not.toBeUndefined();
   });
   it('false exactly for PageOutlet and MobileCartBar', () => {
@@ -110,7 +110,7 @@ describe('style support contract (spec §4, §12)', () => {
   it('every block offering fg / textSize (and owning its text) reads the variables in real rules', () => {
     const owners: string[] = [];
     for (const def of Object.values(BLOCKS)) {
-      if (!def.style || def.slots.length > 0) continue; // containers set the variables for their children
+      if (!def.style || def.slots.length > 0 || def.part) continue; // containers set the variables for their children
       const file = resolve(__dirname, `../src/builder/blocks/${def.name}.module.css`);
       const rules = existsSync(file) ? cssRules(readFileSync(file, 'utf8')) : [];
       if (def.style.keys.includes('fg')) expect(rules.some((r) => /(^|;|\s)color:\s*var\(--sf-block-fg,/.test(r.body)), `${def.name} fg`).toBe(true);
@@ -157,7 +157,7 @@ describe('every stylable block carries the marker when styled (spec §5.1)', () 
     const k = keys.find((x) => x !== 'hide') ?? keys[0]!;
     return { [k]: STYLE_KEYS[k][0] };
   }
-  const stylable = Object.values(BLOCKS).filter((d) => d.style);
+  const stylable = Object.values(BLOCKS).filter((d) => d.style && !d.part);
   const owned = stylable.filter((d) => d.style && d.style.target !== 'wrap').map((d) => d.name);
   const wrapped = stylable.filter((d) => d.style && d.style.target === 'wrap').map((d) => d.name);
   /** Root/pass blocks: the real render must spread `puck.style` onto the element it owns. */

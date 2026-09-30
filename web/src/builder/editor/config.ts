@@ -23,6 +23,7 @@ export const CATEGORY_TITLES: Record<BlockCategory, string> = {
   product: 'Product',
   commerce: 'Cart & account',
   'post-order': 'After the order',
+  part: 'Parts',
 };
 const CATEGORY_ORDER: BlockCategory[] = ['content', 'catalogue', 'shell', 'product', 'commerce', 'post-order'];
 
