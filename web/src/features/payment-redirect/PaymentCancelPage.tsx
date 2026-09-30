@@ -5,6 +5,7 @@ import { orderChatMessage } from '@/lib/chat-links.ts';
 import { findSavedOrder } from '@/stores/saved-orders.ts';
 import { ReferenceRow } from '@/features/payment-redirect/ReferenceRow.tsx';
 import { FADE } from '@/lib/motion.ts';
+import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/payment-redirect/PaymentRedirect.module.css';
 
 /**
@@ -17,6 +18,7 @@ export function PaymentCancelPage() {
   const [params] = useSearchParams();
   const orderRef = params.get('order');
   const saved = orderRef ? findSavedOrder(orderRef) : null;
+  const { t } = useText();
 
   return (
     <div className={`${classes.page} ${FADE}`}>
@@ -24,13 +26,10 @@ export function PaymentCancelPage() {
         <CloseIcon size={18} />
       </span>
       <p className={classes.eyebrow} data-tone="warn">
-        Payment cancelled
+        {t('payment.cancel.eyebrow')}
       </p>
-      <h1 className={classes.headline}>No charge taken</h1>
-      <p className={classes.detail}>
-        Your order is still saved. Return to it to try again or choose another way to
-        pay, or message us if you&rsquo;d like a hand.
-      </p>
+      <h1 className={classes.headline}>{t('payment.cancel.headline')}</h1>
+      <p className={classes.detail}>{t('payment.cancel.detail')}</p>
 
       {orderRef ? <ReferenceRow value={orderRef} /> : null}
 
@@ -42,11 +41,11 @@ export function PaymentCancelPage() {
             data-sf-part="button"
             data-variant="filled"
           >
-            Return to your order
+            {t('payment.cancel.returnToOrder')}
           </Link>
         ) : (
           <Link to="/" className={classes.cta} data-sf-part="button" data-variant="filled">
-            Back to shop
+            {t('payment.cancel.backToShop')}
           </Link>
         )}
       </div>

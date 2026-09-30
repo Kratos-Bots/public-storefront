@@ -1,7 +1,8 @@
 import { CheckIcon, ClockIcon } from '@/components/icons.tsx';
 import { formatDate } from '@/lib/format.ts';
-import { ROUTE_STEPS, statusView, type StatusView } from '@/features/order-status/status.ts';
+import { ROUTE_STEP_KEYS, statusView, type StatusView } from '@/features/order-status/status.ts';
 import { FADE } from '@/lib/motion.ts';
+import { useText } from '@/text/runtime.tsx';
 import type { PublicOrder } from '@/types/public-order.ts';
 import classes from '@/features/order-status/OrderStatus.module.css';
 
@@ -13,6 +14,7 @@ import classes from '@/features/order-status/OrderStatus.module.css';
  * actually knows one — nothing is invented to fill the column.
  */
 export function StatusHero({ order }: { order: PublicOrder }) {
+  const { t } = useText();
   const view = statusView(order);
   // The route carries the dates it knows. When it isn't on screen — payment
   // outstanding, or a cancelled order — the hero states the one date there is,
@@ -20,10 +22,14 @@ export function StatusHero({ order }: { order: PublicOrder }) {
   const routeShown = !view.terminal && !order.payment?.canPay;
   const delivered = order.deliveredAt ? formatDate(order.deliveredAt) : '';
   const placed = formatDate(order.createdAt);
-  const stamp = delivered ? `Delivered ${delivered}` : placed ? `Placed ${placed}` : null;
+  const stamp = delivered
+    ? t('order.dates.delivered', { date: delivered })
+    : placed
+      ? t('order.dates.placed', { date: placed })
+      : null;
 
   return (
-    <section className={`${classes.hero} ${FADE}`} aria-label="Order status">
+    <section className={`${classes.hero} ${FADE}`} aria-label={t('order.hero.ariaLabel')}>
       <p className={classes.eyebrow} data-tone={view.tone}>
         {view.eyebrow}
       </p>
@@ -35,7 +41,7 @@ export function StatusHero({ order }: { order: PublicOrder }) {
       {order.isPreorder && !view.terminal && !view.done ? (
         <p className={classes.flag}>
           <ClockIcon size={12} />
-          Contains pre-order items
+          {t('order.hero.preorderFlag')}
         </p>
       ) : null}
 
@@ -65,19 +71,20 @@ function stepDates(order: PublicOrder): Array<string | null> {
 }
 
 function Route({ view, order }: { view: StatusView; order: PublicOrder }) {
+  const { t } = useText();
   const dates = stepDates(order);
 
   return (
-    <ol className={classes.route} aria-label="Order progress">
-      {ROUTE_STEPS.map((label, i) => {
-        const last = i === ROUTE_STEPS.length - 1;
+    <ol className={classes.route} aria-label={t('order.steps.ariaLabel')}>
+      {ROUTE_STEP_KEYS.map((key, i) => {
+        const last = i === ROUTE_STEP_KEYS.length - 1;
         const done = view.done || (view.activeStep !== null && i < view.activeStep);
         const here = !view.done && view.activeStep === i;
         const arrived = view.done && last;
         const when = done || here ? dates[i] : null;
 
         return (
-          <li key={label} className={classes.step} aria-current={here ? 'step' : undefined}>
+          <li key={key} className={classes.step} aria-current={here ? 'step' : undefined}>
             <span
               className={[
                 classes.node,
@@ -99,9 +106,9 @@ function Route({ view, order }: { view: StatusView; order: PublicOrder }) {
             )}
             <span className={classes.stepBody}>
               <span className={done || here ? `${classes.stepLabel} ${classes.stepLabelOn}` : classes.stepLabel}>
-                {label}
+                {t(key)}
               </span>
-              {here && view.partial ? <span className={classes.stepMark}>Partial</span> : null}
+              {here && view.partial ? <span className={classes.stepMark}>{t('order.steps.partial')}</span> : null}
               {when ? <span className={classes.stepWhen}>{when}</span> : null}
             </span>
           </li>
@@ -112,12 +119,11 @@ function Route({ view, order }: { view: StatusView; order: PublicOrder }) {
 }
 
 function TerminalNotice({ kind }: { kind: 'cancelled' | 'refunded' }) {
+  const { t } = useText();
   const cancelled = kind === 'cancelled';
   return (
     <p className={cancelled ? `${classes.terminal} ${classes.terminalDanger}` : classes.terminal}>
-      {cancelled
-        ? "If that isn't right, reply to the message that sent you this link and we'll sort it out."
-        : 'Refunds take 5–10 business days to appear on your statement.'}
+      {cancelled ? t('order.hero.cancelledNotice') : t('order.hero.refundedNotice')}
     </p>
   );
 }

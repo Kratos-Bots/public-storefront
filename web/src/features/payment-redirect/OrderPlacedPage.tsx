@@ -8,6 +8,7 @@ import { orderChatMessage, withPrefilledText } from '@/lib/chat-links.ts';
 import { MissingReferenceScreen } from '@/features/payment-redirect/MissingReferenceScreen.tsx';
 import { ReferenceRow } from '@/features/payment-redirect/ReferenceRow.tsx';
 import { FADE } from '@/lib/motion.ts';
+import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/payment-redirect/PaymentRedirect.module.css';
 
 /**
@@ -23,6 +24,7 @@ export function OrderPlacedPage() {
   const warning = params.get('warning') === '1';
   const clearCart = useCartStore((s) => s.clear);
   const { brand } = useSettings();
+  const { t } = useText();
 
   // The order was created on the backend before navigating here — start the
   // next visit from a clean slate, same as /payment/success.
@@ -45,19 +47,17 @@ export function OrderPlacedPage() {
         <CheckIcon size={20} />
       </span>
       <p className={classes.eyebrow} data-tone="success">
-        Order confirmed
+        {t('payment.placed.eyebrow')}
       </p>
-      <h1 className={classes.headline}>Order placed</h1>
+      <h1 className={classes.headline}>{t('payment.placed.headline')}</h1>
 
       {warning ? (
         <p className={classes.alert} role="status">
-          We couldn&rsquo;t set up online payment for this order — message us and we&rsquo;ll
-          help you pay.
+          {t('payment.placed.warning')}
         </p>
       ) : whatsapp || telegram ? (
         <p className={classes.detail}>
-          Message us on WhatsApp or Telegram to arrange payment — your order reference
-          is already filled in for you.
+          {t('payment.placed.chatHint')}
         </p>
       ) : null}
 
@@ -75,7 +75,7 @@ export function OrderPlacedPage() {
               data-variant="filled"
             >
               <WhatsAppIcon size={16} />
-              Pay via WhatsApp
+              {t('payment.placed.payViaWhatsapp')}
             </a>
           ) : null}
           {telegram ? (
@@ -88,19 +88,18 @@ export function OrderPlacedPage() {
               data-variant="filled"
             >
               <TelegramIcon size={16} />
-              Pay via Telegram
+              {t('payment.placed.payViaTelegram')}
             </a>
           ) : null}
         </div>
       ) : (
         <p className={classes.fallback}>
-          Contact us through your usual channel and quote your order reference to
-          arrange payment.
+          {t('payment.placed.fallback')}
         </p>
       )}
 
       <Link to="/" className={classes.back}>
-        ← Back to shop
+        {t('common.actions.backToShop')}
       </Link>
     </div>
   );

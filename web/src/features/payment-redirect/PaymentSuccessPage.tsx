@@ -9,6 +9,7 @@ import { findSavedOrder } from '@/stores/saved-orders.ts';
 import { MissingReferenceScreen } from '@/features/payment-redirect/MissingReferenceScreen.tsx';
 import { ReferenceRow } from '@/features/payment-redirect/ReferenceRow.tsx';
 import { FADE } from '@/lib/motion.ts';
+import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/payment-redirect/PaymentRedirect.module.css';
 
 /**
@@ -24,6 +25,7 @@ export function PaymentSuccessPage() {
   const [params] = useSearchParams();
   const orderRef = params.get('order');
   const clearCart = useCartStore((s) => s.clear);
+  const { t } = useText();
 
   // The shopper reached the payment gateway and came back — start the next
   // visit from a clean slate, same as /order-placed.
@@ -52,13 +54,10 @@ export function PaymentSuccessPage() {
         <CheckIcon size={20} />
       </span>
       <p className={classes.eyebrow} data-tone="success">
-        Payment received
+        {t('payment.success.eyebrow')}
       </p>
-      <h1 className={classes.headline}>Thanks — your order&rsquo;s being confirmed</h1>
-      <p className={classes.detail}>
-        We&rsquo;re finalising your order now. You&rsquo;ll hear from us as soon as it&rsquo;s
-        confirmed — keep this reference handy if you need to get in touch.
-      </p>
+      <h1 className={classes.headline}>{t('payment.success.headline')}</h1>
+      <p className={classes.detail}>{t('payment.success.detail')}</p>
 
       <ReferenceRow value={orderRef} />
 
@@ -67,7 +66,7 @@ export function PaymentSuccessPage() {
       </div>
 
       <Link to="/" className={classes.back}>
-        ← Back to shop
+        {t('common.actions.backToShop')}
       </Link>
     </div>
   );

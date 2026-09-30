@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { CheckIcon, CopyIcon } from '@/components/icons.tsx';
+import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/payment-redirect/PaymentRedirect.module.css';
 
 export interface ReferenceRowProps {
@@ -13,7 +14,9 @@ export interface ReferenceRowProps {
  * a 44px target and the value is `user-select: all` for the browsers where
  * the clipboard API is unavailable.
  */
-export function ReferenceRow({ value, label = 'Reference' }: ReferenceRowProps) {
+export function ReferenceRow({ value, label: labelProp }: ReferenceRowProps) {
+  const { t } = useText();
+  const label = labelProp ?? t('payment.reference.label');
   const [copied, setCopied] = useState(false);
   const timer = useRef<number | null>(null);
 
@@ -40,10 +43,10 @@ export function ReferenceRow({ value, label = 'Reference' }: ReferenceRowProps) 
         type="button"
         className={copied ? `${classes.copyButton} ${classes.copyDone}` : classes.copyButton}
         onClick={() => void copy()}
-        aria-label={copied ? `${label} copied` : `Copy ${label.toLowerCase()}`}
+        aria-label={copied ? t('order.copy.copiedNamed', { name: label }) : t('order.copy.copyNamed', { name: label.toLowerCase() })}
       >
         {copied ? <CheckIcon size={12} /> : <CopyIcon size={12} />}
-        {copied ? 'Copied' : 'Copy'}
+        {copied ? t('common.actions.copied') : t('common.actions.copy')}
       </button>
     </div>
   );

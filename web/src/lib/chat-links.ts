@@ -1,3 +1,5 @@
+import { textSnapshot } from '@/text/runtime.tsx';
+
 /**
  * Append the prefilled message as ?text= — supported by wa.me/<number> and
  * t.me/<username> links. Other link shapes (wa.me/message/…, t.me/+invite) keep
@@ -16,7 +18,7 @@ export function withPrefilledText(link: string | null, text: string): string | n
 
 /** The prefilled chat message sent along with a "pay via chat" link after checkout. */
 export function orderChatMessage(ref: string): string {
-  return `I've just placed an order, here is my Order ID: ${ref}. I'd like to pay.`;
+  return textSnapshot().t('order.chat.payRequest', { reference: ref });
 }
 
 /**
@@ -25,5 +27,5 @@ export function orderChatMessage(ref: string): string {
  * so this is a neutral check-in rather than a request to arrange payment.
  */
 export function orderInquiryMessage(ref: string): string {
-  return `Hi — checking in about my order ${ref}.`;
+  return textSnapshot().t('order.chat.inquiry', { reference: ref });
 }

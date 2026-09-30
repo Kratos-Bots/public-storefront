@@ -18,6 +18,7 @@ import {
 } from '@/features/order-status/StateScreens.tsx';
 import { pollInterval, visibleCryptoPayments } from '@/features/order-status/payment-state.ts';
 import { publicOrderKey } from '@/features/order-status/queries.ts';
+import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/order-status/OrderStatus.module.css';
 
 /**
@@ -31,6 +32,7 @@ import classes from '@/features/order-status/OrderStatus.module.css';
 export function OrderStatusPage() {
   const { ref, accessKey } = useParams<{ ref: string; accessKey: string }>();
   const { brand } = useSettings();
+  const { t } = useText();
 
   const orderQuery = useQuery({
     queryKey: publicOrderKey(ref ?? '', accessKey ?? ''),
@@ -47,11 +49,11 @@ export function OrderStatusPage() {
   const order = orderQuery.data;
 
   useEffect(() => {
-    document.title = order ? `Order ${order.reference} — ${brand.name}` : brand.title;
+    document.title = order ? t('order.documentTitle', { reference: order.reference, shop: brand.name }) : brand.title;
     return () => {
       document.title = brand.title;
     };
-  }, [order, brand.name, brand.title]);
+  }, [order, brand.name, brand.title, t]);
 
   // Only a link that has answered is worth remembering — a mistyped one never
   // reaches the store.
@@ -98,8 +100,8 @@ export function OrderStatusPage() {
       </div>
 
       <footer className={classes.hero}>
-        <p className={classes.meta}>Order {order.reference}</p>
-        <p className={classes.detail}>Questions about this order? Message us and quote that reference.</p>
+        <p className={classes.meta}>{t('order.footer.reference', { reference: order.reference })}</p>
+        <p className={classes.detail}>{t('order.footer.questions')}</p>
         <ContactLinks prefill={orderChatMessage(order.reference)} />
       </footer>
     </div>

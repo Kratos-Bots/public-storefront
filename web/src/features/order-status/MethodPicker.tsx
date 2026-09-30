@@ -23,6 +23,7 @@ import {
 } from '@/features/order-status/payment-state.ts';
 import type { PaymentMethod } from '@/types/checkout.ts';
 import type { PublicOrder, SelectPaymentResult } from '@/types/public-order.ts';
+import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/order-status/OrderStatus.module.css';
 
 export interface MethodPickerProps {
@@ -50,6 +51,7 @@ export function MethodPicker({ order, reference, accessKey, onSelected }: Method
   const queryClient = useQueryClient();
   const [open, setOpen] = useState<string | null>(null);
   const [combo, setCombo] = useState<CryptoCombo | null>(null);
+  const { t } = useText();
 
   const options = useQuery({
     // Keyed on the reference alone: the access key is a credential, not an
@@ -81,21 +83,21 @@ export function MethodPicker({ order, reference, accessKey, onSelected }: Method
   // `isLoading`, not `isPending`: a disabled query is pending forever, and this
   // must never sit on "Loading…" with nothing in flight.
   if (options.isLoading) {
-    return <p className={classes.cardNote}>Loading payment methods…</p>;
+    return <p className={classes.cardNote}>{t('order.method.loading')}</p>;
   }
 
   if (options.isError) {
     return (
       <>
         <p className={classes.note} data-tone="danger">
-          {errorMessage(options.error, "We couldn't load the payment methods")}
+          {errorMessage(options.error, t('order.errors.loadMethods'))}
         </p>
         <button
           type="button"
           className={`${classes.ghost} ${classes.ghostWide}`}
           onClick={() => void options.refetch()}
         >
-          Try again
+          {t('common.actions.tryAgain')}
         </button>
       </>
     );
@@ -105,10 +107,7 @@ export function MethodPicker({ order, reference, accessKey, onSelected }: Method
   if (methods.length === 0) {
     return (
       <>
-        <p className={classes.cardNote}>
-          There&rsquo;s no online payment method for this order right now. Message us and we&rsquo;ll
-          arrange it.
-        </p>
+        <p className={classes.cardNote}>{t('order.method.none')}</p>
         <div className={classes.chatLinks}>
           <ContactLinks prefill={orderChatMessage(order.reference)} />
         </div>
@@ -186,7 +185,7 @@ export function MethodPicker({ order, reference, accessKey, onSelected }: Method
                   <span className={classes.pickerSpacer} aria-hidden />
                 )}
                 <span className={classes.pickerLabel}>
-                  {opening ? 'Opening checkout…' : slotLabel(method)}
+                  {opening ? t('order.method.opening') : slotLabel(method)}
                 </span>
                 <span className={classes.pickerFigure}>
                   {formatMoney(method.chargeTotal, order.currency)}
@@ -222,14 +221,12 @@ export function MethodPicker({ order, reference, accessKey, onSelected }: Method
                     data-variant="filled"
                   >
                     {busy
-                      ? 'Preparing payment…'
+                      ? t('order.method.preparing')
                       : combo
-                        ? `Pay with ${comboLabel(combos, combo)}`
-                        : 'Choose a coin above'}
+                        ? t('order.method.payWith', { coin: comboLabel(combos, combo) })
+                        : t('order.method.chooseCoin')}
                   </button>
-                  <p className={classes.txidBlurb}>
-                    The address and the exact amount appear right here.
-                  </p>
+                  <p className={classes.txidBlurb}>{t('order.method.coinBlurb')}</p>
                 </div>
               ) : null}
 
@@ -249,7 +246,7 @@ export function MethodPicker({ order, reference, accessKey, onSelected }: Method
 
       {select.isError && !(select.error instanceof PaymentConflictError) ? (
         <p className={classes.note} data-tone="danger">
-          {errorMessage(select.error, "That payment method isn't available right now")}
+          {errorMessage(select.error, t('order.errors.methodUnavailable'))}
         </p>
       ) : null}
     </div>
@@ -279,12 +276,13 @@ function TransferDetails({
   reference: string;
   settlement: SettlementQuote | null;
 }) {
+  const { t } = useText();
   const details = Object.entries(method.details ?? {});
 
   return (
     <>
       <p className={classes.pickerHead}>
-        Pay by {method.displayName}
+        {t('order.method.transferHead', { method: method.displayName })}
         <span className={classes.pickerHeadRule} aria-hidden />
       </p>
       {details.length > 0 ? (
@@ -294,21 +292,16 @@ function TransferDetails({
           ))}
           {settlement ? (
             <CopyRow
-              label="Amount to send"
+              label={t('order.crypto.amountToSend')}
               value={formatMoney(settlement.amount, settlement.currency)}
               copyValue={formatAmountPlain(settlement.amount, settlement.currency)}
             />
           ) : null}
-          <CopyRow label="Payment reference" value={reference} />
-          <p className={classes.txidBlurb}>
-            Use the order reference so we can match your transfer. Message us once it&rsquo;s sent
-            and we&rsquo;ll confirm the order.
-          </p>
+          <CopyRow label={t('order.method.paymentReference')} value={reference} />
+          <p className={classes.txidBlurb}>{t('order.method.transferBlurb')}</p>
         </>
       ) : (
-        <p className={classes.txidBlurb}>
-          Message us and we&rsquo;ll send the transfer details for order {reference}.
-        </p>
+        <p className={classes.txidBlurb}>{t('order.method.noDetails', { reference })}</p>
       )}
       <div className={classes.chatLinks}>
         <ContactLinks prefill={orderChatMessage(reference)} />

@@ -14,20 +14,22 @@ import {
 } from '@/features/order-status/payment-state.ts';
 import { FADE } from '@/lib/motion.ts';
 import type { PublicCryptoPayment } from '@/types/public-order.ts';
+import type { StringKey } from '@/text/registry.ts';
+import { textKey, useText } from '@/text/runtime.tsx';
 import classes from '@/features/order-status/OrderStatus.module.css';
 
-const PILL: Record<CardState, { label: string; tone: string | null }> = {
-  awaiting: { label: 'Awaiting payment', tone: null },
-  checking: { label: 'Verifying', tone: null },
-  confirmed: { label: 'Confirmed', tone: classes.pillSuccess },
-  attention: { label: 'In review', tone: classes.pillWarn },
+const PILL: Record<CardState, { label: Extract<StringKey, 'order.payment.awaiting' | `order.crypto.pill${string}`>; tone: string | null }> = {
+  awaiting: { label: textKey('order.payment.awaiting'), tone: null },
+  checking: { label: textKey('order.crypto.pillChecking'), tone: null },
+  confirmed: { label: textKey('order.crypto.pillConfirmed'), tone: classes.pillSuccess },
+  attention: { label: textKey('order.crypto.pillAttention'), tone: classes.pillWarn },
 };
 
-const TITLE: Record<CardState, string> = {
-  awaiting: '',
-  checking: 'Verifying your payment',
-  confirmed: 'Payment confirmed',
-  attention: 'Payment in review',
+/** The heading once the card has left the form (the awaiting card names the amount instead). */
+const TITLE: Record<Exclude<CardState, 'awaiting'>, Extract<StringKey, `order.crypto.title${string}`>> = {
+  checking: textKey('order.crypto.titleChecking'),
+  confirmed: textKey('order.crypto.titleConfirmed'),
+  attention: textKey('order.crypto.titleAttention'),
 };
 
 /** The backend accepts 10–120 characters; the form says so before the round trip. */
@@ -50,6 +52,7 @@ export interface CryptoPaymentCardProps {
 export function CryptoPaymentCard({ payment, reference, accessKey, currency }: CryptoPaymentCardProps) {
   const queryClient = useQueryClient();
   const [txid, setTxid] = useState('');
+  const { t, tn } = useText();
 
   const submit = useMutation({
     mutationFn: (value: string) => submitCryptoTxid(reference, accessKey, payment.paymentId, value),
@@ -79,7 +82,7 @@ export function CryptoPaymentCard({ payment, reference, accessKey, currency }: C
   return (
     <section
       className={`${state === 'awaiting' ? `${classes.card} ${classes.cardAction}` : classes.card} ${FADE}`}
-      aria-label="Crypto payment"
+      aria-label={t('order.crypto.label')}
       data-sf-part="card"
     >
       <div className={classes.cardHead}>
@@ -91,46 +94,45 @@ export function CryptoPaymentCard({ payment, reference, accessKey, currency }: C
                 : classes.cardEyebrow
             }
           >
-            {state === 'awaiting' ? 'Payment required' : 'Crypto payment'}
+            {state === 'awaiting' ? t('order.payment.required') : t('order.crypto.label')}
           </p>
           <h2 className={classes.cardTitle}>
-            {state === 'awaiting' ? `Send ${amount} ${payment.coinLabel}` : TITLE[state]}
+            {state === 'awaiting' ? t('order.crypto.sendTitle', { amount, coin: payment.coinLabel }) : t(TITLE[state])}
           </h2>
           <p className={classes.cardFigure}>
-            {payment.coinLabel} · {payment.networkLabel} network ·{' '}
-            {/* The sign belongs to the figure — a line break between them reads as
-                an orphaned symbol. */}
-            <span className={classes.nowrap}>≈ {formatMoney(payment.fiatAmount, currency)}</span>
+            {tn('order.crypto.figure', {
+              coin: payment.coinLabel,
+              network: payment.networkLabel,
+              // The sign belongs to the figure — a line break between them reads as
+              // an orphaned symbol.
+              fiat: <span className={classes.nowrap}>≈ {formatMoney(payment.fiatAmount, currency)}</span>,
+            })}
           </p>
         </div>
-        <span className={pill.tone ? `${classes.pill} ${pill.tone}` : classes.pill}>{pill.label}</span>
+        <span className={pill.tone ? `${classes.pill} ${pill.tone}` : classes.pill}>{t(pill.label)}</span>
       </div>
 
       {state === 'awaiting' ? (
         <>
           <CopyRow
-            label="Amount to send"
+            label={t('order.crypto.amountToSend')}
             value={`${amount} ${payment.coinLabel}`}
             copyValue={amount}
           />
           <CopyRow
-            label={`${payment.coinLabel} address (${payment.networkLabel})`}
+            label={t('order.crypto.addressLabel', { coin: payment.coinLabel, network: payment.networkLabel })}
             value={payment.address}
           />
 
           <p className={classes.note} data-tone="warn">
-            Send exactly {amount} {payment.coinLabel} on the {payment.networkLabel} network. A
-            different amount or network can delay or lose your payment.
+            {t('order.crypto.sendExactly', { amount, coin: payment.coinLabel, network: payment.networkLabel })}
           </p>
 
           <form className={classes.txidForm} onSubmit={onSubmit}>
             <label className={classes.txidLabel} htmlFor={`txid-${payment.paymentId}`}>
-              Transaction ID
+              {t('order.crypto.txidLabel')}
             </label>
-            <p className={classes.txidBlurb}>
-              Once you&rsquo;ve sent it, paste the transaction ID from your wallet and we&rsquo;ll
-              verify it on-chain.
-            </p>
+            <p className={classes.txidBlurb}>{t('order.crypto.txidBlurb')}</p>
             <div className={classes.txidRow}>
               <input
                 id={`txid-${payment.paymentId}`}
@@ -138,7 +140,7 @@ export function CryptoPaymentCard({ payment, reference, accessKey, currency }: C
                 type="text"
                 value={txid}
                 onChange={(e) => setTxid(e.currentTarget.value)}
-                placeholder="Paste transaction ID"
+                placeholder={t('order.crypto.txidPlaceholder')}
                 autoComplete="off"
                 spellCheck={false}
                 maxLength={TXID_MAX}
@@ -149,12 +151,12 @@ export function CryptoPaymentCard({ payment, reference, accessKey, currency }: C
                 className={`${classes.ghost} ${classes.txidSubmit}`}
                 disabled={!valid || submit.isPending}
               >
-                {submit.isPending ? 'Sending…' : 'Submit'}
+                {submit.isPending ? t('order.crypto.sending') : t('order.crypto.submit')}
               </button>
             </div>
             {submit.isError ? (
               <p className={classes.note} data-tone="danger">
-                {errorMessage(submit.error, 'That transaction ID was not accepted. Check it and try again.')}
+                {errorMessage(submit.error, t('order.errors.txidRejected'))}
               </p>
             ) : null}
           </form>
@@ -164,7 +166,7 @@ export function CryptoPaymentCard({ payment, reference, accessKey, currency }: C
       {state !== 'awaiting' && masked ? (
         <div className={classes.copyRow}>
           <div className={classes.copyBody}>
-            <p className={classes.copyLabel}>Transaction ID</p>
+            <p className={classes.copyLabel}>{t('order.crypto.txidLabel')}</p>
             <p className={classes.copyValue}>{masked}</p>
           </div>
         </div>
@@ -173,23 +175,20 @@ export function CryptoPaymentCard({ payment, reference, accessKey, currency }: C
       {state === 'checking' ? (
         <>
           <div className={classes.waiting} aria-hidden />
-          <p className={classes.waitingNote}>
-            Reading it off the chain — this can take a few minutes. The page updates on its own.
-          </p>
+          <p className={classes.waitingNote}>{t('order.crypto.checkingNote')}</p>
         </>
       ) : null}
 
       {state === 'confirmed' ? (
         <p className={classes.note} data-tone="success">
-          <CheckIcon size={11} /> Payment received in full
+          <CheckIcon size={11} /> {t('order.crypto.receivedInFull')}
         </p>
       ) : null}
 
       {state === 'attention' ? (
         <p className={classes.waitingNote}>
           <ClockIcon size={13} />
-          We&rsquo;re taking a closer look at this payment — nothing more is needed from you. Message
-          us if it stays here.
+          {t('order.crypto.attentionNote')}
         </p>
       ) : null}
     </section>
