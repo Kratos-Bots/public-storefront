@@ -37,9 +37,16 @@ const issueSchema = z.looseObject({
 // The recorder below turns a File into this marker (a File can't leave the page); `isFile` is the
 // admin's `z.instanceof(File)`, evaluated in the parent page.
 const fileMarker = z.object({ isFile: z.literal(true), name: z.string(), type: z.string(), size: z.number() });
+const textIssueSchema = z.object({ scope: z.enum(['shared', 'layout']), key: z.string(), rule: z.string(), message: z.string() });
+const siteTextSchema = z.looseObject({
+  schemaVersion: z.literal(1),
+  language: z.looseObject({ locale: z.string(), formatLocale: z.string() }),
+  strings: z.record(z.string(), z.record(z.string(), z.unknown())),
+});
 const adminInbound = z.discriminatedUnion('type', [
   z.object({ type: z.literal('sf-builder-ready'), protocol: z.literal(1) }),
-  z.object({ type: z.literal('sf-builder-change'), loadId: z.string().min(1).max(LOAD_ID_MAX), pageSet: pageSetSchema, issues: z.array(issueSchema).max(500) }),
+  z.object({ type: z.literal('sf-builder-change'), loadId: z.string().min(1).max(LOAD_ID_MAX), pageSet: pageSetSchema, issues: z.array(issueSchema).max(500),
+    siteText: siteTextSchema.optional(), textIssues: z.array(textIssueSchema).max(500) }),
   z.object({ type: z.literal('sf-builder-upload-request'), requestId: z.string().min(1).max(100), file: fileMarker }),
   z.object({ type: z.literal('sf-builder-viewport'), width: z.union([z.literal(360), z.literal(768), z.literal(1280), z.null()]) }),
 ]);
@@ -91,8 +98,12 @@ const THEME = (() => {
   return t;
 })();
 
-type PageSetMsg = { schemaVersion: number; shell: unknown; pages: Record<string, unknown> };
-type Msg = { type: string; loadId?: string; pageSet?: PageSetMsg; issues?: Array<{ docKey: string; rule: string; blockId?: string }>; width?: number | null; protocol?: number };
+type TextStrings = { strings: Record<string, Record<string, unknown>> };
+type PageSetMsg = { schemaVersion: number; shell: unknown; pages: Record<string, unknown>; text?: TextStrings };
+type Msg = {
+  type: string; loadId?: string; pageSet?: PageSetMsg; issues?: Array<{ docKey: string; rule: string; blockId?: string }>; width?: number | null; protocol?: number;
+  siteText?: TextStrings; textIssues?: Array<{ scope: string; key: string; rule: string }>;
+};
 
 const allMessages = (page: Page) => page.evaluate(() => (window as unknown as { __msgs: Msg[] }).__msgs);
 const messages = async (page: Page, type: string) => (await allMessages(page)).filter((m) => m.type === type);
@@ -476,6 +487,25 @@ test.describe('page builder editor · issues and chrome', () => {
       if (width < 1024) await expect(frame.getByText('Testimonial', { exact: true }).first()).toBeVisible();
     });
   }
+
+  test.describe('on a touch screen', () => {
+    test.use({ hasTouch: true, isMobile: true });
+
+    test('at a phone-width frame every header control is a 44px target', async ({ page }) => {
+      const { frame } = await openFramed(page, 360);
+      await loadAndWait(page, frame, load());
+      const header = frame.locator('[data-sf-builder-header]');
+      expect(await header.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true);
+      const small = await header.evaluate((el) =>
+        [...el.querySelectorAll<HTMLElement>('button, select, input')]
+          .map((c) => ({ c, b: c.getBoundingClientRect() }))
+          .filter(({ b }) => b.width > 0 && (b.width < 44 || b.height < 44))
+          .map(({ c, b }) => `${c.getAttribute('aria-label') ?? c.textContent?.trim()} ${Math.round(b.width)}×${Math.round(b.height)}`));
+      expect(small).toEqual([]);
+      // Bigger targets wrap onto more rows; the header never gets wider than the frame.
+      expect(await header.evaluate((el) => el.scrollWidth)).toBeLessThanOrEqual(360);
+    });
+  });
 });
 
 test.describe('page builder editor · final review fixes', () => {
@@ -550,6 +580,86 @@ test.describe('page builder editor · list items', () => {
     await expect(links.getByRole('link')).toHaveCount(2);
     await expect(links.getByRole('link', { name: 'New link' })).toBeVisible();
     await expect.poll(async () => JSON.stringify((await changesFor(page, msg.loadId)).at(-1)?.pageSet?.shell ?? null)).toContain('"label":"New link"');
+  });
+});
+
+test.describe('page builder editor · text', () => {
+  const KEY = 'catalog.search.placeholder';
+  const DEFAULT = 'Search products';
+  const canvasSearch = (frame: FrameLocator, placeholder: string) =>
+    frame.locator(`[data-sf-builder-canvas] input[placeholder="${placeholder}"]`).first();
+
+  async function openText(frame: FrameLocator) {
+    await frame.getByLabel('Page', { exact: true }).selectOption('shell');
+    await expect(canvasSearch(frame, DEFAULT)).toBeVisible();
+    // In the header: Puck's block drawer also has a "Text" (rich text) item with role="button".
+    await frame.locator('[data-sf-builder-header]').getByRole('button', { name: 'Text', exact: true }).click();
+    const panel = frame.getByRole('region', { name: 'Site text' });
+    await panel.getByRole('searchbox', { name: 'Search text' }).fill(KEY);
+    return panel.locator(`[data-text-key="${KEY}"]`);
+  }
+
+  test('a shared edit re-renders the canvas at once and goes out as siteText', async ({ page }) => {
+    const { frame } = await openFramed(page);
+    const msg = load({ siteText: null });
+    await loadAndWait(page, frame, msg);
+    const baseline = (await changesFor(page, msg.loadId))[0]!;
+    expect(baseline.siteText).toEqual({ schemaVersion: 1, language: { locale: 'en', formatLocale: '' }, strings: {} });
+    expect(baseline.textIssues).toEqual([]);
+    const row = await openText(frame);
+    await row.getByRole('textbox').fill('Find a Northbound product');
+    await expect(canvasSearch(frame, 'Find a Northbound product')).toBeVisible();
+    await expect.poll(async () => (await changesFor(page, msg.loadId)).at(-1)?.siteText?.strings.en?.[KEY]).toBe('Find a Northbound product');
+    await expectAdminAccepts(page);
+  });
+
+  test('an override for this layout goes into pageSet.text and leaves shared text alone', async ({ page }) => {
+    const { frame } = await openFramed(page);
+    const msg = load({ siteText: null });
+    await loadAndWait(page, frame, msg);
+    const row = await openText(frame);
+    await row.getByRole('button', { name: 'Only Storefront' }).click();
+    await row.getByRole('textbox').fill('Search the storefront');
+    await expect(canvasSearch(frame, 'Search the storefront')).toBeVisible();
+    await expect.poll(async () => (await changesFor(page, msg.loadId)).at(-1)?.pageSet?.text?.strings.en?.[KEY]).toBe('Search the storefront');
+    expect((await changesFor(page, msg.loadId)).at(-1)?.siteText?.strings).toEqual({});
+    await expectAdminAccepts(page);
+  });
+
+  test('an unknown placeholder is a blocking issue and the canvas keeps the built-in wording', async ({ page }) => {
+    const { frame } = await openFramed(page);
+    const msg = load({ siteText: null });
+    await loadAndWait(page, frame, msg);
+    const row = await openText(frame);
+    await row.getByRole('textbox').fill('Search {nope}');
+    await expect(row.getByText(/\{nope\} isn’t available/)).toBeVisible();
+    // The header's issue list (the Text panel's "Issues" filter is a button too).
+    await expect(frame.locator('[data-sf-builder-header]').getByRole('button', { name: /^Issues/ })).toContainText('1 issue');
+    await expect(canvasSearch(frame, DEFAULT)).toBeVisible();
+    await expect.poll(async () => (await changesFor(page, msg.loadId)).at(-1)?.textIssues).toEqual([
+      expect.objectContaining({ scope: 'shared', key: KEY, rule: 'unknown-placeholder' }),
+    ]);
+    await expectAdminAccepts(page);
+  });
+
+  test('an older admin (no siteText): shared text is read-only and never posted', async ({ page }) => {
+    const { frame } = await openFramed(page);
+    const msg = load();
+    await loadAndWait(page, frame, msg);
+    const row = await openText(frame);
+    await expect(row.getByRole('button', { name: 'All layouts' })).toBeDisabled();
+    await row.getByRole('textbox').fill('Only on this layout');
+    await expect.poll(async () => (await changesFor(page, msg.loadId)).at(-1)?.pageSet?.text?.strings.en?.[KEY]).toBe('Only on this layout');
+    expect((await changesFor(page, msg.loadId)).every((m) => !('siteText' in m))).toBe(true);
+    await expectAdminAccepts(page);
+  });
+
+  test('overrides that arrive with the page set leave in the baseline unchanged', async ({ page }) => {
+    const { frame } = await openFramed(page);
+    const text = { strings: { en: { [KEY]: 'Kept wording' }, de: { [KEY]: 'Behalten' } } };
+    const msg = load({ pageSet: { ...checkoutWithoutFlowSet(), text }, siteText: null });
+    await loadAndWait(page, frame, msg);
+    expect((await changesFor(page, msg.loadId))[0]!.pageSet!.text).toEqual(text);
   });
 });
 

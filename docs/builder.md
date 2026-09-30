@@ -463,12 +463,12 @@ chunks are checked too; only the chunk holding `EditorApp.tsx` is a boundary.
 
 | Direction | Message |
 |---|---|
-| admin → storefront | `sf-builder-load { protocol: 1, loadId, layout, pageSet \| null, theme, readOnly }` |
+| admin → storefront | `sf-builder-load { protocol: 1, loadId, layout, pageSet \| null, theme, readOnly, siteText? }` — `pageSet.text` = this layout's text overrides; `siteText` absent = the admin can't save shared text (overrides only, shared read-only), `null` = none stored yet |
 | admin → storefront | `sf-builder-theme { theme }` |
 | admin → storefront | `sf-builder-select-page { docKey }` (optional: the editor honours it; the current admin does not send it) |
 | admin → storefront | `sf-builder-upload-result { requestId, url \| null, error \| null }` |
 | storefront → admin | `sf-builder-ready { protocol: 1 }` (to `'*'`; once per frame boot) |
-| storefront → admin | `sf-builder-change { loadId, pageSet, issues }` (500 ms debounce, flushed at once when the frame blurs, is hidden or unloads; never when read-only) |
+| storefront → admin | `sf-builder-change { loadId, pageSet, issues, siteText?, textIssues }` (500 ms debounce, flushed at once when the frame blurs, is hidden or unloads; never when read-only). `pageSet.text` carries overrides; `siteText` (the full shared doc) is present iff the load carried it; `textIssues` lists blocking text problems `{ scope, key, rule, message }` |
 | storefront → admin | `sf-builder-upload-request { requestId, file }` |
 | storefront → admin | `sf-builder-viewport { width: 360 \| 768 \| 1280 \| null }` (on every toggle change and after every load) |
 
@@ -551,6 +551,39 @@ the admin stores the file). The URL is then put into the block it was picked for
 live canvas when that page is open, else into the stored draft — as long as the set hasn't been
 reloaded or reset and the block still exists. Otherwise a toast says "Upload finished — the image
 wasn't added because you left the page."
+
+### Text
+
+Every shopper-facing line is edited from the **Text** button (spec 2026-09-30 editable text §7).
+On a wide frame the Text panel is a left-sidebar tab (Blocks and Outline come back when it
+closes); below 1024 px it overlays the canvas. It has the store language and "Numbers and
+dates" at the top (editing the shared draft), search, filters (All / Edited / This layout /
+Issues), one group per area with Site-wide first, and an Unused group for saved wording this
+release no longer shows. Each row edits one key at a scope — **All layouts** (shared Site text)
+or **Only {layout}** (this layout's override) — with the built-in default, the layer the canvas
+currently shows, placeholder chips, a length count and Reset; clearing the box resets. Plural
+keys get one box per plural category of the store language, with a live example.
+
+Selecting a block shows **Text in this block** under its fields (from the block's `text`
+patterns). The canvas re-resolves on every keystroke; only posting is debounced. Text edits share
+Undo/Redo with block edits (`editor/text/history.ts` anchors each text step to Puck's history
+entry). Ctrl/⌘+Z in a Text field undoes text, never a hidden block.
+
+A value the backend would refuse (a half-typed `{`, a plural without "other") stays on screen
+with a blocking issue but is left out of the posted change, so an autosave never fails on it.
+Issues show on the row and under "Text" in the header's issue list, and block Publish. Without
+`siteText` in the load (an older admin), "All layouts" is disabled and shared wording is read
+from the public page-set read.
+
+Known gaps, seen in a real browser:
+
+- Puck's first history entry of a mount has no id, so undoing the **first** block edit of a
+  mount drops any text step waiting to be redone (the block edit itself redoes normally). Later
+  block edits keep text redo across a canvas undo.
+- Puck records history on a short debounce: two block edits made within it are one undo step.
+
+On a touch screen (`pointer: coarse`) the header's controls and the Text panel's are 44 px
+targets, with 16 px text in selects and inputs.
 
 ### Trust boundary
 
