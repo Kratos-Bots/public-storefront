@@ -1,6 +1,6 @@
 import {
   changeMessage, parseInbound, readyMessage, uploadRequestMessage, viewportMessage,
-  type ChangeMessage, type LoadMessage, type Outbound, type ViewportWidth,
+  type ChangeMessage, type ChangeText, type LoadMessage, type Outbound, type ViewportWidth,
 } from '@/builder/editor/protocol.ts';
 import type { DocKey, Issue, PageSet } from '@/builder/types.ts';
 import type { Theme } from '@/types/settings.ts';
@@ -17,7 +17,7 @@ export interface BridgeHandlers {
 
 export interface Bridge {
   /** Debounced 500 ms; only the newest change is sent, stamped with the current loadId. No-op before a load and while it is read-only. */
-  postChange(pageSet: PageSet, issues: Issue[]): void;
+  postChange(pageSet: PageSet, issues: Issue[], text?: ChangeText): void;
   /** Send a pending change now (also runs on the frame's blur, pagehide and visibilitychange→hidden). */
   flushChange(): void;
   /** The admin performs the authenticated upload; resolves to the stored URL. */
@@ -111,10 +111,10 @@ export function createBridge(win: Window, handlers: BridgeHandlers): Bridge {
   win.parent.postMessage(readyMessage(), '*');
 
   return {
-    postChange(pageSet, issues) {
+    postChange(pageSet, issues, text) {
       if (!current || current.readOnly || disposed) return;
       // Stamped now, so the message always carries the load it was produced from.
-      pending = changeMessage(current.loadId, pageSet, issues);
+      pending = changeMessage(current.loadId, pageSet, issues, text);
       if (timer) clearTimeout(timer);
       timer = setTimeout(flushChange, CHANGE_DEBOUNCE_MS);
     },
