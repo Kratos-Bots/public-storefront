@@ -17,6 +17,8 @@ import { ShellStateContext, useShellStateValue } from '@/layouts/shell-context.t
 import { customPageKey, isCardKey, isFixedRouteKey } from '@/builder/types.ts';
 import type { DocKey, LayoutKind, PageRootProps, PageSet, PuckDoc, RouteKey } from '@/builder/types.ts';
 import { TextLayerProvider } from '@/text/runtime.tsx';
+import { CardDesignProvider } from '@/builder/card-design.tsx';
+import { PageSetContext } from '@/builder/page-set-context.ts';
 import type { EditorText } from '@/text/types.ts';
 
 export { pagesKey, PAGES_QUERY, pageSetQueryFn } from '@/builder/published.ts';
@@ -136,6 +138,8 @@ export function PuckShell() {
   // resets for the shell, so neither does this): the bar decision must follow the doc on screen.
   const [shellFailed, setShellFailed] = useState(false);
   const onShellFallback = useCallback(() => setShellFailed(true), []);
+  // The set on screen, for the product sheet; card designs compile once per document (spec §6.2).
+  const setValue = useMemo(() => ({ pageSet, layout }), [pageSet, layout]);
 
   // As PuckPage: wait for the published set rather than paint the default shell and swap it.
   // A route whose default document is chromeless (the shared order link) paints its brand header
@@ -160,15 +164,19 @@ export function PuckShell() {
   const onScreen = fallback && shellFailed ? fallback : shell.doc;
 
   return (
-    <ShellStateContext.Provider value={shellState}>
-      {/* The phone cart bar is a block owners can place; if the shell has none, the frame mounts it. */}
-      <Frame cartBar={!countBlocks(onScreen).has('MobileCartBar')}>
-        {fallback ? (
-          <DocBoundary docKey="shell" onFallback={onShellFallback} fallback={<RenderDoc doc={fallback} docKey="shell" layout={layout} />}>{body}</DocBoundary>
-        ) : (
-          body
-        )}
-      </Frame>
-    </ShellStateContext.Provider>
+    <PageSetContext.Provider value={setValue}>
+      <CardDesignProvider cards={pageSet?.cards} layout={layout}>
+        <ShellStateContext.Provider value={shellState}>
+          {/* The phone cart bar is a block owners can place; if the shell has none, the frame mounts it. */}
+          <Frame cartBar={!countBlocks(onScreen).has('MobileCartBar')}>
+            {fallback ? (
+              <DocBoundary docKey="shell" onFallback={onShellFallback} fallback={<RenderDoc doc={fallback} docKey="shell" layout={layout} />}>{body}</DocBoundary>
+            ) : (
+              body
+            )}
+          </Frame>
+        </ShellStateContext.Provider>
+      </CardDesignProvider>
+    </PageSetContext.Provider>
   );
 }
