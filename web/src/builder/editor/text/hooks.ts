@@ -62,9 +62,12 @@ export function useTextIssues(): TextIssue[] {
 export const useTextReady = (): boolean => useEditorStore(isTextReady);
 
 export interface TextCell {
-  /** The editable draft value, or the published value when shared text is read-only. */
-  shared: TextValue | undefined;
-  layout: TextValue | undefined;
+  /**
+   * The editable draft value, or the published value when shared text is read-only. A draft layer
+   * may hold a half-typed plural (no `other` yet), so these are DraftValues, not TextValues.
+   */
+  shared: DraftValue | undefined;
+  layout: DraftValue | undefined;
   sharedEditable: boolean;
   effective: ResolvedCell;
   /** What shows when this layout's override is cleared. */
@@ -76,12 +79,14 @@ export function useTextCell(key: string): TextCell {
   const text = useEditorText();
   const sharedEditable = useEditorStore((s) => s.sharedEditable);
   const issues = useTextIssues();
-  const shared = Object.hasOwn(text.shared, key) ? text.shared[key] : undefined;
-  const layout = Object.hasOwn(text.layout, key) ? text.layout[key] : undefined;
+  // EditorText types its layers as TextValue, but the store's drafts may hold a DraftValue.
+  const shared: DraftValue | undefined = Object.hasOwn(text.shared, key) ? text.shared[key] : undefined;
+  const layout: DraftValue | undefined = Object.hasOwn(text.layout, key) ? text.layout[key] : undefined;
   return useMemo(() => ({
     shared, layout, sharedEditable,
-    effective: resolveCell(key, { layout, shared }),
-    below: resolveCell(key, { shared }),
+    // resolveCell only returns a layer that passes ruleFor (a usable `other`), i.e. a real TextValue.
+    effective: resolveCell(key, { layout: layout as TextValue | undefined, shared: shared as TextValue | undefined }),
+    below: resolveCell(key, { shared: shared as TextValue | undefined }),
     issues: issues.filter((i) => i.key === key),
   }), [key, shared, layout, sharedEditable, issues]);
 }

@@ -1,0 +1,230 @@
+// web/src/builder/editor/text/TextRow.tsx
+import { useId, useRef, useState } from 'react';
+import type { TextValue } from '@/text/types.ts';
+import { useEditorStore } from '@/builder/editor/store.ts';
+import { LAYOUT_LABELS } from '@/builder/editor/page-catalog.ts';
+import { WarnIcon } from '@/builder/editor/icons.tsx';
+import { applyText, useLoadEpoch, useTextCell, useTextLanguage } from '@/builder/editor/text/hooks.ts';
+import type { DraftValue, PluralForm, TextIssue, TextScope } from '@/builder/editor/text/model.ts';
+import type { TextRowDef } from '@/builder/editor/text/catalog.ts';
+import { countWarnings } from '@/builder/editor/text/issues.ts';
+import { fillExample, pluralFormsFor, sampleCount } from '@/builder/editor/text/languages.ts';
+import styles from '@/builder/editor/text/Text.module.css';
+
+const domId = (reactId: string) => reactId.replace(/[^A-Za-z0-9_-]/g, '');
+export const SHARED_LOCKED = 'Shared wording can’t be changed from this version of the admin.';
+export const READ_ONLY = 'This version is read-only.';
+
+type Forms = Partial<Record<PluralForm, string>>;
+const isForms = (v: DraftValue | TextValue | undefined): v is Forms => typeof v === 'object' && v !== null;
+
+/** The form a plural shows when a category has none of its own (spec §6.3: its own `other`). */
+const formOf = (value: DraftValue | TextValue, category: string): string =>
+  typeof value === 'string' ? value : (value as Record<string, string | undefined>)[category] ?? value.other ?? '';
+export const summary = (value: DraftValue | TextValue): string => formOf(value, 'other');
+
+const quoteList = (forms: readonly string[]) => {
+  const q = forms.map((f) => `“${f}”`);
+  return q.length < 2 ? q.join('') : `${q.slice(0, -1).join(', ')} and ${q.at(-1)}`;
+};
+
+/**
+ * Task 6's `empty` message always points at “Other”; checkValue also raises `empty` for a blank
+ * `one`/`few`… form, so the row names the form(s) actually empty.
+ */
+function issueText(issue: TextIssue, value: DraftValue | undefined): string {
+  if (issue.rule !== 'empty' || !isForms(value)) return issue.message;
+  if (typeof value.other !== 'string' || value.other.trim() === '') {
+    return 'Fill in the “other” form — it’s used for every count without a form of its own.';
+  }
+  const blank = Object.entries(value).filter(([, s]) => typeof s === 'string' && s.trim() === '').map(([f]) => f);
+  if (blank.length === 0) return issue.message;
+  return `Fill in the ${quoteList(blank)} form${blank.length > 1 ? 's' : ''}, or clear ${blank.length > 1 ? 'them' : 'it'} to use “other”.`;
+}
+
+/** Non-blocking hints for the value at the chosen scope: {count} left out, edge spaces dropped. */
+function warningsFor(row: TextRowDef, value: DraftValue | undefined): string[] {
+  if (value === undefined) return [];
+  const out = countWarnings(row.key, value).map(
+    (form) => `The “${form}” form leaves out {count}, so shoppers won’t see the number.`,
+  );
+  const pairs: Array<[string | null, string]> = isForms(value)
+    ? Object.entries(value).filter((e): e is [string, string] => typeof e[1] === 'string').map(([f, s]) => [f, s])
+    : [[null, value]];
+  for (const [form, text] of pairs) {
+    if (text === '') continue;
+    const def = formOf(row.def, form ?? 'other');
+    const where = form ? `The “${form}” form` : 'Yours';
+    if (/^\s/.test(def) && !/^\s/.test(text)) out.push(`The built-in wording starts with a space. ${where} doesn’t, so it may run into the words before it.`);
+    if (/\s$/.test(def) && !/\s$/.test(text)) out.push(`The built-in wording ends with a space. ${where} doesn’t, so it may run into the words after it.`);
+  }
+  return out;
+}
+
+type Field = HTMLInputElement | HTMLTextAreaElement;
+
+/**
+ * One editable line (spec §7.2). Remounted on every editor load, so the scope, the caret target
+ * and the edit's load are never carried from one load into the next.
+ */
+export function TextRow(props: { row: TextRowDef; compact?: boolean }) {
+  const loadEpoch = useLoadEpoch();
+  return <RowForLoad key={loadEpoch} loadEpoch={loadEpoch} {...props} />;
+}
+
+function RowForLoad({ row, compact = false, loadEpoch }: { row: TextRowDef; compact?: boolean; loadEpoch: number }) {
+  const cell = useTextCell(row.key);
+  const layout = useEditorStore((s) => s.layout);
+  const readOnly = useEditorStore((s) => s.readOnly);
+  const { locale } = useTextLanguage();
+  const id = domId(useId());
+  const [scope, setScope] = useState<TextScope>(() => (cell.layout !== undefined || !cell.sharedEditable ? 'layout' : 'shared'));
+  /** The load the current edit started under: captured on focus, else the load this row mounted in. */
+  const editEpoch = useRef(loadEpoch);
+  const last = useRef<{ el: Field; form: string | null } | null>(null);
+  const [active, setActive] = useState<string | null>(null);
+
+  const layoutLabel = LAYOUT_LABELS[layout];
+  const stored = scope === 'shared' ? cell.shared : cell.layout;
+  const under: DraftValue | TextValue = scope === 'layout' ? cell.below.value : row.def;
+  const locked = readOnly || (scope === 'shared' && !cell.sharedEditable);
+  const scopeIssues = cell.issues.filter((i) => i.scope === scope);
+  const fromLabel = cell.effective.from === 'default' ? 'Built-in' : cell.effective.from === 'shared' ? 'Shared' : layoutLabel;
+  const forms = row.plural ? pluralFormsFor(locale) : [];
+  const storedForms: Forms = isForms(stored) ? stored : {};
+  const storedText = typeof stored === 'string' ? stored : '';
+  const warnings = warningsFor(row, stored);
+
+  const write = (value: DraftValue | null) => { applyText(scope, row.key, value, editEpoch.current); };
+  const writeForm = (form: string, text: string) => write({ ...storedForms, [form]: text });
+  const track = (el: Field, form: string | null) => { last.current = { el, form }; setActive(form ?? ''); };
+  const start = (el: Field, form: string | null) => { editEpoch.current = useEditorStore.getState().loadEpoch; track(el, form); };
+
+  const insert = (name: string) => {
+    const target = last.current?.el.isConnected ? last.current : null;
+    const token = `{${name}}`;
+    const form = target?.form ?? (row.plural ? 'other' : null);
+    const current = form ? storedForms[form as PluralForm] ?? '' : storedText;
+    const at = Math.min(target?.el.selectionStart ?? current.length, current.length);
+    const end = Math.min(target?.el.selectionEnd ?? at, current.length);
+    const next = current.slice(0, at) + token + current.slice(end);
+    if (form) writeForm(form, next);
+    else write(next);
+    const el = target?.el;
+    if (el) requestAnimationFrame(() => { if (el.isConnected) { el.focus(); el.setSelectionRange(at + token.length, at + token.length); } });
+  };
+
+  const described = compact ? `${id}-issues` : `${id}-note ${id}-issues`;
+  const Input = row.multiline ? 'textarea' : 'input';
+  const length = active ? (storedForms[active as PluralForm] ?? '').length : row.plural ? summary(stored ?? '').length : storedText.length;
+  const lockReason = readOnly ? READ_ONLY : SHARED_LOCKED;
+
+  return (
+    <div className={styles.row} data-text-key={row.key} data-compact={compact ? '' : undefined} data-sfb-text="">
+      <div className={styles.rowHead}>
+        {row.plural
+          ? <span id={`${id}-label`} className={styles.rowLabel}>{row.label}</span>
+          : <label className={styles.rowLabel} htmlFor={`${id}-v`}>{row.label}</label>}
+        <span className={styles.layer} data-from={cell.effective.from} title="Where the shop takes this line from">{fromLabel}</span>
+      </div>
+      {!compact && (
+        <p id={`${id}-note`} className={styles.note}>
+          {row.note && <span>{row.note}. </span>}
+          <span className={styles.builtIn}>Built-in: {summary(row.def)}</span>
+        </p>
+      )}
+      <div className={styles.scope} role="group" aria-label="Applies to">
+        <button
+          type="button"
+          aria-pressed={scope === 'shared'}
+          disabled={!cell.sharedEditable}
+          title={cell.sharedEditable ? undefined : SHARED_LOCKED}
+          onClick={() => { setScope('shared'); setActive(null); }}
+        >
+          All layouts
+        </button>
+        <button type="button" aria-pressed={scope === 'layout'} onClick={() => { setScope('layout'); setActive(null); }}>
+          Only {layoutLabel}
+        </button>
+      </div>
+      {row.plural ? (
+        <div className={styles.forms} role="group" aria-labelledby={`${id}-label`}>
+          {forms.map((form) => {
+            const value = storedForms[form as PluralForm] ?? '';
+            const n = sampleCount(locale, form);
+            return (
+              <label key={form} className={styles.form}>
+                <span className={styles.formName}>{form}</span>
+                <input
+                  aria-label={`${row.label} — ${form}`}
+                  aria-describedby={described}
+                  aria-invalid={scopeIssues.length > 0 || undefined}
+                  value={value}
+                  placeholder={formOf(under, form)}
+                  readOnly={locked}
+                  title={locked ? lockReason : undefined}
+                  onFocus={(e) => start(e.currentTarget, form)}
+                  onSelect={(e) => track(e.currentTarget, form)}
+                  onChange={(e) => writeForm(form, e.target.value)}
+                />
+                <span className={styles.example}>e.g. {fillExample(value || formOf(cell.effective.value, form), n)}</span>
+              </label>
+            );
+          })}
+        </div>
+      ) : (
+        <Input
+          id={`${id}-v`}
+          className={styles.input}
+          aria-describedby={described}
+          aria-invalid={scopeIssues.length > 0 || undefined}
+          value={storedText}
+          placeholder={summary(under)}
+          readOnly={locked}
+          title={locked ? lockReason : undefined}
+          rows={row.multiline ? 3 : undefined}
+          onFocus={(e) => start(e.currentTarget, null)}
+          onSelect={(e) => track(e.currentTarget, null)}
+          onChange={(e) => write(e.target.value)}
+        />
+      )}
+      <div className={styles.rowFoot}>
+        <span className={styles.chips}>
+          {row.placeholders.map((name) => (
+            <button
+              key={name}
+              type="button"
+              className={styles.chip}
+              aria-label={`Insert {${name}}`}
+              disabled={locked}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => insert(name)}
+            >
+              {`{${name}}`}
+            </button>
+          ))}
+        </span>
+        <span className={styles.count} data-over={length > row.max ? '' : undefined}>{length} / {row.max}</span>
+        <button type="button" className={styles.reset} disabled={stored === undefined || locked} onClick={() => write(null)}>Reset</button>
+      </div>
+      <ul id={`${id}-issues`} className={styles.rowIssues}>
+        {cell.issues.map((i) => {
+          const value = i.scope === 'shared' ? cell.shared : cell.layout;
+          const prefix = i.scope !== scope ? `${i.scope === 'shared' ? 'All layouts' : `Only ${layoutLabel}`}: ` : '';
+          return (
+            <li key={`${i.scope}-${i.rule}`} className={styles.issue}>
+              <WarnIcon />
+              <span>{prefix}{issueText(i, value)}</span>
+            </li>
+          );
+        })}
+        {warnings.map((w) => (
+          <li key={w} className={styles.warning}>
+            <WarnIcon />
+            <span>{w}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
