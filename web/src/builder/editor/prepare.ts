@@ -1,4 +1,5 @@
 import { blockDef } from '@/builder/rules.ts';
+import { parseBlockStyle, type BlockStyle } from '@/builder/style/model.ts';
 import type { ComponentData, DocKey, PuckDoc } from '@/builder/types.ts';
 import type { DocMap } from '@/builder/editor/page-set.ts';
 
@@ -21,9 +22,34 @@ const PREPARE: Record<string, (props: Props) => Props> = {
   },
 };
 
+/** Same keys, same order, same values: the stored style is already what the guard would keep. */
+function sameStyle(raw: unknown, style: BlockStyle): boolean {
+  if (typeof raw !== 'object' || raw === null) return false;
+  const a = Object.entries(raw);
+  const b = Object.entries(style);
+  return a.length === b.length && a.every(([k, v], i) => b[i]![0] === k && b[i]![1] === v);
+}
+
+/**
+ * Block-styling spec §9.2: drop unknown / disallowed / invalid keys, canonical order, `{}` or
+ * `undefined` → the key is removed. The same object when nothing changes (no spurious change).
+ */
+function prepareStyle(name: string, props: Props): Props {
+  if (!Object.hasOwn(props, 'blockStyle')) return props;
+  const def = blockDef(name);
+  // An unregistered type never reaches the admin (the guard drops it); leave its props alone.
+  if (!def) return props;
+  const { style } = parseBlockStyle(def.style ?? false, props.blockStyle);
+  if (style && sameStyle(props.blockStyle, style)) return props;
+  const next: Props = { ...props };
+  if (style) next.blockStyle = style;
+  else delete next.blockStyle;
+  return next;
+}
+
 export function prepareProps(name: string, props: Props): Props {
   const fn = Object.hasOwn(PREPARE, name) ? PREPARE[name] : undefined;
-  return fn ? fn(props) : props;
+  return prepareStyle(name, fn ? fn(props) : props);
 }
 
 function prepareList(items: ComponentData[]): ComponentData[] {

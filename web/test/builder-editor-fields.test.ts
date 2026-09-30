@@ -114,3 +114,15 @@ describe('per-block editor fields', () => {
     }
   });
 });
+
+describe('the Style group (block-styling spec §9.1)', () => {
+  it.each(Object.keys(BLOCKS))('%s: fields end with blockStyle exactly when the block is stylable', (name) => {
+    const keys = Object.keys(byName[name]!);
+    if (BLOCKS[name]!.style) expect(keys.at(-1)).toBe('blockStyle');
+    else expect(keys).not.toContain('blockStyle');
+  });
+  it('blockStyle is a custom field and is never a schema key', () => {
+    expect(byName.Heading!.blockStyle).toMatchObject({ type: 'custom', label: 'Style' });
+    for (const def of Object.values(BLOCKS)) expect(schemaKeys(def)).not.toContain('blockStyle');
+  });
+});

@@ -10,6 +10,7 @@ import { imageField } from '@/builder/editor/custom-fields/image.tsx';
 import { richtextField } from '@/builder/editor/custom-fields/richtext.tsx';
 import { humanizeValue, paletteTokenField } from '@/builder/editor/custom-fields/palette-token.tsx';
 import { categoryPickerField, productPickerField } from '@/builder/editor/custom-fields/pickers.ts';
+import { styleField } from '@/builder/editor/custom-fields/style.tsx';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyBlock = BlockDef<any>;
@@ -206,7 +207,10 @@ export function slotAllowFor(name: string): string[] {
   return docs.length === 0 || layouts.length === 0 ? [] : acceptedOnAll(docs, layouts);
 }
 
-/** Used by every fields/<Block>.ts: derived fields (slots carrying the static allow list), with that block's overrides on top. */
+/**
+ * Used by every fields/<Block>.ts: derived fields (slots carrying the static allow list), with that
+ * block's overrides on top, then — for a stylable block — the Style group (`blockStyle`) last.
+ */
 export function blockFields(name: string, overrides: Fields = {}): Fields {
   const def = Object.hasOwn(BLOCKS, name) ? BLOCKS[name] : undefined;
   if (!def) throw new Error(`Unknown block ${name}`);
@@ -215,7 +219,10 @@ export function blockFields(name: string, overrides: Fields = {}): Fields {
     const allow = slotAllowFor(name);
     for (const slot of def.slots) fields[slot] = { ...(fields[slot] as SlotField), allow: [...allow] };
   }
-  return { ...fields, ...overrides };
+  const out: Fields = { ...fields, ...overrides };
+  // The Style group always comes last, after any overrides (block-styling spec §9.1).
+  if (def.style) out.blockStyle = styleField(def) as Field;
+  return out;
 }
 
 /** Header variants that only render in one layout: `auto` follows the layout, `webapp` falls back to `menu` outside the web app. */
