@@ -154,7 +154,16 @@ export function PuckShell() {
   }
 
   const page = routeKey ? resolveDoc(pageSet, routeKey, layout) : null;
-  if (page?.doc.root.props.chrome === 'none') return <Chromeless />;
+  // Chrome-less pages still see the set on screen and its card designs (no DOM added).
+  if (page?.doc.root.props.chrome === 'none') {
+    return (
+      <PageSetContext.Provider value={setValue}>
+        <CardDesignProvider cards={pageSet?.cards} layout={layout}>
+          <Chromeless />
+        </CardDesignProvider>
+      </PageSetContext.Provider>
+    );
+  }
 
   const shell = resolveDoc(pageSet, 'shell', layout);
   if (!shell) throw new Error(`[builder] no default shell document for the ${layout} layout`);

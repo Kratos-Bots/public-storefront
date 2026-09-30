@@ -31,10 +31,23 @@ vi.mock('@/builder/registry.ts', async (orig) => {
   return { ...real, BLOCKS: { ...real.BLOCKS, TestFrame: frame as AnyBlock, TestName: name as AnyBlock } };
 });
 
+// PuckShell mount (fix round 1): a bare frame so the test sees only the providers around it.
+vi.mock('@/app/layout.ts', () => ({ useEffectiveLayout: () => 'storefront' }));
+vi.mock('@/api/pages.ts', () => ({ fetchPageSet: () => new Promise(() => {}), fetchPublished: () => new Promise(() => {}) }));
+vi.mock('@/layouts/Chromeless.tsx', async () => {
+  const { Outlet } = await import('react-router');
+  return { Chromeless: () => <div data-mark="chromeless"><Outlet /></div> };
+});
+
 import { compileCard } from '@/builder/cards.ts';
 import { CardDesignBoundary, CardDesignProvider, resetCardDesignLog, useCardDesign } from '@/builder/card-design.tsx';
 import { CardTileFamily, type CardData } from '@/builder/families.ts';
 import { baseProduct } from './helpers/product-fixtures.ts';
+import { PageSetOverrideProvider, PuckShell } from '@/builder/runtime.tsx';
+import { usePageSetContext } from '@/builder/page-set-context.ts';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { createMemoryRouter, RouterProvider } from 'react-router';
+import type { PageSet } from '@/builder/types.ts';
 
 const tileDoc = (): PuckDoc => ({ root: { props: { title: '', description: '', chrome: 'shell' } }, content: [
   { type: 'TestFrame', props: { id: 'f', content: [{ type: 'TestName', props: { id: 'n' } }] } },
@@ -125,5 +138,34 @@ describe('CardDesignProvider / CardDesignBoundary', () => {
   });
   it('useCardDesign outside a provider is null', () => {
     expect(render(<Consumer />).container.textContent).toBe('built-in');
+  });
+});
+
+describe('PuckShell mounts the card design and page-set providers (spec §6.2)', () => {
+  function PageProbe() {
+    const ctx = usePageSetContext();
+    return <><Consumer /><i data-mark="ctx">{ctx ? `${ctx.layout}:${ctx.pageSet ? 'set' : 'none'}` : 'no-context'}</i></>;
+  }
+  const mountShell = (pageSet: PageSet) => render(
+    <QueryClientProvider client={new QueryClient()}>
+      <PageSetOverrideProvider pageSet={pageSet}>
+        <RouterProvider router={createMemoryRouter([{
+          path: '/', element: <PuckShell />,
+          children: [{ path: 'pages/:slug', handle: { routeKey: 'page' }, element: <PageProbe /> }],
+        }], { initialEntries: ['/pages/plain'] })} />
+      </PageSetOverrideProvider>
+    </QueryClientProvider>,
+  );
+  it('a chrome:none page renders the published tile design and has page-set context', () => {
+    const set: PageSet = {
+      schemaVersion: 1,
+      shell: { root: { props: { title: '', description: '', chrome: 'shell' } }, content: [] },
+      pages: { 'page:plain': { root: { props: { title: '', description: '', chrome: 'none' } }, content: [] } },
+      cards: { tile: tileDoc() },
+    };
+    const { container } = mountShell(set);
+    expect(container.querySelector('[data-mark="chromeless"]')).not.toBeNull();
+    expect(container.querySelector('h3')?.textContent).toBe('Oats');
+    expect(container.querySelector('[data-mark="ctx"]')?.textContent).toBe('storefront:set');
   });
 });
