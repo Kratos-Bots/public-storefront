@@ -3,7 +3,6 @@ import { withPrefilledText } from '@/lib/chat-links.ts';
 import { TelegramIcon, WhatsAppIcon } from '@/components/icons.tsx';
 import { useText } from '@/text/runtime.tsx';
 import type { StyleAttrs } from '@/builder/define.ts';
-import type { StyleAttrs } from '@/builder/define.ts';
 import classes from '@/components/ContactLinks.module.css';
 
 export interface ContactLinksProps {
