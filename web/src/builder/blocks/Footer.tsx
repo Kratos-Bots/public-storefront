@@ -6,6 +6,7 @@ import { FOOTER_TEXT } from '@/builder/blocks/_shared/text-patterns.ts';
 import type { ComponentData } from '@/builder/types.ts';
 import { ShellFooter } from '@/layouts/ShellFooter.tsx';
 import classes from '@/builder/blocks/Footer.module.css';
+import { BOX, styleSupport, VIS } from '@/builder/style/model.ts';
 
 type Props = {
   id: string; variant: 'template' | 'columns'; columns: '1' | '2' | '3' | '4'; colophon: boolean;
@@ -30,6 +31,7 @@ function ColumnsFooter({ columns, colophon, cols }: { columns: Props['columns'];
 /** template = the active template's Footer slot (the default); columns = owner-composed columns. */
 export const block = defineBlock<Props>({
   name: 'Footer', label: 'Footer', category: 'shell', layouts: ['storefront', 'menu'], routeBound: false, slots: ['col1', 'col2', 'col3', 'col4'],
+  style: styleSupport('wrap', [...BOX, ...VIS]),
   text: FOOTER_TEXT,
   schema: z.object({
     variant: z.enum(['template', 'columns']), columns: z.enum(['1', '2', '3', '4']), colophon: z.boolean(),

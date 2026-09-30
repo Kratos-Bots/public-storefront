@@ -3,12 +3,14 @@ import { z } from 'zod';
 import { defineBlock, slot } from '@/builder/define.ts';
 import type { ComponentData } from '@/builder/types.ts';
 import { CartBlockedContext } from '@/builder/blocks/_shared/cart-context.ts';
+import { BOX, styleSupport } from '@/builder/style/model.ts';
 
 const CartPage = lazy(() => import('@/features/cart/CartPage.tsx').then((m) => ({ default: m.CartPage })));
 
 /** The cart's lines (and empty state); its `summary` slot is the totals column. */
 export const block = defineBlock<{ id: string; summary: ComponentData[] }>({
   name: 'CartContents', label: 'Cart lines', category: 'commerce', layouts: 'all', routeBound: true, slots: ['summary'],
+  style: styleSupport('wrap', [...BOX]),
   text: ['cart.page.*', 'cart.empty.*', 'cart.line.*', 'cart.summary.*', 'common.qty.*', 'common.product.*', 'common.totals.subtotal', 'common.actions.browseCatalogue'],
   schema: z.object({ summary: slot() }), defaultProps: { summary: [] },
   render: ({ summary }) => (
