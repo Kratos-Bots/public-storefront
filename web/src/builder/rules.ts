@@ -1,6 +1,7 @@
 import { BLOCKS } from '@/builder/registry.ts';
-import type { BlockDef } from '@/builder/define.ts';
-import { isRecord, type ComponentData, type DocKey, type FixedRouteKey, type Issue, type LayoutKind, type PuckDoc } from '@/builder/types.ts';
+import type { AnyBlock, BlockDef } from '@/builder/define.ts';
+import { familyAllowedOn, type PartFamily } from '@/builder/parts.ts';
+import { isCardKey, isRecord, type ComponentData, type DocKey, type FixedRouteKey, type Issue, type LayoutKind, type PuckDoc } from '@/builder/types.ts';
 
 const ACCOUNT: readonly DocKey[] = ['account.orders', 'account.order', 'account.loyalty', 'account.referrals', 'account.profile'];
 
@@ -31,6 +32,8 @@ export const PLACEMENT: Record<string, readonly DocKey[]> = {
   OrderPlaced: ['order-placed'],
   VerifyForm: ['verify'],
   TrackingLookup: ['tracking'],
+  CardTile: ['card:tile'],
+  CardRow: ['card:row'],
 };
 
 /** Chrome that only makes sense in the shell document. */
@@ -53,6 +56,8 @@ const EXACTLY_ONE: Partial<Record<DocKey, readonly string[]>> = {
   'order-placed': ['OrderPlaced'],
   verify: ['VerifyForm'],
   tracking: ['TrackingLookup'],
+  'card:tile': ['CardTile'],
+  'card:row': ['CardRow'],
 };
 
 /** Own-key lookup: an untrusted key like `constructor` or `__proto__` never resolves to an Object.prototype member. */
@@ -119,14 +124,35 @@ export function countBlocks(doc: PuckDoc): Map<string, number> {
 export function allowedOn(type: string, docKey: DocKey): boolean {
   const def = blockDef(type);
   if (!def) return false;
+  if (def.part) return familyAllowedOn(def.part.family, docKey);
   const bound = own(PLACEMENT, type);
   if (bound) return bound.includes(docKey);
+  // A card design repeats once per product: only its frame and its parts (spec §3.4).
+  if (isCardKey(docKey)) return false;
   if (SHELL_ONLY.includes(type)) return docKey === 'shell';
   if (docKey === 'shell') return def.category === 'shell' || def.category === 'content';
   return true;
 }
 
 const label = (type: string) => blockDef(type)?.label ?? type.slice(0, 60);
+
+/** Editor copy naming each family's container, as a shopper-neutral noun. */
+export const FAMILY_NOUN: Record<PartFamily, string> = { product: 'product page', catalogue: 'catalogue', 'card-tile': 'product card', 'card-row': 'product row' };
+const FAMILY_HOME: Record<PartFamily, string> = { product: 'Product detail', catalogue: 'product grid or product list', 'card-tile': 'product card', 'card-row': 'product row' };
+const REQUIRES_MESSAGE: Record<string, string> = {
+  'CardTileAdd.CardTilePrice': 'A product card with an add button must also show the price.',
+  'CardRowAdd.CardRowPrice': 'A product row with an add button must also show the price.',
+};
+
+const inLayout = (type: string, layout: LayoutKind): boolean => {
+  const def = blockDef(type);
+  return !!def && (def.layouts === 'all' || def.layouts.includes(layout));
+};
+
+/** A container's required parts that exist in `layout` (spec §4: parts not available are skipped). */
+export function requiredParts(type: string, layout: LayoutKind): string[] {
+  return (blockDef(type)?.container?.required ?? []).filter((t) => inLayout(t, layout));
+}
 
 /** Blocks a shopper must always be able to reach, whatever the doc (spec §10.2). */
 const ALWAYS_REQUIRED: readonly string[] = ['PageOutlet', 'MobileCartBar'];
@@ -154,6 +180,91 @@ function requiredInside(item: ComponentData, required: ReadonlySet<string>): str
     if (Array.isArray(children)) walk(children as ComponentData[], (c) => { if (required.has(c.type)) hits.push(c.type); });
   }
   return hits[0] ?? null;
+}
+
+/** Every part must have a container of its family as its nearest container ancestor (all slots, hidden ones too). */
+function checkPartPlacement(items: readonly ComponentData[], family: PartFamily | null, docKey: DocKey, flagged: Set<string>, issues: Issue[]): void {
+  for (const c of items) {
+    const def = blockDef(c.type);
+    if (!def) continue;
+    if (def.part && def.part.family !== family && !flagged.has(`part-placement:${c.type}`)) {
+      flagged.add(`part-placement:${c.type}`);
+      issues.push({ docKey, rule: `part-placement:${c.type}`, message: `${label(c.type)} can only sit inside the ${FAMILY_HOME[def.part.family]}.`, blockId: c.props.id });
+    }
+    const next = def.container ? def.container.family : family;
+    for (const s of def.slots) {
+      const children = c.props[s];
+      if (Array.isArray(children)) checkPartPlacement(children as ComponentData[], next, docKey, flagged, issues);
+    }
+  }
+}
+
+/** Spec §4 for one container instance: counts through visible slots, stopping at a nested container. */
+function containerIssues(item: ComponentData, def: AnyBlock, docKey: DocKey, layout: LayoutKind): Issue[] {
+  const spec = def.container!;
+  const issues: Issue[] = [];
+  const noun = FAMILY_NOUN[spec.family];
+  const blockId = item.props.id;
+  const required = new Set(requiredParts(def.name, layout));
+  const counts = new Map<string, number>();
+  const hiddenHolders: Array<{ holder: ComponentData; part: string }> = [];
+  const visit = (items: readonly ComponentData[], hidden: ComponentData | null) => {
+    for (const c of items) {
+      counts.set(c.type, (counts.get(c.type) ?? 0) + 1);
+      if (hidden && required.has(c.type)) hiddenHolders.push({ holder: hidden, part: c.type });
+      const d = blockDef(c.type);
+      if (!d || d.container) continue;
+      const nextHidden = hidden ?? (hiddenAs(d, c.props) ? c : null);
+      for (const s of shownSlots(d, c.props)) {
+        const children = c.props[s];
+        if (Array.isArray(children)) visit(children as ComponentData[], nextHidden);
+      }
+    }
+  };
+  for (const s of shownSlots(def, item.props)) {
+    const children = item.props[s];
+    if (Array.isArray(children)) visit(children as ComponentData[], null);
+  }
+  for (const r of required) {
+    const n = counts.get(r) ?? 0;
+    if (n !== 1) {
+      issues.push({ docKey, rule: `part-required:${def.name}.${r}`, blockId,
+        message: n === 0 ? `The ${noun} needs its ${label(r)}.` : `The ${noun} can show its ${label(r)} only once.` });
+    }
+  }
+  for (const u of spec.unique) {
+    if (!required.has(u) && (counts.get(u) ?? 0) > 1) {
+      issues.push({ docKey, rule: `part-unique:${def.name}.${u}`, blockId, message: `The ${noun} can show its ${label(u)} only once.` });
+    }
+  }
+  for (const [p, needs] of spec.requires ?? []) {
+    if ((counts.get(p) ?? 0) > 0 && (counts.get(needs) ?? 0) === 0) {
+      issues.push({ docKey, rule: `part-requires:${p}.${needs}`, blockId,
+        message: own(REQUIRES_MESSAGE, `${p}.${needs}`) ?? `${label(p)} needs the ${label(needs)} beside it.` });
+    }
+  }
+  for (const { holder, part } of hiddenHolders) {
+    const hide = hiddenAs(blockDef(holder.type)!, holder.props);
+    issues.push({ docKey, rule: `hidden-required:${holder.type}`, blockId: holder.props.id,
+      message: `${label(holder.type)} is hidden ${hide === 'mobile' ? 'below' : 'from'} 992 px but holds the ${label(part)}, which every shopper must see.` });
+  }
+  for (const s of def.slots) {
+    const children = item.props[s];
+    if (!Array.isArray(children)) continue;
+    const only = spec.slotAccepts ? own(spec.slotAccepts, s) ?? null : null;
+    const bad = (children as ComponentData[]).find((c) => {
+      if (only) return !only.includes(c.type);
+      const d = blockDef(c.type);
+      return !!d && (d.routeBound || !!d.container);
+    });
+    if (bad) {
+      issues.push({ docKey, rule: `slot-accepts:${def.name}.${s}`, blockId: bad.props.id,
+        message: only
+          ? `${label(bad.type)} can't sit there: that area of the ${noun} holds only ${only.map(label).join(', ')}.`
+          : `${label(bad.type)} can't sit inside the ${label(def.name)}.` });
+    }
+  }
+  return issues;
 }
 
 export function checkRules(doc: PuckDoc, docKey: DocKey, layout: LayoutKind): Issue[] {
@@ -186,6 +297,12 @@ export function checkRules(doc: PuckDoc, docKey: DocKey, layout: LayoutKind): Is
   if (anyOf && !anyOf.some((t) => (counts.get(t) ?? 0) > 0)) {
     issues.push({ docKey, rule: `at-least-one:${docKey}`, message: `This page needs a product grid, product list or trade list.` });
   }
+  // Parts: placement through every slot, then each container instance on its own (spec §3.4, §4).
+  checkPartPlacement(doc.content, null, docKey, flagged, issues);
+  walk(doc.content, (c) => {
+    const def = blockDef(c.type);
+    if (def?.container) issues.push(...containerIssues(c, def, docKey, layout));
+  });
   // A hidden block may not hold anything a shopper must see (spec §10.2): walk what renders.
   const required = requiredOn(docKey);
   walk(doc.content, (c) => {
