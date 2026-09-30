@@ -54,7 +54,8 @@ describe('guard (spec §8: before the slots are cleaned)', () => {
   it('fills absent slots, then de-duplicates their ids like any other', () => {
     // One ProductDetail keeps the product doc's own rules satisfied, so the cleaned doc is returned
     // (FakeBox parts may only sit on the product doc, so 'page:x' would reject it on placement).
-    const detail: ComponentData = { type: 'ProductDetail', props: { ...structuredClone(BLOCKS.ProductDetail!.defaultProps), id: 'pd' } };
+    // A v0.7.0-shaped ProductDetail (no slot keys): the guard fills its slots from the real defaults.
+    const detail: ComponentData = { type: 'ProductDetail', props: { sku: 'inherit', id: 'pd' } };
     const d = doc([detail, box(), box()]);
     const { doc: clean, issues } = validateDoc(d, 'product', 'storefront');
     expect(issues.filter((i) => !i.rule.startsWith('drop:') && !i.rule.startsWith('placement'))).toEqual([]);

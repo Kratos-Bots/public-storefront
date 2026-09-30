@@ -1,4 +1,5 @@
 import type { StyleAttrs } from '@/builder/define.ts';
+import { CardDesignBoundary } from '@/builder/card-design.tsx';
 import { useMemo } from 'react';
 import { useSettings } from '@/app/settings.ts';
 import { useCatalog } from '@/features/catalog/use-catalog.ts';
@@ -46,24 +47,28 @@ export function Upsells({ product, onSelect, rootAttrs }: UpsellsProps) {
         {t('product.upsells.heading')}
       </h2>
       {onSelect ? (
-        <ul className={classes.rows}>
-          {items.map((item, i) => (
-            <li key={item.id} {...rowAnim(i)}>
-              <ProductRow product={item} onSelect={onSelect} />
-            </li>
-          ))}
-        </ul>
+        <CardDesignBoundary kind="row">
+          <ul className={classes.rows}>
+            {items.map((item, i) => (
+              <li key={item.id} {...rowAnim(i)}>
+                <ProductRow product={item} onSelect={onSelect} />
+              </li>
+            ))}
+          </ul>
+        </CardDesignBoundary>
       ) : (
-        <div className={classes.row}>
-          {items.map((item, i) => (
-            <ProductCard
-              key={item.id}
-              product={item}
-              index={i}
-              hasSiblingImages={items.some((p) => p.imageProductId !== null)}
-            />
-          ))}
-        </div>
+        <CardDesignBoundary kind="tile">
+          <div className={classes.row}>
+            {items.map((item, i) => (
+              <ProductCard
+                key={item.id}
+                product={item}
+                index={i}
+                hasSiblingImages={items.some((p) => p.imageProductId !== null)}
+              />
+            ))}
+          </div>
+        </CardDesignBoundary>
       )}
     </section>
   );
