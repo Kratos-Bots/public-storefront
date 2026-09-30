@@ -690,6 +690,9 @@ test.describe('page builder editor · style', () => {
     await loadAndWait(page, frame, msg);
     await addBlock(frame, 'Heading');
     await panel(frame).locator('summary').click();
+    // The swatches fill the sidebar's width in rows, not one tall column.
+    const swatchTops = await panel(frame).getByRole('radiogroup', { name: 'Background' }).getByRole('radio').evaluateAll((els) => els.slice(0, 2).map((e) => Math.round(e.getBoundingClientRect().top)));
+    expect(swatchTops[0]).toBe(swatchTops[1]);
     await panel(frame).getByRole('radiogroup', { name: 'Background' }).getByRole('radio', { name: 'Surface 2' }).click();
     await expect(frame.locator('[data-sf-builder-canvas] [data-sf-style="Heading"][data-sfs-bg="surface-2"]')).toBeVisible();
     await expect.poll(() => lastPage(page, msg.loadId, 'catalog')).toContain('"blockStyle":{"bg":"surface-2"}');
@@ -697,6 +700,26 @@ test.describe('page builder editor · style', () => {
     await expect(frame.locator('[data-sf-builder-canvas] [data-sf-style="Heading"]')).toHaveCount(0);
     await expect.poll(() => lastPage(page, msg.loadId, 'catalog')).not.toContain('blockStyle');
     await expectAdminAccepts(page);
+  });
+
+  test.describe('on a touch screen', () => {
+    test.use({ hasTouch: true });
+    test('44 px swatches stay inside the narrow sidebar', async ({ page }) => {
+      const { frame } = await openFramed(page, 768);
+      const msg = load();
+      await loadAndWait(page, frame, msg);
+      await addBlock(frame, 'Heading');
+      await panel(frame).locator('summary').click();
+      const group = panel(frame).getByRole('radiogroup', { name: 'Background' });
+      const edges = await group.evaluate((g) => ({
+        right: g.getBoundingClientRect().right,
+        swatches: [...g.querySelectorAll('[role="radio"]')].map((r) => { const b = r.getBoundingClientRect(); return { w: b.width, right: b.right }; }),
+      }));
+      for (const s of edges.swatches) {
+        expect(s.w).toBeGreaterThanOrEqual(44);
+        expect(s.right).toBeLessThanOrEqual(edges.right + 0.5);
+      }
+    });
   });
 
   test('a route block offers box styles but no Visibility row', async ({ page }) => {

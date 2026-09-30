@@ -24,6 +24,8 @@
 .row { display: grid; gap: 6px; }
 .rowHead { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
 .control { display: flex; align-items: flex-start; gap: 8px; min-inline-size: 0; }
+/* The options take the row's remaining width: an auto-fill swatch grid in a content-sized flex item collapses to one column. */
+.control > [role='radiogroup'] { flex: 1 1 0; min-inline-size: 0; }
 .chips { display: flex; flex-wrap: wrap; gap: 4px; min-inline-size: 0; }
 .stack { display: grid; gap: 4px; inline-size: 100%; }
 .chip {
@@ -45,4 +47,6 @@
 @media (pointer: coarse) {
   /* Every chip, swatch and reset is a 44 px target on touch (spec §9.1), swatches included. */
   .chip, .reset, .resetAll, .summary, .panel [role='radio'] { min-block-size: 44px; min-inline-size: 44px; }
+  /* …so the swatch grid's tracks grow with them, or 44 px swatches overrun 32 px columns. */
+  .control > [role='radiogroup'] { grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); }
 }
