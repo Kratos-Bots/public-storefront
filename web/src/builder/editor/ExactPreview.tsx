@@ -11,11 +11,19 @@ import { useEditorStore } from '@/builder/editor/store.ts';
 import { useEditorText } from '@/builder/editor/text/hooks.ts';
 import { EyeIcon } from '@/builder/editor/icons.tsx';
 import type { ViewportWidth } from '@/builder/editor/protocol.ts';
-import { isCardKey, type DocKey, type RouteKey } from '@/builder/types.ts';
+import { CardDesignProvider } from '@/builder/card-design.tsx';
+import { PageSetContext } from '@/builder/page-set-context.ts';
+import { isCardKey, type DocKey, type LayoutKind, type RouteKey } from '@/builder/types.ts';
 import styles from '@/builder/editor/Editor.module.css';
 
-/** The shell doc has no page of its own: preview it around the catalogue, the shop's front door. */
-const routeKeyFor = (docKey: DocKey): RouteKey => (docKey === 'shell' || isCardKey(docKey) ? 'catalog' : docKey);
+/**
+ * The route a doc is previewed on. The shell and the card docs have no page of their own: preview
+ * them around the catalogue, the shop's front door. So is the menu / web-app product doc, a sheet
+ * over the catalogue: the fixture location carries `?p=<preview id>`, so the real sheet opens on
+ * the draft (spec §11).
+ */
+export const routeKeyFor = (docKey: DocKey, layout: LayoutKind): RouteKey =>
+  docKey === 'shell' || isCardKey(docKey) || (docKey === 'product' && layout !== 'storefront') ? 'catalog' : docKey;
 
 /**
  * A width preset (Phone / Tablet / Desktop) is an exact preview: the admin has sized the frame to
@@ -74,9 +82,11 @@ export function ExactRuntime({ failTitle, failBody }: { failTitle: string; failB
   const pageText = useEditorStore((s) => s.pageText);
   const text = useEditorText();
   const pageSet = useMemo(() => toPageSet(prepareDocs(docs), layout, pageText), [docs, layout, pageText]);
-  const routeKey = routeKeyFor(docKey);
+  const routeKey = routeKeyFor(docKey, layout);
   const page = resolveDoc(pageSet, routeKey, layout);
   const chromeless = page?.doc.root.props.chrome === 'none';
+  // PuckShell mounts these itself; the chrome-less frame gets them here, as PuckShell would (spec §6.2).
+  const setValue = useMemo(() => ({ pageSet, layout }), [pageSet, layout]);
 
   return (
     <BuilderModeProvider value={mode}>
@@ -93,7 +103,15 @@ export function ExactRuntime({ failTitle, failBody }: { failTitle: string; failB
         >
           {page ? (
             <Routes>
-              <Route element={chromeless ? <Chromeless /> : <PuckShell />}>
+              <Route
+                element={chromeless ? (
+                  <PageSetContext.Provider value={setValue}>
+                    <CardDesignProvider cards={pageSet.cards} layout={layout}>
+                      <Chromeless />
+                    </CardDesignProvider>
+                  </PageSetContext.Provider>
+                ) : <PuckShell />}
+              >
                 <Route index element={<PuckPage key={routeKey} routeKey={routeKey} />} />
               </Route>
             </Routes>

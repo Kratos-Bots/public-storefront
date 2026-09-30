@@ -3,7 +3,11 @@ import { setPuckHistorySource, useEditorStore } from '@/builder/editor/store.ts'
 import { usePuck, useGetPuck } from '@/builder/editor/use-puck.ts';
 import { useHints, useIssues, useLockedPresent } from '@/builder/editor/use-issues.ts';
 import { blockMenu } from '@/builder/editor/config.ts';
-import { insertTarget, type InsertApi } from '@/builder/editor/insert-target.ts';
+import { insertTarget, type InsertApi, type InsertTarget } from '@/builder/editor/insert-target.ts';
+import { ROOT_ZONE } from '@/builder/editor/config.ts';
+import { usePreviewProduct } from '@/builder/editor/preview-product.ts';
+import { FIXTURE_PRODUCT } from '@/builder/editor/fixtures.ts';
+import { useCatalog } from '@/features/catalog/use-catalog.ts';
 import { docLabel, LAYOUT_LABELS } from '@/builder/editor/page-catalog.ts';
 import { isCustomKey } from '@/builder/editor/page-set.ts';
 import { focusPagePickerSoon, PagePicker } from '@/builder/editor/PagePicker.tsx';
@@ -22,7 +26,7 @@ import { LAYER_ISSUE_LABELS } from '@/builder/editor/text/issues.ts';
 import { blockDef } from '@/builder/rules.ts';
 import { registerLiveCanvas } from '@/builder/editor/late-upload.ts';
 import type { PreviewAs } from '@/builder/mode.ts';
-import type { DocKey, Issue } from '@/builder/types.ts';
+import { isCardKey, type DocKey, type Issue } from '@/builder/types.ts';
 import styles from '@/builder/editor/Editor.module.css';
 
 const domId = (reactId: string) => reactId.replace(/[^A-Za-z0-9_-]/g, '');
@@ -96,6 +100,22 @@ function NewPage() {
 // ── add block ────────────────────────────────────────────────────────────────
 
 /**
+ * The Add block menu's placement hint for `target` (insert-target.ts's choice). A block goes after
+ * the selection or at the end of the page; a part (`part` given) lands in its family container —
+ * named by `container` — or, with no container on the page, at the root where it must be moved.
+ */
+export function addBlockHint(
+  target: InsertTarget,
+  selected: { index: number; zone?: string } | null,
+  part?: { container: string | null },
+): string {
+  if (!part) return selected ? 'Adds after the selected block.' : 'Adds at the end of the page.';
+  if (!target.nested || !part.container) return 'Parts belong inside their container. Add one first, or move the part into it.';
+  const afterSelected = selected !== null && (selected.zone ?? ROOT_ZONE) === target.zone && selected.index + 1 === target.index;
+  return afterSelected ? 'Parts go after the selected block.' : `Parts go at the end of the ${part.container} block.`;
+}
+
+/**
  * A button and a menu — not a native <select>: on Windows and in Firefox the arrow keys fire
  * `change` on a closed select, which would insert a block per keypress. Arrow keys move, Enter
  * inserts, Escape closes; focus returns to the button.
@@ -108,14 +128,24 @@ function AddBlock() {
   const getPuck = useGetPuck();
   const groups = useMemo(() => blockMenu(docKey, layout, present), [docKey, layout, present]);
   const [open, setOpen] = useState(false);
-  const [afterSelected, setAfterSelected] = useState(false);
+  const [hints, setHints] = useState<{ block: string; part: string | null }>({ block: '', part: null });
   const button = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);
   const id = domId(useId());
 
   const items = () => [...(menu.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])];
   const show = () => {
-    setAfterSelected(getPuck().appState.ui.itemSelector !== null);
+    const api = getPuck() as unknown as InsertApi;
+    const selected = api.appState.ui.itemSelector;
+    const firstPart = groups.find((g) => g.category === 'part')?.blocks[0]?.name;
+    let part: string | null = null;
+    if (firstPart) {
+      // Every part of a family lands in the same place; one stands for the group.
+      const target = insertTarget(api, firstPart);
+      const owner = target.nested ? api.getItemById(target.zone.slice(0, target.zone.lastIndexOf(':'))) : undefined;
+      part = addBlockHint(target, selected, { container: owner ? blockDef(owner.type)?.label ?? null : null });
+    }
+    setHints({ block: addBlockHint({ zone: ROOT_ZONE, index: -1, nested: false }, selected), part });
     setOpen(true);
   };
   const hide = (refocus: boolean) => {
@@ -176,13 +206,19 @@ function AddBlock() {
       >
         {/* Only menu items may live inside role="menu": the hints sit beside it and describe it. */}
         <p id={`${id}-hint`} className={styles.menuHint}>
-          {groups.length === 0
-            ? 'Nothing more can go on this page.'
-            : afterSelected ? 'Adds after the selected block.' : 'Adds at the end of the page.'}
+          {groups.length === 0 ? 'Nothing more can go on this page.' : hints.block}
         </p>
+        {/* Parts don't follow the page: they land in their container (insert-target.ts). */}
+        {hints.part && <p id={`${id}-part-hint`} className={styles.menuHint}>{hints.part}</p>}
         <div ref={menu} id={`${id}-menu`} role="menu" aria-label="Blocks to add" aria-describedby={`${id}-hint`} onKeyDown={onMenuKey}>
           {groups.map((g) => (
-            <div key={g.category} role="group" aria-labelledby={`${id}-${g.category}`} className={styles.menuGroup}>
+            <div
+              key={g.category}
+              role="group"
+              aria-labelledby={`${id}-${g.category}`}
+              aria-describedby={g.category === 'part' && hints.part ? `${id}-part-hint` : undefined}
+              className={styles.menuGroup}
+            >
               <div id={`${id}-${g.category}`} className={styles.menuGroupTitle}>{g.title}</div>
               {g.blocks.map((b) => (
                 <button key={b.name} type="button" role="menuitem" tabIndex={-1} className={styles.menuItem} data-block={b.name} onClick={() => insert(b.name)}>
@@ -419,6 +455,40 @@ export function PreviewAsControls() {
   );
 }
 
+/**
+ * "Preview with" (spec §11): the product the product page, the sheet and the card designer show.
+ * Shown on the `product` and card docs only; the options are the live catalogue, or the built-in
+ * sample while it is empty. Mounted only there, so no other page reads the catalogue for it.
+ */
+export function PreviewProductPicker() {
+  const docKey = useEditorStore((s) => s.docKey);
+  if (docKey !== 'product' && !isCardKey(docKey)) return null;
+  return <PreviewProductSelect />;
+}
+
+function PreviewProductSelect() {
+  const { data } = useCatalog();
+  const current = usePreviewProduct();
+  const products = data?.products ?? [];
+  return (
+    <label className={styles.previewAs}>
+      <span className={styles.caption}>Preview with</span>
+      <select
+        aria-label="Preview with"
+        style={{ maxInlineSize: '16rem' }}
+        value={String(current.id)}
+        onChange={(e) => useEditorStore.getState().setPreviewProduct(Number(e.target.value))}
+      >
+        {products.length === 0 ? (
+          <option value={String(FIXTURE_PRODUCT.id)}>{`${FIXTURE_PRODUCT.displayName} (sample)`}</option>
+        ) : (
+          products.map((p) => <option key={p.id} value={String(p.id)}>{p.displayName}</option>)
+        )}
+      </select>
+    </label>
+  );
+}
+
 // ── reset / delete ───────────────────────────────────────────────────────────
 
 /** Reset a fixed page (or delete a custom one); the canvas remounts, so focus goes to the Page picker. */
@@ -573,7 +643,7 @@ function IssuesMenu() {
                       <WarnIcon />
                       <span className={styles.panelItemBody}>
                         <span className={styles.panelWhere}>
-                          <span>{docLabel(issue.docKey, docs)}</span>
+                          <span>{docLabel(issue.docKey, docs, layout)}</span>
                           {part && <span className={styles.panelPart}>{part}</span>}
                         </span>
                         <span>{issue.message}</span>
@@ -685,6 +755,7 @@ export function EditorHeader(_props: { actions: ReactNode; children: ReactNode }
       <div className={styles.group}>
         <ViewportToggle />
         <PreviewAsControls />
+        <PreviewProductPicker />
       </div>
       <div className={`${styles.group} ${styles.groupEnd}`}>
         <ResetPage key={docKey} />

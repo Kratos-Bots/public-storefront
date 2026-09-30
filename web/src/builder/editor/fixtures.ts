@@ -4,6 +4,7 @@ import type { PreviewAs } from '@/builder/mode.ts';
 import type { LocalLine } from '@/stores/cart.ts';
 import type { SessionCustomer } from '@/stores/session.ts';
 import type { ServerCart } from '@/types/cart.ts';
+import type { Product } from '@/types/catalog.ts';
 import type { Quote } from '@/types/checkout.ts';
 import type { OrderDetail, OrderSummary } from '@/types/orders.ts';
 import type { Profile, RedeemOptions } from '@/types/profile.ts';
@@ -13,6 +14,20 @@ export const FIXTURE_TOKEN = 'sf-builder-fixture-token';
 export const FIXTURE_CUSTOMER: SessionCustomer = { id: 900001, nickname: 'Morgan' };
 export const FIXTURE_ORDER_REF = 'NB0977';
 export const FIXTURE_ACCESS_KEY = 'preview';
+
+/**
+ * "Preview with" when the catalogue is empty (spec §11): the product the product page, the sheet
+ * and the card designer show. No photo, so nothing is fetched for it.
+ */
+export const FIXTURE_PRODUCT: Product = {
+  id: 900201, sku: 'NB-TO-01', name: 'Northbound Trail Oats 1kg', displayName: 'Northbound Trail Oats 1kg', shortDisplayName: null,
+  description: 'Rolled jumbo oats, milled slow and packed the same week. A kilo is about twenty trail breakfasts.',
+  categoryId: null, categoryName: null, sortOrder: 0, price: 12, inStock: true, lowStockAlert: false, isActive: true,
+  isPreorder: false, preorderEta: null, pricingTiers: [{ id: 1, minQuantity: 5, price: 10.5 }], upsellProductIds: [],
+  excludedFromFreeShipping: false, imageProductId: null,
+  provenance: 'Grown and milled by Northbound Supply partners; packed at shop.example.',
+  minOrderQuantity: null, maxOrderQuantity: null,
+};
 
 export const FIXTURE_CART_LINES: LocalLine[] = [
   {

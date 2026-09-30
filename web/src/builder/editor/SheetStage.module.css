@@ -1,0 +1,62 @@
+/*
+ * The menu / web-app product sheet on the editor canvas (spec §11). The sheet itself wears the
+ * shop's own sheet chrome (components/Sheet.module.css, ProductDetailSheet.module.css) so it reads
+ * exactly as shoppers see it; only the ground it floats over and the caption under it belong to
+ * the editor, and use the neutral --sfb-* tokens.
+ */
+
+.stage {
+  --sfb-ink: #1d2433;
+  --sfb-paper: rgb(255 255 255 / 0.94);
+  --sfb-radius: 6px;
+  --sfb-backdrop: rgb(29 36 51 / 0.35);
+
+  box-sizing: border-box;
+  min-block-size: 100%;
+  padding: 24px 16px 32px;
+  /* The catalogue the real sheet slides over, dimmed as its overlay dims it. */
+  background: var(--sfb-backdrop);
+}
+
+/* Beats Sheet.module.css's .content at every width: on the canvas the sheet is a free-standing
+   column, not a drawer glued to one edge of the viewport. */
+.stage .sheet {
+  box-sizing: border-box;
+  inline-size: min(420px, 100%);
+  margin-inline: auto;
+  border: 1px solid var(--sf-line-strong);
+  border-radius: 16px 16px 0 0;
+  overflow: clip;
+}
+
+/* The copies stay put while the document scrolls between them, as the real sheet's do. */
+.head {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--sf-bg-deep);
+}
+
+.foot {
+  position: sticky;
+  inset-block-end: 0;
+  z-index: 1;
+}
+
+/* A label on the editor's own paper, so it reads the same over every template's ground. */
+.caption {
+  box-sizing: border-box;
+  inline-size: fit-content;
+  max-inline-size: min(420px, 100%);
+  margin: 12px auto 0;
+  padding: 6px 10px;
+  border-radius: var(--sfb-radius);
+  background: var(--sfb-paper);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 12px;
+  line-height: 1.45;
+  text-align: center;
+  color: var(--sfb-ink);
+}

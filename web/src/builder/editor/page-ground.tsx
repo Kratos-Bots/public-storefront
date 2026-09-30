@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { DocKey, LayoutKind } from '@/builder/types.ts';
+import { SheetStage } from '@/builder/editor/SheetStage.tsx';
 import styles from '@/builder/editor/PageGround.module.css';
 
 /**
@@ -12,6 +13,10 @@ import styles from '@/builder/editor/PageGround.module.css';
  * `data-sf-builder-canvas` scopes the resting marks and the link lock (fixture-routes.tsx).
  */
 export function PageGround({ docKey, layout, children }: { docKey: DocKey; layout: LayoutKind; children: ReactNode }) {
+  // The menu / web-app product doc is the sheet's body, not a page: the sheet stage frames it (spec §11).
+  if (docKey === 'product' && layout !== 'storefront') {
+    return <div data-sf-builder-canvas="" className={styles.ground} data-layout={layout}><SheetStage>{children}</SheetStage></div>;
+  }
   return (
     <div data-sf-builder-canvas="" className={styles.ground} data-layout={layout}>
       {docKey === 'shell' ? children : <div className={styles.column} data-sf-builder-column="">{children}</div>}
