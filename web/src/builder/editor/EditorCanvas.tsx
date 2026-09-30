@@ -21,6 +21,8 @@ import { PUCK_VIEWPORTS } from '@/builder/editor/viewports.ts';
 import { CanvasTextScope } from '@/builder/editor/text/scope.tsx';
 import { usePublishedTextSync } from '@/builder/editor/text/hooks.ts';
 import { initialPanels } from '@/builder/editor/panels.ts';
+import { TEXT_PLUGIN } from '@/builder/editor/text/plugin.tsx';
+import { FieldsWithText } from '@/builder/editor/text/BlockText.tsx';
 import styles from '@/builder/editor/Editor.module.css';
 
 function BlockOverlay({ children, componentId, componentType }: { children: ReactNode; hover: boolean; isSelected: boolean; componentId: string; componentType: string }) {
@@ -41,7 +43,9 @@ function BlockOverlay({ children, componentId, componentType }: { children: Reac
   );
 }
 
-const OVERRIDES: Partial<Overrides> = { header: EditorHeader, componentOverlay: BlockOverlay };
+const OVERRIDES: Partial<Overrides> = { header: EditorHeader, componentOverlay: BlockOverlay, fields: FieldsWithText };
+// Module constant: a new array per render would rebuild Puck's plugin rail every time.
+const PLUGINS = [TEXT_PLUGIN];
 // The canvas always fills the frame; the admin sizes the frame (sf-builder-viewport). Puck's own
 // viewport controls stay hidden so there is one width control, in our header.
 const INITIAL_UI: Partial<UiState> = {
@@ -204,6 +208,7 @@ export function EditorCanvas() {
             viewports={PUCK_VIEWPORTS}
             ui={ui}
             overrides={OVERRIDES}
+            plugins={PLUGINS}
             height="100dvh"
           />
         </CanvasTextScope>

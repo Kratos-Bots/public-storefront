@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
 import { setPuckHistorySource, useEditorStore } from '@/builder/editor/store.ts';
 import { usePuck, useGetPuck } from '@/builder/editor/use-puck.ts';
 import { useHints, useIssues, useLockedPresent } from '@/builder/editor/use-issues.ts';
@@ -14,6 +14,8 @@ import { rememberPanel, shouldAutoCloseBlocks, WIDE_FRAME_QUERY } from '@/builde
 import { CheckIcon, PanelLeftIcon, PanelRightIcon, PlusIcon, RedoIcon, TextIcon, TipIcon, UndoIcon, WarnIcon } from '@/builder/editor/icons.tsx';
 import { useTextIssues } from '@/builder/editor/text/hooks.ts';
 import { useTextUi } from '@/builder/editor/text/ui-store.ts';
+import { TextOverlay } from '@/builder/editor/text/TextOverlay.tsx';
+import { useWideFrame } from '@/builder/editor/text/plugin.tsx';
 import { puckHistoryView, redoStep, setAnchorSource, undoStep } from '@/builder/editor/text/history.ts';
 import { rowFor } from '@/builder/editor/text/catalog.ts';
 import { blockDef } from '@/builder/rules.ts';
@@ -270,14 +272,49 @@ function History() {
 }
 
 /** Opens the Text panel (every wording on the site); pressed while it shows. */
-function TextButton() {
+function TextButton({ buttonRef }: { buttonRef: RefObject<HTMLButtonElement | null> }) {
   const open = useTextUi((s) => s.open);
   return (
-    <button type="button" className={styles.button} aria-pressed={open} onClick={() => (open ? useTextUi.getState().hide() : useTextUi.getState().show())}>
+    <button ref={buttonRef} type="button" className={styles.button} aria-pressed={open} onClick={() => (open ? useTextUi.getState().hide() : useTextUi.getState().show())}>
       <TextIcon />
       Text
     </button>
   );
+}
+
+/**
+ * Wide: the Text panel is Puck's `text` sidebar tab. Narrow: an overlay. Keeps the two in step
+ * (spec §7.2): opening shows the tab, closing returns to Blocks; picking another rail tab or
+ * hiding the left sidebar closes the panel.
+ */
+export function useTextPanelPlacement(): { overlay: boolean } {
+  const wide = useWideFrame();
+  const open = useTextUi((s) => s.open);
+  const dispatch = usePuck((s) => s.dispatch);
+  const current = usePuck((s) => s.appState.ui.plugin?.current ?? null);
+  const leftVisible = usePuck((s) => s.appState.ui.leftSideBarVisible);
+  useEffect(() => {
+    if (!wide) {
+      // Narrowed while the tab showed: its body is empty below the wide width, so give Blocks back.
+      if (current === 'text') dispatch({ type: 'setUi', ui: { plugin: { current: 'blocks' } }, recordHistory: false });
+      return;
+    }
+    if (open && (current !== 'text' || !leftVisible)) {
+      dispatch({ type: 'setUi', ui: { plugin: { current: 'text' }, leftSideBarVisible: true }, recordHistory: false });
+    } else if (!open && current === 'text') {
+      dispatch({ type: 'setUi', ui: { plugin: { current: 'blocks' } }, recordHistory: false });
+    }
+    // Only when the owner asks (open changes) or the width class flips.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, wide]);
+  useEffect(() => {
+    if (!wide) return;
+    const ui = useTextUi.getState();
+    const showing = current === 'text' && leftVisible;
+    if (showing && !ui.open) ui.show();
+    if (!showing && ui.open) ui.hide();
+  }, [current, leftVisible, wide]);
+  return { overlay: open && !wide };
 }
 
 /**
@@ -611,7 +648,11 @@ function useLiveCanvas() {
 export function EditorHeader(_props: { actions: ReactNode; children: ReactNode }) {
   const docKey = useEditorStore((s) => s.docKey);
   useLiveCanvas();
+  const { overlay } = useTextPanelPlacement();
+  const textButton = useRef<HTMLButtonElement>(null);
+  const closeOverlay = useCallback(() => { useTextUi.getState().hide(); textButton.current?.focus(); }, []);
   return (
+    <>
     <header className={styles.bar} data-sf-builder-header="">
       <div className={styles.group}>
         <PagePicker />
@@ -619,7 +660,7 @@ export function EditorHeader(_props: { actions: ReactNode; children: ReactNode }
       </div>
       <div className={styles.group}>
         <AddBlock />
-        <TextButton />
+        <TextButton buttonRef={textButton} />
         <History />
         <PanelToggles />
       </div>
@@ -632,5 +673,7 @@ export function EditorHeader(_props: { actions: ReactNode; children: ReactNode }
         <IssuesMenu />
       </div>
     </header>
+    {overlay && <TextOverlay onClose={closeOverlay} />}
+    </>
   );
 }

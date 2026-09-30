@@ -1,0 +1,55 @@
+import { useId, useMemo, useState, type ReactNode } from 'react';
+import type { UiState } from '@puckeditor/core';
+import { useTemplateContext } from '@/templates/runtime.tsx';
+import { usePuck } from '@/builder/editor/use-puck.ts';
+import { blockTextRows, rowMatches, type TextRowDef } from '@/builder/editor/text/catalog.ts';
+import { useTextUi } from '@/builder/editor/text/ui-store.ts';
+import { TextRow } from '@/builder/editor/text/TextRow.tsx';
+import styles from '@/builder/editor/text/Text.module.css';
+import placement from '@/builder/editor/text/TextPlacement.module.css';
+
+/** Above this many lines the block's section gets its own search and a way into the full panel. */
+export const BLOCK_TEXT_SEARCH_OVER = 20;
+
+/** Puck does not export ItemSelector; this is the same type. */
+type ItemSelector = NonNullable<UiState['itemSelector']>;
+
+/** Puck `overrides.fields`: the block's own fields, then the text it shows (spec §7.3). */
+export function FieldsWithText({ children }: { children: ReactNode; isLoading: boolean; itemSelector?: ItemSelector | null }) {
+  const type = usePuck((s) => s.selectedItem?.type ?? null);
+  const templateId = useTemplateContext().resolved?.templateId ?? 'modern';
+  const rows = useMemo(() => (type ? blockTextRows(type, templateId) : []), [type, templateId]);
+  return (
+    <>
+      {children}
+      {rows.length > 0 && <BlockTextSection key={type} rows={rows} />}
+    </>
+  );
+}
+
+function BlockTextSection({ rows }: { rows: readonly TextRowDef[] }) {
+  const id = useId().replace(/[^A-Za-z0-9_-]/g, '');
+  const [query, setQuery] = useState('');
+  const many = rows.length > BLOCK_TEXT_SEARCH_OVER;
+  const shown = many ? rows.filter((r) => rowMatches(r, query)) : rows;
+  return (
+    <section className={`${styles.root} ${placement.blockText}`} data-sfb-text="" data-sfb-block-text="" aria-labelledby={`${id}-t`}>
+      <h3 id={`${id}-t`} className={placement.blockTitle}>Text in this block</h3>
+      {many && (
+        <div className={styles.tools}>
+          <input
+            type="search"
+            className={styles.search}
+            aria-label="Search this block’s text"
+            placeholder="Search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <button type="button" className={styles.reset} onClick={() => useTextUi.getState().show({ query })}>Open in Text panel</button>
+        </div>
+      )}
+      {many && shown.length === 0 && <p className={styles.empty}>No lines match.</p>}
+      {shown.map((r) => <TextRow key={r.key} row={r} compact />)}
+    </section>
+  );
+}
