@@ -7,7 +7,7 @@ import { EmptyState } from '@/components/EmptyState.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { Money } from '@/components/Money.tsx';
 import { errorMessage } from '@/lib/errors.ts';
-import { formatMoney } from '@/lib/format.ts';
+import { formatInteger, formatMoney } from '@/lib/format.ts';
 import { redeem } from '@/api/profile.ts';
 import {
   PROFILE_KEY,
@@ -46,7 +46,7 @@ export function LoyaltyPage() {
     onSuccess: async (result) => {
       setConfirming(null);
       notifications.show({
-        message: `${formatMoney(result.creditAwarded, currency)} credit added — you now have ${result.newPointsBalance.toLocaleString()} points and ${formatMoney(result.newCreditBalance, currency)} in credit.`,
+        message: `${formatMoney(result.creditAwarded, currency)} credit added — you now have ${formatInteger(result.newPointsBalance)} points and ${formatMoney(result.newCreditBalance, currency)} in credit.`,
       });
       await Promise.all([
         client.invalidateQueries({ queryKey: PROFILE_KEY }),
@@ -83,7 +83,7 @@ export function LoyaltyPage() {
   return (
     <div className={classes.body}>
       <div className={classes.meter}>
-        <span className={classes.meterFigure}>{profile.data.loyaltyPoints.toLocaleString()}</span>
+        <span className={classes.meterFigure}>{formatInteger(profile.data.loyaltyPoints)}</span>
         <span className={classes.meterUnit}>Points</span>
       </div>
 
@@ -117,7 +117,7 @@ export function LoyaltyPage() {
                     <div className={classes.optionHead}>
                       <span className={classes.optionLabel}>{option.label}</span>
                       <span className={classes.optionCost}>
-                        {option.pointsCost.toLocaleString()} pts
+                        {formatInteger(option.pointsCost)} pts
                       </span>
                     </div>
 
@@ -136,7 +136,7 @@ export function LoyaltyPage() {
                       <span className={classes.shortfall}>
                         {option.affordable
                           ? `Worth ${formatMoney(option.creditValue, currency)}`
-                          : `${(option.pointsCost - points).toLocaleString()} points to go`}
+                          : `${formatInteger(option.pointsCost - points)} points to go`}
                       </span>
                       <button
                         type="button"
@@ -171,7 +171,7 @@ export function LoyaltyPage() {
         {confirming ? (
           <>
             <p className={classes.modalBody}>
-              {confirming.label} costs {confirming.pointsCost.toLocaleString()} points, and adds{' '}
+              {confirming.label} costs {formatInteger(confirming.pointsCost)} points, and adds{' '}
               {formatMoney(confirming.creditValue, currency)} of credit to your account. Credit is
               spent at checkout.
             </p>

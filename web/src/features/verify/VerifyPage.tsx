@@ -6,6 +6,7 @@ import { verifyProductUnit } from '@/api/verify.ts';
 import type { VerificationResult } from '@/api/verify.ts';
 import { ContactLinks } from '@/components/ContactLinks.tsx';
 import { CheckIcon } from '@/components/icons.tsx';
+import { dateTimeFormat } from '@/lib/format.ts';
 import { FADE } from '@/lib/motion.ts';
 import classes from '@/features/verify/VerifyPage.module.css';
 
@@ -20,11 +21,9 @@ type FieldErrors = { verificationCode?: string; authCode?: string };
 // Deliberately its own format, not `lib/format.ts`'s `formatDate`: a
 // certificate reads as data (2-digit day, short month), not prose, and a
 // dash beats an empty cell when a date can't be parsed at all.
-const dateFmt = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-
 function formatDate(iso: string): string {
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? '—' : dateFmt.format(d);
+  return Number.isNaN(d.getTime()) ? '—' : dateTimeFormat('date', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
 }
 
 /**

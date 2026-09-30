@@ -1,16 +1,26 @@
 import { Field, SelectField } from '@/features/checkout/Field.tsx';
-import { regionName } from '@/features/checkout/CountrySelect.tsx';
 import { DIAL_CODES } from '@/lib/dial-codes.ts';
+import { compareNames, getFormatProfile, regionName } from '@/lib/format.ts';
 import classes from '@/features/checkout/Fields.module.css';
 
 /**
  * Every dial code, not just the shop's shipping countries — a shopper's phone
  * country and their delivery country are independent (expats, gifts, forwarding
- * addresses). Built once at module load; the list never changes.
+ * addresses). Memoised per format-profile locale; the list itself never changes.
  */
-const PREFIX_OPTIONS = Object.entries(DIAL_CODES)
-  .map(([iso, dial]) => ({ iso, name: regionName(iso), dial }))
-  .sort((a, b) => a.name.localeCompare(b.name));
+type PrefixOption = { iso: string; name: string; dial: string };
+const prefixByLocale = new Map<string, PrefixOption[]>();
+export function prefixOptions(): PrefixOption[] {
+  const k = (getFormatProfile().regions ?? []).join(',');
+  let list = prefixByLocale.get(k);
+  if (!list) {
+    list = Object.entries(DIAL_CODES)
+      .map(([iso, dial]) => ({ iso, name: regionName(iso), dial }))
+      .sort((a, b) => compareNames(a.name, b.name));
+    prefixByLocale.set(k, list);
+  }
+  return list;
+}
 
 export interface PhoneFieldProps {
   /** ISO-3166-1 alpha-2 the dial-code picker is set to. */
@@ -41,7 +51,7 @@ export function PhoneField({
       <div className={classes.phoneCode}>
         <SelectField label="Phone country code" labelText="Code" value={prefix} onChange={onPrefixChange}>
           <option value="">Code</option>
-          {PREFIX_OPTIONS.map((o) => (
+          {prefixOptions().map((o) => (
             <option key={o.iso} value={o.iso}>
               {o.name} +{o.dial}
             </option>

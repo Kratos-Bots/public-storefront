@@ -1,3 +1,4 @@
+import { dateTimeFormat } from '@/lib/format.ts';
 import type { ParcelTracking, TrackedEvent, TrackedParcel } from '@/types/tracking.ts';
 
 // Ported from `ecommerce-menu/web/src/features/tracking/status.ts`. The stage
@@ -138,13 +139,11 @@ export function partitionEvents(events: TrackedEvent[]): {
 // Time
 // ------------------------------------------------------------------
 
-const stampFmt = new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
-
 /** Null-safe: occurredAt is nullable on every event. */
 export function formatStamp(iso: string | null): string {
   if (!iso) return 'Date unknown';
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? 'Date unknown' : stampFmt.format(d);
+  return Number.isNaN(d.getTime()) ? 'Date unknown' : dateTimeFormat('date', { dateStyle: 'medium', timeStyle: 'short' }).format(d);
 }
 
 /** "just now" / "12 min ago" / "2h ago" / "3 days ago". Empty string for null. */
