@@ -22,7 +22,7 @@ describe('text model', () => {
     expect(normalizeValue({ one: '', other: '' })).toBeNull();
     expect(normalizeValue({ other: '{count} items', one: '' })).toEqual({ other: '{count} items' });
     expect(Object.keys(normalizeValue({ other: 'x', one: 'y', few: 'z' }) as object)).toEqual(['one', 'few', 'other']);
-    expect(normalizeValue({ one: '1 item' } as never)).toEqual({ one: '1 item' });
+    expect(normalizeValue({ one: '1 item' })).toEqual({ one: '1 item' });
   });
 
   it('withValue sets, replaces and resets, dropping empty locale maps; unchanged returns the same object', () => {
@@ -54,6 +54,10 @@ describe('text model', () => {
     expect(isPostable({ other: 'x', lots: 'y' })).toBe(false);
     expect(isPostable({ other: '' })).toBe(false);
     expect(isPostable(42)).toBe(false);
+    const six = (p: string) => Array.from({ length: 6 }, (_, i) => `{${p}${i}}`).join(' ');
+    expect(isPostable({ one: six('a'), other: six('b') })).toBe(false);
+    expect(isPostable({ one: six('a'), other: six('a') })).toBe(true);
+    expect(isPostable({ other: 5 })).toBe(false);
   });
 
   it('postable docs leave out what the backend would refuse, and keep other locales', () => {
@@ -66,6 +70,15 @@ describe('text model', () => {
     expect(postablePageText({ strings: { en: { 'a.b': '{' } } })).toBeUndefined();
     expect(postablePageText({ strings: { en: { 'a.b': 'Ok' } } })).toEqual({ strings: { en: { 'a.b': 'Ok' } } });
     expect(hasStrings({ en: {} })).toBe(false);
+  });
+
+  it('treats prototype-ish keys as data', () => {
+    const s = { en: { a: 'x' } };
+    expect(withValue(s, 'en', 'constructor', null)).toBe(s);
+    expect(withValue(s, 'constructor', 'a.b', null)).toBe(s);
+    const j = JSON.parse('{"en":{"__proto__":"x"}}');
+    expect(Object.keys(withValue(j, 'en', 'a.b', 'y').en)).toEqual(['__proto__', 'a.b']);
+    expect(Object.keys(postableSiteText({ schemaVersion: 1, language: { locale: 'en', formatLocale: '' }, strings: j }).strings.en)).toEqual(['__proto__']);
   });
 
   it('valueStrings flattens a value for search', () => {
