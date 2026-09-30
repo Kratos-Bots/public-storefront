@@ -357,7 +357,7 @@ describe('editor store: stale text edits across a load', () => {
     expect(S().setLanguage({ locale: 'de' }, null, S().loadEpoch)).toBe(true);
   });
 
-  it('a failed published read belongs to its load: an earlier load's is ignored, a new load clears it', () => {
+  it('a failed published read belongs to its load: an earlier load’s is ignored, a new load clears it', () => {
     S().load({ layout: 'storefront', pageSet: null, readOnly: false });
     const first = S().loadEpoch;
     S().setPublishedFailed(first);
