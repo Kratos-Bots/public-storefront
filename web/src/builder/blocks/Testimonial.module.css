@@ -15,9 +15,9 @@
 .quote p {
   margin: 0;
   font-family: var(--sf-font-heading);
-  font-size: 1.125rem;
+  font-size: calc(1.125rem * var(--sf-text-scale, 1));
   line-height: 1.45;
-  color: var(--sf-text);
+  color: var(--sf-block-fg, var(--sf-text));
   overflow-wrap: anywhere;
 }
 
@@ -27,9 +27,13 @@
   gap: 0.25rem 0.75rem;
   margin-top: 0.9rem;
   font-family: var(--sf-font-mono);
-  font-size: 10px;
+  font-size: calc(10px * var(--sf-text-scale, 1));
   letter-spacing: 0.22em;
   text-transform: uppercase;
 }
-.author { color: var(--sf-text); }
+.author { color: var(--sf-block-fg, var(--sf-text)); }
 .detail { color: var(--sf-faint); }
+
+/* An owner's Alignment (block style) reaches the flex byline too. */
+.card[data-sfs-align='center'] .by { justify-content: center; }
+.card[data-sfs-align='end'] .by { justify-content: flex-end; }

@@ -9,8 +9,8 @@
   font-weight: var(--sf-heading-weight);
   letter-spacing: var(--sf-heading-tracking);
   text-transform: var(--sf-heading-transform);
-  font-size: clamp(1.2rem, 1.05rem + 0.7vw, 1.6rem);
-  color: var(--sf-text);
+  font-size: calc(clamp(1.2rem, 1.05rem + 0.7vw, 1.6rem) * var(--sf-text-scale, 1));
+  color: var(--sf-block-fg, var(--sf-text));
 }
 
 .item {
@@ -30,7 +30,8 @@
   cursor: pointer;
   list-style: none;
   font-weight: 600;
-  color: var(--sf-text);
+  font-size: calc(1em * var(--sf-text-scale, 1));
+  color: var(--sf-block-fg, var(--sf-text));
   overflow-wrap: anywhere;
 }
 .q::-webkit-details-marker { display: none; }
@@ -51,6 +52,7 @@
 .a {
   padding-bottom: 1rem;
   color: var(--sf-muted);
+  font-size: calc(1em * var(--sf-text-scale, 1));
   line-height: 1.65;
   overflow-wrap: anywhere;
 }

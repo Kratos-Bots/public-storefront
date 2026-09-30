@@ -31,12 +31,12 @@
   min-width: 44px;
   padding: 0 0.6rem;
   font-family: var(--sf-font-mono);
-  font-size: 10px;
+  font-size: calc(10px * var(--sf-text-scale, 1));
   font-weight: 500;
   letter-spacing: 0.22em;
   text-transform: uppercase;
   white-space: nowrap;
-  color: var(--sf-muted);
+  color: var(--sf-block-fg, var(--sf-muted));
   text-decoration: none;
   border-radius: var(--sf-card-radius);
   transition: color 120ms ease, background-color 120ms ease;
@@ -54,3 +54,9 @@
 @media (prefers-reduced-motion: reduce) {
   .link { transition: none; }
 }
+
+/* An owner's Alignment (block style) moves the links, not just their text. */
+.nav[data-sfs-align='center'] .list { justify-content: center; }
+.nav[data-sfs-align='end'] .list { justify-content: flex-end; }
+.column[data-sfs-align='center'] .list { align-items: center; }
+.column[data-sfs-align='end'] .list { align-items: flex-end; }

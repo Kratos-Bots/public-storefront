@@ -1,8 +1,8 @@
 .prose {
   min-width: 0;
   padding-block: 0.5rem;
-  color: var(--sf-muted);
-  font-size: 0.9375rem;
+  color: var(--sf-block-fg, var(--sf-muted));
+  font-size: calc(0.9375rem * var(--sf-text-scale, 1));
   line-height: 1.65;
   overflow-wrap: anywhere;
 }
@@ -21,12 +21,12 @@
   font-weight: var(--sf-heading-weight);
   letter-spacing: var(--sf-heading-tracking);
   text-transform: var(--sf-heading-transform);
-  color: var(--sf-text);
+  color: var(--sf-block-fg, var(--sf-text));
   line-height: 1.25;
 }
 
 .prose :where(strong) {
-  color: var(--sf-text);
+  color: var(--sf-block-fg, var(--sf-text));
 }
 
 .prose :where(a) {
