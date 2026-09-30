@@ -51,11 +51,11 @@ export interface BlockDef<P extends Record<string, unknown>> {
   /** Owner props that fall back to a site-text key when blank: render uses `prop.trim() || t(key)` (text spec §6.4). */
   textProps?: Partial<Record<keyof P & string, StringKey>>;
   /**
-   * Which `blockStyle` keys the block accepts and where they land (block-styling spec §4): `root` (its
-   * own root element), `wrap` (a div renderBlock adds), `pass` (forwarded to a named inner element).
-   * `false` = not stylable. Keys may be added in a later release, never removed.
+   * Required: which `blockStyle` keys the block accepts and where they land (block-styling spec §4):
+   * `root` (its own root element), `wrap` (a div renderBlock adds), `pass` (forwarded to a named inner
+   * element). `false` = not stylable. Keys may be added in a later release, never removed.
    */
-  style?: StyleSupport | false;
+  style: StyleSupport | false;
 }
 
 export function defineBlock<P extends Record<string, unknown>>(def: BlockDef<P>): BlockDef<P> {
@@ -128,7 +128,7 @@ function parseSchemaProps(def: BlockDef<any>, raw: Record<string, unknown>, fall
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function parseBlockPropsDetailed(def: BlockDef<any>, raw: Record<string, unknown>, fallback: FieldFallback = 'neutral'): ParsedBlockProps {
   const base = parseSchemaProps(def, raw, fallback);
-  const styled = parseBlockStyle(def.style ?? false, raw.blockStyle);
+  const styled = parseBlockStyle(def.style, raw.blockStyle);
   if (!styled.style && styled.issues.length === 0) return base;
   return {
     props: styled.style ? { ...base.props, blockStyle: styled.style } : base.props,

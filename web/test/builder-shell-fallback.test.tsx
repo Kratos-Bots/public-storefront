@@ -26,6 +26,7 @@ vi.mock('@/builder/blocks/ContactStrip.tsx', async () => {
   const { defineBlock } = await import('@/builder/define.ts');
   return {
     block: defineBlock<{ id: string }>({
+      style: false,
       name: 'ContactStrip', label: 'Contact strip', category: 'shell', layouts: 'all', routeBound: true, slots: [],
       schema: z.object({}), defaultProps: {},
       render: ({ id }) => {

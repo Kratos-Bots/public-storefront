@@ -14,8 +14,8 @@ vi.mock('@/builder/registry.ts', async () => {
   const { defineBlock } = await import('@/builder/define.ts');
   return {
     BLOCKS: {
-      Text: defineBlock<{ id: string; text: string }>({ name: 'Text', label: 'Text', category: 'content', layouts: 'all', routeBound: false, slots: [], schema: z.object({ text: z.string() }), defaultProps: { text: '' }, render: ({ text }) => <p>{text}</p> }),
-      CheckoutFlow: defineBlock<{ id: string }>({ name: 'CheckoutFlow', label: 'Checkout flow', category: 'commerce', layouts: 'all', routeBound: true, slots: [], schema: z.object({}), defaultProps: {}, render: () => <p>checkout flow</p> }),
+      Text: defineBlock<{ id: string; text: string }>({ style: false, name: 'Text', label: 'Text', category: 'content', layouts: 'all', routeBound: false, slots: [], schema: z.object({ text: z.string() }), defaultProps: { text: '' }, render: ({ text }) => <p>{text}</p> }),
+      CheckoutFlow: defineBlock<{ id: string }>({ style: false, name: 'CheckoutFlow', label: 'Checkout flow', category: 'commerce', layouts: 'all', routeBound: true, slots: [], schema: z.object({}), defaultProps: {}, render: () => <p>checkout flow</p> }),
     },
   };
 });

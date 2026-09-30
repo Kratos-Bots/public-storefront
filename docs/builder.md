@@ -102,7 +102,9 @@ chromeless frame (`Chromeless`: brand header only, no shell) instead.
   `SlotRender` function: called with no argument it renders the children with no wrapper; pass
   `{ className, style, as }` to get one wrapper element. Slots are declared as required arrays.
 - `schema` (zod, every prop except `id`) and `defaultProps`.
-- `render(props & { puck: { editing, docKey, layout } })`.
+- `render(props & { puck: { editing, docKey, layout, style? } })`.
+- `style` (**required**): `false`, or `{ target: 'root' | 'wrap' | 'pass', keys }` — see *Block
+  styling*. Build it with `styleSupport(target, include, exclude)` from `@/builder/style/model.ts`.
 
 Conventions:
 
@@ -342,6 +344,165 @@ uses `prop.trim() || t(key)`).
 3. Make sure a block's `text` (or `SITE_WIDE_TEXT`) covers it.
 4. Run `npm --prefix web test -- test/text-guard.test.ts test/text-registry.test.ts test/text-snapshot-guard.test.ts`.
 
+## Block styling
+
+Owners can give most blocks a background, spacing, a border, corners, a shadow, a text colour and
+size, alignment, a maximum width, or hide them on phones or on desktop. Everything is a token or a
+step on the app's fixed scale — never a raw colour or length — so a template or preset switch
+restyles styled blocks in the new template's voice.
+
+### The `blockStyle` prop
+
+A component stores it beside its other props (`style/model.ts`, runtime-safe):
+
+```json
+{ "type": "Heading", "props": { "id": "h-1", "text": "Wholesale enquiries", "level": "h2",
+  "blockStyle": { "bg": "surface-2", "padTop": "lg", "padBottom": "lg", "radius": "card" } } }
+```
+
+| Key | Values |
+|---|---|
+| `bg`, `fg`, `borderColor` | a palette token: `bg bg-deep surface surface-2 surface-3 line line-strong text muted faint primary primary-soft success warn danger` |
+| `padTop`, `padBottom`, `padX`, `marginTop`, `marginBottom` | the `SPACING` scale: `none xs sm md lg xl` |
+| `border` | `thin medium thick` |
+| `borderStyle` | `solid dashed dotted` |
+| `radius` | `none sm md lg card pill` |
+| `shadow` | `card raised` |
+| `textSize` | `sm lg xl` |
+| `align` | `start center end` |
+| `maxWidth` | `narrow text wide` |
+| `hide` | `mobile desktop` |
+
+- **Absent means the template default.** An absent `blockStyle`, `{}` and "every key absent" render
+  identically (nothing added). The editor and the guard never write `{}` — an empty result removes
+  the prop.
+- **`none` is a real value** for spacing and radius (zero, overriding the block's own), distinct
+  from absent.
+- `borderColor` / `borderStyle` without `border` are kept but do nothing.
+- `hide` has one value, so "hidden everywhere" cannot be expressed — delete the block instead.
+- Keys are written in the order of the table above (`STYLE_KEY_ORDER`) so diffs stay quiet.
+- `STYLE_KEYS` is mirrored by the backend's `BLOCK_STYLE_VALUES` (`storefront-pages/schemas.ts`) —
+  change both, backend first.
+
+### What each value does
+
+| Key | CSS on the target |
+|---|---|
+| `bg` | `background: var(--sf-<token>)` (replaces a gradient too). Without `padX` it also adds `padding-inline: 1rem`, the inset Section's tinted band uses, so text never touches the tint (not on a part element such as the header). |
+| `fg` | `color: var(--sf-<token>)` and `--sf-block-fg: var(--sf-<token>)` |
+| `padTop` / `padBottom` / `padX` | `padding-block-start` / `padding-block-end` / `padding-inline` = `SPACING[step]` (`none 0, xs .5rem, sm 1rem, md 1.5rem, lg 2.5rem, xl 4rem`) |
+| `marginTop` / `marginBottom` | `margin-block-start` / `margin-block-end` = `SPACING[step]` |
+| `border` | `border: <1px \| 2px \| 4px> var(--sfs-bs, solid) var(--sfs-bc, var(--sf-line))` |
+| `borderColor` / `borderStyle` | set `--sfs-bc` / `--sfs-bs` |
+| `radius` | `none 0`, `sm/md/lg var(--mantine-radius-*)`, `card var(--sf-card-radius)`, `pill var(--sf-pill-radius)`; never clips (`overflow` is never set) |
+| `shadow` | `card var(--sf-card-shadow)`, `raised var(--sf-card-shadow-hover)` |
+| `textSize` | `--sf-text-scale: <.875 \| 1.125 \| 1.25>` |
+| `align` | `text-align`; with `maxWidth` also places the box (`center` → `margin-inline: auto`, `end` → `margin-inline-start: auto`) |
+| `maxWidth` | `max-width: min(<36rem \| 68ch \| 60rem>, 100%)` |
+| `hide` | `display: none !important` below 62em (`mobile`) or from 62em (`desktop`) — the breakpoint of `.sf-hide-mobile` / `.sf-hide-desktop` |
+
+Every styled target also gets `box-sizing: border-box; min-width: 0` and resets `--sfs-bc` /
+`--sfs-bs` to `initial`, so a nested block never inherits its parent's border colour.
+`--sf-block-fg` and `--sf-text-scale` are **meant** to inherit: a Section set to a large text size
+enlarges the Headings and RichText inside it, and a nested block's own setting wins.
+
+**Text blocks read the variables.** A block that offers `fg` / `textSize` and owns its text writes
+`color: var(--sf-block-fg, <token>)` and `font-size: calc(<size> * var(--sf-text-scale, 1))`. Unset,
+both compute to exactly the old values. Secondary text (eyebrows, captions, testimonial detail)
+keeps its own muted colour and only scales. Interactive rows keep `min-height: 44px` whatever the
+scale.
+
+### Targets and per-block support
+
+`BlockDef.style` is required: `false`, or `{ target, keys }`.
+
+- `root` — the block spreads `{...puck.style}` onto the element it owns (spreading `undefined` adds
+  nothing, so the JSX needs no branch).
+- `wrap` — `renderBlock` puts one `<div>` carrying the attributes around the block's render. A wrap
+  block that renders nothing leaves an empty div, which the stylesheet hides (`:empty`).
+- `pass` — as `root`, but the block forwards `puck.style` (as a `styleAttrs` prop) to a named inner
+  element.
+
+Key sets: **BOX** = `bg padTop padBottom padX marginTop marginBottom border borderColor borderStyle
+radius shadow maxWidth`; **TEXT** = `fg textSize align`; **VIS** = `hide`.
+
+| Block | Target | Keys | Why |
+|---|---|---|---|
+| `Section` | root | BOX − `bg padTop padBottom maxWidth` + `textSize align` + VIS | its own background, text colour, padding and width props stay |
+| `Heading` | root | BOX + `fg textSize` + VIS | own `align` |
+| `RichText` | root | BOX − `maxWidth` + TEXT + VIS | own `width` |
+| `Image` | root | BOX − `maxWidth` + VIS | own `width` |
+| `Button` | root | BOX + VIS | own `align`; the label is the template's `button` part |
+| `Divider` | root | `maxWidth align` + VIS | own `spacing` / `toneToken` |
+| `Spacer` | root | VIS | its size is the block |
+| `Columns`, `FAQ`, `Testimonial`, `NavLinks` | root | BOX + TEXT + VIS | |
+| `Video`, `CatalogHero`, `CategoryNav`, `SearchField`, `FeaturedProducts` | root | BOX + VIS | no text controls (template slots; inputs stay 16px) |
+| `Upsells`, `TopBar`, `NoticeBanners`, `CutoffBar`, `Footer` | wrap | BOX + VIS | no single root the block owns |
+| `ContactStrip` | pass → the strip element | BOX + VIS | the strip is `position: sticky; bottom: 0`; a wrapper sized to it would stop it sticking |
+| `Header` | pass → `<header data-sf-part="header">` | `bg shadow` + VIS | a wrapper would end `position: sticky`; padding or a border would change `--sf-bar-h` |
+| The 19 route-bound blocks (`ProductGrid` … `TrackingLookup`) and `AccountNav` | wrap | BOX | never `hide`, never TEXT |
+| `WholesaleTable` (route-bound) | wrap | `bg padTop marginTop marginBottom shadow` | its `WholesaleBar` is a sticky full-bleed band: side padding, bottom padding, borders, corners and a max width would offset or clip it |
+| `PageOutlet` | — | `false` | it is the page: hiding it hides every route, padding doubles `<main>`'s, a wrapper breaks `flex: 1` |
+| `MobileCartBar` | — | `false` | fixed-position; hiding it would remove the phone checkout path |
+
+`CatalogHero` in its `template` variant renders the template's hero slot, which owns no element the
+block can mark: when (and only when) styled it gets one `<div>` carrying the attributes.
+`NavLinks` and `Testimonial` align through `data-sfs-align` rather than an own prop.
+
+**Allowlists only grow.** A later release may add keys to a block, never remove them — removing
+turns stored styles into blocking issues in every store. `test/builder-style-contract.test.tsx`
+pins today's lists as a floor.
+
+### Rendering
+
+`renderBlock` (`style/apply.tsx`) is the only caller of `def.render` — the shop, the exact preview
+and the editor canvas all go through it, so they cannot disagree. `styleAttrs(def, style, editing)`
+re-checks the allowlist and each value (the canvas hands it props the guard never saw) and returns
+`null` when nothing applies; `renderBlock` then makes the exact unstyled call (same `puck` object),
+so an unstyled page's DOM is byte-identical to one built before styling existed. Otherwise it
+emits `data-sf-style="<Block>"` plus one attribute per key: `data-sfs-bg`, `-fg`, `-pt`, `-pb`,
+`-px`, `-mt`, `-mb`, `-border`, `-bc`, `-bs`, `-radius`, `-shadow`, `-text`, `-align`, `-max`, and
+`data-sfs-hide` — or `data-sfs-ghost` on the editor canvas (`editing: true`), where the editor's CSS
+shows a hidden block ghosted at the matching width so it can still be selected. Styling is
+attribute-only; no `className` is ever touched.
+
+### The stylesheet
+
+`style/block-style.css` is **generated** by `renderBlockStyleCss()` (`style/css.ts`) and checked in;
+`test/block-style-css.test.ts` fails when it is stale
+(`UPDATE_BLOCK_STYLE_CSS=1 npm --prefix web test -- test/block-style-css.test.ts` rewrites it). It
+is imported once, in `main.tsx`. Every selector is `:root:root [data-sf-style][data-sfs-<key>="<value>"]`
+— specificity **(0,4,0)**, above module classes and template part rules (0,3,0), so an owner's
+choice is what the shopper sees. It has no transitions or animations.
+
+**Phones.** Below 48em spacing `lg` / `xl` (padding and margins) drop to 1.5rem / 2.5rem, `padX`
+`md`–`xl` to 1rem, `textSize: xl` to 1.125, and a third nested `padX` level to 0. `maxWidth` is
+always `min(…, 100%)`. `hide` uses 62em (the editor labels it "Hide below 992 px" / "Hide from
+992 px").
+
+### Guard and rules
+
+The guard parses `blockStyle` beside the schema (`parseBlockStyle`, called from
+`parseBlockPropsDetailed`): an unknown key drops silently (forward compatibility); a key the block
+does not accept, or a value outside its list, drops with `field:<Block>.blockStyle.<key>`; a
+non-object is `field:<Block>.blockStyle`. Field issues keep the page rendering (the key is just not
+applied) and block Publish.
+
+`hidden-required:<Block>` (see *Rules*) closes the last way `hide` could remove a flow: required
+blocks cannot carry `hide`, and nothing that carries it may hold them. It fires per hidden
+container, even when a visible copy of the required block exists elsewhere, so a mobile-only list
+beside a desktop-only grid is not possible.
+
+### Editor
+
+Every stylable block's fields end with a collapsible **Style** group (`editor/custom-fields/style.tsx`,
+appended last by `blockFields`), built only from the block's allowed keys: colours as the palette
+swatches, spacing as `0 · XS · S · M · L · XL` chips, corners, shadow, text size, alignment, max
+width and visibility. Every row starts at "Default" (absent) with its own reset, **Reset style**
+clears the group in one undo step, and a contrast hint shows under 4.5 : 1. `prepareProps`
+normalises `blockStyle` (unknown / disallowed / invalid keys dropped, canonical order, `{}`
+removed) before a change is posted.
+
 ## Rules
 
 `checkRules(doc, docKey, layout)` (`rules.ts`) returns issues; a non-empty list makes the guard
@@ -354,6 +515,7 @@ fall back to the route's default document.
 | `at-least-one:catalog` | the catalogue needs a `ProductGrid`, `ProductList` or `WholesaleTable` |
 | `placement:<Block>` | the block is not allowed on this document (the `PLACEMENT` and `SHELL_ONLY` tables) |
 | `layout:<Block>` | the block is not available in this layout |
+| `hidden-required:<Block>` | a block with `blockStyle.hide` holds (through visible slots, any depth) a block the document requires — its `EXACTLY_ONE` / `AT_LEAST_ONE` blocks, `PageOutlet` or `MobileCartBar` |
 | `drop:*` | informational, from the guard (see above); never a fallback by themselves |
 
 **EXACTLY_ONE**: `shell` → `PageOutlet`; `product` → `ProductDetail`; `cart` → `CartContents` and
@@ -448,6 +610,9 @@ images are **never garbage-collected**: removing an `Image` block leaves the fil
   not supported.
 - Hidden `Columns` / `Footer` columns keep their content but do not render it, and blocks in
   them do not count toward the rules (see Visible slots).
+- `hidden-required` fires for every hidden container that holds a required block, even when a
+  visible copy exists elsewhere on the page — so "a mobile-only `ProductList` in one Section and a
+  desktop-only `ProductGrid` in another" cannot be built (see *Block styling*).
 
 ## The editor (`/__builder`)
 

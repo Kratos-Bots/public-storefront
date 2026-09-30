@@ -4,6 +4,7 @@ import { collectBlocks } from '@/builder/registry.ts';
 import { defineBlock } from '@/builder/define.ts';
 
 const make = (name: string) => defineBlock<{ id: string }>({
+  style: false,
   name, label: name, category: 'content', layouts: 'all', routeBound: false, slots: [],
   schema: z.object({}), defaultProps: {}, render: () => null,
 });

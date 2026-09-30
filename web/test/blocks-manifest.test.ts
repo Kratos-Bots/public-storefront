@@ -12,7 +12,9 @@ describe('blocks.json', () => {
   it('lists every block with its category, layouts and route binding', () => {
     const m = blocksManifest();
     expect(m.schemaVersion).toBe(1);
-    expect(m.blocks.find((b) => b.name === 'CheckoutFlow')).toEqual({ name: 'CheckoutFlow', category: 'commerce', layouts: ['storefront', 'menu', 'webapp'], routeBound: true });
+    expect(m.blocks.find((b) => b.name === 'CheckoutFlow')).toEqual({ name: 'CheckoutFlow', category: 'commerce', layouts: ['storefront', 'menu', 'webapp'], routeBound: true,
+      style: { target: 'wrap', keys: ['bg', 'padTop', 'padBottom', 'padX', 'marginTop', 'marginBottom', 'border', 'borderColor', 'borderStyle', 'radius', 'shadow', 'maxWidth'] } });
+    expect(m.blocks.find((b) => b.name === 'PageOutlet')!.style).toBe(false);
     expect(m.blocks.find((b) => b.name === 'Footer')!.layouts).toEqual(['storefront', 'menu']);
     expect(m.blocks.map((b) => b.name)).toEqual([...m.blocks.map((b) => b.name)].sort((a, b) => a.localeCompare(b)));
   });

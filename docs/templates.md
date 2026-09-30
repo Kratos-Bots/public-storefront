@@ -310,6 +310,9 @@ template that wants one consistent heading look across every page styles the par
 `data-sf-part="button" data-variant="filled"`, so a template styles them purely through the shared
 parts — no page-specific class is ever targeted.
 
+Never use a direct-child combinator under `[data-sf-part="main"]` (or any part): a styled block adds
+a wrapper `<div>` around wrap-mode blocks.
+
 ### Shared button-fill rules
 
 `mantine.css` carries the fill recipes for `tokens.button.fill` on every element tagged
@@ -348,6 +351,12 @@ looks beyond a plain on/off: `.glass` / `.glass-soft` (frosted sticky chrome, fr
 `styles/chassis.css`) and Mantine's static `.mantine-Overlay-root`. Prefer the `glass` token
 (`data-sf-glass`) to switching blur off entirely by hand; reach for these selectors only for a
 template-specific treatment of the frosted look itself.
+
+**Block styles (escape hatch).** Owners style blocks with `data-sf-style` / `data-sfs-*` attributes
+at specificity (0,4,0). A template whose design genuinely breaks under an owner value may override
+at equal specificity in its `template.css` (which loads after the main bundle, so it wins), e.g.
+`:root[data-sf-template="<id>"] [data-sf-style="Header"][data-sfs-bg] { … }`. This is the only
+supported style hook; use it sparingly — the owner chose that value.
 
 ## 5. Slots
 

@@ -186,7 +186,7 @@ describe('parseBlockPropsDetailed with blockStyle', () => {
     expect(parseBlockPropsDetailed(rootDef, { text: 'x' })).toEqual({ props: { text: 'x' }, fallbacks: [] });
   });
   it('a block with no style declaration treats every style key as not accepted', () => {
-    const bare = { ...rootDef, style: undefined };
+    const bare = { ...rootDef, style: false as const };
     expect(parseBlockPropsDetailed(bare, { text: 'x', blockStyle: { bg: 'surface' } }).fallbacks).toEqual(['blockStyle.bg']);
   });
 });

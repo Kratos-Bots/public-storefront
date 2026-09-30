@@ -12,19 +12,23 @@ vi.mock('@/builder/registry.ts', async () => {
         defaultProps: { text: 'Heading', level: 'h2' }, render: () => null,
       }),
       Section: defineBlock({
+        style: false,
         name: 'Section', label: 'Section', category: 'content', layouts: 'all', routeBound: false, slots: ['content'],
         schema: z.object({ content: slot() }), defaultProps: { content: [] }, render: () => null,
       }),
       Faq: defineBlock<{ id: string; title: string; items: { q: string }[] }>({
+        style: false,
         name: 'Faq', label: 'FAQ', category: 'content', layouts: 'all', routeBound: false, slots: [],
         schema: z.object({ title: z.string(), items: z.array(z.object({ q: z.string().min(1) })).max(5) }),
         defaultProps: { title: 'Questions', items: [{ q: 'Placeholder question?' }] }, render: () => null,
       }),
       MenuOnly: defineBlock<{ id: string }>({
+        style: false,
         name: 'MenuOnly', label: 'Menu only', category: 'content', layouts: ['menu'], routeBound: false, slots: [],
         schema: z.object({}), defaultProps: {}, render: () => null,
       }),
       CheckoutFlow: defineBlock<{ id: string }>({
+        style: false,
         name: 'CheckoutFlow', label: 'Checkout flow', category: 'commerce', layouts: 'all', routeBound: true, slots: [],
         schema: z.object({}), defaultProps: {}, render: () => null,
       }),

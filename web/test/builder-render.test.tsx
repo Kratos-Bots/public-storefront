@@ -11,7 +11,7 @@ vi.mock('@/builder/registry.ts', async () => {
   function Thrower(): never { throw new Error('boom'); }
   function Flaky() { if (flaky.broken) throw new Error('flaky'); return <p>recovered</p>; }
   function Mode() { return <i>{useBuilderMode().editing ? 'editing' : 'live'}</i>; }
-  const base = { category: 'content' as const, layouts: 'all' as const, routeBound: false };
+  const base = { category: 'content' as const, layouts: 'all' as const, routeBound: false, style: false as const };
   return {
     BLOCKS: {
       Text: defineBlock<{ id: string; text: string }>({ ...base, name: 'Text', label: 'Text', slots: [], schema: z.object({ text: z.string() }), defaultProps: { text: '' }, render: ({ text }) => <p>{text}</p> }),

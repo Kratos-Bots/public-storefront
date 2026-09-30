@@ -9,7 +9,24 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      }
     },
     {
       "name": "Button",
@@ -19,7 +36,25 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      }
     },
     {
       "name": "CartContents",
@@ -29,7 +64,24 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      }
     },
     {
       "name": "CartSummary",
@@ -39,7 +91,24 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      }
     },
     {
       "name": "CatalogHero",
@@ -49,7 +118,25 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      }
     },
     {
       "name": "CategoryNav",
@@ -59,7 +146,25 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      }
     },
     {
       "name": "CheckoutFlow",
@@ -69,7 +174,24 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      }
     },
     {
       "name": "Columns",
@@ -79,7 +201,28 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      }
     },
     {
       "name": "ContactStrip",
@@ -89,7 +232,25 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "pass",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      }
     },
     {
       "name": "CutoffBar",
@@ -99,7 +260,25 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      }
     },
     {
       "name": "Divider",
@@ -109,7 +288,15 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      }
     },
     {
       "name": "FAQ",
@@ -119,7 +306,28 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      }
     },
     {
       "name": "FeaturedProducts",
@@ -129,7 +337,25 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      }
     },
     {
       "name": "Footer",
@@ -138,7 +364,25 @@
         "storefront",
         "menu"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      }
     },
     {
       "name": "Header",
@@ -148,7 +392,15 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "pass",
+        "keys": [
+          "bg",
+          "shadow",
+          "hide"
+        ]
+      }
     },
     {
       "name": "Heading",
@@ -158,7 +410,27 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "maxWidth",
+          "hide"
+        ]
+      }
     },
     {
       "name": "Image",
@@ -168,7 +440,24 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "hide"
+        ]
+      }
     },
     {
       "name": "LoginOptions",
@@ -178,7 +467,24 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      }
     },
     {
       "name": "Loyalty",
@@ -188,7 +494,24 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      }
     },
     {
       "name": "MobileCartBar",
@@ -197,7 +520,8 @@
         "storefront",
         "menu"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": false
     },
     {
       "name": "NavLinks",
@@ -207,7 +531,28 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      }
     },
     {
       "name": "NoticeBanners",
@@ -217,7 +562,25 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      }
     },
     {
       "name": "OrderDetail",
@@ -227,7 +590,24 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      }
     },
     {
       "name": "OrderPlaced",
@@ -237,7 +617,24 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      }
     },
     {
       "name": "OrdersList",
@@ -247,7 +644,24 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      }
     },
     {
       "name": "OrderStatus",
@@ -257,7 +671,24 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      }
     },
     {
       "name": "PageOutlet",
@@ -267,7 +698,8 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": false
     },
     {
       "name": "PaymentCancel",
@@ -277,7 +709,24 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      }
     },
     {
       "name": "PaymentSuccess",
@@ -287,7 +736,24 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      }
     },
     {
       "name": "ProductDetail",
@@ -297,7 +763,24 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      }
     },
     {
       "name": "ProductGrid",
@@ -307,7 +790,24 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      }
     },
     {
       "name": "ProductList",
@@ -317,7 +817,24 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      }
     },
     {
       "name": "Profile",
@@ -327,7 +844,24 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      }
     },
     {
       "name": "Referrals",
@@ -337,7 +871,24 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      }
     },
     {
       "name": "RichText",
@@ -347,7 +898,27 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "hide"
+        ]
+      }
     },
     {
       "name": "SearchField",
@@ -357,7 +928,25 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      }
     },
     {
       "name": "Section",
@@ -367,7 +956,23 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "hide"
+        ]
+      }
     },
     {
       "name": "Spacer",
@@ -377,7 +982,13 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "hide"
+        ]
+      }
     },
     {
       "name": "Testimonial",
@@ -387,7 +998,28 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      }
     },
     {
       "name": "TopBar",
@@ -396,7 +1028,25 @@
         "storefront",
         "menu"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      }
     },
     {
       "name": "TrackingLookup",
@@ -406,7 +1056,24 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      }
     },
     {
       "name": "Upsells",
@@ -416,7 +1083,25 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      }
     },
     {
       "name": "VerifyForm",
@@ -426,7 +1111,24 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      }
     },
     {
       "name": "Video",
@@ -436,7 +1138,25 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      }
     },
     {
       "name": "WholesaleTable",
@@ -446,7 +1166,17 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "marginTop",
+          "marginBottom",
+          "shadow"
+        ]
+      }
     }
   ]
 }
