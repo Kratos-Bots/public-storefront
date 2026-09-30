@@ -3,6 +3,7 @@ import { blockDef } from '@/builder/rules.ts';
 import { useBuilderMode } from '@/builder/mode.ts';
 import type { BlockRenderContext, SlotRender } from '@/builder/define.ts';
 import type { ComponentData, DocKey, LayoutKind, PuckDoc } from '@/builder/types.ts';
+import { renderBlock } from '@/builder/style/apply.tsx';
 
 const logged = new Set<string>();
 
@@ -71,9 +72,9 @@ function slotRender(value: unknown, ctx: BlockRenderContext): SlotRender {
 
 function BlockBody({ item, ctx }: { item: ComponentData; ctx: BlockRenderContext }) {
   const def = blockDef(item.type)!;
-  const props: Record<string, unknown> = { ...item.props, puck: ctx };
+  const props: Record<string, unknown> = { ...item.props };
   for (const s of def.slots) props[s] = slotRender(item.props[s], ctx);
-  return <>{def.render(props as never)}</>;
+  return <>{renderBlock(def, props, ctx)}</>;
 }
 
 function BlockNode({ item, ctx }: { item: ComponentData; ctx: BlockRenderContext }) {

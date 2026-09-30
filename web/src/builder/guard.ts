@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { parseBlockPropsDetailed } from '@/builder/define.ts';
 import { blockDef, checkRules } from '@/builder/rules.ts';
+import { STYLE_LABELS } from '@/builder/style/labels.ts';
+import { isStyleKey } from '@/builder/style/model.ts';
 import {
   EMPTY_ROOT, isComponentLike, isRecord, MAX_COMPONENTS, MAX_DEPTH,
   type ComponentData, type DocKey, type Issue, type LayoutKind, type PageRootProps, type PuckDoc,
@@ -28,8 +30,13 @@ function drop(w: Walk, issue: Omit<Issue, 'docKey'>): void {
   if (w.drops.length < MAX_DROP_ISSUES) w.drops.push({ docKey: w.docKey, ...issue });
 }
 
-/** `items[2]` → an item that was left out; `title` → a field that was left empty. */
+/** `items[2]` → an item that was left out; `title` → a field that was left empty; `blockStyle.<key>` → a style row left at its default. */
 function fieldMessage(label: string, f: string): string {
+  if (f === 'blockStyle') return `${label}: the style settings are not valid and were left at their defaults.`;
+  if (f.startsWith('blockStyle.')) {
+    const key = f.slice('blockStyle.'.length);
+    return `${label}: the style setting "${isStyleKey(key) ? STYLE_LABELS[key] : key}" is not valid here and was left at its default.`;
+  }
   const item = /^(.+)\[(\d+)\]$/.exec(f);
   return item
     ? `${label}: item ${Number(item[2]) + 1} of "${item[1]}" is not valid and is left out.`

@@ -3,6 +3,7 @@ import { parseBlockProps, type BlockDef, type BlockRenderContext } from '@/build
 import type { DocKey, LayoutKind } from '@/builder/types.ts';
 import { stableStringify } from '@/builder/editor/page-set.ts';
 import { prepareProps } from '@/builder/editor/prepare.ts';
+import { renderBlock } from '@/builder/style/apply.tsx';
 import styles from '@/builder/editor/EditorBlock.module.css';
 
 interface BoundaryProps {
@@ -73,11 +74,19 @@ function restoreRichtext(value: unknown, nodes: readonly unknown[]): unknown {
 
 /** Rendered as its own component so the block's hooks and throws stay inside the boundary. */
 function BlockBody({ def, props, ctx }: { def: BlockDef<any>; props: Record<string, unknown>; ctx: BlockRenderContext }) {
-  return <>{def.render({ ...props, puck: ctx } as never)}</>;
+  return <>{renderBlock(def, props, ctx)}</>;
 }
 
-/** Nothing a person could see or click: no element and no text. */
-const isEmpty = (el: HTMLElement): boolean => el.firstElementChild === null && !(el.textContent ?? '').trim();
+/**
+ * Nothing a person could see or click: no element and no text — or only a style wrapper around
+ * nothing (a styled wrap block that rendered null; the stylesheet's :empty rule hides it).
+ */
+const isEmpty = (el: HTMLElement): boolean => {
+  const first = el.firstElementChild;
+  const onlyEmptyWrapper = first !== null && first === el.lastElementChild
+    && first.matches('[data-sf-style]:not([data-sf-block])') && first.childElementCount === 0;
+  return (first === null || onlyEmptyWrapper) && !(el.textContent ?? '').trim();
+};
 
 /**
  * Many blocks render nothing when their content is blank (an empty Heading, a quote-less

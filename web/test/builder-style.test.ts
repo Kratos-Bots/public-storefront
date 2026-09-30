@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { PALETTE_TOKENS, SPACING } from '@/builder/define.ts';
+import { isValidElement, type ReactElement } from 'react';
+import { z } from 'zod';
+import {
+  defineBlock, PALETTE_TOKENS, parseBlockPropsDetailed, SPACING, type BlockRenderContext,
+} from '@/builder/define.ts';
+import { renderBlock, styleAttrs } from '@/builder/style/apply.tsx';
 import {
   BOX, parseBlockStyle, STYLE_ATTR, STYLE_KEY_ORDER, STYLE_KEYS, STYLE_SPACE, STYLE_TOKENS, styleSupport, TEXT, VIS,
   type StyleSupport,
@@ -109,5 +114,79 @@ describe('parseBlockStyle (spec §10.1)', () => {
   it('accepts a null-prototype object', () => {
     const raw = Object.assign(Object.create(null) as Record<string, unknown>, { bg: 'surface' });
     expect(parseBlockStyle(ALL, raw)).toEqual({ style: { bg: 'surface' }, issues: [] });
+  });
+});
+
+const ctx: BlockRenderContext = { editing: false, docKey: 'page:x', layout: 'storefront' };
+const rootDef = defineBlock<{ id: string; text: string }>({
+  name: 'RootBox', label: 'Root box', category: 'content', layouts: 'all', routeBound: false, slots: [],
+  style: styleSupport('root', ['bg', 'padTop', 'hide']),
+  schema: z.object({ text: z.string() }), defaultProps: { text: '' }, render: () => null,
+});
+const wrapDef = { ...rootDef, name: 'WrapBox', style: styleSupport('wrap', ['bg', 'hide']) };
+const offDef = { ...rootDef, name: 'Off', style: false as const };
+
+describe('styleAttrs (spec §5.1)', () => {
+  it.each([undefined, null, {}, { align: 'center' }, { bg: 'hotpink' }, 'bg'])('null for %j', (s) => {
+    expect(styleAttrs(rootDef, s, false)).toBeNull();
+  });
+  it('null when the block is not stylable', () => {
+    expect(styleAttrs(offDef, { bg: 'surface' }, false)).toBeNull();
+  });
+  it('marker first, one attribute per allowed key, canonical order', () => {
+    expect(Object.entries(styleAttrs(rootDef, { hide: 'mobile', padTop: 'lg', bg: 'surface' }, false)!)).toEqual([
+      ['data-sf-style', 'RootBox'], ['data-sfs-bg', 'surface'], ['data-sfs-pt', 'lg'], ['data-sfs-hide', 'mobile'],
+    ]);
+  });
+  it('hide becomes ghost while editing', () => {
+    expect(styleAttrs(rootDef, { hide: 'desktop' }, true)).toEqual({ 'data-sf-style': 'RootBox', 'data-sfs-ghost': 'desktop' });
+  });
+});
+
+describe('renderBlock (spec §5.1, §6)', () => {
+  function spy(def: typeof rootDef) {
+    const calls: Array<Record<string, unknown>> = [];
+    return { calls, def: { ...def, render: (p: Record<string, unknown>) => { calls.push(p); return 'body'; } } as unknown as typeof rootDef };
+  }
+  it('unstyled: the exact call made today, same ctx reference, no blockStyle prop', () => {
+    const { calls, def } = spy(rootDef);
+    for (const blockStyle of [undefined, {}, { align: 'end' }]) {
+      const props: Record<string, unknown> = { id: 'a', text: 't', ...(blockStyle ? { blockStyle } : {}) };
+      expect(renderBlock(def, props, ctx)).toBe('body');
+    }
+    for (const p of calls) {
+      expect(p.puck).toBe(ctx);
+      expect(p).toEqual({ id: 'a', text: 't', puck: ctx });
+    }
+  });
+  it('root: attributes arrive as puck.style', () => {
+    const { calls, def } = spy(rootDef);
+    renderBlock(def, { id: 'a', text: 't', blockStyle: { bg: 'surface' } }, ctx);
+    expect(calls[0]!.puck).toEqual({ ...ctx, style: { 'data-sf-style': 'RootBox', 'data-sfs-bg': 'surface' } });
+    expect('blockStyle' in calls[0]!).toBe(false);
+  });
+  it('wrap: one div carrying the attributes around the unchanged render', () => {
+    const { calls, def } = spy(wrapDef as typeof rootDef);
+    const out = renderBlock(def, { id: 'a', text: 't', blockStyle: { bg: 'surface', padTop: 'lg' } }, ctx) as ReactElement<Record<string, unknown>>;
+    expect(isValidElement(out) && out.type).toBe('div');
+    expect(out.props).toMatchObject({ 'data-sf-style': 'WrapBox', 'data-sfs-bg': 'surface', children: 'body' });
+    expect(out.props['data-sfs-pt']).toBeUndefined();
+    expect(calls[0]!.puck).toBe(ctx);
+  });
+});
+
+describe('parseBlockPropsDetailed with blockStyle', () => {
+  it('keeps the guarded style beside the schema props and reports dropped keys', () => {
+    expect(parseBlockPropsDetailed(rootDef, { text: 'x', blockStyle: { bg: 'surface', fg: 'text', zz: 1 } })).toEqual({
+      props: { text: 'x', blockStyle: { bg: 'surface' } }, fallbacks: ['blockStyle.fg'],
+    });
+  });
+  it('no blockStyle key when nothing survives; an absent style changes nothing', () => {
+    expect(parseBlockPropsDetailed(rootDef, { text: 'x', blockStyle: {} })).toEqual({ props: { text: 'x' }, fallbacks: [] });
+    expect(parseBlockPropsDetailed(rootDef, { text: 'x' })).toEqual({ props: { text: 'x' }, fallbacks: [] });
+  });
+  it('a block with no style declaration treats every style key as not accepted', () => {
+    const bare = { ...rootDef, style: undefined };
+    expect(parseBlockPropsDetailed(bare, { text: 'x', blockStyle: { bg: 'surface' } }).fallbacks).toEqual(['blockStyle.bg']);
   });
 });
