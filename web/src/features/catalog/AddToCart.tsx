@@ -1,3 +1,4 @@
+import type { StyleAttrs } from '@/builder/define.ts';
 import { useEffect, useRef, useState } from 'react';
 import { useSettings } from '@/app/settings.ts';
 import { addToCart } from '@/features/cart/useServerCart.ts';
@@ -16,6 +17,8 @@ export interface AddToCartProps {
   size?: 'sm' | 'lg';
   /** Print the price in the label. Off on cards, where the price is already set beside it. */
   showPrice?: boolean;
+  /** A page-builder part's style attributes (stage 2), spread on the root; undefined adds nothing. */
+  rootAttrs?: StyleAttrs;
 }
 
 /**
@@ -26,7 +29,7 @@ export interface AddToCartProps {
  * browse-only, so a shop with `ordering: false` never shows a control that leads
  * nowhere. The label carries the state — no toast, no badge animation.
  */
-export function AddToCart({ product, size = 'lg', showPrice = true }: AddToCartProps) {
+export function AddToCart({ product, size = 'lg', showPrice = true, rootAttrs }: AddToCartProps) {
   const { features, currency } = useSettings();
   const { t } = useText();
   const [phase, setPhase] = useState<'idle' | 'added' | 'again'>('idle');
@@ -79,6 +82,7 @@ export function AddToCart({ product, size = 'lg', showPrice = true }: AddToCartP
       aria-label={showPrice ? undefined : t('product.add.labelWithName', { label, name: product.displayName })}
       data-sf-part="button"
       data-variant="filled"
+      {...rootAttrs}
     >
       <span className={classes.label} aria-live="polite">
         {label}

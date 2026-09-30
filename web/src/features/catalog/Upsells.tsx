@@ -1,3 +1,4 @@
+import type { StyleAttrs } from '@/builder/define.ts';
 import { useMemo } from 'react';
 import { useSettings } from '@/app/settings.ts';
 import { useCatalog } from '@/features/catalog/use-catalog.ts';
@@ -19,6 +20,8 @@ export interface UpsellsProps {
    * instead of cards that navigate away. The menu layout's detail sheet does.
    */
   onSelect?: (product: Product) => void;
+  /** A page-builder part's style attributes (stage 2), spread on the root; undefined adds nothing. */
+  rootAttrs?: StyleAttrs;
 }
 
 /**
@@ -26,7 +29,7 @@ export interface UpsellsProps {
  * is off, when nothing is curated, or when the curated ids are no longer in the
  * catalogue — an empty "you may also like" rail is worse than none.
  */
-export function Upsells({ product, onSelect }: UpsellsProps) {
+export function Upsells({ product, onSelect, rootAttrs }: UpsellsProps) {
   const { features } = useSettings();
   const { t } = useText();
   const catalog = useCatalog();
@@ -38,7 +41,7 @@ export function Upsells({ product, onSelect }: UpsellsProps) {
   if (!features.upsell || items.length === 0) return null;
 
   return (
-    <section className={classes.root} aria-labelledby="upsells-heading">
+    <section className={classes.root} aria-labelledby="upsells-heading" {...rootAttrs}>
       <h2 id="upsells-heading" className={classes.head}>
         {t('product.upsells.heading')}
       </h2>

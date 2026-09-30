@@ -1,3 +1,4 @@
+import type { StyleAttrs } from '@/builder/define.ts';
 import { useEffect, useState } from 'react';
 import { productImageUrl } from '@/lib/media-url.ts';
 import classes from '@/features/catalog/ProductImage.module.css';
@@ -10,6 +11,8 @@ export interface ProductImageProps {
   className?: string;
   /** Skip lazy-loading for the one image above the fold. */
   eager?: boolean;
+  /** A page-builder part's style attributes (stage 2), spread on the root; undefined adds nothing. */
+  rootAttrs?: StyleAttrs;
 }
 
 /**
@@ -17,12 +20,12 @@ export interface ProductImageProps {
  * not others, so a miss is a normal state, not an error: the image removes itself
  * and the well keeps the grid's rhythm with the chassis' "nothing here" rule.
  */
-export function ProductImage({ productId, variant = 'web', alt, className, eager = false }: ProductImageProps) {
+export function ProductImage({ productId, variant = 'web', alt, className, eager = false, rootAttrs }: ProductImageProps) {
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [productId, variant]);
 
   return (
-    <span className={className ? `${classes.well} ${className}` : classes.well}>
+    <span className={className ? `${classes.well} ${className}` : classes.well} {...rootAttrs}>
       {failed ? (
         <span className={classes.rule} aria-hidden />
       ) : (

@@ -1,3 +1,4 @@
+import type { StyleAttrs } from '@/builder/define.ts';
 import { Link } from 'react-router';
 import { useUiStore } from '@/stores/ui.ts';
 import { useText } from '@/text/runtime.tsx';
@@ -114,6 +115,8 @@ export interface CategoryNavProps {
   /** Every product in the catalogue — the count beside "All products". */
   total: number;
   activeId: number | null;
+  /** A page-builder part's style attributes (stage 2), spread on the root; undefined adds nothing. */
+  navAttrs?: StyleAttrs;
 }
 
 /**
@@ -121,14 +124,14 @@ export interface CategoryNavProps {
  * only — the sheet holds the rest) and the full index as a left rail from 62em.
  * Both are always in the DOM; CSS decides which one the viewport gets.
  */
-export function CategoryNav({ tree, total, activeId }: CategoryNavProps) {
+export function CategoryNav({ tree, total, activeId, navAttrs }: CategoryNavProps) {
   const openFilters = useUiStore((s) => s.open);
   const { t } = useText();
   if (tree.length === 0) return null;
 
   return (
     <>
-      <nav className={classes.chips} aria-label={t('catalog.nav.categories')}>
+      <nav className={classes.chips} aria-label={t('catalog.nav.categories')} {...navAttrs}>
         <div className={classes.chipRow}>
           <Link to="/" className={classes.chip} aria-current={activeId === null ? 'page' : undefined}>
             {t('catalog.nav.all')}
@@ -154,7 +157,7 @@ export function CategoryNav({ tree, total, activeId }: CategoryNavProps) {
         </div>
       </nav>
 
-      <nav className={classes.rail} aria-label={t('catalog.nav.categories')}>
+      <nav className={classes.rail} aria-label={t('catalog.nav.categories')} {...navAttrs}>
         <h2 className={classes.railHead}>{t('catalog.nav.categories')}</h2>
         <CategoryIndex tree={tree} total={total} activeId={activeId} />
       </nav>
