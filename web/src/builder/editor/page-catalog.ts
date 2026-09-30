@@ -1,5 +1,5 @@
 import { customPageKeys, type DocMap } from '@/builder/editor/page-set.ts';
-import type { DocKey, FixedRouteKey, LayoutKind } from '@/builder/types.ts';
+import { isCardKey, type CardKey, type DocKey, type FixedRouteKey, type LayoutKind } from '@/builder/types.ts';
 
 export const LAYOUT_LABELS: Record<LayoutKind, string> = { storefront: 'Storefront', menu: 'Menu', webapp: 'Telegram web app' };
 
@@ -32,21 +32,28 @@ const GROUPS: Array<{ label: string; keys: Array<'shell' | FixedRouteKey> }> = [
   { label: 'Tools', keys: ['verify', 'tracking'] },
 ];
 
-export function docLabel(docKey: DocKey, docs: DocMap): string {
+const CARD_LABELS: Record<CardKey, string> = { 'card:tile': 'Product card', 'card:row': 'Product row' };
+const CARD_KEYS: readonly CardKey[] = ['card:tile', 'card:row'];
+
+/** `layout` names the product document: the storefront's page, the menu/webapp sheet (spec §11). */
+export function docLabel(docKey: DocKey, docs: DocMap, layout: LayoutKind = 'storefront'): string {
   if (docKey.startsWith('page:')) {
     const title = docs[docKey]?.root.props.title;
     return `${title || docKey.slice(5)} (/pages/${docKey.slice(5)})`;
   }
+  if (isCardKey(docKey)) return CARD_LABELS[docKey];
+  if (docKey === 'product' && layout !== 'storefront') return 'Product sheet';
   return DOC_LABELS[docKey as 'shell' | FixedRouteKey];
 }
 
 export function pageOptions(docs: DocMap, layout: LayoutKind): Array<{ label: string; options: Array<{ docKey: DocKey; label: string }> }> {
   const edited = (key: DocKey) => (key !== 'shell' && docs[key] ? ' · edited' : '');
-  const groups = GROUPS.map((g) => ({
+  const groups: Array<{ label: string; options: Array<{ docKey: DocKey; label: string }> }> = GROUPS.map((g) => ({
     label: g.label,
-    // The product page exists only in the storefront layout; menu/webapp open a sheet (spec §3).
-    options: g.keys.filter((k) => k !== 'product' || layout === 'storefront').map((k) => ({ docKey: k as DocKey, label: `${DOC_LABELS[k]}${edited(k)}` })),
+    // Every layout has the product document: the storefront's page, the menu/webapp sheet (spec §7.2).
+    options: g.keys.map((k) => ({ docKey: k as DocKey, label: `${docLabel(k, docs, layout)}${edited(k)}` })),
   }));
+  groups.push({ label: 'Product cards', options: CARD_KEYS.map((k) => ({ docKey: k, label: `${CARD_LABELS[k]}${edited(k)}` })) });
   const custom = customPageKeys(docs).sort();
   if (custom.length) groups.push({ label: 'Custom pages', options: custom.map((k) => ({ docKey: k, label: docLabel(k, docs) })) });
   return groups;

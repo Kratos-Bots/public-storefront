@@ -31,9 +31,10 @@ describe('editor store', () => {
     useEditorStore.getState().createPage('about', 'About');
     useEditorStore.getState().load({ layout: 'storefront', pageSet: null, readOnly: false });
     expect(useEditorStore.getState().docKey).toBe('catalog');
+    // Stage 3 (spec §7.2): the product doc exists in every layout (the webapp sheet), so it stays selected.
     useEditorStore.getState().selectDoc('product');
     useEditorStore.getState().load({ layout: 'webapp', pageSet: null, readOnly: false });
-    expect(useEditorStore.getState().docKey).toBe('catalog');
+    expect(useEditorStore.getState().docKey).toBe('product');
   });
 
   it('ignores selecting an unknown custom page and invalid keys', () => {
@@ -89,12 +90,13 @@ describe('editor store', () => {
     expect(useEditorStore.getState().docs.cart).toBeUndefined();
   });
 
-  it('refuses the product page outside the storefront layout', () => {
+  // Stage 3 (spec §7.2, §11): outside the storefront the product doc is the product sheet, and is editable.
+  it('selects and edits the product sheet outside the storefront layout', () => {
     useEditorStore.getState().load({ layout: 'menu', pageSet: null, readOnly: false });
     useEditorStore.getState().selectDoc('product');
-    expect(useEditorStore.getState().docKey).toBe('catalog');
+    expect(useEditorStore.getState().docKey).toBe('product');
     useEditorStore.getState().updateDoc('product', { root: { props: {} }, content: [] });
-    expect(useEditorStore.getState().docs.product).toBeUndefined();
+    expect(useEditorStore.getState().docs.product).toEqual({ root: { props: { title: '', description: '', chrome: 'shell' } }, content: [] });
   });
 
   it('resetting a custom page that is not selected keeps the selection', () => {
@@ -116,12 +118,12 @@ describe('editor store', () => {
     expect(useEditorStore.getState().docs['page:about']).toBeUndefined();
   });
 
-  it('page options hide the product page outside the storefront layout and list custom pages', () => {
+  it('page options list the product doc in every layout (the sheet outside the storefront) and custom pages', () => {
     useEditorStore.getState().load({ layout: 'menu', pageSet: null, readOnly: false });
     useEditorStore.getState().createPage('about', 'About');
     const s = useEditorStore.getState();
     const keys = pageOptions(s.docs, 'menu').flatMap((g) => g.options.map((o) => o.docKey));
-    expect(keys).not.toContain('product');
+    expect(keys).toContain('product');
     expect(keys).toContain('page:about');
     expect(pageOptions(s.docs, 'storefront').flatMap((g) => g.options.map((o) => o.docKey))).toContain('product');
     expect(docFor(s.docs, 'page:about', 'menu').root.props.title).toBe('About');

@@ -35,6 +35,11 @@ export interface EditorState {
   previewAs: PreviewAs;
   /** The frame width the admin should give us; null = fill. Survives reloads of the set. */
   viewport: ViewportWidth | null;
+  /**
+   * Preview with (spec §11): the product the product page, sheet and card designer show; null = the
+   * default pick. Survives reloads of the set.
+   */
+  previewProductId: number | null;
   /** The shared Site text draft (spec §7.4); null when the load carried no siteText (not editable). */
   siteText: SiteText | null;
   /** The load carried `siteText` (object or null): shared text can be edited and is posted. */
@@ -104,6 +109,7 @@ export interface EditorState {
   createPage(slug: string, title: string): string | null;
   setPreviewAs(patch: Partial<PreviewAs>): void;
   setViewport(width: ViewportWidth | null): void;
+  setPreviewProduct(id: number | null): void;
 }
 
 /** The text part of a fresh store (also what tests reset to). */
@@ -194,6 +200,7 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
   epoch: 0,
   previewAs: DEFAULT_PREVIEW_AS,
   viewport: null,
+  previewProductId: null,
   ...TEXT_INITIAL,
 
   load({ layout, pageSet, readOnly, siteText }) {
@@ -277,6 +284,10 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
 
   setViewport(viewport) {
     if (viewport !== get().viewport) set({ viewport });
+  },
+
+  setPreviewProduct(id) {
+    if (id !== get().previewProductId) set({ previewProductId: id });
   },
 
   setText(scope, key, value, anchor, loadEpoch) {
