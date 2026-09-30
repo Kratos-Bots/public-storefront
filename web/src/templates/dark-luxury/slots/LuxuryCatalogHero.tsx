@@ -1,4 +1,4 @@
-import type { CatalogHeroProps } from '@/templates/contract.ts';
+import { useText, type CatalogHeroProps } from '@/templates/contract.ts';
 import { splitHeadline } from './headline.ts';
 
 /**
@@ -7,17 +7,20 @@ import { splitHeadline } from './headline.ts';
  * are dense — they keep only the welcome line.
  */
 export function LuxuryCatalogHero({ surface, tagline, welcomeMessage, productCount, categoryCount, options }: CatalogHeroProps) {
+  const { t, tp } = useText();
   if (surface !== 'grid') {
     return welcomeMessage ? <p className="lux-welcome">{welcomeMessage}</p> : null;
   }
   if (!tagline && !welcomeMessage) return null;
 
   const { muted, bright } = splitHeadline(tagline);
-  const products = `${productCount} ${productCount === 1 ? 'product' : 'products'}`;
-  const counts = categoryCount > 0 ? `${products} · ${categoryCount} ${categoryCount === 1 ? 'category' : 'categories'}` : products;
+  const products = tp('templates.dark-luxury.hero.products', productCount);
+  const counts = categoryCount > 0
+    ? t('templates.dark-luxury.hero.counts', { products, categories: tp('templates.dark-luxury.hero.categories', categoryCount) })
+    : products;
 
   return (
-    <section className="lux-hero" aria-label="About this shop" data-sf-part="hero">
+    <section className="lux-hero" aria-label={t('templates.dark-luxury.hero.aboutAria')} data-sf-part="hero">
       {options.orb === true ? <div className="lux-orb" data-lux="orb" aria-hidden /> : null}
       <p className="lux-hero__badge">
         <span className="lux-hero__dot" aria-hidden />

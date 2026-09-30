@@ -1,4 +1,4 @@
-import { Brand, ContactLinks, type FooterProps } from '@/templates/contract.ts';
+import { Brand, ContactLinks, useText, type FooterProps } from '@/templates/contract.ts';
 
 /**
  * The footer as a row of cells on the same grid as the shop board: the brand cell is wide, support
@@ -6,6 +6,7 @@ import { Brand, ContactLinks, type FooterProps } from '@/templates/contract.ts';
  * turns it off everywhere.
  */
 export function BentoFooter({ brand, layout, supportLinks, hasChat, options }: FooterProps) {
+  const { t } = useText();
   if (layout !== 'storefront' || options.showFooter === false) return null;
   const year = new Date().getFullYear();
 
@@ -19,8 +20,8 @@ export function BentoFooter({ brand, layout, supportLinks, hasChat, options }: F
         </div>
 
         {supportLinks.length > 0 ? (
-          <nav className="bento-cell" aria-label="Support">
-            <h2 className="bento-footer__head">Support</h2>
+          <nav className="bento-cell" aria-label={t('templates.bento.footer.support')}>
+            <h2 className="bento-footer__head">{t('templates.bento.footer.support')}</h2>
             <ul className="bento-footer__list">
               {supportLinks.map((link) => (
                 <li key={link.url}>
@@ -35,7 +36,7 @@ export function BentoFooter({ brand, layout, supportLinks, hasChat, options }: F
 
         {hasChat ? (
           <div className="bento-cell">
-            <h2 className="bento-footer__head">Talk to us</h2>
+            <h2 className="bento-footer__head">{t('templates.bento.footer.talk')}</h2>
             <ContactLinks />
           </div>
         ) : null}

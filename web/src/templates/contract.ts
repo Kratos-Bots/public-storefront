@@ -10,3 +10,5 @@ export { ContactLinks } from '@/components/ContactLinks.tsx';
 export { ArrowUpRightIcon } from '@/components/icons.tsx';
 export type { GlyphProps } from '@/components/icons.tsx';
 export { Link } from 'react-router';
+export { useText, textKey, textSnapshot } from '@/text/runtime.tsx';
+export type { TextApi } from '@/text/runtime.tsx';

@@ -1,10 +1,12 @@
 import { Brand } from '@/components/Brand.tsx';
 import { ContactLinks } from '@/components/ContactLinks.tsx';
 import type { FooterProps } from '@/templates/slots.ts';
+import { useText } from '@/templates/contract.ts';
 import classes from '@/layouts/StorefrontShell.module.css';
 
 /** Modern's footer: the storefront layout's three columns and colophon; the menu layout has none. */
 export function DefaultFooter({ brand, layout, supportLinks, hasChat }: FooterProps) {
+  const { t } = useText();
   if (layout !== 'storefront') return null;
   return (
     <footer className={classes.footer} data-sf-part="footer">
@@ -15,8 +17,8 @@ export function DefaultFooter({ brand, layout, supportLinks, hasChat }: FooterPr
         </div>
 
         {supportLinks.length > 0 ? (
-          <nav aria-label="Support">
-            <h2 className={classes.footerHead}>Support</h2>
+          <nav aria-label={t('templates.default.footer.support')}>
+            <h2 className={classes.footerHead}>{t('templates.default.footer.support')}</h2>
             <ul className={classes.footerList}>
               {supportLinks.map((link) => (
                 <li key={link.url}>
@@ -31,7 +33,7 @@ export function DefaultFooter({ brand, layout, supportLinks, hasChat }: FooterPr
 
         {hasChat ? (
           <div>
-            <h2 className={classes.footerHead}>Talk to us</h2>
+            <h2 className={classes.footerHead}>{t('templates.default.footer.talk')}</h2>
             <ContactLinks />
           </div>
         ) : null}
