@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { expect, test, type FrameLocator, type Page } from '@playwright/test';
 import { z } from 'zod';
 import { installMocks, ORIGIN, type MockHandle } from './mocks.ts';
-import { checkoutWithoutFlowSet } from './page-sets.ts';
+import { checkoutWithoutFlowSet, editorStyleSet } from './page-sets.ts';
 
 /**
  * The page builder, framed exactly as the admin frames it (spec §6, §13 A6): a page on ANOTHER
@@ -678,4 +678,49 @@ test.describe('page builder gate', () => {
       expect(editor).toEqual([]);
     });
   }
+});
+
+test.describe('page builder editor · style', () => {
+  // Puck mounts the fields twice (a hidden left-sidebar Fields tab and the right sidebar): use the shown one.
+  const panel = (frame: FrameLocator) => frame.locator('[data-sf-style-panel]').locator('visible=true');
+
+  test('a swatch restyles the canvas and posts blockStyle; Reset style removes it', async ({ page }) => {
+    const { frame } = await openFramed(page);
+    const msg = load();
+    await loadAndWait(page, frame, msg);
+    await addBlock(frame, 'Heading');
+    await panel(frame).locator('summary').click();
+    await panel(frame).getByRole('radiogroup', { name: 'Background' }).getByRole('radio', { name: 'Surface 2' }).click();
+    await expect(frame.locator('[data-sf-builder-canvas] [data-sf-style="Heading"][data-sfs-bg="surface-2"]')).toBeVisible();
+    await expect.poll(() => lastPage(page, msg.loadId, 'catalog')).toContain('"blockStyle":{"bg":"surface-2"}');
+    await panel(frame).getByRole('button', { name: 'Reset style' }).click();
+    await expect(frame.locator('[data-sf-builder-canvas] [data-sf-style="Heading"]')).toHaveCount(0);
+    await expect.poll(() => lastPage(page, msg.loadId, 'catalog')).not.toContain('blockStyle');
+    await expectAdminAccepts(page);
+  });
+
+  test('a route block offers box styles but no Visibility row', async ({ page }) => {
+    const { frame } = await openFramed(page);
+    const msg = load({ pageSet: editorStyleSet() });
+    await loadAndWait(page, frame, msg);
+    await frame.locator('[data-sf-builder-canvas] [data-puck-component="grid-1"]').click();
+    await panel(frame).locator('summary').click();
+    await expect(panel(frame).getByRole('radiogroup', { name: 'Padding top' })).toBeVisible();
+    await expect(panel(frame).getByRole('radiogroup', { name: 'Visibility' })).toHaveCount(0);
+  });
+
+  test('a hidden block is ghosted in Fit and gone in the Phone exact preview', async ({ page }) => {
+    const { frame } = await openFramed(page, 900);
+    const msg = load({ pageSet: editorStyleSet() });
+    await loadAndWait(page, frame, msg);
+    const ghost = frame.locator('[data-sf-builder-canvas] [data-sfs-ghost="mobile"]');
+    await expect(ghost).toBeVisible();
+    expect(await ghost.evaluate((el) => getComputedStyle(el).opacity)).toBe('0.4');
+    await frame.getByRole('group', { name: 'Preview width' }).getByRole('button', { name: 'Phone' }).click();
+    const preview = frame.locator('[data-sf-builder-exact="360"]');
+    await expect(preview).toBeVisible();
+    await expect(preview.locator('[data-sfs-hide="mobile"]')).toHaveCount(1);
+    await expect(preview.getByRole('heading', { name: 'Ghost heading' })).toBeHidden();
+    await frame.getByRole('button', { name: 'Back to editing' }).click();
+  });
 });

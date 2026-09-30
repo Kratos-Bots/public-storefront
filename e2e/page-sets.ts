@@ -10,10 +10,10 @@ const listBlock = (layout: Layout) => (layout === 'storefront' ? c('ProductGrid'
 type NavItem = { label: string; href: string };
 const STORY_LINK: NavItem = { label: 'Our story', href: '/pages/our-story' };
 
-function shell(layout: Layout, footer: ComponentData | null, navItems: NavItem[] = [STORY_LINK], extra: ComponentData[] = []): PuckDoc {
+function shell(layout: Layout, footer: ComponentData | null, navItems: NavItem[] = [STORY_LINK], extra: ComponentData[] = [], header: Record<string, unknown> = {}): PuckDoc {
   const nav = c('NavLinks', { ariaLabel: 'Site', direction: 'row', items: navItems });
   return doc([
-    c('Header', { nav: [nav] }),
+    c('Header', { nav: [nav], ...header }),
     c('NoticeBanners'),
     c('CutoffBar'),
     c('PageOutlet'),
@@ -129,4 +129,84 @@ export function doubledShellSet(layout: Layout, type: 'Header' | 'MobileCartBar'
     ? [c('Header', {}, 'second-header')]
     : [c('MobileCartBar', {}, 'bar-1'), c('MobileCartBar', {}, 'bar-2')];
   return { schemaVersion: 1, shell: shell(layout, c('Footer'), [STORY_LINK], extra), pages: {} };
+}
+
+// ---- block styling (spec 2026-09-30-block-styling §12) ---------------------------------------
+
+/** Every key at its largest that the block accepts. */
+const MAX_BOX = { padX: 'xl', marginTop: 'xl', marginBottom: 'xl', border: 'thick', borderColor: 'primary', borderStyle: 'dashed', radius: 'pill', shadow: 'raised' };
+const MAX_SECTION = { ...MAX_BOX, textSize: 'xl', align: 'end' };
+const MAX_FULL = { bg: 'surface', fg: 'text', padTop: 'xl', padBottom: 'xl', ...MAX_BOX, textSize: 'xl', align: 'end', maxWidth: 'wide' };
+const MAX_HEADING = { bg: 'surface-2', fg: 'text', padTop: 'xl', padBottom: 'xl', ...MAX_BOX, textSize: 'xl', maxWidth: 'wide' };
+const MAX_FLOW = { bg: 'surface', padTop: 'xl', padBottom: 'xl', ...MAX_BOX, maxWidth: 'wide' };
+
+export function styledCatalogSet(layout: Layout): PageSet {
+  return {
+    schemaVersion: 1,
+    shell: shell(layout, c('Footer')),
+    pages: {
+      catalog: doc([
+        c('Heading', { text: 'Styled heading', level: 'h2', blockStyle: { bg: 'surface-2', padTop: 'lg', border: 'thin', borderColor: 'primary', radius: 'card', textSize: 'lg' } }, 'styled-heading'),
+        c('Heading', { text: 'Plain heading', level: 'h2' }, 'plain-heading'),
+        c('Section', { content: [c('Heading', { text: 'Only from 992 px' }, 'desk-h')], blockStyle: { hide: 'mobile' } }, 'hide-mobile'),
+        c('Section', { content: [c('Heading', { text: 'Only below 992 px' }, 'phone-h')], blockStyle: { hide: 'desktop' } }, 'hide-desktop'),
+        c('Upsells', { blockStyle: { bg: 'surface', padTop: 'xl', padBottom: 'xl', border: 'thick' } }, 'empty-upsells'),
+        listBlock(layout),
+      ]),
+    },
+  };
+}
+
+export function styledHeaderSet(layout: Layout): PageSet {
+  return {
+    schemaVersion: 1,
+    shell: shell(layout, c('Footer'), [STORY_LINK], [], { blockStyle: { bg: 'surface-3', shadow: 'raised' } }),
+    pages: { catalog: doc([...Array.from({ length: 12 }, (_, i) => c('Spacer', { size: 'xl' }, `sp-${i}`)), listBlock(layout)]) },
+  };
+}
+
+export function styledFlowSet(layout: Layout): PageSet {
+  return {
+    schemaVersion: 1,
+    shell: shell(layout, c('Footer')),
+    pages: {
+      checkout: doc([c('CheckoutFlow', { blockStyle: { bg: 'surface', padTop: 'md', padBottom: 'md', padX: 'sm', border: 'thin', radius: 'card' } }, 'styled-flow')]),
+      cart: doc([c('CartContents', { summary: [c('CartSummary', { blockStyle: { bg: 'surface-2', padTop: 'sm', border: 'thin' } }, 'styled-summary')], blockStyle: { padTop: 'md', border: 'thin' } }, 'styled-lines')]),
+    },
+  };
+}
+
+/** Section › Columns › Section › Heading, every key at its largest, plus a styled flow. */
+export function maximumStyleSet(layout: Layout): PageSet {
+  const nest = (id: string) => c('Section', { blockStyle: MAX_SECTION, content: [
+    c('Columns', { columns: '2', stackBelow: 'md', blockStyle: MAX_FULL, col1: [
+      c('Section', { width: 'full', backgroundToken: 'surface-2', blockStyle: MAX_SECTION, content: [c('Heading', { text: 'Deep and wide', blockStyle: MAX_HEADING }, `${id}-h`)] }, `${id}-inner`),
+    ], col2: [c('RichText', { bodyHtml: `<p>${LONG_LABEL}</p>`, blockStyle: { ...MAX_FULL, maxWidth: undefined } }, `${id}-rt`)] }, `${id}-cols`),
+  ] }, `${id}-outer`);
+  return {
+    schemaVersion: 1,
+    shell: shell(layout, c('Footer')),
+    pages: {
+      catalog: doc([nest('cat'), listBlock(layout)]),
+      checkout: doc([nest('co'), c('CheckoutFlow', { blockStyle: MAX_FLOW }, 'max-flow')]),
+    },
+  };
+}
+
+/** The catalogue grid inside a hidden Section: must fall back to the default catalogue. */
+export function hiddenGridSet(layout: Layout): PageSet {
+  return {
+    schemaVersion: 1,
+    shell: shell(layout, c('Footer')),
+    pages: { catalog: doc([c('Section', { blockStyle: { hide: 'mobile' }, content: [listBlock(layout)] }, 'hidden-grid'), c('Heading', { text: 'Should not render' }, 'hg-h')]) },
+  };
+}
+
+/** For the editor: a Heading hidden below 992 px and a locked ProductGrid with a known id. */
+export function editorStyleSet(): PageSet {
+  return {
+    schemaVersion: 1,
+    shell: shell('storefront', c('Footer')),
+    pages: { catalog: doc([c('Heading', { text: 'Ghost heading', blockStyle: { hide: 'mobile' } }, 'ghost-h'), c('ProductGrid', {}, 'grid-1')]) },
+  };
 }
