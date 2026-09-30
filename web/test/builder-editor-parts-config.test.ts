@@ -132,6 +132,81 @@ describe('Add block with nothing selected inside the container (spec §11)', () 
   });
 });
 
+/** A Puck-like API over a real tree: ids, parents and selectors indexed from the content. */
+function treeApi(content: ComponentData[], sel: InsertApi['appState']['ui']['itemSelector']): InsertApi {
+  const items = new Map<string, ComponentData>();
+  const parents = new Map<string, ComponentData | undefined>();
+  const selectors = new Map<string, { index: number; zone: string }>();
+  const index = (list: ComponentData[], zone: string, parent: ComponentData | undefined) => list.forEach((c, i) => {
+    items.set(c.props.id, c); parents.set(c.props.id, parent); selectors.set(c.props.id, { index: i, zone });
+    for (const [k, v] of Object.entries(c.props)) if (Array.isArray(v) && v.every((x) => x && typeof x === 'object' && 'type' in x)) index(v as ComponentData[], `${c.props.id}:${k}`, c);
+  });
+  index(content, 'root:default-zone', undefined);
+  return {
+    config: cfg('catalog'),
+    appState: { ui: { itemSelector: sel }, data: { content } },
+    getItemById: (id: string) => items.get(id),
+    getParentById: (id: string) => parents.get(id),
+    getSelectorForId: (id: string) => selectors.get(id),
+  } as unknown as InsertApi;
+}
+
+describe('Add block picks the container the selection is in (fix round 1)', () => {
+  const grid = (): ComponentData => ({ type: 'ProductGrid', props: { id: 'g', top: [], rail: [{ type: 'CatalogCategories', props: { id: 'cc' } }], main: [{ type: 'CatalogTitle', props: { id: 't' } }] } });
+  const list = (): ComponentData => ({ type: 'ProductList', props: { id: 'l', content: [{ type: 'CatalogTitle', props: { id: 'lt' } }, { type: 'CatalogResults', props: { id: 'lr' } }] } });
+  const section = (): ComponentData => ({ type: 'Section', props: { id: 's', content: [{ type: 'Heading', props: { id: 'sh' } }] } });
+
+  it('a block inside a root Section selected → the container insert slot, never the Section', () => {
+    expect(insertTarget(treeApi([section(), grid()], { index: 0, zone: 's:content' }), 'CatalogSearch')).toEqual({ zone: 'g:main', index: 1, nested: true });
+  });
+  it('a Section inside the container keeps the part where the owner is', () => {
+    const g = grid();
+    (g.props.main as ComponentData[]).push(section());
+    expect(insertTarget(treeApi([g], { index: 0, zone: 's:content' }), 'CatalogSearch')).toEqual({ zone: 's:content', index: 1, nested: true });
+  });
+  it('the second container selected → that container, not the first', () => {
+    expect(insertTarget(treeApi([grid(), list()], { index: 1, zone: 'root:default-zone' }), 'CatalogSearch')).toEqual({ zone: 'l:content', index: 2, nested: true });
+  });
+  it('a part in the second container selected → right after it there', () => {
+    expect(insertTarget(treeApi([grid(), list()], { index: 0, zone: 'l:content' }), 'CatalogSearch')).toEqual({ zone: 'l:content', index: 1, nested: true });
+  });
+  it('a slot that refuses the part (the rail) → the end of that container\'s insert slot', () => {
+    expect(insertTarget(treeApi([list(), grid()], { index: 0, zone: 'g:rail' }), 'CatalogSearch')).toEqual({ zone: 'g:main', index: 1, nested: true });
+  });
+});
+
+describe('palette hides parts already shown (fix round 1)', () => {
+  const names = (docKey: DocKey, present: ReadonlySet<string>) => blockMenu(docKey, 'storefront', present).flatMap((g) => g.blocks.map((b) => b.name));
+  it('present non-group parts are not offered again; groups stay offered', () => {
+    const doc = defaultDoc('product', 'storefront')!;
+    const present = lockedPresent(doc, 'product');
+    expect(present.has('ProductDetail')).toBe(true);
+    const offered = names('product', present);
+    for (const n of ['ProductDescription', 'ProductPrice', 'ProductAsk']) expect(offered).not.toContain(n);
+    expect(offered).toContain('ProductGroup');
+    expect(names('card:tile', lockedPresent(defaultDoc('card:tile', 'storefront')!, 'card:tile'))).toContain('CardTileGroup');
+  });
+  it('a removed optional part is offered again', () => {
+    const doc = structuredClone(defaultDoc('catalog', 'storefront')!);
+    const strip = (items: ComponentData[]): ComponentData[] => items.filter((c) => c.type !== 'CatalogSearch')
+      .map((c) => ({ ...c, props: Object.fromEntries(Object.entries(c.props).map(([k, v]) => [k, Array.isArray(v) ? strip(v as ComponentData[]) : v])) as ComponentData['props'] }));
+    const before = lockedPresent(doc, 'catalog');
+    expect(before.has('CatalogSearch')).toBe(true);
+    const after = lockedPresent({ ...doc, content: strip(doc.content) }, 'catalog');
+    expect(after.has('CatalogSearch')).toBe(false);
+    expect(names('catalog', after)).toContain('CatalogSearch');
+  });
+  it('with two containers a part stays offered until each one shows it', () => {
+    const doc = { root: { props: { title: '', description: '', chrome: 'shell' as const } }, content: [
+      { type: 'ProductGrid', props: { id: 'g', top: [{ type: 'CatalogSearch', props: { id: 'gs' } }], rail: [], main: [] } },
+      { type: 'ProductList', props: { id: 'l', content: [] } },
+    ] };
+    expect(lockedPresent(doc, 'catalog').has('CatalogSearch')).toBe(false);
+    (doc.content[1]!.props.content as ComponentData[]).push({ type: 'CatalogSearch', props: { id: 'ls' } });
+    expect(lockedPresent(doc, 'catalog').has('CatalogSearch')).toBe(true);
+  });
+});
+
 describe('hints', () => {
   it('double intro looks for a CatalogIntro part in a list container whose intro is not hidden', () => {
     const doc = { root: { props: { title: '', description: '', chrome: 'shell' as const } }, content: [

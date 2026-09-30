@@ -53,13 +53,34 @@ const lockedOn = (docKey: DocKey): readonly string[] => {
 };
 
 /**
- * The doc's exactly-one blocks that are already on it (nested ones included). Pass the result to
- * `blockMenu` / `buildEditorConfig` so a present one isn't offered again, while a stored doc that
- * lost it can still get it back. Memoise on its sorted contents, not on the doc.
+ * The doc's exactly-one blocks that are already on it (nested ones included), plus the at-most-one
+ * parts every container already shows. Pass the result to `blockMenu` / `buildEditorConfig` so a
+ * present one isn't offered again, while a stored doc that lost it can still get it back. Memoise
+ * on its sorted contents, not on the doc.
  */
 export function lockedPresent(doc: PuckDoc, docKey: DocKey): Set<string> {
   const counts = countBlocks(doc);
-  return new Set(lockedOn(docKey).filter((name) => (counts.get(name) ?? 0) > 0));
+  const out = new Set(lockedOn(docKey).filter((name) => (counts.get(name) ?? 0) > 0));
+  for (const name of uniquePartsShown(doc.content)) out.add(name);
+  return out;
+}
+
+/**
+ * The at-most-one parts (`container.unique`; groups are never listed) that every container on the
+ * doc already holds, hidden slots included: offering one again could only raise part-unique.
+ * With no container, none — the palette then offers every part so the owner can see them.
+ */
+function uniquePartsShown(content: readonly ComponentData[]): string[] {
+  const containers: ComponentData[] = [];
+  walk(content, (c) => { if (blockDef(c.type)?.container) containers.push(c); });
+  let shared: string[] | null = null;
+  for (const c of containers) {
+    const def = blockDef(c.type)!;
+    const slots = def.slots.map((s) => c.props[s]).filter((v): v is ComponentData[] => Array.isArray(v));
+    const here = def.container!.unique.filter((u) => slots.some((items) => containsType(items, u)));
+    shared = shared === null ? here : shared.filter((u) => here.includes(u));
+  }
+  return shared ?? [];
 }
 
 /**
@@ -68,7 +89,7 @@ export function lockedPresent(doc: PuckDoc, docKey: DocKey): Set<string> {
  */
 export function blockMenu(docKey: DocKey, layout: LayoutKind, present: ReadonlySet<string>) {
   const insertable = new Set(insertableBlocks(docKey, layout));
-  for (const name of lockedOn(docKey)) if (present.has(name)) insertable.delete(name);
+  for (const name of present) insertable.delete(name);
   return CATEGORY_ORDER.map((category) => ({
     category,
     title: category === 'part' ? PART_TITLES[familyOfDoc(docKey) ?? 'product'] : CATEGORY_TITLES[category],
