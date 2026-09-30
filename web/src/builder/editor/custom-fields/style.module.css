@@ -1,5 +1,15 @@
 .panel { display: block; }
-.summary { cursor: pointer; font-weight: 600; color: var(--sfb-ink); min-block-size: 32px; display: flex; align-items: center; }
+.summary { cursor: pointer; font-weight: 600; color: var(--sfb-ink); min-block-size: 32px; display: flex; align-items: center; gap: 6px; list-style: none; }
+.summary::-webkit-details-marker { display: none; }
+/* A chevron that turns to point down while the group is open. */
+.summary::before {
+  content: ''; flex: none; inline-size: 6px; block-size: 6px;
+  border-inline-end: 1.5px solid currentColor; border-block-end: 1.5px solid currentColor;
+  transform: rotate(-45deg); transition: transform 120ms ease;
+}
+.panel[open] > .summary::before { transform: rotate(45deg); }
+.summary:focus-visible { outline: 2px solid var(--sfb-accent); outline-offset: 2px; border-radius: var(--sfb-radius); }
+@media (prefers-reduced-motion: reduce) { .summary::before { transition: none; } }
 .body { border: 0; margin: 0; padding: 8px 0 0; display: grid; gap: 14px; min-inline-size: 0; }
 .bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .barNote { color: var(--sfb-muted); font-size: 12px; }
@@ -18,7 +28,7 @@
 .stack { display: grid; gap: 4px; inline-size: 100%; }
 .chip {
   min-block-size: 32px; min-inline-size: 32px; padding: 0 8px; font: inherit; font-size: 12px;
-  color: var(--sfb-ink); background: var(--sfb-surface, #fff); border: 1px solid var(--sfb-line-strong);
+  color: var(--sfb-ink); background: var(--sfb-surface); border: 1px solid var(--sfb-line-strong);
   border-radius: var(--sfb-radius); cursor: pointer; text-align: start;
 }
 .chip[aria-checked='true'] { border-color: var(--sfb-accent); box-shadow: inset 0 0 0 1px var(--sfb-accent); }
@@ -28,7 +38,8 @@
 .diagramBox { fill: none; stroke: var(--sfb-line-strong); }
 .diagramSide { stroke: var(--sfb-accent); stroke-width: 2.5; stroke-linecap: round; }
 .note { margin: 0; font-size: 12px; color: var(--sfb-muted); }
-.warn { margin: 0; font-size: 12px; color: var(--sfb-warn-ink, #6b4a00); }
+.warn { margin: 0; font-size: 12px; color: var(--sfb-warn-ink); }
+.warn:empty { display: none; }
 .visuallyHidden { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media (pointer: coarse) {
   /* Every chip, swatch and reset is a 44 px target on touch (spec §9.1), swatches included. */

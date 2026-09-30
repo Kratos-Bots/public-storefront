@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties } from 'react';
+import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import type { CustomField } from '@puckeditor/core';
 import type { AnyBlock } from '@/builder/define.ts';
 import type { BlockStyle, StyleKey, StyleSupport } from '@/builder/style/model.ts';
@@ -69,17 +69,24 @@ function Row({ styleKey, value, disabled, onPick }: RowProps) {
   const checked = options.findIndex((o) => o.value === value);
   const colour = COLOURS.has(styleKey);
   const side = SIDE[styleKey];
+  const group = useRef<HTMLDivElement>(null);
+  // The reset button unmounts once its key is cleared: hand focus to the row's Default radio.
+  const reset = () => {
+    onPick(undefined);
+    group.current?.querySelector<HTMLElement>('[role="radio"]')?.focus();
+  };
   return (
     <div className={styles.row}>
       <div className={styles.rowHead}>
         <span className={fieldStyles.label}>{label}</span>
         {value !== undefined && styleKey !== 'hide' ? (
-          <button type="button" className={styles.reset} aria-label={`Reset ${label}`} title={`Reset ${label}`} onClick={() => onPick(undefined)}>×</button>
+          <button type="button" className={styles.reset} aria-label={`Reset ${label}`} title={`Reset ${label}`} onClick={reset}>×</button>
         ) : null}
       </div>
       <div className={styles.control}>
         {side ? <SideDiagram side={side} /> : null}
         <div
+          ref={group}
           role="radiogroup"
           aria-label={label}
           aria-disabled={disabled || undefined}
@@ -116,34 +123,39 @@ function Row({ styleKey, value, disabled, onPick }: RowProps) {
   );
 }
 
+/**
+ * The probe touches the DOM, so it runs in a layout effect (not during render). The live region
+ * stays mounted, empty when there is nothing to say, so a warning that appears later is announced.
+ */
 function ContrastHint({ bg, fg }: { bg?: string; fg?: string }) {
-  const ratio = useMemo(() => {
-    if (!fg) return null;
-    const a = resolveToken(bg ?? 'bg');
-    const b = resolveToken(fg);
-    return a && b ? contrastRatio(a, b) : null;
+  const [ratio, setRatio] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const a = fg ? resolveToken(bg ?? 'bg') : null;
+    const b = fg ? resolveToken(fg) : null;
+    setRatio(a && b ? contrastRatio(a, b) : null);
   }, [bg, fg]);
-  if (ratio === null || !Number.isFinite(ratio) || ratio >= 4.5) return null;
-  return <p className={styles.warn} role="status">{`Low contrast (${formatRatio(ratio)})`}</p>;
+  const low = ratio !== null && Number.isFinite(ratio) && ratio < 4.5;
+  return <p className={styles.warn} role="status">{low ? `Low contrast (${formatRatio(ratio)})` : null}</p>;
 }
 
 interface PanelProps { id: string; name: string; support: StyleSupport; value: BlockStyle | undefined; onChange: (v: BlockStyle | undefined) => void; readOnly: boolean }
 
 function StylePanel({ id, name, support, value, onChange, readOnly }: PanelProps) {
   const [open, setOpen] = useState(() => openByType.get(name) ?? false);
+  const summary = useRef<HTMLElement>(null);
   const count = countSet(value, support);
   const pick = (key: StyleKey) => (v: string | undefined) => onChange(setStyleKey(value, key, v, support));
   // Controlled: React owns `open` (Enter/Space on a summary fire click too), remembered per block type.
   const toggle = () => { const next = !open; openByType.set(name, next); setOpen(next); };
   return (
     <details className={`${fieldStyles.field} ${styles.panel}`} id={id} data-sf-style-panel="" open={open}>
-      <summary className={styles.summary} onClick={(e) => { e.preventDefault(); toggle(); }}>
+      <summary ref={summary} className={styles.summary} onClick={(e) => { e.preventDefault(); toggle(); }}>
         {count > 0 ? `Style · ${count} set` : 'Style'}
       </summary>
       <fieldset className={styles.body} disabled={readOnly}>
         <div className={styles.bar}>
           <span className={styles.barNote}>Template default unless set</span>
-          {count > 0 ? <button type="button" className={styles.resetAll} onClick={() => onChange(undefined)}>Reset style</button> : null}
+          {count > 0 ? <button type="button" className={styles.resetAll} onClick={() => { onChange(undefined); summary.current?.focus(); }}>Reset style</button> : null}
         </div>
         {groupsFor(support).map((g) => (
           <section key={g.title} className={styles.group} aria-label={g.title}>

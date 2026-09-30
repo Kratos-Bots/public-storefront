@@ -30,6 +30,10 @@ describe('style-model', () => {
     expect(setStyleKey({ bg: 'surface' }, 'bg', undefined, s)).toBeUndefined();
     expect(setStyleKey({ bg: 'surface' }, 'align', 'center', styleSupport('root', ['bg']))).toEqual({ bg: 'surface' });
   });
+  it('clearing the border width clears its colour and style too', () => {
+    expect(setStyleKey({ bg: 'surface', border: 'thin', borderColor: 'line', borderStyle: 'dashed' }, 'border', undefined, s)).toEqual({ bg: 'surface' });
+    expect(setStyleKey({ border: 'thin', borderColor: 'line' }, 'border', 'thick', s)).toEqual({ border: 'thick', borderColor: 'line' });
+  });
   it('countSet counts allowed keys only', () => {
     expect(countSet({ bg: 'surface', align: 'end' }, styleSupport('root', ['bg']))).toBe(1);
     expect(countSet(undefined, s)).toBe(0);
@@ -97,6 +101,18 @@ describe('styleField', () => {
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenCalledWith(undefined);
   });
+  it('a reset hands focus to the row Default radio; Reset style hands it to the summary', () => {
+    show(heading, { bg: 'surface', padTop: 'lg' });
+    const reset = screen.getByRole('button', { name: 'Reset Padding top' });
+    reset.focus();
+    fireEvent.click(reset);
+    const row = screen.getByRole('radiogroup', { name: 'Padding top' });
+    expect(document.activeElement).toBe(within(row).getByRole('radio', { name: 'Default' }));
+    const all = screen.getByRole('button', { name: 'Reset style' });
+    all.focus();
+    fireEvent.click(all);
+    expect(document.activeElement).toBe(document.querySelector('[data-sf-style-panel] > summary'));
+  });
   it('border colour and style wait for a width', () => {
     show(heading, undefined);
     for (const r of within(screen.getByRole('radiogroup', { name: 'Border colour' })).getAllByRole('radio')) expect(r).toBeDisabled();
@@ -122,5 +138,9 @@ describe('styleField', () => {
     show(heading, { bg: 'primary', fg: 'muted' });
     expect(screen.queryByText(/Low contrast/)).toBeNull();
     expect(screen.queryByText(/NaN/)).toBeNull();
+  });
+  it('keeps the contrast live region mounted (empty) so a later warning is announced', () => {
+    show(heading, undefined);
+    expect(screen.getByRole('status')).toBeEmptyDOMElement();
   });
 });

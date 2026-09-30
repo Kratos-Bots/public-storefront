@@ -55,11 +55,19 @@ export function optionsFor(key: StyleKey): StyleOption[] {
   return [DEFAULT, ...(FIXED[key] ?? [])];
 }
 
-/** One key changed; allowed keys only, canonical order; an empty result is `undefined` (never `{}`). */
+/** Border colour and style mean nothing without a width: clearing the width clears them too. */
+const NEEDS_BORDER: ReadonlySet<StyleKey> = new Set(['borderColor', 'borderStyle']);
+
+/**
+ * One key changed; allowed keys only, canonical order; an empty result is `undefined` (never `{}`).
+ * Clearing `border` also clears `borderColor` and `borderStyle`.
+ */
 export function setStyleKey(style: BlockStyle | undefined, key: StyleKey, value: string | undefined, support: StyleSupport): BlockStyle | undefined {
   const next: Record<string, string> = {};
+  const noBorder = key === 'border' && value === undefined;
   for (const k of STYLE_KEY_ORDER) {
     if (!support.keys.includes(k)) continue;
+    if (noBorder && NEEDS_BORDER.has(k)) continue;
     const v = k === key ? value : style?.[k];
     if (v !== undefined && (STYLE_KEYS[k] as readonly string[]).includes(v)) next[k] = v;
   }
