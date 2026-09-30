@@ -28,7 +28,7 @@
 ## Global Constraints
 
 - **Where to work:** the `feature/puck-editable` worktree of `ecommerce-admin-frontend/` (already checked out; never create a branch, never touch the main checkout). Run every `npm`/`npx`/`node` command from that repo's root. The sibling worktrees `ecommerce-storefront/` and `ecommerce-backend/` sit next to it (`../ecommerce-storefront`).
-- **Commits:** commit by explicit pathspec only: `git commit -m "…" -- <paths>`. Never `git add -A`, `git stash`, reset, or checkout someone else's files. Other implementers share this worktree. Every commit message ends with:
+- **Commits:** commit by explicit pathspec only: `git commit -m "…" -- <paths>`. A pathspec commit ignores untracked files, so run `git add -- <new paths>` first for files a task creates (Task 1: `src/api/storefront-error-codes.ts`, `src/api/storefront-text.ts`; Task 4: `src/features/storefront-settings/pages/text-restore.ts`). Never `git add -A`, `git stash`, reset, or checkout someone else's files. Other implementers share this worktree. Every commit message ends with:
   ```
   Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
   Claude-Session: https://claude.ai/code/session_015prWiSdK9Tgbwfp2fhZsB4
@@ -3610,3 +3610,7 @@ These are names and shapes the spec leaves open or implies. This plan assumes ea
 - **Storefront, read-only preview with no `siteText`:** a page-version preview whose pin is `null`, `0` or pruned is posted **without** a `siteText` key. The editor then shows shared values as it does for any load without `siteText`.
 - **Storefront, text-version preview:** "Preview" of a text version posts `readOnly: true` with that version's `siteText` and the layout's newest published page set (`null` when none).
 - **Error-code strings:** exactly `PAGESET_CONFLICT`, `SITETEXT_CONFLICT`, `TEXT_VERSION_GONE`, `NO_DRAFT`, each as the envelope's `error` string.
+
+## Reconciled contracts (pre-flight)
+
+Checked against Plans 1–3. **No contract change was needed**: every assumption above matches the backend plan (endpoints, bodies, results, error strings, `storefront-text:published`, version detail carrying `data.text`, `restore` accepting `{ withText: false }` or no body, pruned text version = 404) and the editor plan (protocol fields, `textIssues` always sent, `siteText` never `null` in a change, read-only previews without `siteText`). Change made: Global Constraints now say to `git add -- <new paths>` before a pathspec commit (Tasks 1 and 4 create files).

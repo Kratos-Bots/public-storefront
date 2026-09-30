@@ -3240,3 +3240,10 @@ Claude-Session: https://claude.ai/code/session_015prWiSdK9Tgbwfp2fhZsB4" -- STOR
 - **404 message** for an unknown text version: `Site text version not found`.
 - **Permission domain** `storefront-text`, granted by the existing Storefront module (no admin-SPA change needed; the routes are `authorize('admin')` anyway).
 - **Scoped body parser** `express.json({ limit: '1mb' })` on `/api/v1/storefront-text`.
+
+## Reconciled contracts (pre-flight)
+
+Checked against Plans 2–4; full table in the (git-ignored) pre-flight notes. **No change to this plan's code or HTTP contract.**
+
+- Key regex: this plan's `TEXT_KEY_RE` (`[A-Za-z0-9_-]` after the first character of a later segment) is canonical; Plan 2's `KEY_RE` was changed to be identical.
+- Every endpoint, request/response shape, error string (`SITETEXT_CONFLICT`, `PAGESET_CONFLICT`, `NO_DRAFT`, `TEXT_VERSION_GONE`), the `storefront-text:published { version }` event and the public-read shape `{ version, data, text: { version, locale, formatLocale, shared, layout } | null }` match what Plan 2 (`fetchPublished`) and Plan 4 (admin API) consume, including: restore body `{ withText: false }` / no body; page version detail keeps `data.text`; text draft GET with nothing stored = `{ source: 'none', data: null, baseVersion: 0, latestPublishedVersion: 0, updatedAt: null }`; `RestoreResult.textVersion` always a number.

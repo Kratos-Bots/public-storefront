@@ -19,7 +19,8 @@
 - **Defaults are the rendered string** (spec §9): HTML entities decoded (`&rsquo;` → `’`, `&gt;` → `>`), JSX whitespace collapsed exactly as React does (a line break plus indentation between words becomes one space; leading/trailing whitespace-only lines vanish), `{' '}` kept, typographic characters (`’ — – … ← ·` and U+00A0) copied, never retyped. Copy values from `web/test/helpers/text-inventory.json` (Task 4), which already holds the rendered form.
 - **Text is never markup** (spec Guarantee 3): resolved strings reach the DOM only as React text children or attribute values — never `dangerouslySetInnerHTML`, `href`, `src`, `style`.
 - **No extra shopper request** (Guarantee 4): text rides in the existing `GET storefront/pages/:layout` response; `PAGES_QUERY` is unchanged (read once per page load).
-- Key shape: 2–6 dot-separated segments, first segment lower-case letters (the area), later segments start with a letter or digit and use `[A-Za-z0-9-]` (camelCase; `-` only inside template ids), total ≤ 100 chars. `KEY_RE = /^[a-z]+(?:\.[A-Za-z0-9][A-Za-z0-9-]*){1,5}$/`.
+- Key shape: 2–6 dot-separated segments, first segment lower-case letters (the area), later segments start with a letter or digit and continue with `[A-Za-z0-9_-]`, total ≤ 100 chars — the regex is **identical to the backend's `TEXT_KEY_RE`** (pre-flight ruling). Registry keys are still written camelCase, with `-` only inside template ids; `_` is admitted by the shape but not used. `KEY_RE = /^[a-z]+(?:\.[A-Za-z0-9][A-Za-z0-9_-]*){1,5}$/`.
+- New files: a pathspec commit ignores untracked files, so `git add -- <new paths>` first (never `git add -A`).
 - Entry fields: `en` (the default), `note?`, `label?`, `max?` (default `200`, never above `1000`), `fixed?`. Placeholders match `\{[A-Za-z][A-Za-z0-9]{0,31}\}`; no other `{` / `}` in a default; ≤ 10 distinct placeholder names per key.
 - Areas (spec §6.1), exactly these 19, one file each under `web/src/text/keys/`: `common`, `shell`, `catalog`, `product`, `cart`, `checkout`, `auth`, `account`, `order`, `payment`, `tracking`, `verify`, `wholesale`, `webapp`, `notices`, `errors`, `templates`, `closed`, `boot`. `closed.*` and `boot.*` keys are all `fixed: true`; no other key is.
 - Formatting: locale `en` with `formatLocale: ''` keeps the legacy per-call-site locales exactly (money `'en'`, `formatDate` `'en-GB'`, `formatDateTime` viewer locale, integers viewer locale, tracking stamps `'en-GB'`, verify dates `'en-GB'`, country names `['en']`); any other language uses `formatLocale || locale` for all of them. `lib/cutoffs.ts` (`'en-US'` parts parser) and the `templates/hooks.ts` clock/offset helpers are never localised. `index.html` keeps `lang="en"`; `dir` is never set.
@@ -95,7 +96,7 @@ web/src/text/
   format-profile.ts   FormatProfile, LEGACY_PROFILE, formatProfileFor()                        (Task 2)
   runtime.tsx         TextApi, createTextApi(), TextLayerProvider, TextProvider, useText(),
                       textSnapshot(), textKey()                                                (Task 5)
-  site-wide.ts        SITE_WIDE_TEXT: the Text panel's Site-wide group                         (Task 15)
+  site-wide.ts        SITE_WIDE_TEXT: the Text panel's Site-wide group          (Task 5 provisional, Task 15 final)
 web/src/api/pages.ts        Published, fetchPublished(), toPublished(), toPublishedText()     (Task 3)
 web/src/builder/published.ts pagesKey, PAGES_QUERY, pageSetQueryFn (moved out of runtime.tsx)  (Task 3)
 web/src/builder/types.ts    PageSet gains `text?: PageText`                                    (Task 3)
@@ -123,6 +124,8 @@ docs/builder.md  "Text layer" section                                           
 | 4 | Tasks 6–14 — extraction: checkout · account · order+payment · tracking+verify · catalog+product · cart+wholesale · auth+webapp+notices · shell+system · templates | 5 |
 | 5 | Task 15 — guard switched on, registry integrity, block text patterns, docs | 6–14 |
 | 6 | Task 16 — e2e: mocks `text` option, `text.spec.ts`, full Playwright incl. dom-parity (**owns Playwright**) | 15 |
+
+Cross-plan (pre-flight): the editor plan (Plan 3) may start once Tasks 1–5 are committed (its "Plan 2 core wave"). Plan 3's Task 12 (its Playwright pass and `docs/builder.md` edit) runs **after** this plan's Task 16 — both use Playwright on port 5199 and both edit `docs/builder.md`.
 
 ---
 
@@ -345,7 +348,8 @@ export type EditorText = TextLayers;
 export const TEXT_LIMITS = { locales: 10, keysPerLocale: 3000, key: 100, value: 1000, placeholders: 10, docBytes: 256 * 1024 } as const;
 export const DEFAULT_MAX = 200;
 export const LOCALE_RE = /^[a-z]{2,3}(?:-[A-Z][a-z]{3})?(?:-(?:[A-Z]{2}|\d{3}))?$/;
-export const KEY_RE = /^[a-z]+(?:\.[A-Za-z0-9][A-Za-z0-9-]*){1,5}$/;
+/** Identical to the backend's TEXT_KEY_RE (storefront-text/schemas.ts). */
+export const KEY_RE = /^[a-z]+(?:\.[A-Za-z0-9][A-Za-z0-9_-]*){1,5}$/;
 
 export function isLocale(x: unknown): x is Locale {
   if (typeof x !== 'string' || !LOCALE_RE.test(x)) return false;
@@ -1072,7 +1076,7 @@ their fetchPageSet mock (the runtime reads through it now); no assertion changed
 
 **Files:**
 - Create: `web/test/helpers/text-scan.ts`, `web/test/helpers/text-area-guard.ts`, `web/test/helpers/text-inventory.json` (generated), `web/test/text-guard.allow.ts`, `web/test/text-scan.test.ts`
-- Modify (seeds): `web/src/text/keys/common.ts`, `cart.ts`, `checkout.ts`, `catalog.ts`, `product.ts`, `shell.ts`
+- Modify (seeds): `web/src/text/keys/common.ts`, `cart.ts`, `checkout.ts`, `catalog.ts`, `product.ts`, `shell.ts`, `closed.ts` (one fixed seed, so the editor plan's tests have a `fixed` key before Task 13 lands)
 
 **Interfaces:**
 - Consumes: `TEXT_ENTRIES`, `formsOf` (Task 1).
@@ -1492,6 +1496,10 @@ export default defineTextArea('product', {
 export default defineTextArea('shell', {
   'nav.ariaLabel': { en: 'Site', note: 'Screen-reader name of a Links block left without its own label', max: 40 },
 });
+// keys/closed.ts — the one fixed seed (pre-flight: the editor plan's wave-1 tests need a fixed key; Task 13 keeps it)
+export default defineTextArea('closed', {
+  'eyebrow': { en: 'Currently closed', note: 'Small heading on the page shown while the shop is closed (not editable)', fixed: true },
+});
 ```
 
 (Each file keeps the `import { defineTextArea } from '@/text/define.ts';` line and a one-line doc comment naming its area.)
@@ -1506,7 +1514,7 @@ Run: `npm --prefix web run typecheck` → PASS.
 - [ ] **Step 8: Commit**
 
 ```bash
-git commit -m "test(text): text guard scanner, frozen v0.7.0 literal inventory, per-area guard helper, seeded shared keys" -- web/test/helpers/text-scan.ts web/test/helpers/text-area-guard.ts web/test/helpers/text-inventory.json web/test/text-guard.allow.ts web/test/text-scan.test.ts web/src/text/keys/common.ts web/src/text/keys/cart.ts web/src/text/keys/checkout.ts web/src/text/keys/catalog.ts web/src/text/keys/product.ts web/src/text/keys/shell.ts
+git commit -m "test(text): text guard scanner, frozen v0.7.0 literal inventory, per-area guard helper, seeded shared keys" -- web/test/helpers/text-scan.ts web/test/helpers/text-area-guard.ts web/test/helpers/text-inventory.json web/test/text-guard.allow.ts web/test/text-scan.test.ts web/src/text/keys/common.ts web/src/text/keys/cart.ts web/src/text/keys/checkout.ts web/src/text/keys/catalog.ts web/src/text/keys/product.ts web/src/text/keys/shell.ts web/src/text/keys/closed.ts
 ```
 
 ---
@@ -1516,7 +1524,7 @@ git commit -m "test(text): text guard scanner, frozen v0.7.0 literal inventory, 
 **Depends on:** Tasks 2, 3, 4. **Wave 3.**
 
 **Files:**
-- Create: `web/src/text/runtime.tsx`
+- Create: `web/src/text/runtime.tsx`, `web/src/text/site-wide.ts` (provisional list — pre-flight: the editor plan's wave 1 imports it; Task 15 finalises it)
 - Modify: `web/src/app/App.tsx` (mount only), `web/src/builder/runtime.tsx` (`PageSetOverrideProvider` `text?`), `web/src/builder/define.ts` (`BlockDef.text?`, `BlockDef.textProps?`)
 - Test: `web/test/text-runtime.test.tsx`, `web/test/text-types.test.ts`
 
@@ -1540,7 +1548,7 @@ export function useText(): TextApi;                                   // default
 export function textSnapshot(): TextApi;                              // the mounted provider's API
 export function textKey<K extends StringKey>(key: K): K;
 ```
-  `PageSetOverrideProvider({ pageSet, text?, children })` — when `text` is given (an `EditorText`), children are wrapped in `TextLayerProvider`. `BlockDef<P>` gains `text?: readonly TextKeyPattern[]` and `textProps?: Partial<Record<keyof P & string, StringKey>>`.
+  `PageSetOverrideProvider({ pageSet, text?, children })` — when `text` is given (an `EditorText`), children are wrapped in `TextLayerProvider`. `BlockDef<P>` gains `text?: readonly TextKeyPattern[]` and `textProps?: Partial<Record<keyof P & string, StringKey>>`. `SITE_WIDE_TEXT: readonly TextKeyPattern[]` from `@/text/site-wide.ts` (provisional here, final in Task 15).
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1817,6 +1825,20 @@ export function PageSetOverrideProvider({ pageSet, text, children }: { pageSet: 
   /** Owner props that fall back to a site-text key when blank: render uses `prop.trim() || t(key)` (text spec §6.4). */
   textProps?: Partial<Record<keyof P & string, StringKey>>;
 ```
+- Create `web/src/text/site-wide.ts` now, with the provisional list (pre-flight ruling: the editor plan's catalogue imports it in its wave 1, long before Task 15). Prefixes that match no key yet are harmless; Task 15 adjusts them to the real key names:
+
+```ts
+import type { TextKeyPattern } from '@/text/registry.ts';
+
+/**
+ * Keys of system mounts that belong to no block (spec §7.3): cart drawer, login modal, the phone cart bar
+ * safety net, Telegram chrome, the not-found page and error fallbacks. The editor's Text panel shows them
+ * as the "Site-wide" group. Provisional until Task 15 (which finalises the prefixes).
+ */
+export const SITE_WIDE_TEXT: readonly TextKeyPattern[] = [
+  'cart.drawer.*', 'cart.bar.*', 'auth.modal.*', 'webapp.*', 'shell.notFound.*', 'shell.webapp.*', 'errors.*', 'common.*',
+];
+```
 
 - [ ] **Step 5: Add a provider test to `web/test/text-runtime.test.tsx`** for the override path, then run everything
 
@@ -1837,7 +1859,8 @@ Run: `npm --prefix web run typecheck && npm --prefix web test` → PASS.
 - [ ] **Step 6: Commit**
 
 ```bash
-git commit -m "feat(text): TextProvider, useText/tp/tn/msg, textSnapshot, editor text override, BlockDef text fields" -- web/src/text/runtime.tsx web/src/app/App.tsx web/src/builder/runtime.tsx web/src/builder/define.ts web/test/text-runtime.test.tsx web/test/text-types.test.ts
+git add -- web/src/text/runtime.tsx web/src/text/site-wide.ts web/test/text-runtime.test.tsx web/test/text-types.test.ts
+git commit -m "feat(text): TextProvider, useText/tp/tn/msg, textSnapshot, editor text override, BlockDef text fields" -- web/src/text/runtime.tsx web/src/text/site-wide.ts web/src/app/App.tsx web/src/builder/runtime.tsx web/src/builder/define.ts web/test/text-runtime.test.tsx web/test/text-types.test.ts
 ```
 
 ---
@@ -2262,7 +2285,7 @@ describe('Telegram MainButton labels follow published text', () => {
 
 **Files:**
 - Modify: every file under `web/src/layouts/` **except** `SearchField.tsx`; every file under `web/src/components/`; `web/src/features/NotFoundPage.tsx`; `web/src/features/closed/ClosedPage.tsx`; `web/src/app/App.tsx` (boot screen strings only); `web/src/lib/errors.ts`; `web/src/api/client.ts` (fallback messages only — do not restructure the file); `web/src/builder/blocks/NavLinks.tsx`; `web/src/builder/blocks/Video.tsx`
-- Modify: `web/src/text/keys/shell.ts` (keep the seed), `boot.ts`, `closed.ts`, `errors.ts`, `common.ts` (owner of `common` in this wave; keep every seed)
+- Modify: `web/src/text/keys/shell.ts` (keep the seed), `boot.ts`, `closed.ts` (keep the `closed.eyebrow` seed), `errors.ts`, `common.ts` (owner of `common` in this wave; keep every seed)
 - Modify (spec conflict 2 — one assertion): `web/test/builder-neutral-fallbacks.test.tsx`
 - Create: `web/test/text-guard-shell.test.tsx`
 - Existing tests, unedited: `shell-parts.test.tsx`, `shell-header-options.test.tsx`, `builder-shell.test.tsx`, `builder-nav-footer.test.tsx`, `builder-content-media.test.tsx`, `closed-gate.test.tsx`, `closed-exempt.test.ts`, `api-client.test.ts`, `api-interceptor.test.ts`, `public-order-api.test.ts`, `api-orders.test.ts`, `document-theme.test.tsx`.
@@ -2399,8 +2422,8 @@ describe('template copy', () => {
 **Depends on:** Tasks 6–14. **Wave 5.**
 
 **Files:**
-- Create: `web/test/text-guard.test.ts`, `web/test/text-registry.test.ts`, `web/test/text-inventory.test.ts`, `web/src/text/site-wide.ts`
-- Modify: `web/test/text-guard.allow.ts` (merge every per-area `allow` entry), `web/test/text-guard-*.test.tsx` (remove the `describeAreaGuard(...)` call and its import only — keep their override tests), `web/test/text-scan.test.ts` (remove the `TEXT_INVENTORY_WRITE` writer), every `web/src/builder/blocks/*.tsx` that renders site text (add `text: [...]`), any leftover source file the global guard flags, `web/src/text/keys/common.ts` (only to consolidate "candidate for common" duplicates reported by Tasks 6–14, updating their call sites), `docs/builder.md`
+- Create: `web/test/text-guard.test.ts`, `web/test/text-registry.test.ts`, `web/test/text-inventory.test.ts`
+- Modify: `web/src/text/site-wide.ts` (created provisionally by Task 5 — finalise the prefixes), `web/test/text-guard.allow.ts` (merge every per-area `allow` entry), `web/test/text-guard-*.test.tsx` (remove the `describeAreaGuard(...)` call and its import only — keep their override tests), `web/test/text-scan.test.ts` (remove the `TEXT_INVENTORY_WRITE` writer), every `web/src/builder/blocks/*.tsx` that renders site text (add `text: [...]`), any leftover source file the global guard flags, `web/src/text/keys/common.ts` (only to consolidate "candidate for common" duplicates reported by Tasks 6–14, updating their call sites), `docs/builder.md`
 - Delete: `web/test/helpers/text-area-guard.ts`
 
 **Interfaces:**
@@ -2504,14 +2527,14 @@ describe('text registry (spec §6.6)', () => {
 
 - [ ] **Step 2: Run to verify they fail**
 
-Run: `npm --prefix web test -- test/text-guard.test.ts test/text-registry.test.ts test/text-inventory.test.ts` → FAIL (`@/text/site-wide.ts` missing; coverage and any leftovers listed).
+Run: `npm --prefix web test -- test/text-guard.test.ts test/text-registry.test.ts test/text-inventory.test.ts` → FAIL (uncovered keys — the provisional `SITE_WIDE_TEXT` and no block `text` yet — and any leftovers listed).
 
 - [ ] **Step 3: Make them pass**
   - Move every per-area `allow` entry into `TEXT_GUARD_ALLOW` (keep the reason), then remove `describeAreaGuard` from the nine `text-guard-*.test.tsx` files; delete `helpers/text-area-guard.ts`; remove the inventory writer from `text-scan.test.ts`.
   - Fix every leftover global finding: shopper text → a key in the right area (you may edit any area file now — no extraction task is running); editor/admin/code text → an allowlist entry with a reason.
   - **Manual sweep** (spec §13.12): `grep -rnE "['\`\"][A-Z][a-z]+( [a-z’']+)+" web/src/features web/src/layouts web/src/components web/src/lib web/src/templates` — every hit is a key, a data/owner value, or allowlisted.
   - Consolidate the "candidate for common" duplicates Tasks 6–14 reported (one key per meaning), updating call sites.
-  - Create `web/src/text/site-wide.ts`:
+  - Finalise `web/src/text/site-wide.ts` (Task 5 created it with this provisional list; drop the word "Provisional" from its comment):
 
 ```ts
 import type { TextKeyPattern } from '@/text/registry.ts';
@@ -2537,9 +2560,10 @@ Run: `npm --prefix web test` → PASS. `npm --prefix web run typecheck` → PASS
 - [ ] **Step 6: Commit**
 
 ```bash
-git commit -m "test(text): text guard, registry integrity and v0.7.0 inventory checks on for all of web/src; block text patterns; docs" -- web/test web/src/text web/src/builder/blocks docs/builder.md <any leftover source files you changed>
+git add -- web/test/text-guard.test.ts web/test/text-registry.test.ts web/test/text-inventory.test.ts
+git commit -m "test(text): text guard, registry integrity and v0.7.0 inventory checks on for all of web/src; block text patterns; docs" -- web/test/text-guard.test.ts web/test/text-registry.test.ts web/test/text-inventory.test.ts web/test/text-guard.allow.ts web/test/text-scan.test.ts web/test/text-guard-*.test.tsx web/test/helpers/text-area-guard.ts web/src/text web/src/builder/blocks docs/builder.md <any leftover source files you changed>
 ```
-(List the leftover source files explicitly; `web/test` and `web/src/text` as directories are fine because no other task is running in this wave.)
+(List the leftover source files explicitly. **Never `web/test` as a directory** (pre-flight ruling): the editor plan (Plan 3) runs concurrently and keeps its own uncommitted `web/test/builder-editor-*` files and `web/test/helpers/text-keys.ts` there. `web/src/text` and `web/src/builder/blocks` as directories are fine — Plan 3 never edits them and no other Plan 2 task runs in this wave. The deleted `helpers/text-area-guard.ts` is staged by naming it.)
 
 ---
 
@@ -2707,9 +2731,21 @@ git commit -m "test(e2e): published site text — shared, per-layout, fallback, 
 - `EditorText` = `TextLayers` = `{ locale, formatLocale, shared: LocaleStrings, layout: LocaleStrings }` (active locale only); `PageSetOverrideProvider({ pageSet, text?: EditorText, children })`; the editor may also mount `TextLayerProvider` (`@/text/runtime.tsx`) directly. The editor must pass a memoised `text` object (resolution is memoised per object identity).
 - `checkValue(key: string, value: unknown): { ok: true } | { ok: false; rule: TextRule; message: string }` with `TextRule` exactly the spec §6.3 ids; the editor builds `TextIssue { scope, key, rule, message }` from it and drops `unknown-key` from blocking issues.
 - Registry exports for the editor: `TEXT_ENTRIES`, `TEXT_AREAS` (panel group order), `textLabel(key)`, `matchesTextPattern(key, pattern)`, `isPluralKey`, `placeholdersOf(entry)` (`@/text/define.ts`), `categoriesFor(locale)` (`@/text/plural.ts`), `isLocale`, `LOCALE_RE`, `KEY_RE`, `TEXT_LIMITS`, `isTextValue` (`@/text/types.ts`).
-- This plan adds `BlockDef.text?: readonly TextKeyPattern[]` and `BlockDef.textProps?` (Task 5 types, Task 15 values) and `SITE_WIDE_TEXT` in `web/src/text/site-wide.ts`; the editor plan consumes them and does not re-declare them.
+- This plan adds `BlockDef.text?: readonly TextKeyPattern[]` and `BlockDef.textProps?` (Task 5 types, Task 15 values) and `SITE_WIDE_TEXT` in `web/src/text/site-wide.ts` (created provisionally in Task 5 so the editor's wave 1 can import it; finalised in Task 15); the editor plan consumes them and does not re-declare them.
 - This plan adds `PageSet.text?: PageText` to `web/src/builder/types.ts` (Task 3); the editor plan adds `text` to `protocol.ts`'s strict `pageSetSchema` and `toPageSet`.
-- Key regex allows `-` in later segments (template ids such as `cyber-brutalism`): the backend's key check must accept `^[a-z]+(\.[A-Za-z0-9][A-Za-z0-9-]*){1,5}$` (≤ 100 chars).
+- Key regex allows `-` in later segments (template ids such as `cyber-brutalism`): `KEY_RE` is identical to the backend's `TEXT_KEY_RE`, `^[a-z]+(?:\.[A-Za-z0-9][A-Za-z0-9_-]*){1,5}$` (≤ 100 chars) — reconciled in pre-flight.
 - Template keys: `templates.default.*` for the built-in default slots, `templates.<templateId>.*` per template; the Text panel's templates group shows `templates.default.*` plus the active template's keys.
 - Public read shape exactly spec §4.6 (`data: null | { version, data, text: { version, locale, formatLocale, shared, layout } | null }`); the storefront treats a missing `text`, `text: null`, or a malformed `text` as "no text".
 - `closed.*` and `boot.*` keys are `fixed: true` and hidden from the Text panel; the editor filters them with `TEXT_ENTRIES[k].fixed`.
+
+## Reconciled contracts (pre-flight)
+
+Checked against Plans 1, 3 and 4. Changes made to this plan:
+
+- **Key regex** — `KEY_RE` is now `^[a-z]+(?:\.[A-Za-z0-9][A-Za-z0-9_-]*){1,5}$`, identical to the backend's `TEXT_KEY_RE` (Global Constraints, Task 1 `types.ts`, cross-plan line). Registry keys stay camelCase.
+- **`SITE_WIDE_TEXT`** stays in `@/text/site-wide.ts` (this plan is the producer; Plan 3 was changed from `@/text/coverage.ts`). It is now **created provisionally in Task 5** (so Plan 3's wave 1 can import it) and finalised in Task 15 (Create → Modify).
+- **Fixed seed** — Task 4 also seeds `closed.eyebrow` (`fixed: true`) in `keys/closed.ts`, so Plan 3's wave-1 tests find a fixed key; Task 13 keeps it.
+- **Task 15 commit** — no `web/test` directory pathspec (Plan 3 has uncommitted files there); explicit test paths instead.
+- **Sequencing** — Plan 3 starts after Tasks 1–5; Plan 3 Task 12 runs after Task 16 (shared Playwright port and `docs/builder.md`).
+- **New files** — Global Constraints now say `git add -- <new paths>` before a pathspec commit.
+- Unchanged and confirmed with consumers: `checkValue` returns `TextCheck` (Plan 3 adapted to it), `EditorText = TextLayers`, `PageSetOverrideProvider({ pageSet, text?, children })`, `fetchPublished` → `{ pageSet, text: PublishedText | null }`, `pluralCategory`/`categoriesFor`, `TEXT`/`TEXT_ENTRIES` entry shape, `BlockDef.text`/`textProps`, `templates.default.*` convention (Plan 3's template filter now includes it).

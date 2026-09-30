@@ -10,7 +10,7 @@
 
 **Spec:** `ecommerce-storefront/docs/superpowers/specs/2026-09-30-editable-text-design.md` — this plan implements §7 (all of it) and the editor parts of §10. Read §3, §6.3, §6.4 and §13 too. Initiative rules: `ecommerce-storefront/docs/superpowers/specs/2026-09-30-puck-editable-overview.md`. House rules: `ecommerce-storefront/.superpowers/sdd/house-rules.md`.
 
-**Runs after:** the core wave of Plan 2 (`2026-09-30-editable-text-2-runtime.md`): `web/src/text/{types,registry,resolve,plural,runtime}.ts(x)`, `PageSet.text`, `fetchPublished`, and `PageSetOverrideProvider`'s `text` prop must exist. Plan 2's migration waves (feature files, block files) may run concurrently with this plan: **this plan never edits a file under `web/src/features/`, `web/src/layouts/`, `web/src/builder/blocks/`, `web/src/text/` or `web/src/builder/{define,runtime,types}.ts(x)`.**
+**Runs after:** the core wave of Plan 2 (`2026-09-30-editable-text-2-runtime.md`) = Plan 2 **Tasks 1–5** committed: `web/src/text/{types,registry,resolve,plural,runtime,site-wide}.ts(x)` (`site-wide.ts` provisional until Plan 2 Task 15), the Task 4 seeds (incl. one fixed key, `closed.eyebrow`), `PageSet.text`, `fetchPublished`, `BlockDef.text`, and `PageSetOverrideProvider`'s `text` prop must exist. Task 12 additionally runs after Plan 2 **Task 16** (pre-flight: both own Playwright on port 5199 and both edit `docs/builder.md`). Plan 2's migration waves (feature files, block files) may run concurrently with this plan: **this plan never edits a file under `web/src/features/`, `web/src/layouts/`, `web/src/builder/blocks/`, `web/src/text/` or `web/src/builder/{define,runtime,types}.ts(x)`.**
 
 All paths below are relative to `ecommerce-storefront/`; commands run in `ecommerce-storefront/web/` unless stated.
 
@@ -321,7 +321,7 @@ Claude-Session: https://claude.ai/code/session_015prWiSdK9Tgbwfp2fhZsB4" -- web/
 
 ### Task 2: Text catalogue (registry → editor rows)
 
-**Depends on:** Plan 2 core wave (`TEXT`, `TextKey` in `@/text/registry.ts`; `SITE_WIDE_TEXT` in `@/text/coverage.ts`; `BlockDef.text` — see Cross-plan contract assumptions).
+**Depends on:** Plan 2 core wave (`TEXT`, `TextKey` in `@/text/registry.ts`; `SITE_WIDE_TEXT` in `@/text/site-wide.ts`; `BlockDef.text` — see Cross-plan contract assumptions).
 
 **Files:**
 - Create: `web/src/builder/editor/text/catalog.ts`
@@ -329,7 +329,7 @@ Claude-Session: https://claude.ai/code/session_015prWiSdK9Tgbwfp2fhZsB4" -- web/
 - Test: `web/test/builder-editor-text-catalog.test.ts`
 
 **Interfaces:**
-- Consumes: `TEXT`, `type TextKey` (`@/text/registry.ts`); `SITE_WIDE_TEXT: readonly string[]` (`@/text/coverage.ts`); `BLOCKS` (`@/builder/registry.ts`) with `def.text?: readonly string[]`; `TextValue` (`@/text/types.ts`).
+- Consumes: `TEXT`, `type TextKey` (`@/text/registry.ts`); `SITE_WIDE_TEXT: readonly TextKeyPattern[]` (`@/text/site-wide.ts`; read as `readonly string[]`); `BLOCKS` (`@/builder/registry.ts`) with `def.text?: readonly TextKeyPattern[]`; `TextValue` (`@/text/types.ts`).
 - Produces:
   - `interface TextRowDef { key: TextKey; area: string; label: string; note: string; def: TextValue; max: number; plural: boolean; placeholders: readonly string[]; multiline: boolean }`
   - `DEFAULT_MAX = 200`, `MULTILINE_OVER = 60`, `AREA_TITLES: Record<string, string>`, `SITE_WIDE_GROUP = 'site-wide'`
@@ -422,10 +422,13 @@ describe('text catalogue', () => {
     expect(matchesPattern('cart.drawer.titles', 'cart.drawer.title')).toBe(false);
   });
 
-  it('template keys show only for the active template', () => {
+  it('template keys show only for the active template, plus the built-in default slots', () => {
     expect(isForTemplate('templates.bento.heroTitle', 'bento')).toBe(true);
     expect(isForTemplate('templates.bento.heroTitle', 'modern')).toBe(false);
     expect(isForTemplate('cart.drawer.title', 'modern')).toBe(true);
+    // Plan 2: templates.default.* are the built-in slots every template without its own slot renders.
+    expect(isForTemplate('templates.default.footer.support', 'modern')).toBe(true);
+    expect(isForTemplate('templates.default.footer.support', 'bento')).toBe(true);
   });
 
   it('groups: Site-wide first, then areas; no key twice; only the active template', () => {
@@ -462,7 +465,7 @@ Expected: FAIL — cannot resolve `@/builder/editor/text/catalog.ts`. (If it fai
 ```ts
 // web/src/builder/editor/text/catalog.ts
 import { TEXT, type TextKey } from '@/text/registry.ts';
-import { SITE_WIDE_TEXT } from '@/text/coverage.ts';
+import { SITE_WIDE_TEXT } from '@/text/site-wide.ts';
 import { BLOCKS } from '@/builder/registry.ts';
 import type { TextValue } from '@/text/types.ts';
 
@@ -563,9 +566,12 @@ export function matchesPattern(key: string, pattern: string): boolean {
   return pattern.endsWith('.*') ? key.startsWith(pattern.slice(0, -1)) : key === pattern;
 }
 
-/** `templates.<id>.*` keys belong to one template; the panel shows only the active one's. */
+/**
+ * `templates.<id>.*` keys belong to one template; the panel shows only the active one's, plus
+ * `templates.default.*` — Plan 2's built-in slots, rendered by every template without its own slot.
+ */
 export const isForTemplate = (key: string, templateId: string): boolean =>
-  !key.startsWith('templates.') || key.startsWith(`templates.${templateId}.`);
+  !key.startsWith('templates.') || key.startsWith('templates.default.') || key.startsWith(`templates.${templateId}.`);
 
 export function rowsMatching(patterns: readonly string[], templateId: string): TextRowDef[] {
   return allRows().filter((r) => isForTemplate(r.key, templateId) && patterns.some((p) => matchesPattern(r.key, p)));
@@ -1274,7 +1280,7 @@ Claude-Session: https://claude.ai/code/session_015prWiSdK9Tgbwfp2fhZsB4" -- web/
 - Test: `web/test/builder-editor-text-issues.test.ts`
 
 **Interfaces:**
-- Consumes: `checkValue(key: string, value: unknown): TextRule | null` and `type TextRule` from `@/text/resolve.ts`; `rowFor`, `TextRowDef` (Task 2); `TextIssue`, `TextScope` (Task 1).
+- Consumes: `checkValue(key: string, value: unknown): TextCheck` (`{ ok: true } | { ok: false; rule: TextRule; message: string }`) and `type TextRule` from `@/text/resolve.ts` (Plan 2's shape — pre-flight ruling); `rowFor`, `TextRowDef` (Task 2); `TextIssue`, `TextScope` (Task 1).
 - Produces:
   - `NON_BLOCKING: ReadonlySet<string>` (`unknown-key`)
   - `ruleFor(key: string, value: unknown): string | null` — `checkValue`, plus `'empty'` for a plural without a usable `other` (the one shape the editor can hold that the backend refuses and `checkValue` may not flag)
@@ -1360,7 +1366,7 @@ Expected: FAIL — cannot resolve `@/builder/editor/text/issues.ts`.
 
 ```ts
 // web/src/builder/editor/text/issues.ts
-import { checkValue } from '@/text/resolve.ts';
+import { checkValue, type TextRule } from '@/text/resolve.ts';
 import type { LocaleStrings, TextValue } from '@/text/types.ts';
 import { rowFor } from '@/builder/editor/text/catalog.ts';
 import type { TextIssue, TextScope } from '@/builder/editor/text/model.ts';
@@ -1375,10 +1381,17 @@ export const NON_BLOCKING: ReadonlySet<string> = new Set(['unknown-key']);
 const NAME_RE = /\{([A-Za-z][A-Za-z0-9]{0,31})\}/g;
 const isForms = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 
+/** The rule id of Plan 2's `checkValue` result, or null when the value is valid. */
+function checkedRule(key: string, value: unknown): TextRule | null {
+  const c = checkValue(key, value);
+  return c.ok ? null : c.rule;
+}
+
 export function ruleFor(key: string, value: unknown): string | null {
-  // The editor keeps a plural whose `other` is blank while the owner types; the backend refuses it.
+  // The editor keeps a plural whose `other` is blank while the owner types; the backend refuses it
+  // (Plan 2's checkValue would call it `type-mismatch`; the editor reports `empty`).
   if (isForms(value) && rowFor(key)?.plural && (typeof value.other !== 'string' || value.other === '')) return 'empty';
-  return checkValue(key, value);
+  return checkedRule(key, value);
 }
 
 const list = (names: readonly string[]) => names.map((n) => `{${n}}`).join(', ');
@@ -1444,7 +1457,7 @@ export function unusedEntries(input: { shared: LocaleStrings | null; layout: Loc
   const out: UnusedEntry[] = [];
   const scan = (scope: TextScope, strings: LocaleStrings) => {
     for (const [key, value] of Object.entries(strings)) {
-      const rule = checkValue(key, value);
+      const rule = checkedRule(key, value);
       if (rule === 'unknown-key' || rule === 'fixed') out.push({ scope, key, rule, value });
     }
   };
@@ -3549,7 +3562,7 @@ Claude-Session: https://claude.ai/code/session_015prWiSdK9Tgbwfp2fhZsB4" -- web/
 
 ### Task 12: Playwright pass and docs (owns Playwright)
 
-**Depends on:** Tasks 1–11; Plan 2's migration of the storefront header search field (the key below).
+**Depends on:** Tasks 1–11; Plan 2's migration of the storefront header search field (the key below); **Plan 2 Task 16 committed** (pre-flight: Playwright on port 5199 and `docs/builder.md` are shared with it — never run the two at once).
 
 **Files:**
 - Modify: `e2e/builder-editor.spec.ts`
@@ -3725,11 +3738,23 @@ Claude-Session: https://claude.ai/code/session_015prWiSdK9Tgbwfp2fhZsB4" -- e2e/
 
 - `@/text/types.ts` exports `Locale, PluralForms, TextValue, LocaleStrings, TextLanguage, SiteText, PageText, TEXT_LIMITS` exactly as spec §3/§4.3 (TEXT_LIMITS has `value: 1000` and `placeholders: 10`), **and** `EditorText = { locale: Locale; formatLocale: '' | Locale; shared: LocaleStrings; layout: LocaleStrings }` (the name spec §5 uses without a shape).
 - `@/text/registry.ts` exports `TEXT` as a record keyed by full key whose entries keep the `defineTextArea` fields `{ en, note?, label?, max?, fixed? }` (max absent = 200), plus `type TextKey`.
-- `@/text/resolve.ts` exports `checkValue(key: string, value: unknown): TextRule | null` returning the spec §6.3 rule ids as strings (`unknown-key` for unregistered keys, `fixed` for stored values of fixed keys) and `type TextRule`.
-- `@/text/plural.ts` exports `pluralCategory(locale, n): string` and `categoriesFor(locale): readonly string[]` (as spec §6 file list).
-- `@/text/coverage.ts` exports `SITE_WIDE_TEXT: readonly string[]` (the §7.3 Site-wide group's key patterns), and `BlockDef` (`@/builder/define.ts`) gains `text?: readonly string[]` (exact keys or `area.part.*`), both owned and populated by Plan 2 (its §6.6 registry test needs them). Plan 3 only reads them.
+- `@/text/resolve.ts` exports `checkValue(key: string, value: unknown): TextCheck` = `{ ok: true } | { ok: false; rule: TextRule; message: string }` with the spec §6.3 rule ids (`unknown-key` for unregistered keys, checked before `fixed` for stored values of fixed keys) and `type TextRule` — **reconciled to Plan 2's shape**; `issues.ts` maps it to `TextRule | null` locally.
+- `@/text/plural.ts` exports `pluralCategory(locale, n): PluralCategory` and `categoriesFor(locale): PluralCategory[]` (`other` last) — assignable to the `string` / `readonly string[]` this plan reads.
+- `@/text/site-wide.ts` (**reconciled** from `coverage.ts`) exports `SITE_WIDE_TEXT: readonly TextKeyPattern[]` (the §7.3 Site-wide group's key patterns; provisional from Plan 2 Task 5, final in Task 15), and `BlockDef` (`@/builder/define.ts`) gains `text?: readonly TextKeyPattern[]` (exact keys or `area.part.*`), both owned and populated by Plan 2 (its §6.6 registry test needs them). Plan 3 only reads them.
+- Template keys: `templates.default.*` (built-in slots) plus `templates.<activeTemplateId>.*` are shown (Plan 2's convention; reconciled in `isForTemplate`).
 - `PageSetOverrideProvider({ pageSet, text?, children })` (`@/builder/runtime.tsx`): when `text` is given, every `useText()` below it resolves from that `EditorText` (layout → shared → default via `checkValue`), whatever `pageSet` is.
 - `@/api/pages.ts` exports `fetchPublished(layout): Promise<{ pageSet: PageSet | null; text: PublishedText | null }>` with `PublishedText = { version, locale, formatLocale, shared, layout }` (spec §4.6/§5).
 - `PageSet` (`@/builder/types.ts`) has `text?: PageText` (spec §3).
 - Protocol field names are the spec's: `siteText`, `pageSet.text`, `textIssues` with `{ scope: 'shared' | 'layout', key, rule, message }`; `textIssues` is present on every change the session posts. For the admin plan: a plural missing `other` is reported as rule `empty`; values the backend would refuse are never in the posted `siteText` / `pageSet.text`.
 - The header search field's key is `catalog.search.placeholder` (spec §6.4), rendered by the default storefront shell's `Header`.
+
+## Reconciled contracts (pre-flight)
+
+Checked against Plans 1, 2 and 4. Changes made to this plan (Plan 2 produces the storefront TS exports, so its names win):
+
+- **`SITE_WIDE_TEXT`** is imported from `@/text/site-wide.ts` (was `@/text/coverage.ts`) — Task 2 depends/consumes lines and `catalog.ts` import. Plan 2 now creates it in its Task 5, inside the core wave.
+- **`checkValue`** returns Plan 2's `TextCheck` (`{ ok: true } | { ok: false; rule; message }`), not `TextRule | null`. Task 6's `issues.ts` gains a local `checkedRule()` used by `ruleFor` and `unusedEntries`; the tests are unchanged.
+- **Template filter** — `isForTemplate` also admits `templates.default.*` (Plan 2's built-in slots, rendered by every template without its own slot; without this the default template's slot copy could never be edited). Task 2 test gains two assertions.
+- **Core wave** = Plan 2 Tasks 1–5 (incl. provisional `site-wide.ts` and a fixed seed `closed.eyebrow`, which `helpers/text-keys.ts` `fixedKey()` needs).
+- **Task 12** runs after Plan 2 Task 16 (both use Playwright on port 5199 and edit `docs/builder.md`).
+- Unchanged and confirmed: protocol fields and the admin's parser (Plan 4 Task 2) agree — `siteText` absent/null/doc on load, `siteText` only when present and never `null` on change, `textIssues` always sent, `{ scope, key, rule, message }`, ≤ 500; `fetchPublished`, `EditorText`, `PageSetOverrideProvider` `text` prop, plural helpers.
