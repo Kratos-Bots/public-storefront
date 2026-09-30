@@ -6,10 +6,12 @@ import { DocBoundary, RenderDoc } from '@/builder/render.tsx';
 import { validateDoc } from '@/builder/guard.ts';
 import { defaultDoc } from '@/builder/defaults/index.ts';
 import { buildEditorConfig } from '@/builder/editor/config.ts';
-import { docFor, isCustomKey } from '@/builder/editor/page-set.ts';
+import { docFor, isCustomKey, type DocMap } from '@/builder/editor/page-set.ts';
 import { PageGround } from '@/builder/editor/page-ground.tsx';
 import { ExactPreview, ExactRuntime } from '@/builder/editor/ExactPreview.tsx';
-import type { DocKey, LayoutKind, PuckDoc } from '@/builder/types.ts';
+import { CARD_KINDS, cardKey, type DocKey, type LayoutKind, type PageSet, type PuckDoc } from '@/builder/types.ts';
+import { CardDesignProvider } from '@/builder/card-design.tsx';
+import { prepareDoc } from '@/builder/editor/prepare.ts';
 import { isLockedOn } from '@/builder/editor/route-bound.ts';
 import { useEditorStore } from '@/builder/editor/store.ts';
 import { useCurrentDoc, useIssues, useLockedPresent } from '@/builder/editor/use-issues.ts';
@@ -95,6 +97,28 @@ function CanvasFailed() {
   );
 }
 
+// One prepared object per draft object: compileCard memoises per document object, so an edit to
+// another page must not hand the provider a fresh (uncompiled) copy of an unchanged card doc.
+const preparedDocs = new WeakMap<PuckDoc, PuckDoc>();
+function prepared(doc: PuckDoc): PuckDoc {
+  let out = preparedDocs.get(doc);
+  if (!out) { out = prepareDoc(doc); preparedDocs.set(doc, out); }
+  return out;
+}
+
+/**
+ * The drafts' card designs, as the canvas shows them (spec §6.2): every card doc in the set,
+ * prepared as the session emits it; none ⇒ undefined (the built-in cards).
+ */
+export function draftCards(docs: DocMap): PageSet['cards'] | undefined {
+  const cards: NonNullable<PageSet['cards']> = {};
+  for (const kind of CARD_KINDS) {
+    const doc = docs[cardKey(kind)];
+    if (doc) cards[kind] = prepared(doc);
+  }
+  return Object.keys(cards).length > 0 ? cards : undefined;
+}
+
 function ReadOnlyView() {
   const docKey = useEditorStore((s) => s.docKey);
   const layout = useEditorStore((s) => s.layout);
@@ -102,6 +126,7 @@ function ReadOnlyView() {
   const epoch = useEditorStore((s) => s.epoch);
   const viewport = useEditorStore((s) => s.viewport);
   const doc = useMemo(() => shownDoc(docFor(docs, docKey, layout), docKey, layout), [docs, docKey, layout]);
+  const cards = useMemo(() => draftCards(docs), [docs]);
   return (
     <div className={styles.readOnly} data-exact={viewport !== null ? '' : undefined}>
       <header className={styles.bar}>
@@ -139,11 +164,13 @@ function ReadOnlyView() {
               </div>
             }
           >
-            <CanvasTextScope>
-              <PageGround docKey={docKey} layout={layout}>
-                <RenderDoc doc={doc} docKey={docKey} layout={layout} />
-              </PageGround>
-            </CanvasTextScope>
+            <CardDesignProvider cards={cards} layout={layout}>
+              <CanvasTextScope>
+                <PageGround docKey={docKey} layout={layout}>
+                  <RenderDoc doc={doc} docKey={docKey} layout={layout} />
+                </PageGround>
+              </CanvasTextScope>
+            </CardDesignProvider>
           </DocBoundary>
         </div>
       )}
@@ -175,6 +202,10 @@ export function EditorCanvas() {
   const viewport = useEditorStore((s) => s.viewport);
   // Memoised on the sorted names of the locked blocks present, not the doc: edits don't rebuild it.
   const present = useLockedPresent();
+  // The drafts' card designs, so a catalogue on the canvas shows the card being designed. Inside
+  // the (doc, epoch)-keyed boundary: a design that failed on one page is tried afresh on the next.
+  const docs = useEditorStore((s) => s.docs);
+  const cards = useMemo(() => draftCards(docs), [docs]);
   const config = useMemo(() => buildEditorConfig(docKey, layout, present), [docKey, layout, present]);
   // Puck's `data` is initial state: read the store once per (doc, epoch) and let Puck own it after.
   const data = useMemo(() => {
@@ -196,22 +227,24 @@ export function EditorCanvas() {
       {viewport !== null && <ExactPreview width={viewport} />}
       <div className={styles.puckHost} hidden={viewport !== null}>
         <RestingMarks />
-        <CanvasTextScope>
-          <Puck
-            key={mount}
-            config={config}
-            data={data}
-            // The mount epoch travels with every change, so a late onChange from a canvas that a load,
-            // reset or new page replaced is ignored by the store.
-            onChange={(next) => useEditorStore.getState().updateDoc(docKey, next, epoch)}
-            iframe={{ enabled: false }}
-            viewports={PUCK_VIEWPORTS}
-            ui={ui}
-            overrides={OVERRIDES}
-            plugins={PLUGINS}
-            height="100dvh"
-          />
-        </CanvasTextScope>
+        <CardDesignProvider cards={cards} layout={layout}>
+          <CanvasTextScope>
+            <Puck
+              key={mount}
+              config={config}
+              data={data}
+              // The mount epoch travels with every change, so a late onChange from a canvas that a load,
+              // reset or new page replaced is ignored by the store.
+              onChange={(next) => useEditorStore.getState().updateDoc(docKey, next, epoch)}
+              iframe={{ enabled: false }}
+              viewports={PUCK_VIEWPORTS}
+              ui={ui}
+              overrides={OVERRIDES}
+              plugins={PLUGINS}
+              height="100dvh"
+            />
+          </CanvasTextScope>
+        </CardDesignProvider>
       </div>
     </CanvasBoundary>
   );

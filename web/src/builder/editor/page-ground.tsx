@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
-import type { DocKey, LayoutKind } from '@/builder/types.ts';
+import { cardKind, isCardKey, type DocKey, type LayoutKind } from '@/builder/types.ts';
 import { SheetStage } from '@/builder/editor/SheetStage.tsx';
+import { CardStage } from '@/builder/editor/CardStage.tsx';
 import styles from '@/builder/editor/PageGround.module.css';
 
 /**
@@ -16,6 +17,14 @@ export function PageGround({ docKey, layout, children }: { docKey: DocKey; layou
   // The menu / web-app product doc is the sheet's body, not a page: the sheet stage frames it (spec §11).
   if (docKey === 'product' && layout !== 'storefront') {
     return <div data-sf-builder-canvas="" className={styles.ground} data-layout={layout}><SheetStage>{children}</SheetStage></div>;
+  }
+  // A card doc is one card: the card stage sets it in the real grid / rows list beside its state copies.
+  if (isCardKey(docKey)) {
+    return (
+      <div data-sf-builder-canvas="" className={styles.ground} data-layout={layout}>
+        <div className={styles.column} data-sf-builder-column=""><CardStage kind={cardKind(docKey)}>{children}</CardStage></div>
+      </div>
+    );
   }
   return (
     <div data-sf-builder-canvas="" className={styles.ground} data-layout={layout}>
