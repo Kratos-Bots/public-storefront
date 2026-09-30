@@ -209,6 +209,123 @@ The 45 blocks of this release. "All" layouts = storefront, menu and webapp. Slot
 The route blocks are the only place checkout, cart, sign-in and account behaviour lives; they are
 self-contained, so an edit around them cannot break a flow.
 
+## Text layer (editable text)
+
+Every line of shopper-facing text the storefront writes itself — headings, buttons, labels,
+screen-reader names, empty and error states, validation messages — is a key in a registry, and
+the owner can reword it in the editor's Text panel. Data (product, category and method names),
+owner content (brand, notices, block props such as a `Button`'s label), backend messages shown
+verbatim, and the editor's and admin's own UI are not text-layer keys. With nothing published the
+DOM is byte-identical to v0.7.0.
+
+### The registry
+
+`web/src/text/keys/<area>.ts` — one file per area, in Text-panel order: `common`, `shell`,
+`catalog`, `product`, `cart`, `checkout`, `auth`, `account`, `order`, `payment`, `tracking`,
+`verify`, `wholesale`, `webapp`, `notices`, `errors`, `templates`, `closed`, `boot`. Each file is
+`defineTextArea('<area>', { '<part>.<name>': entry })`; `registry.ts` merges them into `TEXT`.
+
+- **Key shape**: `<area>.<part>.<name>`, 2–6 dot-separated segments, camelCase, at most 100
+  characters (`KEY_RE`, identical to the backend's). `-` appears only inside template ids
+  (`templates.dark-luxury.footer.support`). Template slot copy is keyed per template:
+  `templates.default.*` for the built-in slots, `templates.<id>.*` for each template.
+- **Entry**: `en` (the default: a string, or plural forms `{ one, other }`), `note` (required —
+  where the line appears, in shopper words; for error and empty states, when it shows), `label?`
+  (else derived from the last segment), `max?` (default 200, never above 1000) and `fixed?`.
+- **Defaults are the rendered string**: entities decoded, JSX whitespace collapsed as React
+  does, typographic characters (`’ — … ←` and U+00A0) copied, never retyped.
+- **Placeholders** are `{name}` (`[A-Za-z][A-Za-z0-9]{0,31}`), at most 10 per key; no other `{` or
+  `}` may appear. Plural keys get `{count}` from `tp`.
+- **Fixed keys**: everything under `closed.*` and `boot.*` (and nothing else) is `fixed: true` —
+  read through the same API, never editable, because those screens render before or without the
+  published text.
+- **One key per meaning**: shared wording (Try again, Close, Subtotal, Remove {name}, …) lives in
+  `common.*`; an area reuses it rather than registering a copy.
+
+### Reading text
+
+- **Components**: `const { t, tp, tn, msg } = useText();` at the top of the component (never in a
+  block's `render`, which must not call hooks — call it in the inner view).
+  - `t('cart.drawer.title')`, `t('common.qty.remove', { name })` — a string; params are required
+    exactly when the key has placeholders (type-checked).
+  - `tp('cart.summary.items', n)` — plural by `Intl.PluralRules`; inserts `String(n)` as `{count}`.
+    Only an `n === 1` ternary becomes a plural key; other conditions stay two string keys.
+  - `tn('account.orders.balanceDue', { amount: <Money amount={due} /> })` — a sentence that embeds an
+    element; returns strings and keyed fragments, so the serialised DOM is unchanged.
+  - `msg(value)` — renders component state that holds either a key (stored with `textKey(…)`) or
+    a backend message: a registered string key resolves, anything else passes through verbatim.
+- **Outside React** (`lib/errors.ts`, `api/client.ts`, status helpers, zod messages):
+  `textSnapshot().t(…)` from `@/text/snapshot.ts`, read **at call time** — never at import time,
+  never in a module-level constant. Module-scope maps hold keys (`textKey('…')`) so the orphan
+  check sees each literal. zod messages use the function form:
+  `.min(1, { error: () => textSnapshot().t('checkout.errors.required') })`. Pass error
+  fallbacks as `errorMessage(err, t('<area>.errors.<name>'))`.
+- **The snapshot rule**: `textSnapshot()` is the *deepest mounted* provider's text, read when
+  called. Reading it during a render — directly or through a helper — is only fresh if that
+  component re-renders on a text change, i.e. it also calls `useText()`; a `useMemo` that reads it
+  must list that `t` in its deps. Prefer passing `t` into helpers (`groupProducts(visible, tree, t)`,
+  `defaultPrimaryAction(input, t)`) and rendering from key maps (`t(shipmentLabelKey(status))`).
+  `test/text-snapshot-guard.test.ts` enforces this; a reviewed exception carries
+  `// text-snapshot-ok: <reason>` on or above the line.
+- `@/text/snapshot.ts` imports nothing outside `@/text/*`, so importing it never enters the
+  `runtime → builder/published → api/client → lib/errors` cycle; `runtime.tsx` re-exports it for
+  components. Non-React modules import it directly.
+- Template slot components (including external templates) import `useText` from
+  `@/templates/contract.ts`.
+
+### Resolution
+
+`TextProvider` (app level) reads the published text of the effective layout from the page-set
+response (`GET storefront/pages/:layout` carries `text` — no extra request); the editor and the
+version preview inject theirs through `PageSetOverrideProvider`'s `text`. For each key: the
+layout's override for the store language, then the shared value, then the built-in English. A
+stored value is ignored (with one console warning) when it fails `checkValue`: unknown key, string
+vs plural mismatch, a placeholder the key doesn't offer, a stray brace, empty, longer than `max`,
+or a fixed key. The provider also sets `<html lang>` and the **format profile**: English with
+built-in formatting keeps every v0.7.0 per-call-site locale (money `en`, dates `en-GB`, …); any
+other language (or an explicit *Numbers and dates* locale) formats money, dates, numbers and
+country names in that locale, falling back to the legacy profile when `Intl` rejects it.
+
+### Blocks and the Text panel
+
+`BlockDef.text` lists the keys a block renders — exact keys or `area.part.*` prefixes
+(`OrderStatus: ['order.*', …]`, `Header: ['shell.header.*', 'catalog.search.*', …]`); the
+editor shows them under **Text in this block**. Template-slot patterns shared by several blocks
+live in `builder/blocks/_shared/text-patterns.ts` (`HERO_TEXT`, `FOOTER_TEXT`, `TOP_BAR_TEXT`, …).
+Keys of mounts that belong to no block — cart drawer, login modal, phone cart bar safety net,
+Telegram chrome, not-found page, error fallbacks — and `common.*` form the **Site-wide** group
+(`SITE_WIDE_TEXT` in `text/site-wide.ts`). `BlockDef.textProps` maps an owner prop to a key it
+falls back to when blank (`SearchField: { placeholder: 'catalog.search.placeholder' }`; render
+uses `prop.trim() || t(key)`).
+
+### The guard
+
+- `test/text-guard.test.ts` scans every file under `web/src` (except `builder/editor/**` and
+  `text/keys/**`) for shopper text outside the registry: JSX text; text attributes (`aria-label`,
+  `title`, `placeholder`, `alt`, `label`, `eyebrow`, …); literal JSX children and branches,
+  including a same-file `const` rendered as `{label}`; messages passed to `setErrors`,
+  `errorMessage`, `notifications.show` and zod; message-like object properties; and
+  sentence-like literals anywhere else — including messages of app error classes (`ApiError`),
+  which `errorMessage` shows. Exempt: code positions, built-in `Error` messages, non-text props
+  (`className`, `color`, `path`, …), and a `defineBlock`'s `label`, `defaultProps`, `text` and
+  `textProps`.
+- Exceptions live in `test/text-guard.allow.ts` as `{ file, text, reason }` (`text: '*'` for a
+  whole editor- or admin-only file); a stale entry fails the test.
+- `test/text-inventory.test.ts` checks every v0.7.0 literal (`test/helpers/text-inventory.json`)
+  still occurs, character-exact, in some default.
+- `test/text-registry.test.ts` checks key shape and area, `fixed` exactly on `closed.*`/`boot.*`,
+  every default against `checkValue` and its `max`, a note on every key, no orphan (every
+  non-fixed key appears as a literal under `web/src`), and that every non-fixed key is covered by
+  a block's `text` or `SITE_WIDE_TEXT` (with no dead pattern).
+
+### Adding a string
+
+1. Add the key to its area file with a `note` (and a `max` for short labels):
+   `'drawer.title': { en: 'Your cart', note: 'Heading of the slide-out cart', max: 60 }`.
+2. Render it with `t('cart.drawer.title')` (or `tp`/`tn`/`msg`; `textSnapshot().t` outside React).
+3. Make sure a block's `text` (or `SITE_WIDE_TEXT`) covers it.
+4. Run `npm --prefix web test -- test/text-guard.test.ts test/text-registry.test.ts test/text-snapshot-guard.test.ts`.
+
 ## Rules
 
 `checkRules(doc, docKey, layout)` (`rules.ts`) returns issues; a non-empty list makes the guard

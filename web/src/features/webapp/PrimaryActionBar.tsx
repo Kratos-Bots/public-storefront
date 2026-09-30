@@ -10,6 +10,7 @@ import { defaultPrimaryAction } from '@/features/webapp/default-action.ts';
 import { formatMoney } from '@/lib/format.ts';
 import { isTelegramWebApp, readableTextOn, setMainButton } from '@/lib/telegram-webapp.ts';
 import { Slot } from '@/templates/runtime.tsx';
+import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/webapp/PrimaryActionBar.module.css';
 
 /** A page's own action if it claimed one, else the cart default for this route. */
@@ -22,6 +23,7 @@ export function useResolvedPrimaryAction(): PrimaryAction | null {
   const { issues } = useServerCart();
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  const { t } = useText();
 
   const fallback = defaultPrimaryAction({
     pathname,
@@ -30,7 +32,7 @@ export function useResolvedPrimaryAction(): PrimaryAction | null {
     checkoutTo: checkoutTarget(loggedIn, features.guestCheckout),
     ordering: features.ordering,
     blocked: issues.some((i) => i.inactive || i.belowMin || i.aboveMax),
-  });
+  }, t);
   const label = fallback?.label ?? null;
   const to = fallback?.to ?? null;
   const disabled = fallback?.disabled ?? false;

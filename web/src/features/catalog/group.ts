@@ -1,6 +1,6 @@
 import type { CategoryNode } from '@/features/catalog/category-tree.ts';
 import type { Product } from '@/types/catalog.ts';
-import { textSnapshot, type TextApi } from '@/text/runtime.tsx';
+import { textSnapshot, type TextApi } from '@/text/snapshot.ts';
 
 export interface ProductGroup {
   key: string;

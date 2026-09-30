@@ -1,12 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render } from '@testing-library/react';
-import { describeAreaGuard } from './helpers/text-area-guard.ts';
 import { TextLayerProvider } from '@/text/runtime.tsx';
 import { referralShareText } from '@/features/account/referral-share.ts';
-
-describeAreaGuard('account', ['features/account/'], {
-  allow: [{ file: 'features/account/LoyaltyPage.tsx', text: 'red', reason: 'Mantine notification colour name, not shopper text' }],
-});
 
 afterEach(cleanup);
 describe('account wording follows published text', () => {

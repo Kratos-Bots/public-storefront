@@ -30,6 +30,7 @@ function CategoryNavView() {
  */
 export const block = defineBlock<{ id: string }>({
   name: 'CategoryNav', label: 'Categories (always shown)', category: 'catalogue', layouts: 'all', routeBound: false, slots: [],
+  text: ['catalog.nav.*', 'catalog.list.*'],
   schema: z.object({}), defaultProps: {},
   render: () => <CategoryNavView />,
 });

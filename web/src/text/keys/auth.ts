@@ -22,7 +22,6 @@ export default defineTextArea('auth', {
   'whatsapp.expiredNote': { en: 'That code expired', note: 'WhatsApp sign-in, when the code has run out', max: 60 },
   'whatsapp.expiredBody': { en: 'A code is only good for a few minutes. Start a new one when you’re ready to send it.', note: 'WhatsApp sign-in, under "That code expired"', max: 200 },
   'whatsapp.startAgain': { en: 'Start again', note: 'Button to get a new WhatsApp code', max: 40 },
-  'whatsapp.failed': { en: 'Something went wrong', note: 'WhatsApp sign-in error when no reason is available', max: 80 },
   'whatsapp.open': { en: 'Open WhatsApp', note: 'Button that opens WhatsApp with the sign-in message ready', max: 40 },
   'whatsapp.sendCodeTo': { en: 'Or send this code to {number}', note: "Label above the sign-in code; {number} is the shop's WhatsApp number", max: 80 },
   'whatsapp.sendCodeToUs': { en: 'Or send this code to us on WhatsApp', note: 'Label above the sign-in code when the shop has no WhatsApp number to show', max: 80 },

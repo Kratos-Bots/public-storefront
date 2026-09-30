@@ -34,6 +34,7 @@ function VideoView({ src, title }: { src: string; title: string }) {
 /** An id, never a URL: the embed host is fixed here, so an owner can't point an iframe anywhere else. */
 export const block = defineBlock<Props>({
   name: 'Video', label: 'Video', category: 'content', layouts: 'all', routeBound: false, slots: [],
+  text: ['common.video.*'],
   schema: z.object({ provider: z.enum(['youtube', 'vimeo']), videoId: z.string().max(20), title: z.string().min(1).max(120) }),
   defaultProps: { provider: 'youtube', videoId: '', title: 'Video' },
   render: ({ provider, videoId, title }) => {

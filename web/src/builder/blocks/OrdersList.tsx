@@ -6,6 +6,7 @@ const OrdersPage = lazy(() => import('@/features/account/OrdersPage.tsx').then((
 
 export const block = defineBlock<{ id: string }>({
   name: 'OrdersList', label: 'Order history', category: 'commerce', layouts: 'all', routeBound: true, slots: [],
+  text: ['account.orders.*', 'account.nav.*', 'order.status.*', 'common.actions.*'],
   schema: z.object({}), defaultProps: {},
   render: () => <OrdersPage />,
 });

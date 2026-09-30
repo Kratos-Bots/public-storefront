@@ -3,7 +3,7 @@ import { ApiError } from '@/lib/errors.ts';
 import { useSessionStore } from '@/stores/session.ts';
 import { closedGate } from '@/app/closed-gate.ts';
 import { isBuilderMode } from '@/app/builder-gate.ts';
-import { textSnapshot } from '@/text/runtime.tsx';
+import { textSnapshot } from '@/text/snapshot.ts';
 
 // Re-exported so callers (and this task's test) can `import { ApiError } from '@/api/client.ts'`
 // without also reaching into `@/lib/errors.ts`; the class itself still lives there.

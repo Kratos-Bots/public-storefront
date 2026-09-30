@@ -6,6 +6,7 @@ const ProfilePage = lazy(() => import('@/features/account/ProfilePage.tsx').then
 
 export const block = defineBlock<{ id: string }>({
   name: 'Profile', label: 'Profile', category: 'commerce', layouts: 'all', routeBound: true, slots: [],
+  text: ['account.profile.*', 'account.nav.*', 'common.contact.*', 'common.actions.*'],
   schema: z.object({}), defaultProps: {},
   render: () => <ProfilePage />,
 });

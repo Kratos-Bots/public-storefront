@@ -10,6 +10,7 @@ type Props = { id: string; gallery: boolean; bulkPricing: boolean; provenance: b
 /** The product page body (storefront layout; menu and web app open a sheet from the list instead). */
 export const block = defineBlock<Props>({
   name: 'ProductDetail', label: 'Product detail', category: 'product', layouts: 'all', routeBound: true, slots: [],
+  text: ['product.*', 'catalog.nav.*', 'common.product.*', 'common.contact.*', 'common.actions.*', 'common.status.loading'],
   schema: z.object({ gallery: z.boolean(), bulkPricing: z.boolean(), provenance: z.boolean(), upsells: z.boolean(), sku: override() }),
   defaultProps: { gallery: true, bulkPricing: true, provenance: true, upsells: true, sku: 'inherit' },
   render: ({ gallery, bulkPricing, provenance, upsells, sku }) => (

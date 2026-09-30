@@ -6,15 +6,15 @@ import { Money } from '@/components/Money.tsx';
 import { ApiError } from '@/lib/errors.ts';
 import { formatDate, formatDateTime } from '@/lib/format.ts';
 import {
-  SHIPMENT_LABEL,
   SHIPMENT_TONE,
+  shipmentLabelKey,
   orderStatusLabel,
   orderStatusTone,
   type Tone,
 } from '@/features/order-status/status.ts';
 import { StatusPill } from '@/features/account/StatusPill.tsx';
 import { useOrder } from '@/features/account/queries.ts';
-import { useText } from '@/text/runtime.tsx';
+import { useText, type TextApi } from '@/text/runtime.tsx';
 import type { OrderShipment } from '@/types/orders.ts';
 import type { ShipmentStatus } from '@/types/public-order.ts';
 import classes from '@/features/account/Account.module.css';
@@ -32,8 +32,9 @@ function paymentTone(status: string): Tone {
 }
 
 /** A shipment's status is a plain string on the wire; anything unmapped reads as shipped. */
-function shipmentLabel(shipment: OrderShipment, fallback: string): string {
-  return SHIPMENT_LABEL[shipment.status as ShipmentStatus] ?? fallback;
+function shipmentLabel(shipment: OrderShipment, t: TextApi['t']): string {
+  const key = shipmentLabelKey(shipment.status);
+  return key ? t(key) : t('account.order.shippedFallback');
 }
 
 function shipmentTone(shipment: OrderShipment): Tone {
@@ -191,7 +192,7 @@ export function OrderDetailPage() {
                     (shipment.shippedAt ? formatDate(shipment.shippedAt) : t('account.order.awaitingDispatch'))}
                 </span>
                 <span className={classes.eventStatus}>
-                  <StatusPill tone={shipmentTone(shipment)}>{shipmentLabel(shipment, t('account.order.shippedFallback'))}</StatusPill>
+                  <StatusPill tone={shipmentTone(shipment)}>{shipmentLabel(shipment, t)}</StatusPill>
                 </span>
                 {shipment.trackingStatusDescription ? (
                   <p className={classes.eventDetail}>{shipment.trackingStatusDescription}</p>

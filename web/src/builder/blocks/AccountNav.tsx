@@ -8,6 +8,7 @@ const AccountLayout = lazy(() => import('@/features/account/AccountLayout.tsx').
 /** The account letterhead and section rail; `body` is the section's own block. */
 export const block = defineBlock<{ id: string; body: ComponentData[] }>({
   name: 'AccountNav', label: 'Account header', category: 'commerce', layouts: 'all', routeBound: false, slots: ['body'],
+  text: ['account.nav.*', 'account.layout.*'],
   schema: z.object({ body: slot() }), defaultProps: { body: [] },
   render: ({ body }) => <AccountLayout>{body()}</AccountLayout>,
 });

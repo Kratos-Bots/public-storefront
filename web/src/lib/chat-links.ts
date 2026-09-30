@@ -1,4 +1,4 @@
-import { textSnapshot } from '@/text/runtime.tsx';
+import { textSnapshot } from '@/text/snapshot.ts';
 
 /**
  * Append the prefilled message as ?text= — supported by wa.me/<number> and

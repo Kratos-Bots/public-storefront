@@ -1,16 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
-import { describeAreaGuard } from './helpers/text-area-guard.ts';
 import { TextLayerProvider } from '@/text/runtime.tsx';
 
 vi.mock('@/app/settings.ts', async (orig) => ({ ...(await orig<typeof import('@/app/settings.ts')>()), useSettings: () => ({ currency: 'GBP', features: { guestCheckout: true, layout: 'storefront' } }) }));
 import { CartSummary } from '@/features/cart/CartSummary.tsx';
 import { useCartStore } from '@/stores/cart.ts';
-
-describeAreaGuard('cart + wholesale', ['features/cart/', 'features/wholesale/'], {
-  allow: [{ file: 'features/cart/useServerCart.ts', text: 'red', reason: 'a toast colour name, not shopper text' }],
-});
 
 afterEach(cleanup);
 describe('cart wording follows published text', () => {

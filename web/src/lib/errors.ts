@@ -1,4 +1,4 @@
-import { textSnapshot } from '@/text/runtime.tsx';
+import { textSnapshot } from '@/text/snapshot.ts';
 
 export class ApiError extends Error {
   readonly status: number;

@@ -1,6 +1,11 @@
 {
   "api/client.ts": [
-    "Request failed"
+    "Request failed",
+    "The request timed out",
+    "Network error"
+  ],
+  "api/tracking.ts": [
+    "Network error"
   ],
   "app/App.tsx": [
     "Connection",
@@ -282,7 +287,9 @@
   ],
   "features/catalog/AddToCart.tsx": [
     "Out of stock",
-    "Add another"
+    "Add another",
+    "Unavailable",
+    "Added"
   ],
   "features/catalog/BulkPricing.tsx": [
     "Quantity",
@@ -651,7 +658,9 @@
   "features/order-status/ShipmentCard.tsx": [
     "On its way",
     "Tracking number",
-    "Track this parcel"
+    "Track this parcel",
+    "Parcel ${} of ${}",
+    "Parcel"
   ],
   "features/order-status/StateScreens.tsx": [
     "Loading your order",
@@ -669,7 +678,9 @@
     "Order progress",
     "Partial",
     "If that isn't right, reply to the message that sent you this link and we'll sort it out.",
-    "Refunds take 5–10 business days to appear on your statement."
+    "Refunds take 5–10 business days to appear on your statement.",
+    "Delivered ${}",
+    "Placed ${}"
   ],
   "features/order-status/status.ts": [
     "Order status",
@@ -743,7 +754,8 @@
     "Parcels",
     "Type",
     "Order tracking summary",
-    "Order "
+    "Order ",
+    "Delivered ${}"
   ],
   "features/tracking/ParcelCard.tsx": [
     "Heading to ",
@@ -758,7 +770,9 @@
     "Last known",
     "Awaiting tracking number",
     "Live tracking is unavailable right now. Search the tracking number above on your carrier’s website for the latest scan.",
-    "This parcel doesn’t have a tracking number yet. One appears here as soon as the carrier issues it."
+    "This parcel doesn’t have a tracking number yet. One appears here as soon as the carrier issues it.",
+    "Parcel ${} of ${}",
+    "Parcel"
   ],
   "features/tracking/ParcelTimeline.tsx": [
     "Scan history",
@@ -768,7 +782,8 @@
   ],
   "features/tracking/ProgressStepper.tsx": [
     "Awaiting first courier scan",
-    "Awaiting first scan"
+    "Awaiting first scan",
+    "Stage ${} of ${}: ${}"
   ],
   "features/tracking/RefreshButton.tsx": [
     "Checked ${}",
@@ -1000,6 +1015,9 @@
     "Support",
     "[Support]",
     "[Talk to us]"
+  ],
+  "templates/dark-luxury/slots/LuxurySectionLabel.tsx": [
+    "[Catalogue]"
   ],
   "templates/defaults/DefaultCatalogHero.tsx": [
     "About this shop",

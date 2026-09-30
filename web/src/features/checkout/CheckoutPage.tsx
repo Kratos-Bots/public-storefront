@@ -268,6 +268,8 @@ export function CheckoutPage() {
       // is the way a shopper hits it.
       if (!settled && quotedKey.current === debouncedGuestKey) quotedKey.current = null;
     };
+    // `t` is left out on purpose: it only words an error set once per run, and a text edit
+    // must not re-run the mint and quote.
   }, [guest, settings.turnstile, form.country, needsToken, placed, debouncedGuestKey, retryTick]);
 
   const contactSchema = useMemo(

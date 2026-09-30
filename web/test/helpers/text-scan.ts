@@ -20,7 +20,8 @@ const TEXT_ATTRS = new Set(['aria-label', 'aria-description', 'aria-roledescript
 const TEXT_PROPS = new Set(['message', 'title', 'label', 'description', 'placeholder', 'hint', 'ariaLabel', 'eyebrow']);
 const TEXT_CALLS = new Set(['setErrors', 'setError', 'errorMessage', 'notifications.show']);
 const ZOD_CALLS = new Set(['min', 'max', 'length', 'email', 'url', 'regex', 'nonempty', 'refine', 'superRefine']);
-const NON_TEXT_PROPS = new Set(['className', 'classNames', 'style', 'styles', 'key', 'id', 'href', 'to', 'src', 'type', 'name', 'variant', 'size', 'color', 'component', 'rel', 'target', 'role', 'autoComplete', 'inputMode', 'position', 'radius', 'transition']);
+const NON_TEXT_PROPS = new Set(['className', 'classNames', 'style', 'styles', 'key', 'id', 'href', 'to', 'src', 'type', 'name', 'variant', 'size', 'color', 'component', 'rel', 'target', 'role', 'autoComplete', 'inputMode', 'position', 'radius', 'transition', 'path']);
+const BUILTIN_ERRORS = new Set(['Error', 'TypeError', 'RangeError', 'SyntaxError', 'ReferenceError', 'DOMException']);
 const LETTER = /\p{L}/u;
 const SENTENCE = /\p{L}{2,}[  ]+\p{L}{2,}|’/u;
 const CODEISH = /var\(--|[{};=]|:\/\//;
@@ -50,22 +51,46 @@ function templateText(e: ts.TemplateExpression): string {
   return e.head.text + e.templateSpans.map((s) => `\${}${s.literal.text}`).join('');
 }
 
-/** String-ish leaves of an expression, following ?:, ||, ??, &&, parens and casts. */
-function leaves(e: ts.Expression): Array<{ node: ts.Node; text: string }> {
-  if (ts.isParenthesizedExpression(e) || ts.isAsExpression(e) || ts.isSatisfiesExpression(e) || ts.isNonNullExpression(e)) return leaves(e.expression);
-  if (ts.isConditionalExpression(e)) return [...leaves(e.whenTrue), ...leaves(e.whenFalse)];
+/** `const name = …` initialisers of one file, for names declared exactly once (no scope analysis needed). */
+type Consts = ReadonlyMap<string, ts.Expression>;
+function fileConsts(src: ts.SourceFile): Consts {
+  const found = new Map<string, ts.Expression | null>();
+  const walk = (n: ts.Node): void => {
+    if (ts.isVariableDeclaration(n) && ts.isIdentifier(n.name)) {
+      const list = n.parent;
+      const init = ts.isVariableDeclarationList(list) && list.flags & ts.NodeFlags.Const ? n.initializer : undefined;
+      found.set(n.name.text, found.has(n.name.text) || !init ? null : init);
+    }
+    ts.forEachChild(n, walk);
+  };
+  walk(src);
+  const out = new Map<string, ts.Expression>();
+  for (const [k, v] of found) if (v) out.set(k, v);
+  return out;
+}
+
+/**
+ * String-ish leaves of an expression, following ?:, ||, ??, &&, parens and casts — and, when `consts`
+ * is given, an identifier bound by a same-file `const` (`const label = a ? '[Catalogue]' : …; <p>{label}</p>`).
+ */
+function leaves(e: ts.Expression, consts?: Consts, depth = 0): Array<{ node: ts.Node; text: string }> {
+  const next = (x: ts.Expression) => leaves(x, consts, depth);
+  if (ts.isParenthesizedExpression(e) || ts.isAsExpression(e) || ts.isSatisfiesExpression(e) || ts.isNonNullExpression(e)) return next(e.expression);
+  if (ts.isConditionalExpression(e)) return [...next(e.whenTrue), ...next(e.whenFalse)];
   if (ts.isBinaryExpression(e) && [ts.SyntaxKind.BarBarToken, ts.SyntaxKind.QuestionQuestionToken, ts.SyntaxKind.AmpersandAmpersandToken].includes(e.operatorToken.kind)) {
-    return [...leaves(e.left), ...leaves(e.right)];
+    return [...next(e.left), ...next(e.right)];
   }
   if (ts.isStringLiteral(e) || ts.isNoSubstitutionTemplateLiteral(e)) return [{ node: e, text: e.text }];
   if (ts.isTemplateExpression(e)) return [{ node: e, text: templateText(e) }];
+  const bound = consts && depth < 3 && ts.isIdentifier(e) ? consts.get(e.text) : undefined;
+  if (bound) return leaves(bound, consts, depth + 1);
   return [];
 }
 
-/** leaves(), plus object-literal values and array elements, recursively (call arguments). */
+/** leaves(), plus object-literal values and array elements, recursively (call arguments). Non-text properties (`color`, `path`, …) are skipped. */
 function deepLeaves(e: ts.Expression): Array<{ node: ts.Node; text: string }> {
   if (ts.isObjectLiteralExpression(e)) {
-    return e.properties.flatMap((p) => (ts.isPropertyAssignment(p) ? deepLeaves(p.initializer) : []));
+    return e.properties.flatMap((p) => (ts.isPropertyAssignment(p) && !NON_TEXT_PROPS.has(p.name.getText()) ? deepLeaves(p.initializer) : []));
   }
   if (ts.isArrayLiteralExpression(e)) return e.elements.flatMap((x) => deepLeaves(x));
   return leaves(e);
@@ -80,10 +105,14 @@ function calleeName(c: ts.CallExpression): string {
 
 const isJsxBoundary = (n: ts.Node) => ts.isJsxElement(n) || ts.isJsxSelfClosingElement(n) || ts.isJsxFragment(n);
 
-/** True inside defineBlock({ label, defaultProps }) — the palette label and owner starter content. */
+/**
+ * True inside defineBlock({ label, defaultProps, text, textProps }) — the palette label, owner starter
+ * content, and the registry key names a block declares (`textProps: { ariaLabel: 'shell.nav.ariaLabel' }`).
+ */
+const DEFINE_BLOCK_EXEMPT = new Set(['label', 'defaultProps', 'text', 'textProps']);
 function inDefineBlockExempt(n: ts.Node): boolean {
   for (let p: ts.Node | undefined = n; p; p = p.parent) {
-    if (ts.isPropertyAssignment(p) && (p.name.getText() === 'label' || p.name.getText() === 'defaultProps')) {
+    if (ts.isPropertyAssignment(p) && DEFINE_BLOCK_EXEMPT.has(p.name.getText())) {
       const obj = p.parent;
       const call = obj?.parent;
       if (obj && ts.isObjectLiteralExpression(obj) && call && ts.isCallExpression(call) && call.expression.getText() === 'defineBlock') return true;
@@ -96,11 +125,13 @@ function inDefineBlockExempt(n: ts.Node): boolean {
 function sentenceExempt(n: ts.Node): boolean {
   for (let p: ts.Node | undefined = n.parent; p; p = p.parent) {
     if (isJsxBoundary(p)) return false;
-    if (ts.isImportDeclaration(p) || ts.isExportDeclaration(p) || ts.isImportTypeNode(p) || ts.isLiteralTypeNode(p) || ts.isThrowStatement(p)) return true;
+    if (ts.isImportDeclaration(p) || ts.isExportDeclaration(p) || ts.isImportTypeNode(p) || ts.isLiteralTypeNode(p)) return true;
     if (ts.isJsxAttribute(p)) return !TEXT_ATTRS.has(p.name.getText());
     if (ts.isPropertyAssignment(p) && p.name === n) return true;
     if (ts.isPropertyAssignment(p) && NON_TEXT_PROPS.has(p.name.getText())) return true;
-    if (ts.isNewExpression(p) && /Error$/.test(p.expression.getText())) return true;
+    // Built-in errors carry developer messages (errorMessage() never shows them); an app error class
+    // (ApiError, …) carries a message a shopper can read, so its literals stay reportable.
+    if (ts.isNewExpression(p) && BUILTIN_ERRORS.has(p.expression.getText())) return true;
     if (ts.isCallExpression(p) && (/^console\./.test(p.expression.getText()) || p.expression.kind === ts.SyntaxKind.SuperKeyword)) return true;
   }
   return false;
@@ -110,6 +141,7 @@ export function scanSource(file: string, code: string): Finding[] {
   const src = ts.createSourceFile(file, code, ts.ScriptTarget.Latest, true, file.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
   const out: Finding[] = [];
   const seen = new Set<ts.Node>();
+  const consts = fileConsts(src);
   const line = (n: ts.Node) => src.getLineAndCharacterOfPosition(n.getStart(src)).line + 1;
   const report = (rule: GuardRule, node: ts.Node, text: string) => {
     if (seen.has(node) || !LETTER.test(text) || inDefineBlockExempt(node)) return;
@@ -122,9 +154,9 @@ export function scanSource(file: string, code: string): Finding[] {
     } else if (ts.isJsxAttribute(n) && TEXT_ATTRS.has(n.name.getText()) && n.initializer) {
       const init = n.initializer;
       if (ts.isStringLiteral(init)) report('text-attr', init, decodeEntities(init.text));
-      else if (ts.isJsxExpression(init) && init.expression) for (const l of leaves(init.expression)) report('text-attr', l.node, l.text);
+      else if (ts.isJsxExpression(init) && init.expression) for (const l of leaves(init.expression, consts)) report('text-attr', l.node, l.text);
     } else if (ts.isJsxExpression(n) && n.expression && n.parent && (ts.isJsxElement(n.parent) || ts.isJsxFragment(n.parent))) {
-      for (const l of leaves(n.expression)) report('jsx-child', l.node, l.text);
+      for (const l of leaves(n.expression, consts)) report('jsx-child', l.node, l.text);
     } else if (ts.isCallExpression(n)) {
       const name = calleeName(n);
       if (TEXT_CALLS.has(name) || (ZOD_CALLS.has(name) && ts.isPropertyAccessExpression(n.expression))) {

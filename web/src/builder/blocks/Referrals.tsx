@@ -6,6 +6,7 @@ const ReferralsPage = lazy(() => import('@/features/account/ReferralsPage.tsx').
 
 export const block = defineBlock<{ id: string }>({
   name: 'Referrals', label: 'Referrals', category: 'commerce', layouts: 'all', routeBound: true, slots: [],
+  text: ['account.referrals.*', 'account.nav.*', 'common.contact.*', 'common.actions.*'],
   schema: z.object({}), defaultProps: {},
   render: () => <ReferralsPage />,
 });

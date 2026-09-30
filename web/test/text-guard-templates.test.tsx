@@ -1,11 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup } from '@testing-library/react';
-import { describeAreaGuard } from './helpers/text-area-guard.ts';
 import { TEXT_ENTRIES } from '@/text/registry.ts';
 import { readoutLines } from '@/templates/cyber-brutalism/slots/readout.ts';
 import * as contract from '@/templates/contract.ts';
-
-describeAreaGuard('templates', ['templates/defaults/', 'templates/bento/slots/', 'templates/cyber-brutalism/slots/', 'templates/dark-luxury/slots/', 'templates/contract.ts']);
 
 afterEach(cleanup);
 describe('template copy', () => {

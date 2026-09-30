@@ -8,6 +8,7 @@ import { MobileCartBar } from '@/features/cart/MobileCartBar.tsx';
  */
 export const block = defineBlock<{ id: string }>({
   name: 'MobileCartBar', label: 'Phone cart bar', category: 'shell', layouts: ['storefront', 'menu'], routeBound: false, slots: [],
+  text: ['cart.bar.*', 'cart.summary.items', 'cart.summary.checkout'],
   schema: z.object({}), defaultProps: {},
   render: () => <MobileCartBar />,
 });

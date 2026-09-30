@@ -1,5 +1,6 @@
 import { ApiError, api, unwrap } from '@/api/client.ts';
 import type { TrackingLookup } from '@/types/tracking.ts';
+import { textSnapshot } from '@/text/snapshot.ts';
 
 /**
  * A tracking lookup that didn't answer, carrying the status the page branches
@@ -54,6 +55,6 @@ export async function lookupTracking({
     );
   } catch (err) {
     if (err instanceof ApiError) throw new TrackingLookupError(err.status, err.message);
-    throw new TrackingLookupError(0, 'Network error');
+    throw new TrackingLookupError(0, textSnapshot().t('errors.network'));
   }
 }

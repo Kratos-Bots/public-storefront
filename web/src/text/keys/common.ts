@@ -9,6 +9,7 @@ export default defineTextArea('common', {
   'actions.backToShop': { en: '← Back to shop', note: 'Link back to the catalogue on order, payment and verification pages', max: 60 },
   'actions.close': { en: 'Close', note: 'Screen-reader label of the close (×) button on drawers and sheets', max: 40 },
   'actions.signIn': { en: 'Sign in', note: 'Sign-in button, and the header account button when signed out', max: 40 },
+  'actions.cancel': { en: 'Cancel', note: 'Button that backs out of a confirmation (loyalty redemption, switching to the classic bot)', max: 30 },
   'status.loading': { en: 'Loading', note: 'Screen-reader label while a page or list loads', max: 40 },
   'status.checking': { en: 'Checking…', note: 'Button label while a code, reference or transaction is being checked', max: 40 },
   'product.preorder': { en: 'Pre-order', note: 'Tag on pre-order products, cart lines and order items', max: 30 },

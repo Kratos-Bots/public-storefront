@@ -7,7 +7,7 @@ import { useCartStore } from '@/stores/cart.ts';
 import { useSessionStore } from '@/stores/session.ts';
 import { resetCartSync } from '@/features/cart/useServerCart.ts';
 import { errorMessage } from '@/lib/errors.ts';
-import { textSnapshot } from '@/text/runtime.tsx';
+import { textSnapshot } from '@/text/snapshot.ts';
 import type { LoginResult } from '@/types/auth.ts';
 import type { CartLineInput, ServerCartLine } from '@/types/cart.ts';
 

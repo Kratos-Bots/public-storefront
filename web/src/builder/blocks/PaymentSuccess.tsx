@@ -6,6 +6,7 @@ const PaymentSuccessPage = lazy(() => import('@/features/payment-redirect/Paymen
 
 export const block = defineBlock<{ id: string }>({
   name: 'PaymentSuccess', label: 'Payment received', category: 'post-order', layouts: 'all', routeBound: true, slots: [],
+  text: ['payment.success.*', 'payment.reference.*', 'payment.missing.*', 'order.copy.*', 'order.chat.*', 'order.link.*', 'common.contact.*', 'common.actions.backToShop'],
   schema: z.object({}), defaultProps: {},
   render: () => <PaymentSuccessPage />,
 });

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { useSettings } from '@/app/settings.ts';
 import { useBuilderMode } from '@/builder/mode.ts';
 import { defineBlock, MEDIA_SRC_RE, mediaSrc, richtext } from '@/builder/define.ts';
+import { HERO_TEXT } from '@/builder/blocks/_shared/text-patterns.ts';
 import { RichHtml } from '@/builder/blocks/_shared/RichHtml.tsx';
 import { useCatalogStats } from '@/templates/hooks.ts';
 import { Slot } from '@/templates/runtime.tsx';
@@ -49,6 +50,7 @@ function CustomHero({ title, bodyHtml, imageSrc, imageAlt, align }: Pick<Props, 
 /** The catalogue intro: the template's own (template), or owner copy and an image (custom). */
 export const block = defineBlock<Props>({
   name: 'CatalogHero', label: 'Catalogue intro', category: 'catalogue', layouts: 'all', routeBound: false, slots: [],
+  text: HERO_TEXT,
   schema: z.object({
     variant: z.enum(['template', 'custom']), surface: z.enum(['auto', 'grid', 'list', 'wholesale']),
     title: z.string().max(120), bodyHtml: richtext(), imageSrc: mediaSrc(), imageAlt: z.string().max(300), align: z.enum(['start', 'center']),

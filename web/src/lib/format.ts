@@ -1,6 +1,6 @@
 import type { Product, PricingTier, StockStatus } from '@/types/catalog.ts';
 import { LEGACY_PROFILE, type FormatProfile } from '@/text/format-profile.ts';
-import { textSnapshot } from '@/text/runtime.tsx';
+import { textSnapshot } from '@/text/snapshot.ts';
 
 // The active profile. TextLayerProvider sets it synchronously during render (idempotent), before any
 // child formats; caches are keyed by locale so switching profiles never reuses a wrong formatter.

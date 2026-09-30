@@ -16,6 +16,7 @@ function CartSummaryView() {
 /** Subtotal and the way on to checkout. */
 export const block = defineBlock<{ id: string }>({
   name: 'CartSummary', label: 'Cart summary', category: 'commerce', layouts: 'all', routeBound: true, slots: [],
+  text: ['cart.summary.*', 'common.totals.subtotal'],
   schema: z.object({}), defaultProps: {},
   render: () => <CartSummaryView />,
 });

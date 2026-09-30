@@ -1,5 +1,5 @@
 import { withPrefilledText } from '@/lib/chat-links.ts';
-import { textSnapshot } from '@/text/runtime.tsx';
+import { textSnapshot } from '@/text/snapshot.ts';
 import type { Brand } from '@/types/settings.ts';
 
 export interface ReferralShareLinks {

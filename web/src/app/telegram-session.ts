@@ -3,7 +3,7 @@ import { fetchCart } from '@/api/cart.ts';
 import { adoptAccountCart } from '@/features/auth/useLoginSuccess.ts';
 import { resetCartSync } from '@/features/cart/useServerCart.ts';
 import { errorMessage } from '@/lib/errors.ts';
-import { textSnapshot } from '@/text/runtime.tsx';
+import { textSnapshot } from '@/text/snapshot.ts';
 import { isTelegramWebApp, telegramInitData } from '@/lib/telegram-webapp.ts';
 import { useCartStore } from '@/stores/cart.ts';
 import { useSessionStore } from '@/stores/session.ts';

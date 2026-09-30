@@ -1,5 +1,5 @@
 import { defaultText, type StringKey } from '@/text/registry.ts';
-import { textKey, textSnapshot } from '@/text/runtime.tsx';
+import { textKey, textSnapshot } from '@/text/snapshot.ts';
 import type { PublicOrder, PublicOrderStatus, ShipmentStatus } from '@/types/public-order.ts';
 
 // Ported from `ecommerce-menu/web/src/features/order-status/status.ts` (plus
@@ -103,6 +103,11 @@ export const SHIPMENT_LABEL_KEYS: Record<ShipmentStatus, Extract<StringKey, `ord
   delivered: textKey('order.shipment.status.delivered'),
   returned: textKey('order.shipment.status.returned'),
 };
+
+/** The label key of a parcel status, or null for a status this release doesn't know (the wire value is a plain string). */
+export function shipmentLabelKey(status: string): (typeof SHIPMENT_LABEL_KEYS)[ShipmentStatus] | null {
+  return Object.hasOwn(SHIPMENT_LABEL_KEYS, status) ? SHIPMENT_LABEL_KEYS[status as ShipmentStatus] : null;
+}
 
 /**
  * Parcel status names, resolved on every read (each property is a getter over

@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 import { isBuilderMode } from '@/app/builder-gate.ts';
-import { textKey, textSnapshot } from '@/text/runtime.tsx';
+import { textKey, textSnapshot } from '@/text/snapshot.ts';
 
 const MINT_TIMEOUT_MS = 30_000;
 /** How long an unclaimed token is worth sending. Cloudflare expires tokens after

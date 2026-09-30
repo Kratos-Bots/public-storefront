@@ -1,3 +1,5 @@
+import { textSnapshot, type TextApi } from '@/templates/contract.ts';
+
 export const DEFAULT_NODE = 'NODE_01';
 export const NODE_MAX = 24;
 
@@ -7,8 +9,6 @@ export function nodeName(value: boolean | string | undefined): string {
   const v = value.trim();
   return v ? v.slice(0, NODE_MAX) : DEFAULT_NODE;
 }
-
-import { textSnapshot, type TextApi } from '@/templates/contract.ts';
 
 export interface ReadoutInput { productCount: number | null; cutoff: string | null; accepting: boolean }
 

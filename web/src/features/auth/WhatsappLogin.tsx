@@ -90,7 +90,7 @@ export function WhatsappLogin({ number }: { number: string | null }) {
   if (state === 'error') {
     return (
       <>
-        <AuthNote tone="danger">{error ?? t('auth.whatsapp.failed')}</AuthNote>
+        <AuthNote tone="danger">{error ?? t('errors.generic')}</AuthNote>
         <button
           type="button"
           className={classes.cta}

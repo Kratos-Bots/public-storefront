@@ -1,6 +1,6 @@
 import { dateTimeFormat } from '@/lib/format.ts';
-import { defaultText, type StringKey } from '@/text/registry.ts';
-import { textKey, textSnapshot } from '@/text/runtime.tsx';
+import type { StringKey } from '@/text/registry.ts';
+import { textKey, textSnapshot } from '@/text/snapshot.ts';
 import type { ParcelTracking, TrackedEvent, TrackedParcel } from '@/types/tracking.ts';
 
 // Ported from `ecommerce-menu/web/src/features/tracking/status.ts`. The stage
@@ -24,9 +24,6 @@ export const STAGE_KEYS = [
   textKey('tracking.status.stageOutForDelivery'),
   textKey('tracking.status.stageDelivered'),
 ] as const;
-
-/** The built-in English of the stages (registry-derived). */
-export const STAGES = STAGE_KEYS.map(defaultText);
 
 const STAGE_BY_CODE: Record<string, number> = {
   INFO_RECEIVED: 0,
@@ -92,11 +89,6 @@ export const PARCEL_LABEL_KEYS: Record<string, ParcelLabelKey> = {
   RETURNED: textKey('tracking.status.returned'),
   UNKNOWN: textKey('tracking.status.unknown'),
 };
-
-/** The built-in English of the parcel labels (registry-derived). */
-export const PARCEL_LABEL: Record<string, string> = Object.fromEntries(
-  Object.entries(PARCEL_LABEL_KEYS).map(([code, key]) => [code, defaultText(key)]),
-);
 
 export const PARCEL_TONE: Record<string, Tone> = {
   PRE_TRANSIT: 'neutral',

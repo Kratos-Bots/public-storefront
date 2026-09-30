@@ -9,6 +9,7 @@ const CartPage = lazy(() => import('@/features/cart/CartPage.tsx').then((m) => (
 /** The cart's lines (and empty state); its `summary` slot is the totals column. */
 export const block = defineBlock<{ id: string; summary: ComponentData[] }>({
   name: 'CartContents', label: 'Cart lines', category: 'commerce', layouts: 'all', routeBound: true, slots: ['summary'],
+  text: ['cart.page.*', 'cart.empty.*', 'cart.line.*', 'cart.summary.*', 'common.qty.*', 'common.product.*', 'common.totals.subtotal', 'common.actions.browseCatalogue'],
   schema: z.object({ summary: slot() }), defaultProps: { summary: [] },
   render: ({ summary }) => (
     <CartPage

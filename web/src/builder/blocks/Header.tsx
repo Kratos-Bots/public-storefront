@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { compactScope, defineBlock, iconOverride, override, slot, type Override } from '@/builder/define.ts';
+import { TOP_BAR_TEXT } from '@/builder/blocks/_shared/text-patterns.ts';
 import type { ComponentData } from '@/builder/types.ts';
 import { CoreOptionsScope } from '@/builder/blocks/_shared/CoreOptionsScope.tsx';
 import { StorefrontHeader } from '@/layouts/StorefrontShell.tsx';
@@ -19,6 +20,7 @@ type Props = {
  */
 export const block = defineBlock<Props>({
   name: 'Header', label: 'Header', category: 'shell', layouts: 'all', routeBound: false, slots: ['nav'],
+  text: ['shell.header.*', 'shell.webapp.*', 'catalog.search.*', 'common.nav.*', 'common.actions.signIn', ...TOP_BAR_TEXT],
   schema: z.object({
     variant: z.enum(['auto', 'storefront', 'menu', 'webapp']),
     topBar: z.boolean(), search: z.boolean(), sticky: z.boolean(),

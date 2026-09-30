@@ -1,7 +1,5 @@
-/// <reference types="node" />
-import { writeFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { INVENTORY_FILE, inventoryOf, readInventory, renderedJsxText, scanFiles, scanSource, sourceFiles, staleEntries, unallowed } from './helpers/text-scan.ts';
+import { readInventory, renderedJsxText, scanSource, staleEntries, unallowed } from './helpers/text-scan.ts';
 import { TEXT_GUARD_ALLOW } from './text-guard.allow.ts';
 import { TEXT_ENTRIES } from '@/text/registry.ts';
 
@@ -29,6 +27,25 @@ describe('scanSource', () => {
   });
   it('exempts defineBlock palette labels and starter content, and non-text attributes', () => {
     expect(rules(`export const block = defineBlock({ name: 'Button', label: 'Button', defaultProps: { label: 'Shop now', title: 'Hi there' } }); const a = <a rel="noopener noreferrer" className="a b" />;`)).toEqual([]);
+  });
+});
+
+describe('scanSource coverage (Task 15)', () => {
+  it('exempts the registry key names a block declares in text and textProps', () => {
+    expect(rules(`export const block = defineBlock({ name: 'N', text: ['shell.nav.*'], textProps: { ariaLabel: 'shell.nav.ariaLabel', placeholder: 'catalog.search.placeholder' } });`)).toEqual([]);
+    expect(rules(`const o = { textProps: { ariaLabel: 'Main links' } };`)).toEqual(['text-prop:Main links']);
+  });
+  it('reports messages of app error classes, which errorMessage() shows; built-in Error stays exempt', () => {
+    expect(rules(`throw new ApiError(0, 'The request timed out'); throw new Error('Verification is still loading');`)).toEqual(['sentence:The request timed out']);
+  });
+  it('follows a same-file const into JSX children and text attributes', () => {
+    expect(rules(`const text = page ? '[Catalogue]' : \`[\${i}]\`; const a = <p>{text}</p>;`)).toEqual(['jsx-child:[Catalogue]']);
+    expect(rules(`const hint = 'Close'; const a = <button aria-label={hint} />;`)).toEqual(['text-attr:Close']);
+    expect(rules(`let x = 'Close'; x = 'Open'; const a = <p>{x}</p>;`)).toEqual([]);
+  });
+  it('skips non-text properties of call arguments (a toast colour, a zod issue path)', () => {
+    expect(rules(`notifications.show({ message: 'Saved it', color: 'red' }); s.refine(f, { message: 'Pick one', path: ['coin'] });`))
+      .toEqual(['text-call:Saved it', 'text-call:Pick one']);
   });
 });
 
@@ -73,8 +90,5 @@ describe('inventory', () => {
       const forms = typeof entry.en === 'string' ? [entry.en] : ['item', 'items'];
       for (const f of forms) expect(all.has(f.replace(/\{[A-Za-z][A-Za-z0-9]*\}/g, '${}')), `${key}: ${f}`).toBe(true);
     }
-  });
-  it.runIf(process.env.TEXT_INVENTORY_WRITE === '1')('writes the v0.7.0 inventory (run once, in Task 4)', () => {
-    writeFileSync(INVENTORY_FILE, `${JSON.stringify(inventoryOf(unallowed(scanFiles(sourceFiles()), TEXT_GUARD_ALLOW)), null, 2)}\n`);
   });
 });

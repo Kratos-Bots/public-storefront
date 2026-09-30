@@ -5,7 +5,7 @@ import type {
 } from '@/types/public-order.ts';
 import type { PaymentMethod } from '@/types/checkout.ts';
 import type { StringKey } from '@/text/registry.ts';
-import { textKey, textSnapshot } from '@/text/runtime.tsx';
+import { textKey, textSnapshot } from '@/text/snapshot.ts';
 
 // The order page's payment logic, kept out of the components that render it.
 // Ported from `ecommerce-menu/web/src/features/order-status/{PaymentSection,

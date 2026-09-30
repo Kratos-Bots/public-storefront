@@ -6,6 +6,7 @@ const VerifyPage = lazy(() => import('@/features/verify/VerifyPage.tsx').then((m
 
 export const block = defineBlock<{ id: string }>({
   name: 'VerifyForm', label: 'Product verification', category: 'post-order', layouts: 'all', routeBound: true, slots: [],
+  text: ['verify.*', 'checkout.errors.required', 'common.status.checking', 'common.contact.*', 'common.actions.*'],
   schema: z.object({}), defaultProps: {},
   render: () => <VerifyPage />,
 });

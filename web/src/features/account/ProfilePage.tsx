@@ -67,7 +67,7 @@ function ClassicBotSwitch() {
             {stage === 'busy' ? t('account.profile.botSwitching') : t('account.profile.botConfirm')}
           </button>
           <button type="button" className={classes.logout} onClick={() => setStage('idle')} disabled={stage === 'busy'}>
-            {t('account.profile.botCancel')}
+            {t('common.actions.cancel')}
           </button>
         </div>
       )}

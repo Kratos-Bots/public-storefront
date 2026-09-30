@@ -1,7 +1,7 @@
 import { ArrowUpRightIcon } from '@/components/icons.tsx';
 import { formatDate } from '@/lib/format.ts';
 import { CopyRow } from '@/features/order-status/CopyRow.tsx';
-import { SHIPMENT_LABEL_KEYS, SHIPMENT_TONE, type Tone } from '@/features/order-status/status.ts';
+import { SHIPMENT_TONE, shipmentLabelKey, type Tone } from '@/features/order-status/status.ts';
 import { FADE } from '@/lib/motion.ts';
 import { useText } from '@/text/runtime.tsx';
 import type { Shipment } from '@/types/public-order.ts';
@@ -27,6 +27,8 @@ export function ShipmentCard({ shipment, index, count }: ShipmentCardProps) {
   const shipped = shipment.shippedAt ? formatDate(shipment.shippedAt) : null;
   const delivered = shipment.deliveredAt ? formatDate(shipment.deliveredAt) : null;
   const tone = PILL_TONE[SHIPMENT_TONE[shipment.status]];
+  // An unknown status renders an empty pill, as it did before the text layer.
+  const statusKey = shipmentLabelKey(shipment.status);
   const dates = [
     shipped && t('order.dates.shipped', { date: shipped }),
     delivered && t('order.dates.delivered', { date: delivered }),
@@ -40,7 +42,7 @@ export function ShipmentCard({ shipment, index, count }: ShipmentCardProps) {
           <h2 className={classes.cardTitle}>{shipment.carrier ?? t('order.shipment.untitled')}</h2>
         </div>
         <span className={tone ? `${classes.pill} ${tone}` : classes.pill}>
-          {t(SHIPMENT_LABEL_KEYS[shipment.status])}
+          {statusKey ? t(statusKey) : null}
         </span>
       </div>
 

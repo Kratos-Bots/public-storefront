@@ -6,6 +6,7 @@ const LoyaltyPage = lazy(() => import('@/features/account/LoyaltyPage.tsx').then
 
 export const block = defineBlock<{ id: string }>({
   name: 'Loyalty', label: 'Loyalty points', category: 'commerce', layouts: 'all', routeBound: true, slots: [],
+  text: ['account.loyalty.*', 'account.nav.*', 'common.actions.*'],
   schema: z.object({}), defaultProps: {},
   render: () => <LoyaltyPage />,
 });

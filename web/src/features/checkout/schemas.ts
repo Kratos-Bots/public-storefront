@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { PaymentMethod } from '@/types/checkout.ts';
 import type { ContactFieldMode, ContactModes } from '@/types/settings.ts';
 import { composePhoneNumber } from '@/lib/dial-codes.ts';
-import { textSnapshot } from '@/text/runtime.tsx';
+import { textSnapshot } from '@/text/snapshot.ts';
 
 // Messages resolve at parse time (editable-text playbook 9): a mounted provider's edits apply even to
 // schemas built at import, and without one they are the built-in English.

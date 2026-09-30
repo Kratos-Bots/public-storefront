@@ -1,6 +1,7 @@
 import { lazy, useMemo } from 'react';
 import { z } from 'zod';
 import { defineBlock } from '@/builder/define.ts';
+import { PRODUCT_CARD_TEXT } from '@/builder/blocks/_shared/text-patterns.ts';
 import { useBuilderMode } from '@/builder/mode.ts';
 import { useCatalog } from '@/features/catalog/use-catalog.ts';
 import { useText } from '@/text/runtime.tsx';
@@ -40,6 +41,7 @@ function FeaturedView({ title, ...query }: Omit<Props, 'id'>) {
 
 export const block = defineBlock<Props>({
   name: 'FeaturedProducts', label: 'Featured products', category: 'catalogue', layouts: 'all', routeBound: false, slots: [],
+  text: ['catalog.featured.*', ...PRODUCT_CARD_TEXT, 'common.status.loading'],
   schema: z.object({
     title: z.string().max(120),
     source: z.enum(['picked', 'category']),

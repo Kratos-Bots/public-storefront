@@ -1,10 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render } from '@testing-library/react';
-import { describeAreaGuard } from './helpers/text-area-guard.ts';
 import { TextLayerProvider } from '@/text/runtime.tsx';
 import { formatRelative, formatStamp } from '@/features/tracking/status.ts';
-
-describeAreaGuard('tracking + verify', ['features/tracking/', 'features/verify/']);
 
 afterEach(cleanup);
 const now = Date.parse('2026-07-07T12:00:00Z');

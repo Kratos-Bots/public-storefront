@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 import { z } from 'zod';
 import { useSettings } from '@/app/settings.ts';
 import { defineBlock, slot, type SlotRender } from '@/builder/define.ts';
+import { FOOTER_TEXT } from '@/builder/blocks/_shared/text-patterns.ts';
 import type { ComponentData } from '@/builder/types.ts';
 import { ShellFooter } from '@/layouts/ShellFooter.tsx';
 import classes from '@/builder/blocks/Footer.module.css';
@@ -29,6 +30,7 @@ function ColumnsFooter({ columns, colophon, cols }: { columns: Props['columns'];
 /** template = the active template's Footer slot (the default); columns = owner-composed columns. */
 export const block = defineBlock<Props>({
   name: 'Footer', label: 'Footer', category: 'shell', layouts: ['storefront', 'menu'], routeBound: false, slots: ['col1', 'col2', 'col3', 'col4'],
+  text: FOOTER_TEXT,
   schema: z.object({
     variant: z.enum(['template', 'columns']), columns: z.enum(['1', '2', '3', '4']), colophon: z.boolean(),
     col1: slot(), col2: slot(), col3: slot(), col4: slot(),

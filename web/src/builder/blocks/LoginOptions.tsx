@@ -7,6 +7,7 @@ const LoginPage = lazy(() => import('@/features/auth/LoginPage.tsx').then((m) =>
 /** The sign-in page body: heading, the ways in, the returnTo hand-off and the Telegram error state. */
 export const block = defineBlock<{ id: string }>({
   name: 'LoginOptions', label: 'Sign-in options', category: 'commerce', layouts: 'all', routeBound: true, slots: [],
+  text: ['auth.page.*', 'auth.options.*', 'auth.telegram.*', 'auth.whatsapp.*', 'auth.login.*', 'common.contact.*', 'common.actions.*'],
   schema: z.object({}), defaultProps: {},
   render: () => <LoginPage />,
 });

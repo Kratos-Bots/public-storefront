@@ -69,8 +69,8 @@ export function WholesaleCatalogPage() {
     [categories, products],
   );
   const rows = useMemo(
-    () => bandRows(groupProducts(visible, tree).flatMap((g) => g.products)),
-    [visible, tree],
+    () => bandRows(groupProducts(visible, tree, t).flatMap((g) => g.products)),
+    [visible, tree, t],
   );
 
   if (catalog.isPending) return <PageSkeleton inline />;

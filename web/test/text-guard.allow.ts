@@ -11,7 +11,6 @@ export const TEXT_GUARD_ALLOW: AllowEntry[] = [
   { file: 'templates/bento/manifest.ts', text: '*', reason: 'template gallery metadata shown only in the admin' },
   { file: 'templates/cyber-brutalism/manifest.ts', text: '*', reason: 'template gallery metadata shown only in the admin' },
   { file: 'templates/dark-luxury/manifest.ts', text: '*', reason: 'template gallery metadata shown only in the admin' },
-  { file: 'app/theme-bootstrap.ts', text: '*', reason: 'an inline first-paint script string, not text' },
   { file: 'app/theme-bridge.ts', text: '*', reason: 'CSS values (font stacks, borders), not text' },
   { file: 'templates/registry.ts', text: '*', reason: 'build-time manifest errors and console warnings for developers, never shown to shoppers' },
   { file: 'builder/sanitize.ts', text: 'noopener noreferrer', reason: 'a rel attribute value set on sanitised links, not text' },

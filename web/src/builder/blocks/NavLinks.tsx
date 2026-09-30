@@ -26,6 +26,7 @@ function NavLinksView({ links, ariaLabel, direction }: { links: Item[]; ariaLabe
 /** A list of links: a row for the Header's nav slot (scrolls sideways), a column for a footer column. Custom pages link as /pages/<slug>. */
 export const block = defineBlock<Props>({
   name: 'NavLinks', label: 'Links', category: 'shell', layouts: 'all', routeBound: false, slots: [],
+  text: ['shell.nav.*'],
   schema: z.object({
     items: z.array(z.object({ label: z.string().min(1).max(40), href: routeLink() })).max(12),
     ariaLabel: z.string().max(40),

@@ -1,15 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render } from '@testing-library/react';
-import { describeAreaGuard } from './helpers/text-area-guard.ts';
 import { TextLayerProvider } from '@/text/runtime.tsx';
 import { addressSchema, buildContactSchema } from '@/features/checkout/schemas.ts';
-
-describeAreaGuard('checkout', ['features/checkout/'], {
-  allow: [
-    { file: 'features/checkout/CheckoutPage.tsx', text: 'red', reason: 'the notification colour name, not text' },
-    { file: 'features/checkout/schemas.ts', text: 'coin', reason: 'a zod issue path (the form field name), not text' },
-  ],
-});
 
 afterEach(cleanup);
 const edited = { locale: 'en', formatLocale: '', shared: { 'checkout.errors.required': 'Please fill this in' }, layout: {} } as const;

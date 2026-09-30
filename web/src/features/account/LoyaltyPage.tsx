@@ -190,7 +190,7 @@ export function LoyaltyPage() {
                 onClick={() => setConfirming(null)}
                 disabled={mutation.isPending}
               >
-                {t('account.loyalty.cancel')}
+                {t('common.actions.cancel')}
               </button>
               <button
                 type="button"

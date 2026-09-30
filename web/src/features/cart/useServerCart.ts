@@ -4,7 +4,7 @@ import { notifications } from '@mantine/notifications';
 import { fetchCart, putCart } from '@/api/cart.ts';
 import { useCartStore } from '@/stores/cart.ts';
 import { ApiError, errorMessage } from '@/lib/errors.ts';
-import { textSnapshot } from '@/text/runtime.tsx';
+import { textSnapshot } from '@/text/snapshot.ts';
 import type { Product } from '@/types/catalog.ts';
 import type { CartLineInput, ServerCart, ServerCartLine } from '@/types/cart.ts';
 

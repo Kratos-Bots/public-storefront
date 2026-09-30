@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
-import { describeAreaGuard } from './helpers/text-area-guard.ts';
 import { TextLayerProvider } from '@/text/runtime.tsx';
 import { SearchField } from '@/layouts/SearchField.tsx';
 import { stockLabel } from '@/lib/format.ts';
@@ -11,10 +10,6 @@ import { useText } from '@/text/runtime.tsx';
 import { useMemo } from 'react';
 import type { Product } from '@/types/catalog.ts';
 import { block as searchBlock } from '@/builder/blocks/SearchField.tsx';
-
-describeAreaGuard('catalog + product', ['features/catalog/', 'layouts/SearchField.tsx', 'builder/blocks/SearchField.tsx', 'builder/blocks/FeaturedProducts.tsx', 'lib/format.ts'], {
-  allow: [{ file: 'builder/blocks/SearchField.tsx', text: 'catalog.search.placeholder', reason: 'textProps maps the prop to a registry key; the key name is not shopper text' }],
-});
 
 afterEach(cleanup);
 describe('catalog wording follows published text', () => {

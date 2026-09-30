@@ -1,4 +1,4 @@
-import { textSnapshot } from '@/text/runtime.tsx';
+import { textSnapshot, type TextApi } from '@/text/snapshot.ts';
 
 export interface DefaultActionInput {
   pathname: string;
@@ -27,10 +27,10 @@ const TERMINAL = ['/checkout', '/order-placed', '/order/', '/payment/'];
  * wholesale sheet uses it too (its own tab stands down in the web app), and a
  * shop that isn't taking orders has nothing to put behind the button.
  */
-export function defaultPrimaryAction(input: DefaultActionInput): DefaultAction | null {
+export function defaultPrimaryAction(input: DefaultActionInput, t: TextApi['t'] = textSnapshot().t): DefaultAction | null {
   const { pathname, count, subtotalLabel, checkoutTo, ordering, blocked } = input;
   if (!ordering || count === 0) return null;
   if (TERMINAL.some((p) => pathname === p || (p.endsWith('/') && pathname.startsWith(p)))) return null;
-  if (pathname === '/cart') return { label: textSnapshot().t('webapp.action.checkout', { subtotal: subtotalLabel }), to: checkoutTo, disabled: blocked };
-  return { label: textSnapshot().t('webapp.action.viewCart', { subtotal: subtotalLabel }), to: '/cart', disabled: false };
+  if (pathname === '/cart') return { label: t('webapp.action.checkout', { subtotal: subtotalLabel }), to: checkoutTo, disabled: blocked };
+  return { label: t('webapp.action.viewCart', { subtotal: subtotalLabel }), to: '/cart', disabled: false };
 }
