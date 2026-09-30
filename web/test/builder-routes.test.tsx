@@ -19,7 +19,7 @@ vi.mock('@/app/settings.ts', () => ({
   }),
 }));
 vi.mock('@/lib/telegram-webapp.ts', () => ({ isTelegramWebApp: () => state.telegram }));
-vi.mock('@/api/pages.ts', () => ({ fetchPageSet: (layout: string) => state.fetchPageSet!(layout) }));
+vi.mock('@/api/pages.ts', () => ({ fetchPageSet: (layout: string) => state.fetchPageSet!(layout), fetchPublished: async (layout: string) => ({ pageSet: (await state.fetchPageSet!(layout)) ?? null, text: null }) }));
 vi.mock('@/components/Brand.tsx', () => ({ Brand: () => <span>brand</span> }));
 vi.mock('@/features/auth/LoginModal.tsx', () => ({ LoginModal: () => <i data-mark="login-modal" /> }));
 vi.mock('@/features/cart/CartDrawer.tsx', () => ({ CartDrawer: () => <i data-mark="cart-drawer" /> }));

@@ -1,9 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ComponentType, type ReactNode } from 'react';
 import { Navigate, useMatches } from 'react-router';
-import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSettings } from '@/app/settings.ts';
 import { useEffectiveLayout } from '@/app/layout.ts';
-import { fetchPageSet } from '@/api/pages.ts';
+import { PAGES_QUERY, pageSetQueryFn, pagesKey } from '@/builder/published.ts';
 import { validateDoc } from '@/builder/guard.ts';
 import { defaultDoc } from '@/builder/defaults/index.ts';
 import { DocBoundary, RenderDoc } from '@/builder/render.tsx';
@@ -17,23 +17,7 @@ import { ShellStateContext, useShellStateValue } from '@/layouts/shell-context.t
 import { customPageKey, isFixedRouteKey } from '@/builder/types.ts';
 import type { DocKey, LayoutKind, PageRootProps, PageSet, PuckDoc, RouteKey } from '@/builder/types.ts';
 
-export const pagesKey = (layout: LayoutKind) => ['pages', layout] as const;
-
-/**
- * Read once per page load and never again: nothing (a remount, focus, a reconnect, time) refetches
- * it — a publish must not swap the page under a shopper mid-checkout. A new set shows on reload.
- */
-export const PAGES_QUERY = {
-  staleTime: Infinity, refetchOnMount: false, refetchOnReconnect: false, refetchOnWindowFocus: false, retry: false,
-} as const;
-
-/**
- * The query function for a layout's set. fetchPageSet resolves null on any failure, so should the
- * query ever run again (an invalidation), a failed read keeps the set this page load already has.
- */
-export function pageSetQueryFn(client: QueryClient, layout: LayoutKind): () => Promise<PageSet | null> {
-  return async () => (await fetchPageSet(layout)) ?? client.getQueryData<PageSet | null>(pagesKey(layout)) ?? null;
-}
+export { pagesKey, PAGES_QUERY, pageSetQueryFn } from '@/builder/published.ts';
 
 const PageSetOverrideContext = createContext<{ pageSet: PageSet | null } | null>(null);
 
@@ -53,7 +37,7 @@ export function usePageSet(layout: LayoutKind): { pageSet: PageSet | null; isLoa
     enabled: override === null,
   });
   if (override) return { pageSet: override.pageSet, isLoading: false };
-  return { pageSet: query.data ?? null, isLoading: query.isPending };
+  return { pageSet: query.data?.pageSet ?? null, isLoading: query.isPending };
 }
 
 export interface ResolvedDoc { doc: PuckDoc; isDefault: boolean }

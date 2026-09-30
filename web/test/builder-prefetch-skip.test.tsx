@@ -11,6 +11,10 @@ vi.mock('@/api/pages.ts', () => ({
     state.calls.push(layout);
     return Promise.resolve(null);
   },
+  fetchPublished: (layout: string) => {
+    state.calls.push(layout);
+    return Promise.resolve({ pageSet: null, text: null });
+  },
 }));
 
 import { usePrefetchPageSet } from '@/app/App.tsx';

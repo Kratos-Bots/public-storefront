@@ -22,7 +22,7 @@ vi.mock('@/features/webapp/PrimaryActionBar.tsx', () => ({ PrimaryActionBar: () 
 vi.mock('@/features/webapp/useTelegramChrome.ts', () => ({ useTelegramChrome: () => {}, isFirstHistoryEntry: () => true }));
 vi.mock('@/lib/telegram-webapp.ts', () => ({ isTelegramWebApp: () => false }));
 // Only the no-override skeleton test reaches the network; it must stay pending.
-vi.mock('@/api/pages.ts', () => ({ fetchPageSet: () => new Promise(() => {}) }));
+vi.mock('@/api/pages.ts', () => ({ fetchPageSet: () => new Promise(() => {}), fetchPublished: () => new Promise(() => {}) }));
 
 import { StorefrontShell } from '@/layouts/StorefrontShell.tsx';
 import { MenuShell } from '@/layouts/MenuShell.tsx';
