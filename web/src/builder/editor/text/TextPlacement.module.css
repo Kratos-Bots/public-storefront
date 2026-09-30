@@ -17,12 +17,12 @@
   letter-spacing: 0.04em;
   color: var(--sfb-muted);
 }
-.blockText .tools {
+.blockText .blockTools {
   margin-inline: -16px;
   padding-inline: 16px;
   margin-block-end: 2px;
 }
-.blockText .tools button { justify-self: start; }
+.blockText .blockTools button { justify-self: start; }
 
 /* Narrow frames: a sheet over the canvas, pinned under the editor header on the left. */
 .overlay {

@@ -18,6 +18,7 @@ import { defaultDoc } from '@/builder/defaults/index.ts';
 import { WIDE_FRAME_QUERY } from '@/builder/editor/panels.ts';
 import { blockTextRows } from '@/builder/editor/text/catalog.ts';
 import { BLOCK_TEXT_SEARCH_OVER } from '@/builder/editor/text/BlockText.tsx';
+import placement from '@/builder/editor/text/TextPlacement.module.css';
 
 function renderCanvas() {
   const router = createMemoryRouter([{ path: '/__builder/*', element: <EditorCanvas /> }], { initialEntries: ['/__builder/doc/shell'] });
@@ -118,6 +119,10 @@ describe('Text panel placement and block text', () => {
     await act(async () => { fireEvent.click(el); });
     const [section] = await screen.findAllByRole('region', { name: 'Text in this block', hidden: true });
     const search = within(section!).getByRole('searchbox', { name: 'Search this block’s text', hidden: true });
+    // The block's search row carries the placement module's own class, which its layout rules target.
+    const tools = search.closest('[data-sfb-block-tools]') as HTMLElement;
+    expect(tools).not.toBeNull();
+    expect(tools.classList).toContain(placement.blockTools);
     fireEvent.change(search, { target: { value: 'zzzz-no-such-line' } });
     expect(section!.querySelectorAll('[data-text-key]')).toHaveLength(0);
     fireEvent.click(within(section!).getByRole('button', { name: 'Open in Text panel', hidden: true }));

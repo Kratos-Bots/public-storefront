@@ -36,7 +36,7 @@ function BlockTextSection({ rows }: { rows: readonly TextRowDef[] }) {
     <section className={`${styles.root} ${placement.blockText}`} data-sfb-text="" data-sfb-block-text="" aria-labelledby={`${id}-t`}>
       <h3 id={`${id}-t`} className={placement.blockTitle}>Text in this block</h3>
       {many && (
-        <div className={styles.tools}>
+        <div className={`${styles.tools} ${placement.blockTools}`} data-sfb-block-tools="">
           <input
             type="search"
             className={styles.search}
