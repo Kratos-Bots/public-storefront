@@ -1,6 +1,7 @@
 import { useSettings } from '@/app/settings.ts';
 import { withPrefilledText } from '@/lib/chat-links.ts';
 import { TelegramIcon, WhatsAppIcon } from '@/components/icons.tsx';
+import { useText } from '@/text/runtime.tsx';
 import classes from '@/components/ContactLinks.module.css';
 
 export interface ContactLinksProps {
@@ -13,11 +14,12 @@ export interface ContactLinksProps {
 /** WhatsApp / Telegram links from the client's brand settings. Renders nothing when neither is configured. */
 export function ContactLinks({ prefill, variant = 'inline' }: ContactLinksProps) {
   const { brand } = useSettings();
+  const { t } = useText();
   const resolve = (link: string | null) => (prefill ? withPrefilledText(link, prefill) : link);
 
   const links = [
-    { key: 'whatsapp', label: 'WhatsApp', href: resolve(brand.links.whatsapp), Icon: WhatsAppIcon },
-    { key: 'telegram', label: 'Telegram', href: resolve(brand.links.telegram), Icon: TelegramIcon },
+    { key: 'whatsapp', label: t('common.contact.whatsapp'), href: resolve(brand.links.whatsapp), Icon: WhatsAppIcon },
+    { key: 'telegram', label: t('common.contact.telegram'), href: resolve(brand.links.telegram), Icon: TelegramIcon },
   ].filter((l): l is { key: string; label: string; href: string; Icon: typeof WhatsAppIcon } => !!l.href);
 
   if (links.length === 0) return null;

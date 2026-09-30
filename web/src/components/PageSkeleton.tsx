@@ -1,3 +1,4 @@
+import { useText } from '@/text/runtime.tsx';
 import classes from '@/components/PageSkeleton.module.css';
 
 export interface PageSkeletonProps {
@@ -7,8 +8,9 @@ export interface PageSkeletonProps {
 
 /** Full-page loading state used before settings resolve, and as the lazy-route fallback. */
 export function PageSkeleton({ inline = false }: PageSkeletonProps) {
+  const { t } = useText();
   return (
-    <div className={inline ? classes.inline : classes.root} role="status" aria-label="Loading">
+    <div className={inline ? classes.inline : classes.root} role="status" aria-label={t('common.status.loading')}>
       {inline ? null : (
         <>
           <div className={classes.bar}>

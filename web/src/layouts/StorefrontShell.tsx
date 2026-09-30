@@ -16,6 +16,7 @@ import { ShellFooter } from '@/layouts/ShellFooter.tsx';
 import { ShellStateContext, useShellState, useShellStateValue } from '@/layouts/shell-context.ts';
 import { Slot } from '@/templates/runtime.tsx';
 import { headerIconClass, useCoreOptions } from '@/templates/hooks.ts';
+import { useText } from '@/text/runtime.tsx';
 import classes from '@/layouts/StorefrontShell.module.css';
 
 export interface ShellHeaderProps {
@@ -32,6 +33,7 @@ export interface ShellHeaderProps {
 /** TopBar slot + the header bar. */
 export function StorefrontHeader({ topBar = true, search: withSearch = true, sticky = true, nav }: ShellHeaderProps) {
   const { brand, features } = useSettings();
+  const { t, tp } = useText();
   const loggedIn = useSessionStore(selectIsLoggedIn);
   const cartCount = useCartStore(selectCount);
   const { search, setSearch } = useShellState();
@@ -45,7 +47,7 @@ export function StorefrontHeader({ topBar = true, search: withSearch = true, sti
       <header className={sticky ? classes.header : `${classes.header} ${classes.unstuck}`} data-sf-part="header">
         <NoticeBanners pinned />
         <div className={classes.headerInner}>
-          <Link to="/" className={classes.home} aria-label={`${brand.name} — home`}>
+          <Link to="/" className={classes.home} aria-label={t('shell.header.homeAriaLabel', { shop: brand.name })}>
             <Brand size="md" />
           </Link>
 
@@ -56,12 +58,12 @@ export function StorefrontHeader({ topBar = true, search: withSearch = true, sti
           <div className={classes.actions}>
             {features.accounts && accountClass !== null ? (
               loggedIn ? (
-                <Link to="/account" className={`${classes.action} ${accountClass}`} aria-label="Your account">
+                <Link to="/account" className={`${classes.action} ${accountClass}`} aria-label={t('common.nav.yourAccount')}>
                   <UserIcon size={18} />
                 </Link>
               ) : (
                 <Link to="/login" className={`${classes.signIn} ${accountClass}`}>
-                  Sign in
+                  {t('common.actions.signIn')}
                 </Link>
               )
             ) : null}
@@ -70,7 +72,7 @@ export function StorefrontHeader({ topBar = true, search: withSearch = true, sti
               <Link
                 to="/cart"
                 className={`${classes.action} ${cartClass}`}
-                aria-label={`Cart, ${cartCount} item${cartCount === 1 ? '' : 's'}`}
+                aria-label={tp('shell.header.cartAriaLabel', cartCount)}
               >
                 <BagIcon size={18} />
                 {cartCount > 0 ? <span className={classes.count} data-sf-part="badge">{cartCount}</span> : null}

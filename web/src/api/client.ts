@@ -3,6 +3,7 @@ import { ApiError } from '@/lib/errors.ts';
 import { useSessionStore } from '@/stores/session.ts';
 import { closedGate } from '@/app/closed-gate.ts';
 import { isBuilderMode } from '@/app/builder-gate.ts';
+import { textSnapshot } from '@/text/runtime.tsx';
 
 // Re-exported so callers (and this task's test) can `import { ApiError } from '@/api/client.ts'`
 // without also reaching into `@/lib/errors.ts`; the class itself still lives there.
@@ -60,21 +61,21 @@ export const api = ky.create({
 
 async function toApiError(err: unknown): Promise<never> {
   if (err instanceof HTTPError) {
-    let message = err.response.statusText || 'Request failed';
+    let message = err.response.statusText || textSnapshot().t('errors.requestFailed');
     try { const body = (await err.response.clone().json()) as Partial<Envelope<unknown>>; if (typeof body.error === 'string' && body.error) message = body.error; } catch { /* non-JSON */ }
     const apiErr = new ApiError(err.response.status, message);
     if (apiErr.isUnauthorized) useSessionStore.getState().clear();
     if (apiErr.isStorefrontDisabled) closedGate.getState().setClosed(true);
     throw apiErr;
   }
-  if (err instanceof Error && err.name === 'TimeoutError') throw new ApiError(0, 'The request timed out');
-  throw new ApiError(0, 'Network error');
+  if (err instanceof Error && err.name === 'TimeoutError') throw new ApiError(0, textSnapshot().t('errors.timeout'));
+  throw new ApiError(0, textSnapshot().t('errors.network'));
 }
 
 export async function unwrap<T>(p: Promise<Response>): Promise<T> {
   try {
     const body = (await (await p).json()) as Envelope<T>;
-    if (!body.success) throw new ApiError(500, body.error ?? 'Request failed');
+    if (!body.success) throw new ApiError(500, body.error ?? textSnapshot().t('errors.requestFailed'));
     return body.data;
   } catch (err) { if (err instanceof ApiError) throw err; return toApiError(err); }
 }
@@ -82,7 +83,7 @@ export async function unwrap<T>(p: Promise<Response>): Promise<T> {
 export async function unwrapWithMeta<T, M>(p: Promise<Response>): Promise<{ data: T; meta: M }> {
   try {
     const body = (await (await p).json()) as Envelope<T> & { meta: M };
-    if (!body.success) throw new ApiError(500, body.error ?? 'Request failed');
+    if (!body.success) throw new ApiError(500, body.error ?? textSnapshot().t('errors.requestFailed'));
     return { data: body.data, meta: body.meta };
   } catch (err) { if (err instanceof ApiError) throw err; return toApiError(err); }
 }

@@ -65,9 +65,9 @@ describe('neutral fallbacks at render time (guarded published/draft docs)', () =
     expect(container.textContent).not.toContain('Bad');
     expect(issues.map((i) => i.rule)).toEqual(['field:FAQ.items[1]', 'field:NavLinks.items[1]']);
   });
-  it('an invalid NavLinks ariaLabel falls back to none rather than the "Site" placeholder', () => {
+  it('an empty NavLinks ariaLabel uses the shell.nav.ariaLabel site text', () => {
     const { container } = guardAndMount([c('NavLinks', { items: [{ label: 'Shop', href: '/' }], ariaLabel: '', direction: 'row' })]);
-    expect(container.querySelector('nav')!.hasAttribute('aria-label')).toBe(false);
+    expect(container.querySelector('nav')!.getAttribute('aria-label')).toBe('Site');
   });
 });
 

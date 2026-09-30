@@ -19,6 +19,7 @@ import type { ShellHeaderProps } from '@/layouts/StorefrontShell.tsx';
 import { ShellStateContext, useShellState, useShellStateValue } from '@/layouts/shell-context.ts';
 import { Slot } from '@/templates/runtime.tsx';
 import { headerIconClass, useCoreOptions } from '@/templates/hooks.ts';
+import { useText } from '@/text/runtime.tsx';
 import classes from '@/layouts/MenuShell.module.css';
 
 const onCatalogPath = (pathname: string) => pathname === '/' || pathname.startsWith('/c/');
@@ -26,6 +27,7 @@ const onCatalogPath = (pathname: string) => pathname === '/' || pathname.startsW
 /** TopBar slot + the one compact bar. */
 export function MenuHeader({ topBar = true, search: withSearch = true, sticky = true, nav }: ShellHeaderProps) {
   const { brand, features } = useSettings();
+  const { t, tp } = useText();
   const loggedIn = useSessionStore(selectIsLoggedIn);
   const cartCount = useCartStore(selectCount);
   const openPanel = useUiStore((s) => s.open);
@@ -47,13 +49,13 @@ export function MenuHeader({ topBar = true, search: withSearch = true, sticky = 
       <header className={sticky ? classes.bar : `${classes.bar} ${classes.unstuck}`} data-sf-part="header">
         <NoticeBanners pinned />
         <div className={classes.barInner}>
-          <Link to="/" className={classes.home} aria-label={`${brand.name} — home`}>
+          <Link to="/" className={classes.home} aria-label={t('shell.header.homeAriaLabel', { shop: brand.name })}>
             <Brand size="sm" />
           </Link>
 
           {nav}
 
-          {withSearch ? <SearchField className={classes.search} value={search} onChange={setSearch} placeholder="Search" /> : null}
+          {withSearch ? <SearchField className={classes.search} value={search} onChange={setSearch} placeholder={t('shell.header.searchPlaceholder')} /> : null}
 
           <div className={classes.actions}>
             {canFilter ? (
@@ -61,7 +63,7 @@ export function MenuHeader({ topBar = true, search: withSearch = true, sticky = 
                 type="button"
                 className={classes.action}
                 onClick={() => openPanel('filterOpen')}
-                aria-label={filtered ? 'Categories — one category selected' : 'Categories'}
+                aria-label={filtered ? t('shell.header.categoriesFiltered') : t('shell.header.categories')}
               >
                 <FilterIcon size={17} />
                 {filtered ? <span className={classes.mark} aria-hidden /> : null}
@@ -72,7 +74,7 @@ export function MenuHeader({ topBar = true, search: withSearch = true, sticky = 
               <Link
                 to={loggedIn ? '/account' : '/login'}
                 className={`${classes.action} ${accountClass}`}
-                aria-label={loggedIn ? 'Your account' : 'Sign in'}
+                aria-label={loggedIn ? t('common.nav.yourAccount') : t('common.actions.signIn')}
               >
                 <UserIcon size={17} />
               </Link>
@@ -82,7 +84,7 @@ export function MenuHeader({ topBar = true, search: withSearch = true, sticky = 
               <Link
                 to="/cart"
                 className={`${classes.action} ${cartClass}`}
-                aria-label={`Cart, ${cartCount} item${cartCount === 1 ? '' : 's'}`}
+                aria-label={tp('shell.header.cartAriaLabel', cartCount)}
               >
                 <BagIcon size={17} />
                 {cartCount > 0 ? <span className={classes.count} data-sf-part="badge">{cartCount}</span> : null}

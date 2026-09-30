@@ -9,7 +9,7 @@ import { BUILDER_PATH, isBuilderMode } from '@/app/builder-gate.ts';
 import { buildMantineTheme, lastKnownBrandName } from '@/app/theme-bridge.ts';
 import { useDocumentTheme } from '@/app/document-theme.ts';
 import { TemplateProvider } from '@/templates/runtime.tsx';
-import { TextProvider } from '@/text/runtime.tsx';
+import { TextProvider, useText } from '@/text/runtime.tsx';
 import { router } from '@/app/router.tsx';
 import { effectiveLayout } from '@/app/layout.ts';
 import { isTelegramWebApp } from '@/lib/telegram-webapp.ts';
@@ -145,6 +145,8 @@ function ThemedApp({ settings }: { settings: StorefrontSettings }) {
 function SettingsBoundary() {
   const query = useSettingsQuery();
   const telegramPending = useTelegramAuthStore((s) => s.status === 'pending');
+  // Renders above TextProvider, so this is always the built-in English (boot.* keys are fixed).
+  const { t } = useText();
   useBootCart();
 
   if (query.data && !telegramPending) return <ThemedApp settings={query.data} />;
@@ -155,12 +157,12 @@ function SettingsBoundary() {
       <MantineProvider forceColorScheme={bootColorScheme()}>
         <div className={classes.boot}>
           <EmptyState
-            eyebrow="Connection"
-            title={name ? `We can't reach ${name}` : "We can't reach the shop"}
-            description="Check your connection and try again."
+            eyebrow={t('boot.eyebrow')}
+            title={name ? t('boot.titleNamed', { shop: name }) : t('boot.title')}
+            description={t('boot.description')}
             action={
               <Button variant="default" size="sm" onClick={() => void query.refetch()}>
-                Try again
+                {t('boot.retry')}
               </Button>
             }
           />

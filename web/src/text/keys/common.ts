@@ -29,4 +29,5 @@ export default defineTextArea('common', {
   'list.emptyCategory': { en: 'Nothing stocked here yet', note: 'Catalogue and trade list, for a category with no products', max: 80 },
   'contact.whatsapp': { en: 'WhatsApp', note: 'Contact-link and sign-in channel name', max: 30 },
   'contact.telegram': { en: 'Telegram', note: 'Contact-link and sign-in channel name', max: 30 },
+  'video.title': { en: 'Video', note: 'Screen-reader name of an embedded video that has no title of its own', max: 60 },
 });
