@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { act, renderHook } from '@testing-library/react';
+import { act, cleanup, renderHook } from '@testing-library/react';
+import { builderOverrides } from '@/app/builder-gate.ts';
 import { useDocumentTheme } from '@/app/document-theme.ts';
 import { THEME_STORAGE_KEY } from '@/app/theme-bridge.ts';
 import type { StorefrontSettings, Theme } from '@/types/settings.ts';
@@ -27,7 +28,7 @@ function framedWindow(search: string) {
   return { win, send };
 }
 
-afterEach(() => { localStorage.clear(); document.documentElement.removeAttribute('style'); });
+afterEach(() => { cleanup(); localStorage.clear(); document.documentElement.removeAttribute('style'); });
 
 describe('useDocumentTheme', () => {
   it('outside a preview frame: paints the stored theme and persists it', () => {
@@ -63,5 +64,28 @@ describe('useDocumentTheme', () => {
     expect(localStorage.getItem(THEME_STORAGE_KEY)).toBeNull(); // preview frame: nothing persisted
     rerender({ win: framedWindow('').win }); // same theme, no longer a preview frame
     expect(JSON.parse(localStorage.getItem(THEME_STORAGE_KEY)!).vars['--sf-bg']).toBe('#0f3965');
+  });
+
+  it('in the builder frame: the builder theme wins, keeps the saved customCss, and writes nothing', () => {
+    const listeners: Array<(e: MessageEvent) => void> = [];
+    const win = {
+      location: { search: '?sf-builder=1', pathname: '/__builder' },
+      parent: { postMessage: vi.fn() },
+      addEventListener: (_: string, fn: (e: MessageEvent) => void) => listeners.push(fn),
+      removeEventListener: () => undefined,
+    } as unknown as Window;
+    act(() => builderOverrides.setState({ theme: { ...stored, colors: { ...stored.colors, bg: '#202020' }, customCss: '' } }));
+    const { result } = renderHook(() => useDocumentTheme(settings, win));
+    expect(result.current.colors.bg).toBe('#202020');
+    expect(result.current.customCss).toBe('.saved{}');
+    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBeNull();
+    act(() => builderOverrides.setState({ theme: null }));
+  });
+
+  it('outside the builder frame: a builder theme left in the overrides store is ignored', () => {
+    act(() => builderOverrides.setState({ theme: { ...stored, colors: { ...stored.colors, bg: '#202020' }, customCss: '' } }));
+    const { result } = renderHook(() => useDocumentTheme(settings, framedWindow('').win));
+    expect(result.current.colors.bg).toBe('#0f3965');
+    act(() => builderOverrides.setState({ theme: null }));
   });
 });

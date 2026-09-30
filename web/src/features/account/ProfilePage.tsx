@@ -8,6 +8,7 @@ import { formatDate } from '@/lib/format.ts';
 import { logout } from '@/api/auth.ts';
 import { setBotMode } from '@/api/profile.ts';
 import { useSettings } from '@/app/settings.ts';
+import { isBuilderMode } from '@/app/builder-gate.ts';
 import { useEffectiveLayout } from '@/app/layout.ts';
 import { errorMessage } from '@/lib/errors.ts';
 import { isTelegramWebApp, tgClose } from '@/lib/telegram-webapp.ts';
@@ -93,6 +94,13 @@ export function ProfilePage() {
     // A revoke that fails still ends the session here: the token is useless to a
     // customer who has left, and refusing to sign them out would be the worse answer.
     await logout().catch(() => undefined);
+
+    // The page builder's fixture session: the editor refused the call (and said so). Clearing or
+    // reloading here would drop the editor frame out of builder mode.
+    if (isBuilderMode()) {
+      setSigningOut(false);
+      return;
+    }
 
     useSessionStore.getState().clear();
     useCartStore.getState().clear();

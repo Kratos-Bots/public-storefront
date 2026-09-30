@@ -1,0 +1,24 @@
+.start,
+.center,
+.stretch {
+  display: flex;
+  padding-block: 0.5rem;
+  min-width: 0;
+}
+.center { justify-content: center; }
+
+/* Mantine's md button is 42px — a thumb needs 44. */
+.button {
+  min-height: 44px;
+  max-width: 100%;
+  height: auto;
+  padding-block: 0.5rem;
+}
+/* Mantine's label is nowrap + clipped; a long label wraps instead of being cut at 360px. */
+.button :global(.mantine-Button-label) {
+  white-space: normal;
+  overflow: visible;
+  text-align: center;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}

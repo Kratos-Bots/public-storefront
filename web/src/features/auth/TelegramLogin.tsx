@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { isBuilderMode } from '@/app/builder-gate.ts';
 import { AuthNote } from '@/features/auth/AuthCard.tsx';
 import type { TelegramAuthPayload } from '@/types/auth.ts';
 import classes from '@/features/auth/TelegramLogin.module.css';
@@ -32,8 +33,16 @@ export interface TelegramLoginProps {
  *   BotFather matches this exact origin — which is why an iframe that never
  *   arrives is a state this component has to be able to say out loud, rather
  *   than an empty box the customer stares at.
+ *
+ * In the page builder's frame the widget is never loaded (no third-party script runs there):
+ * a note stands in its place.
  */
-export function TelegramLogin({ botUsername, onAuth }: TelegramLoginProps) {
+export function TelegramLogin(props: TelegramLoginProps) {
+  if (isBuilderMode()) return <AuthNote>Preview: Telegram&rsquo;s sign-in button shows here on your live shop</AuthNote>;
+  return <TelegramWidget {...props} />;
+}
+
+function TelegramWidget({ botUsername, onAuth }: TelegramLoginProps) {
   const host = useRef<HTMLDivElement>(null);
   const handler = useRef(onAuth);
   const [absent, setAbsent] = useState(false);

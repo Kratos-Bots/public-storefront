@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router';
 import { useSessionStore } from '@/stores/session.ts';
 import { formatDate } from '@/lib/format.ts';
@@ -21,8 +22,11 @@ const TABS = [
  * real route, so it has to survive a middle-click, a bookmark and the back
  * button, and `/account/orders/:ref` keeps the Orders section marked as the one
  * it belongs to.
+ *
+ * The page builder's AccountNav block passes the section as `children`; a route
+ * that nests under it still uses the outlet.
  */
-export function AccountLayout() {
+export function AccountLayout({ children }: { children?: ReactNode }) {
   const profile = useProfile();
   const sessionNickname = useSessionStore((s) => s.customer?.nickname);
   const name = sessionNickname ?? profile.data?.nickname ?? null;
@@ -57,7 +61,7 @@ export function AccountLayout() {
       </nav>
 
       <div key={location.pathname} className={FADE}>
-        <Outlet />
+        {children ?? <Outlet />}
       </div>
     </div>
   );

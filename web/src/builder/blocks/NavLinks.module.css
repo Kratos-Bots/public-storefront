@@ -1,0 +1,56 @@
+/* In the header bar it shares one row with the brand, search and icons: it may
+   shrink and scroll sideways, never push the row wider than the phone. */
+.nav {
+  min-width: 0;
+}
+.row {
+  flex: 0 1 auto;
+  overflow-x: auto;
+  /* overflow clips the 2px focus outline (+ offset) top and bottom; give it room. */
+  padding-block: 4px;
+  scrollbar-width: none;
+}
+.row::-webkit-scrollbar { display: none; }
+
+.list {
+  display: flex;
+  gap: 0.125rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.column .list {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 0.6rem;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--sf-muted);
+  text-decoration: none;
+  border-radius: var(--sf-card-radius);
+  transition: color 120ms ease, background-color 120ms ease;
+}
+.column .link { padding-inline: 0; }
+.link:hover,
+.link[aria-current='page'] { color: var(--sf-text); }
+.link:hover { background: var(--sf-surface); }
+.column .link:hover { background: none; text-decoration: underline; text-underline-offset: 3px; }
+.link:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .link { transition: none; }
+}

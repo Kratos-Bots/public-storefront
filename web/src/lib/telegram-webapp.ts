@@ -10,6 +10,8 @@
  * down with it.
  */
 
+import { isBuilderMode } from '@/app/builder-gate.ts';
+
 export const TELEGRAM_SDK_SRC = 'https://telegram.org/js/telegram-web-app.js';
 
 type Insets = { top?: number; bottom?: number; left?: number; right?: number };
@@ -95,7 +97,8 @@ export function looksLikeTelegramLaunch(): boolean {
 
 /** Loads the SDK on a Telegram launch; resolves (never rejects) on load, error or timeout. */
 export function loadTelegramSdk(timeoutMs = 4000): Promise<void> {
-  if (typeof window === 'undefined' || window.Telegram?.WebApp || !looksLikeTelegramLaunch()) {
+  // Never in the page builder's frame: no third-party script loads there.
+  if (typeof window === 'undefined' || window.Telegram?.WebApp || !looksLikeTelegramLaunch() || isBuilderMode()) {
     return Promise.resolve();
   }
   return new Promise((resolve) => {

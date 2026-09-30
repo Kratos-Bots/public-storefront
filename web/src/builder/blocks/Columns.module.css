@@ -1,0 +1,20 @@
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gap);
+  padding-block: 0.5rem;
+}
+
+.col {
+  min-width: 0;
+}
+
+@media (min-width: 36em) {
+  .stackSm { grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); }
+}
+@media (min-width: 48em) {
+  .stackMd { grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); }
+}
+@media (min-width: 62em) {
+  .stackLg { grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); }
+}

@@ -4,6 +4,8 @@ const RULES: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
   [/^\/media\/products\/(\d+)\/image$/, (m) => `api/v1/products/${m[1]}/image`],
   [/^\/media\/settings\/branding\/(logo|favicon)$/, (m) => `api/v1/settings/branding/${m[1]}`],
   [/^\/media\/storefront-settings\/branding\/(logo|favicon)$/, (m) => `api/v1/storefront-settings/branding/${m[1]}`],
+  // Page-builder uploads (spec 13 A3): a random 32-hex key, never a user-chosen name.
+  [/^\/media\/storefront-pages\/media\/([a-f0-9]{32}\.(?:png|jpg|webp|gif))$/, (m) => `api/v1/storefront-pages/media/${m[1]}`],
 ];
 
 export function mediaTarget(pathname: string, search: string, backendUrl: string): URL | null {

@@ -9,6 +9,7 @@ import type { PublicOrder, SelectPaymentResult } from '../web/src/types/public-o
 import type { StorefrontSettings } from '../web/src/types/settings.ts';
 import type { TrackingLookup } from '../web/src/types/tracking.ts';
 import type { LoginResult, WhatsappStart } from '../web/src/types/auth.ts';
+import type { PageSet } from '../web/src/builder/types.ts';
 
 /** The dev server the suite starts (see playwright.config.ts). Route globs are
  *  anchored to it: a bare `**\/api\/**` also matches Vite's own module URLs
@@ -80,6 +81,10 @@ export interface InstallMocksOptions {
   checkoutReference?: string;
   /** The Mini App sign-in answers 401, as it does for stale or forged initData. */
   telegramAuthFails?: boolean;
+  /** Published page set per layout (`GET storefront/pages/:layout`). Omitted = `null` = no published set. */
+  pages?: Partial<Record<Layout, PageSet | null>>;
+  /** Make the pages route fail (503 or 404) so specs can exercise the built-in fallback. */
+  pagesFail?: 503 | 404;
 }
 
 export interface MockState {
@@ -110,6 +115,10 @@ export interface MockState {
   webappLogins: Array<Record<string, unknown>>;
   /** Bodies posted to the classic-bot switch. */
   botModes: Array<Record<string, unknown>>;
+  /** What `GET storefront/pages/:layout` serves. */
+  pages: Partial<Record<Layout, PageSet | null>>;
+  /** When set, the pages route answers this error status instead of the fixture. */
+  pagesFail: 503 | 404 | null;
 }
 
 export interface MockHandle {
@@ -249,6 +258,8 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     txids: [],
     webappLogins: [],
     botModes: [],
+    pages: options.pages ?? {},
+    pagesFail: options.pagesFail ?? null,
   };
 
   options.tweakSettings?.(state.settings);
@@ -301,6 +312,17 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
 
     if (path === 'storefront/settings' && method === 'GET') {
       await envelope(route, state.settings);
+      return;
+    }
+
+    const pages = /^storefront\/pages\/(storefront|menu|webapp)$/.exec(path);
+    if (pages && method === 'GET') {
+      if (state.pagesFail) {
+        await fail(route, state.pagesFail, state.pagesFail === 503 ? 'UNAVAILABLE' : 'Not found');
+        return;
+      }
+      const set = state.pages[pages[1] as Layout] ?? null;
+      await envelope(route, set ? { version: 1, data: set } : null);
       return;
     }
 

@@ -1,4 +1,4 @@
-import { Suspense, useMemo, useState } from 'react';
+import { Suspense, type ReactNode } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router';
 import { useSettings } from '@/app/settings.ts';
 import { useSessionStore, selectIsLoggedIn } from '@/stores/session.ts';
@@ -13,33 +13,23 @@ import { LoginModal } from '@/features/auth/LoginModal.tsx';
 import { PrimaryActionBar, usePrimaryBarShowing } from '@/features/webapp/PrimaryActionBar.tsx';
 import { isFirstHistoryEntry, useTelegramChrome } from '@/features/webapp/useTelegramChrome.ts';
 import { SearchField } from '@/layouts/SearchField.tsx';
-import type { ShellSearchContext } from '@/layouts/shell-context.ts';
+import type { ShellHeaderProps } from '@/layouts/StorefrontShell.tsx';
+import { ShellStateContext, useShellState, useShellStateValue } from '@/layouts/shell-context.ts';
 import { isTelegramWebApp } from '@/lib/telegram-webapp.ts';
 import { Slot } from '@/templates/runtime.tsx';
 import { headerIconClass, useCoreOptions } from '@/templates/hooks.ts';
 import classes from '@/layouts/WebAppShell.module.css';
 
-/**
- * The `webapp` layout: always inside Telegram, and wherever a store picks it.
- * The same list, sheets and template as the menu layout, with Telegram owning
- * the top chrome (so no TopBar slot) and the primary action owning the foot
- * (so no Footer slot, no contact strip, no cart drawer — contact lives on the
- * profile page). Outside Telegram the header grows a back chevron and the
- * primary action becomes an in-page bar.
- */
-export function WebAppShell() {
+/** Telegram owns the top chrome in this layout, so there is never a TopBar slot here. */
+export function WebAppHeader({ search: withSearch = true, sticky = true, nav }: Omit<ShellHeaderProps, 'topBar'>) {
   const { brand, features } = useSettings();
   const loggedIn = useSessionStore(selectIsLoggedIn);
   const cartCount = useCartStore(selectCount);
   const openPanel = useUiStore((s) => s.open);
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const [search, setSearch] = useState('');
-  const outletContext = useMemo<ShellSearchContext>(() => ({ search, setSearch }), [search]);
+  const { search, setSearch } = useShellState();
   const native = isTelegramWebApp();
-  const barShowing = usePrimaryBarShowing();
-
-  useTelegramChrome();
 
   const onCatalog = pathname === '/' || pathname.startsWith('/c/');
   const { showCategoryPicker, headerAccountIcon, headerCartIcon } = useCoreOptions();
@@ -49,79 +39,101 @@ export function WebAppShell() {
   const filtered = pathname.startsWith('/c/');
   const showBack = !native && !onCatalog;
 
+  return (
+    <header className={sticky ? classes.bar : `${classes.bar} ${classes.unstuck}`} data-sf-part="header">
+      <div className={classes.safeTop} />
+      <NoticeBanners pinned />
+      <div className={classes.barInner}>
+        {showBack ? (
+          <button
+            type="button"
+            className={`${classes.action} ${classes.back}`}
+            // A deep link has nothing behind it in this tab: go home, not off the shop.
+            onClick={() => (isFirstHistoryEntry() ? navigate('/', { replace: true }) : navigate(-1))}
+            aria-label="Back"
+          >
+            <ChevronIcon size={17} />
+          </button>
+        ) : null}
+
+        <Link to="/" className={classes.home} aria-label={`${brand.name} — home`}>
+          <Brand size="sm" />
+        </Link>
+
+        {nav}
+
+        {withSearch ? <SearchField className={classes.search} value={search} onChange={setSearch} placeholder="Search" /> : null}
+
+        <div className={classes.actions}>
+          {canFilter ? (
+            <button
+              type="button"
+              className={classes.action}
+              onClick={() => openPanel('filterOpen')}
+              aria-label={filtered ? 'Categories — one category selected' : 'Categories'}
+            >
+              <FilterIcon size={17} />
+              {filtered ? <span className={classes.mark} aria-hidden /> : null}
+            </button>
+          ) : null}
+
+          {features.accounts && accountClass !== null ? (
+            <Link
+              to={loggedIn || native ? '/account' : '/login'}
+              className={`${classes.action} ${accountClass}`}
+              aria-label={loggedIn ? 'Your account' : 'Sign in'}
+            >
+              <UserIcon size={17} />
+            </Link>
+          ) : null}
+
+          {features.ordering && cartClass !== null ? (
+            <Link
+              to="/cart"
+              className={`${classes.action} ${cartClass}`}
+              aria-label={`Cart, ${cartCount} item${cartCount === 1 ? '' : 's'}`}
+            >
+              <BagIcon size={17} />
+              {cartCount > 0 ? <span className={classes.count} data-sf-part="badge">{cartCount}</span> : null}
+            </Link>
+          ) : null}
+        </div>
+      </div>
+    </header>
+  );
+}
+
+/** The list column: the routed page, with the shell's search handed down as outlet context. */
+export function WebAppMain() {
+  const outletContext = useShellState();
+  return (
+    <main className={classes.main} data-sf-part="main">
+      <Suspense fallback={<PageSkeleton inline />}>
+        <Outlet context={outletContext} />
+      </Suspense>
+    </main>
+  );
+}
+
+/**
+ * The web app's root: Telegram chrome wiring, the primary action at the foot (it is
+ * this layout's cart bar, so `cartBar` is accepted and ignored), the login modal
+ * outside Telegram, and the Overlay slot.
+ */
+export function WebAppFrame({ children }: { children: ReactNode; cartBar?: boolean }) {
+  const { features } = useSettings();
+  const native = isTelegramWebApp();
+  const barShowing = usePrimaryBarShowing();
+
+  useTelegramChrome();
+
   const shellClass = [classes.shell, barShowing ? classes.withBar : '', native ? classes.native : '']
     .filter(Boolean)
     .join(' ');
 
   return (
     <div className={shellClass} data-sf-layout="webapp">
-      <header className={classes.bar} data-sf-part="header">
-        <div className={classes.safeTop} />
-        <NoticeBanners pinned />
-        <div className={classes.barInner}>
-          {showBack ? (
-            <button
-              type="button"
-              className={`${classes.action} ${classes.back}`}
-              // A deep link has nothing behind it in this tab: go home, not off the shop.
-              onClick={() => (isFirstHistoryEntry() ? navigate('/', { replace: true }) : navigate(-1))}
-              aria-label="Back"
-            >
-              <ChevronIcon size={17} />
-            </button>
-          ) : null}
-
-          <Link to="/" className={classes.home} aria-label={`${brand.name} — home`}>
-            <Brand size="sm" />
-          </Link>
-
-          <SearchField className={classes.search} value={search} onChange={setSearch} placeholder="Search" />
-
-          <div className={classes.actions}>
-            {canFilter ? (
-              <button
-                type="button"
-                className={classes.action}
-                onClick={() => openPanel('filterOpen')}
-                aria-label={filtered ? 'Categories — one category selected' : 'Categories'}
-              >
-                <FilterIcon size={17} />
-                {filtered ? <span className={classes.mark} aria-hidden /> : null}
-              </button>
-            ) : null}
-
-            {features.accounts && accountClass !== null ? (
-              <Link
-                to={loggedIn || native ? '/account' : '/login'}
-                className={`${classes.action} ${accountClass}`}
-                aria-label={loggedIn ? 'Your account' : 'Sign in'}
-              >
-                <UserIcon size={17} />
-              </Link>
-            ) : null}
-
-            {features.ordering && cartClass !== null ? (
-              <Link
-                to="/cart"
-                className={`${classes.action} ${cartClass}`}
-                aria-label={`Cart, ${cartCount} item${cartCount === 1 ? '' : 's'}`}
-              >
-                <BagIcon size={17} />
-                {cartCount > 0 ? <span className={classes.count} data-sf-part="badge">{cartCount}</span> : null}
-              </Link>
-            ) : null}
-          </div>
-        </div>
-      </header>
-
-      <NoticeBanners />
-      <CutoffBar />
-
-      <main className={classes.main} data-sf-part="main">
-        <Suspense fallback={<PageSkeleton inline />}>
-          <Outlet context={outletContext} />
-        </Suspense>
-      </main>
+      {children}
 
       <PrimaryActionBar />
 
@@ -129,5 +141,28 @@ export function WebAppShell() {
 
       <Slot name="Overlay" />
     </div>
+  );
+}
+
+/**
+ * The `webapp` layout: always inside Telegram, and wherever a store picks it.
+ * The same list, sheets and template as the menu layout, with Telegram owning
+ * the top chrome (so no TopBar slot) and the primary action owning the foot
+ * (so no Footer slot, no contact strip, no cart drawer — contact lives on the
+ * profile page). Outside Telegram the header grows a back chevron and the
+ * primary action becomes an in-page bar.
+ * v0.6.0's composition, kept as the parity oracle. Production renders PuckShell.
+ */
+export function WebAppShell() {
+  const state = useShellStateValue();
+  return (
+    <ShellStateContext.Provider value={state}>
+      <WebAppFrame>
+        <WebAppHeader />
+        <NoticeBanners />
+        <CutoffBar />
+        <WebAppMain />
+      </WebAppFrame>
+    </ShellStateContext.Provider>
   );
 }

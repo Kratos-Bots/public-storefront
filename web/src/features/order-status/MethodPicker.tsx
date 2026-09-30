@@ -6,6 +6,7 @@ import {
   selectPaymentMethod,
   type PaymentSelection,
 } from '@/api/public-order.ts';
+import { isBuilderMode } from '@/app/builder-gate.ts';
 import { ArrowUpRightIcon } from '@/components/icons.tsx';
 import { ContactLinks } from '@/components/ContactLinks.tsx';
 import { errorMessage } from '@/lib/errors.ts';
@@ -119,7 +120,8 @@ export function MethodPicker({ order, reference, accessKey, onSelected }: Method
      it, so the tab is opened blank and pointed at the session once it exists. */
   const openHostedCheckout = (method: PaymentMethod) => {
     if (busy) return;
-    const tab = window.open('', '_blank');
+    // In the page builder the mutation is refused in the frame: no blank tab to strand.
+    const tab = isBuilderMode() ? null : window.open('', '_blank');
     if (tab) tab.opener = null;
     select.mutate(
       { method: method.method },

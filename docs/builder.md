@@ -1,0 +1,430 @@
+# Page builder
+
+Renderer half of the page builder (v0.7.0). The editor half is at the end of this file
+(`## The editor (/__builder)`). When this document and the code disagree, trust
+`web/src/builder/{types,define,guard,rules,render,runtime}.ts(x)`; the block table below is
+written by hand from `web/public/blocks.json` and the block files in `web/src/builder/blocks/`.
+
+## What the page builder is
+
+Templates own the look (tokens, parts, slots — see [`templates.md`](templates.md)); page
+documents own structure: which blocks appear on a page, in which order, with which options. Every
+page of every layout (`storefront`, `menu`, `webapp`) renders from a Puck-format document through
+the storefront's own renderer (`web/src/builder/`), inside the store's template. Owners edit them
+in Admin → Storefront → Pages; a page set is published as a whole, with a 20-version history.
+
+With no published set (a store that never publishes, a backend older than v0.7.0, a 404/503 or a
+malformed body) every page renders the built-in default document for its route, and the defaults
+reproduce v0.6.0's DOM. `e2e/dom-parity.spec.ts` proves it against snapshots captured before the
+builder touched any source.
+
+## Data model
+
+From `web/src/builder/types.ts`:
+
+```ts
+export type LayoutKind = 'storefront' | 'menu' | 'webapp';
+
+export const FIXED_ROUTE_KEYS = ['catalog', 'product', 'cart', 'checkout', 'login', 'account.orders', 'account.order',
+  'account.loyalty', 'account.referrals', 'account.profile', 'order-status', 'payment-success', 'payment-cancel',
+  'order-placed', 'verify', 'tracking'] as const;
+export type FixedRouteKey = typeof FIXED_ROUTE_KEYS[number];
+export type RouteKey = FixedRouteKey | `page:${string}`; // slug /^[a-z0-9-]{1,60}$/
+export type DocKey = RouteKey | 'shell';
+
+export interface ComponentData { type: string; props: { id: string; [k: string]: unknown } }
+export interface PageRootProps { title: string; description: string; chrome: 'shell' | 'none' }
+export interface PuckDoc { root: { props: PageRootProps }; content: ComponentData[]; zones?: Record<string, ComponentData[]> }
+export interface PageSet { schemaVersion: 1; shell: PuckDoc; pages: Partial<Record<RouteKey, PuckDoc>> }
+export interface Issue { docKey: DocKey; rule: string; message: string; blockId?: string }
+```
+
+A page set is **sparse**: `shell` is required, `pages` holds only the routes the owner has
+customised. A missing key means "the default document". Custom pages live under `page:<slug>` and
+are served at `/pages/<slug>`. The root props are `title` (the tab title; empty leaves the store's
+own), `description` (the meta description) and `chrome` (`'shell'`, or `'none'` for the chromeless
+frame — the default of `order-status`, the shared order link).
+
+## How a page renders
+
+1. **`usePageSet(layout)`** reads the published set through the public route
+   `storefront/pages/:layout` (Worker-cached 30 s). It is read once per page load (`PAGES_QUERY`),
+   and any failure yields `null`, meaning defaults. `fetchPageSet` passes `retry: 0`, so a 503 is
+   one request rather than the shared client's two. A `PageSetOverrideProvider` (the editor)
+   replaces it.
+2. **`validateDoc(doc, docKey, layout)`** (`guard.ts`) cleans the stored document (memoised per
+   doc object and key). See "The guard" below.
+3. **`RenderDoc`** (`render.tsx`) renders the cleaned content. It adds no wrapper elements; each
+   block has its own `BlockBoundary` that renders nothing when the block throws. A route block that
+   throws escalates to the page-level `DocBoundary`, which renders that route's default document.
+4. While the set is loading, `PuckPage` shows the inline `PageSkeleton` and `PuckShell` shows
+   `PageSkeleton` (or the chromeless skeleton when the matched route's default document is
+   `chrome: 'none'`) instead of painting the default and swapping it a moment later.
+
+### The guard
+
+`validateDoc` never throws. It drops, with informational issues:
+
+| Issue id | Cause |
+|---|---|
+| `drop:shape` | a child that is not `{ type, props: { id } }` |
+| `drop:unknown-block` | a `type` this release does not register (saved by a newer release, or removed); one console warning per type |
+| `drop:layout` | a block not available in the current layout |
+| `drop:depth` | nested deeper than 12 |
+| `drop:too-many` | beyond 2 000 blocks in a document |
+
+Props are parsed with the block's schema, whole object first, else field by field onto the block's
+defaults. Duplicate ids are re-keyed (`id~2`). Root props are parsed field by field. The number of
+drop issues is capped at 50. Then `checkRules` runs, and **any rule violation replaces the whole
+document with the route's default** (the violations are returned as issues so the editor can show
+them). A document that is not an object also falls back.
+
+### PuckShell and the system mounts
+
+`PuckShell` replaces the per-layout shell switch: the layout's frame (`StorefrontFrame`,
+`MenuFrame`, `WebAppFrame`) around the shell document, where `PageOutlet` renders the current
+route. The frame supplies the system mounts, which are not blocks and cannot be removed:
+first-paint theme, `CartDrawer`, `LoginModal`, Telegram chrome and `PrimaryActionBar`, the
+preview listener, the template's `Overlay` slot, and the per-route document title. The phone cart
+bar is a block (`MobileCartBar`) owners may place; **when the shell document on screen contains
+none, the frame mounts it itself** (the safety net; it also applies when a published shell has
+crashed and the default shell is showing). A page whose root says `chrome: 'none'` gets the
+chromeless frame (`Chromeless`: brand header only, no shell) instead.
+
+## The block contract
+
+`defineBlock<P>` (`define.ts`) takes:
+
+- `name` (the registry key, equal to the file name), `label`, `category`
+  (`shell | catalogue | product | commerce | post-order | content`), `layouts`
+  (`LayoutKind[] | 'all'`) and `routeBound`.
+- `slots`: the prop names holding `ComponentData[]`. A slot prop arrives at render as a
+  `SlotRender` function: called with no argument it renders the children with no wrapper; pass
+  `{ className, style, as }` to get one wrapper element. Slots are declared as required arrays.
+- `schema` (zod, every prop except `id`) and `defaultProps`.
+- `render(props & { puck: { editing, docKey, layout } })`.
+
+Conventions:
+
+- `render` returns JSX of an inner component and never calls hooks itself (the editor may call it
+  as a plain function).
+- Prop naming: `*Html` — richtext strings sanitised by `sanitizeRichtext` (DOMPurify; allowed tags
+  `p h2 h3 h4 strong em u s a ul ol li blockquote br code`); `href` / `*Href` — route links
+  (`routeLink()`: empty, a site path, or `https:`/`mailto:`/`tel:`; never `//host` or `/\host`,
+  never control or whitespace characters); `src` / `*Src` — **uploaded media only**
+  (`/media/storefront-pages/media/<32 hex>.<png|jpg|webp|gif>` or empty); `*Token` — palette
+  colours (`paletteToken()`); `productId` / `categoryId`; `items: Array<{ productId }>`.
+- Richtext links go through the same href rule inside `sanitizeRichtext`; richtext never carries
+  images (media is only the `Image` block or an `imageSrc`).
+- No `{ type, props }` objects inside non-slot arrays: only slots hold child blocks.
+- Owner-selectable spacing props use the `SPACING` scale (`none xs sm md lg xl`).
+- Content blocks mark their root with `data-sf-block="<Name>"`.
+- Heavy components load behind `lazy()`; mobile rules are those of `templates.md` §7.
+
+**Adding a block:** create `web/src/builder/blocks/<Name>.tsx` exporting `block` — the registry
+globs the directory; add a unit test; regenerate `blocks.json`
+(`UPDATE_BLOCKS_JSON=1 npm --prefix web test -- test/blocks-manifest.test.ts`). Decide its rules
+(`rules.ts`) and, if it is a route block, its default in `defaults/groups/*.ts`.
+
+## Block library
+
+The 45 blocks of this release. "All" layouts = storefront, menu and webapp. Slots are marked
+*(slot)*.
+
+### Shell
+
+| Block | Layouts | Route-bound | Props |
+|---|---|---|---|
+| `PageOutlet` | all | yes (`shell`) | none — renders the current route |
+| `Header` | all | no | `variant` (auto/storefront/menu/webapp), `topBar`, `search`, `sticky`, `accountIcon` and `cartIcon` (inherit/show/hide), `nav` *(slot)* |
+| `TopBar` | storefront, menu | no | none — the template's `TopBar` slot |
+| `NavLinks` | all | no | `items` (`{ label, href }`, up to 12), `ariaLabel`, `direction` (row/column) |
+| `NoticeBanners` | all | no | `pinned` |
+| `CutoffBar` | all | no | none |
+| `ContactStrip` | all | no | `catalogOnly` |
+| `MobileCartBar` | storefront, menu | no | none |
+| `Footer` | storefront, menu | no | `variant` (template/columns), `columns` (1-4), `colophon`, `col1`–`col4` *(slots)* |
+
+### Catalogue
+
+| Block | Layouts | Route-bound | Props |
+|---|---|---|---|
+| `ProductGrid` | all | yes (`catalog`) | `categoryPicker`, `pageTitle`, `intro`, `sku` (each inherit/show/hide) |
+| `ProductList` | all | yes (`catalog`) | same four overrides |
+| `WholesaleTable` | all | yes (`catalog`) | same four overrides |
+| `CatalogHero` | all | no | `variant` (template/custom), `surface` (auto/grid/list/wholesale), `title`, `bodyHtml`, `imageSrc`, `imageAlt`, `align` |
+| `CategoryNav` | all | no | none |
+| `SearchField` | all | no | `placeholder` |
+| `FeaturedProducts` | all | no | `title`, `source` (picked/category), `items` (`{ productId }`, up to 24), `categoryId`, `limit` |
+| `Upsells` | all | no | `productId` (null = the product on the current route) |
+
+### Product
+
+| Block | Layouts | Route-bound | Props |
+|---|---|---|---|
+| `ProductDetail` | all | yes (`product`) | `gallery`, `bulkPricing`, `provenance`, `upsells`, `sku` (inherit/show/hide) |
+
+### Commerce
+
+| Block | Layouts | Route-bound | Props |
+|---|---|---|---|
+| `CartContents` | all | yes (`cart`) | `summary` *(slot)* |
+| `CartSummary` | all | yes (`cart`) | none |
+| `CheckoutFlow` | all | yes (`checkout`) | none |
+| `LoginOptions` | all | yes (`login`) | none |
+| `AccountNav` | all | no (placement `account.*`) | `body` *(slot)* |
+| `OrdersList` | all | yes (`account.orders`) | none |
+| `OrderDetail` | all | yes (`account.order`) | none |
+| `Loyalty` | all | yes (`account.loyalty`) | none |
+| `Referrals` | all | yes (`account.referrals`) | none |
+| `Profile` | all | yes (`account.profile`) | none |
+
+### Post-order
+
+| Block | Layouts | Route-bound | Props |
+|---|---|---|---|
+| `OrderStatus` | all | yes (`order-status`) | none |
+| `PaymentSuccess` | all | yes (`payment-success`) | none |
+| `PaymentCancel` | all | yes (`payment-cancel`) | none |
+| `OrderPlaced` | all | yes (`order-placed`) | none |
+| `VerifyForm` | all | yes (`verify`) | none |
+| `TrackingLookup` | all | yes (`tracking`) | none |
+
+### Content
+
+| Block | Layouts | Route-bound | Props |
+|---|---|---|---|
+| `Heading` | all | no | `text`, `eyebrow`, `level` (h2/h3/h4), `align` |
+| `RichText` | all | no | `bodyHtml`, `width` (narrow/full) |
+| `Image` | all | no | `src`, `alt`, `caption`, `width` (narrow/rail/full), `aspect` (auto, 1/1, 4/3, 16/9) |
+| `Button` | all | no | `label`, `href`, `variant` (filled/default/subtle), `align` |
+| `Divider` | all | no | `spacing`, `toneToken` (line/line-strong) |
+| `Spacer` | all | no | `size` |
+| `Columns` | all | no | `columns` (2-4), `stackBelow` (sm/md/lg), `gap`, `col1`–`col4` *(slots)* |
+| `Section` | all | no | `padding`, `backgroundToken`, `textToken`, `width` (rail/full), `content` *(slot)* |
+| `FAQ` | all | no | `title`, `items` (`{ question, answerHtml }`, up to 30) |
+| `Testimonial` | all | no | `quote`, `author`, `detail` |
+| `Video` | all | no | `provider` (youtube/vimeo), `videoId`, `title` |
+
+The route blocks are the only place checkout, cart, sign-in and account behaviour lives; they are
+self-contained, so an edit around them cannot break a flow.
+
+## Rules
+
+`checkRules(doc, docKey, layout)` (`rules.ts`) returns issues; a non-empty list makes the guard
+fall back to the route's default document.
+
+| Rule id | Meaning |
+|---|---|
+| `exactly-one:<Block>` | the route needs exactly one of the block(s) below (counted through visible slots) |
+| `at-most-one:<Block>` | `Header` and `MobileCartBar`: never more than one in a document (two headers fight over `--sf-pin-h`; two phone bars stack) |
+| `at-least-one:catalog` | the catalogue needs a `ProductGrid`, `ProductList` or `WholesaleTable` |
+| `placement:<Block>` | the block is not allowed on this document (the `PLACEMENT` and `SHELL_ONLY` tables) |
+| `layout:<Block>` | the block is not available in this layout |
+| `drop:*` | informational, from the guard (see above); never a fallback by themselves |
+
+**EXACTLY_ONE**: `shell` → `PageOutlet`; `product` → `ProductDetail`; `cart` → `CartContents` and
+`CartSummary`; `checkout` → `CheckoutFlow`; `login` → `LoginOptions`; `account.orders` →
+`OrdersList`; `account.order` → `OrderDetail`; `account.loyalty` → `Loyalty`; `account.referrals`
+→ `Referrals`; `account.profile` → `Profile`; `order-status` → `OrderStatus`; `payment-success` →
+`PaymentSuccess`; `payment-cancel` → `PaymentCancel`; `order-placed` → `OrderPlaced`; `verify` →
+`VerifyForm`; `tracking` → `TrackingLookup`. (`catalog` and custom pages have none.)
+
+**AT_LEAST_ONE**: `catalog` → any of `ProductGrid`, `ProductList`, `WholesaleTable`.
+
+**AT_MOST_ONE** (any document): `Header`, `MobileCartBar`.
+
+**Visible slots.** The counts (`exactly-one`, `at-most-one`, `at-least-one`, and `countBlocks`)
+walk only the slots a shopper sees. A block may declare `visibleSlots(props)`: `Columns` returns
+`col1`…`colN` for its `columns` count, and `Footer` returns none in its `template` variant and
+`col1`…`colN` in its `columns` variant; any other block shows all of its slots. So a
+`PageOutlet` moved into `col3` of a Columns that is then set to two columns counts as missing:
+the guard falls back to the default shell for shoppers, and the editor lists the `exactly-one`
+issue so Publish stays off. `placement` and `layout` still check every stored block, hidden
+slots included.
+
+**PLACEMENT** (only on the listed document; anywhere else, including custom pages, is refused):
+`PageOutlet` → `shell`; `ProductGrid`, `ProductList`, `WholesaleTable` → `catalog`;
+`ProductDetail` → `product`; `CartContents`, `CartSummary` → `cart`; `CheckoutFlow` → `checkout`;
+`LoginOptions` → `login`; `AccountNav` → the five `account.*` documents; every other account and
+post-order route block → its own route. On the shell document only `shell` and `content` category
+blocks may sit.
+
+**SHELL_ONLY**: `PageOutlet`, `Header`, `Footer`, `TopBar`, `MobileCartBar` — allowed only on the
+shell document. `allowedOn(type, docKey)` exports the placement decision (the editor's Add menu
+uses it).
+
+## Default documents
+
+From `defaults/groups/*.ts`, resolved by `defaultDoc(docKey, layout)`:
+
+- **Shell** — storefront: `Header`, `NoticeBanners`, `CutoffBar`, `PageOutlet`, `Footer`. Menu: the
+  same, then `ContactStrip`. Web app: `Header`, `NoticeBanners`, `CutoffBar`, `PageOutlet`.
+- **catalog** — storefront: `ProductGrid`; menu and webapp: `ProductList`. Under wholesale mode
+  `CatalogueBody` swaps in the trade list under any shell and any list block, so a default (or
+  published) document still shows the trade list.
+- **product** — `ProductDetail`. **cart** — `CartContents` with a `CartSummary` in its `summary`
+  slot. **checkout** — `CheckoutFlow`. **login** — `LoginOptions`.
+- **account.\*** — `AccountNav` with the route's block (`OrdersList`, `OrderDetail`, `Loyalty`,
+  `Referrals`, `Profile`) in its `body` slot.
+- **order-status** — `OrderStatus`, root `chrome: 'none'`. **payment-success**, **payment-cancel**,
+  **order-placed**, **verify**, **tracking** — their one block.
+- A custom page has no default: an unknown or unpublished `/pages/<slug>` redirects to `/`.
+
+## Core options per block
+
+Template core options (`showPageTitle`, `showCatalogIntro`, `showSku`, `showCategoryPicker`,
+`headerAccountIcon`, `headerCartIcon`, …) are store-wide. A block can override some for its own
+subtree through `CoreOptionsScope`, using `inherit` (the store-wide option decides), `show` or
+`hide`: `Header` (`accountIcon`, `cartIcon`), `ProductGrid` / `ProductList` / `WholesaleTable`
+(`categoryPicker`, `pageTitle`, `intro`, `sku`) and `ProductDetail` (`sku`). `compactScope` drops
+`inherit` so the store option stays in charge. `intro` is also how a store hides a list block's
+built-in catalogue intro when it adds a custom `CatalogHero`.
+
+## Media and the Worker
+
+Owners upload images in the editor (admin → backend). The stored form is
+`/media/storefront-pages/media/<32 hex>.<png|jpg|webp|gif>`; the Worker's `/media/*` proxy maps it
+to `api/v1/storefront-pages/media/<key>` with a one-day edge cache. `storefront/pages/:layout` is
+proxied under the `/api` allowlist and edge-cached for 30 s (unauthenticated GETs only). Uploaded
+images are **never garbage-collected**: removing an `Image` block leaves the file in storage.
+
+## Testing
+
+- **`e2e/dom-parity.spec.ts`** — the no-published-set gate: default documents against v0.6.0 DOM
+  snapshots in `e2e/__baseline__/`. Regenerate one snapshot with
+  `npm run test:e2e -- dom-parity.spec.ts --update-snapshots -g "<test name>"`; every regeneration
+  must be justified in the commit message.
+- **`e2e/builder.spec.ts`** — published sets across the three layouts: composition, fallbacks
+  (404/503 pages route, failing rules, crashes), custom pages, checkout through a customised page.
+- **Unit** — `web/test/builder-*.test.ts(x)`: define, guard, rules, registry, sanitize, render,
+  runtime, shell, each block group, defaults completeness, the editor contract, and
+  `blocks-manifest.test.ts`, which fails when `web/public/blocks.json` is stale.
+- `npm run build` emits `web/dist/blocks.json`.
+
+## Known limitations
+
+- A standalone `CategoryNav` is roots-only on phones (the button that opens nested categories is
+  hidden); the list blocks' own picker still reaches every level.
+- `Footer` `columns` replaces the template footer, so it drops the template footer's support links
+  and contact details; re-add them as blocks in a column.
+- A custom `CatalogHero` does not hide the list block's built-in intro: set the list block's
+  `intro` override to `hide`.
+- Uploaded images are never garbage-collected.
+- `Video` accepts YouTube ids and Vimeo ids of six or more digits; private (hash) Vimeo links are
+  not supported.
+- Hidden `Columns` / `Footer` columns keep their content but do not render it, and blocks in
+  them do not count toward the rules (see Visible slots).
+
+## The editor (`/__builder`)
+
+The editor is a lazy chunk of the storefront, framed by the admin's **Storefront → Pages** tab
+at `/__builder?sf-builder=1`. It boots only when that parameter is present **and** the page is
+inside a frame (decided once per window, like the Appearance preview); anything else redirects
+to `/`. The build fails if `@puckeditor/core`, tiptap, dnd-kit or any `src/builder/editor/`
+module is statically reachable from the shopper entry (`vite-plugins/builder-isolation.ts`,
+tested in `test/builder-isolation-plugin.test.ts` against hand-built bundle fixtures). Shopper lazy
+chunks are checked too; only the chunk holding `EditorApp.tsx` is a boundary.
+
+### Protocol (spec §13 A6)
+
+| Direction | Message |
+|---|---|
+| admin → storefront | `sf-builder-load { protocol: 1, loadId, layout, pageSet \| null, theme, readOnly }` |
+| admin → storefront | `sf-builder-theme { theme }` |
+| admin → storefront | `sf-builder-select-page { docKey }` (optional: the editor honours it; the current admin does not send it) |
+| admin → storefront | `sf-builder-upload-result { requestId, url \| null, error \| null }` |
+| storefront → admin | `sf-builder-ready { protocol: 1 }` (to `'*'`; once per frame boot) |
+| storefront → admin | `sf-builder-change { loadId, pageSet, issues }` (500 ms debounce, flushed at once when the frame blurs, is hidden or unloads; never when read-only) |
+| storefront → admin | `sf-builder-upload-request { requestId, file }` |
+| storefront → admin | `sf-builder-viewport { width: 360 \| 768 \| 1280 \| null }` (on every toggle change and after every load) |
+
+Load identity: every `sf-builder-load` carries a `loadId`, and every `sf-builder-change` echoes
+the `loadId` of the load it derives from, so the admin can discard changes belonging to a
+superseded load. On each load the editor cancels any pending debounced change and posts exactly
+one change built from the loaded data (also when `pageSet` is `null`; none when `readOnly`).
+
+The debounce never holds back the owner's last edit: when the frame loses focus (the owner
+clicks Publish or anything else in the admin), is hidden, or unloads (`blur`, `visibilitychange`
+to hidden, `pagehide`), the pending change is sent immediately. The issues in a change, and the
+issue list in the editor's header, are both computed from the same prepared docs (editor-only
+leftovers such as an unpicked Featured row removed), so the two always agree.
+
+Only messages whose `source` is the parent frame are read; the first valid load pins the admin
+origin (it must be an `http(s)` origin), and later messages from any other origin are ignored.
+Draft themes never carry custom CSS into the frame. Guard issues whose rule starts with `drop:`
+are informational and are not posted to the admin.
+
+### Preview width
+
+Puck's own canvas iframe is disabled (the app's theme variables live on the document root), and
+its canvas always fills the frame. The header's **Fit / Phone / Tablet / Desktop** toggle posts
+`sf-builder-viewport`; the admin resizes the iframe element to that width (centred, scrollable),
+so CSS media queries and `useMediaQuery` respond exactly as they would on a real device width.
+
+**Fit** is editing. **Phone / Tablet / Desktop** are *exact previews*, and editing is paused
+while one shows: Puck's panels would otherwise eat into the width being previewed. The draft is
+rendered full-frame through the storefront's own runtime (the draft set in
+`PageSetOverrideProvider`, then `PuckShell` with the header, footer, cart drawer, cart bar and
+other system mounts around `PuckPage`, or `Chromeless` for a `chrome: 'none'` page), under a bar
+with a single **Back to editing** button. The Puck canvas stays mounted but hidden, so selection
+and undo history survive the round trip; nothing is posted while a preview shows, and anything
+that changed meanwhile goes out on the way back.
+
+**Hotkey guard.** While an exact preview shows, `guardHiddenCanvasHotkeys` (`preview-keys.ts`)
+holds back undo/redo (Ctrl/Cmd+Z, Shift+Ctrl/Cmd+Z, Ctrl/Cmd+Y) everywhere and Delete/Backspace
+outside text fields, so Puck's document-level shortcuts can't edit or delete blocks in the
+hidden canvas. The keys keep their default action (typing in a text field still works).
+
+The read-only version view uses the same full-runtime render at a width preset; at Fit it shows
+the page on the shop's ground without the shell.
+
+### Fixture mode
+
+Blocks that need a session, a cart or an order render against built-in **Northbound Supply**
+fixtures (`src/builder/editor/fixtures.ts`), chosen with **Preview as** (signed out / signed in /
+signed in with orders × empty cart / cart with items). In the editor the api client is
+intercepted: the catalogue and settings come from the live public API (without any token),
+session routes are answered from fixtures, and every mutation or lookup is refused with a
+"Preview only" toast. The session and cart stores write to memory, never to the shop's
+`localStorage`, and navigation away from `/__builder` is blocked.
+
+### Fields
+
+Each block's Puck fields live in `src/builder/editor/fields/<Block>.ts` and are derived from the
+block's zod schema (`derive-fields.ts`), by prop name first:
+
+| Prop name | Field |
+|---|---|
+| ends in `Html` | Puck `richtext` limited to what the sanitiser keeps: paragraphs, headings h2–h4, bold, italic, underline, strike, inline code, quotes, lists, line breaks and links to `https:` / `mailto:` / `tel:` / site paths (no h1/h5/h6, code blocks, rules or alignment). Stored as an HTML string, sanitised on save and render |
+| `href` / ends in `Href` | route link: a fixed page, a custom page (`/pages/<slug>`), or an `https:` / `mailto:` / `tel:` address |
+| `src` / ends in `Src` | image uploaded through the admin (PNG, JPEG, WebP, GIF, ≤ 5 MB) |
+| ends in `Token` (enum) | palette swatches (`var(--sf-<token>)`) |
+| `productId` / ends in `ProductId` | product picker over the live catalogue |
+| `categoryId` / ends in `CategoryId` | category picker over the live catalogue |
+| a slot | Puck `slot` |
+
+Otherwise the JSON-schema type decides: enum → radio (≤ 3 options) or select, boolean → On/Off,
+number → number (with min/max), string → text (textarea above 200 chars), array of objects →
+array, object → object. A test fails if any schema key of any block has no field.
+
+The page settings' **Page title** and **Search description** stop at the backend's limits (120
+and 300 characters) as the owner types, with a running count. In a route link, switching to
+**Web address** and leaving the empty box keeps the existing link; only deleting a typed address
+clears it.
+
+An image upload can outlive its field (the owner selects another block or switches page while
+the admin stores the file). The URL is then put into the block it was picked for — through the
+live canvas when that page is open, else into the stored draft — as long as the set hasn't been
+reloaded or reset and the block still exists. Otherwise a toast says "Upload finished — the image
+wasn't added because you left the page."
+
+### Trust boundary
+
+Any site can frame `/__builder?sf-builder=1`; the storefront doesn't restrict `frame-ancestors`
+to the admin. That is acceptable because the frame holds nothing worth stealing: it has no admin
+session or token, fixture mode refuses every mutation and swaps the frame's storage for memory,
+and the only data it sends a framer is the draft it was given plus, when the user picks a file
+in an image field, that file (uploads go to whoever sent the load). This is the same stance as
+the Appearance preview. A per-client `frame-ancestors` limited to the admin origin is a possible
+hardening.

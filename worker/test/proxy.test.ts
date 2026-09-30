@@ -43,6 +43,9 @@ describe('allowlist', () => {
   it.each(['', 'products', 'users', 'bot-settings', 'storefront-settings', 'catalogue', 'auth/login', 'wholesale/catalog', '../products'])('blocks %s', (p) => {
     expect(isAllowedApiPath(p)).toBe(false);
   });
+  it('allows the page-set route', () => {
+    expect(isAllowedApiPath('storefront/pages/menu')).toBe(true);
+  });
 });
 
 describe('buildBackendUrl', () => {
@@ -57,6 +60,13 @@ describe('cacheTtlFor', () => {
     expect(cacheTtlFor('catalog')).toBe(60);
     expect(cacheTtlFor('catalog/products/9')).toBe(60);
     expect(cacheTtlFor('storefront/cart')).toBe(0);
+  });
+  it('caches the published page set 30s per layout and nothing next to it', () => {
+    expect(cacheTtlFor('storefront/pages/storefront')).toBe(30);
+    expect(cacheTtlFor('storefront/pages/menu')).toBe(30);
+    expect(cacheTtlFor('storefront/pages/webapp')).toBe(30);
+    expect(cacheTtlFor('storefront/pages/other')).toBe(0);
+    expect(cacheTtlFor('storefront/pages/menu/extra')).toBe(0);
   });
 });
 

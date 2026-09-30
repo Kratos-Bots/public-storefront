@@ -1,0 +1,452 @@
+{
+  "schemaVersion": 1,
+  "blocks": [
+    {
+      "name": "AccountNav",
+      "category": "commerce",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false
+    },
+    {
+      "name": "Button",
+      "category": "content",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false
+    },
+    {
+      "name": "CartContents",
+      "category": "commerce",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": true
+    },
+    {
+      "name": "CartSummary",
+      "category": "commerce",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": true
+    },
+    {
+      "name": "CatalogHero",
+      "category": "catalogue",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false
+    },
+    {
+      "name": "CategoryNav",
+      "category": "catalogue",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false
+    },
+    {
+      "name": "CheckoutFlow",
+      "category": "commerce",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": true
+    },
+    {
+      "name": "Columns",
+      "category": "content",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false
+    },
+    {
+      "name": "ContactStrip",
+      "category": "shell",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false
+    },
+    {
+      "name": "CutoffBar",
+      "category": "shell",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false
+    },
+    {
+      "name": "Divider",
+      "category": "content",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false
+    },
+    {
+      "name": "FAQ",
+      "category": "content",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false
+    },
+    {
+      "name": "FeaturedProducts",
+      "category": "catalogue",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false
+    },
+    {
+      "name": "Footer",
+      "category": "shell",
+      "layouts": [
+        "storefront",
+        "menu"
+      ],
+      "routeBound": false
+    },
+    {
+      "name": "Header",
+      "category": "shell",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false
+    },
+    {
+      "name": "Heading",
+      "category": "content",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false
+    },
+    {
+      "name": "Image",
+      "category": "content",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false
+    },
+    {
+      "name": "LoginOptions",
+      "category": "commerce",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": true
+    },
+    {
+      "name": "Loyalty",
+      "category": "commerce",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": true
+    },
+    {
+      "name": "MobileCartBar",
+      "category": "shell",
+      "layouts": [
+        "storefront",
+        "menu"
+      ],
+      "routeBound": false
+    },
+    {
+      "name": "NavLinks",
+      "category": "shell",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false
+    },
+    {
+      "name": "NoticeBanners",
+      "category": "shell",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false
+    },
+    {
+      "name": "OrderDetail",
+      "category": "commerce",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": true
+    },
+    {
+      "name": "OrderPlaced",
+      "category": "post-order",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": true
+    },
+    {
+      "name": "OrdersList",
+      "category": "commerce",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": true
+    },
+    {
+      "name": "OrderStatus",
+      "category": "post-order",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": true
+    },
+    {
+      "name": "PageOutlet",
+      "category": "shell",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": true
+    },
+    {
+      "name": "PaymentCancel",
+      "category": "post-order",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": true
+    },
+    {
+      "name": "PaymentSuccess",
+      "category": "post-order",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": true
+    },
+    {
+      "name": "ProductDetail",
+      "category": "product",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": true
+    },
+    {
+      "name": "ProductGrid",
+      "category": "catalogue",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": true
+    },
+    {
+      "name": "ProductList",
+      "category": "catalogue",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": true
+    },
+    {
+      "name": "Profile",
+      "category": "commerce",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": true
+    },
+    {
+      "name": "Referrals",
+      "category": "commerce",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": true
+    },
+    {
+      "name": "RichText",
+      "category": "content",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false
+    },
+    {
+      "name": "SearchField",
+      "category": "catalogue",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false
+    },
+    {
+      "name": "Section",
+      "category": "content",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false
+    },
+    {
+      "name": "Spacer",
+      "category": "content",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false
+    },
+    {
+      "name": "Testimonial",
+      "category": "content",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false
+    },
+    {
+      "name": "TopBar",
+      "category": "shell",
+      "layouts": [
+        "storefront",
+        "menu"
+      ],
+      "routeBound": false
+    },
+    {
+      "name": "TrackingLookup",
+      "category": "post-order",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": true
+    },
+    {
+      "name": "Upsells",
+      "category": "catalogue",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false
+    },
+    {
+      "name": "VerifyForm",
+      "category": "post-order",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": true
+    },
+    {
+      "name": "Video",
+      "category": "content",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false
+    },
+    {
+      "name": "WholesaleTable",
+      "category": "catalogue",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": true
+    }
+  ]
+}
