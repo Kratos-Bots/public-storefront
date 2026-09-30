@@ -16,6 +16,7 @@ import { useTextUi } from '@/builder/editor/text/ui-store.ts';
 import { CanvasTextScope } from '@/builder/editor/text/scope.tsx';
 import { setAnchorSource } from '@/builder/editor/text/history.ts';
 import { useText } from '@/text/runtime.tsx';
+import { usePageSet } from '@/builder/runtime.tsx';
 import { defaultOf, plainKey } from './helpers/text-keys.ts';
 
 const S = () => useEditorStore.getState();
@@ -129,6 +130,23 @@ describe('editor text hooks', () => {
     expect(screen.getByTestId('probe')).toHaveTextContent('Northbound wording');
     act(() => { applyText('layout', key, 'Only here'); });
     expect(screen.getByTestId('probe')).toHaveTextContent('Only here');
+  });
+
+  it('the canvas scope keeps the page set (and prepared docs) across text-only keystrokes', () => {
+    S().load({ layout: 'storefront', pageSet: null, readOnly: false, siteText: null });
+    const seen: unknown[] = [];
+    function Probe() {
+      seen.push(usePageSet('storefront').pageSet);
+      return <p data-testid="probe">{useText().t(key as never)}</p>;
+    }
+    render(<CanvasTextScope><Probe /></CanvasTextScope>, { wrapper });
+    const first = seen.at(-1);
+    act(() => { applyText('layout', key, 'Only here'); });
+    act(() => { applyText('layout', key, 'Only here, again'); });
+    expect(screen.getByTestId('probe')).toHaveTextContent('Only here, again');
+    expect(seen.at(-1)).toBe(first);
+    act(() => { S().updateDoc('catalog', { root: { props: { title: 'Changed', description: '', chrome: 'shell' } }, content: [] }, S().epoch); });
+    expect(seen.at(-1)).not.toBe(first);
   });
 
   it('ui store: show with a key bumps focus; hide closes', () => {
