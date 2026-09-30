@@ -43,7 +43,7 @@ export function ProductList() {
     () => filterProducts(products, categories, { categoryId: active?.id ?? null, search }),
     [products, categories, active?.id, search],
   );
-  const groups = useMemo(() => groupProducts(visible, tree), [visible, tree]);
+  const groups = useMemo(() => groupProducts(visible, tree, t), [visible, tree, t]);
 
   // `?p=` is the sheet's open state, so the product is shareable, and Back closes it.
   const raw = params.get('p');
