@@ -186,8 +186,8 @@ describe('editor header: text', () => {
     renderCanvas();
     await puckShown();
     const headings = () => (S().docs.catalog?.content ?? []).filter((c) => c.type === 'Heading').length;
-    // Two inserts: Puck's initial history entry has no id, and the store treats stepping onto an
-    // id-less entry as unknown (it clears the redo — the safe failure). Step between minted ids.
+    // Two inserts, so the undo and redo step between minted ids (the id-less first entry has its
+    // own test below).
     for (const n of [1, 2]) {
       fireEvent.click(screen.getByRole('button', { name: 'Add block' }));
       await act(async () => fireEvent.click(within(screen.getByRole('menu')).getByRole('menuitem', { name: 'Heading' })));
@@ -215,6 +215,26 @@ describe('editor header: text', () => {
     expect(S().siteText!.strings.en![key]).toBe('After block');
     // Two recorded inserts (400 ms each) on top of Puck's first render: well past the 5 s default
     // when the whole suite shares the CPU.
+  }, 30_000);
+
+  it('undoing the first block edit of a mount keeps the text redo (Puck\'s id-less first entry)', async () => {
+    renderCanvas();
+    await puckShown();
+    const headings = () => (S().docs.catalog?.content ?? []).filter((c) => c.type === 'Heading').length;
+    await insertHeading(1);
+    const undo = screen.getByRole('button', { name: 'Undo' });
+    const redo = screen.getByRole('button', { name: 'Redo' });
+    act(() => { applyText('shared', key, 'After first block'); });
+    await act(async () => { fireEvent.click(undo); });          // text
+    await act(async () => { fireEvent.click(undo); });          // the only block, onto the id-less entry
+    await vi.waitFor(() => expect(headings()).toBe(0), { timeout: 5_000 });
+    await act(async () => { await new Promise((r) => setTimeout(r, 50)); });
+    expect(S().textFuture).toHaveLength(1);
+    await act(async () => { fireEvent.click(redo); });          // the block again
+    await vi.waitFor(() => expect(headings()).toBe(1), { timeout: 5_000 });
+    await act(async () => { await new Promise((r) => setTimeout(r, 50)); });
+    await act(async () => { fireEvent.click(redo); });          // then the text
+    expect(S().siteText!.strings.en![key]).toBe('After first block');
   }, 30_000);
 
   it('a new block edit clears the text redo', async () => {

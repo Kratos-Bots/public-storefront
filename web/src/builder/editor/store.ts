@@ -337,9 +337,12 @@ export function setPuckHistorySource(fn: (() => PuckHistoryView | null) | null):
  * Puck's index to an entry that already exists; a new edit records a freshly minted id (after a
  * debounce in current Puck, but possibly synchronously in another version). So the history is
  * read at change time and again once the current task ends, and the stack is kept only when the
- * position moved to an id that was already in the history at change time. Anything else — no
- * source registered, the position unchanged (record still pending), or a new id — clears it.
- * Losing a text redo is the safe failure; replaying a branched-away one is not.
+ * position moved to an entry that was already in the history at change time — same position,
+ * same id (Puck's first entry of a mount has no id: compared by position, null matches null, so
+ * undoing the first block edit keeps the redo). Anything else — no source registered, the position
+ * unchanged (record still pending), a position past the old end, or a new id at an old position
+ * (a truncating record) — clears it. Losing a text redo is the safe failure; replaying a
+ * branched-away one is not.
  */
 function blockEdited(deferred: boolean): void {
   lastTextEdit = null;
@@ -349,10 +352,11 @@ function blockEdited(deferred: boolean): void {
     useEditorStore.setState({ textFuture: [] });
     return;
   }
-  const known = new Set(before.anchors);
   queueMicrotask(() => {
     const after = historySource?.() ?? null;
-    const stepped = after !== null && after.anchor !== before.anchor && after.anchor !== null && known.has(after.anchor);
+    const stepped = after !== null && after.index !== before.index
+      && after.index >= 0 && after.index < before.anchors.length
+      && after.anchor === before.anchors[after.index];
     if (!stepped) useEditorStore.getState().discardTextFuture();
   });
 }

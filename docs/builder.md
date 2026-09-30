@@ -578,9 +578,11 @@ from the public page-set read.
 
 Known gaps, seen in a real browser:
 
-- Puck's first history entry of a mount has no id, so undoing the **first** block edit of a
-  mount drops any text step waiting to be redone (the block edit itself redoes normally). Later
-  block edits keep text redo across a canvas undo.
+- Puck's first history entry of a mount has no id. The store tells a canvas undo/redo from a new
+  block edit by position in Puck's history (same place, same id — null matching null), so undoing
+  the **first** block edit of a mount keeps a text step waiting to be redone, like any later one.
+  This leans on Puck 0.23's history shape (entries with ids, an index); if a Puck upgrade changes
+  it, the store falls back to dropping the text redo (the safe failure).
 - Puck records history on a short debounce: two block edits made within it are one undo step.
 
 On a touch screen (`pointer: coarse`) the header's controls and the Text panel's are 44 px

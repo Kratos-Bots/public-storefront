@@ -179,7 +179,7 @@ describe('editor store: text history limits and block edits', () => {
   });
 
   /** A fake Puck history read live, as Task 10's source must (appStore.getState(), not a render snapshot). */
-  function fakePuck(ids: string[]) {
+  function fakePuck(ids: (string | null)[]) {
     const h = { ids: [...ids], index: ids.length - 1 };
     setPuckHistorySource((): PuckHistoryView => ({
       anchor: h.ids[h.index] ?? null, anchors: [...h.ids], index: h.index, hasPast: h.index > 0, hasFuture: h.index < h.ids.length - 1,
@@ -187,7 +187,7 @@ describe('editor store: text history limits and block edits', () => {
     return {
       back: () => { h.index -= 1; },
       forward: () => { h.index += 1; },
-      record: (id: string) => { h.ids = [...h.ids.slice(0, h.index + 1), id]; h.index = h.ids.length - 1; },
+      record: (id: string | null) => { h.ids = [...h.ids.slice(0, h.index + 1), id]; h.index = h.ids.length - 1; },
     };
   }
 
@@ -204,6 +204,33 @@ describe('editor store: text history limits and block edits', () => {
     puck.forward();
     await flush();
     expect(S().textFuture).toHaveLength(1);
+  });
+
+  it('undoing the first block edit of a mount (onto Puck\'s id-less first entry) keeps the text redo', async () => {
+    S().load({ layout: 'storefront', pageSet: null, readOnly: false, siteText: null });
+    const puck = fakePuck([null, 'd1']);
+    withTextRedo();
+    catalogEdit('Before');
+    puck.back();
+    await flush();
+    expect(S().textFuture).toHaveLength(1);
+    catalogEdit('After');
+    puck.forward();
+    await flush();
+    expect(S().textFuture).toHaveLength(1);
+  });
+
+  it('a new edit from Puck\'s id-less first entry still clears the text redo', async () => {
+    S().load({ layout: 'storefront', pageSet: null, readOnly: false, siteText: null });
+    const puck = fakePuck([null, 'd1']);
+    catalogEdit('Back');
+    puck.back();
+    await flush();
+    withTextRedo();
+    catalogEdit('Branch');
+    puck.record('d7');          // replaces d1 at the same position: a new id there, not a step
+    await flush();
+    expect(S().textFuture).toEqual([]);
   });
 
   it('a new block edit with Puck recording later (debounced) clears the text redo stack', async () => {
