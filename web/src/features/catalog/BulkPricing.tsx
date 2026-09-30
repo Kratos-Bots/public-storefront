@@ -1,5 +1,6 @@
 import { useSettings } from '@/app/settings.ts';
 import { formatMoney } from '@/lib/format.ts';
+import { useText } from '@/text/runtime.tsx';
 import type { PricingTier } from '@/types/catalog.ts';
 import classes from '@/features/catalog/BulkPricing.module.css';
 
@@ -15,6 +16,7 @@ export interface BulkPricingProps {
  */
 export function BulkPricing({ tiers, price }: BulkPricingProps) {
   const { currency } = useSettings();
+  const { t } = useText();
   if (tiers.length === 0) return null;
 
   const byQuantity = new Map<number, number>([[1, price]]);
@@ -25,9 +27,9 @@ export function BulkPricing({ tiers, price }: BulkPricingProps) {
     <table className={classes.table}>
       <thead>
         <tr>
-          <th scope="col">Quantity</th>
-          <th scope="col">Unit price</th>
-          <th scope="col">Saving</th>
+          <th scope="col">{t('product.bulk.quantity')}</th>
+          <th scope="col">{t('product.bulk.unitPrice')}</th>
+          <th scope="col">{t('product.bulk.saving')}</th>
         </tr>
       </thead>
       <tbody>

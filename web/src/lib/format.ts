@@ -1,5 +1,6 @@
 import type { Product, PricingTier, StockStatus } from '@/types/catalog.ts';
 import { LEGACY_PROFILE, type FormatProfile } from '@/text/format-profile.ts';
+import { textSnapshot } from '@/text/runtime.tsx';
 
 // The active profile. TextLayerProvider sets it synchronously during render (idempotent), before any
 // child formats; caches are keyed by locale so switching profiles never reuses a wrong formatter.
@@ -98,7 +99,7 @@ export function deriveStockStatus(inStock: boolean, lowAlert: boolean): StockSta
 }
 
 export function stockLabel(status: StockStatus): string {
-  return status === 'in' ? 'In Stock' : status === 'low' ? 'Low Stock' : 'Out of Stock';
+  return textSnapshot().t(status === 'in' ? 'product.stock.in' : status === 'low' ? 'product.stock.low' : 'product.stock.out');
 }
 
 /**

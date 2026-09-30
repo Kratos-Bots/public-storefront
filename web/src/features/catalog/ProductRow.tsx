@@ -7,6 +7,7 @@ import { MinusIcon, PlusIcon } from '@/components/icons.tsx';
 import { rowAnim } from '@/lib/motion.ts';
 import type { Product } from '@/types/catalog.ts';
 import { useCoreOptions } from '@/templates/hooks.ts';
+import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/catalog/ProductRow.module.css';
 
 export interface ProductRowProps {
@@ -28,6 +29,7 @@ export interface ProductRowProps {
 export function ProductRow({ product, onSelect, index }: ProductRowProps) {
   const { currency, features } = useSettings();
   const { showSku } = useCoreOptions();
+  const { t } = useText();
   const quantity = useCartStore((s) => s.lines.find((l) => l.productId === product.id)?.quantity ?? 0);
   // Written through the cart's sync path, not the store: a signed-in shopper's
   // cart page adopts the server cart on open, so an edit that never reached
@@ -64,14 +66,14 @@ export function ProductRow({ product, onSelect, index }: ProductRowProps) {
           <p className={classes.meta}>
             {showSku ? <span className={classes.sku}>{product.sku}</span> : null}
             {product.minOrderQuantity != null ? (
-              <span className={classes.limit}>Min {product.minOrderQuantity}</span>
+              <span className={classes.limit}>{t('product.limit.min', { min: product.minOrderQuantity })}</span>
             ) : null}
             {best ? (
               <span className={classes.tier}>
                 {best.minQuantity}+ {formatMoney(best.price, currency)}
               </span>
             ) : null}
-            {product.isPreorder ? <span className={classes.preorder}>Pre-order</span> : null}
+            {product.isPreorder ? <span className={classes.preorder}>{t('common.product.preorder')}</span> : null}
             {status !== 'in' ? <StockChip status={status} /> : null}
           </p>
         ) : null}
@@ -87,7 +89,7 @@ export function ProductRow({ product, onSelect, index }: ProductRowProps) {
                 type="button"
                 className={classes.step}
                 onClick={() => setQuantity(product.id, quantity > floor ? quantity - 1 : 0)}
-                aria-label={`One fewer ${product.displayName}`}
+                aria-label={t('common.qty.fewer', { name: product.displayName })}
               >
                 <MinusIcon size={15} />
               </button>
@@ -99,7 +101,7 @@ export function ProductRow({ product, onSelect, index }: ProductRowProps) {
                 className={classes.step}
                 disabled={atCeiling}
                 onClick={() => setQuantity(product.id, quantity + 1)}
-                aria-label={`One more ${product.displayName}`}
+                aria-label={t('common.qty.more', { name: product.displayName })}
               >
                 <PlusIcon size={15} />
               </button>
@@ -112,10 +114,10 @@ export function ProductRow({ product, onSelect, index }: ProductRowProps) {
               onClick={() => add(product, floor)}
               aria-label={
                 !product.isActive
-                  ? `Unavailable — ${product.displayName}`
+                  ? t('product.row.unavailable', { name: product.displayName })
                   : unavailable
-                    ? `Out of stock — ${product.displayName}`
-                    : `${product.isPreorder ? 'Pre-order' : 'Add'} ${product.displayName}`
+                    ? t('product.row.outOfStock', { name: product.displayName })
+                    : t('product.add.ariaLabel', { verb: product.isPreorder ? t('common.product.preorder') : t('product.add.verb'), name: product.displayName })
               }
             >
               <PlusIcon size={16} />

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { defineBlock } from '@/builder/define.ts';
 import { useBuilderMode } from '@/builder/mode.ts';
 import { useCatalog } from '@/features/catalog/use-catalog.ts';
+import { useText } from '@/text/runtime.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { pickFeatured, type FeaturedQuery } from '@/builder/blocks/_shared/featured.ts';
 import classes from '@/builder/blocks/FeaturedProducts.module.css';
@@ -14,6 +15,7 @@ type Props = { id: string; title: string } & FeaturedQuery;
 function FeaturedView({ title, ...query }: Omit<Props, 'id'>) {
   const catalog = useCatalog();
   const { editing } = useBuilderMode();
+  const { t } = useText();
   const picked = useMemo(
     () => (catalog.data ? pickFeatured(catalog.data.products, catalog.data.categories, query) : []),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the query is plain data; serialise it
@@ -25,7 +27,7 @@ function FeaturedView({ title, ...query }: Omit<Props, 'id'>) {
   }
   const siblingImages = picked.some((p) => p.imageProductId !== null);
   return (
-    <section className={classes.root} data-sf-block="FeaturedProducts" aria-label={title || 'Featured products'}>
+    <section className={classes.root} data-sf-block="FeaturedProducts" aria-label={title || t('catalog.featured.ariaLabel')}>
       {title ? <h2 className={classes.title}>{title}</h2> : null}
       <div className={classes.grid}>
         {picked.map((product, i) => (

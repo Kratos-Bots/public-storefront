@@ -16,6 +16,7 @@ import { useShellSearch } from '@/layouts/shell-context.ts';
 import { FADE, rowAnim } from '@/lib/motion.ts';
 import { Slot } from '@/templates/runtime.tsx';
 import { useCoreOptions } from '@/templates/hooks.ts';
+import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/catalog/ProductGrid.module.css';
 
 /** How many cards load their image eagerly — the first two rows on a phone. */
@@ -31,6 +32,7 @@ export function ProductGrid() {
   const { categorySlug } = useParams();
   const catalog = useCatalog();
   const { showPageTitle, showCategoryPicker } = useCoreOptions();
+  const { t } = useText();
 
   const products = useMemo(() => catalog.data?.products ?? [], [catalog.data]);
   const categories = useMemo(() => catalog.data?.categories ?? [], [catalog.data]);
@@ -52,12 +54,12 @@ export function ProductGrid() {
   if (catalog.isError) {
     return (
       <EmptyState
-        eyebrow="Catalogue"
-        title="We couldn't load the products"
-        description="The shop is still there — this was a hiccup between your browser and us."
+        eyebrow={t('catalog.list.eyebrowCatalogue')}
+        title={t('common.list.loadFailed')}
+        description={t('catalog.list.loadFailedDetail')}
         action={
           <Button variant="default" size="sm" onClick={() => void catalog.refetch()}>
-            Try again
+            {t('common.actions.tryAgain')}
           </Button>
         }
       />
@@ -79,46 +81,46 @@ export function ProductGrid() {
         <div className={classes.column}>
           {/* The page-title core option hides the whole heading block (its label and count
               too), leaving the h1 in the accessibility tree only. */}
-          {showPageTitle ? <Slot name="SectionLabel" index={1} title={active ? active.name : 'All products'} level="page" /> : null}
+          {showPageTitle ? <Slot name="SectionLabel" index={1} title={active ? active.name : t('catalog.list.allProducts')} level="page" /> : null}
           <div className={showPageTitle ? classes.head : undefined}>
-            <h1 className={showPageTitle ? classes.title : 'sf-visually-hidden'} data-sf-part="page-title">{active ? active.name : 'All products'}</h1>
+            <h1 className={showPageTitle ? classes.title : 'sf-visually-hidden'} data-sf-part="page-title">{active ? active.name : t('catalog.list.allProducts')}</h1>
             {/* Micro-caps, so the shopper's own query stays out of it — the field
                 above and the empty state below both quote it in their own case. */}
             {showPageTitle ? (
               <p className={classes.result}>
-                {query ? `${visible.length} matching` : `${visible.length} products`}
+                {query ? t('catalog.list.matching', { count: visible.length }) : t('catalog.list.count', { count: visible.length })}
               </p>
             ) : null}
           </div>
 
           {unknownCategory ? (
             <EmptyState
-              eyebrow="Category"
-              title="That category isn't here"
-              description="It may have been renamed or retired. The full range is still one tap away."
+              eyebrow={t('catalog.list.eyebrowCategory')}
+              title={t('common.list.categoryMissing')}
+              description={t('catalog.list.categoryMissingDetail')}
               action={
                 <Button component={Link} to="/" variant="default" size="sm">
-                  Show all products
+                  {t('catalog.list.showAll')}
                 </Button>
               }
             />
           ) : visible.length === 0 ? (
             query ? (
               <EmptyState
-                eyebrow="Search"
-                title={`Nothing matches "${query}"`}
-                description="Try a shorter word, or the product code from your last order."
+                eyebrow={t('catalog.list.eyebrowSearch')}
+                title={t('common.list.noMatches', { query })}
+                description={t('catalog.list.noMatchesDetail')}
                 action={
                   <Button variant="default" size="sm" onClick={() => setSearch('')}>
-                    Clear search
+                    {t('common.list.clearSearch')}
                   </Button>
                 }
               />
             ) : (
               <EmptyState
-                eyebrow="Catalogue"
-                title="Nothing stocked here yet"
-                description="This part of the shop is empty for now — check back soon."
+                eyebrow={t('catalog.list.eyebrowCatalogue')}
+                title={t('common.list.emptyCategory')}
+                description={t('catalog.list.emptyCategoryDetail')}
               />
             )
           ) : imageless ? (

@@ -1,5 +1,6 @@
 import { TextInput } from '@mantine/core';
 import { SearchIcon } from '@/components/icons.tsx';
+import { useText } from '@/text/runtime.tsx';
 import classes from '@/layouts/SearchField.module.css';
 
 export interface SearchFieldProps {
@@ -10,13 +11,14 @@ export interface SearchFieldProps {
 }
 
 /** Header search box, shared by both shells. */
-export function SearchField({ value, onChange, placeholder = 'Search products', className }: SearchFieldProps) {
+export function SearchField({ value, onChange, placeholder, className }: SearchFieldProps) {
+  const { t } = useText();
   return (
     <TextInput
       value={value}
       onChange={(event) => onChange(event.currentTarget.value)}
-      placeholder={placeholder}
-      aria-label="Search products"
+      placeholder={placeholder ?? t('catalog.search.placeholder')}
+      aria-label={t('catalog.search.ariaLabel')}
       variant="unstyled"
       size="sm"
       leftSection={<SearchIcon size={14} />}

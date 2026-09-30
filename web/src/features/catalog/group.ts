@@ -1,5 +1,6 @@
 import type { CategoryNode } from '@/features/catalog/category-tree.ts';
 import type { Product } from '@/types/catalog.ts';
+import { textSnapshot } from '@/text/runtime.tsx';
 
 export interface ProductGroup {
   key: string;
@@ -47,10 +48,10 @@ export function groupProducts(visible: Product[], tree: CategoryNode[]): Product
     groups.push({ key: String(node.id), label: node.name, trail: trail.join(' / '), emoji: node.emoji, products });
   }
   for (const [id, products] of buckets) {
-    groups.push({ key: String(id), label: products[0]?.categoryName ?? 'Other', trail: '', emoji: null, products });
+    groups.push({ key: String(id), label: products[0]?.categoryName ?? textSnapshot().t('catalog.group.other'), trail: '', emoji: null, products });
   }
   if (loose.length > 0) {
-    groups.push({ key: 'none', label: 'Uncategorised', trail: '', emoji: null, products: loose });
+    groups.push({ key: 'none', label: textSnapshot().t('catalog.group.uncategorised'), trail: '', emoji: null, products: loose });
   }
   return groups;
 }

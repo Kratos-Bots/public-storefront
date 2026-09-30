@@ -16,6 +16,7 @@ import { deriveStockStatus, formatDate, formatMoney } from '@/lib/format.ts';
 import { FADE } from '@/lib/motion.ts';
 import type { Category, Product } from '@/types/catalog.ts';
 import { useCoreOptions } from '@/templates/hooks.ts';
+import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/catalog/ProductDetailSheet.module.css';
 
 /**
@@ -46,6 +47,7 @@ export interface ProductDetailSheetProps {
  */
 export function ProductDetailSheet({ productId, onClose, onSelect }: ProductDetailSheetProps) {
   const { brand } = useSettings();
+  const { t } = useText();
   const query = useProduct(productId);
   const catalog = useCatalog();
   const product = query.data;
@@ -66,11 +68,11 @@ export function ProductDetailSheet({ productId, onClose, onSelect }: ProductDeta
     <Sheet
       opened={opened}
       onClose={onClose}
-      label={product?.displayName ?? 'Product'}
+      label={product?.displayName ?? t('product.detail.product')}
       header={
         <div className={classes.head}>
-          <span className={classes.eyebrow}>{trail || 'Product'}</span>
-          <button type="button" className={classes.close} onClick={onClose} aria-label="Close">
+          <span className={classes.eyebrow}>{trail || t('product.detail.product')}</span>
+          <button type="button" className={classes.close} onClick={onClose} aria-label={t('common.actions.close')}>
             <CloseIcon size={16} />
           </button>
         </div>
@@ -81,9 +83,9 @@ export function ProductDetailSheet({ productId, onClose, onSelect }: ProductDeta
         {query.isPending ? <Loading /> : null}
         {query.isError ? (
           <div className={classes.failed}>
-            <p className={classes.failedText}>We couldn't load this product.</p>
+            <p className={classes.failedText}>{t('product.sheet.loadFailed')}</p>
             <Button variant="default" size="sm" onClick={() => void query.refetch()}>
-              Try again
+              {t('common.actions.tryAgain')}
             </Button>
           </div>
         ) : null}
@@ -96,6 +98,7 @@ export function ProductDetailSheet({ productId, onClose, onSelect }: ProductDeta
 function Detail({ product, onSelect }: { product: Product; onSelect: (product: Product) => void }) {
   const { brand, currency } = useSettings();
   const { showSku } = useCoreOptions();
+  const { t } = useText();
   const status = deriveStockStatus(product.inStock, product.lowStockAlert);
   const eta = product.isPreorder && product.preorderEta ? formatDate(new Date(product.preorderEta).toISOString()) : '';
 
@@ -108,10 +111,10 @@ function Detail({ product, onSelect }: { product: Product; onSelect: (product: P
             {showSku ? <span className={classes.sku}>{product.sku}</span> : null}
             <StockChip status={status} />
             {product.isPreorder ? (
-              <span className={classes.preorder}>{eta ? `Ships ${eta}` : 'Pre-order'}</span>
+              <span className={classes.preorder}>{eta ? t('product.sheet.ships', { eta }) : t('common.product.preorder')}</span>
             ) : null}
             {product.minOrderQuantity != null ? (
-              <span className={classes.limit}>Min {product.minOrderQuantity}</span>
+              <span className={classes.limit}>{t('product.limit.min', { min: product.minOrderQuantity })}</span>
             ) : null}
           </p>
         </div>
@@ -128,34 +131,34 @@ function Detail({ product, onSelect }: { product: Product; onSelect: (product: P
 
       {/* The one number the shopper came for, on its own rule. */}
       <div className={classes.priceBand}>
-        <span className={classes.priceLabel}>Unit</span>
+        <span className={classes.priceLabel}>{t('product.sheet.unit')}</span>
         <span className={classes.price} data-sf-part="price">{formatMoney(product.price, currency)}</span>
       </div>
 
       {product.description ? (
-        <Block label="Description">
+        <Block label={t('product.sheet.description')}>
           <p className={classes.description}>{product.description}</p>
         </Block>
       ) : null}
 
       {product.pricingTiers.length > 0 ? (
-        <Block label="Buy more, pay less">
+        <Block label={t('product.bulk.heading')}>
           <BulkPricing tiers={product.pricingTiers} price={product.price} />
         </Block>
       ) : null}
 
       {product.provenance ? (
-        <Block label="Provenance">
+        <Block label={t('product.provenance.heading')}>
           <Provenance markdown={product.provenance} />
         </Block>
       ) : null}
 
       {brand.links.whatsapp || brand.links.telegram ? (
-        <Block label="Ask first">
+        <Block label={t('product.ask.heading')}>
           <p className={classes.askText}>
-            Send us a message about {product.displayName} and we'll answer before you order.
+            {t('product.ask.text', { name: product.displayName })}
           </p>
-          <ContactLinks prefill={`Hi — a question about ${product.displayName} (${product.sku})`} />
+          <ContactLinks prefill={t('product.ask.prefill', { name: product.displayName, sku: product.sku })} />
         </Block>
       ) : null}
 
@@ -174,8 +177,9 @@ function Block({ label, children }: { label: string; children: ReactNode }) {
 }
 
 function Loading() {
+  const { t } = useText();
   return (
-    <div className={classes.loading} role="status" aria-label="Loading">
+    <div className={classes.loading} role="status" aria-label={t('common.status.loading')}>
       <span className={classes.shape} style={{ width: '65%', height: 22 }} />
       <span className={classes.shape} style={{ width: '35%', height: 12 }} />
       <span className={classes.shape} style={{ width: '100%', height: 56 }} />

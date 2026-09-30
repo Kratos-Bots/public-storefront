@@ -17,6 +17,7 @@ import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { deriveStockStatus, formatDate, formatMoney } from '@/lib/format.ts';
 import { FADE } from '@/lib/motion.ts';
 import { useCoreOptions } from '@/templates/hooks.ts';
+import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/catalog/ProductDetailPage.module.css';
 
 /** Which optional parts the page shows — the ProductDetail block's toggles. All on by default. */
@@ -28,6 +29,7 @@ export function ProductDetailPage({ sections }: { sections?: Partial<ProductDeta
   const show = { ...ALL_SECTIONS, ...sections };
   const { brand, currency } = useSettings();
   const { showSku } = useCoreOptions();
+  const { t } = useText();
   const { id } = useParams();
   const productId = Number(id);
   const query = useProduct(productId);
@@ -58,9 +60,9 @@ export function ProductDetailPage({ sections }: { sections?: Partial<ProductDeta
 
   return (
     <article className={`${classes.page} ${FADE}`}>
-      <nav className={classes.crumbs} aria-label="Breadcrumb">
+      <nav className={classes.crumbs} aria-label={t('product.detail.breadcrumb')}>
         <Link to="/" className={classes.crumb}>
-          Shop
+          {t('product.detail.shop')}
         </Link>
         {trail.map((step) => (
           <span key={step.id} className={classes.step}>
@@ -105,10 +107,10 @@ export function ProductDetailPage({ sections }: { sections?: Partial<ProductDeta
             <div className={classes.flags}>
               <StockChip status={status} />
               {product.isPreorder ? (
-                <span className={classes.preorder}>{eta ? `Pre-order · ships ${eta}` : 'Pre-order'}</span>
+                <span className={classes.preorder}>{eta ? t('product.detail.preorderShips', { eta }) : t('common.product.preorder')}</span>
               ) : null}
               {product.minOrderQuantity != null ? (
-                <span className={classes.limit}>Min {product.minOrderQuantity}</span>
+                <span className={classes.limit}>{t('product.limit.min', { min: product.minOrderQuantity })}</span>
               ) : null}
             </div>
           </div>
@@ -120,7 +122,7 @@ export function ProductDetailPage({ sections }: { sections?: Partial<ProductDeta
           {show.bulkPricing && product.pricingTiers.length > 0 ? (
             <section className={classes.section} aria-labelledby="bulk-heading">
               <h2 id="bulk-heading" className={classes.sectionHead}>
-                Buy more, pay less
+                {t('product.bulk.heading')}
               </h2>
               <BulkPricing tiers={product.pricingTiers} price={product.price} />
             </section>
@@ -129,7 +131,7 @@ export function ProductDetailPage({ sections }: { sections?: Partial<ProductDeta
           {show.provenance && product.provenance ? (
             <section className={classes.section} aria-labelledby="provenance-heading">
               <h2 id="provenance-heading" className={classes.sectionHead}>
-                Provenance
+                {t('product.provenance.heading')}
               </h2>
               <Provenance markdown={product.provenance} />
             </section>
@@ -138,12 +140,12 @@ export function ProductDetailPage({ sections }: { sections?: Partial<ProductDeta
           {brand.links.whatsapp || brand.links.telegram ? (
             <section className={classes.ask} aria-labelledby="ask-heading">
               <h2 id="ask-heading" className={classes.sectionHead}>
-                Ask first
+                {t('product.ask.heading')}
               </h2>
               <p className={classes.askText}>
-                Send us a message about {product.displayName} and we'll answer before you order.
+                {t('product.ask.text', { name: product.displayName })}
               </p>
-              <ContactLinks prefill={`Hi — a question about ${product.displayName} (${product.sku})`} />
+              <ContactLinks prefill={t('product.ask.prefill', { name: product.displayName, sku: product.sku })} />
             </section>
           ) : null}
         </div>
@@ -155,24 +157,25 @@ export function ProductDetailPage({ sections }: { sections?: Partial<ProductDeta
 }
 
 function NotFound({ retry }: { retry?: () => void }) {
+  const { t } = useText();
   return (
     <EmptyState
-      eyebrow="Product"
-      title="We can't find that product"
-      description="It may have sold out and been retired, or the link may be out of date."
+      eyebrow={t('product.detail.product')}
+      title={t('product.detail.notFoundTitle')}
+      description={t('product.detail.notFoundDetail')}
       action={
         retry ? (
           <div className={classes.notFoundActions}>
             <Button variant="default" size="sm" onClick={retry}>
-              Try again
+              {t('common.actions.tryAgain')}
             </Button>
             <Button component={Link} to="/" variant="subtle" size="sm">
-              Browse the shop
+              {t('product.detail.browse')}
             </Button>
           </div>
         ) : (
           <Button component={Link} to="/" variant="default" size="sm">
-            Browse the shop
+            {t('product.detail.browse')}
           </Button>
         )
       }

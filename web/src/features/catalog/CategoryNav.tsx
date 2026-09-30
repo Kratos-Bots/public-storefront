@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
 import { useUiStore } from '@/stores/ui.ts';
+import { useText } from '@/text/runtime.tsx';
 import type { CategoryNode } from '@/features/catalog/category-tree.ts';
 import classes from '@/features/catalog/CategoryNav.module.css';
 
@@ -87,6 +88,7 @@ export interface CategoryIndexProps {
  */
 export function CategoryIndex({ tree, total, activeId, onNavigate }: CategoryIndexProps) {
   const glyphs = treeHasEmoji(tree);
+  const { t } = useText();
 
   return (
     <>
@@ -98,7 +100,7 @@ export function CategoryIndex({ tree, total, activeId, onNavigate }: CategoryInd
       >
         <span className={classes.rowLabel}>
           {glyphs ? <span className={classes.glyph} aria-hidden /> : null}
-          All products
+          {t('catalog.list.allProducts')}
         </span>
         <span className={classes.count}>{total}</span>
       </Link>
@@ -121,14 +123,15 @@ export interface CategoryNavProps {
  */
 export function CategoryNav({ tree, total, activeId }: CategoryNavProps) {
   const openFilters = useUiStore((s) => s.open);
+  const { t } = useText();
   if (tree.length === 0) return null;
 
   return (
     <>
-      <nav className={classes.chips} aria-label="Categories">
+      <nav className={classes.chips} aria-label={t('catalog.nav.categories')}>
         <div className={classes.chipRow}>
           <Link to="/" className={classes.chip} aria-current={activeId === null ? 'page' : undefined}>
-            All
+            {t('catalog.nav.all')}
             <span className={classes.chipCount}>{total}</span>
           </Link>
           {tree.map((node) => (
@@ -145,14 +148,14 @@ export function CategoryNav({ tree, total, activeId }: CategoryNavProps) {
           ))}
           {hasNesting(tree) ? (
             <button type="button" className={classes.more} onClick={() => openFilters('filterOpen')}>
-              All categories
+              {t('catalog.nav.allCategories')}
             </button>
           ) : null}
         </div>
       </nav>
 
-      <nav className={classes.rail} aria-label="Categories">
-        <h2 className={classes.railHead}>Categories</h2>
+      <nav className={classes.rail} aria-label={t('catalog.nav.categories')}>
+        <h2 className={classes.railHead}>{t('catalog.nav.categories')}</h2>
         <CategoryIndex tree={tree} total={total} activeId={activeId} />
       </nav>
     </>

@@ -29,6 +29,7 @@ function SearchFieldView({ placeholder }: { placeholder: string }) {
 
 export const block = defineBlock<{ id: string; placeholder: string }>({
   name: 'SearchField', label: 'Search field', category: 'catalogue', layouts: 'all', routeBound: false, slots: [],
-  schema: z.object({ placeholder: z.string().min(1).max(60) }), defaultProps: { placeholder: 'Search products' },
+  schema: z.object({ placeholder: z.string().max(60) }), defaultProps: { placeholder: '' },
+  textProps: { placeholder: 'catalog.search.placeholder' },
   render: ({ placeholder }) => <SearchFieldView placeholder={placeholder} />,
 });

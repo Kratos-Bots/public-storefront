@@ -5,6 +5,7 @@ import { upsellsFor } from '@/features/catalog/filter.ts';
 import { ProductCard } from '@/features/catalog/ProductCard.tsx';
 import { ProductRow } from '@/features/catalog/ProductRow.tsx';
 import { rowAnim } from '@/lib/motion.ts';
+import { useText } from '@/text/runtime.tsx';
 import type { Product } from '@/types/catalog.ts';
 import classes from '@/features/catalog/Upsells.module.css';
 
@@ -27,6 +28,7 @@ export interface UpsellsProps {
  */
 export function Upsells({ product, onSelect }: UpsellsProps) {
   const { features } = useSettings();
+  const { t } = useText();
   const catalog = useCatalog();
   const items = useMemo(
     () => upsellsFor(product, catalog.data).slice(0, MAX_UPSELLS),
@@ -38,7 +40,7 @@ export function Upsells({ product, onSelect }: UpsellsProps) {
   return (
     <section className={classes.root} aria-labelledby="upsells-heading">
       <h2 id="upsells-heading" className={classes.head}>
-        Often bought with this
+        {t('product.upsells.heading')}
       </h2>
       {onSelect ? (
         <ul className={classes.rows}>

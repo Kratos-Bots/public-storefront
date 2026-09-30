@@ -5,6 +5,7 @@ import { ProductImage } from '@/features/catalog/ProductImage.tsx';
 import { StockChip } from '@/features/catalog/StockChip.tsx';
 import { AddToCart } from '@/features/catalog/AddToCart.tsx';
 import { rowAnim } from '@/lib/motion.ts';
+import { useText } from '@/text/runtime.tsx';
 import type { Product } from '@/types/catalog.ts';
 import classes from '@/features/catalog/ProductCard.module.css';
 import imageClasses from '@/features/catalog/ProductImage.module.css';
@@ -26,6 +27,7 @@ export interface ProductCardProps {
  */
 export function ProductCard({ product, eager = false, hasSiblingImages = true, index = 0 }: ProductCardProps) {
   const { currency } = useSettings();
+  const { t } = useText();
   const status = deriveStockStatus(product.inStock, product.lowStockAlert);
   const best = product.pricingTiers.reduce<Product['pricingTiers'][number] | null>(
     (lowest, tier) => (!lowest || tier.price < lowest.price ? tier : lowest),
@@ -60,9 +62,9 @@ export function ProductCard({ product, eager = false, hasSiblingImages = true, i
         {product.isPreorder || status !== 'in' || product.minOrderQuantity != null ? (
           <div className={classes.flags}>
             {product.minOrderQuantity != null ? (
-              <span className={classes.limit}>Min {product.minOrderQuantity}</span>
+              <span className={classes.limit}>{t('product.limit.min', { min: product.minOrderQuantity })}</span>
             ) : null}
-            {product.isPreorder ? <span className={classes.preorder}>Pre-order</span> : null}
+            {product.isPreorder ? <span className={classes.preorder}>{t('common.product.preorder')}</span> : null}
             {status !== 'in' ? <StockChip status={status} /> : null}
           </div>
         ) : null}
