@@ -79,7 +79,7 @@ describe('fixture mode', () => {
     expect(useCartStore.getState()).toMatchObject({ mode: 'local' });
     expect(useCartStore.getState().lines).toHaveLength(2);
     expect(useSessionStore.getState().token).toBe(FIXTURE_TOKEN);
-    expect(notificationsShow).toHaveBeenCalledWith({ id: 'sf-builder-preview-only', message: PREVIEW_ONLY_MESSAGE });
+    expect(notificationsShow).toHaveBeenCalledWith({ id: 'sf-builder-preview-only', message: PREVIEW_ONLY_MESSAGE, position: 'bottom-center' });
   });
 
   it('applyPreviewAs refuses to run before fixture mode is entered', async () => {

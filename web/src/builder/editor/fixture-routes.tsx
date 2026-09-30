@@ -49,7 +49,7 @@ export function useNavigationLock(): void {
   useEffect(() => {
     if (blocker.state !== 'blocked') return;
     blocker.reset();
-    notifications.show({ id: 'sf-builder-nav', message: 'Links don’t navigate while you edit. Pick a page from the Page menu instead.' });
+    notifications.show({ id: 'sf-builder-nav', message: 'Links don’t navigate while you edit. Pick a page from the Page menu instead.', position: 'bottom-center' });
   }, [blocker]);
   useEffect(() => {
     const onClick = (event: MouseEvent) => {

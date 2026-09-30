@@ -1,4 +1,4 @@
-import { Component, useMemo, type ReactNode } from 'react';
+import { Component, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { Puck, type Data, type Overrides, type UiState } from '@puckeditor/core';
 // Puck's styles without its @import of Inter from rsms.me: the frame loads nothing from third parties.
 import '@puckeditor/core/no-external.css';
@@ -6,7 +6,12 @@ import { DocBoundary, RenderDoc } from '@/builder/render.tsx';
 import { validateDoc } from '@/builder/guard.ts';
 import { defaultDoc } from '@/builder/defaults/index.ts';
 import { buildEditorConfig } from '@/builder/editor/config.ts';
-import { docFor, isCustomKey } from '@/builder/editor/page-set.ts';
+import { docFor, isCustomKey, stableStringify } from '@/builder/editor/page-set.ts';
+import { prepareDoc } from '@/builder/editor/prepare.ts';
+import { PageGround } from '@/builder/editor/page-ground.tsx';
+import type { ViewportWidth } from '@/builder/editor/protocol.ts';
+import { BuilderModeProvider } from '@/builder/mode.ts';
+import type { DocKey, LayoutKind, PuckDoc } from '@/builder/types.ts';
 import { isLockedOn } from '@/builder/editor/route-bound.ts';
 import { useEditorStore } from '@/builder/editor/store.ts';
 import { useCurrentDoc, useIssues, useLockedPresent } from '@/builder/editor/use-issues.ts';
@@ -91,10 +96,7 @@ function ReadOnlyView() {
   const layout = useEditorStore((s) => s.layout);
   const docs = useEditorStore((s) => s.docs);
   const epoch = useEditorStore((s) => s.epoch);
-  const doc = useMemo(() => {
-    const raw = docFor(docs, docKey, layout);
-    return validateDoc(raw, docKey, layout).doc ?? defaultDoc(docKey, layout) ?? raw;
-  }, [docs, docKey, layout]);
+  const doc = useMemo(() => shownDoc(docFor(docs, docKey, layout), docKey, layout), [docs, docKey, layout]);
   return (
     <div className={styles.readOnly}>
       <header className={styles.bar}>
@@ -110,7 +112,7 @@ function ReadOnlyView() {
           <PreviewAsControls />
         </div>
       </header>
-      <div data-sf-builder-canvas="" className={styles.readOnlyCanvas}>
+      <div className={styles.readOnlyCanvas}>
         {/* Keyed on the loaded set and the page: a crash in one version never sticks to the next. */}
         <DocBoundary
           key={`${epoch}|${docKey}`}
@@ -122,9 +124,64 @@ function ReadOnlyView() {
             </div>
           }
         >
-          <RenderDoc doc={doc} docKey={docKey} layout={layout} />
+          <PageGround docKey={docKey} layout={layout}>
+            <RenderDoc doc={doc} docKey={docKey} layout={layout} />
+          </PageGround>
         </DocBoundary>
       </div>
+    </div>
+  );
+}
+
+/** A doc as the storefront would render it: the guard's version, else the route's default. */
+function shownDoc(raw: PuckDoc, docKey: DocKey, layout: LayoutKind): PuckDoc {
+  return validateDoc(raw, docKey, layout).doc ?? defaultDoc(docKey, layout) ?? raw;
+}
+
+/**
+ * A width preset (Phone / Tablet / Desktop) is an exact preview: the admin has sized the frame to
+ * that width, so media queries match, and the draft page renders as a shopper would see it — no
+ * Puck chrome, no editor hints, the same RenderDoc path as the read-only view. Nothing can be
+ * edited here, so nothing is posted (session.ts). "Back to editing" returns to Fit, where the
+ * still-mounted Puck canvas carries on with its selection and undo history.
+ */
+function ExactPreview({ width }: { width: ViewportWidth }) {
+  const docKey = useEditorStore((s) => s.docKey);
+  const layout = useEditorStore((s) => s.layout);
+  const docs = useEditorStore((s) => s.docs);
+  const previewAs = useEditorStore((s) => s.previewAs);
+  const mode = useMemo(() => ({ editing: false, previewAs }), [previewAs]);
+  const doc = useMemo(() => shownDoc(prepareDoc(docFor(docs, docKey, layout)), docKey, layout), [docs, docKey, layout]);
+  const back = useRef<HTMLButtonElement>(null);
+  // Keyboard users land on the way back, not at the top of the document.
+  useEffect(() => back.current?.focus({ preventScroll: true }), []);
+  return (
+    <div className={styles.exact} data-sf-builder-exact={width}>
+      <div className={styles.exactBar} role="region" aria-label="Exact preview">
+        <span className={styles.exactLabel}>
+          <EyeIcon />
+          <span>Previewing at <strong>{width} px</strong></span>
+        </span>
+        <button ref={back} type="button" className={styles.button} onClick={() => useEditorStore.getState().setViewport(null)}>
+          Back to editing
+        </button>
+      </div>
+      <BuilderModeProvider value={mode}>
+        <DocBoundary
+          key={stableStringify(doc)}
+          docKey={docKey}
+          fallback={
+            <div className={styles.failed} role="alert">
+              <h2 className={styles.failedTitle}>This page can’t be previewed</h2>
+              <p>Part of the draft failed to render. Go back to editing and check its blocks.</p>
+            </div>
+          }
+        >
+          <PageGround docKey={docKey} layout={layout}>
+            <RenderDoc doc={doc} docKey={docKey} layout={layout} />
+          </PageGround>
+        </DocBoundary>
+      </BuilderModeProvider>
     </div>
   );
 }
@@ -143,6 +200,7 @@ export function EditorCanvas() {
   const layout = useEditorStore((s) => s.layout);
   const epoch = useEditorStore((s) => s.epoch);
   const readOnly = useEditorStore((s) => s.readOnly);
+  const viewport = useEditorStore((s) => s.viewport);
   // Memoised on the sorted names of the locked blocks present, not the doc: edits don't rebuild it.
   const present = useLockedPresent();
   const config = useMemo(() => buildEditorConfig(docKey, layout, present), [docKey, layout, present]);
@@ -163,20 +221,23 @@ export function EditorCanvas() {
   const mount = `${docKey}|${epoch}`;
   return (
     <CanvasBoundary key={mount} fallback={<CanvasFailed />}>
-      <RestingMarks />
-      <Puck
-        key={mount}
-        config={config}
-        data={data}
-        // The mount epoch travels with every change, so a late onChange from a canvas that a load,
-        // reset or new page replaced is ignored by the store.
-        onChange={(next) => useEditorStore.getState().updateDoc(docKey, next, epoch)}
-        iframe={{ enabled: false }}
-        viewports={PUCK_VIEWPORTS}
-        ui={ui}
-        overrides={OVERRIDES}
-        height="100dvh"
-      />
+      {viewport !== null && <ExactPreview width={viewport} />}
+      <div className={styles.puckHost} hidden={viewport !== null}>
+        <RestingMarks />
+        <Puck
+          key={mount}
+          config={config}
+          data={data}
+          // The mount epoch travels with every change, so a late onChange from a canvas that a load,
+          // reset or new page replaced is ignored by the store.
+          onChange={(next) => useEditorStore.getState().updateDoc(docKey, next, epoch)}
+          iframe={{ enabled: false }}
+          viewports={PUCK_VIEWPORTS}
+          ui={ui}
+          overrides={OVERRIDES}
+          height="100dvh"
+        />
+      </div>
     </CanvasBoundary>
   );
 }

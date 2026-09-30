@@ -4,13 +4,21 @@
  * the header still inserts, and the panel toggle brings the list back.
  */
 export const WIDE_FRAME_PX = 1024;
+export const WIDE_FRAME_QUERY = `(min-width: ${WIDE_FRAME_PX}px)`;
+
+type Side = 'left' | 'right';
 
 /** What the person chose with the panel toggles; survives the canvas remounting on a page switch. */
-const chosen: { left?: boolean; right?: boolean } = {};
+const chosen: Partial<Record<Side, boolean>> = {};
 
-export function rememberPanels(choice: { left?: boolean; right?: boolean }): void {
-  if (choice.left !== undefined) chosen.left = choice.left;
-  if (choice.right !== undefined) chosen.right = choice.right;
+/** Record a click on one toggle. Only the side the person clicked: a side closed as a knock-on effect was not their choice. */
+export function rememberPanel(side: Side, visible: boolean): void {
+  chosen[side] = visible;
+}
+
+/** The person's own choice for a side, if they made one. */
+export function panelChoice(side: Side): boolean | undefined {
+  return chosen[side];
 }
 
 /** Sidebar visibility for a freshly mounted canvas in a frame this wide. */
@@ -19,6 +27,14 @@ export function initialPanels(frameWidth: number): { leftSideBarVisible: boolean
     leftSideBarVisible: chosen.left ?? frameWidth >= WIDE_FRAME_PX,
     rightSideBarVisible: chosen.right ?? true,
   };
+}
+
+/**
+ * The frame narrowed below WIDE_FRAME_PX while editing (the admin resized its panel): close the
+ * Blocks panel, unless the person opened it themselves.
+ */
+export function shouldAutoCloseBlocks(wide: boolean): boolean {
+  return !wide && chosen.left !== true;
 }
 
 /** Test hook. */

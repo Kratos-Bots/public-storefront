@@ -6,6 +6,7 @@
  */
 
 .bar,
+.exactBar,
 .dialog,
 .waiting,
 .readOnly,
@@ -48,6 +49,7 @@
 }
 
 .bar *,
+.exactBar *,
 .dialog *,
 .issuesPanel *,
 .menuPanel * {
@@ -738,10 +740,68 @@
 .readOnlyCanvas {
   flex: 1;
   min-block-size: 0;
-  /* The shop's own ground and ink, as on the published page (global.css paints them on body). */
-  background: var(--sf-bg);
-  color: var(--sf-text);
-  font-family: var(--sf-font-body);
+  display: flex;
+  flex-direction: column;
+}
+
+.readOnlyCanvas > * {
+  flex: 1;
+}
+
+/* Puck stays mounted (undo history, selection) while an exact preview shows; hidden, not removed. */
+.puckHost {
+  display: contents;
+  /* Puck's page frame takes the shop's ground, so no white shows around a short page. */
+  --puck-canvas-preview-color-bg: var(--sf-bg);
+}
+
+.puckHost[hidden] {
+  display: none;
+}
+
+/*
+ * Exact preview (a width preset): the draft page alone, full width in a frame the admin sized to
+ * that width, under one slim bar. The bar is the editor's; the page below is the shop's.
+ */
+.exact {
+  min-block-size: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.exact > :last-child {
+  flex: 1;
+}
+
+.exactBar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px 6px 12px;
+  background: var(--sfb-surface);
+  border-block-end: 1px solid var(--sfb-line);
+  color: var(--sfb-ink);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+}
+
+.exactLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-inline-size: 0;
+  color: var(--sfb-muted);
+  white-space: nowrap;
+}
+
+.exactLabel strong {
+  color: var(--sfb-ink);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .failed {

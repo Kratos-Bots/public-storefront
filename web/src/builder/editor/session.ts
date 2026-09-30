@@ -38,7 +38,7 @@ function postDocs(bridge: Bridge, docs: DocMap, layout: LayoutKind, last: string
  * store's `load` bumps `epoch`, so a canvas keyed on `epoch` remounts and a late onChange from the
  * old canvas (passed with its mount epoch to `updateDoc`) is ignored. Right after each accepted
  * load exactly one change goes out, built from the loaded docs (none when read-only), followed by
- * the current viewport.
+ * the current viewport. While a width preset shows its exact preview, no change is posted.
  */
 export function startBuilderSession(win: Window, client: QueryClient): () => void {
   // Fixture mode and the interceptor come first: from here on no request reaches the live shop
@@ -83,7 +83,13 @@ export function startBuilderSession(win: Window, client: QueryClient): () => voi
     if (s.previewAs !== prev.previewAs) applyPreviewAs(s.previewAs, client);
     // Media queries only follow a real frame width, so the admin resizes the iframe itself.
     if (s.viewport !== prev.viewport) bridge.postViewport(s.viewport);
-    if (loading || s.docs === prev.docs || s.readOnly || s.status !== 'ready') return;
+    if (loading || s.readOnly || s.status !== 'ready') return;
+    // A width preset is an exact preview with Puck hidden: nothing is posted while it shows.
+    // Anything that did change meanwhile (say a stray undo shortcut) goes out on the way back to
+    // editing — postDocs sends nothing when the docs match what the admin already has.
+    if (s.viewport !== null) return;
+    const backToEditing = prev.viewport !== null;
+    if (s.docs === prev.docs && !backToEditing) return;
     lastPosted = postDocs(bridge, s.docs, s.layout, lastPosted);
   });
 

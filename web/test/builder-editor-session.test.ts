@@ -118,6 +118,27 @@ describe('builder session', () => {
     stop();
   });
 
+  it('posts nothing while a width preset previews, and catches up on the way back to editing', () => {
+    const { win, send, changes } = fakeWindow();
+    const stop = startBuilderSession(win, new QueryClient());
+    send(load());
+    expect(changes()).toHaveLength(1);
+    useEditorStore.getState().setViewport(768);
+    useEditorStore.getState().createPage('about', 'About');
+    vi.advanceTimersByTime(CHANGE_DEBOUNCE_MS * 2);
+    expect(changes()).toHaveLength(1);
+    useEditorStore.getState().setViewport(null);
+    vi.advanceTimersByTime(CHANGE_DEBOUNCE_MS);
+    expect(changes()).toHaveLength(2);
+    expect(Object.keys(changes()[1]![0].pageSet.pages)).toEqual(['page:about']);
+    // Previewing and returning with nothing changed sends nothing more.
+    useEditorStore.getState().setViewport(360);
+    useEditorStore.getState().setViewport(null);
+    vi.advanceTimersByTime(CHANGE_DEBOUNCE_MS * 2);
+    expect(changes()).toHaveLength(2);
+    stop();
+  });
+
   it("emits FeaturedProducts without rows the admin hasn't picked yet", () => {
     const { win, send, changes } = fakeWindow();
     const stop = startBuilderSession(win, new QueryClient());

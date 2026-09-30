@@ -7,6 +7,7 @@ import type { ComponentData, DocKey, LayoutKind, PuckDoc } from '@/builder/types
 import { insertableBlocks, isLockedOn, ROUTE_BOUND } from '@/builder/editor/route-bound.ts';
 import { scopeFields } from '@/builder/editor/derive-fields.ts';
 import { EditorBlock } from '@/builder/editor/EditorBlock.tsx';
+import { PageGround } from '@/builder/editor/page-ground.tsx';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyBlock = BlockDef<any>;
@@ -146,14 +147,6 @@ const LOCKED = { delete: false, duplicate: false } as const;
  * One config per (doc, layout): locks, slot allow lists and the drawer depend on which page is
  * open. `present` as for `blockMenu`.
  */
-/** What a shopper's page stands on (global.css paints it on body); the canvas paints it itself. */
-export const PAGE_GROUND = {
-  background: 'var(--sf-bg)',
-  color: 'var(--sf-text)',
-  fontFamily: 'var(--sf-font-body)',
-  minHeight: '100%',
-} as const;
-
 export function buildEditorConfig(docKey: DocKey, layout: LayoutKind, present: ReadonlySet<string>): Config {
   const components: Config['components'] = {};
   for (const def of inLayout(layout)) {
@@ -178,9 +171,8 @@ export function buildEditorConfig(docKey: DocKey, layout: LayoutKind, present: R
     root: {
       fields: docKey === 'shell' ? {} : ROOT_FIELDS,
       defaultProps: { title: '', description: '', chrome: 'shell' },
-      // The shop's own ground and ink: Puck's canvas is white, and a dark theme's text would vanish on it.
-      render: ({ children }: { children: ReactNode }) =>
-        createElement('div', { 'data-sf-builder-canvas': '', style: PAGE_GROUND }, children),
+      // The shop's ground, ink and content column (page-ground.tsx): what a shopper's page stands on.
+      render: ({ children }: { children: ReactNode }) => createElement(PageGround, { docKey, layout, children }),
     },
   };
 }

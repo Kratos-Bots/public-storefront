@@ -10,7 +10,8 @@ import { FIXTURE_CART_LINES, FIXTURE_CUSTOMER, FIXTURE_TOKEN } from '@/builder/e
 export const PREVIEW_ONLY_MESSAGE = 'Preview only — nothing was sent.';
 
 export function notifyPreviewOnly(): void {
-  notifications.show({ id: 'sf-builder-preview-only', message: PREVIEW_ONLY_MESSAGE });
+  // At the bottom: the editor's bars (header, exact-preview bar) are sticky at the top.
+  notifications.show({ id: 'sf-builder-preview-only', message: PREVIEW_ONLY_MESSAGE, position: 'bottom-center' });
 }
 
 function memoryStorage(): StateStorage {

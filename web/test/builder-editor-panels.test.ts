@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { initialPanels, rememberPanels, resetPanelChoice, WIDE_FRAME_PX } from '@/builder/editor/panels.ts';
+import {
+  initialPanels, panelChoice, rememberPanel, resetPanelChoice, shouldAutoCloseBlocks, WIDE_FRAME_PX,
+} from '@/builder/editor/panels.ts';
 
 afterEach(() => resetPanelChoice());
 
@@ -12,11 +14,28 @@ describe('initial sidebar visibility', () => {
   });
 
   it('keeps what the person chose with the toggles across remounts', () => {
-    rememberPanels({ left: true });
+    rememberPanel('left', true);
     expect(initialPanels(768).leftSideBarVisible).toBe(true);
-    rememberPanels({ right: false });
+    rememberPanel('right', false);
     expect(initialPanels(1280)).toEqual({ leftSideBarVisible: true, rightSideBarVisible: false });
-    rememberPanels({ left: false });
+    rememberPanel('left', false);
     expect(initialPanels(1440).leftSideBarVisible).toBe(false);
+  });
+
+  it('records only the side that was clicked', () => {
+    rememberPanel('right', true);
+    expect(panelChoice('right')).toBe(true);
+    expect(panelChoice('left')).toBeUndefined();
+  });
+});
+
+describe('the frame narrowing while editing', () => {
+  it('closes the Blocks panel unless the person opened it', () => {
+    expect(shouldAutoCloseBlocks(true)).toBe(false);
+    expect(shouldAutoCloseBlocks(false)).toBe(true);
+    rememberPanel('left', false);
+    expect(shouldAutoCloseBlocks(false)).toBe(true);
+    rememberPanel('left', true);
+    expect(shouldAutoCloseBlocks(false)).toBe(false);
   });
 });

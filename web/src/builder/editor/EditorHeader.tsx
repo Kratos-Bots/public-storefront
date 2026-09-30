@@ -10,7 +10,7 @@ import { focusPagePickerSoon, PagePicker } from '@/builder/editor/PagePicker.tsx
 import { FloatingPanel } from '@/builder/editor/floating.tsx';
 import { VIEWPORT_OPTIONS } from '@/builder/editor/viewports.ts';
 import { cssString } from '@/builder/editor/resting-marks.ts';
-import { rememberPanels } from '@/builder/editor/panels.ts';
+import { rememberPanel, shouldAutoCloseBlocks, WIDE_FRAME_QUERY } from '@/builder/editor/panels.ts';
 import { CheckIcon, PanelLeftIcon, PanelRightIcon, PlusIcon, RedoIcon, TipIcon, UndoIcon, WarnIcon } from '@/builder/editor/icons.tsx';
 import { blockDef } from '@/builder/rules.ts';
 import type { PreviewAs } from '@/builder/mode.ts';
@@ -213,12 +213,23 @@ function PanelToggles() {
   const dispatch = usePuck((s) => s.dispatch);
   const left = usePuck((s) => s.appState.ui.leftSideBarVisible);
   const right = usePuck((s) => s.appState.ui.rightSideBarVisible);
+  // The admin can narrow the frame while someone edits at Fit: the Blocks panel steps aside
+  // (unless they opened it themselves). Width presets are exact previews with Puck hidden, so a
+  // change while previewing is not a reason to touch the panels.
+  useEffect(() => {
+    const query = window.matchMedia?.(WIDE_FRAME_QUERY);
+    if (!query) return;
+    const onChange = () => {
+      if (useEditorStore.getState().viewport !== null || !shouldAutoCloseBlocks(query.matches)) return;
+      dispatch({ type: 'setUi', ui: { leftSideBarVisible: false }, recordHistory: false });
+    };
+    query.addEventListener('change', onChange);
+    return () => query.removeEventListener('change', onChange);
+  }, [dispatch]);
   const toggle = (side: 'left' | 'right') => {
     const narrow = !window.matchMedia?.('(min-width: 638px)').matches;
     const visible = side === 'left' ? left : right;
-    rememberPanels(side === 'left'
-      ? { left: !visible, ...(narrow ? { right: false } : {}) }
-      : { right: !visible, ...(narrow ? { left: false } : {}) });
+    rememberPanel(side, !visible);
     dispatch({
       type: 'setUi',
       ui: side === 'left'

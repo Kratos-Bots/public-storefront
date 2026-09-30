@@ -104,6 +104,35 @@ describe('editor chrome', () => {
     await vi.waitFor(() => expect(screen.getByRole('combobox', { name: 'Page' })).toHaveFocus());
   });
 
+  it('a width preset is an exact preview: Puck hidden but kept, the draft page shown, one way back', async () => {
+    // A custom page (no catalogue blocks, which need the shop settings this test doesn't load).
+    const about: PuckDoc = { root: { props: { title: 'About', description: '', chrome: 'shell' } }, content: [{ type: 'Heading', props: { id: 'h1', text: 'Northbound Supply' } }] };
+    useEditorStore.getState().load({ layout: 'storefront', pageSet: { schemaVersion: 1, shell: defaultDoc('shell', 'storefront')!, pages: { 'page:about': about } }, readOnly: false });
+    useEditorStore.getState().selectDoc('page:about');
+    renderCanvas();
+    await puckShown();
+    const header = document.querySelector('[data-sf-builder-header]')!;
+    fireEvent.click(within(screen.getByRole('group', { name: 'Preview width' })).getByRole('button', { name: 'Tablet' }));
+    const bar = await screen.findByRole('region', { name: 'Exact preview' });
+    expect(bar).toHaveTextContent('Previewing at 768 px');
+    // The editor stays mounted (undo, selection) but out of sight; no editor chrome shows.
+    expect(header.isConnected).toBe(true);
+    expect(header.closest('[hidden]')).not.toBeNull();
+    expect(screen.queryByRole('button', { name: 'Add block' })).toBeNull();
+    // The page renders as a shopper sees it, inside the shop's column, with no Puck wrappers.
+    const preview = document.querySelector('[data-sf-builder-exact="768"]')!;
+    expect(preview.querySelector('[data-sf-builder-column]')).not.toBeNull();
+    expect(preview.querySelector('[data-puck-component]')).toBeNull();
+    expect(within(preview as HTMLElement).getByRole('heading', { name: 'Northbound Supply' })).toBeInTheDocument();
+    const back = within(bar).getByRole('button', { name: 'Back to editing' });
+    expect(back).toHaveFocus();
+    fireEvent.click(back);
+    expect(useEditorStore.getState().viewport).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Exact preview' })).toBeNull();
+    expect(header.isConnected).toBe(true);
+    expect(header.closest('[hidden]')).toBeNull();
+  });
+
   it('Add block is a keyboard menu: arrows move, Escape returns focus, choosing inserts once', async () => {
     ready(false);
     renderCanvas();

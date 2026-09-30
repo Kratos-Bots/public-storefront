@@ -235,12 +235,18 @@ describe('EditorBlock', () => {
     expect(container.querySelector('[data-sf-builder-outlet]')).toHaveTextContent('Page content appears here');
   });
 
-  it('paints the shop ground and ink on the canvas (Puck is white; dark themes would vanish)', () => {
-    const root = buildEditorConfig('catalog', 'storefront', NONE).root!;
-    const { container } = render(createElement(() => (root.render as (p: { children: string }) => ReturnType<typeof createElement>)({ children: 'page' })));
-    const ground = container.querySelector<HTMLElement>('[data-sf-builder-canvas]')!;
-    expect(ground.style.background).toBe('var(--sf-bg)');
-    expect(ground.style.color).toBe('var(--sf-text)');
-    expect(ground).toHaveTextContent('page');
+  it('stands pages on the shop ground inside the shell content column; the shell gets the ground only', () => {
+    const renderRoot = (docKey: DocKey, layout: 'storefront' | 'menu') => {
+      const root = buildEditorConfig(docKey, layout, NONE).root!;
+      return render(createElement(() => (root.render as (p: { children: string }) => ReturnType<typeof createElement>)({ children: 'page' }))).container;
+    };
+    const page = renderRoot('catalog', 'menu');
+    const column = page.querySelector('[data-sf-builder-canvas] > [data-sf-builder-column]');
+    expect(column).toHaveAttribute('data-layout', 'menu');
+    expect(column).toHaveTextContent('page');
+    cleanup();
+    const shell = renderRoot('shell', 'storefront');
+    expect(shell.querySelector('[data-sf-builder-canvas]')).toHaveTextContent('page');
+    expect(shell.querySelector('[data-sf-builder-column]')).toBeNull();
   });
 });
