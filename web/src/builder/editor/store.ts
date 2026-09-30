@@ -8,7 +8,7 @@ import { DEFAULT_LANGUAGE, emptyPageText, emptySiteText, withValue, type DraftVa
 import { rowFor } from '@/builder/editor/text/catalog.ts';
 import { isStoreLocale } from '@/builder/editor/text/languages.ts';
 import { textIssues } from '@/builder/editor/text/issues.ts';
-import { COALESCE_MS, TEXT_HISTORY_MAX, currentAnchor, type TextHistoryEntry } from '@/builder/editor/text/history.ts';
+import { COALESCE_MS, TEXT_HISTORY_MAX, type PuckHistoryView, type TextHistoryEntry } from '@/builder/editor/text/history.ts';
 
 export const DEFAULT_PREVIEW_AS: PreviewAs = { session: 'signed-in-orders', cart: 'items' };
 
@@ -50,21 +50,29 @@ export interface EditorState {
   textPast: TextHistoryEntry<TextSnap>[];
   /** Text redo stack (top = last). Cleared by any new text edit and by any block edit. */
   textFuture: TextHistoryEntry<TextSnap>[];
+  /**
+   * Bumped by every `load()` only (unlike `epoch`, not by a page reset or new page). Text callers
+   * capture it when an edit starts and pass it back, so a commit landing after a load (a blur
+   * during a layout switch) cannot write into the new load's text.
+   */
+  loadEpoch: number;
   /** `siteText` absent = shared text not editable; null = none stored yet (starts empty). */
   load(input: { layout: LayoutKind; pageSet: PageSet | null; readOnly: boolean; siteText?: SiteText | null }): void;
   /**
    * One key at one scope in the active locale; null or '' resets. `anchor` = Puck's current history
    * id. Keystrokes into the same key and anchor within COALESCE_MS of the previous one are one undo
-   * step. Refused (false) when read-only, not loaded, shared without siteText, or an unknown key
-   * is given a value (resetting an unknown key is allowed: it cleans up leftovers).
+   * step. Refused (false) when read-only, not loaded, `loadEpoch` is given and not the current one,
+   * shared without siteText, or an unknown key is given a value (resetting an unknown key is
+   * allowed: it cleans up leftovers).
    */
-  setText(scope: TextScope, key: string, value: DraftValue | null, anchor: string | null): boolean;
+  setText(scope: TextScope, key: string, value: DraftValue | null, anchor: string | null, loadEpoch?: number): boolean;
   /** Language or number format of the shared doc; a new language resets the format to built-in. */
-  setLanguage(patch: Partial<TextLanguage>, anchor: string | null): boolean;
+  setLanguage(patch: Partial<TextLanguage>, anchor: string | null, loadEpoch?: number): boolean;
   undoText(): boolean;
   redoText(): boolean;
   discardTextFuture(): void;
-  setPublishedText(p: PublishedShared): void;
+  /** Ignored when `loadEpoch` is given and not the current one (a fetch started under an earlier load). */
+  setPublishedText(p: PublishedShared, loadEpoch?: number): void;
   selectDoc(docKey: DocKey): void;
   /**
    * Puck's onChange for the selected doc. Ignored unless `docKey` is the selected page, and ignored
@@ -87,7 +95,7 @@ export interface EditorState {
 
 /** The text part of a fresh store (also what tests reset to). */
 export const TEXT_INITIAL = {
-  siteText: null, sharedEditable: false, pageText: emptyPageText(), published: null, textPast: [], textFuture: [],
+  siteText: null, sharedEditable: false, pageText: emptyPageText(), published: null, textPast: [], textFuture: [], loadEpoch: 0,
 } satisfies Partial<EditorState>;
 
 type TextState = Pick<EditorState, 'sharedEditable' | 'siteText' | 'published'>;
@@ -163,6 +171,7 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
       published: null,
       textPast: [],
       textFuture: [],
+      loadEpoch: s.loadEpoch + 1,
     }));
   },
 
@@ -230,9 +239,9 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
     if (viewport !== get().viewport) set({ viewport });
   },
 
-  setText(scope, key, value, anchor) {
+  setText(scope, key, value, anchor, loadEpoch) {
     const s = get();
-    if (s.readOnly || s.status !== 'ready') return false;
+    if (s.readOnly || s.status !== 'ready' || (loadEpoch !== undefined && loadEpoch !== s.loadEpoch)) return false;
     if (scope === 'shared' && (!s.sharedEditable || !s.siteText)) return false;
     if (value !== null && value !== '' && !rowFor(key)) return false;
     const { locale } = textLanguage(s);
@@ -256,9 +265,10 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
     return true;
   },
 
-  setLanguage(patch, anchor) {
+  setLanguage(patch, anchor, loadEpoch) {
     const s = get();
-    if (s.readOnly || s.status !== 'ready' || !s.sharedEditable || !s.siteText) return false;
+    if (s.readOnly || s.status !== 'ready' || (loadEpoch !== undefined && loadEpoch !== s.loadEpoch)) return false;
+    if (!s.sharedEditable || !s.siteText) return false;
     const cur = s.siteText.language;
     const locale = patch.locale ?? cur.locale;
     const formatLocale = patch.formatLocale !== undefined ? patch.formatLocale : locale !== cur.locale ? '' : cur.formatLocale;
@@ -303,28 +313,46 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
     if (get().textFuture.length > 0) set({ textFuture: [] });
   },
 
-  setPublishedText(published) {
+  setPublishedText(published, loadEpoch) {
+    if (loadEpoch !== undefined && loadEpoch !== get().loadEpoch) return;
     set({ published });
   },
 }));
 
+let historySource: (() => PuckHistoryView | null) | null = null;
 /**
- * A block edit ends the typing run and invalidates the text redo stack (a redo anchored to a
- * Puck entry the edit branched away from would otherwise read as "another mount" and replay).
- * `deferred` is for Puck's onChange, which also fires for Puck's own undo/redo: Puck calls it
- * synchronously inside its dispatch, before it moves its history index, and records a new entry
- * only after a 250 ms debounce. So once the current task ends, an undo/redo has moved the
- * anchor while a new edit has not — only the latter clears the stack.
+ * The live canvas (EditorHeader, Task 10) registers how to read Puck's history. It MUST read Puck's
+ * app store live at call time (`getPuck().history` / `appStore.getState().history`), never a value
+ * captured at render: the store reads it inside Puck's onChange and again a microtask later.
+ */
+export function setPuckHistorySource(fn: (() => PuckHistoryView | null) | null): void {
+  historySource = fn;
+}
+
+/**
+ * A block edit ends the typing run and invalidates the text redo stack (a redo anchored to a Puck
+ * entry the edit branched away from would otherwise read as "another mount" and replay).
+ *
+ * `deferred` is for Puck's onChange, which also fires for Puck's own undo/redo. Those only move
+ * Puck's index to an entry that already exists; a new edit records a freshly minted id (after a
+ * debounce in current Puck, but possibly synchronously in another version). So the history is
+ * read at change time and again once the current task ends, and the stack is kept only when the
+ * position moved to an id that was already in the history at change time. Anything else — no
+ * source registered, the position unchanged (record still pending), or a new id — clears it.
+ * Losing a text redo is the safe failure; replaying a branched-away one is not.
  */
 function blockEdited(deferred: boolean): void {
   lastTextEdit = null;
   if (useEditorStore.getState().textFuture.length === 0) return;
-  if (!deferred) {
+  const before = deferred ? historySource?.() ?? null : null;
+  if (!before) {
     useEditorStore.setState({ textFuture: [] });
     return;
   }
-  const before = currentAnchor();
+  const known = new Set(before.anchors);
   queueMicrotask(() => {
-    if (currentAnchor() === before) useEditorStore.getState().discardTextFuture();
+    const after = historySource?.() ?? null;
+    const stepped = after !== null && after.anchor !== before.anchor && after.anchor !== null && known.has(after.anchor);
+    if (!stepped) useEditorStore.getState().discardTextFuture();
   });
 }

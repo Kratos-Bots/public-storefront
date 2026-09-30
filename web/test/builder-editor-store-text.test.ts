@@ -1,7 +1,7 @@
 // web/test/builder-editor-store-text.test.ts
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { DEFAULT_PREVIEW_AS, TEXT_INITIAL, editorTextOf, isTextReady, textIssuesOf, textLanguage, useEditorStore } from '@/builder/editor/store.ts';
-import { COALESCE_MS, TEXT_HISTORY_MAX, setAnchorSource } from '@/builder/editor/text/history.ts';
+import { DEFAULT_PREVIEW_AS, TEXT_INITIAL, editorTextOf, isTextReady, setPuckHistorySource, textIssuesOf, textLanguage, useEditorStore } from '@/builder/editor/store.ts';
+import { COALESCE_MS, TEXT_HISTORY_MAX, type PuckHistoryView } from '@/builder/editor/text/history.ts';
 import { plainKey, pluralKey } from './helpers/text-keys.ts';
 
 const reset = () => useEditorStore.setState({ status: 'waiting', layout: 'storefront', readOnly: false, docs: {}, docKey: 'catalog', epoch: 0, previewAs: DEFAULT_PREVIEW_AS, viewport: null, ...TEXT_INITIAL });
@@ -111,7 +111,7 @@ describe('editor store: text', () => {
 describe('editor store: text history limits and block edits', () => {
   const key = plainKey();
   beforeEach(() => { reset(); vi.useFakeTimers(); });
-  afterEach(() => { setAnchorSource(null); vi.useRealTimers(); });
+  afterEach(() => { setPuckHistorySource(null); vi.useRealTimers(); });
 
   const flush = () => Promise.resolve();
   const catalogEdit = (title: string) =>
@@ -178,20 +178,68 @@ describe('editor store: text history limits and block edits', () => {
     expect(S().redoText()).toBe(false);
   });
 
-  it('a canvas undo/redo (Puck moves its history position) keeps the text redo stack', async () => {
+  /** A fake Puck history read live, as Task 10's source must (appStore.getState(), not a render snapshot). */
+  function fakePuck(ids: string[]) {
+    const h = { ids: [...ids], index: ids.length - 1 };
+    setPuckHistorySource((): PuckHistoryView => ({
+      anchor: h.ids[h.index] ?? null, anchors: [...h.ids], index: h.index, hasPast: h.index > 0, hasFuture: h.index < h.ids.length - 1,
+    }));
+    return {
+      back: () => { h.index -= 1; },
+      forward: () => { h.index += 1; },
+      record: (id: string) => { h.ids = [...h.ids.slice(0, h.index + 1), id]; h.index = h.ids.length - 1; },
+    };
+  }
+
+  it('a canvas undo/redo (Puck moves to an existing entry) keeps the text redo stack', async () => {
     S().load({ layout: 'storefront', pageSet: null, readOnly: false, siteText: null });
-    let anchor = 'd1';
-    setAnchorSource(() => anchor);
-    catalogEdit('First');
-    await flush();
+    const puck = fakePuck(['d0', 'd1']);
     withTextRedo();
-    // Puck's back(): onChange fires first, then the history index moves (same tick).
+    // Puck's back(): onChange fires inside its dispatch, then the index moves (same task).
     catalogEdit('Before');
-    anchor = 'd0';
+    puck.back();
     await flush();
     expect(S().textFuture).toHaveLength(1);
-    // A new block edit leaves Puck's position where it is until its debounced record.
+    catalogEdit('After');
+    puck.forward();
+    await flush();
+    expect(S().textFuture).toHaveLength(1);
+  });
+
+  it('a new block edit with Puck recording later (debounced) clears the text redo stack', async () => {
+    S().load({ layout: 'storefront', pageSet: null, readOnly: false, siteText: null });
+    fakePuck(['d0', 'd1']);
+    withTextRedo();
     catalogEdit('Branch');
+    await flush();
+    expect(S().textFuture).toEqual([]);
+  });
+
+  it('a Puck that records synchronously (before or after onChange) still clears the text redo stack', async () => {
+    S().load({ layout: 'storefront', pageSet: null, readOnly: false, siteText: null });
+    const puck = fakePuck(['d0', 'd1']);
+    withTextRedo();
+    puck.record('d2');          // recorded before onChange: the fresh id is already current
+    catalogEdit('Branch A');
+    await flush();
+    expect(S().textFuture).toEqual([]);
+
+    withTextRedo();
+    catalogEdit('Branch B');
+    puck.record('d3');          // recorded right after onChange: an id not in the history before
+    await flush();
+    expect(S().textFuture).toEqual([]);
+  });
+
+  it('after an undo, a new edit that truncates Puck future clears the text redo stack', async () => {
+    S().load({ layout: 'storefront', pageSet: null, readOnly: false, siteText: null });
+    const puck = fakePuck(['d0', 'd1', 'd2']);
+    catalogEdit('At d1');
+    puck.back();
+    await flush();
+    withTextRedo();
+    catalogEdit('Branch');
+    puck.record('d9');          // drops d2; d9 was not in the history before the change
     await flush();
     expect(S().textFuture).toEqual([]);
   });
@@ -258,5 +306,45 @@ describe('editor store: editorTextOf', () => {
     const b = editorTextOf(S());
     expect(b).toEqual({ locale: 'de', formatLocale: 'de-AT', shared: { [key]: 'Geteilt' }, layout: {} });
     expect(b.layout).toBe(a.layout);
+  });
+});
+
+// Fix round 1: text edits and the published read are tied to the load they were made under.
+describe('editor store: stale text edits across a load', () => {
+  const key = plainKey();
+  beforeEach(reset);
+
+  it('setText / setLanguage with the loadEpoch of an earlier load are dropped', () => {
+    S().load({ layout: 'storefront', pageSet: null, readOnly: false, siteText: null });
+    const first = S().loadEpoch;
+    expect(S().setText('layout', key, 'Mine', null, first)).toBe(true);
+    S().load({ layout: 'menu', pageSet: null, readOnly: false, siteText: null });
+    expect(S().loadEpoch).not.toBe(first);
+    expect(S().setText('layout', key, 'Late blur', null, first)).toBe(false);
+    expect(S().setText('shared', key, 'Late blur', null, first)).toBe(false);
+    expect(S().setLanguage({ locale: 'de' }, null, first)).toBe(false);
+    expect(S().pageText.strings).toEqual({});
+    expect(S().siteText!.strings).toEqual({});
+    expect(textLanguage(S()).locale).toBe('en');
+    expect(S().setText('layout', key, 'Now', null, S().loadEpoch)).toBe(true);
+    expect(S().setLanguage({ locale: 'de' }, null, S().loadEpoch)).toBe(true);
+  });
+
+  it('page resets and new pages do not invalidate a text edit (only a load does)', () => {
+    S().load({ layout: 'storefront', pageSet: null, readOnly: false, siteText: null });
+    const at = S().loadEpoch;
+    expect(S().createPage('about', 'About')).toBeNull();
+    S().resetDoc('page:about');
+    expect(S().setText('layout', key, 'Still mine', null, at)).toBe(true);
+  });
+
+  it('setPublishedText from an earlier load is ignored', () => {
+    S().load({ layout: 'storefront', pageSet: null, readOnly: false });
+    const first = S().loadEpoch;
+    S().load({ layout: 'menu', pageSet: null, readOnly: false });
+    S().setPublishedText({ language: { locale: 'de', formatLocale: '' }, shared: {} }, first);
+    expect(S().published).toBeNull();
+    S().setPublishedText({ language: { locale: 'de', formatLocale: '' }, shared: {} }, S().loadEpoch);
+    expect(textLanguage(S()).locale).toBe('de');
   });
 });

@@ -182,3 +182,38 @@ describe('builder session: only postable text goes out', () => {
     stop();
   });
 });
+
+// Fix round 1: the published read arriving after the baseline.
+describe('builder session: published text arrival', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    useEditorStore.setState({ status: 'waiting', layout: 'storefront', readOnly: false, docs: {}, docKey: 'catalog', epoch: 0, previewAs: DEFAULT_PREVIEW_AS, viewport: null, ...TEXT_INITIAL });
+    builderOverrides.setState({ theme: null, layout: null });
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it('in the default language it posts nothing after the baseline', () => {
+    const { win, send, changes } = fakeWindow();
+    const stop = startBuilderSession(win, new QueryClient());
+    send(load());
+    useEditorStore.getState().setPublishedText({ language: { locale: 'en', formatLocale: '' }, shared: { [plainKey()]: 'Shared' } });
+    vi.advanceTimersByTime(CHANGE_DEBOUNCE_MS * 2);
+    expect(changes()).toHaveLength(1);
+    stop();
+  });
+
+  it('in another language only textIssues change: pageSet equals the baseline (the admin never re-saves an equal value)', () => {
+    const { win, send, changes } = fakeWindow();
+    const stop = startBuilderSession(win, new QueryClient());
+    const bad = { strings: { de: { [plainKey()]: 'Kaputt {' } } };
+    send(load({ pageSet: { schemaVersion: 1, shell: shell(), pages: {}, text: bad } }));
+    expect(changes()[0].textIssues).toEqual([]);
+    useEditorStore.getState().setPublishedText({ language: { locale: 'de', formatLocale: '' }, shared: {} });
+    vi.advanceTimersByTime(CHANGE_DEBOUNCE_MS);
+    expect(changes()).toHaveLength(2);
+    expect(changes()[1].pageSet).toEqual(changes()[0].pageSet);
+    expect('siteText' in changes()[1]).toBe(false);
+    expect(changes()[1].textIssues).toEqual([expect.objectContaining({ scope: 'layout', rule: 'bad-brace' })]);
+    stop();
+  });
+});
