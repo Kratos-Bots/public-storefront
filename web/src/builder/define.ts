@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { CoreOptions } from '@/templates/hooks.ts';
 import type { HeaderIconMode } from '@/templates/define.ts';
 import { isComponentLike, type ComponentData, type DocKey, type LayoutKind } from '@/builder/types.ts';
+import type { StringKey, TextKeyPattern } from '@/text/registry.ts';
 
 // Runtime-safe: nothing here may value-import @puckeditor/core (spec §13 A1).
 
@@ -36,6 +37,10 @@ export interface BlockDef<P extends Record<string, unknown>> {
    * may invoke it as a plain function.
    */
   render(props: SlotProps<P> & { puck: BlockRenderContext }): ReactNode;
+  /** Site-text keys this block renders — exact keys or `area.part.*` prefixes (text spec §7.3). Set in Task 15. */
+  text?: readonly TextKeyPattern[];
+  /** Owner props that fall back to a site-text key when blank: render uses `prop.trim() || t(key)` (text spec §6.4). */
+  textProps?: Partial<Record<keyof P & string, StringKey>>;
 }
 
 export function defineBlock<P extends Record<string, unknown>>(def: BlockDef<P>): BlockDef<P> {

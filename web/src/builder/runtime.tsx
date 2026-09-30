@@ -16,15 +16,18 @@ import { WebAppFrame } from '@/layouts/WebAppShell.tsx';
 import { ShellStateContext, useShellStateValue } from '@/layouts/shell-context.ts';
 import { customPageKey, isFixedRouteKey } from '@/builder/types.ts';
 import type { DocKey, LayoutKind, PageRootProps, PageSet, PuckDoc, RouteKey } from '@/builder/types.ts';
+import { TextLayerProvider } from '@/text/runtime.tsx';
+import type { EditorText } from '@/text/types.ts';
 
 export { pagesKey, PAGES_QUERY, pageSetQueryFn } from '@/builder/published.ts';
 
 const PageSetOverrideContext = createContext<{ pageSet: PageSet | null } | null>(null);
 
-/** The editor and preview frames inject a draft set; nothing inside fetches the published one. */
-export function PageSetOverrideProvider({ pageSet, children }: { pageSet: PageSet | null; children: ReactNode }) {
+/** The editor and preview frames inject a draft set (and, with `text`, the edited words); nothing inside fetches the published one. */
+export function PageSetOverrideProvider({ pageSet, text, children }: { pageSet: PageSet | null; text?: EditorText; children: ReactNode }) {
   const value = useMemo(() => ({ pageSet }), [pageSet]);
-  return <PageSetOverrideContext.Provider value={value}>{children}</PageSetOverrideContext.Provider>;
+  const inner = <PageSetOverrideContext.Provider value={value}>{children}</PageSetOverrideContext.Provider>;
+  return text === undefined ? inner : <TextLayerProvider text={text}>{inner}</TextLayerProvider>;
 }
 
 export function usePageSet(layout: LayoutKind): { pageSet: PageSet | null; isLoading: boolean } {

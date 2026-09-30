@@ -9,6 +9,7 @@ import { BUILDER_PATH, isBuilderMode } from '@/app/builder-gate.ts';
 import { buildMantineTheme, lastKnownBrandName } from '@/app/theme-bridge.ts';
 import { useDocumentTheme } from '@/app/document-theme.ts';
 import { TemplateProvider } from '@/templates/runtime.tsx';
+import { TextProvider } from '@/text/runtime.tsx';
 import { router } from '@/app/router.tsx';
 import { effectiveLayout } from '@/app/layout.ts';
 import { isTelegramWebApp } from '@/lib/telegram-webapp.ts';
@@ -131,9 +132,11 @@ function ThemedApp({ settings }: { settings: StorefrontSettings }) {
     <MantineProvider theme={mantineTheme} forceColorScheme={resolved.scheme}>
       <TemplateProvider resolved={resolved} fallback={<PageSkeleton />}>
         <Notifications position="top-center" />
-        <ClosedGate>
-          <RouterProvider router={router} />
-        </ClosedGate>
+        <TextProvider>
+          <ClosedGate>
+            <RouterProvider router={router} />
+          </ClosedGate>
+        </TextProvider>
       </TemplateProvider>
     </MantineProvider>
   );
