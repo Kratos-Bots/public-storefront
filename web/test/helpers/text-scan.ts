@@ -15,7 +15,7 @@ export interface Finding { file: string; line: number; rule: GuardRule; text: st
 /** `text: '*'` allows every finding in `file`. */
 export interface AllowEntry { file: string; text: string; reason: string }
 
-const EXCLUDED = [/^builder\/editor\//, /^text\/keys\//, /\.d\.ts$/];
+const EXCLUDED = [/^builder\/editor\//, /^text\/keys\//, /^text\/notes\//, /\.d\.ts$/];
 const TEXT_ATTRS = new Set(['aria-label', 'aria-description', 'aria-roledescription', 'aria-valuetext', 'placeholder', 'title', 'alt', 'label', 'eyebrow', 'description', 'labelText', 'hint', 'message', 'ariaLabel']);
 const TEXT_PROPS = new Set(['message', 'title', 'label', 'description', 'placeholder', 'hint', 'ariaLabel', 'eyebrow']);
 const TEXT_CALLS = new Set(['setErrors', 'setError', 'errorMessage', 'notifications.show']);

@@ -3,10 +3,8 @@ import { isPluralForms, type TextValue } from '@/text/types.ts';
 export interface TextEntry {
   /** The built-in default — the rendered English of v0.7.0, character for character. */
   readonly en: TextValue;
-  /** Where the line appears, in shopper words; shown in the editor's Text panel. */
-  readonly note?: string;
-  /** Short name; else derived from the last key segment (textLabel). */
-  readonly label?: string;
+  // Editor-only notes and labels live in `@/text/notes/*` (imported only by builder/editor/**), so
+  // the shopper bundle does not carry them.
   /** Max length of every form (default DEFAULT_MAX, never above TEXT_LIMITS.value). */
   readonly max?: number;
   /** Goes through useText but is never editable (closed.*, boot.* — spec §6.2). */

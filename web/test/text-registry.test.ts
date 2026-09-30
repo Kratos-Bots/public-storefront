@@ -7,6 +7,7 @@ import { formsOf, placeholdersOf } from '@/text/define.ts';
 import { checkValue } from '@/text/resolve.ts';
 import { matchesTextPattern, TEXT_AREAS, TEXT_ENTRIES } from '@/text/registry.ts';
 import { SITE_WIDE_TEXT } from '@/text/site-wide.ts';
+import { TEXT_NOTES } from '@/text/notes/index.ts';
 import { BLOCKS } from '@/builder/registry.ts';
 import { DEFAULT_MAX, KEY_RE, TEXT_LIMITS } from '@/text/types.ts';
 import { readdirSync } from 'node:fs';
@@ -14,7 +15,7 @@ import { readdirSync } from 'node:fs';
 const keys = Object.keys(TEXT_ENTRIES);
 const srcFiles = (dir = SRC_ROOT): string[] => readdirSync(dir, { withFileTypes: true }).flatMap((d) => {
   const abs = path.join(dir, d.name);
-  if (d.isDirectory()) return abs.includes(`${path.sep}text${path.sep}keys`) ? [] : srcFiles(abs);
+  if (d.isDirectory()) return abs.includes(`${path.sep}text${path.sep}keys`) || abs.includes(`${path.sep}text${path.sep}notes`) ? [] : srcFiles(abs);
   return /\.(ts|tsx)$/.test(d.name) ? [abs] : [];
 });
 
@@ -36,8 +37,20 @@ describe('text registry (spec §6.6)', () => {
       for (const f of formsOf(e.en)) expect(f.length <= max, `${k}: ${f.length} > ${max}`).toBe(true);
       expect(placeholdersOf(e).size <= TEXT_LIMITS.placeholders, k).toBe(true);
       if (!e.fixed) expect(checkValue(k, e.en), k).toEqual({ ok: true });
-      expect(e.note && e.note.length > 5, `${k} needs a note`).toBe(true);
     }
+  });
+  it('every key has an editor note, and every note belongs to a key', () => {
+    for (const k of keys) expect((TEXT_NOTES[k] ?? '').length > 5, `${k} needs a note`).toBe(true);
+    expect(Object.keys(TEXT_NOTES).filter((k) => !Object.hasOwn(TEXT_ENTRIES, k))).toEqual([]);
+  });
+  it('notes and labels stay out of the shopper registry (editor-only, final review)', () => {
+    for (const k of keys) {
+      expect(Object.keys(TEXT_ENTRIES[k]!).filter((f) => f === 'note' || f === 'label'), k).toEqual([]);
+    }
+    const importers = srcFiles().filter((f) => /['"]@\/text\/notes\//.test(readFileSync(f, 'utf8')))
+      .map((f) => path.relative(SRC_ROOT, f).split(path.sep).join('/'))
+      .filter((f) => !f.startsWith('builder/editor/'));
+    expect(importers).toEqual([]);
   });
   it('no orphans: every non-fixed key is referenced as a literal under web/src (outside text/keys)', () => {
     const corpus = srcFiles().map((f) => readFileSync(f, 'utf8')).join('\n');

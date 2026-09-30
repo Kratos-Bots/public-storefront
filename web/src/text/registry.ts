@@ -50,13 +50,6 @@ export function isStringKey(k: string): k is StringKey { return isTextKey(k) && 
 export function isPluralKey(k: string): k is PluralKey { return isTextKey(k) && typeof TEXT_ENTRIES[k]!.en !== 'string'; }
 /** The English default — for compatibility exports that existing tests read (playbook rule 8). */
 export function defaultText(key: StringKey): string { return TEXT_ENTRIES[key]!.en as string; }
-/** `label`, else the last segment split from camelCase: 'cart.drawer.closeLabel' → 'Close label'. */
-export function textLabel(key: string): string {
-  const entry = TEXT_ENTRIES[key];
-  if (entry?.label) return entry.label;
-  const last = key.slice(key.lastIndexOf('.') + 1).replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/-/g, ' ').toLowerCase();
-  return last.charAt(0).toUpperCase() + last.slice(1);
-}
 export function matchesTextPattern(key: string, pattern: string): boolean {
   return pattern.endsWith('.*') ? key.startsWith(pattern.slice(0, -1)) : key === pattern;
 }

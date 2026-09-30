@@ -1,0 +1,21 @@
+/** Editor-only notes for area `payment`: where each line appears, in shopper words (Text panel). */
+export default {
+  'reference.label': 'Label of the copyable order reference on the after-checkout pages',
+  'missing.title': 'Heading when an after-checkout link has no order reference',
+  'missing.description': 'Text when an after-checkout link has no order reference',
+  'success.eyebrow': 'Small line above the heading after a successful payment',
+  'success.headline': 'Heading after a successful payment',
+  'success.detail': 'Text after a successful payment',
+  'cancel.eyebrow': 'Small line above the heading when the shopper backs out of paying',
+  'cancel.headline': 'Heading when the shopper backs out of paying',
+  'cancel.detail': 'Text when the shopper backs out of paying',
+  'cancel.returnToOrder': 'Button back to the order page after a cancelled payment',
+  'cancel.backToShop': 'Button after a cancelled payment when the order page link is unknown (no arrow)',
+  'placed.eyebrow': 'Small line above the heading once an order is placed without online payment',
+  'placed.headline': 'Heading once an order is placed without online payment',
+  'placed.warning': 'Shown when the online payment could not be started',
+  'placed.chatHint': 'Text above the pay-via-chat buttons',
+  'placed.payViaWhatsapp': 'Button that opens WhatsApp with the order reference filled in',
+  'placed.payViaTelegram': 'Button that opens Telegram with the order reference filled in',
+  'placed.fallback': 'Shown when the shop has no WhatsApp or Telegram link',
+} as const satisfies Record<string, string>;

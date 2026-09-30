@@ -1,0 +1,21 @@
+/** Editor-only notes for area `verify`: where each line appears, in shopper words (Text panel). */
+export default {
+  'page.eyebrow': 'Small label above the title on the product-verification page',
+  'page.title': 'Title of the product-verification page',
+  'page.lead': 'Line under the title on the product-verification page',
+  'form.codeLabel': 'Label of the first code box on the verification form',
+  'form.codePlaceholder': 'Example code shown inside the empty verification-code box',
+  'form.authLabel': 'Label of the second code box on the verification form',
+  'form.submit': 'Button that checks the code pair',
+  'errors.digitsOnly': 'Error beside the authentication-code label when it contains anything but digits',
+  'result.verifiedHead': 'Heading when the code pair matches a genuine unit',
+  'result.verifiedBody': 'Text when the code pair matches a genuine unit',
+  'result.issued': 'Label of the date the unit was issued, on a genuine result',
+  'result.expires': 'Label of the date the unit expires, on a genuine result',
+  'result.expiredNote': 'Note on a genuine result whose expiry date has passed',
+  'result.invalidHead': 'Heading when the code pair matches nothing',
+  'result.invalidBody': 'Text when the code pair matches nothing',
+  'result.invalidHint': 'Second line when the code pair matches nothing',
+  'result.errorHead': 'Heading when the verification service could not be reached',
+  'result.errorBody': 'Text when the verification service could not be reached',
+} as const satisfies Record<string, string>;

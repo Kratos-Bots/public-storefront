@@ -3,7 +3,7 @@ import { defineTextArea, hasBadBrace, placeholdersIn, placeholdersOf, type Param
 import { isLocale, isTextValue, KEY_RE } from '@/text/types.ts';
 
 const area = defineTextArea('cart', {
-  'drawer.title': { en: 'Your cart', note: 'Heading of the slide-out cart' },
+  'drawer.title': { en: 'Your cart' },
   'summary.items': { en: { one: '{count} item', other: '{count} items' } },
   'errors.stock': { en: 'Only {available} left of {name}', max: 80 },
   'units': { en: { one: 'line', other: 'lines' } },

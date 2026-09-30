@@ -1,12 +1,13 @@
 // web/src/builder/editor/text/catalog.ts
 import { TEXT, type TextKey } from '@/text/registry.ts';
 import { SITE_WIDE_TEXT } from '@/text/site-wide.ts';
+import { TEXT_LABELS, TEXT_NOTES } from '@/text/notes/index.ts';
 import { BLOCKS } from '@/builder/registry.ts';
 import type { TextValue } from '@/text/types.ts';
 
 /** The registry (Plan 2, spec §6.1) as the editor lists it: one row per key an owner may edit. */
 
-interface Entry { en: TextValue; note?: string; label?: string; max?: number; fixed?: boolean }
+interface Entry { en: TextValue; max?: number; fixed?: boolean }
 
 export interface TextRowDef {
   key: TextKey;
@@ -76,8 +77,8 @@ export function allRows(): readonly TextRowDef[] {
     rows.push({
       key: key as TextKey,
       area: key.slice(0, key.indexOf('.')),
-      label: e.label ?? labelFromKey(key),
-      note: e.note ?? '',
+      label: TEXT_LABELS[key] ?? labelFromKey(key),
+      note: TEXT_NOTES[key] ?? '',
       def: e.en,
       max: e.max ?? DEFAULT_MAX,
       plural,
