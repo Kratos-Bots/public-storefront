@@ -10,6 +10,7 @@ import { CartLine } from '@/features/cart/CartLine.tsx';
 import { CartSummary } from '@/features/cart/CartSummary.tsx';
 import { useServerCart } from '@/features/cart/useServerCart.ts';
 import classes from '@/features/cart/CartDrawer.module.css';
+import { useText } from '@/text/runtime.tsx';
 
 /**
  * The cart as a panel: it slides in from the right on a desktop and rises as a
@@ -18,6 +19,7 @@ import classes from '@/features/cart/CartDrawer.module.css';
  * have added to it from the bot since this tab was last awake.
  */
 export function CartDrawer() {
+  const { t, tp } = useText();
   const opened = useUiStore((s) => s.cartOpen);
   const close = useUiStore((s) => s.close);
   const lines = useCartStore((s) => s.lines);
@@ -40,18 +42,18 @@ export function CartDrawer() {
     <Sheet
       opened={opened}
       onClose={dismiss}
-      label="Your cart"
+      label={t('cart.drawer.title')}
       part="drawer"
       header={
         <div className={classes.head}>
           <div>
-            <h2 className={classes.title}>Your cart</h2>
+            <h2 className={classes.title}>{t('cart.drawer.title')}</h2>
             <p className={classes.sub}>
-              {count} {count === 1 ? 'item' : 'items'}
+              {tp('cart.summary.items', count)}
               {isSyncing ? <span className={classes.pulse} aria-hidden /> : null}
             </p>
           </div>
-          <button type="button" className={classes.close} onClick={dismiss} aria-label="Close">
+          <button type="button" className={classes.close} onClick={dismiss} aria-label={t('common.actions.close')}>
             <CloseIcon size={16} />
           </button>
         </div>
@@ -60,12 +62,12 @@ export function CartDrawer() {
     >
       {lines.length === 0 ? (
         <EmptyState
-          eyebrow="Cart"
-          title="Nothing on the order yet"
-          description="Everything you add shows up here, with the price at the quantity you're buying."
+          eyebrow={t('cart.page.eyebrow')}
+          title={t('cart.empty.title')}
+          description={t('cart.empty.description')}
           action={
             <Button component={Link} to="/" variant="default" size="sm" onClick={dismiss}>
-              Browse the catalogue
+              {t('common.actions.browseCatalogue')}
             </Button>
           }
         />

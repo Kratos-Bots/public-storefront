@@ -7,6 +7,7 @@ import { CartLine } from '@/features/cart/CartLine.tsx';
 import { CartSummary } from '@/features/cart/CartSummary.tsx';
 import { useServerCart } from '@/features/cart/useServerCart.ts';
 import classes from '@/features/cart/CartPage.module.css';
+import { useText } from '@/text/runtime.tsx';
 
 /**
  * The cart as a page. A phone gets this rather than the drawer: the sheet would
@@ -20,6 +21,7 @@ export interface CartPageProps {
 }
 
 export function CartPage({ foot }: CartPageProps) {
+  const { t, tp } = useText();
   const lines = useCartStore((s) => s.lines);
   const count = useCartStore(selectCount);
   const { setQuantity, remove, issues, isSyncing, refresh } = useServerCart();
@@ -34,12 +36,12 @@ export function CartPage({ foot }: CartPageProps) {
   if (lines.length === 0) {
     return (
       <EmptyState
-        eyebrow="Cart"
-        title="Nothing on the order yet"
-        description="Everything you add shows up here, with the price at the quantity you're buying."
+        eyebrow={t('cart.page.eyebrow')}
+        title={t('cart.empty.title')}
+        description={t('cart.empty.description')}
         action={
           <Button component={Link} to="/" variant="default" size="sm">
-            Browse the catalogue
+            {t('common.actions.browseCatalogue')}
           </Button>
         }
       />
@@ -49,10 +51,10 @@ export function CartPage({ foot }: CartPageProps) {
   return (
     <div className={classes.page}>
       <header className={classes.head}>
-        <span className={classes.eyebrow}>Cart</span>
-        <h1 className={classes.title}>Your cart</h1>
+        <span className={classes.eyebrow}>{t('cart.page.eyebrow')}</span>
+        <h1 className={classes.title}>{t('cart.page.title')}</h1>
         <p className={classes.sub}>
-          {count} {count === 1 ? 'item' : 'items'}
+          {tp('cart.summary.items', count)}
           {isSyncing ? <span className={classes.pulse} aria-hidden /> : null}
         </p>
       </header>

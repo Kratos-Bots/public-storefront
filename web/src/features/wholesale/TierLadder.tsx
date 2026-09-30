@@ -3,6 +3,7 @@ import { formatMoney } from '@/lib/format.ts';
 import { activeRungMin, ladderRungs } from '@/features/wholesale/wholesale-helpers.ts';
 import type { Product } from '@/types/catalog.ts';
 import classes from '@/features/wholesale/TierLadder.module.css';
+import { useText } from '@/text/runtime.tsx';
 
 export interface TierLadderProps {
   id: string;
@@ -24,6 +25,7 @@ export interface TierLadderProps {
  */
 export function TierLadder({ id, product, quantity, band, inCart, groupEnd, ordering, codeColumn = true }: TierLadderProps) {
   const { currency } = useSettings();
+  const { t } = useText();
   const rungs = ladderRungs(product);
   const activeMin = activeRungMin(product, quantity);
 
@@ -49,12 +51,12 @@ export function TierLadder({ id, product, quantity, band, inCart, groupEnd, orde
           >
             {codeColumn ? <td className={classes.pad} role="cell" /> : null}
             <td className={classes.threshold} role="cell">
-              {rung.minQuantity}+ units
-              {active ? <span className={classes.now}>your price</span> : null}
+              {t('wholesale.ladder.minUnits', { min: rung.minQuantity })}
+              {active ? <span className={classes.now}>{t('wholesale.ladder.yourPrice')}</span> : null}
             </td>
             <td className={classes.price} role="cell">
               {formatMoney(rung.price, currency)}
-              <span className={classes.each}>/ea</span>
+              <span className={classes.each}>{t('cart.line.perUnit')}</span>
             </td>
             <td className={classes.off} role="cell">
               {off > 0 ? `−${off}%` : null}

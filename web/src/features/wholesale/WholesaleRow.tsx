@@ -10,6 +10,7 @@ import { rowAnim } from '@/lib/motion.ts';
 import type { Product } from '@/types/catalog.ts';
 import { useCoreOptions } from '@/templates/hooks.ts';
 import classes from '@/features/wholesale/WholesaleRow.module.css';
+import { useText } from '@/text/runtime.tsx';
 
 export interface WholesaleRowProps {
   product: Product;
@@ -31,6 +32,7 @@ export interface WholesaleRowProps {
  * price break, and the chip turns into the discount it just won.
  */
 export function WholesaleRow({ product, band, groupEnd, ordering, index }: WholesaleRowProps) {
+  const { t } = useText();
   const { currency } = useSettings();
   const { showSku } = useCoreOptions();
   const quantity = useCartStore(
@@ -123,9 +125,9 @@ export function WholesaleRow({ product, band, groupEnd, ordering, index }: Whole
               {hasStatus ? (
                 <span className={classes.status}>
                   {status !== 'in' ? <StockChip status={status} /> : null}
-                  {product.isPreorder ? <span className={classes.preorder}>Pre-order</span> : null}
+                  {product.isPreorder ? <span className={classes.preorder}>{t('common.product.preorder')}</span> : null}
                   {product.minOrderQuantity != null ? (
-                    <span className={classes.limit}>Min {product.minOrderQuantity}</span>
+                    <span className={classes.limit}>{t('wholesale.row.min', { count: product.minOrderQuantity })}</span>
                   ) : null}
                 </span>
               ) : null}
@@ -134,7 +136,7 @@ export function WholesaleRow({ product, band, groupEnd, ordering, index }: Whole
 
           <td className={classes.unit} role="cell">
             <span className={classes.unitPrice}>{formatMoney(unitPrice, currency)}</span>
-            <span className={classes.each}>/ea</span>
+            <span className={classes.each}>{t('cart.line.perUnit')}</span>
           </td>
 
           <td className={classes.bulk} role="cell">
@@ -146,12 +148,12 @@ export function WholesaleRow({ product, band, groupEnd, ordering, index }: Whole
                 aria-controls={open ? ladderId : undefined}
                 aria-label={
                   discounted
-                    ? `Bulk price applied, ${saving}% off — show the price breaks for ${product.displayName}`
-                    : `Show the price breaks for ${product.displayName}`
+                    ? t('wholesale.row.bulkPriceApplied', { percent: saving, name: product.displayName })
+                    : t('wholesale.row.showBreaks', { name: product.displayName })
                 }
                 onClick={() => setOpen((v) => !v)}
               >
-                {discounted ? `−${saving}%` : 'Bulk'}
+                {discounted ? `−${saving}%` : t('wholesale.row.bulk')}
                 {/* The chevron follows `aria-expanded` in CSS — the state is
                     declared once, in the place assistive tech reads it. */}
                 <ChevronIcon size={11} />
@@ -175,9 +177,9 @@ export function WholesaleRow({ product, band, groupEnd, ordering, index }: Whole
                       type="button"
                       className={classes.remove}
                       onClick={() => setQty(0)}
-                      aria-label={`Remove ${product.displayName} from the order`}
+                      aria-label={t('wholesale.row.removeAria', { name: product.displayName })}
                     >
-                      Remove
+                      {t('cart.line.removeButton')}
                     </button>
                   ) : null
                 ) : (
@@ -187,7 +189,7 @@ export function WholesaleRow({ product, band, groupEnd, ordering, index }: Whole
                       className={classes.step}
                       disabled={!inCart}
                       onClick={onDecrement}
-                      aria-label={`One fewer ${product.displayName}`}
+                      aria-label={t('common.qty.fewer', { name: product.displayName })}
                     >
                       <MinusIcon size={15} />
                     </button>
@@ -198,7 +200,7 @@ export function WholesaleRow({ product, band, groupEnd, ordering, index }: Whole
                       pattern="[0-9]*"
                       autoComplete="off"
                       placeholder="0"
-                      aria-label={`${product.displayName} quantity`}
+                      aria-label={t('cart.line.quantityLabel', { name: product.displayName })}
                       value={draft}
                       onChange={(e) => setDraft(e.currentTarget.value.replace(/\D/g, ''))}
                       onBlur={commitDraft}
@@ -211,7 +213,7 @@ export function WholesaleRow({ product, band, groupEnd, ordering, index }: Whole
                       className={classes.step}
                       disabled={atCeiling}
                       onClick={onIncrement}
-                      aria-label={`One more ${product.displayName}`}
+                      aria-label={t('common.qty.more', { name: product.displayName })}
                     >
                       <PlusIcon size={15} />
                     </button>

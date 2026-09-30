@@ -7,6 +7,7 @@ import { formatMoney } from '@/lib/format.ts';
 import { checkoutTarget } from '@/features/cart/checkout-target.ts';
 import { Slot } from '@/templates/runtime.tsx';
 import classes from '@/features/cart/CartSummary.module.css';
+import { useText } from '@/text/runtime.tsx';
 
 export interface CartSummaryProps {
   /** A line the server has withdrawn, or one violating its order-quantity limit, is
@@ -25,6 +26,7 @@ export interface CartSummaryProps {
  * saying so plainly is cheaper than a shopper discovering it at the payment step.
  */
 export function CartSummary({ blocked, onNavigate }: CartSummaryProps) {
+  const { t, tp } = useText();
   const { currency, features } = useSettings();
   const loggedIn = useSessionStore(selectIsLoggedIn);
   const count = useCartStore(selectCount);
@@ -38,24 +40,24 @@ export function CartSummary({ blocked, onNavigate }: CartSummaryProps) {
     <div className={classes.summary}>
       {mixedPreorder ? (
         <p className={classes.notice}>
-          This order mixes in-stock and pre-order items — pre-orders dispatch when they land.
+          {t('cart.summary.mixedNotice')}
         </p>
       ) : null}
 
       <div className={classes.ledger}>
         <span className={classes.label}>
-          Subtotal
+          {t('common.totals.subtotal')}
           <span className={classes.units}>
-            {count} {count === 1 ? 'item' : 'items'}
+            {tp('cart.summary.items', count)}
           </span>
         </span>
         <span className={classes.figure}>{formatMoney(subtotal, currency)}</span>
       </div>
 
-      <p className={classes.terms}>Shipping and discounts are calculated at checkout.</p>
+      <p className={classes.terms}>{t('cart.summary.terms')}</p>
 
       {primaryElsewhere ? (
-        blocked ? <p className={classes.held}>Resolve the flagged items to continue.</p> : null
+        blocked ? <p className={classes.held}>{t('cart.summary.held')}</p> : null
       ) : blocked ? (
         <>
           <button
@@ -66,10 +68,10 @@ export function CartSummary({ blocked, onNavigate }: CartSummaryProps) {
             data-variant="filled"
             data-sf-cta="main"
           >
-            Checkout
+            {t('cart.summary.checkout')}
             <Slot name="ButtonAdornment" variant="primary" cta />
           </button>
-          <p className={classes.held}>Resolve the flagged items to continue.</p>
+          <p className={classes.held}>{t('cart.summary.held')}</p>
         </>
       ) : (
         <Link
@@ -80,13 +82,13 @@ export function CartSummary({ blocked, onNavigate }: CartSummaryProps) {
           data-variant="filled"
           data-sf-cta="main"
         >
-          Checkout
+          {t('cart.summary.checkout')}
           <Slot name="ButtonAdornment" variant="primary" cta />
         </Link>
       )}
 
       <Link to="/" className={classes.keep} onClick={onNavigate}>
-        Continue shopping
+        {t('cart.summary.keepShopping')}
       </Link>
     </div>
   );

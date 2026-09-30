@@ -7,6 +7,7 @@ import { rowAnim } from '@/lib/motion.ts';
 import type { LocalLine } from '@/stores/cart.ts';
 import type { ServerCartLine } from '@/types/cart.ts';
 import classes from '@/features/cart/CartLine.module.css';
+import { useText } from '@/text/runtime.tsx';
 
 export interface CartLineProps {
   line: LocalLine;
@@ -29,6 +30,7 @@ export interface CartLineProps {
  * quantity, not how you delete a line — Remove is the only thing that does that.
  */
 export function CartLine({ line, issue, onQuantity, onRemove, index = 0 }: CartLineProps) {
+  const { t } = useText();
   const { currency } = useSettings();
   const [draft, setDraft] = useState(String(line.quantity));
   useEffect(() => setDraft(String(line.quantity)), [line.quantity]);
@@ -57,9 +59,9 @@ export function CartLine({ line, issue, onQuantity, onRemove, index = 0 }: CartL
       type="button"
       className={classes.remove}
       onClick={() => onRemove(line.productId)}
-      aria-label={`Remove ${line.displayName}`}
+      aria-label={t('common.qty.remove', { name: line.displayName })}
     >
-      Remove
+      {t('cart.line.removeButton')}
     </button>
   );
 
@@ -86,9 +88,9 @@ export function CartLine({ line, issue, onQuantity, onRemove, index = 0 }: CartL
           <span className={classes.was}>{formatMoney(line.basePrice, currency)}</span>
         ) : null}
         <span className={classes.unit}>{formatMoney(line.unitPrice, currency)}</span>
-        <span className={classes.each}>/ea</span>
-        {line.isPreorder ? <span className={classes.preorder}>Pre-order</span> : null}
-        {issue?.priceChanged ? <span className={classes.chip}>Price updated</span> : null}
+        <span className={classes.each}>{t('cart.line.perUnit')}</span>
+        {line.isPreorder ? <span className={classes.preorder}>{t('common.product.preorder')}</span> : null}
+        {issue?.priceChanged ? <span className={classes.chip}>{t('cart.line.priceUpdated')}</span> : null}
       </span>
 
       {withdrawn ? null : (
@@ -99,7 +101,7 @@ export function CartLine({ line, issue, onQuantity, onRemove, index = 0 }: CartL
               className={classes.step}
               disabled={line.quantity <= minBound}
               onClick={() => onQuantity(line.productId, line.quantity - 1)}
-              aria-label={`One fewer ${line.displayName}`}
+              aria-label={t('common.qty.fewer', { name: line.displayName })}
             >
               <MinusIcon size={15} />
             </button>
@@ -109,7 +111,7 @@ export function CartLine({ line, issue, onQuantity, onRemove, index = 0 }: CartL
               inputMode="numeric"
               pattern="[0-9]*"
               autoComplete="off"
-              aria-label={`${line.displayName} quantity`}
+              aria-label={t('cart.line.quantityLabel', { name: line.displayName })}
               value={draft}
               onChange={(e) => type(e.currentTarget.value)}
               onBlur={() => setDraft(String(line.quantity))}
@@ -119,7 +121,7 @@ export function CartLine({ line, issue, onQuantity, onRemove, index = 0 }: CartL
               className={classes.step}
               disabled={maxBound !== null && line.quantity >= maxBound}
               onClick={() => onQuantity(line.productId, line.quantity + 1)}
-              aria-label={`One more ${line.displayName}`}
+              aria-label={t('common.qty.more', { name: line.displayName })}
             >
               <PlusIcon size={15} />
             </button>
@@ -131,34 +133,34 @@ export function CartLine({ line, issue, onQuantity, onRemove, index = 0 }: CartL
 
       {issue?.inactive ? (
         <span className={`${classes.note} ${classes.gone}`}>
-          <span className={classes.noteText}>No longer available — remove to continue</span>
+          <span className={classes.noteText}>{t('cart.line.unavailable')}</span>
           {removeButton}
         </span>
       ) : issue && issue.belowMin && issue.minOrderQuantity != null ? (
         <span className={`${classes.note} ${classes.short}`}>
-          <span className={classes.noteText}>Minimum {issue.minOrderQuantity} per order</span>
+          <span className={classes.noteText}>{t('cart.line.minimum', { count: issue.minOrderQuantity })}</span>
           <button
             type="button"
             className={classes.fix}
             onClick={() => onQuantity(line.productId, issue.minOrderQuantity as number)}
           >
-            Set to {issue.minOrderQuantity}
+            {t('cart.line.setTo', { count: issue.minOrderQuantity })}
           </button>
         </span>
       ) : issue && issue.aboveMax && issue.maxOrderQuantity != null ? (
         <span className={`${classes.note} ${classes.short}`}>
-          <span className={classes.noteText}>Maximum {issue.maxOrderQuantity} per order</span>
+          <span className={classes.noteText}>{t('cart.line.maximum', { count: issue.maxOrderQuantity })}</span>
           <button
             type="button"
             className={classes.fix}
             onClick={() => onQuantity(line.productId, issue.maxOrderQuantity as number)}
           >
-            Set to {issue.maxOrderQuantity}
+            {t('cart.line.setTo', { count: issue.maxOrderQuantity })}
           </button>
         </span>
       ) : issue?.outOfStock ? (
         <span className={`${classes.note} ${classes.short}`}>
-          <span className={classes.noteText}>Out of stock</span>
+          <span className={classes.noteText}>{t('cart.line.outOfStock')}</span>
         </span>
       ) : null}
     </li>
