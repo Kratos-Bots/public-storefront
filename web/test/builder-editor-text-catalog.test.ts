@@ -1,8 +1,9 @@
 // web/test/builder-editor-text-catalog.test.ts
 import { describe, expect, it } from 'vitest';
-import { TEXT } from '@/text/registry.ts';
+import { TEXT, TEXT_AREAS, TEXT_ENTRIES } from '@/text/registry.ts';
+import { DEFAULT_MAX as TEXT_DEFAULT_MAX } from '@/text/types.ts';
 import {
-  allRows, blockTextRows, isFixedKey, isForTemplate, labelFromKey, matchesPattern, placeholdersOf, rowFor, rowMatches,
+  allRows, AREA_TITLES, blockTextRows, DEFAULT_MAX, isFixedKey, isForTemplate, labelFromKey, matchesPattern, placeholdersOf, rowFor, rowMatches,
   textGroups, SITE_WIDE_GROUP,
 } from '@/builder/editor/text/catalog.ts';
 import { defaultOf, fixedKey, placeholderKey, plainKey, pluralKey } from './helpers/text-keys.ts';
@@ -39,6 +40,19 @@ describe('text catalogue', () => {
   it('labels come from the last key segment', () => {
     expect(labelFromKey('checkout.errors.paymentMissing')).toBe('Payment missing');
     expect(labelFromKey('cart.drawer.title')).toBe('Title');
+    // Key segments may carry - and _ (backend key rule): they read as spaces.
+    expect(labelFromKey('templates.dark-luxury.hero-title')).toBe('Hero title');
+    expect(labelFromKey('templates.default.footer_note')).toBe('Footer note');
+  });
+
+  it('shares the shopper registry\'s own rules: default max, areas in registry order', () => {
+    expect(DEFAULT_MAX).toBe(TEXT_DEFAULT_MAX);
+    for (const r of allRows()) expect(r.max, r.key).toBe(TEXT_ENTRIES[r.key]!.max ?? TEXT_DEFAULT_MAX);
+    const areaGroups = textGroups('modern').map((g) => g.id).filter((id) => id !== SITE_WIDE_GROUP);
+    const order = TEXT_AREAS.filter((a) => areaGroups.includes(a));
+    expect(areaGroups).toEqual(order);
+    // Every area with editable rows has a proper title (fixed-only areas never list).
+    for (const area of new Set(allRows().map((r) => r.area))) expect(AREA_TITLES[area], area).toBeTruthy();
   });
 
   it('patterns: exact keys and area.part.* prefixes', () => {

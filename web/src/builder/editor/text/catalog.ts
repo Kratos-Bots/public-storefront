@@ -1,13 +1,16 @@
 // web/src/builder/editor/text/catalog.ts
-import { TEXT, type TextKey } from '@/text/registry.ts';
+import { matchesTextPattern, TEXT_AREAS, TEXT_ENTRIES, type TextKey } from '@/text/registry.ts';
+import { formsOf, placeholdersOf as entryPlaceholders } from '@/text/define.ts';
 import { SITE_WIDE_TEXT } from '@/text/site-wide.ts';
 import { TEXT_LABELS, TEXT_NOTES } from '@/text/notes/index.ts';
 import { BLOCKS } from '@/builder/registry.ts';
-import type { TextValue } from '@/text/types.ts';
+import { DEFAULT_MAX, type TextValue } from '@/text/types.ts';
 
-/** The registry (Plan 2, spec §6.1) as the editor lists it: one row per key an owner may edit. */
-
-interface Entry { en: TextValue; max?: number; fixed?: boolean }
+/**
+ * The registry (Plan 2, spec §6.1) as the editor lists it: one row per key an owner may edit.
+ * Limits, placeholders, patterns and area order are the shopper registry's own (`@/text`), so the
+ * editor can't drift from what the resolver accepts.
+ */
 
 export interface TextRowDef {
   key: TextKey;
@@ -22,11 +25,11 @@ export interface TextRowDef {
   multiline: boolean;
 }
 
-export const DEFAULT_MAX = 200;
+export { DEFAULT_MAX };
 export const MULTILINE_OVER = 60;
 export const SITE_WIDE_GROUP = 'site-wide';
 
-/** Spec §6.1 areas, in Text panel order. `closed` and `boot` are fixed and never listed. */
+/** Titles of the spec §6.1 areas. `closed` and `boot` are fixed and never listed. */
 export const AREA_TITLES: Record<string, string> = {
   common: 'Common',
   shell: 'Header, footer and menus',
@@ -46,22 +49,21 @@ export const AREA_TITLES: Record<string, string> = {
   errors: 'Error messages',
   templates: 'Template',
 };
-const AREA_ORDER = Object.keys(AREA_TITLES);
+/** The registry's area order (Text panel order). */
+const AREA_ORDER: readonly string[] = TEXT_AREAS;
 
-const REGISTRY = TEXT as unknown as Record<string, Entry>;
-const NAME_RE = /\{([A-Za-z][A-Za-z0-9]{0,31})\}/g;
+const REGISTRY = TEXT_ENTRIES;
 
-const forms = (v: TextValue): string[] => (typeof v === 'string' ? [v] : Object.values(v).filter((s): s is string => typeof s === 'string'));
-
+/** The resolver's placeholder set (`@/text/define.ts`), as chips: `count` first for a plural. */
 export function placeholdersOf(def: TextValue, plural: boolean): string[] {
-  const names = new Set<string>(plural ? ['count'] : []);
-  for (const f of forms(def)) for (const m of f.matchAll(NAME_RE)) names.add(m[1]!);
-  return [...names];
+  const names = [...entryPlaceholders({ en: def })];
+  return plural ? ['count', ...names.filter((n) => n !== 'count')] : names;
 }
 
+/** The fallback label where TEXT_LABELS has none: the last key segment in words ("paymentMissing", "hero-title"). */
 export function labelFromKey(key: string): string {
   const last = key.slice(key.lastIndexOf('.') + 1);
-  const words = last.replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase();
+  const words = last.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/[-_]+/g, ' ').trim().toLowerCase();
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
@@ -83,7 +85,7 @@ export function allRows(): readonly TextRowDef[] {
       max: e.max ?? DEFAULT_MAX,
       plural,
       placeholders: placeholdersOf(e.en, plural),
-      multiline: Math.max(...forms(e.en).map((f) => f.length)) > MULTILINE_OVER,
+      multiline: Math.max(...formsOf(e.en).map((f) => f.length)) > MULTILINE_OVER,
     });
   }
   byKey = new Map(rows.map((r) => [r.key, r]));
@@ -98,9 +100,7 @@ export function rowFor(key: string): TextRowDef | null {
 export const isFixedKey = (key: string): boolean => Object.hasOwn(REGISTRY, key) && REGISTRY[key]!.fixed === true;
 
 /** Exact key, or `area.part.*` = every key starting with `area.part.` (spec §7.3). */
-export function matchesPattern(key: string, pattern: string): boolean {
-  return pattern.endsWith('.*') ? key.startsWith(pattern.slice(0, -1)) : key === pattern;
-}
+export const matchesPattern = matchesTextPattern;
 
 /**
  * `templates.<id>.*` keys belong to one template; the panel shows only the active one's, plus
@@ -140,5 +140,5 @@ export function textGroups(templateId: string): TextGroup[] {
 export function rowMatches(row: TextRowDef, query: string, extra: readonly string[] = []): boolean {
   const q = query.trim().toLowerCase();
   if (!q) return true;
-  return [row.key, row.label, row.note, ...forms(row.def), ...extra].some((s) => s.toLowerCase().includes(q));
+  return [row.key, row.label, row.note, ...formsOf(row.def), ...extra].some((s) => s.toLowerCase().includes(q));
 }
