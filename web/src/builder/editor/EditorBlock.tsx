@@ -96,7 +96,16 @@ function withItems(slots: Record<string, unknown>, stored: ComponentData | undef
  */
 function useStoredItem(id: unknown): ComponentData | undefined {
   try {
-    return usePuck((s) => (typeof id === 'string' ? (s.getItemById(id) as ComponentData | undefined) : undefined));
+    return usePuck((s) => {
+      if (typeof id !== 'string') return undefined;
+      // Puck 0.23's getItemById reads `indexes.nodes[id].data`: a TypeError while the id is briefly
+      // out of the index (mid delete / move). No items for that render, never a crashed block.
+      try {
+        return s.getItemById(id) as ComponentData | undefined;
+      } catch {
+        return undefined;
+      }
+    });
   } catch (error) {
     if (error instanceof Error && error.message.startsWith('usePuck must be used inside <Puck>')) return undefined;
     throw error;

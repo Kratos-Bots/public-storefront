@@ -4,7 +4,7 @@ import { useBuilderMode } from '@/builder/mode.ts';
 import type { BlockRenderContext, SlotRender } from '@/builder/define.ts';
 import type { ComponentData, DocKey, LayoutKind, PuckDoc } from '@/builder/types.ts';
 import { renderBlock } from '@/builder/style/apply.tsx';
-import { FAMILY_DOC } from '@/builder/parts.ts';
+import { FAMILY_DOCS } from '@/builder/parts.ts';
 
 const logged = new Set<string>();
 
@@ -81,14 +81,15 @@ export function slotRenders(slots: Readonly<Record<string, readonly ComponentDat
 
 /**
  * A container's default arrangement as slot renders: the feature components' no-argument entry
- * points (tests, v0.7.0 call sites) draw exactly what the default document draws.
+ * points (tests, v0.7.0 call sites) draw exactly what the default document draws. The parts render
+ * under `docKey` (the caller's document), else the family's home document.
  */
-export function defaultSlotRenders(type: string, layout: LayoutKind, props: Record<string, unknown> = {}): Record<string, SlotRender> {
+export function defaultSlotRenders(type: string, layout: LayoutKind, props: Record<string, unknown> = {}, docKey?: DocKey): Record<string, SlotRender> {
   const def = blockDef(type);
   const spec = def?.container;
   if (!spec) return {};
   const id = `${type}-default`;
-  return slotRenders(spec.defaultSlots(props, { layout, id }), { editing: false, docKey: FAMILY_DOC[spec.family], layout });
+  return slotRenders(spec.defaultSlots(props, { layout, id }), { editing: false, docKey: docKey ?? FAMILY_DOCS[spec.family][0]!, layout });
 }
 
 function BlockBody({ item, ctx }: { item: ComponentData; ctx: BlockRenderContext }) {

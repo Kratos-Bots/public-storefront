@@ -6,10 +6,6 @@ import { createMemoryRouter, RouterProvider } from 'react-router';
 import type { StorefrontSettings } from '@/types/settings.ts';
 import type { PuckDoc } from '@/builder/types.ts';
 
-// EditorCanvas pulls in Puck, whose drag-and-drop layer needs ResizeObserver at import time.
-vi.hoisted(() => {
-  globalThis.ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} } as unknown as typeof ResizeObserver;
-});
 const state = vi.hoisted(() => ({ settings: {} as StorefrontSettings }));
 vi.mock('@/app/settings.ts', () => ({ useSettings: () => state.settings }));
 vi.mock('@/app/builder-gate.ts', async (orig) => ({ ...(await orig<typeof import('@/app/builder-gate.ts')>()), isBuilderMode: () => true }));

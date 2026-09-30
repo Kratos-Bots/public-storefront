@@ -4,10 +4,6 @@ import { act, cleanup, render, renderHook, screen } from '@testing-library/react
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
-vi.hoisted(() => {
-  // BlockText pulls in Puck, which reads ResizeObserver at import time.
-  globalThis.ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} } as unknown as typeof ResizeObserver;
-});
 vi.mock('@/api/pages.ts', async (orig) => ({
   ...(await orig<typeof import('@/api/pages.ts')>()),
   fetchPublished: vi.fn(async () => ({ pageSet: null, text: { version: 3, locale: 'de', formatLocale: '', shared: {}, layout: {} } })),

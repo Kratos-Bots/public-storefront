@@ -95,5 +95,16 @@ export function fixedSlot(children: ReactNode, items: readonly ComponentData[] =
   return Object.assign(fn, { items });
 }
 
-/** Where each family's container lives (spec §3.4). */
-export const FAMILY_DOC: Record<PartFamily, DocKey> = { product: 'product', catalogue: 'catalog', 'card-tile': 'card:tile', 'card-row': 'card:row' };
+/**
+ * The documents each family's container may live on (spec §3.4); the first is its home, used when a
+ * caller renders a container's defaults without naming a document. Several per family from stage 4
+ * (the account and payment families span routes).
+ */
+export const FAMILY_DOCS: Readonly<Record<PartFamily, readonly DocKey[]>> = {
+  product: ['product'], catalogue: ['catalog'], 'card-tile': ['card:tile'], 'card-row': ['card:row'],
+};
+
+/** May `family`'s container live on `docKey`? Own-key lookup: an unguarded family string never hits the prototype. */
+export function familyAllowedOn(family: PartFamily, docKey: DocKey): boolean {
+  return Object.hasOwn(FAMILY_DOCS, family) && FAMILY_DOCS[family].includes(docKey);
+}
