@@ -380,7 +380,9 @@ A component stores it beside its other props (`style/model.ts`, runtime-safe):
   from absent.
 - `borderColor` / `borderStyle` without `border` are kept but do nothing.
 - `hide` has one value, so "hidden everywhere" cannot be expressed — delete the block instead.
-- Keys are written in the order of the table above (`STYLE_KEY_ORDER`) so diffs stay quiet.
+- Keys are written in `STYLE_KEY_ORDER` — `bg fg padTop padBottom padX marginTop marginBottom border
+  borderColor borderStyle radius shadow textSize align maxWidth hide` (the key order of `STYLE_KEYS`,
+  not the grouping of the table above) — so diffs stay quiet.
 - `STYLE_KEYS` is mirrored by the backend's `BLOCK_STYLE_VALUES` (`storefront-pages/schemas.ts`) —
   change both, backend first.
 
@@ -388,7 +390,7 @@ A component stores it beside its other props (`style/model.ts`, runtime-safe):
 
 | Key | CSS on the target |
 |---|---|
-| `bg` | `background: var(--sf-<token>)` (replaces a gradient too). Without `padX` it also adds `padding-inline: 1rem`, the inset Section's tinted band uses, so text never touches the tint (not on a part element such as the header). |
+| `bg` | `background: var(--sf-<token>)` (replaces a gradient too). Without `padX` it also adds `padding-inline: 1rem`, the inset Section's tinted band uses, so text never touches the tint (not on a part element such as the header, nor on `WholesaleTable`, whose cart bar is a full-bleed band). |
 | `fg` | `color: var(--sf-<token>)` and `--sf-block-fg: var(--sf-<token>)` |
 | `padTop` / `padBottom` / `padX` | `padding-block-start` / `padding-block-end` / `padding-inline` = `SPACING[step]` (`none 0, xs .5rem, sm 1rem, md 1.5rem, lg 2.5rem, xl 4rem`) |
 | `marginTop` / `marginBottom` | `margin-block-start` / `margin-block-end` = `SPACING[step]` |
@@ -399,12 +401,13 @@ A component stores it beside its other props (`style/model.ts`, runtime-safe):
 | `textSize` | `--sf-text-scale: <.875 \| 1.125 \| 1.25>` |
 | `align` | `text-align`; with `maxWidth` also places the box (`center` → `margin-inline: auto`, `end` → `margin-inline-start: auto`) |
 | `maxWidth` | `max-width: min(<36rem \| 68ch \| 60rem>, 100%)` |
-| `hide` | `display: none !important` below 62em (`mobile`) or from 62em (`desktop`) — the breakpoint of `.sf-hide-mobile` / `.sf-hide-desktop` |
+| `hide` | `display: none !important` below 62em (`mobile`) or from 62em (`desktop`) — the breakpoint of `.sf-hide-mobile` / `.sf-hide-desktop`. A hidden `Header` also zeroes the shell's `--sf-bar-h` / `--sf-pin-h` at that breakpoint (as `sticky: false` does), so sticky page heads come to rest at the top; its pinned notices go with it |
 
 Every styled target also gets `box-sizing: border-box; min-width: 0` and resets `--sfs-bc` /
 `--sfs-bs` to `initial`, so a nested block never inherits its parent's border colour.
-`--sf-block-fg` and `--sf-text-scale` are **meant** to inherit: a Section set to a large text size
-enlarges the Headings and RichText inside it, and a nested block's own setting wins.
+`--sf-block-fg` and `--sf-text-scale` are **meant** to inherit: the `fg` colour (`--sf-block-fg`) and
+the text scale set on a Section or Columns flow into the text blocks inside it — a Section set to a
+large text size enlarges the Headings and RichText inside it — and a nested block's own setting wins.
 
 **Text blocks read the variables.** A block that offers `fg` / `textSize` and owns its text writes
 `color: var(--sf-block-fg, <token>)` and `font-size: calc(<size> * var(--sf-text-scale, 1))`. Unset,
@@ -471,7 +474,7 @@ attribute-only; no `className` is ever touched.
 `style/block-style.css` is **generated** by `renderBlockStyleCss()` (`style/css.ts`) and checked in;
 `test/block-style-css.test.ts` fails when it is stale
 (`UPDATE_BLOCK_STYLE_CSS=1 npm --prefix web test -- test/block-style-css.test.ts` rewrites it). It
-is imported once, in `main.tsx`. Every selector is `:root:root [data-sf-style][data-sfs-<key>="<value>"]`
+is imported once, in `main.tsx`. Every per-value rule is `:root:root [data-sf-style][data-sfs-<key>="<value>"]`
 — specificity **(0,4,0)**, above module classes and template part rules (0,3,0), so an owner's
 choice is what the shopper sees. It has no transitions or animations.
 
@@ -499,7 +502,10 @@ Every stylable block's fields end with a collapsible **Style** group (`editor/cu
 appended last by `blockFields`), built only from the block's allowed keys: colours as the palette
 swatches, spacing as `0 · XS · S · M · L · XL` chips, corners, shadow, text size, alignment, max
 width and visibility. Every row starts at "Default" (absent) with its own reset, **Reset style**
-clears the group in one undo step, and a contrast hint shows under 4.5 : 1. `prepareProps`
+clears the group in one undo step, and a contrast hint shows under 4.5 : 1 (it compares `fg` against
+the block's `bg` token, or `--sf-bg` when none is set; the block's real background — a Section band,
+a template surface — is not probed). The Header's Visibility row warns that hiding the header hides its pinned
+notices too (and the cart and back buttons in the Telegram web app layout). `prepareProps`
 normalises `blockStyle` (unknown / disallowed / invalid keys dropped, canonical order, `{}`
 removed) before a change is posted.
 
