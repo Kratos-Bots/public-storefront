@@ -509,6 +509,269 @@ notices too (and the cart and back buttons in the Telegram web app layout). `pre
 normalises `blockStyle` (unknown / disallowed / invalid keys dropped, canonical order, `{}`
 removed) before a change is posted.
 
+## Containers and parts
+
+The product page, the product sheet, the catalogue grid and list, and the product card and row are
+not single blocks any more: each is a **container** that owns the data, with **parts** that each
+draw one piece of it (the title, the price, the add button …). An owner can reorder parts, wrap them
+in content blocks, drop optional ones and style each one; the default arrangement of every container
+renders byte-for-byte the markup of v0.7.0.
+
+### The pattern
+
+- **The container owns the data.** It keeps the queries, the selected state and the loading, error
+  and not-found states (unchanged markup, drawn before any slot). Parts cannot fetch, mutate or
+  navigate, so an arrangement changes what a shopper *sees*, never what a purchase *does*.
+- **Parts are shells.** A part block's `render` is always
+  `(p) => <Family.PartHost name="<Block>" props={p} styleAttrs={p.puck.style} />`. `PartHost` reads
+  the family context and draws the container's view for that name; with no container above it
+  (impossible after the guard, possible mid-drag in the editor) it renders `null`.
+- **Views travel through context.** The container wraps its output in
+  `Family.Provider value={{ data, views }}`, where `views` is a static map in the container's own
+  lazy chunk. Block files are globbed into the entry bundle by the registry: if a part imported its
+  view, the product page would move into the entry; if each part used `lazy()`, every part would
+  suspend once and flash. The container stays the **only lazy boundary**, as before, and parts
+  render in the same commit as their container.
+
+Files:
+
+| File | What it holds |
+|---|---|
+| `builder/parts.ts` | runtime-safe contract: `PartFamily`, `ContainerSpec`, `createFamily` (`Provider`, `useData`, `PartHost`), `slotShows`, `containsType`, `partId` / `part` / `group` helpers, `fixedSlot`, `FAMILY_DOCS` + `familyAllowedOn` |
+| `builder/families.ts` | the four families (`ProductFamily`, `CatalogueFamily`, `CardTileFamily`, `CardRowFamily`), their data types, the slot types, and `ProductHostContext` (type-only feature imports — it is in the entry) |
+| `builder/blocks/_shared/product-container.ts`, `catalogue-container.ts`, `card-containers.ts` | each container's `ContainerSpec`: `defaultSlots`, `required`, `unique`, `requires`, `slotAccepts`, `legacyProps`, `insertSlot` |
+| `builder/blocks/<Part>.tsx` | one block per part (`category: 'part'`, `part: { family }`, `slots: []` except groups) |
+| `features/catalog/product-parts.tsx` | product views shared by page and sheet (breadcrumbs, groups, …) and `productData()` |
+| `features/catalog/ProductDetailPage.tsx` / `ProductDetailSheet.tsx` | `PAGE_VIEWS` / `SHEET_VIEWS` and the two surfaces; the sheet body is `ProductSheetBody` |
+| `features/catalog/ProductGrid.tsx` / `ProductList.tsx` / `catalogue-parts.tsx` | `GRID_VIEWS` / `LIST_VIEWS` and the shared catalogue views |
+| `features/catalog/ProductCard.tsx` / `ProductRow.tsx` | `TILE_VIEWS` / `ROW_VIEWS` and the built-in compositions |
+
+`BlockDef` gains `container?: ContainerSpec` and `part?: { family }` (never both), and
+`BlockCategory` gains `'part'`. A `SlotRender` carries the stored children as `.items`, so a
+container can choose classes from what a slot holds (`layoutNoImage`, `noNav`) without rendering it.
+
+### Placement and rules
+
+A part is allowed on a document exactly where its family's container is (`FAMILY_DOCS`):
+`product` → `product`; `catalogue` → `catalog`; `card-tile` → `card:tile`; `card-row` → `card:row`.
+Its **nearest container ancestor** — through every slot, hidden ones included — must be of its
+family: a part at the page root or in a `Section` outside the container fails. Content blocks may
+sit *between* a container and its parts (a `Columns` in the product page's `main` slot holding the
+price and stock is valid). A container's slots accept its family's parts, the group part, content
+blocks and the non-route `catalogue` blocks allowed on the document (`FeaturedProducts`, `Upsells`,
+`CategoryNav`, `SearchField`), unless `slotAccepts` narrows the slot; route blocks and other
+containers never, at any depth. Card documents accept only their frame and their family's parts.
+
+Rules run **per container instance** (two containers on one catalogue each need their own results),
+counting parts through visible slots and stopping at a nested container:
+
+| Rule id | Meaning |
+|---|---|
+| `part-required:<Container>.<Part>` | a required part is missing or appears more than once |
+| `part-unique:<Container>.<Part>` | a part appears more than once (most parts render fixed element ids — `bulk-heading`, `upsells-heading` — or the page's only `h1`) |
+| `part-requires:<Part>.<Needs>` | e.g. a card's add button without its price |
+| `part-placement:<Part>` | the part's nearest container is missing or of another family |
+| `slot-accepts:<Container>.<slot>` | a restricted slot (or a block inside a container slot) holds something it may not |
+| `exactly-one:CardTile` / `exactly-one:CardRow` | on `card:tile` / `card:row` |
+| `hidden-required:<Block>` | extended to parts: a block with `hide` may not hold, at any depth inside a container, a part that container requires (reported once per holder) |
+
+| Container | Required | Why |
+|---|---|---|
+| `ProductDetail` | `ProductTitle`, `ProductPrice`, `ProductAddToCart` | the page's only `h1`; the price before a purchase; the purchase path. `ProductAddToCart` is storefront-only, so menu / web-app sheets require title and price. |
+| `ProductGrid`, `ProductList` | `CatalogTitle`, `CatalogResults`, `CatalogEmpty` | the page's `h1`; the products; the empty states carry the only "Clear search" / "Show all" recovery |
+| `CardTile` | `CardTileName` | the card's only link to the product page |
+| `CardRow` | `CardRowName` | the row's only way to open the product |
+
+Every part is `unique` except the group parts (`ProductGroup`, `CardTileGroup`, `CardRowGroup`),
+which are wrappers — the sheet's default uses two `ProductGroup`s. `requires`:
+`CardTileAdd → CardTilePrice`, `CardRowAdd → CardRowPrice`. Required parts accept no `hide`, and no
+part holding an input (`CatalogSearch`, `ProductAddToCart`, `CardTileAdd`, `CardRowAdd`) accepts
+`textSize`.
+
+### Product page and sheet (`family: 'product'`, container `ProductDetail`)
+
+Slots `top`, `media`, `main`, `below`. On the page, `top` and `below` render bare, and
+`media` / `main` sit in the `layout` grid; `media` renders only when it shows something
+(`ProductGallery` is silent for a product without a photo), and `layoutNoImage` is added exactly
+then. On the sheet the four slots render bare, in order, after the sheet's loading / failed states.
+
+| Part | Page view | Sheet view | Layouts |
+|---|---|---|---|
+| `ProductBreadcrumbs` | `<nav class="crumbs">` trail | the same | all |
+| `ProductGallery` | `ProductImage variant="web" eager` | `ProductImage class="thumb"` | all |
+| `ProductTitle` *(req.)* | `<header class="head"><h1 data-sf-part="page-title">` + SKU | `<h2 data-sf-part="sheet-title">` | all |
+| `ProductPrice` *(req.)* | `<p class="price" data-sf-part="price">` | `<div class="priceBand">` | all |
+| `ProductStock` | `<div class="flags">` chip, pre-order, minimum | `<p class="flags">` SKU, chip, pre-order, minimum | all |
+| `ProductAddToCart` *(req.)* | `AddToCart size="lg"` | — (pinned in the sheet footer) | storefront |
+| `ProductDescription` | `<p class="description">` | `<section class="block">` | all |
+| `ProductBulkPricing` | `<section aria-labelledby="bulk-heading">` | `<section class="block">` | all |
+| `ProductProvenance` | `<section aria-labelledby="provenance-heading">` | `<section class="block">` | all |
+| `ProductAsk` | `<section class="ask">` + contact links | `<section class="block">` | all |
+| `ProductUpsells` | `Upsells` (cards) | `Upsells onSelect` (rows, swap in place) | all |
+| `ProductGroup` | `kind` `priceRow` ("Side by side"), `identity` ("Text beside thumbnail"), `identityText` ("Text column"); one slot `items` | same classes | all |
+
+Each view renders `null` exactly when v0.7.0 omitted the piece (no description, tiers, provenance,
+contact links or curated upsells). Defaults — *storefront*: `top` [Breadcrumbs] · `media` [Gallery]
+· `main` [Title, Group(priceRow)[Price, Stock], AddToCart, Description, BulkPricing, Provenance, Ask]
+· `below` [Upsells]. *menu, webapp*: `top` [] · `media` [] · `main` [Group(identity)[Group(identityText)
+[Title, Stock], Gallery], Price, Description, BulkPricing, Provenance, Ask] · `below` [Upsells].
+
+### Catalogue grid and list (`family: 'catalogue'`)
+
+`ProductGrid` has slots `top`, `rail`, `main` (`rail` renders bare as a grid track and accepts only
+`CatalogCategories`; `noNav` is added when it shows nothing; the `FilterDrawer` mounts when the
+picker is on and a `CatalogCategories` exists). `ProductList` has one slot, `content`, followed by
+the container-owned product sheet and `FilterSheet`.
+
+| Part | Grid | List |
+|---|---|---|
+| `CatalogIntro` | the template hero slot, `surface="grid"` | `surface="list"`; nothing on an unknown category |
+| `CatalogSearch` | `SearchField` on the shell search state | the same |
+| `CatalogCategories` | `CategoryNav` (chips + rail); nothing with the picker off | the same |
+| `CatalogTitle` *(req.)* | section label + `head` h1 + count, or the visually hidden h1 | section label + `head` h1 + tally |
+| `CatalogResults` *(req.)* | the card grid, or rows when nothing has a photo | category sections of rows |
+| `CatalogEmpty` *(req.)* | unknown category / no matches / empty category | the same |
+
+Defaults: grid `top` [Intro, Search] · `rail` [Categories] · `main` [Title, Empty, Results]; list
+`content` [Title, Intro, Empty, Results]. `CatalogEmpty` and `CatalogResults` never render together.
+
+### Cards (`family: 'card-tile'` / `'card-row'`)
+
+The frames `CardTile` (`<article class="card" data-sf-part="product-card">`) and `CardRow`
+(`<div class="row" data-sf-part="product-row">`) are the containers and the root of a card
+document (route-bound, locked), each with one slot `content`.
+
+| Part | Renders |
+|---|---|
+| `CardTileImage` | `ProductImage variant="thumbnail"`, or the empty well when a sibling has a photo |
+| `CardTileGroup` | `kind` `body` → `<div class="body">`, `foot` → `<div class="foot">`; slot `items` |
+| `CardTileName` *(req.)* | `<h3><Link class="link">` — the stretched link |
+| `CardTileFlags` | minimum, pre-order, stock — only when one applies |
+| `CardTilePrice` | `<p class="prices">` price + best tier |
+| `CardTileAdd` | `<div class="add">` `AddToCart size="sm"` |
+| `CardRowGroup` | `kind` `text` → `<div class="text">`; slot `items` |
+| `CardRowName` *(req.)* | `<h3><button class="open">` → the row's `onSelect` |
+| `CardRowMeta` | SKU, minimum, tier, pre-order, stock — only when one applies |
+| `CardRowPrice` | `<p class="price" data-sf-part="price">` |
+| `CardRowAdd` | `<div class="gutter">` quick add / stepper; nothing when ordering is off |
+
+Defaults: tile `content` [Image, Group(body)[Name, Flags, Group(foot)[Price, Add]]]; row `content`
+[Group(text)[Name, Meta], Price, Add]. The card context is exactly the props `ProductCard` /
+`ProductRow` take: `{ product, index?, eager, hasSiblingImages, onSelect? }`.
+
+### Styling and text per part
+
+Parts are `root` targets (except `CatalogIntro` and `CatalogResults`, `wrap`, and
+`CatalogCategories`, `pass` to both of its navs). Shared feature components that are a part's root
+take an optional `rootAttrs` prop (`AddToCart`, `ProductImage`, `SearchField`, `EmptyState`,
+`Upsells`; `CategoryNav` takes `navAttrs`). Parts offering TEXT read `var(--sf-block-fg, <today>)`
+and `calc(<today> * var(--sf-text-scale, 1))` in their views' module CSS, which compute to today's
+values when unset. `web/test/builder-parts-contract.test.tsx` pins each part's family, target and
+keys (keys may be added later, never removed) and checks the CSS reads the variables.
+
+**TEXT reach is partial** inside `ProductBulkPricing`, `ProductProvenance`, `ProductAsk`,
+`ProductStock` and `ProductBreadcrumbs`. `fg` and `textSize` reach the text the part's view draws
+from `ProductDetailPage.module.css` / `ProductDetailSheet.module.css` (section headings, the ask
+copy, the flags row, the breadcrumb links and their size), but not the shared components nested
+inside them: the tier table (`BulkPricing.module.css`), the provenance rows (`Provenance.module.css`),
+the stock chip (`StockChip.module.css`), the contact link buttons, the breadcrumb separators and the
+link hover colour keep their own colours and sizes. An owner who sets a text colour on these parts
+sees the heading change and the body stay in the template's voice.
+
+### Menu and web-app sheet
+
+In menu and webapp the `product` route redirects to the catalogue with `?p=<id>`, so that layout's
+`product` document drives the **sheet body**. `ProductDetailSheet` keeps its `Sheet` chrome (the
+category eyebrow, close, the pinned `AddToCart size="lg"` footer), its title effect and its product
+query; its body renders the layout's guarded `product` document through `RenderDoc` inside a
+`ProductHostContext` `{ productId, onSelect, surface: 'sheet', SheetBody }`. `ProductDetail`,
+seeing a host, renders `SheetBody` (`ProductSheetBody`) instead of the page — so the sheet needs no
+lazy chunk and no route. A stored `ProductAddToCart` in a menu document drops as `drop:layout`.
+Root content blocks of that document render around the container in the sheet body; its root
+`title` / `description` do nothing. **The storefront layout keeps the built-in sheet**: its
+`product` document is a page, so a `ProductList` placed on a storefront catalogue opens the
+default (menu) sheet document, not the storefront page document.
+
+### Wholesale
+
+With `features.wholesale` on, `ProductGrid` and `ProductList` render `WholesaleCatalogPage` and
+ignore their slots, so owner content inside those containers is hidden too, while blocks outside
+them still render. The editor marks the container with a notice ("Wholesale mode is on: shoppers
+see the trade list here …"). `WholesaleTable` stays a monolith.
+
+### Old documents
+
+A v0.7.0 (or stage 1/2) document stores `ProductDetail`, `ProductGrid` or `ProductList` with no
+slot keys. `upgradeDoc` / `fillAbsentSlots` (`builder/upgrade.ts`, pure) fill every slot whose key is
+**absent** from `container.defaultSlots(parsedProps, { layout, id })`; a slot that is present —
+even `[]` — is never touched (idempotent; `[]` is an owner's deliberate empty slot).
+
+- It runs in the **guard** (before a container's slots are cleaned, so the filled parts get the
+  same id de-duplication, budget and checks), in the **default table** (`defaultDoc`), and on the
+  **editor's load**, before documents reach Puck — otherwise the first autosave would store `[]`
+  and wipe every part.
+- `ProductDetail`'s v0.7.0 toggles `gallery`, `bulkPricing`, `provenance`, `upsells` are
+  `legacyProps`: read only by `defaultSlots` on storefront (`gallery: false` ⇒ `media` [], the others
+  leave their part out); ignored on menu / webapp, whose v0.7.0 sheet never read them. They stay in
+  the schema forever (optional, absent = on), are not shown as fields, and are dropped on save from
+  a container whose slots are present. A rollback to v0.7.0 is safe: its schema strips the slots.
+- No stored document is rewritten by the backend or a migration. **An already-edited v0.7.0
+  product or catalogue document shows once as changed in the admin's publish diff after its first
+  editor load**: the load fills the absent slots and the next autosave posts the upgraded shape.
+  The shop renders the same thing before and after; the diff entry is the new shape being stored.
+  This is accepted — publishing (or leaving it) is safe either way.
+
+### Adding a part
+
+1. Copy a part block file in `builder/blocks/` (`category: 'part'`, `part: { family }`,
+   `slots: []`, `render` = `PartHost`), with `style` (BOX, plus TEXT only if the view reads the
+   variables; never `hide` on a required part, never `textSize` with an input) and `text` (the keys
+   the view renders).
+2. Write the view in the surface file(s) — the container's lazy chunk — and add it to that
+   surface's `*_VIEWS` map. Render `null` when there is nothing to show.
+3. Decide whether it is in the container's `defaultSlots` (a default change breaks parity — only if
+   intended), `unique`, `required`, `requires`, `slotAccepts`.
+4. Add its fields file under `builder/editor/fields/`.
+5. Add it to the table in `test/builder-parts-contract.test.tsx` and `PART_BLOCKS` in
+   `test/builder-editor-contract.test.ts`; regenerate `web/public/blocks.json`
+   (`UPDATE_BLOCKS_JSON=1 npm --prefix web test -- test/blocks-manifest.test.ts`).
+6. The golden captures (`test/golden-parity.test.tsx`) and `e2e/dom-parity.spec.ts` must pass
+   **unchanged**.
+
+`blocks.json` lists, per block, `part: { family }` or `container: { family, slots, required,
+unique, insertSlot }` when the block has one, so the admin can mirror the part rules.
+
+## Card designs
+
+An owner can redesign the product card (tile) and the product row per layout.
+
+- **Storage.** `PageSet.cards?: Partial<Record<'tile' | 'row', PuckDoc>>`, sparse like `pages`:
+  an absent kind is the built-in design. It publishes, versions, restores and diffs with the
+  layout. The document keys are `card:tile` / `card:row` (`DocKey`); they are not routes, so they
+  are not in `pages`. A card document's root props are ignored; its content is exactly one frame
+  (`CardTile` / `CardRow`, `exactly-one`) holding the family's parts. Both kinds exist in every
+  layout: tiles appear in the grid, `FeaturedProducts` and page upsells; rows in the list, the
+  grid's all-imageless mode and the sheet's upsells.
+- **Compile once.** `compileCard(doc, kind, layout)` (`builder/cards.ts`) guards the document once
+  (a violation ⇒ `null` ⇒ built-in), walks it once into a static element tree through
+  `renderBlock` (block renders are pure), and memoises per `(doc object, layout)`.
+  `design.render(data, views)` wraps the **same element objects** in the card family's provider
+  for each card, with the views from the caller's chunk — no parse, guard walk, tree walk or Puck
+  per card.
+- **Where designs apply.** `CardDesignProvider` (`builder/card-design.tsx`, mounted by `PuckShell`
+  — also on chrome-less pages — and by the editor canvas and preview) reads `pageSet.cards`.
+  `ProductCard` and `ProductRow` keep their names, props and call sites and ask
+  `useCardDesign('tile' | 'row')`: with a design they return `design.render(…)`, otherwise their
+  built-in composition drawn from the same views. `WholesaleRow` is untouched.
+- **Failure.** One `CardDesignBoundary` per card list (grid, list, `Upsells`, `FeaturedProducts`)
+  catches a throw, logs once, marks that kind failed in the provider for the rest of the page load,
+  and every list re-renders with the built-in design. It adds no DOM.
+- **Parity.** The built-in cards are composed of the same views as a compiled design; a unit test
+  proves the compiled *default* card document draws markup identical to the built-in card, so
+  publishing the default design changes nothing a shopper sees. A published design costs one
+  `PartHost` per part per card (measured about 25 % more render time per 500 tiles than the
+  built-in); with no design there is no extra cost.
+
 ## Rules
 
 `checkRules(doc, docKey, layout)` (`rules.ts`) returns issues; a non-empty list makes the guard
@@ -601,6 +864,13 @@ images are **never garbage-collected**: removing an `Image` block leaves the fil
 - **Unit** — `web/test/builder-*.test.ts(x)`: define, guard, rules, registry, sanitize, render,
   runtime, shell, each block group, defaults completeness, the editor contract, and
   `blocks-manifest.test.ts`, which fails when `web/public/blocks.json` is stale.
+- **Golden captures** — `web/test/golden-parity.test.tsx` against `web/test/__golden__/`: the v0.7.0
+  markup of the product page and sheet, cards, grid and list (loading, error and not-found states
+  included), which every default container arrangement must reproduce. Never regenerate them to
+  make a change pass.
+- **`web/test/builder-parts-contract.test.tsx`** — the part table (family, style target and keys),
+  each container's defaults passing its own rules in every layout, and TEXT parts reading the
+  variables.
 - `npm run build` emits `web/dist/blocks.json`.
 
 ## Known limitations
@@ -619,6 +889,11 @@ images are **never garbage-collected**: removing an `Image` block leaves the fil
 - `hidden-required` fires for every hidden container that holds a required block, even when a
   visible copy exists elsewhere on the page — so "a mobile-only `ProductList` in one Section and a
   desktop-only `ProductGrid` in another" cannot be built (see *Block styling*).
+- TEXT reach is partial inside `ProductBulkPricing`, `ProductProvenance`, `ProductAsk`,
+  `ProductStock` and `ProductBreadcrumbs`: nested shared components keep their own colours and sizes
+  (see *Containers and parts*).
+- An already-edited v0.7.0 product or catalogue document shows once as changed in the admin's
+  publish diff after its first editor load (see *Old documents*).
 
 ## The editor (`/__builder`)
 

@@ -57,6 +57,452 @@
       }
     },
     {
+      "name": "CardRow",
+      "category": "catalogue",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": true,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "container": {
+        "family": "card-row",
+        "slots": [
+          "content"
+        ],
+        "required": [
+          "CardRowName"
+        ],
+        "unique": [
+          "CardRowName",
+          "CardRowMeta",
+          "CardRowPrice",
+          "CardRowAdd"
+        ],
+        "insertSlot": "content"
+      }
+    },
+    {
+      "name": "CardRowAdd",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "card-row"
+      }
+    },
+    {
+      "name": "CardRowGroup",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "card-row"
+      }
+    },
+    {
+      "name": "CardRowMeta",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "card-row"
+      }
+    },
+    {
+      "name": "CardRowName",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "card-row"
+      }
+    },
+    {
+      "name": "CardRowPrice",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "card-row"
+      }
+    },
+    {
+      "name": "CardTile",
+      "category": "catalogue",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": true,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "container": {
+        "family": "card-tile",
+        "slots": [
+          "content"
+        ],
+        "required": [
+          "CardTileName"
+        ],
+        "unique": [
+          "CardTileImage",
+          "CardTileName",
+          "CardTileFlags",
+          "CardTilePrice",
+          "CardTileAdd"
+        ],
+        "insertSlot": "content"
+      }
+    },
+    {
+      "name": "CardTileAdd",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "card-tile"
+      }
+    },
+    {
+      "name": "CardTileFlags",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "card-tile"
+      }
+    },
+    {
+      "name": "CardTileGroup",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "card-tile"
+      }
+    },
+    {
+      "name": "CardTileImage",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "card-tile"
+      }
+    },
+    {
+      "name": "CardTileName",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "card-tile"
+      }
+    },
+    {
+      "name": "CardTilePrice",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "card-tile"
+      }
+    },
+    {
       "name": "CartContents",
       "category": "commerce",
       "layouts": [
@@ -111,6 +557,70 @@
       }
     },
     {
+      "name": "CatalogCategories",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "pass",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "catalogue"
+      }
+    },
+    {
+      "name": "CatalogEmpty",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "catalogue"
+      }
+    },
+    {
       "name": "CatalogHero",
       "category": "catalogue",
       "layouts": [
@@ -136,6 +646,131 @@
           "maxWidth",
           "hide"
         ]
+      }
+    },
+    {
+      "name": "CatalogIntro",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "catalogue"
+      }
+    },
+    {
+      "name": "CatalogResults",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "catalogue"
+      }
+    },
+    {
+      "name": "CatalogSearch",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "catalogue"
+      }
+    },
+    {
+      "name": "CatalogTitle",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "catalogue"
       }
     },
     {
@@ -756,6 +1391,170 @@
       }
     },
     {
+      "name": "ProductAddToCart",
+      "category": "part",
+      "layouts": [
+        "storefront"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "product"
+      }
+    },
+    {
+      "name": "ProductAsk",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "product"
+      }
+    },
+    {
+      "name": "ProductBreadcrumbs",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "product"
+      }
+    },
+    {
+      "name": "ProductBulkPricing",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "product"
+      }
+    },
+    {
+      "name": "ProductDescription",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "product"
+      }
+    },
+    {
       "name": "ProductDetail",
       "category": "product",
       "layouts": [
@@ -780,6 +1579,65 @@
           "shadow",
           "maxWidth"
         ]
+      },
+      "container": {
+        "family": "product",
+        "slots": [
+          "top",
+          "media",
+          "main",
+          "below"
+        ],
+        "required": [
+          "ProductTitle",
+          "ProductPrice",
+          "ProductAddToCart"
+        ],
+        "unique": [
+          "ProductBreadcrumbs",
+          "ProductGallery",
+          "ProductTitle",
+          "ProductPrice",
+          "ProductStock",
+          "ProductAddToCart",
+          "ProductDescription",
+          "ProductBulkPricing",
+          "ProductProvenance",
+          "ProductAsk",
+          "ProductUpsells"
+        ],
+        "insertSlot": "main"
+      }
+    },
+    {
+      "name": "ProductGallery",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "product"
       }
     },
     {
@@ -807,6 +1665,60 @@
           "shadow",
           "maxWidth"
         ]
+      },
+      "container": {
+        "family": "catalogue",
+        "slots": [
+          "top",
+          "rail",
+          "main"
+        ],
+        "required": [
+          "CatalogTitle",
+          "CatalogResults",
+          "CatalogEmpty"
+        ],
+        "unique": [
+          "CatalogIntro",
+          "CatalogSearch",
+          "CatalogCategories",
+          "CatalogTitle",
+          "CatalogResults",
+          "CatalogEmpty"
+        ],
+        "insertSlot": "main"
+      }
+    },
+    {
+      "name": "ProductGroup",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "product"
       }
     },
     {
@@ -834,6 +1746,191 @@
           "shadow",
           "maxWidth"
         ]
+      },
+      "container": {
+        "family": "catalogue",
+        "slots": [
+          "content"
+        ],
+        "required": [
+          "CatalogTitle",
+          "CatalogResults",
+          "CatalogEmpty"
+        ],
+        "unique": [
+          "CatalogIntro",
+          "CatalogSearch",
+          "CatalogCategories",
+          "CatalogTitle",
+          "CatalogResults",
+          "CatalogEmpty"
+        ],
+        "insertSlot": "content"
+      }
+    },
+    {
+      "name": "ProductPrice",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "product"
+      }
+    },
+    {
+      "name": "ProductProvenance",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "product"
+      }
+    },
+    {
+      "name": "ProductStock",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "product"
+      }
+    },
+    {
+      "name": "ProductTitle",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "product"
+      }
+    },
+    {
+      "name": "ProductUpsells",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "product"
       }
     },
     {

@@ -18,6 +18,17 @@ describe('blocks.json', () => {
     expect(m.blocks.find((b) => b.name === 'Footer')!.layouts).toEqual(['storefront', 'menu']);
     expect(m.blocks.map((b) => b.name)).toEqual([...m.blocks.map((b) => b.name)].sort((a, b) => a.localeCompare(b)));
   });
+  it('carries part and container fields only where a block has them (stage 3 §9, §13)', () => {
+    const m = blocksManifest();
+    const by = (n: string) => m.blocks.find((b) => b.name === n)!;
+    expect(by('ProductPrice').part).toEqual({ family: 'product' });
+    expect(by('ProductPrice').container).toBeUndefined();
+    expect(by('ProductDetail').container!.family).toBe('product');
+    expect(by('ProductDetail').container!.required).toEqual(['ProductTitle', 'ProductPrice', 'ProductAddToCart']);
+    expect(by('ProductDetail').part).toBeUndefined();
+    expect('part' in by('Heading') || 'container' in by('Heading')).toBe(false);
+    for (const b of m.blocks) if (b.container) expect(b.container.slots).toContain(b.container.insertSlot);
+  });
   it('the committed web/public/blocks.json is current (UPDATE_BLOCKS_JSON=1 npm --prefix web test -- test/blocks-manifest.test.ts regenerates it)', () => {
     const expected = `${JSON.stringify(blocksManifest(), null, 2)}\n`;
     if (process.env.UPDATE_BLOCKS_JSON === '1') writeFileSync(FILE, expected);

@@ -313,6 +313,13 @@ parts — no page-specific class is ever targeted.
 Never use a direct-child combinator under `[data-sf-part="main"]` (or any part): a styled block adds
 a wrapper `<div>` around wrap-mode blocks.
 
+Structural selectors inside product surfaces (for example bento's `[data-sf-part="product-card"] > :first-child`)
+assume the default arrangement; degrade gracefully when an owner changes it. Every `data-sf-part` stays
+on the same element under any arrangement, and the default arrangement renders exactly the markup
+above, but an owner can reorder, wrap, drop or restyle the parts of the product page, the product
+sheet, the catalogue and the product card and row (see `builder.md`, *Containers and parts*), so a
+card's first child may not be its image. Style the part itself rather than its position where you can.
+
 ### Shared button-fill rules
 
 `mantine.css` carries the fill recipes for `tokens.button.fill` on every element tagged

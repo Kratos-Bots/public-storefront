@@ -26,6 +26,15 @@ export const SPEC_BLOCKS = [
   'Heading', 'RichText', 'Image', 'Button', 'Columns', 'Section', 'Spacer', 'Divider', 'FAQ', 'Testimonial', 'Video',
 ] as const;
 
+/** Product-parts spec §9: the stage-3 parts. The editor's Parts panel is keyed by these names. */
+export const PART_BLOCKS = [
+  'ProductBreadcrumbs', 'ProductGallery', 'ProductTitle', 'ProductPrice', 'ProductStock', 'ProductAddToCart', 'ProductDescription',
+  'ProductBulkPricing', 'ProductProvenance', 'ProductAsk', 'ProductUpsells', 'ProductGroup',
+  'CatalogIntro', 'CatalogSearch', 'CatalogCategories', 'CatalogTitle', 'CatalogResults', 'CatalogEmpty',
+  'CardTileImage', 'CardTileGroup', 'CardTileName', 'CardTileFlags', 'CardTilePrice', 'CardTileAdd',
+  'CardRowGroup', 'CardRowName', 'CardRowMeta', 'CardRowPrice', 'CardRowAdd',
+] as const;
+
 describe('Plan 2 contract the editor builds on (spec §13 A7)', () => {
   it('exposes every A7 value', () => {
     expect(typeof define.defineBlock).toBe('function');
@@ -48,6 +57,9 @@ describe('Plan 2 contract the editor builds on (spec §13 A7)', () => {
     expect(Object.keys(BLOCKS).filter((n) => !BLOCKS[n]!.part).sort()).toEqual([...SPEC_BLOCKS].sort());
     for (const [key, def] of Object.entries(BLOCKS)) expect(def.name).toBe(key);
   });
+
+  it('registers exactly the stage-3 parts', () =>
+    expect(Object.values(BLOCKS).filter((d) => d.part).map((d) => d.name).sort()).toEqual([...PART_BLOCKS].sort()));
 
   it('has a default doc for the shell and every fixed route of the storefront layout', () => {
     expect(defaultDoc('shell', 'storefront')).not.toBeNull();
