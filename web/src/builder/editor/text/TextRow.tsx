@@ -1,13 +1,13 @@
 // web/src/builder/editor/text/TextRow.tsx
-import { useId, useRef, useState } from 'react';
+import { memo, useId, useMemo, useRef, useState } from 'react';
 import type { TextValue } from '@/text/types.ts';
-import { useEditorStore } from '@/builder/editor/store.ts';
+import { editorTextOf, textIssuesOf, textLanguage, useEditorStore } from '@/builder/editor/store.ts';
 import { LAYOUT_LABELS } from '@/builder/editor/page-catalog.ts';
 import { WarnIcon } from '@/builder/editor/icons.tsx';
-import { applyText, useLoadEpoch, useTextCell, useTextLanguage } from '@/builder/editor/text/hooks.ts';
+import { applyText, useLoadEpoch, type TextCell } from '@/builder/editor/text/hooks.ts';
 import type { DraftValue, PluralForm, TextIssue, TextScope } from '@/builder/editor/text/model.ts';
 import type { TextRowDef } from '@/builder/editor/text/catalog.ts';
-import { countWarnings } from '@/builder/editor/text/issues.ts';
+import { countWarnings, resolveCell } from '@/builder/editor/text/issues.ts';
 import { fillExample, pluralFormsFor, sampleCount } from '@/builder/editor/text/languages.ts';
 import styles from '@/builder/editor/text/Text.module.css';
 
@@ -63,20 +63,47 @@ function warningsFor(row: TextRowDef, value: DraftValue | undefined): string[] {
 
 type Field = HTMLInputElement | HTMLTextAreaElement;
 
+const EMPTY_ISSUES: TextIssue[] = [];
+const own = (map: Record<string, TextValue>, key: string): DraftValue | undefined => (Object.hasOwn(map, key) ? map[key] : undefined);
+
+/**
+ * `useTextCell`, narrowed to this key's own store slices: a keystroke in another row changes
+ * neither this key's layer values (same references in the copied maps) nor its issue signature,
+ * so this row does not re-render. With ~700 rows, that is what keeps typing responsive.
+ */
+function useRowCell(key: string): TextCell {
+  // The store's draft layers may hold a DraftValue (a plural without `other` while typing).
+  const shared = useEditorStore((s) => own(editorTextOf(s).shared, key));
+  const layout = useEditorStore((s) => own(editorTextOf(s).layout, key));
+  const sharedEditable = useEditorStore((s) => s.sharedEditable);
+  const signature = useEditorStore((s) => {
+    const mine = textIssuesOf(s).filter((i) => i.key === key);
+    return mine.length === 0 ? '' : JSON.stringify(mine);
+  });
+  const issues = useMemo(() => (signature ? (JSON.parse(signature) as TextIssue[]) : EMPTY_ISSUES), [signature]);
+  return useMemo(() => ({
+    shared, layout, sharedEditable,
+    // resolveCell only returns a layer that passes ruleFor (a usable `other`), i.e. a real TextValue.
+    effective: resolveCell(key, { layout: layout as TextValue | undefined, shared: shared as TextValue | undefined }),
+    below: resolveCell(key, { shared: shared as TextValue | undefined }),
+    issues,
+  }), [key, shared, layout, sharedEditable, issues]);
+}
+
 /**
  * One editable line (spec §7.2). Remounted on every editor load, so the scope, the caret target
  * and the edit's load are never carried from one load into the next.
  */
-export function TextRow(props: { row: TextRowDef; compact?: boolean }) {
+export const TextRow = memo(function TextRow(props: { row: TextRowDef; compact?: boolean }) {
   const loadEpoch = useLoadEpoch();
   return <RowForLoad key={loadEpoch} loadEpoch={loadEpoch} {...props} />;
-}
+});
 
 function RowForLoad({ row, compact = false, loadEpoch }: { row: TextRowDef; compact?: boolean; loadEpoch: number }) {
-  const cell = useTextCell(row.key);
+  const cell = useRowCell(row.key);
   const layout = useEditorStore((s) => s.layout);
   const readOnly = useEditorStore((s) => s.readOnly);
-  const { locale } = useTextLanguage();
+  const locale = useEditorStore((s) => textLanguage(s).locale);
   const id = domId(useId());
   const [scope, setScope] = useState<TextScope>(() => (cell.layout !== undefined || !cell.sharedEditable ? 'layout' : 'shared'));
   /** The load the current edit started under: captured on focus, else the load this row mounted in. */
@@ -99,6 +126,9 @@ function RowForLoad({ row, compact = false, loadEpoch }: { row: TextRowDef; comp
   const writeForm = (form: string, text: string) => write({ ...storedForms, [form]: text });
   const track = (el: Field, form: string | null) => { last.current = { el, form }; setActive(form ?? ''); };
   const start = (el: Field, form: string | null) => { editEpoch.current = useEditorStore.getState().loadEpoch; track(el, form); };
+
+  // The chip's caret target belongs to the scope it was taken in.
+  const switchScope = (next: TextScope) => { setScope(next); setActive(null); last.current = null; };
 
   const insert = (name: string) => {
     const target = last.current?.el.isConnected ? last.current : null;
@@ -139,11 +169,11 @@ function RowForLoad({ row, compact = false, loadEpoch }: { row: TextRowDef; comp
           aria-pressed={scope === 'shared'}
           disabled={!cell.sharedEditable}
           title={cell.sharedEditable ? undefined : SHARED_LOCKED}
-          onClick={() => { setScope('shared'); setActive(null); }}
+          onClick={() => switchScope('shared')}
         >
           All layouts
         </button>
-        <button type="button" aria-pressed={scope === 'layout'} onClick={() => { setScope('layout'); setActive(null); }}>
+        <button type="button" aria-pressed={scope === 'layout'} onClick={() => switchScope('layout')}>
           Only {layoutLabel}
         </button>
       </div>

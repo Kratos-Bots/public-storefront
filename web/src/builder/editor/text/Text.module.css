@@ -246,3 +246,25 @@ textarea.input { resize: vertical; min-block-size: calc(var(--sfb-control-h) * 2
   .groupToggle::before { transition: transform 120ms ease-out; }
 }
 @keyframes sfb-text-open { from { opacity: 0; } to { opacity: 1; } }
+
+.more {
+  justify-self: start;
+  min-block-size: var(--sfb-control-h);
+  padding: 4px 12px;
+  border: 1px solid var(--sfb-line-strong);
+  border-radius: var(--sfb-radius);
+  background: var(--sfb-surface);
+  color: var(--sfb-ink);
+  font: inherit;
+  cursor: pointer;
+}
+.more:hover { background: var(--sfb-wash); }
+.more:focus-visible { outline: 2px solid var(--sfb-accent); outline-offset: 1px; }
+
+/* Touch: 16px text so iOS doesn't zoom on focus, and 44px targets. */
+@media (pointer: coarse) {
+  .input, .search, .forms input, .field select, .field input { font-size: 16px; min-block-size: 44px; }
+  .filters button, .scope button, .chip, .reset, .more, .iconButton, .groupToggle { min-block-size: 44px; }
+  .iconButton { inline-size: 44px; block-size: 44px; }
+  .chip { min-inline-size: 44px; }
+}

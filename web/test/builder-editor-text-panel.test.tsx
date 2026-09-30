@@ -1,11 +1,12 @@
 // web/test/builder-editor-text-panel.test.tsx
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { Profiler } from 'react';
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { DEFAULT_PREVIEW_AS, TEXT_INITIAL, useEditorStore } from '@/builder/editor/store.ts';
 import { useTextUi } from '@/builder/editor/text/ui-store.ts';
 import { TextRow } from '@/builder/editor/text/TextRow.tsx';
 import { TextPanel } from '@/builder/editor/text/TextPanel.tsx';
-import { rowFor } from '@/builder/editor/text/catalog.ts';
+import { allRows, rowFor } from '@/builder/editor/text/catalog.ts';
 import { defaultOf, placeholderKey, plainKey, pluralKey } from './helpers/text-keys.ts';
 
 const S = () => useEditorStore.getState();
@@ -175,6 +176,26 @@ describe('Text panel rows', () => {
     fireEvent.change(input, { target: { value: 'Too late' } });
     expect(S().siteText!.strings.en?.[key]).toBeUndefined();
   });
+  it('editing one row does not re-render another', () => {
+    ready();
+    const key = plainKey();
+    const other = allRows().find((r) => r.key !== key && !r.plural)!;
+    const renders: Record<string, number> = { a: 0, b: 0 };
+    const count = (id: string) => { renders[id]! += 1; };
+    render(
+      <>
+        <Profiler id="a" onRender={() => count('a')}><TextRow row={rowFor(key)!} /></Profiler>
+        <Profiler id="b" onRender={() => count('b')}><TextRow row={other} /></Profiler>
+      </>,
+    );
+    const before = renders.b;
+    const input = screen.getByRole('textbox', { name: rowFor(key)!.label });
+    fireEvent.change(input, { target: { value: 'One' } });
+    fireEvent.change(input, { target: { value: 'One two' } });
+    fireEvent.change(input, { target: { value: 'Hi {' } });   // an issue appears on this row only
+    expect(renders.a).toBeGreaterThan(1);
+    expect(renders.b).toBe(before);
+  });
 });
 
 describe('Text panel', () => {
@@ -201,6 +222,74 @@ describe('Text panel', () => {
     expect(within(unused).getByText('zz.gone.key')).toBeInTheDocument();
     fireEvent.click(within(unused).getByRole('button', { name: 'Delete zz.gone.key' }));
     expect(S().siteText!.strings.en!['zz.gone.key']).toBeUndefined();
+  });
+
+  it('under Issues, the row being fixed stays until the filter changes', () => {
+    ready();
+    const key = plainKey();
+    act(() => { S().setText('shared', key, 'Hi {', null); });
+    render(<TextPanel />);
+    const panel = screen.getByRole('region', { name: 'Site text' });
+    fireEvent.click(within(panel).getByRole('button', { name: /^Issues/ }));
+    const input = within(panel).getByRole('textbox', { name: rowFor(key)!.label });
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'Hi there' } });
+    expect(S().siteText!.strings.en![key]).toBe('Hi there');
+    expect(within(panel).getByRole('textbox', { name: rowFor(key)!.label })).toBe(input);
+    fireEvent.click(within(panel).getByRole('button', { name: 'All' }));
+    fireEvent.click(within(panel).getByRole('button', { name: /^Issues/ }));
+    expect(panel.querySelector(`[data-text-key="${key}"]`)).toBeNull();
+  });
+
+  it('under Edited, clearing a row keeps it in place', () => {
+    ready();
+    const key = plainKey();
+    act(() => { S().setText('shared', key, 'Changed', null); });
+    render(<TextPanel />);
+    const panel = screen.getByRole('region', { name: 'Site text' });
+    fireEvent.click(within(panel).getByRole('button', { name: 'Edited' }));
+    const input = within(panel).getByRole('textbox', { name: rowFor(key)!.label });
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: '' } });
+    expect(S().siteText!.strings).toEqual({});
+    expect(within(panel).getByRole('textbox', { name: rowFor(key)!.label })).toBe(input);
+  });
+
+  it('a broad search mounts a capped number of rows, with Show more', () => {
+    ready();
+    render(<TextPanel />);
+    const panel = screen.getByRole('region', { name: 'Site text' });
+    fireEvent.change(within(panel).getByRole('searchbox', { name: 'Search text' }), { target: { value: 'e' } });
+    const first = panel.querySelectorAll('[data-text-key]').length;
+    expect(first).toBeLessThanOrEqual(60);
+    fireEvent.click(within(panel).getByRole('button', { name: /^Show \d+ more/ }));
+    expect(panel.querySelectorAll('[data-text-key]').length).toBeGreaterThan(first);
+  });
+
+  it('a focus request clears a filter and search that hide the row', async () => {
+    ready();
+    const key = plainKey();
+    useTextUi.setState({ filter: 'issues', query: 'zzqq-nothing' });
+    useTextUi.setState({ focus: { key, seq: 999 } });
+    render(<TextPanel />);
+    await vi.waitFor(() => expect(document.activeElement?.closest('[data-text-key]')?.getAttribute('data-text-key')).toBe(key));
+    expect(useTextUi.getState().filter).toBe('all');
+    expect(useTextUi.getState().query).toBe('');
+  });
+
+  it('the Issues count matches the rows it lists', () => {
+    ready();
+    const key = plainKey();
+    act(() => {
+      S().setText('shared', key, 'Hi {', null);
+      S().setText('layout', key, 'Oops }', null);
+    });
+    render(<TextPanel />);
+    const panel = screen.getByRole('region', { name: 'Site text' });
+    const issuesButton = within(panel).getByRole('button', { name: /^Issues/ });
+    expect(issuesButton).toHaveAccessibleName('Issues 1');
+    fireEvent.click(issuesButton);
+    expect(panel.querySelectorAll('[data-text-key]').length).toBe(1);
   });
 
   it('the filter group has All, Edited, This layout and Issues', () => {
