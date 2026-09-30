@@ -7,7 +7,10 @@ export interface DefaultEntry { docKey: DocKey; layouts: readonly LayoutKind[] |
 export function block(type: string, props: Record<string, unknown> = {}, id = `${type}-default`): ComponentData {
   const def = BLOCKS[type];
   if (!def) throw new Error(`[builder] a default document uses the unknown block "${type}"`);
-  return { type, props: { ...(structuredClone(def.defaultProps) as Record<string, unknown>), ...props, id } };
+  const base = structuredClone(def.defaultProps) as Record<string, unknown>;
+  // A container's slots come from its defaultSlots for the entry's layout (defaults/index.ts).
+  if (def.container) for (const key of [...def.slots, ...(def.container.legacyProps ?? [])]) delete base[key];
+  return { type, props: { ...base, ...props, id } };
 }
 
 export function doc(content: ComponentData[], root: Partial<PageRootProps> = {}): PuckDoc {

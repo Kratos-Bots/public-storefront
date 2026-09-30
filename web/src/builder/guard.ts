@@ -7,6 +7,7 @@ import {
   EMPTY_ROOT, isComponentLike, isRecord, MAX_COMPONENTS, MAX_DEPTH,
   type ComponentData, type DocKey, type Issue, type LayoutKind, type PageRootProps, type PuckDoc,
 } from '@/builder/types.ts';
+import { fillAbsentSlots } from '@/builder/upgrade.ts';
 
 export interface GuardResult { doc: PuckDoc | null; issues: Issue[] }
 
@@ -75,8 +76,11 @@ function cleanItems(items: unknown, w: Walk): ComponentData[] {
       continue;
     }
     w.budget.left -= 1;
-    const props: Record<string, unknown> = { ...raw.props };
-    for (const s of def.slots) props[s] = cleanItems(raw.props[s], { ...w, depth: w.depth + 1 });
+    // Spec §8: an absent container slot takes its default content BEFORE cleaning, so the filled
+    // parts get the same id de-duplication, budget and checks. Never `?? []` here (Review Focus 1).
+    const source = def.container ? fillAbsentSlots(def, raw.props, w.layout) : raw.props;
+    const props: Record<string, unknown> = { ...source };
+    for (const s of def.slots) props[s] = cleanItems(source[s], { ...w, depth: w.depth + 1 });
     // Neutral fallbacks: a broken field renders empty, never the block's placeholder copy.
     const { props: parsed, fallbacks } = parseBlockPropsDetailed(def, props, 'neutral');
     let id = blockId;
