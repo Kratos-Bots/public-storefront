@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { isBuilderMode } from '@/app/builder-gate.ts';
 import { AuthNote } from '@/features/auth/AuthCard.tsx';
+import { useText } from '@/text/runtime.tsx';
 import type { TelegramAuthPayload } from '@/types/auth.ts';
 import classes from '@/features/auth/TelegramLogin.module.css';
 
@@ -38,11 +39,13 @@ export interface TelegramLoginProps {
  * a note stands in its place.
  */
 export function TelegramLogin(props: TelegramLoginProps) {
-  if (isBuilderMode()) return <AuthNote>Preview: Telegram&rsquo;s sign-in button shows here on your live shop</AuthNote>;
+  const { t } = useText();
+  if (isBuilderMode()) return <AuthNote>{t('auth.telegram.previewNote')}</AuthNote>;
   return <TelegramWidget {...props} />;
 }
 
 function TelegramWidget({ botUsername, onAuth }: TelegramLoginProps) {
+  const { t } = useText();
   const host = useRef<HTMLDivElement>(null);
   const handler = useRef(onAuth);
   const [absent, setAbsent] = useState(false);
@@ -87,7 +90,7 @@ function TelegramWidget({ botUsername, onAuth }: TelegramLoginProps) {
     <>
       <div className={classes.mount} ref={host} />
       {absent ? (
-        <AuthNote tone="warn">Telegram sign-in isn&rsquo;t loading on this address</AuthNote>
+        <AuthNote tone="warn">{t('auth.telegram.widgetMissing')}</AuthNote>
       ) : null}
     </>
   );

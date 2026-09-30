@@ -2,6 +2,7 @@ import { type CSSProperties, type ReactNode } from 'react';
 import { formatCountdown } from '@/lib/cutoffs.ts';
 import { useCutoffInfo } from '@/lib/server-clock.ts';
 import { useCoreOptions } from '@/templates/hooks.ts';
+import { textKey, useText } from '@/text/runtime.tsx';
 import classes from '@/features/notices/CutoffBar.module.css';
 
 /** How long the meter takes to drain: the last 12 hours before a cut-off. */
@@ -9,9 +10,17 @@ const WINDOW_MS = 12 * 60 * 60 * 1000;
 /** Under an hour the rail switches to the warning token. */
 const URGENT_MS = 60 * 60 * 1000;
 
-const DAY_LABEL: Record<string, string> = {
-  mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun',
-};
+const DAY_LABEL = {
+  mon: textKey('notices.cutoff.days.mon'),
+  tue: textKey('notices.cutoff.days.tue'),
+  wed: textKey('notices.cutoff.days.wed'),
+  thu: textKey('notices.cutoff.days.thu'),
+  fri: textKey('notices.cutoff.days.fri'),
+  sat: textKey('notices.cutoff.days.sat'),
+  sun: textKey('notices.cutoff.days.sun'),
+} as const;
+
+const dayKey = (day: string) => (Object.hasOwn(DAY_LABEL, day) ? DAY_LABEL[day as keyof typeof DAY_LABEL] : null);
 
 /**
  * The store's own wording (the `cutoffMessage` core option) with `{time}` and `{dispatch}`
@@ -33,6 +42,7 @@ export function fillCutoffMessage(message: string, time: ReactNode, dispatch: Re
  * time left and the meter.
  */
 export function CutoffBar() {
+  const { t, tn } = useText();
   const { next } = useCutoffInfo();
   const { showCutoffBar, cutoffMessage, showCutoffCountdown } = useCoreOptions();
   if (!next || !showCutoffBar) return null;
@@ -50,26 +60,24 @@ export function CutoffBar() {
   return (
     <section
       className={`${classes.rail} ${urgent ? classes.urgent : ''}`}
-      aria-label="Dispatch cut-off"
+      aria-label={t('notices.cutoff.ariaLabel')}
       data-sf-part="cutoff"
     >
       <div className={classes.inner}>
         <p className={classes.line}>
           {next.isToday ? null : (
             <>
-              <span className={classes.day}>{DAY_LABEL[next.day] ?? next.day}</span>
+              <span className={classes.day}>{dayKey(next.day) ? t(dayKey(next.day)!) : next.day}</span>
               {' · '}
             </>
           )}
           {cutoffMessage ? (
             fillCutoffMessage(cutoffMessage, time, ships)
           ) : (
-            <>
-              Order by {time} for {ships} dispatch
-            </>
+            <>{tn('notices.cutoff.message', { time, dispatch: ships })}</>
           )}
         </p>
-        {showCutoffCountdown ? <span className={classes.left}>{formatCountdown(next.msRemaining)} left</span> : null}
+        {showCutoffCountdown ? <span className={classes.left}>{t('notices.cutoff.left', { time: formatCountdown(next.msRemaining) })}</span> : null}
       </div>
       {fill === null ? null : (
         <span className={classes.meter} style={{ '--fill': fill } as CSSProperties} aria-hidden />

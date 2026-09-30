@@ -5,6 +5,7 @@ import { useSessionStore } from '@/stores/session.ts';
 import { useTelegramAuthStore } from '@/stores/telegram.ts';
 import { TelegramSignInError } from '@/features/auth/TelegramSignInError.tsx';
 import { LoginOptions } from '@/features/auth/LoginOptions.tsx';
+import { useText } from '@/text/runtime.tsx';
 import { DEFAULT_LANDING, safeReturnTo } from '@/features/auth/useLoginSuccess.ts';
 import classes from '@/features/auth/LoginPage.module.css';
 
@@ -16,6 +17,7 @@ import classes from '@/features/auth/LoginPage.module.css';
  */
 export function LoginPage() {
   const { brand } = useSettings();
+  const { t } = useText();
   const [params] = useSearchParams();
   const setReturnTo = useSessionStore((s) => s.setReturnTo);
   const telegramStatus = useTelegramAuthStore((s) => s.status);
@@ -57,10 +59,9 @@ export function LoginPage() {
             client with no logo uploaded gets the wordmark fallback — which would
             print the shop's name twice in a row, immediately above the heading
             that names it a third time. */}
-        <h1 className={classes.title}>Sign in to {brand.name}</h1>
+        <h1 className={classes.title}>{t('auth.page.title', { name: brand.name })}</h1>
         <p className={classes.lede}>
-          There&rsquo;s no password. Sign in from a chat app you already use, and your orders,
-          points and referrals are waiting.
+          {t('auth.page.lede')}
         </p>
       </div>
 

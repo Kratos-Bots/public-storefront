@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useClipboard } from '@mantine/hooks';
 import { AuthNote } from '@/features/auth/AuthCard.tsx';
 import { useWhatsappLogin } from '@/features/auth/useWhatsappLogin.ts';
+import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/auth/WhatsappLogin.module.css';
 
 /** A bare international number reads as a number once it has its plus. */
@@ -51,6 +52,7 @@ function useRemaining(deadline: number | undefined): number {
  */
 export function WhatsappLogin({ number }: { number: string | null }) {
   const { state, start, pending, data, deadline, error } = useWhatsappLogin();
+  const { t } = useText();
   const remaining = useRemaining(state === 'started' ? deadline : undefined);
   const clipboard = useClipboard({ timeout: 1600 });
   const to = dialable(number);
@@ -59,7 +61,7 @@ export function WhatsappLogin({ number }: { number: string | null }) {
     return (
       <p className={classes.settled} role="status">
         <span className={classes.dot} aria-hidden />
-        Message received — signing you in
+        {t('auth.whatsapp.received')}
       </p>
     );
   }
@@ -67,9 +69,9 @@ export function WhatsappLogin({ number }: { number: string | null }) {
   if (state === 'expired') {
     return (
       <>
-        <AuthNote tone="warn">That code expired</AuthNote>
+        <AuthNote tone="warn">{t('auth.whatsapp.expiredNote')}</AuthNote>
         <p className={classes.lede}>
-          A code is only good for a few minutes. Start a new one when you&rsquo;re ready to send it.
+          {t('auth.whatsapp.expiredBody')}
         </p>
         <button
           type="button"
@@ -79,7 +81,7 @@ export function WhatsappLogin({ number }: { number: string | null }) {
           data-sf-part="button"
           data-variant="filled"
         >
-          Start again
+          {t('auth.whatsapp.startAgain')}
         </button>
       </>
     );
@@ -88,7 +90,7 @@ export function WhatsappLogin({ number }: { number: string | null }) {
   if (state === 'error') {
     return (
       <>
-        <AuthNote tone="danger">{error ?? 'Something went wrong'}</AuthNote>
+        <AuthNote tone="danger">{error ?? t('auth.whatsapp.failed')}</AuthNote>
         <button
           type="button"
           className={classes.cta}
@@ -97,7 +99,7 @@ export function WhatsappLogin({ number }: { number: string | null }) {
           data-sf-part="button"
           data-variant="filled"
         >
-          Try again
+          {t('common.actions.tryAgain')}
         </button>
       </>
     );
@@ -114,12 +116,12 @@ export function WhatsappLogin({ number }: { number: string | null }) {
           data-sf-part="button"
           data-variant="filled"
         >
-          Open WhatsApp
+          {t('auth.whatsapp.open')}
         </a>
 
         <div className={classes.slip}>
           <span className={classes.slipLabel}>
-            {to ? `Or send this code to ${to}` : 'Or send this code to us on WhatsApp'}
+            {to ? t('auth.whatsapp.sendCodeTo', { number: to }) : t('auth.whatsapp.sendCodeToUs')}
           </span>
           <div className={classes.slipRow}>
             <code className={classes.code}>{data.code}</code>
@@ -128,9 +130,9 @@ export function WhatsappLogin({ number }: { number: string | null }) {
                 type="button"
                 className={classes.copy}
                 onClick={() => clipboard.copy(data.code)}
-                aria-label={`Copy the code ${data.code}`}
+                aria-label={t('auth.whatsapp.copyCode', { code: data.code })}
               >
-                {clipboard.copied ? 'Copied' : 'Copy'}
+                {clipboard.copied ? t('common.actions.copied') : t('common.actions.copy')}
               </button>
             ) : null}
           </div>
@@ -138,7 +140,7 @@ export function WhatsappLogin({ number }: { number: string | null }) {
 
         <p className={classes.waiting} role="status">
           <span className={classes.pulse} aria-hidden />
-          Waiting for your message
+          {t('auth.whatsapp.waiting')}
           <span className={classes.clock} aria-hidden>
             {clock(remaining)}
           </span>
@@ -150,8 +152,7 @@ export function WhatsappLogin({ number }: { number: string | null }) {
   return (
     <>
       <p className={classes.lede}>
-        Send us one message from WhatsApp and you&rsquo;re in. Nothing to remember, nothing to type
-        back.
+        {t('auth.whatsapp.intro')}
       </p>
       <button
         type="button"
@@ -161,7 +162,7 @@ export function WhatsappLogin({ number }: { number: string | null }) {
         data-sf-part="button"
         data-variant="filled"
       >
-        {pending ? 'Starting…' : 'Continue with WhatsApp'}
+        {pending ? t('auth.whatsapp.starting') : t('auth.whatsapp.continue')}
       </button>
     </>
   );

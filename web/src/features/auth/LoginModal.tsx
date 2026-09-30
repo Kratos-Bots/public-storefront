@@ -3,6 +3,7 @@ import { Modal } from '@mantine/core';
 import { useUiStore } from '@/stores/ui.ts';
 import { useSessionStore, selectIsLoggedIn } from '@/stores/session.ts';
 import { LoginOptions } from '@/features/auth/LoginOptions.tsx';
+import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/auth/LoginModal.module.css';
 
 /**
@@ -16,6 +17,7 @@ export function LoginModal() {
   const opened = useUiStore((s) => s.loginOpen);
   const close = useUiStore((s) => s.close);
   const loggedIn = useSessionStore(selectIsLoggedIn);
+  const { t } = useText();
 
   useEffect(() => {
     if (opened && loggedIn) close('loginOpen');
@@ -25,14 +27,14 @@ export function LoginModal() {
     <Modal
       opened={opened}
       onClose={() => close('loginOpen')}
-      title="Sign in"
+      title={t('common.actions.signIn')}
       centered
       size="sm"
       radius="var(--mantine-radius-default)"
       classNames={{ content: classes.content, header: classes.header, title: classes.title }}
     >
       <p className={classes.lede}>
-        There&rsquo;s no password — sign in from a chat app you already use.
+        {t('auth.modal.lede')}
       </p>
       <LoginOptions />
     </Modal>

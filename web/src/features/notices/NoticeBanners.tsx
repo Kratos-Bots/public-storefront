@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import { CloseButton } from '@mantine/core';
 import { useSettings } from '@/app/settings.ts';
 import type { Notice } from '@/types/settings.ts';
+import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/notices/NoticeBanners.module.css';
 
 const STORAGE_KEY = 'sf-dismissed-notices-v1';
@@ -70,6 +71,7 @@ export interface NoticeBannersProps {
  */
 export function NoticeBanners({ pinned = false }: NoticeBannersProps) {
   const { notices } = useSettings();
+  const { t } = useText();
   const [dismissed, setDismissed] = useState(readDismissed);
   const ref = useRef<HTMLElement>(null);
 
@@ -92,7 +94,7 @@ export function NoticeBanners({ pinned = false }: NoticeBannersProps) {
   return (
     <aside
       ref={ref}
-      aria-label={pinned ? 'Pinned store notices' : 'Store notices'}
+      aria-label={pinned ? t('notices.banners.pinnedLabel') : t('notices.banners.label')}
       data-sf-part={pinned ? 'pinned-notices' : undefined}
     >
       {visible.map((notice) => (
@@ -111,7 +113,7 @@ export function NoticeBanners({ pinned = false }: NoticeBannersProps) {
                 size="sm"
                 variant="subtle"
                 classNames={{ root: classes.close }}
-                aria-label={notice.title ? `Dismiss: ${notice.title}` : 'Dismiss notice'}
+                aria-label={notice.title ? t('notices.banners.dismissTitled', { title: notice.title }) : t('notices.banners.dismiss')}
                 onClick={() => dismiss(notice.id)}
               />
             ) : null}

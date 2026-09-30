@@ -2,6 +2,7 @@ import { Button } from '@mantine/core';
 import { EmptyState } from '@/components/EmptyState.tsx';
 import { bootTelegramSession } from '@/app/telegram-session.ts';
 import { useTelegramAuthStore } from '@/stores/telegram.ts';
+import { useText } from '@/text/runtime.tsx';
 
 /**
  * Inside Telegram there is no other way in — no widget, no WhatsApp code — so a
@@ -9,14 +10,15 @@ import { useTelegramAuthStore } from '@/stores/telegram.ts';
  */
 export function TelegramSignInError() {
   const error = useTelegramAuthStore((s) => s.error);
+  const { t } = useText();
   return (
     <EmptyState
-      eyebrow="Telegram"
-      title="Couldn’t sign you in through Telegram"
-      description={`Close and reopen the shop from the bot.${error ? ` (${error})` : ''}`}
+      eyebrow={t('common.contact.telegram')}
+      title={t('auth.telegram.errorTitle')}
+      description={t('auth.telegram.errorBody', { detail: error ? ` (${error})` : '' })}
       action={
         <Button variant="default" size="sm" onClick={() => void bootTelegramSession()}>
-          Try again
+          {t('common.actions.tryAgain')}
         </Button>
       }
     />

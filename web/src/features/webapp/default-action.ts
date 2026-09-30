@@ -1,3 +1,5 @@
+import { textSnapshot } from '@/text/runtime.tsx';
+
 export interface DefaultActionInput {
   pathname: string;
   count: number;
@@ -29,6 +31,6 @@ export function defaultPrimaryAction(input: DefaultActionInput): DefaultAction |
   const { pathname, count, subtotalLabel, checkoutTo, ordering, blocked } = input;
   if (!ordering || count === 0) return null;
   if (TERMINAL.some((p) => pathname === p || (p.endsWith('/') && pathname.startsWith(p)))) return null;
-  if (pathname === '/cart') return { label: `Checkout · ${subtotalLabel}`, to: checkoutTo, disabled: blocked };
-  return { label: `View cart · ${subtotalLabel}`, to: '/cart', disabled: false };
+  if (pathname === '/cart') return { label: textSnapshot().t('webapp.action.checkout', { subtotal: subtotalLabel }), to: checkoutTo, disabled: blocked };
+  return { label: textSnapshot().t('webapp.action.viewCart', { subtotal: subtotalLabel }), to: '/cart', disabled: false };
 }
