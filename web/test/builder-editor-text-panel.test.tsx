@@ -124,6 +124,14 @@ describe('Text panel rows', () => {
     expect(screen.queryByText(/“Other” form/)).toBeNull();
   });
 
+  it('a row\'s issue list is a polite live region, so a new issue is announced', () => {
+    ready();
+    const key = pluralKey();
+    render(<TextRow row={rowFor(key)!} />);
+    const list = document.querySelector(`[data-text-key="${key}"] ul`);
+    expect(list).toHaveAttribute('aria-live', 'polite');
+  });
+
   it('a plural missing its “other” form says so', () => {
     ready();
     const key = pluralKey();

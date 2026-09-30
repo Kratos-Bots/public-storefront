@@ -23,25 +23,6 @@ const formOf = (value: DraftValue | TextValue, category: string): string =>
   typeof value === 'string' ? value : (value as Record<string, string | undefined>)[category] ?? value.other ?? '';
 export const summary = (value: DraftValue | TextValue): string => formOf(value, 'other');
 
-const quoteList = (forms: readonly string[]) => {
-  const q = forms.map((f) => `“${f}”`);
-  return q.length < 2 ? q.join('') : `${q.slice(0, -1).join(', ')} and ${q.at(-1)}`;
-};
-
-/**
- * Task 6's `empty` message always points at “Other”; checkValue also raises `empty` for a blank
- * `one`/`few`… form, so the row names the form(s) actually empty.
- */
-function issueText(issue: TextIssue, value: DraftValue | undefined): string {
-  if (issue.rule !== 'empty' || !isForms(value)) return issue.message;
-  if (typeof value.other !== 'string' || value.other.trim() === '') {
-    return 'Fill in the “other” form — it’s used for every count without a form of its own.';
-  }
-  const blank = Object.entries(value).filter(([, s]) => typeof s === 'string' && s.trim() === '').map(([f]) => f);
-  if (blank.length === 0) return issue.message;
-  return `Fill in the ${quoteList(blank)} form${blank.length > 1 ? 's' : ''}, or clear ${blank.length > 1 ? 'them' : 'it'} to use “other”.`;
-}
-
 /** Non-blocking hints for the value at the chosen scope: {count} left out, edge spaces dropped. */
 function warningsFor(row: TextRowDef, value: DraftValue | undefined): string[] {
   if (value === undefined) return [];
@@ -237,14 +218,13 @@ function RowForLoad({ row, compact = false, loadEpoch }: { row: TextRowDef; comp
         <span className={styles.count} data-over={length > row.max ? '' : undefined}>{length} / {row.max}</span>
         <button type="button" className={styles.reset} disabled={stored === undefined || locked} onClick={() => write(null)}>Reset</button>
       </div>
-      <ul id={`${id}-issues`} className={styles.rowIssues}>
+      <ul id={`${id}-issues`} className={styles.rowIssues} aria-live="polite">
         {cell.issues.map((i) => {
-          const value = i.scope === 'shared' ? cell.shared : cell.layout;
           const prefix = i.scope !== scope ? `${i.scope === 'shared' ? 'All layouts' : `Only ${layoutLabel}`}: ` : '';
           return (
             <li key={`${i.scope}-${i.rule}`} className={styles.issue}>
               <WarnIcon />
-              <span>{prefix}{issueText(i, value)}</span>
+              <span>{prefix}{i.message}</span>
             </li>
           );
         })}

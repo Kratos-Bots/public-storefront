@@ -48,6 +48,21 @@ export function countWarnings(key: string, value: unknown): string[] {
 
 const list = (names: readonly string[]) => names.map((n) => `{${n}}`).join(', ');
 
+const quoteList = (forms: readonly string[]) => {
+  const q = forms.map((f) => `“${f}”`);
+  return q.length < 2 ? q.join('') : `${q.slice(0, -1).join(', ')} and ${q.at(-1)}`;
+};
+
+/** `empty` on a plural: name the form(s) actually blank — `other` first, as it has no fallback. */
+function emptyFormsMessage(value: Record<string, unknown>): string {
+  if (typeof value.other !== 'string' || value.other.trim() === '') {
+    return 'Fill in the “other” form — it’s used for every count without a form of its own.';
+  }
+  const blank = Object.entries(value).filter(([, s]) => typeof s === 'string' && s.trim() === '').map(([f]) => f);
+  if (blank.length === 0) return 'Fill in every form, or clear the ones you don’t need to use “other”.';
+  return `Fill in the ${quoteList(blank)} form${blank.length > 1 ? 's' : ''}, or clear ${blank.length > 1 ? 'them' : 'it'} to use “other”.`;
+}
+
 export function textIssueMessage(rule: string, key: string, value: unknown): string {
   const row = rowFor(key);
   switch (rule) {
@@ -68,9 +83,7 @@ export function textIssueMessage(rule: string, key: string, value: unknown): str
         ? 'This line needs one wording per count. Reset it and fill in the forms again.'
         : 'This line takes a single wording. Reset it and type it again.';
     case 'empty':
-      return isForms(value)
-        ? 'Fill in the “Other” form — it’s used for every count without a form of its own.'
-        : 'Type some wording, or reset the line.';
+      return isForms(value) ? emptyFormsMessage(value) : 'Type some wording, or reset the line.';
     case 'control-char':
       return 'Remove the tabs or other invisible control characters.';
     case 'fixed':

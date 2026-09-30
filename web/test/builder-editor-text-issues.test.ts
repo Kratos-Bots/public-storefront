@@ -45,7 +45,16 @@ describe('text issues', () => {
     expect(textIssueMessage('unknown-placeholder', withPh, 'Hi {nope}')).toContain(`{${name}}`);
     expect(textIssueMessage('unknown-placeholder', plain, 'Hi {nope}')).toContain('takes no placeholders');
     expect(textIssueMessage('too-long', plain, '')).toBe(`Keep this line to ${rowFor(plain)!.max} characters.`);
-    expect(textIssueMessage('empty', plural, { one: 'a' })).toContain('“Other”');
+    expect(textIssueMessage('empty', plural, { one: 'a' })).toContain('“other” form');
+  });
+
+  it('the empty message names the plural form that is actually empty (admin-facing textIssues)', () => {
+    expect(textIssueMessage('empty', plural, { one: '  ', other: '{count} crates' })).toBe('Fill in the “one” form, or clear it to use “other”.');
+    expect(textIssueMessage('empty', plural, { zero: '', one: ' ', other: '{count} crates' }))
+      .toBe('Fill in the “zero” and “one” forms, or clear them to use “other”.');
+    expect(textIssueMessage('empty', plural, { one: 'a', other: ' ' })).toContain('“other” form');
+    const [issue] = textIssues({ shared: null, layout: { [plural]: { one: ' ', other: '{count} crates' } } });
+    expect(issue?.message).toContain('“one” form');
   });
 
   it('textIssues: shared first, unknown keys never block, null shared is skipped', () => {
