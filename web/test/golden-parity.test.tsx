@@ -1,4 +1,4 @@
-import { afterEach, describe, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -9,12 +9,19 @@ import type { StorefrontSettings } from '@/types/settings.ts';
 import { CARD_MATRIX, catalogOf, FULL, LEGACY_TOGGLES, MATE, ROW_MATRIX, SETTINGS, toggleName, baseProduct } from './helpers/product-fixtures.ts';
 import { expectGolden } from './helpers/golden.ts';
 
-const state = vi.hoisted(() => ({ settings: {} as StorefrontSettings, catalog: undefined as Catalog | undefined, showSku: true, search: '' }));
+const state = vi.hoisted(() => ({
+  settings: {} as StorefrontSettings, catalog: undefined as Catalog | undefined, showSku: true, search: '',
+  /** Every query hook answers in this state: settled with data, still pending, or failed. */
+  mode: 'ok' as 'ok' | 'pending' | 'error',
+}));
+const answer = <T,>(data: T) => ({
+  data: state.mode === 'ok' ? data : undefined, isPending: state.mode === 'pending', isError: state.mode === 'error', refetch: () => {},
+});
 vi.mock('@/app/settings.ts', () => ({ useSettings: () => state.settings }));
 vi.mock('@/features/catalog/use-catalog.ts', () => ({
   CATALOG_KEY: ['catalog'],
-  useCatalog: () => ({ data: state.catalog, isPending: false, isError: false, refetch: () => {} }),
-  useProduct: (id: number | null) => ({ data: id == null ? undefined : state.catalog?.products.find((p) => p.id === id), isPending: false, isError: false, refetch: () => {} }),
+  useCatalog: () => answer(state.catalog),
+  useProduct: (id: number | null) => answer(id == null ? undefined : state.catalog?.products.find((p) => p.id === id)),
 }));
 vi.mock('@/templates/hooks.ts', async (orig) => {
   const real = await orig<typeof import('@/templates/hooks.ts')>();
@@ -28,7 +35,7 @@ import { ProductRow } from '@/features/catalog/ProductRow.tsx';
 import { ProductGrid } from '@/features/catalog/ProductGrid.tsx';
 import { ProductList } from '@/features/catalog/ProductList.tsx';
 
-afterEach(() => { cleanup(); state.showSku = true; state.search = ''; });
+afterEach(() => { cleanup(); state.showSku = true; state.search = ''; state.mode = 'ok'; });
 
 /** The search term arrives the way the shells hand it down: through the router outlet context. */
 function shell(path: string, route: string, element: ReactNode) {
@@ -54,18 +61,39 @@ describe('product page (v0.7.0, sections × photo)', () => {
     const { container } = shell('/p/1', '/p/:id', <ProductDetailPage sections={t} />);
     expectGolden(toggleName(t, photo), container.innerHTML);
   });
+  it.each([
+    { name: 'product-page-loading', path: '/p/1', mode: 'pending' as const },
+    { name: 'product-page-error', path: '/p/1', mode: 'error' as const },
+    { name: 'product-page-nan', path: '/p/abc', mode: 'ok' as const },
+    { name: 'product-page-unknown', path: '/p/999', mode: 'ok' as const },
+  ])('$name', ({ name, path, mode }) => {
+    state.settings = SETTINGS;
+    state.catalog = catalogOf(FULL, MATE);
+    state.mode = mode;
+    const { container } = shell(path, '/p/:id', <ProductDetailPage />);
+    expectGolden(name, container.innerHTML);
+  });
 });
 
 describe('product sheet (v0.7.0)', () => {
   it.each([
     { name: 'product-sheet-full', product: FULL, showSku: true },
     { name: 'product-sheet-plain-nosku', product: baseProduct(), showSku: false },
-  ])('$name', ({ name, product, showSku }) => {
+    { name: 'product-sheet-preorder', product: baseProduct({ isPreorder: true, preorderEta: Date.UTC(2026, 9, 12, 12) }), showSku: true },
+    { name: 'product-sheet-preorder-no-eta', product: baseProduct({ isPreorder: true, inStock: false }), showSku: true },
+    { name: 'product-sheet-low', product: baseProduct({ lowStockAlert: true }), showSku: true },
+    { name: 'product-sheet-tiers', product: baseProduct({ pricingTiers: [{ id: 1, minQuantity: 5, price: 10 }, { id: 2, minQuantity: 10, price: 9 }] }), showSku: true },
+    { name: 'product-sheet-loading', product: FULL, showSku: true, mode: 'pending' as const },
+    { name: 'product-sheet-error', product: FULL, showSku: true, mode: 'error' as const },
+  ])('$name', ({ name, product, showSku, mode }) => {
+    state.mode = mode ?? 'ok';
     state.settings = { ...SETTINGS, features: { ...SETTINGS.features, layout: 'menu' } } as StorefrontSettings;
     state.catalog = catalogOf(product, MATE);
     state.showSku = showSku;
     const { baseElement } = shell('/', '/', <ProductDetailSheet productId={product.id} onClose={() => {}} onSelect={() => {}} />);
-    expectGolden(name, baseElement.querySelector('[data-sf-part="sheet"]')!.outerHTML);
+    const sheet = baseElement.querySelector('[data-sf-part="sheet"]');
+    expect(sheet, 'no [data-sf-part="sheet"] root rendered').not.toBeNull();
+    expectGolden(name, sheet!.outerHTML);
   });
 });
 
@@ -97,6 +125,17 @@ describe('catalogue pages (v0.7.0)', () => {
   ])('$name', ({ name, path, route, search, products }) => {
     state.settings = SETTINGS; state.catalog = catalogOf(...products); state.search = search;
     const { container } = shell(path, route, <ProductGrid />);
+    expectGolden(name, container.innerHTML);
+  });
+  it.each([
+    { name: 'grid-loading', mode: 'pending' as const, list: false },
+    { name: 'grid-error', mode: 'error' as const, list: false },
+    { name: 'list-loading', mode: 'pending' as const, list: true },
+    { name: 'list-error', mode: 'error' as const, list: true },
+  ])('$name', ({ name, mode, list }) => {
+    state.settings = list ? { ...SETTINGS, features: { ...SETTINGS.features, layout: 'menu' } } as StorefrontSettings : SETTINGS;
+    state.catalog = catalogOf(FULL, MATE); state.mode = mode;
+    const { container } = shell('/', '/', list ? <ProductList /> : <ProductGrid />);
     expectGolden(name, container.innerHTML);
   });
   it.each([
