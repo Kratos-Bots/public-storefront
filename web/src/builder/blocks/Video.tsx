@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { defineBlock } from '@/builder/define.ts';
 import { useText } from '@/text/runtime.tsx';
+import { BOX, styleSupport, VIS } from '@/builder/style/model.ts';
+import type { StyleAttrs } from '@/builder/define.ts';
 import classes from '@/builder/blocks/Video.module.css';
 
 type Props = { id: string; provider: 'youtube' | 'vimeo'; videoId: string; title: string };
@@ -13,10 +15,10 @@ export function embedUrl(provider: Props['provider'], videoId: string): string |
 }
 
 /** A block's render must not call hooks, so the site-text fallback for an empty title lives here. */
-function VideoView({ src, title }: { src: string; title: string }) {
+function VideoView({ src, title, styleAttrs }: { src: string; title: string; styleAttrs?: StyleAttrs }) {
   const { t } = useText();
   return (
-    <div className={classes.frame} data-sf-block="Video">
+    <div className={classes.frame} data-sf-block="Video" {...styleAttrs}>
       <iframe
         className={classes.player}
         src={src}
@@ -35,11 +37,12 @@ function VideoView({ src, title }: { src: string; title: string }) {
 export const block = defineBlock<Props>({
   name: 'Video', label: 'Video', category: 'content', layouts: 'all', routeBound: false, slots: [],
   text: ['common.video.*'],
+  style: styleSupport('root', [...BOX, ...VIS]),
   schema: z.object({ provider: z.enum(['youtube', 'vimeo']), videoId: z.string().max(20), title: z.string().min(1).max(120) }),
   defaultProps: { provider: 'youtube', videoId: '', title: 'Video' },
-  render: ({ provider, videoId, title }) => {
+  render: ({ provider, videoId, title, puck }) => {
     const src = embedUrl(provider, videoId);
     if (!src) return null;
-    return <VideoView src={src} title={title} />;
+    return <VideoView src={src} title={title} styleAttrs={puck.style} />;
   },
 });
