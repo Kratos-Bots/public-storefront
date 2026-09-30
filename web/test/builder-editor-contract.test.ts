@@ -20,7 +20,7 @@ const pkg = JSON.parse(readFileSync(resolve(__dirname, '../package.json'), 'utf8
 export const SPEC_BLOCKS = [
   'PageOutlet', 'Header', 'NavLinks', 'Footer', 'TopBar', 'NoticeBanners', 'CutoffBar', 'ContactStrip', 'MobileCartBar',
   'CatalogHero', 'CategoryNav', 'SearchField', 'ProductGrid', 'ProductList', 'WholesaleTable', 'FeaturedProducts', 'Upsells',
-  'ProductDetail',
+  'ProductDetail', 'CardTile', 'CardRow',
   'CartContents', 'CartSummary', 'CheckoutFlow', 'LoginOptions', 'AccountNav', 'OrdersList', 'OrderDetail', 'Loyalty', 'Referrals', 'Profile',
   'OrderStatus', 'PaymentSuccess', 'PaymentCancel', 'OrderPlaced', 'VerifyForm', 'TrackingLookup',
   'Heading', 'RichText', 'Image', 'Button', 'Columns', 'Section', 'Spacer', 'Divider', 'FAQ', 'Testimonial', 'Video',

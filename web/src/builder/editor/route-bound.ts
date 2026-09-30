@@ -1,6 +1,6 @@
 import { BLOCKS } from '@/builder/registry.ts';
 import { allowedOn } from '@/builder/rules.ts';
-import type { DocKey, FixedRouteKey, LayoutKind } from '@/builder/types.ts';
+import type { CardKey, DocKey, FixedRouteKey, LayoutKind } from '@/builder/types.ts';
 
 type Entry = { blocks: readonly string[]; exactlyOne: boolean };
 
@@ -10,7 +10,7 @@ type Entry = { blocks: readonly string[]; exactlyOne: boolean };
  * The catalogue's "≥ 1 of" rule is not locked — the issues list reports its absence instead.
  * The route-bound test cross-checks this table against Plan 2's checkRules() and BLOCKS.
  */
-export const ROUTE_BOUND: Record<'shell' | FixedRouteKey, Entry> = {
+export const ROUTE_BOUND: Record<'shell' | FixedRouteKey | CardKey, Entry> = {
   shell: { blocks: ['PageOutlet'], exactlyOne: true },
   catalog: { blocks: ['ProductGrid', 'ProductList', 'WholesaleTable'], exactlyOne: false },
   product: { blocks: ['ProductDetail'], exactlyOne: true },
@@ -28,6 +28,9 @@ export const ROUTE_BOUND: Record<'shell' | FixedRouteKey, Entry> = {
   'order-placed': { blocks: ['OrderPlaced'], exactlyOne: true },
   verify: { blocks: ['VerifyForm'], exactlyOne: true },
   tracking: { blocks: ['TrackingLookup'], exactlyOne: true },
+  // A card design's frame (product-parts §5.3): the root of its document, locked.
+  'card:tile': { blocks: ['CardTile'], exactlyOne: true },
+  'card:row': { blocks: ['CardRow'], exactlyOne: true },
 };
 
 export function homeDocKeys(name: string): DocKey[] {

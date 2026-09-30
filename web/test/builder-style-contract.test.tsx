@@ -76,6 +76,7 @@ const FLOOR: Record<string, { target: StyleTarget; keys: readonly StyleKey[] } |
   WholesaleTable: { target: 'wrap', keys: ['bg', 'padTop', 'marginTop', 'marginBottom', 'shadow'] },
   PageOutlet: false,
   MobileCartBar: false,
+  CardTile: { target: 'root', keys: [...BOX] }, CardRow: { target: 'root', keys: [...BOX] },
 };
 
 describe('style support contract (spec §4, §12)', () => {
@@ -158,7 +159,8 @@ describe('every stylable block carries the marker when styled (spec §5.1)', () 
     return { [k]: STYLE_KEYS[k][0] };
   }
   const stylable = Object.values(BLOCKS).filter((d) => d.style && !d.part);
-  const owned = stylable.filter((d) => d.style && d.style.target !== 'wrap').map((d) => d.name);
+  // A card frame renders only inside a card context: its marker is asserted in builder-card-parts.test.tsx.
+  const owned = stylable.filter((d) => d.style && d.style.target !== 'wrap' && !['CardTile', 'CardRow'].includes(d.name)).map((d) => d.name);
   const wrapped = stylable.filter((d) => d.style && d.style.target === 'wrap').map((d) => d.name);
   /** Root/pass blocks: the real render must spread `puck.style` onto the element it owns. */
   const SAMPLE: Record<string, ComponentData> = {

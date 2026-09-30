@@ -23,7 +23,7 @@
 .name {
   margin: 0;
   font-family: var(--sf-font-heading);
-  font-size: 0.9375rem;
+  font-size: calc(0.9375rem * var(--sf-text-scale, 1));
   font-weight: 600;
   line-height: 1.25;
   letter-spacing: -0.005em;
@@ -41,7 +41,7 @@
   background: none;
   font: inherit;
   letter-spacing: inherit;
-  color: var(--sf-text);
+  color: var(--sf-block-fg, var(--sf-text));
   text-align: left;
   cursor: pointer;
   overflow: hidden;
@@ -88,34 +88,34 @@
 .preorder,
 .limit {
   font-family: var(--sf-font-mono);
-  font-size: 10px;
+  font-size: calc(10px * var(--sf-text-scale, 1));
   font-weight: 500;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   font-variant-numeric: tabular-nums;
-  color: var(--sf-faint);
+  color: var(--sf-block-fg, var(--sf-faint));
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .tier,
 .limit {
-  color: var(--sf-muted);
+  color: var(--sf-block-fg, var(--sf-muted));
 }
 
 .preorder {
-  color: var(--sf-warn);
+  color: var(--sf-block-fg, var(--sf-warn));
 }
 
 .price {
   flex: none;
   margin: 0;
   font-family: var(--sf-font-mono);
-  font-size: 0.9375rem;
+  font-size: calc(0.9375rem * var(--sf-text-scale, 1));
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   line-height: 1;
-  color: var(--sf-text);
+  color: var(--sf-block-fg, var(--sf-text));
   text-align: right;
 }
 

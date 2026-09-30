@@ -8,6 +8,7 @@ import { useText } from '@/text/runtime.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { pickFeatured, type FeaturedQuery } from '@/builder/blocks/_shared/featured.ts';
 import { BOX, styleSupport, VIS } from '@/builder/style/model.ts';
+import { CardDesignBoundary } from '@/builder/card-design.tsx';
 import type { StyleAttrs } from '@/builder/define.ts';
 import classes from '@/builder/blocks/FeaturedProducts.module.css';
 
@@ -33,9 +34,11 @@ function FeaturedView({ title, styleAttrs, ...query }: Omit<Props, 'id'> & { sty
     <section className={classes.root} data-sf-block="FeaturedProducts" {...styleAttrs} aria-label={title || t('catalog.featured.ariaLabel')}>
       {title ? <h2 className={classes.title}>{title}</h2> : null}
       <div className={classes.grid}>
-        {picked.map((product, i) => (
-          <ProductCard key={product.id} product={product} index={i} hasSiblingImages={siblingImages} />
-        ))}
+        <CardDesignBoundary kind="tile">
+          {picked.map((product, i) => (
+            <ProductCard key={product.id} product={product} index={i} hasSiblingImages={siblingImages} />
+          ))}
+        </CardDesignBoundary>
       </div>
     </section>
   );

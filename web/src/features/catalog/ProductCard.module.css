@@ -28,10 +28,10 @@
 .name {
   margin: 0;
   font-family: var(--sf-font-heading);
-  font-size: 0.875rem;
+  font-size: calc(0.875rem * var(--sf-text-scale, 1));
   font-weight: 600;
   line-height: 1.35;
-  color: var(--sf-text);
+  color: var(--sf-block-fg, var(--sf-text));
 }
 
 .link {
@@ -74,23 +74,23 @@
 
 .preorder {
   font-family: var(--sf-font-mono);
-  font-size: 10px;
+  font-size: calc(10px * var(--sf-text-scale, 1));
   font-weight: 500;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--sf-primary);
+  color: var(--sf-block-fg, var(--sf-primary));
 }
 
 /* The floor the quick-add already opens at — shown so tapping Add is never a
    surprise about how many units just landed in the cart. */
 .limit {
   font-family: var(--sf-font-mono);
-  font-size: 10px;
+  font-size: calc(10px * var(--sf-text-scale, 1));
   font-weight: 500;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   font-variant-numeric: tabular-nums;
-  color: var(--sf-muted);
+  color: var(--sf-block-fg, var(--sf-muted));
 }
 
 /* Pinned to the bottom of the tile so the price rail reads across the row. */
@@ -120,21 +120,21 @@
 
 .price {
   font-family: var(--sf-font-mono);
-  font-size: 0.9375rem;
+  font-size: calc(0.9375rem * var(--sf-text-scale, 1));
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.01em;
-  color: var(--sf-text);
+  color: var(--sf-block-fg, var(--sf-text));
 }
 
 /* The bulk rung, stated as the shopper would say it: "5+ £26.00". */
 .tier {
   font-family: var(--sf-font-mono);
-  font-size: 10px;
+  font-size: calc(10px * var(--sf-text-scale, 1));
   font-weight: 500;
   letter-spacing: 0.12em;
   font-variant-numeric: tabular-nums;
-  color: var(--sf-faint);
+  color: var(--sf-block-fg, var(--sf-faint));
 }
 
 .add {
