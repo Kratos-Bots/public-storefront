@@ -28,7 +28,7 @@ export interface ParcelCardProps {
 export function ParcelCard({ parcel, index, count, onRetry }: ParcelCardProps) {
   const { t: text } = useText();
   const t = parcel.tracking;
-  const title = count > 1 ? text('tracking.parcel.title', { index: index + 1, count }) : text('tracking.parcel.single');
+  const title = count > 1 ? text('common.shipment.parcelOf', { index: index + 1, count }) : text('tracking.parcel.single');
   const destination = count > 1 ? t?.destination ?? null : null;
   const tone = t?.outcome === 'ok' ? parcelTone(t.status) : 'neutral';
   const badge = t?.outcome === 'ok' ? text(parcelLabelKey(t.status)) : null;
@@ -65,7 +65,7 @@ export function ParcelCard({ parcel, index, count, onRetry }: ParcelCardProps) {
       {parcel.trackingNumber || t?.courierNumber ? (
         <div className={classes.numbers}>
           {parcel.trackingNumber ? (
-            <CopyRow label={text('tracking.parcel.trackingNumber')} value={parcel.trackingNumber} />
+            <CopyRow label={text('common.shipment.trackingNumber')} value={parcel.trackingNumber} />
           ) : null}
 
           {t?.courierNumber && t.courierNumber !== parcel.trackingNumber ? (

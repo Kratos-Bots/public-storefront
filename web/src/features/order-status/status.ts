@@ -1,5 +1,5 @@
 import { defaultText, type StringKey } from '@/text/registry.ts';
-import { textKey, textSnapshot } from '@/text/snapshot.ts';
+import { textKey, textSnapshot, type TextApi } from '@/text/snapshot.ts';
 import type { PublicOrder, PublicOrderStatus, ShipmentStatus } from '@/types/public-order.ts';
 
 // Ported from `ecommerce-menu/web/src/features/order-status/status.ts` (plus
@@ -43,15 +43,15 @@ export interface StatusView {
 type Shape = Omit<StatusView, 'eyebrow' | 'headline' | 'detail'>;
 const PROGRESS: Shape = { activeStep: 0, done: false, partial: false, terminal: null, tone: 'default' };
 
-/** Wording resolves at call time, so a mounted provider's published text applies. */
 type HeroKey = Extract<StringKey, `order.hero.${string}`>;
 
-function view(eyebrow: HeroKey, headline: HeroKey, detail: HeroKey, shape: Shape): StatusView {
-  const { t } = textSnapshot();
-  return { eyebrow: t(eyebrow), headline: t(headline), detail: t(detail), ...shape };
-}
-
-export function statusView(order: PublicOrder): StatusView {
+/**
+ * Wording comes from `t`: a component passes `useText().t` (the nearest provider, and it re-renders on
+ * a text change); non-React callers may omit it and get the mounted text at call time.
+ */
+export function statusView(order: PublicOrder, t: TextApi['t'] = textSnapshot().t): StatusView {
+  const view = (eyebrow: HeroKey, headline: HeroKey, detail: HeroKey, shape: Shape): StatusView =>
+    ({ eyebrow: t(eyebrow), headline: t(headline), detail: t(detail), ...shape });
   const status: PublicOrderStatus = order.status;
   const eyebrow = textKey('order.hero.eyebrow');
 
@@ -97,9 +97,9 @@ export function statusView(order: PublicOrder): StatusView {
   }
 }
 
-export const SHIPMENT_LABEL_KEYS: Record<ShipmentStatus, Extract<StringKey, `order.shipment.status.${string}`>> = {
+export const SHIPMENT_LABEL_KEYS: Record<ShipmentStatus, Extract<StringKey, `order.shipment.status.${string}` | 'common.shipment.inTransit'>> = {
   shipped: textKey('order.shipment.status.shipped'),
-  in_transit: textKey('order.shipment.status.inTransit'),
+  in_transit: textKey('common.shipment.inTransit'),
   delivered: textKey('order.shipment.status.delivered'),
   returned: textKey('order.shipment.status.returned'),
 };
@@ -142,10 +142,13 @@ export const ORDER_STATUS_LABEL: Record<string, Extract<StringKey, `order.status
   refunded: textKey('order.status.refunded'),
 };
 
-/** Default case is mandatory: new statuses ship without a client release. Resolved at call time. */
-export function orderStatusLabel(status: string): string {
+/**
+ * Default case is mandatory: new statuses ship without a client release. Components pass `useText().t`;
+ * non-React callers may omit it (the mounted text at call time).
+ */
+export function orderStatusLabel(status: string, t: TextApi['t'] = textSnapshot().t): string {
   const key = Object.hasOwn(ORDER_STATUS_LABEL, status) ? ORDER_STATUS_LABEL[status]! : textKey('order.status.pending');
-  return textSnapshot().t(key);
+  return t(key);
 }
 
 /**

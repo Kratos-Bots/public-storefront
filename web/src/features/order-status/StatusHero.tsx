@@ -15,7 +15,7 @@ import classes from '@/features/order-status/OrderStatus.module.css';
  */
 export function StatusHero({ order }: { order: PublicOrder }) {
   const { t } = useText();
-  const view = statusView(order);
+  const view = statusView(order, t);
   // The route carries the dates it knows. When it isn't on screen — payment
   // outstanding, or a cancelled order — the hero states the one date there is,
   // rather than the two surfaces saying the same thing twice.
@@ -23,7 +23,7 @@ export function StatusHero({ order }: { order: PublicOrder }) {
   const delivered = order.deliveredAt ? formatDate(order.deliveredAt) : '';
   const placed = formatDate(order.createdAt);
   const stamp = delivered
-    ? t('order.dates.delivered', { date: delivered })
+    ? t('common.dates.delivered', { date: delivered })
     : placed
       ? t('order.dates.placed', { date: placed })
       : null;

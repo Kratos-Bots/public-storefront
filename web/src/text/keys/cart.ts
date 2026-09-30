@@ -21,7 +21,6 @@ export default defineTextArea('cart', {
   'line.minimum': { en: 'Minimum {count} per order', max: 80 },
   'line.maximum': { en: 'Maximum {count} per order', max: 80 },
   'line.setTo': { en: 'Set to {count}', max: 40 },
-  'line.outOfStock': { en: 'Out of stock', max: 60 },
   'bar.viewCartLabel': { en: 'View cart — {items}, {subtotal}', max: 120 },
   'sync.signInAgain': { en: 'Please sign in again', max: 80 },
   'sync.updateFailed': { en: "We couldn't update your cart", max: 100 },

@@ -26,7 +26,7 @@ export function OrderHero({ data }: { data: TrackingLookup }) {
   // One parcel → its own status leads. Several, or none resolved → the order
   // status leads. Never derived from the newest event: the server already
   // settles terminal states and dateless scans.
-  const headline = single ? t(parcelLabelKey(single.tracking!.status)) : orderStatusLabel(data.status);
+  const headline = single ? t(parcelLabelKey(single.tracking!.status)) : orderStatusLabel(data.status, t);
   const tone = single ? parcelTone(single.tracking!.status) : 'neutral';
 
   const status = single?.tracking?.status ?? null;
@@ -36,7 +36,7 @@ export function OrderHero({ data }: { data: TrackingLookup }) {
   const settled = status === 'DELIVERED' || status === 'RETURNED' || status === 'EXCEPTION';
 
   const subline = deliveredAt
-    ? t('tracking.hero.deliveredOn', { date: formatDate(deliveredAt) })
+    ? t('common.dates.delivered', { date: formatDate(deliveredAt) })
     : settled
       ? null
       : destination
@@ -66,7 +66,7 @@ export function OrderHero({ data }: { data: TrackingLookup }) {
             repeat the headline word for word. */}
         {single ? (
           <span className={classes.pill} data-tone={tone}>
-            {orderStatusLabel(data.status)}
+            {orderStatusLabel(data.status, t)}
           </span>
         ) : null}
       </div>

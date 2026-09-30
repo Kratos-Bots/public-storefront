@@ -52,6 +52,20 @@ describe('text registry (spec §6.6)', () => {
       .filter((f) => !f.startsWith('builder/editor/'));
     expect(importers).toEqual([]);
   });
+  it('same-meaning keys are merged into one key each (final-review ruling)', () => {
+    const merged: Record<string, string> = {
+      'common.shipment.trackingNumber': 'Tracking number',
+      'common.shipment.parcelOf': 'Parcel {index} of {count}',
+      'common.shipment.inTransit': 'In transit',
+      'common.dates.delivered': 'Delivered {date}',
+      'common.product.outOfStock': 'Out of stock',
+    };
+    for (const [k, en] of Object.entries(merged)) expect(TEXT_ENTRIES[k]?.en, k).toBe(en);
+    const gone = ['order.shipment.trackingNumber', 'tracking.parcel.trackingNumber', 'order.shipment.parcelOf', 'tracking.parcel.title',
+      'order.shipment.status.inTransit', 'tracking.status.inTransit', 'order.dates.delivered', 'tracking.hero.deliveredOn',
+      'product.add.outOfStock', 'cart.line.outOfStock'];
+    expect(gone.filter((k) => Object.hasOwn(TEXT_ENTRIES, k))).toEqual([]);
+  });
   it('no orphans: every non-fixed key is referenced as a literal under web/src (outside text/keys)', () => {
     const corpus = srcFiles().map((f) => readFileSync(f, 'utf8')).join('\n');
     const orphans = keys.filter((k) => !TEXT_ENTRIES[k]!.fixed && !corpus.includes(`'${k}'`) && !corpus.includes(`"${k}"`));

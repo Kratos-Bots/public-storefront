@@ -19,7 +19,6 @@ export default {
   'line.minimum': "Note on a cart line below its product's minimum order quantity",
   'line.maximum': "Note on a cart line above its product's maximum order quantity",
   'line.setTo': 'Button on a quantity-limit note that snaps the line to the limit',
-  'line.outOfStock': 'Note on a cart line whose product has sold out',
   'bar.viewCartLabel': 'Screen-reader label of the phone cart bar link; {items} is the item count, {subtotal} the cart subtotal',
   'sync.signInAgain': 'Toast when the session has expired while saving the cart',
   'sync.updateFailed': 'Toast when saving the cart fails and the server gave no reason',

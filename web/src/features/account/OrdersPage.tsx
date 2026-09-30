@@ -76,7 +76,7 @@ export function OrdersPage() {
               <span className={classes.date}>{formatDate(order.createdAt)}</span>
               <span className={classes.status}>
                 <StatusPill tone={orderStatusTone(order.status)}>
-                  {orderStatusLabel(order.status)}
+                  {orderStatusLabel(order.status, t)}
                 </StatusPill>
               </span>
               {order.outstandingBalance > 0 ? (

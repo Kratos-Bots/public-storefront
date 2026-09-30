@@ -8,7 +8,6 @@ export default defineTextArea('product', {
   'limit.min': { en: 'Min {min}', max: 30 },
   'add.verb': { en: 'Add', max: 30 },
   'add.unavailable': { en: 'Unavailable', max: 30 },
-  'add.outOfStock': { en: 'Out of stock', max: 30 },
   'add.added': { en: 'Added', max: 30 },
   'add.another': { en: 'Add another', max: 30 },
   'add.labelWithName': { en: '{label} — {name}', max: 80 },

@@ -31,7 +31,6 @@ export default defineTextArea('order', {
   // Dates, shown in the hero and on each parcel.
   'dates.placed': { en: 'Placed {date}', max: 60 },
   'dates.shipped': { en: 'Shipped {date}', max: 60 },
-  'dates.delivered': { en: 'Delivered {date}', max: 60 },
 
   // The four milestones on the route.
   'steps.ariaLabel': { en: 'Order progress', max: 60 },
@@ -75,12 +74,9 @@ export default defineTextArea('order', {
 
   // Parcels.
   'shipment.parcel': { en: 'Parcel', max: 40 },
-  'shipment.parcelOf': { en: 'Parcel {index} of {count}', max: 60 },
   'shipment.untitled': { en: 'On its way', max: 60 },
-  'shipment.trackingNumber': { en: 'Tracking number', max: 40 },
   'shipment.track': { en: 'Track this parcel', max: 60 },
   'shipment.status.shipped': { en: 'Shipped', max: 30 },
-  'shipment.status.inTransit': { en: 'In transit', max: 30 },
   'shipment.status.delivered': { en: 'Delivered', max: 30 },
   'shipment.status.returned': { en: 'Returned', max: 30 },
 

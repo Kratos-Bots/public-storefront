@@ -91,7 +91,7 @@ export function OrderDetailPage() {
 
       <div className={classes.detailHead}>
         <h2 className={classes.detailRef}>{data.reference}</h2>
-        <StatusPill tone={orderStatusTone(data.status)}>{orderStatusLabel(data.status)}</StatusPill>
+        <StatusPill tone={orderStatusTone(data.status)}>{orderStatusLabel(data.status, t)}</StatusPill>
         <span className={classes.detailDate}>{t('account.order.placed', { date: formatDate(data.createdAt) })}</span>
       </div>
 

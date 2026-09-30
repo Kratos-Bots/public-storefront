@@ -7,7 +7,7 @@ const TrackingPage = lazy(() => import('@/features/tracking/TrackingPage.tsx').t
 /** The lookup form, or a tracked order when the URL carries a reference. */
 export const block = defineBlock<{ id: string }>({
   name: 'TrackingLookup', label: 'Order tracking', category: 'post-order', layouts: 'all', routeBound: true, slots: [],
-  text: ['tracking.*', 'order.status.*', 'common.product.*', 'common.status.*', 'common.actions.*'],
+  text: ['tracking.*', 'order.status.*', 'common.shipment.*', 'common.dates.*', 'common.product.*', 'common.status.*', 'common.actions.*'],
   schema: z.object({}), defaultProps: {},
   render: () => <TrackingPage />,
 });

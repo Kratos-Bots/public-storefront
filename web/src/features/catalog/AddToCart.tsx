@@ -56,7 +56,7 @@ export function AddToCart({ product, size = 'lg', showPrice = true }: AddToCartP
   const label = !product.isActive
     ? t('product.add.unavailable')
     : outOfStock
-      ? t('product.add.outOfStock')
+      ? t('common.product.outOfStock')
       : phase === 'added'
         ? t('product.add.added')
         : phase === 'again'

@@ -75,12 +75,13 @@ export type Tone = 'neutral' | 'info' | 'warn' | 'success' | 'danger';
 /** The nine parcel-status keys — a narrow union, so `t(key)` needs no params. */
 export type ParcelLabelKey = Extract<
   StringKey,
-  `tracking.status.${'preTransit' | 'inTransit' | 'customs' | 'outForDelivery' | 'availableForPickup' | 'delivered' | 'exception' | 'returned' | 'unknown'}`
+  | `tracking.status.${'preTransit' | 'customs' | 'outForDelivery' | 'availableForPickup' | 'delivered' | 'exception' | 'returned' | 'unknown'}`
+  | 'common.shipment.inTransit'
 >;
 
 export const PARCEL_LABEL_KEYS: Record<string, ParcelLabelKey> = {
   PRE_TRANSIT: textKey('tracking.status.preTransit'),
-  IN_TRANSIT: textKey('tracking.status.inTransit'),
+  IN_TRANSIT: textKey('common.shipment.inTransit'),
   CUSTOMS: textKey('tracking.status.customs'),
   OUT_FOR_DELIVERY: textKey('tracking.status.outForDelivery'),
   AVAILABLE_FOR_PICKUP: textKey('tracking.status.availableForPickup'),

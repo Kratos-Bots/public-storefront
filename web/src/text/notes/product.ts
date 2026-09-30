@@ -6,7 +6,6 @@ export default {
   'limit.min': 'Minimum order quantity flag on product cards, rows and pages',
   'add.verb': "Start of the add-to-cart button label (\"Add 2 · $10.00\") and of a row's screen-reader label",
   'add.unavailable': "Add-to-cart button label for a product that can't be ordered",
-  'add.outOfStock': 'Add-to-cart button label when the product is sold out',
   'add.added': 'Add-to-cart button label for a moment after adding',
   'add.another': 'Add-to-cart button label once a product has been added',
   'add.labelWithName': 'Screen-reader label of an icon-only add button: its label, then the product name',

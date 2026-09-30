@@ -23,7 +23,7 @@ export interface ShipmentCardProps {
 /** One parcel: who has it, where it is, and how to follow it. */
 export function ShipmentCard({ shipment, index, count }: ShipmentCardProps) {
   const { t } = useText();
-  const eyebrow = count > 1 ? t('order.shipment.parcelOf', { index: index + 1, count }) : t('order.shipment.parcel');
+  const eyebrow = count > 1 ? t('common.shipment.parcelOf', { index: index + 1, count }) : t('order.shipment.parcel');
   const shipped = shipment.shippedAt ? formatDate(shipment.shippedAt) : null;
   const delivered = shipment.deliveredAt ? formatDate(shipment.deliveredAt) : null;
   const tone = PILL_TONE[SHIPMENT_TONE[shipment.status]];
@@ -31,7 +31,7 @@ export function ShipmentCard({ shipment, index, count }: ShipmentCardProps) {
   const statusKey = shipmentLabelKey(shipment.status);
   const dates = [
     shipped && t('order.dates.shipped', { date: shipped }),
-    delivered && t('order.dates.delivered', { date: delivered }),
+    delivered && t('common.dates.delivered', { date: delivered }),
   ].filter(Boolean);
 
   return (
@@ -51,7 +51,7 @@ export function ShipmentCard({ shipment, index, count }: ShipmentCardProps) {
       ) : null}
 
       {shipment.trackingNumber ? (
-        <CopyRow label={t('order.shipment.trackingNumber')} value={shipment.trackingNumber} />
+        <CopyRow label={t('common.shipment.trackingNumber')} value={shipment.trackingNumber} />
       ) : null}
 
       {shipment.trackingUrl ? (

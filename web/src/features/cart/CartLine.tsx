@@ -160,7 +160,7 @@ export function CartLine({ line, issue, onQuantity, onRemove, index = 0 }: CartL
         </span>
       ) : issue?.outOfStock ? (
         <span className={`${classes.note} ${classes.short}`}>
-          <span className={classes.noteText}>{t('cart.line.outOfStock')}</span>
+          <span className={classes.noteText}>{t('common.product.outOfStock')}</span>
         </span>
       ) : null}
     </li>

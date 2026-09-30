@@ -7,7 +7,7 @@ const OrderStatusPage = lazy(() => import('@/features/order-status/OrderStatusPa
 /** The shared order link's page: status, payment, items, address, shipments. */
 export const block = defineBlock<{ id: string }>({
   name: 'OrderStatus', label: 'Order status', category: 'post-order', layouts: 'all', routeBound: true, slots: [],
-  text: ['order.*', 'common.contact.*', 'common.totals.*', 'common.product.*', 'common.actions.*'],
+  text: ['order.*', 'common.shipment.*', 'common.dates.*', 'common.contact.*', 'common.totals.*', 'common.product.*', 'common.actions.*'],
   schema: z.object({}), defaultProps: {},
   render: () => <OrderStatusPage />,
 });

@@ -18,7 +18,6 @@ export default defineTextArea('tracking', {
   // ── hero (summary above the fold) ─────────────────────────────────────────
   'hero.summaryAria': { en: 'Order tracking summary', max: 80 },
   'hero.orderRef': { en: 'Order {reference}', max: 60 },
-  'hero.deliveredOn': { en: 'Delivered {date}', max: 60 },
   'hero.headingTo': { en: 'Heading to {place}', max: 60 },
   'hero.parcelsDispatched': { en: '{count} parcels dispatched', max: 60 },
   'hero.factPlaced': { en: 'Placed', max: 30 },
@@ -28,9 +27,7 @@ export default defineTextArea('tracking', {
   'hero.factType': { en: 'Type', max: 30 },
 
   // ── parcel card ───────────────────────────────────────────────────────────
-  'parcel.title': { en: 'Parcel {index} of {count}', max: 60 },
   'parcel.single': { en: 'Parcel', max: 40 },
-  'parcel.trackingNumber': { en: 'Tracking number', max: 40 },
   'parcel.carrierRef': { en: 'Carrier ref', max: 40 },
   'parcel.trackWith': { en: 'Track with {carrier}', max: 60 },
   'parcel.awaitingScan': { en: 'Awaiting first scan', max: 60 },
@@ -49,7 +46,6 @@ export default defineTextArea('tracking', {
 
   // ── status labels ─────────────────────────────────────────────────────────
   'status.preTransit': { en: 'Label created', max: 40 },
-  'status.inTransit': { en: 'In transit', max: 40 },
   'status.customs': { en: 'In customs', max: 40 },
   'status.outForDelivery': { en: 'Out for delivery', max: 40 },
   'status.availableForPickup': { en: 'Ready for pickup', max: 40 },
