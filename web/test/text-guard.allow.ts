@@ -3,6 +3,7 @@ import type { AllowEntry } from './helpers/text-scan.ts';
 /** Reviewed exceptions to the text guard (spec §6.6). A stale entry fails text-guard.test.ts. */
 export const TEXT_GUARD_ALLOW: AllowEntry[] = [
   { file: 'builder/guard.ts', text: '*', reason: 'editor issue messages — the editor\'s own UI text is a non-goal (spec §12)' },
+  { file: 'builder/style/labels.ts', text: '*', reason: 'editor-only Style row labels (Style panel and editor issue messages)' },
   { file: 'builder/rules.ts', text: '*', reason: 'editor issue messages — the editor\'s own UI text is a non-goal (spec §12)' },
   { file: 'builder/define.ts', text: '*', reason: 'zod messages surfaced only as editor field issues' },
   { file: 'text/resolve.ts', text: '*', reason: 'checkValue messages are editor issues (spec §7.2), not shopper text' },
