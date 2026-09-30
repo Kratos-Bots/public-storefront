@@ -7,13 +7,15 @@ import { useCatalog } from '@/features/catalog/use-catalog.ts';
 import { useText } from '@/text/runtime.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { pickFeatured, type FeaturedQuery } from '@/builder/blocks/_shared/featured.ts';
+import { BOX, styleSupport, VIS } from '@/builder/style/model.ts';
+import type { StyleAttrs } from '@/builder/define.ts';
 import classes from '@/builder/blocks/FeaturedProducts.module.css';
 
 const ProductCard = lazy(() => import('@/features/catalog/ProductCard.tsx').then((m) => ({ default: m.ProductCard })));
 
 type Props = { id: string; title: string } & FeaturedQuery;
 
-function FeaturedView({ title, ...query }: Omit<Props, 'id'>) {
+function FeaturedView({ title, styleAttrs, ...query }: Omit<Props, 'id'> & { styleAttrs?: StyleAttrs }) {
   const catalog = useCatalog();
   const { editing } = useBuilderMode();
   const { t } = useText();
@@ -24,11 +26,11 @@ function FeaturedView({ title, ...query }: Omit<Props, 'id'>) {
   );
   if (catalog.isPending) return <PageSkeleton inline />;
   if (picked.length === 0) {
-    return editing ? <p className={classes.hint} data-sf-block="FeaturedProducts">Pick products, or a category with products in it.</p> : null;
+    return editing ? <p className={classes.hint} data-sf-block="FeaturedProducts" {...styleAttrs}>Pick products, or a category with products in it.</p> : null;
   }
   const siblingImages = picked.some((p) => p.imageProductId !== null);
   return (
-    <section className={classes.root} data-sf-block="FeaturedProducts" aria-label={title || t('catalog.featured.ariaLabel')}>
+    <section className={classes.root} data-sf-block="FeaturedProducts" {...styleAttrs} aria-label={title || t('catalog.featured.ariaLabel')}>
       {title ? <h2 className={classes.title}>{title}</h2> : null}
       <div className={classes.grid}>
         {picked.map((product, i) => (
@@ -42,6 +44,7 @@ function FeaturedView({ title, ...query }: Omit<Props, 'id'>) {
 export const block = defineBlock<Props>({
   name: 'FeaturedProducts', label: 'Featured products', category: 'catalogue', layouts: 'all', routeBound: false, slots: [],
   text: ['catalog.featured.*', ...PRODUCT_CARD_TEXT, 'common.status.loading'],
+  style: styleSupport('root', [...BOX, ...VIS]),
   schema: z.object({
     title: z.string().max(120),
     source: z.enum(['picked', 'category']),
@@ -50,5 +53,5 @@ export const block = defineBlock<Props>({
     limit: z.number().int().min(1).max(24),
   }),
   defaultProps: { title: 'Featured', source: 'category', items: [], categoryId: null, limit: 4 },
-  render: ({ title, source, items, categoryId, limit }) => <FeaturedView title={title} source={source} items={items} categoryId={categoryId} limit={limit} />,
+  render: ({ title, source, items, categoryId, limit, puck }) => <FeaturedView title={title} source={source} items={items} categoryId={categoryId} limit={limit} styleAttrs={puck.style} />,
 });

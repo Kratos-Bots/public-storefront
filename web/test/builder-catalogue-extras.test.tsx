@@ -85,3 +85,40 @@ describe('catalogue extras', () => {
     expect(container.querySelector('section')).toBeNull();
   });
 });
+
+describe('catalogue blocks · block styles', () => {
+  const markers = (container: HTMLElement) => [...container.querySelectorAll('[data-sf-style]')];
+  it('CatalogHero custom: style on its section; unstyled DOM unchanged', () => {
+    const props = { variant: 'custom', surface: 'grid', title: 'Fresh this week', bodyHtml: '<p>Rolled Monday.</p>', imageSrc: '', imageAlt: '', align: 'start' };
+    const plain = mount([c('CatalogHero', props)], '/pages/x').container.innerHTML;
+    cleanup();
+    expect(mount([c('CatalogHero', { ...props, blockStyle: {} })], '/pages/x').container.innerHTML).toBe(plain);
+    cleanup();
+    const { container } = mount([c('CatalogHero', { ...props, blockStyle: { bg: 'surface-2', radius: 'card' } })], '/pages/x');
+    expect(markers(container)).toHaveLength(1);
+    expect(markers(container)[0]!.getAttribute('data-sf-block')).toBe('CatalogHero');
+  });
+  it('CatalogHero template: one added div only when styled', () => {
+    const plain = mount([c('CatalogHero', { variant: 'template', surface: 'grid' })], '/pages/x').container.innerHTML;
+    cleanup();
+    const { container } = mount([c('CatalogHero', { variant: 'template', surface: 'grid', blockStyle: { padTop: 'lg' } })], '/pages/x');
+    const m = markers(container);
+    expect(m).toHaveLength(1);
+    expect(m[0]!.tagName).toBe('DIV');
+    expect(m[0]!.getAttribute('data-sfs-pt')).toBe('lg');
+    expect(m[0]!.innerHTML.length).toBeGreaterThan(0);
+    expect(plain).toContain(m[0]!.innerHTML);
+  });
+  it('CategoryNav, SearchField and FeaturedProducts: style on the data-sf-block element', async () => {
+    const { container } = mount([
+      c('CategoryNav', { blockStyle: { border: 'thin' } }),
+      { type: 'SearchField', props: { id: 's', placeholder: '', blockStyle: { padX: 'sm', textSize: 'xl' } } },
+      { type: 'FeaturedProducts', props: { id: 'f', title: 'Staff picks', source: 'picked', items: [{ productId: 7 }], categoryId: null, limit: 4, blockStyle: { shadow: 'card' } } },
+    ], '/pages/x');
+    await screen.findAllByRole('navigation', { name: 'Categories' });
+    const byName = Object.fromEntries(markers(container).map((m) => [m.getAttribute('data-sf-style'), m]));
+    expect(Object.keys(byName).sort()).toEqual(['CategoryNav', 'FeaturedProducts', 'SearchField']);
+    for (const [name, el] of Object.entries(byName)) expect(el.getAttribute('data-sf-block')).toBe(name);
+    expect(byName.SearchField!.hasAttribute('data-sfs-text')).toBe(false);
+  });
+});

@@ -7,6 +7,8 @@ import { RichHtml } from '@/builder/blocks/_shared/RichHtml.tsx';
 import { useCatalogStats } from '@/templates/hooks.ts';
 import { Slot } from '@/templates/runtime.tsx';
 import type { LayoutKind } from '@/builder/types.ts';
+import { BOX, styleSupport, VIS } from '@/builder/style/model.ts';
+import type { StyleAttrs } from '@/builder/define.ts';
 import classes from '@/builder/blocks/CatalogHero.module.css';
 
 type Surface = 'grid' | 'list' | 'wholesale';
@@ -23,7 +25,7 @@ function TemplateHero({ surface }: { surface: Surface }) {
   return <Slot name="CatalogHero" surface={surface} tagline={brand.tagline} welcomeMessage={welcomeMessage} productCount={productCount ?? 0} categoryCount={categoryCount ?? 0} />;
 }
 
-function CustomHero({ title, bodyHtml, imageSrc, imageAlt, align }: Pick<Props, 'title' | 'bodyHtml' | 'imageSrc' | 'imageAlt' | 'align'>) {
+function CustomHero({ title, bodyHtml, imageSrc, imageAlt, align, styleAttrs }: Pick<Props, 'title' | 'bodyHtml' | 'imageSrc' | 'imageAlt' | 'align'> & { styleAttrs?: StyleAttrs }) {
   const { editing } = useBuilderMode();
   // Re-checked here as Image does: the editor may hand over props the guard never saw.
   const src = MEDIA_SRC_RE.test(imageSrc) ? imageSrc : '';
@@ -33,10 +35,10 @@ function CustomHero({ title, bodyHtml, imageSrc, imageAlt, align }: Pick<Props, 
   // Inside the editor Puck hands a richtext prop over as a React element: that counts as a body.
   const noBody = typeof bodyHtml === 'string' && !bodyHtml.trim();
   if (!heading && noBody && !image) {
-    return needsAlt && editing ? <p className={classes.hint} data-sf-block="CatalogHero">Describe the image for screen readers so it shows.</p> : null;
+    return needsAlt && editing ? <p className={classes.hint} data-sf-block="CatalogHero" {...styleAttrs}>Describe the image for screen readers so it shows.</p> : null;
   }
   return (
-    <section className={`${classes.hero} ${align === 'center' ? classes.center : ''} ${image ? classes.withImage : ''}`.trim()} data-sf-block="CatalogHero">
+    <section className={`${classes.hero} ${align === 'center' ? classes.center : ''} ${image ? classes.withImage : ''}`.trim()} data-sf-block="CatalogHero" {...styleAttrs}>
       <div className={classes.text}>
         {heading ? <h2 className={classes.title}>{title}</h2> : null}
         <RichHtml value={bodyHtml} className={classes.body} />
@@ -51,13 +53,16 @@ function CustomHero({ title, bodyHtml, imageSrc, imageAlt, align }: Pick<Props, 
 export const block = defineBlock<Props>({
   name: 'CatalogHero', label: 'Catalogue intro', category: 'catalogue', layouts: 'all', routeBound: false, slots: [],
   text: HERO_TEXT,
+  style: styleSupport('root', [...BOX, ...VIS]),
   schema: z.object({
     variant: z.enum(['template', 'custom']), surface: z.enum(['auto', 'grid', 'list', 'wholesale']),
     title: z.string().max(120), bodyHtml: richtext(), imageSrc: mediaSrc(), imageAlt: z.string().max(300), align: z.enum(['start', 'center']),
   }),
   defaultProps: { variant: 'template', surface: 'auto', title: '', bodyHtml: '', imageSrc: '', imageAlt: '', align: 'start' },
-  render: ({ variant, surface, title, bodyHtml, imageSrc, imageAlt, align, puck }) =>
-    variant === 'template'
-      ? <TemplateHero surface={surface === 'auto' ? autoSurface(puck.layout) : surface} />
-      : <CustomHero title={title} bodyHtml={bodyHtml} imageSrc={imageSrc} imageAlt={imageAlt} align={align} />,
+  render: ({ variant, surface, title, bodyHtml, imageSrc, imageAlt, align, puck }) => {
+    if (variant === 'custom') return <CustomHero title={title} bodyHtml={bodyHtml} imageSrc={imageSrc} imageAlt={imageAlt} align={align} styleAttrs={puck.style} />;
+    const hero = <TemplateHero surface={surface === 'auto' ? autoSurface(puck.layout) : surface} />;
+    // The template slot owns no element we can mark: a styled template intro gets one div (spec section 4 note).
+    return puck.style ? <div {...puck.style}>{hero}</div> : hero;
+  },
 });
