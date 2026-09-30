@@ -2,7 +2,7 @@ import { createElement, Fragment, type ReactNode } from 'react';
 import { pluralCategory } from '@/text/plural.ts';
 import { isStringKey, type NodeParams, type ParamArgs, type PluralKey, type StringKey, type TextKey } from '@/text/registry.ts';
 import { resolveText } from '@/text/resolve.ts';
-import type { Locale, LocaleStrings, PluralForms, TextLayers, TextValue } from '@/text/types.ts';
+import type { Locale, LocaleStrings, PluralForms, TextLayers } from '@/text/types.ts';
 
 /*
  * The text API and the call-time snapshot, in a module that imports nothing outside `@/text/*` (and
@@ -42,18 +42,24 @@ export function createTextApi(layers: TextLayers): TextApi {
   // Built once per layers object, since the API itself is memoised per layers object.
   const stored = { layout: layers.layout ?? EMPTY, shared: layers.shared ?? EMPTY };
   const resolved = resolveText(stored, layers.locale);
-  const pick = (v: TextValue, count: number | undefined): string => {
+  // A built-in default is English whatever the store locale, so its form is chosen with English rules
+  // (fr would put 0 in `one`: "0 item"; ja has only `other`: "1 items"). A stored value is written for
+  // the store locale and uses its rules.
+  const pick = (key: string, count: number | undefined): string => {
+    const v = resolved.value(key);
     if (typeof v === 'string') return v;
     const forms = v as PluralForms;
-    return count === undefined ? forms.other : (forms[pluralCategory(layers.locale, count) as keyof PluralForms] ?? forms.other);
+    if (count === undefined) return forms.other;
+    const rulesLocale = resolved.builtIn(key) ? 'en' : layers.locale;
+    return forms[pluralCategory(rulesLocale, count) as keyof PluralForms] ?? forms.other;
   };
   const api: TextApi = {
     locale: layers.locale,
-    t: ((key: string, params: Record<string, unknown> = {}) => fill(pick(resolved.value(key), undefined), params)) as TextApi['t'],
+    t: ((key: string, params: Record<string, unknown> = {}) => fill(pick(key, undefined), params)) as TextApi['t'],
     tp: ((key: string, count: number, params: Record<string, unknown> = {}) =>
-      fill(pick(resolved.value(key), count), { ...params, count: String(count) })) as TextApi['tp'],
+      fill(pick(key, count), { ...params, count: String(count) })) as TextApi['tp'],
     tn: ((key: string, params: Record<string, ReactNode>, count?: number) => {
-      const s = pick(resolved.value(key), count);
+      const s = pick(key, count);
       const all: Record<string, ReactNode> = count === undefined ? params : { ...params, count: String(count) };
       const out: ReactNode[] = [];
       let last = 0;
@@ -66,7 +72,7 @@ export function createTextApi(layers: TextLayers): TextApi {
       if (last < s.length) out.push(s.slice(last));
       return out;
     }) as TextApi['tn'],
-    msg: (value) => (isStringKey(value) ? fill(pick(resolved.value(value), undefined), {}) : value),
+    msg: (value) => (isStringKey(value) ? fill(pick(value, undefined), {}) : value),
   };
   apis.set(layers, api);
   return api;

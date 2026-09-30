@@ -63,6 +63,21 @@ describe('TextApi', () => {
     const pl = createTextApi(layers({ locale: 'pl', shared: { 'cart.summary.items': { one: '{count} rzecz', few: '{count} rzeczy', other: '{count} rz.' } } }));
     expect([1, 2, 5].map((n) => pl.tp('cart.summary.items', n))).toEqual(['1 rzecz', '2 rzeczy', '5 rz.']);
   });
+  it('a built-in English default picks its form with English plural rules (final review)', () => {
+    // fr puts 0 in `one`, ja has only `other`: neither must bend the English default.
+    const fr = createTextApi(layers({ locale: 'fr' }));
+    const ja = createTextApi(layers({ locale: 'ja' }));
+    expect([0, 1, 2].map((n) => fr.tp('cart.summary.items', n))).toEqual(['0 items', '1 item', '2 items']);
+    expect([0, 1, 2].map((n) => ja.tp('cart.summary.items', n))).toEqual(['0 items', '1 item', '2 items']);
+    const { container } = render(<p>{fr.tn('cart.summary.items', {}, 0)}</p>);
+    expect(container.textContent).toBe('0 items');
+  });
+  it('an override picks its form with the store locale\'s plural rules', () => {
+    const fr = createTextApi(layers({ locale: 'fr', layout: { 'cart.summary.items': { one: '{count} article', other: '{count} articles' } } }));
+    expect([0, 1, 2].map((n) => fr.tp('cart.summary.items', n))).toEqual(['0 article', '1 article', '2 articles']);
+    const ja = createTextApi(layers({ locale: 'ja', shared: { 'cart.summary.items': { one: '{count} one', other: '{count} 点' } } }));
+    expect(ja.tp('cart.summary.items', 1)).toBe('1 点');
+  });
   it('t fills placeholders; a dropped placeholder is fine', () => {
     expect(api.t('common.qty.more', { name: 'Oats' })).toBe('One more Oats');
     expect(createTextApi(layers({ shared: { 'common.qty.more': 'Add another' } })).t('common.qty.more', { name: 'Oats' })).toBe('Add another');

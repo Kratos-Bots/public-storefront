@@ -5,7 +5,12 @@ import { DEFAULT_MAX, isPluralForms, type Locale, type LocaleStrings, type TextV
 // Rule messages are editor UI (spec §12: the editor's own text is not translated).
 export type TextRule = 'unknown-key' | 'type-mismatch' | 'unknown-placeholder' | 'bad-brace' | 'too-long' | 'empty' | 'fixed';
 export type TextCheck = { ok: true } | { ok: false; rule: TextRule; message: string };
-export interface Resolved { readonly locale: Locale; value(key: string): TextValue }
+export interface Resolved {
+  readonly locale: Locale;
+  value(key: string): TextValue;
+  /** True when `value(key)` is the release's built-in English (no valid stored value) — its plural form is picked with 'en' rules. */
+  builtIn(key: string): boolean;
+}
 export interface TextResolver {
   checkValue(key: string, value: unknown): TextCheck;
   resolveText(layers: { layout: LocaleStrings; shared: LocaleStrings }, locale: Locale): Resolved;
@@ -56,25 +61,27 @@ export function createResolver(entries: Readonly<Record<string, TextEntry>>): Te
         if (!Object.hasOwn(entries, key)) warnOnce(`unknown:${key}`, `ignoring "${key}": not a key of this release`);
       }
     }
-    const cache = new Map<string, TextValue>();
+    const cache = new Map<string, { v: TextValue; builtIn: boolean }>();
+    const lookup = (key: string): { v: TextValue; builtIn: boolean } => {
+      const cached = cache.get(key);
+      if (cached) return cached;
+      const entry = Object.hasOwn(entries, key) ? entries[key] : undefined;
+      let hit = { v: entry ? entry.en : key, builtIn: true } as { v: TextValue; builtIn: boolean };
+      if (entry) {
+        for (const [scope, layer] of [['layout', layers.layout], ['shared', layers.shared]] as const) {
+          if (!Object.hasOwn(layer, key)) continue;
+          const c = checkValue(key, layer[key]);
+          if (c.ok) { hit = { v: layer[key]!, builtIn: false }; break; }
+          warnOnce(`${scope}:${key}:${c.rule}`, `ignoring the ${scope} value of "${key}" (${c.rule})`);
+        }
+      }
+      cache.set(key, hit);
+      return hit;
+    };
     const resolved: Resolved = {
       locale,
-      value(key) {
-        const cached = cache.get(key);
-        if (cached !== undefined) return cached;
-        const entry = Object.hasOwn(entries, key) ? entries[key] : undefined;
-        let v: TextValue = entry ? entry.en : key;
-        if (entry) {
-          for (const [scope, layer] of [['layout', layers.layout], ['shared', layers.shared]] as const) {
-            if (!Object.hasOwn(layer, key)) continue;
-            const c = checkValue(key, layer[key]);
-            if (c.ok) { v = layer[key]!; break; }
-            warnOnce(`${scope}:${key}:${c.rule}`, `ignoring the ${scope} value of "${key}" (${c.rule})`);
-          }
-        }
-        cache.set(key, v);
-        return v;
-      },
+      value: (key) => lookup(key).v,
+      builtIn: (key) => lookup(key).builtIn,
     };
     byLocale.set(locale, resolved);
     return resolved;

@@ -45,6 +45,13 @@ describe('resolveText', () => {
     expect(r.value('cart.errors.stock')).toBe('Few left');
     expect(r.value('cart.summary.items')).toEqual({ one: '{count} item', other: '{count} items' });
   });
+  it('builtIn tells a release default from a stored value (a rejected one counts as default)', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const r = resolveText({ layout: { 'cart.drawer.title': 'Basket', 'cart.summary.items': 'not plural' }, shared: {} }, 'fr');
+    expect(r.builtIn('cart.drawer.title')).toBe(false);
+    expect(r.builtIn('cart.summary.items')).toBe(true);
+    expect(r.builtIn('cart.errors.stock')).toBe(true);
+  });
   it('falls back per key: a bad override yields the shared value', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const r = resolveText({ layout: { 'cart.errors.stock': 'Only {oops} left' }, shared: { 'cart.errors.stock': 'Few left' } }, 'en');
