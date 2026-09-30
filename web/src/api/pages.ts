@@ -1,13 +1,26 @@
 import { api, unwrap } from '@/api/client.ts';
-import { isRecord, type LayoutKind, type PageSet } from '@/builder/types.ts';
+import { CARD_KINDS, isRecord, type LayoutKind, type PageSet, type PuckDoc } from '@/builder/types.ts';
 import { isLocale, isTextValue, type LocaleStrings, type PublishedText } from '@/text/types.ts';
+
+/** Product-parts §10.3: only `tile` / `row` whose value is a doc shape; a malformed `cards` is dropped alone. */
+export function cardsOf(raw: unknown): PageSet['cards'] | undefined {
+  if (!isRecord(raw)) return undefined;
+  const out: NonNullable<PageSet['cards']> = {};
+  for (const kind of CARD_KINDS) {
+    const doc = Object.hasOwn(raw, kind) ? raw[kind] : undefined;
+    if (isRecord(doc) && Array.isArray(doc.content)) out[kind] = doc as unknown as PuckDoc;
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
 
 /** `{ version, data }` from the public route → the set, or null for anything that is not a schema-1 set. */
 export function toPageSet(body: unknown): PageSet | null {
   if (!isRecord(body) || !isRecord(body.data)) return null;
   const set = body.data;
   if (set.schemaVersion !== 1 || !isRecord(set.shell) || !isRecord(set.pages)) return null;
-  return set as unknown as PageSet;
+  const { cards, ...rest } = set;
+  const clean = cardsOf(cards);
+  return { ...(rest as unknown as PageSet), ...(clean ? { cards: clean } : {}) };
 }
 
 /** Every page waits on the set before its first paint; past this it paints the defaults instead. */

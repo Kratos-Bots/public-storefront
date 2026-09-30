@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { themeSchema } from '@/templates/theme-schema.ts';
 import { MEDIA_SRC_RE } from '@/builder/define.ts';
-import { FIXED_ROUTE_KEYS, isRecord, type DocKey, type Issue, type LayoutKind, type PageSet, type PuckDoc } from '@/builder/types.ts';
+import { CARD_KINDS, FIXED_ROUTE_KEYS, isCardKey, isRecord, type DocKey, type Issue, type LayoutKind, type PageSet, type PuckDoc } from '@/builder/types.ts';
 import type { Theme } from '@/types/settings.ts';
 import type { PageText, SiteText } from '@/text/types.ts';
 import type { TextIssue } from '@/builder/editor/text/model.ts';
@@ -23,7 +23,7 @@ export const MAX_CHANGE_ISSUES = 500;
 export const MAX_REQUEST_ID = 100;
 
 export function isDocKey(key: string): key is DocKey {
-  return key === 'shell' || (FIXED_ROUTE_KEYS as readonly string[]).includes(key) || CUSTOM_KEY_RE.test(key);
+  return key === 'shell' || isCardKey(key) || (FIXED_ROUTE_KEYS as readonly string[]).includes(key) || CUSTOM_KEY_RE.test(key);
 }
 
 const layoutSchema = z.enum(['storefront', 'menu', 'webapp']);
@@ -55,6 +55,8 @@ const pageSetSchema = z.object({
   pages: z.record(z.string(), docSchema),
   // Spec §7.1: dropping this would erase every layout override on the next autosave.
   text: pageTextSchema.optional(),
+  // Product-parts §10.3: without this the strict schema would strip every card design on load.
+  cards: z.unknown().optional(),
 });
 
 const loadSchema = z.object({
@@ -128,10 +130,21 @@ function toTheme(theme: z.infer<typeof themeSchema>): Theme {
 function toPageSet(raw: z.infer<typeof pageSetSchema>): PageSet {
   const pages: PageSet['pages'] = {};
   for (const [key, doc] of Object.entries(raw.pages)) {
-    if (key !== 'shell' && isDocKey(key)) pages[key as keyof PageSet['pages']] = doc as unknown as PuckDoc;
+    if (key !== 'shell' && isDocKey(key) && !isCardKey(key)) pages[key as keyof PageSet['pages']] = doc as unknown as PuckDoc;
   }
   const text = raw.text ? pageTextOf(raw.text) : undefined;
-  return { schemaVersion: 1, shell: raw.shell as unknown as PuckDoc, pages, ...(text ? { text } : {}) };
+  const cards = cardsFrom(raw.cards);
+  return { schemaVersion: 1, shell: raw.shell as unknown as PuckDoc, pages, ...(text ? { text } : {}), ...(cards ? { cards } : {}) };
+}
+
+function cardsFrom(raw: unknown): PageSet['cards'] | undefined {
+  if (!isRecord(raw)) return undefined;
+  const out: NonNullable<PageSet['cards']> = {};
+  for (const kind of CARD_KINDS) {
+    const parsed = Object.hasOwn(raw, kind) ? docSchema.safeParse(raw[kind]) : null;
+    if (parsed?.success) out[kind] = parsed.data as unknown as PuckDoc;
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
 }
 
 /** Languages with a tag the backend refuses (Intl could throw on it) are dropped; none left = none. */
@@ -229,6 +242,9 @@ export function changeMessage(loadId: string, pageSet: PageSet, issues: Issue[],
   }
   const out: PageSet = { schemaVersion: 1, shell: outboundDoc(pageSet.shell), pages };
   if (pageSet.text) out.text = plain(pageSet.text) as PageText;
+  const cards: NonNullable<PageSet['cards']> = {};
+  for (const kind of CARD_KINDS) { const doc = pageSet.cards?.[kind]; if (doc) cards[kind] = outboundDoc(doc); }
+  if (Object.keys(cards).length > 0) out.cards = cards;
   return {
     type: 'sf-builder-change',
     loadId,
