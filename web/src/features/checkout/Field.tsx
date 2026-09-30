@@ -1,5 +1,22 @@
 import { useId, type ReactNode } from 'react';
 import classes from '@/features/checkout/Fields.module.css';
+import { useText } from '@/text/runtime.tsx';
+
+/** The "Optional" chip beside a field label. */
+function OptionalTag() {
+  const { t } = useText();
+  return <span className={classes.optional}>{t('checkout.field.optional')}</span>;
+}
+
+/** A field's error: a registered key (set by the checkout page) resolves; anything else (zod's resolved text, a backend message) shows as is. */
+function ErrorNote({ id, error }: { id: string; error: string }) {
+  const { msg } = useText();
+  return (
+    <span id={id} className={classes.error}>
+      {msg(error)}
+    </span>
+  );
+}
 
 interface CommonProps {
   /** Names the control. Also set as `aria-label` so the visible "Optional" chip
@@ -41,7 +58,7 @@ export function Field({
     <div className={classes.field}>
       <label className={classes.label} htmlFor={id}>
         {label}
-        {optional ? <span className={classes.optional}>Optional</span> : null}
+        {optional ? <OptionalTag /> : null}
       </label>
       <input
         id={id}
@@ -59,9 +76,7 @@ export function Field({
         placeholder={placeholder}
       />
       {error ? (
-        <span id={noteId} className={classes.error}>
-          {error}
-        </span>
+        <ErrorNote id={noteId} error={error} />
       ) : hint ? (
         <p id={noteId} className={classes.hint}>
           {hint}
@@ -99,7 +114,7 @@ export function SelectField({
     <div className={classes.field}>
       <label className={classes.label} htmlFor={id}>
         {labelText ?? label}
-        {optional ? <span className={classes.optional}>Optional</span> : null}
+        {optional ? <OptionalTag /> : null}
       </label>
       <span className={classes.selectWrap}>
         <select
@@ -118,9 +133,7 @@ export function SelectField({
         <span className={classes.caret} aria-hidden />
       </span>
       {error ? (
-        <span id={noteId} className={classes.error}>
-          {error}
-        </span>
+        <ErrorNote id={noteId} error={error} />
       ) : hint ? (
         <p id={noteId} className={classes.hint}>
           {hint}
@@ -155,7 +168,7 @@ export function TextareaField({
     <div className={classes.field}>
       <label className={classes.label} htmlFor={id}>
         {label}
-        {optional ? <span className={classes.optional}>Optional</span> : null}
+        {optional ? <OptionalTag /> : null}
       </label>
       <textarea
         id={id}
@@ -171,9 +184,7 @@ export function TextareaField({
         placeholder={placeholder}
       />
       {error ? (
-        <span id={noteId} className={classes.error}>
-          {error}
-        </span>
+        <ErrorNote id={noteId} error={error} />
       ) : hint ? (
         <p id={noteId} className={classes.hint}>
           {hint}

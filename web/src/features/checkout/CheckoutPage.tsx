@@ -41,14 +41,15 @@ import { haptic, isTelegramWebApp, openExternalLink } from '@/lib/telegram-webap
 import { usePrimaryAction } from '@/stores/primary-action.ts';
 import { FADE } from '@/lib/motion.ts';
 import { Slot } from '@/templates/runtime.tsx';
+import { textKey, useText } from '@/text/runtime.tsx';
 import classes from '@/features/checkout/CheckoutPage.module.css';
 
 const STEPS = [
-  { label: 'Contact', title: 'Your details' },
-  { label: 'Address', title: 'Delivery address' },
-  { label: 'Shipping', title: 'Delivery and discounts' },
-  { label: 'Payment', title: 'How you’ll pay' },
-  { label: 'Review', title: 'Review your order' },
+  { label: textKey('checkout.steps.contact'), title: textKey('checkout.steps.contactTitle') },
+  { label: textKey('checkout.steps.address'), title: textKey('checkout.steps.addressTitle') },
+  { label: textKey('checkout.steps.shipping'), title: textKey('checkout.steps.shippingTitle') },
+  { label: textKey('checkout.steps.payment'), title: textKey('checkout.steps.paymentTitle') },
+  { label: textKey('checkout.steps.review'), title: textKey('checkout.steps.reviewTitle') },
 ] as const;
 
 /**
@@ -110,6 +111,7 @@ function firstIssues(issues: Array<{ path: PropertyKey[]; message: string }>): R
 }
 
 export function CheckoutPage() {
+  const { t, tn } = useText();
   const settings = useSettings();
   const { contactModes, currency, features } = settings;
   const loggedIn = useSessionStore(selectIsLoggedIn);
@@ -236,7 +238,7 @@ export function CheckoutPage() {
         if (cancelled) return;
         settled = true;
         quotedKey.current = null;
-        setVerifyError(errorMessage(err, "We couldn't verify your browser"));
+        setVerifyError(errorMessage(err, t('checkout.errors.verifyBrowser')));
         setVerifying(false);
         return;
       }
@@ -304,7 +306,7 @@ export function CheckoutPage() {
   const errorTarget = classifyQuoteError(quoteError, form);
   const quoteMessage = quoteError
     ? quoteError.status === 404
-      ? 'Unknown code'
+      ? t('checkout.errors.unknownCode')
       : errorMessage(quoteError)
     : undefined;
   // Anything the steps can't own (429, 502, a timeout) belongs at the top of the page.
@@ -356,7 +358,7 @@ export function CheckoutPage() {
         return false;
       }
       if (!shownQuote) {
-        setErrors({ shippingOptionId: 'Still pricing your order — one moment' });
+        setErrors({ shippingOptionId: textKey('checkout.errors.stillPricing') });
         return false;
       }
       // The schema can only say "a positive integer". Whether that integer is
@@ -365,7 +367,7 @@ export function CheckoutPage() {
       if (shippingStale) {
         setForm((f) => ({ ...f, shippingOptionId: null }));
         setErrors({
-          shippingOptionId: 'That delivery option is no longer available — choose another',
+          shippingOptionId: textKey('checkout.errors.shippingStale'),
         });
         return false;
       }
@@ -373,7 +375,7 @@ export function CheckoutPage() {
     }
     if (index === 3) {
       if (!shownQuote) {
-        setErrors({ method: 'Still pricing your order — one moment' });
+        setErrors({ method: textKey('checkout.errors.stillPricing') });
         return false;
       }
       // Store credit covers the order: no method is required, and a method left
@@ -385,17 +387,17 @@ export function CheckoutPage() {
         return true;
       }
       if (!form.paymentMethod) {
-        setErrors({ method: 'Choose how you’d like to pay' });
+        setErrors({ method: textKey('checkout.errors.paymentMissing') });
         return false;
       }
       if (methodStale) {
         setForm((f) => ({ ...f, paymentMethod: '', coin: '', network: '' }));
-        setErrors({ method: 'That payment method is no longer available — choose another' });
+        setErrors({ method: textKey('checkout.errors.methodStale') });
         return false;
       }
       if (comboStale) {
         setForm((f) => ({ ...f, coin: '', network: '' }));
-        setErrors({ coin: 'That coin and network are no longer available — choose another' });
+        setErrors({ coin: textKey('checkout.errors.comboStale') });
         return false;
       }
       const parsed = paymentSchema.safeParse({
@@ -535,14 +537,14 @@ export function CheckoutPage() {
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         notifications.show({
-          message: err.message || 'Checkout already in progress',
+          message: err.message || t('checkout.errors.inProgress'),
           color: 'red',
         });
         setLocked(true);
         if (lockTimer.current) clearTimeout(lockTimer.current);
         lockTimer.current = setTimeout(() => setLocked(false), LOCK_MS);
       } else {
-        setSubmitError(errorMessage(err, "We couldn't place your order"));
+        setSubmitError(errorMessage(err, t('checkout.errors.placeFailed')));
       }
     } finally {
       submitLatch.current = false;
@@ -557,12 +559,12 @@ export function CheckoutPage() {
     inTelegram && showsForm
       ? {
           label: !lastStep
-            ? 'Continue'
+            ? t('checkout.actions.continue')
             : submitting
-              ? 'Placing order…'
+              ? t('checkout.actions.placing')
               : chargeTotal !== null && chargeTotal > 0
-                ? `Place order · ${formatMoney(chargeTotal, currency)}`
-                : 'Place order',
+                ? t('checkout.actions.placeOrderTotal', { total: formatMoney(chargeTotal, currency) })
+                : t('checkout.actions.placeOrder'),
           onClick: lastStep ? () => void submit() : next,
           disabled: submitting || locked || (lastStep && guest && verifying),
           busy: submitting,
@@ -578,12 +580,12 @@ export function CheckoutPage() {
   if (guest && !settings.turnstile) {
     return (
       <EmptyState
-        eyebrow="Checkout"
-        title="Guest checkout isn't available right now"
-        description="Sign in and we'll pick your order up from here."
+        eyebrow={t('checkout.page.eyebrow')}
+        title={t('checkout.page.guestUnavailableTitle')}
+        description={t('checkout.page.guestUnavailableBody')}
         action={
           <Button component={Link} to="/login?returnTo=%2Fcheckout" variant="default" size="sm">
-            Sign in
+            {t('common.actions.signIn')}
           </Button>
         }
       />
@@ -593,12 +595,12 @@ export function CheckoutPage() {
   if (lines.length === 0 && !placed) {
     return (
       <EmptyState
-        eyebrow="Checkout"
-        title="There's nothing to check out"
-        description="Add something to your cart and we'll pick this back up."
+        eyebrow={t('checkout.page.eyebrow')}
+        title={t('checkout.page.emptyTitle')}
+        description={t('checkout.page.emptyBody')}
         action={
           <Button component={Link} to="/" variant="default" size="sm">
-            Browse the catalogue
+            {t('common.actions.browseCatalogue')}
           </Button>
         }
       />
@@ -612,8 +614,8 @@ export function CheckoutPage() {
   return (
     <div className={classes.page}>
       <header className={classes.head}>
-        <span className={classes.eyebrow}>Checkout</span>
-        <h1 className={classes.title}>{guest ? 'Guest checkout' : 'Checkout'}</h1>
+        <span className={classes.eyebrow}>{t('checkout.page.eyebrow')}</span>
+        <h1 className={classes.title}>{guest ? t('checkout.page.guestTitle') : t('checkout.page.title')}</h1>
       </header>
 
       <div className={classes.grid}>
@@ -637,16 +639,16 @@ export function CheckoutPage() {
             }}
           >
             {STEPS.map((s) => (
-              <Stepper.Step key={s.label} label={s.label} />
+              <Stepper.Step key={s.label} label={t(s.label)} />
             ))}
           </Stepper>
 
           <div key={step} className={`${classes.card} ${FADE}`} ref={cardRef} data-sf-part="card">
             <header className={classes.cardHead}>
               <span className={classes.cardCount}>
-                Step {step + 1} of {STEPS.length}
+                {t('checkout.steps.count', { current: step + 1, total: STEPS.length })}
               </span>
-              <h2 className={classes.cardTitle}>{meta.title}</h2>
+              <h2 className={classes.cardTitle}>{t(meta.title)}</h2>
             </header>
 
             {pageQuoteError ? <p className={classes.alert}>{pageQuoteError}</p> : null}
@@ -658,7 +660,7 @@ export function CheckoutPage() {
                   className={classes.alertAction}
                   onClick={() => setRetryTick((t) => t + 1)}
                 >
-                  Try again
+                  {t('common.actions.tryAgain')}
                 </button>
               </p>
             ) : null}
@@ -666,7 +668,7 @@ export function CheckoutPage() {
             {guest && verifying ? (
               <p className={classes.verifying}>
                 <span className={classes.pulse} aria-hidden />
-                Verifying…
+                {t('checkout.page.verifying')}
               </p>
             ) : null}
 
@@ -732,7 +734,7 @@ export function CheckoutPage() {
                   data-sf-part="button"
                   data-variant="default"
                 >
-                  Back
+                  {t('checkout.actions.back')}
                 </button>
               ) : null}
               {inTelegram ? null : onReview ? (
@@ -745,15 +747,11 @@ export function CheckoutPage() {
                   data-variant="filled"
                   data-sf-cta="main"
                 >
-                  {submitting ? (
-                    'Placing order…'
-                  ) : chargeTotal !== null && chargeTotal > 0 ? (
-                    <>
-                      Place order · <Money amount={chargeTotal} />
-                    </>
-                  ) : (
-                    'Place order'
-                  )}
+                  {submitting
+                    ? t('checkout.actions.placing')
+                    : chargeTotal !== null && chargeTotal > 0
+                      ? tn('checkout.actions.placeOrderTotal', { total: <Money amount={chargeTotal} /> })
+                      : t('checkout.actions.placeOrder')}
                   <Slot name="ButtonAdornment" variant="primary" cta busy={submitting} />
                 </button>
               ) : (
@@ -765,7 +763,7 @@ export function CheckoutPage() {
                   data-variant="filled"
                   data-sf-cta="main"
                 >
-                  Continue
+                  {t('checkout.actions.continue')}
                   <Slot name="ButtonAdornment" variant="primary" cta />
                 </button>
               )}
@@ -774,7 +772,7 @@ export function CheckoutPage() {
 
           {onReview ? (
             <p className={classes.terms}>
-              Placing the order confirms the details above. We&rsquo;ll send you a link to track it.
+              {t('checkout.page.terms')}
             </p>
           ) : null}
         </div>

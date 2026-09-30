@@ -3,6 +3,7 @@ import type { CryptoOption, PaymentMethod, Quote } from '@/types/checkout.ts';
 import { useCartStore, selectSubtotal } from '@/stores/cart.ts';
 import { Money } from '@/components/Money.tsx';
 import { rowAnim } from '@/lib/motion.ts';
+import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/checkout/QuoteSummary.module.css';
 
 export interface QuoteSummaryProps {
@@ -37,6 +38,7 @@ export function QuoteSummary({
   combo,
   defaultOpen = false,
 }: QuoteSummaryProps) {
+  const { t, tn, tp } = useText();
   const [open, setOpen] = useState(defaultOpen);
   const autoOpened = useRef(defaultOpen);
   const bodyId = useId();
@@ -73,7 +75,8 @@ export function QuoteSummary({
   const charge = combo?.chargeTotal ?? method?.chargeTotal ?? null;
   const due = quote?.amountDue ?? null;
   const heroAmount = charge ?? due;
-  const heroLabel = due === 0 ? 'Nothing to pay' : charge !== null ? 'To pay' : 'Amount due';
+  const heroLabel =
+    due === 0 ? t('checkout.summary.nothingToPay') : charge !== null ? t('checkout.summary.toPay') : t('checkout.summary.amountDue');
   const fee = combo ? combo.fee : method ? method.fee : 0;
   const feeLabel = (combo?.feeLabel || method?.feeLabel) ?? '';
   const feeRateText = (combo?.feeRateText || method?.feeRateText) ?? '';
@@ -84,7 +87,7 @@ export function QuoteSummary({
       data-open={open}
       data-stale={stale}
       data-fetching={isFetching}
-      aria-label="Order summary"
+      aria-label={t('checkout.summary.ariaLabel')}
     >
       <button
         type="button"
@@ -93,7 +96,7 @@ export function QuoteSummary({
         aria-controls={bodyId}
         onClick={() => setOpen((v) => !v)}
       >
-        <span className={classes.toggleLabel}>{open ? 'Hide summary' : 'Order summary'}</span>
+        <span className={classes.toggleLabel}>{open ? t('checkout.summary.hide') : t('checkout.summary.ariaLabel')}</span>
         <span className={classes.toggleFigure}>
           <Money amount={heroAmount ?? quote?.grandTotal ?? localSubtotal} />
         </span>
@@ -102,11 +105,9 @@ export function QuoteSummary({
 
       <div className={classes.body} id={bodyId}>
         <header className={classes.head}>
-          <h2 className={classes.headName}>Your order</h2>
+          <h2 className={classes.headName}>{t('checkout.summary.heading')}</h2>
           <span className={classes.headRule} aria-hidden />
-          <span className={classes.headCount}>
-            {count} {count === 1 ? 'item' : 'items'}
-          </span>
+          <span className={classes.headCount}>{tp('cart.summary.items', count)}</span>
         </header>
 
         <ul className={classes.items}>
@@ -119,9 +120,9 @@ export function QuoteSummary({
               <span className={classes.itemQty}>{item.quantity}×</span>
               <span className={classes.itemName}>
                 {item.name}
-                {item.tierApplied ? <span className={classes.tag}>Bulk</span> : null}
+                {item.tierApplied ? <span className={classes.tag}>{t('checkout.summary.bulk')}</span> : null}
                 {item.isPreorder ? (
-                  <span className={`${classes.tag} ${classes.tagWarn}`}>Pre-order</span>
+                  <span className={`${classes.tag} ${classes.tagWarn}`}>{t('common.product.preorder')}</span>
                 ) : null}
               </span>
               <span className={classes.itemFigure}>
@@ -133,7 +134,7 @@ export function QuoteSummary({
 
         <div className={classes.ledger}>
           <div className={classes.row}>
-            <span className={classes.rowLabel}>Subtotal</span>
+            <span className={classes.rowLabel}>{t('common.totals.subtotal')}</span>
             <span className={classes.rowFigure}>
               <Money amount={quote ? quote.subtotal : localSubtotal} />
             </span>
@@ -142,7 +143,7 @@ export function QuoteSummary({
           {quote?.coupon ? (
             <div className={`${classes.row} ${classes.discount}`}>
               <span className={classes.rowLabel}>
-                Discount <span className={classes.rowNote}>{quote.coupon.code}</span>
+                {tn('checkout.summary.discountCode', { code: <span className={classes.rowNote}>{quote.coupon.code}</span> })}
               </span>
               <span className={classes.rowFigure}>
                 −
@@ -153,16 +154,16 @@ export function QuoteSummary({
 
           {quote && quote.selectedShippingOptionId !== null ? (
             <div className={classes.row}>
-              <span className={classes.rowLabel}>Shipping</span>
+              <span className={classes.rowLabel}>{t('common.totals.shipping')}</span>
               <span className={classes.rowFigure}>
-                {quote.shippingAmount === 0 ? 'Free' : <Money amount={quote.shippingAmount} />}
+                {quote.shippingAmount === 0 ? t('checkout.shipping.free') : <Money amount={quote.shippingAmount} />}
               </span>
             </div>
           ) : null}
 
           {quote ? (
             <div className={`${classes.row} ${classes.total}`}>
-              <span className={classes.rowLabel}>Total</span>
+              <span className={classes.rowLabel}>{t('common.totals.total')}</span>
               <span className={classes.rowFigure}>
                 <Money amount={quote.grandTotal} />
               </span>
@@ -171,7 +172,7 @@ export function QuoteSummary({
 
           {quote && quote.storeCredit.applied > 0 ? (
             <div className={`${classes.row} ${classes.credit}`}>
-              <span className={classes.rowLabel}>Store credit</span>
+              <span className={classes.rowLabel}>{t('common.totals.storeCredit')}</span>
               <span className={classes.rowFigure}>
                 −<Money amount={quote.storeCredit.applied} />
               </span>
@@ -181,7 +182,7 @@ export function QuoteSummary({
           {quote && charge !== null && due !== null ? (
             <>
               <div className={classes.row}>
-                <span className={classes.rowLabel}>Amount due</span>
+                <span className={classes.rowLabel}>{t('checkout.summary.amountDue')}</span>
                 <span className={classes.rowFigure}>
                   <Money amount={due} />
                 </span>
@@ -189,7 +190,7 @@ export function QuoteSummary({
               {fee !== 0 ? (
                 <div className={classes.row}>
                   <span className={classes.rowLabel}>
-                    {feeLabel || 'Payment fee'}{' '}
+                    {feeLabel || t('common.totals.paymentFee')}{' '}
                     {feeRateText ? <span className={classes.rowNote}>{feeRateText}</span> : null}
                   </span>
                   <span className={classes.rowFigure}>
@@ -214,11 +215,11 @@ export function QuoteSummary({
         {quote ? (
           due === 0 ? (
             <p className={classes.note} data-tone="success">
-              Store credit covers this order.
+              {t('checkout.summary.creditCovers')}
             </p>
           ) : null
         ) : (
-          <p className={classes.note}>Shipping and discounts are added once we have your address.</p>
+          <p className={classes.note}>{t('checkout.summary.pending')}</p>
         )}
       </div>
     </section>

@@ -2,6 +2,7 @@ import { Field, SelectField } from '@/features/checkout/Field.tsx';
 import { DIAL_CODES } from '@/lib/dial-codes.ts';
 import { compareNames, getFormatProfile, regionName } from '@/lib/format.ts';
 import classes from '@/features/checkout/Fields.module.css';
+import { useText } from '@/text/runtime.tsx';
 
 /**
  * Every dial code, not just the shop's shipping countries — a shopper's phone
@@ -46,11 +47,12 @@ export function PhoneField({
   onPrefixChange,
   onPhoneChange,
 }: PhoneFieldProps) {
+  const { t } = useText();
   return (
     <div className={classes.phone}>
       <div className={classes.phoneCode}>
-        <SelectField label="Phone country code" labelText="Code" value={prefix} onChange={onPrefixChange}>
-          <option value="">Code</option>
+        <SelectField label={t('checkout.phone.codeAriaLabel')} labelText={t('checkout.phone.code')} value={prefix} onChange={onPrefixChange}>
+          <option value="">{t('checkout.phone.code')}</option>
           {prefixOptions().map((o) => (
             <option key={o.iso} value={o.iso}>
               {o.name} +{o.dial}
@@ -60,7 +62,7 @@ export function PhoneField({
       </div>
       <div className={classes.phoneNumber}>
         <Field
-          label="Phone"
+          label={t('checkout.phone.label')}
           type="tel"
           inputMode="tel"
           autoComplete="tel"
@@ -68,7 +70,7 @@ export function PhoneField({
           onChange={onPhoneChange}
           error={error}
           optional={optional}
-          hint={error ? undefined : 'Couriers may use this for delivery.'}
+          hint={error ? undefined : t('checkout.phone.hint')}
         />
       </div>
     </div>

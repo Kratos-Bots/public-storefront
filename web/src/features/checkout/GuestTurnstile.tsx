@@ -1,12 +1,14 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 import { isBuilderMode } from '@/app/builder-gate.ts';
+import { textKey, textSnapshot } from '@/text/runtime.tsx';
 
 const MINT_TIMEOUT_MS = 30_000;
 /** How long an unclaimed token is worth sending. Cloudflare expires tokens after
  *  five minutes; well inside that, a fresh challenge is cheaper than a `422`. */
 const STASH_TTL_MS = 120_000;
-const FAILED = "We couldn't verify your browser — please try again";
+/** A key, read when a mint fails (not at import), so published wording applies. */
+const FAILED = textKey('checkout.errors.verifyFailed');
 /** What the page builder's frame sends instead: its quotes never leave the frame. */
 const PREVIEW_TOKEN = 'sf-builder-preview';
 
@@ -107,7 +109,7 @@ const LiveTurnstile = forwardRef<GuestTurnstileHandle, { siteKey: string }>(
             }
 
             const timer = setTimeout(
-              () => settle((p) => p.reject(new Error(FAILED))),
+              () => settle((p) => p.reject(new Error(textSnapshot().t(FAILED)))),
               MINT_TIMEOUT_MS,
             );
             pending.current = { resolve, reject, timer };
@@ -140,7 +142,7 @@ const LiveTurnstile = forwardRef<GuestTurnstileHandle, { siteKey: string }>(
         }}
         onError={() => {
           stash.current = null;
-          settle((p) => p.reject(new Error(FAILED)));
+          settle((p) => p.reject(new Error(textSnapshot().t(FAILED))));
         }}
         onExpire={() => {
           stash.current = null;

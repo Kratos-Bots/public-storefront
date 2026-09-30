@@ -4,6 +4,7 @@ import type { CheckoutForm } from '@/features/checkout/form-state.ts';
 import { Money } from '@/components/Money.tsx';
 import { CouponField } from '@/features/checkout/CouponField.tsx';
 import { countryName } from '@/features/checkout/CountrySelect.tsx';
+import { useText } from '@/text/runtime.tsx';
 import fields from '@/features/checkout/Fields.module.css';
 import classes from '@/features/checkout/steps/Steps.module.css';
 
@@ -32,6 +33,7 @@ export function ShippingStep({
   couponError,
   notice,
 }: ShippingStepProps) {
+  const { t, msg } = useText();
   const name = useId();
   const options = quote?.shippingOptions ?? [];
 
@@ -39,16 +41,17 @@ export function ShippingStep({
     <div className={classes.step}>
       <div className={classes.section}>
         <p className={classes.sectionHead}>
-          Delivery
+          {t('checkout.shipping.heading')}
           <span className={classes.sectionRule} aria-hidden />
         </p>
 
         {!quote ? (
-          <p className={classes.note}>Pricing your order…</p>
+          <p className={classes.note}>{t('checkout.quote.pricing')}</p>
         ) : options.length === 0 ? (
           <p className={classes.note} data-tone="warn">
-            We can&rsquo;t ship to {countryName(form.country) || 'that country'} yet. Choose another
-            country, or message us and we&rsquo;ll sort it.
+            {t('checkout.shipping.unserviceable', {
+              country: countryName(form.country) || t('checkout.shipping.thatCountry'),
+            })}
           </p>
         ) : (
           <div className={fields.choices}>
@@ -72,7 +75,7 @@ export function ShippingStep({
                       : fields.choiceFigure
                   }
                 >
-                  {o.freeShipping || o.price === 0 ? 'Free' : <Money amount={o.price} />}
+                  {o.freeShipping || o.price === 0 ? t('checkout.shipping.free') : <Money amount={o.price} />}
                 </span>
               </label>
             ))}
@@ -81,7 +84,7 @@ export function ShippingStep({
 
         {errors.shippingOptionId ? (
           <p className={classes.note} data-tone="danger">
-            {errors.shippingOptionId}
+            {msg(errors.shippingOptionId)}
           </p>
         ) : null}
         {notice ? (

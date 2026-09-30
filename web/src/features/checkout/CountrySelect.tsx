@@ -1,6 +1,7 @@
 import { SelectField } from '@/features/checkout/Field.tsx';
 import { DIAL_CODES } from '@/lib/dial-codes.ts';
 import { compareNames, getFormatProfile, regionName } from '@/lib/format.ts';
+import { useText } from '@/text/runtime.tsx';
 
 export { regionName } from '@/lib/format.ts';
 
@@ -34,17 +35,18 @@ export interface CountrySelectProps {
   label?: string;
 }
 
-export function CountrySelect({ value, onChange, error, label = 'Country' }: CountrySelectProps) {
+export function CountrySelect({ value, onChange, error, label }: CountrySelectProps) {
+  const { t } = useText();
   return (
     <SelectField
-      label={label}
+      label={label ?? t('checkout.address.country')}
       value={value}
       onChange={onChange}
       error={error}
       autoComplete="country"
     >
       <option value="" disabled>
-        Choose a country
+        {t('checkout.address.chooseCountry')}
       </option>
       {countryOptions().map((c) => (
         <option key={c.iso} value={c.iso}>

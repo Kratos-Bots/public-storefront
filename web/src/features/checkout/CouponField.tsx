@@ -1,6 +1,7 @@
 import { useId, useState } from 'react';
 import type { QuoteCoupon } from '@/types/checkout.ts';
 import { Money } from '@/components/Money.tsx';
+import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/checkout/CouponField.module.css';
 
 export interface CouponFieldProps {
@@ -22,6 +23,7 @@ export interface CouponFieldProps {
  * option to try one of their own over the top.
  */
 export function CouponField({ applied, code, onApply, onRemove, error, busy }: CouponFieldProps) {
+  const { t } = useText();
   const id = useId();
   const [draft, setDraft] = useState('');
   const [entryOpen, setEntryOpen] = useState(false);
@@ -44,9 +46,9 @@ export function CouponField({ applied, code, onApply, onRemove, error, busy }: C
             e.preventDefault();
             submit();
           }}
-          aria-label="Coupon code"
+          aria-label={t('checkout.coupon.codeLabel')}
           aria-invalid={error ? true : undefined}
-          placeholder="Have a code?"
+          placeholder={t('checkout.coupon.placeholder')}
           autoComplete="off"
           spellCheck={false}
           maxLength={40}
@@ -57,7 +59,7 @@ export function CouponField({ applied, code, onApply, onRemove, error, busy }: C
           onClick={submit}
           disabled={busy || draft.trim().length === 0}
         >
-          {busy ? 'Checking' : 'Apply'}
+          {busy ? t('checkout.coupon.checking') : t('checkout.coupon.apply')}
         </button>
       </div>
       {error ? <span className={classes.error}>{error}</span> : null}
@@ -71,10 +73,10 @@ export function CouponField({ applied, code, onApply, onRemove, error, busy }: C
   if (!applied && code) {
     return (
       <div className={classes.field}>
-        <span className={classes.label}>Discount</span>
+        <span className={classes.label}>{t('checkout.coupon.discountLabel')}</span>
         <div className={`${classes.applied} ${classes.rejected}`}>
           <span className={classes.code}>{code}</span>
-          <span className={classes.rejectedNote}>{busy ? 'Checking…' : (error ?? 'Not applied')}</span>
+          <span className={classes.rejectedNote}>{busy ? t('common.status.checking') : (error ?? t('checkout.coupon.notApplied'))}</span>
           <button
             type="button"
             className={classes.remove}
@@ -84,7 +86,7 @@ export function CouponField({ applied, code, onApply, onRemove, error, busy }: C
               onRemove();
             }}
           >
-            Remove
+            {t('checkout.coupon.remove')}
           </button>
         </div>
       </div>
@@ -95,7 +97,7 @@ export function CouponField({ applied, code, onApply, onRemove, error, busy }: C
     const saving = applied.discountAmount + applied.shippingDiscount;
     return (
       <div className={classes.field}>
-        <span className={classes.label}>Discount</span>
+        <span className={classes.label}>{t('checkout.coupon.discountLabel')}</span>
         <div className={classes.applied}>
           <span className={classes.code}>{applied.code}</span>
           {saving > 0 ? (
@@ -105,14 +107,14 @@ export function CouponField({ applied, code, onApply, onRemove, error, busy }: C
           ) : null}
           {applied.autoApplied ? (
             <>
-              <span className={classes.auto}>Applied automatically</span>
+              <span className={classes.auto}>{t('checkout.coupon.autoApplied')}</span>
               {!entryOpen ? (
                 <button
                   type="button"
                   className={classes.remove}
                   onClick={() => setEntryOpen(true)}
                 >
-                  Use another
+                  {t('checkout.coupon.useAnother')}
                 </button>
               ) : null}
             </>
@@ -126,7 +128,7 @@ export function CouponField({ applied, code, onApply, onRemove, error, busy }: C
                 onRemove();
               }}
             >
-              Remove
+              {t('checkout.coupon.remove')}
             </button>
           )}
         </div>
@@ -138,7 +140,7 @@ export function CouponField({ applied, code, onApply, onRemove, error, busy }: C
   return (
     <div className={classes.field}>
       <label className={classes.label} htmlFor={id}>
-        Coupon code
+        {t('checkout.coupon.codeLabel')}
       </label>
       {entry}
     </div>
