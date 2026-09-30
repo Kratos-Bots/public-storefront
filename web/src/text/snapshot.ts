@@ -20,7 +20,8 @@ export interface TextApi {
   locale: Locale;
   t<K extends StringKey>(key: K, ...p: ParamArgs<K>): string;
   tp<K extends PluralKey>(key: K, count: number, ...p: ParamArgs<K, 'count'>): string;
-  tn<K extends TextKey>(key: K, params: NodeParams<K>, count?: number): ReactNode;
+  /** A plural key takes its count (it picks the form and fills `{count}`); a string key takes none. */
+  tn<K extends TextKey>(key: K, params: NodeParams<K>, ...count: K extends PluralKey ? [count: number] : []): ReactNode;
   /** A registered string key → t(key); anything else (a backend message) verbatim. */
   msg(value: string): string;
 }

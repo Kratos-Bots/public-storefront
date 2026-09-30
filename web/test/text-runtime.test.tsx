@@ -78,6 +78,13 @@ describe('TextApi', () => {
     const ja = createTextApi(layers({ locale: 'ja', shared: { 'cart.summary.items': { one: '{count} one', other: '{count} 点' } } }));
     expect(ja.tp('cart.summary.items', 1)).toBe('1 点');
   });
+  it('tn takes a count exactly for plural keys (type level, Task 5 deferred)', () => {
+    // @ts-expect-error a plural key needs its count
+    const noCount = () => api.tn('cart.summary.items', {});
+    // @ts-expect-error a string key takes no count
+    const strayCount = () => api.tn('common.qty.more', { name: 'Oats' }, 2);
+    expect([typeof noCount, typeof strayCount]).toEqual(['function', 'function']);
+  });
   it('t fills placeholders; a dropped placeholder is fine', () => {
     expect(api.t('common.qty.more', { name: 'Oats' })).toBe('One more Oats');
     expect(createTextApi(layers({ shared: { 'common.qty.more': 'Add another' } })).t('common.qty.more', { name: 'Oats' })).toBe('Add another');
