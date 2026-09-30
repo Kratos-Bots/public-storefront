@@ -265,10 +265,19 @@ test.describe('page builder editor · protocol', () => {
     await expect(preview).toBeVisible();
     expect(await preview.evaluate((el) => Math.round(el.getBoundingClientRect().width))).toBe(768);
     expect(await preview.evaluate(() => window.innerWidth)).toBe(768);
-    // The draft is what shows: the new Heading, with no Puck wrappers.
-    await expect(preview.locator('[data-sf-block="Heading"]')).toBeVisible();
+    // The draft, through the shop's own shell: its header, the new Heading inside <main>, no Puck wrappers.
+    await expect(preview.locator('header').first()).toBeVisible();
+    await expect(preview.locator('main [data-sf-block="Heading"]')).toBeVisible();
     await expect(preview.locator('[data-puck-component]')).toHaveCount(0);
     await page.screenshot({ path: `${SHOTS}exact-preview-768.png` });
+
+    // The Heading is still selected on the hidden canvas, and "Back to editing" has focus: Puck's
+    // delete and undo hotkeys must not reach it.
+    const backButton = bar.getByRole('button', { name: 'Back to editing' });
+    await expect(backButton).toBeFocused();
+    await backButton.press('Backspace');
+    await backButton.press('Delete');
+    await backButton.press('Control+z');
 
     await bar.getByRole('button', { name: 'Back to editing' }).click();
     await expect.poll(async () => (await messages(page, 'sf-builder-viewport')).at(-1)).toEqual({ type: 'sf-builder-viewport', width: null });

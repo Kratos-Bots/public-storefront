@@ -104,8 +104,7 @@ describe('editor chrome', () => {
     await vi.waitFor(() => expect(screen.getByRole('combobox', { name: 'Page' })).toHaveFocus());
   });
 
-  it('a width preset is an exact preview: Puck hidden but kept, the draft page shown, one way back', async () => {
-    // A custom page (no catalogue blocks, which need the shop settings this test doesn't load).
+  it('a width preset is an exact preview: Puck hidden but kept, one way back', async () => {
     const about: PuckDoc = { root: { props: { title: 'About', description: '', chrome: 'shell' } }, content: [{ type: 'Heading', props: { id: 'h1', text: 'Northbound Supply' } }] };
     useEditorStore.getState().load({ layout: 'storefront', pageSet: { schemaVersion: 1, shell: defaultDoc('shell', 'storefront')!, pages: { 'page:about': about } }, readOnly: false });
     useEditorStore.getState().selectDoc('page:about');
@@ -119,11 +118,8 @@ describe('editor chrome', () => {
     expect(header.isConnected).toBe(true);
     expect(header.closest('[hidden]')).not.toBeNull();
     expect(screen.queryByRole('button', { name: 'Add block' })).toBeNull();
-    // The page renders as a shopper sees it, inside the shop's column, with no Puck wrappers.
-    const preview = document.querySelector('[data-sf-builder-exact="768"]')!;
-    expect(preview.querySelector('[data-sf-builder-column]')).not.toBeNull();
-    expect(preview.querySelector('[data-puck-component]')).toBeNull();
-    expect(within(preview as HTMLElement).getByRole('heading', { name: 'Northbound Supply' })).toBeInTheDocument();
+    // No Puck wrappers in the preview (its rendering is covered in builder-editor-exact-preview.test.tsx).
+    expect(document.querySelector('[data-sf-builder-exact="768"] [data-puck-component]')).toBeNull();
     const back = within(bar).getByRole('button', { name: 'Back to editing' });
     expect(back).toHaveFocus();
     fireEvent.click(back);
@@ -131,6 +127,43 @@ describe('editor chrome', () => {
     expect(screen.queryByRole('region', { name: 'Exact preview' })).toBeNull();
     expect(header.isConnected).toBe(true);
     expect(header.closest('[hidden]')).toBeNull();
+  });
+
+  it("Puck's undo and delete hotkeys can't touch the hidden draft while a preview shows", async () => {
+    ready(false);
+    renderCanvas();
+    await puckShown();
+    const headings = () => (useEditorStore.getState().docs.catalog?.content ?? []).filter((c) => c.type === 'Heading').length;
+    fireEvent.click(screen.getByRole('button', { name: 'Add block' }));
+    await act(async () => fireEvent.click(within(screen.getByRole('menu')).getByRole('menuitem', { name: 'Heading' })));
+    await vi.waitFor(() => expect(headings()).toBe(1));
+    const docsBefore = useEditorStore.getState().docs;
+    const ctrlZ = (target: Element) => {
+      fireEvent.keyDown(target, { key: 'Control', code: 'ControlLeft', ctrlKey: true });
+      fireEvent.keyDown(target, { key: 'z', code: 'KeyZ', ctrlKey: true });
+      fireEvent.keyUp(target, { key: 'z', code: 'KeyZ', ctrlKey: true });
+      fireEvent.keyUp(target, { key: 'Control', code: 'ControlLeft' });
+    };
+
+    fireEvent.click(within(screen.getByRole('group', { name: 'Preview width' })).getByRole('button', { name: 'Tablet' }));
+    const back = within(await screen.findByRole('region', { name: 'Exact preview' })).getByRole('button', { name: 'Back to editing' });
+    expect(back).toHaveFocus();
+    // The Heading is still selected on the hidden canvas: Backspace / Delete would remove it.
+    await act(async () => {
+      fireEvent.keyDown(back, { key: 'Backspace', code: 'Backspace' });
+      fireEvent.keyUp(back, { key: 'Backspace', code: 'Backspace' });
+      fireEvent.keyDown(back, { key: 'Delete', code: 'Delete' });
+      fireEvent.keyUp(back, { key: 'Delete', code: 'Delete' });
+      ctrlZ(back);
+    });
+    await new Promise((r) => setTimeout(r, 50));
+    expect(useEditorStore.getState().docs).toBe(docsBefore);
+    expect(headings()).toBe(1);
+
+    // Control: back at Fit the same shortcut does reach Puck and undoes the insert.
+    fireEvent.click(back);
+    await act(async () => ctrlZ(document.body));
+    await vi.waitFor(() => expect(headings()).toBe(0));
   });
 
   it('Add block is a keyboard menu: arrows move, Escape returns focus, choosing inserts once', async () => {

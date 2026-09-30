@@ -37,7 +37,8 @@ export function FixtureRoutes({ children }: { children: ReactNode }) {
     <>
       {location.pathname !== target && <Navigate to={target} replace />}
       <Routes>
-        <Route path={pattern} element={children} />
+        {/* Trailing splat: the exact preview nests the shop's own shell and page routes here. */}
+        <Route path={`${pattern}/*`} element={children} />
       </Routes>
     </>
   );

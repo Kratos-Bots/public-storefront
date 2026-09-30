@@ -241,8 +241,8 @@ describe('EditorBlock', () => {
       return render(createElement(() => (root.render as (p: { children: string }) => ReturnType<typeof createElement>)({ children: 'page' }))).container;
     };
     const page = renderRoot('catalog', 'menu');
+    expect(page.querySelector('[data-sf-builder-canvas]')).toHaveAttribute('data-layout', 'menu');
     const column = page.querySelector('[data-sf-builder-canvas] > [data-sf-builder-column]');
-    expect(column).toHaveAttribute('data-layout', 'menu');
     expect(column).toHaveTextContent('page');
     cleanup();
     const shell = renderRoot('shell', 'storefront');

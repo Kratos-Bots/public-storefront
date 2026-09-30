@@ -764,13 +764,18 @@
  * that width, under one slim bar. The bar is the editor's; the page below is the shop's.
  */
 .exact {
-  min-block-size: 100dvh;
+  block-size: 100dvh;
   display: flex;
   flex-direction: column;
 }
 
-.exact > :last-child {
+/* The page scrolls here, under the bar: the shop's sticky header then rests below it. */
+.exactBody {
   flex: 1;
+  min-block-size: 0;
+  overflow: auto;
+  background: var(--sf-bg);
+  color: var(--sf-text);
 }
 
 .exactBar {

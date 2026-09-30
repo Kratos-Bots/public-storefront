@@ -1,4 +1,4 @@
-import { Component, useEffect, useMemo, useRef, type ReactNode } from 'react';
+import { Component, useMemo, type ReactNode } from 'react';
 import { Puck, type Data, type Overrides, type UiState } from '@puckeditor/core';
 // Puck's styles without its @import of Inter from rsms.me: the frame loads nothing from third parties.
 import '@puckeditor/core/no-external.css';
@@ -6,11 +6,9 @@ import { DocBoundary, RenderDoc } from '@/builder/render.tsx';
 import { validateDoc } from '@/builder/guard.ts';
 import { defaultDoc } from '@/builder/defaults/index.ts';
 import { buildEditorConfig } from '@/builder/editor/config.ts';
-import { docFor, isCustomKey, stableStringify } from '@/builder/editor/page-set.ts';
-import { prepareDoc } from '@/builder/editor/prepare.ts';
+import { docFor, isCustomKey } from '@/builder/editor/page-set.ts';
 import { PageGround } from '@/builder/editor/page-ground.tsx';
-import type { ViewportWidth } from '@/builder/editor/protocol.ts';
-import { BuilderModeProvider } from '@/builder/mode.ts';
+import { ExactPreview } from '@/builder/editor/ExactPreview.tsx';
 import type { DocKey, LayoutKind, PuckDoc } from '@/builder/types.ts';
 import { isLockedOn } from '@/builder/editor/route-bound.ts';
 import { useEditorStore } from '@/builder/editor/store.ts';
@@ -136,54 +134,6 @@ function ReadOnlyView() {
 /** A doc as the storefront would render it: the guard's version, else the route's default. */
 function shownDoc(raw: PuckDoc, docKey: DocKey, layout: LayoutKind): PuckDoc {
   return validateDoc(raw, docKey, layout).doc ?? defaultDoc(docKey, layout) ?? raw;
-}
-
-/**
- * A width preset (Phone / Tablet / Desktop) is an exact preview: the admin has sized the frame to
- * that width, so media queries match, and the draft page renders as a shopper would see it — no
- * Puck chrome, no editor hints, the same RenderDoc path as the read-only view. Nothing can be
- * edited here, so nothing is posted (session.ts). "Back to editing" returns to Fit, where the
- * still-mounted Puck canvas carries on with its selection and undo history.
- */
-function ExactPreview({ width }: { width: ViewportWidth }) {
-  const docKey = useEditorStore((s) => s.docKey);
-  const layout = useEditorStore((s) => s.layout);
-  const docs = useEditorStore((s) => s.docs);
-  const previewAs = useEditorStore((s) => s.previewAs);
-  const mode = useMemo(() => ({ editing: false, previewAs }), [previewAs]);
-  const doc = useMemo(() => shownDoc(prepareDoc(docFor(docs, docKey, layout)), docKey, layout), [docs, docKey, layout]);
-  const back = useRef<HTMLButtonElement>(null);
-  // Keyboard users land on the way back, not at the top of the document.
-  useEffect(() => back.current?.focus({ preventScroll: true }), []);
-  return (
-    <div className={styles.exact} data-sf-builder-exact={width}>
-      <div className={styles.exactBar} role="region" aria-label="Exact preview">
-        <span className={styles.exactLabel}>
-          <EyeIcon />
-          <span>Previewing at <strong>{width} px</strong></span>
-        </span>
-        <button ref={back} type="button" className={styles.button} onClick={() => useEditorStore.getState().setViewport(null)}>
-          Back to editing
-        </button>
-      </div>
-      <BuilderModeProvider value={mode}>
-        <DocBoundary
-          key={stableStringify(doc)}
-          docKey={docKey}
-          fallback={
-            <div className={styles.failed} role="alert">
-              <h2 className={styles.failedTitle}>This page can’t be previewed</h2>
-              <p>Part of the draft failed to render. Go back to editing and check its blocks.</p>
-            </div>
-          }
-        >
-          <PageGround docKey={docKey} layout={layout}>
-            <RenderDoc doc={doc} docKey={docKey} layout={layout} />
-          </PageGround>
-        </DocBoundary>
-      </BuilderModeProvider>
-    </div>
-  );
 }
 
 /** Issue outlines and lock marks on the open doc, visible without hovering (see resting-marks.ts). */

@@ -1,10 +1,15 @@
 /*
- * The storefront's page ground and content column, for the editor's canvas and previews. The
- * column values mirror the shells' `.shell` / `.main` (layouts/StorefrontShell.module.css,
- * MenuShell.module.css, WebAppShell.module.css) — keep them in step.
+ * The storefront's page ground and content column, for the editor canvas and the read-only view.
+ * The custom properties mirror each shell's `.shell` (layouts/StorefrontShell.module.css,
+ * MenuShell.module.css, WebAppShell.module.css — the web app composes the menu's), published the
+ * same way for blocks that line up with the chrome. test/builder-editor-page-ground.test.ts keeps
+ * the copies in step.
  */
 
 .ground {
+  --sf-rail-max: 1200px;
+  --sf-bar-h: 56px;
+  --sf-main-pad: 1rem;
   /* flow-root: a first block's top margin stays inside the ground, as it does in the shell's
      flex column, instead of collapsing through and exposing the canvas behind it. */
   display: flow-root;
@@ -14,32 +19,34 @@
   font-family: var(--sf-font-body);
 }
 
+.ground[data-layout='menu'],
+.ground[data-layout='webapp'] {
+  --sf-rail-max: 48rem;
+  --sf-bar-h: 52px;
+  --sf-main-pad: 0.75rem;
+}
+
+.ground[data-layout='webapp'] {
+  --sf-rail-max: 35rem;
+}
+
+@media (min-width: 62em) {
+  .ground {
+    --sf-bar-h: 68px;
+    --sf-main-pad: 1.5rem;
+  }
+  .ground[data-layout='menu'],
+  .ground[data-layout='webapp'] {
+    --sf-bar-h: 60px;
+    --sf-main-pad: 1rem;
+  }
+}
+
+/* The shell's <main> column (every shell's `.main`), for page docs. */
 .column {
-  --sf-rail-max: 1200px;
-  --sf-main-pad: 1rem;
   box-sizing: border-box;
   inline-size: 100%;
   max-inline-size: var(--sf-rail-max);
   margin-inline: auto;
   padding-inline: var(--sf-main-pad);
-}
-
-.column[data-layout='menu'],
-.column[data-layout='webapp'] {
-  --sf-main-pad: 0.75rem;
-  --sf-rail-max: 48rem;
-}
-
-.column[data-layout='webapp'] {
-  --sf-rail-max: 35rem;
-}
-
-@media (min-width: 62em) {
-  .column {
-    --sf-main-pad: 1.5rem;
-  }
-  .column[data-layout='menu'],
-  .column[data-layout='webapp'] {
-    --sf-main-pad: 1rem;
-  }
 }
