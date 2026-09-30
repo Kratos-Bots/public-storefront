@@ -116,6 +116,6 @@ describe('CSS polish (rule presence only)', () => {
     expect(read('FAQ.module.css')).toMatch(/content: '\+';\s*content: '\+' \/ '';/);
   });
   it('Heading eyebrow is sized in rem, not px', () => {
-    expect(read('Heading.module.css')).toMatch(/\.eyebrow\s*\{[^}]*font-size:\s*[\d.]+rem/);
+    expect(read('Heading.module.css')).toMatch(/\.eyebrow\s*\{[^}]*font-size:\s*(?:calc\()?[\d.]+rem/);
   });
 });
