@@ -31,6 +31,17 @@ describe('protocol: text on load', () => {
     expect(parseInbound({ ...LOAD, pageSet: { schemaVersion: 1, shell: doc, pages: {}, text: { strings: 'nope' } } })).toBeNull();
   });
 
+  it('a bad language tag in pageSet.text drops just that language, not the load', () => {
+    const text = { strings: { en: { 'cart.drawer.title': 'Your basket' }, 'en-gb': { 'cart.drawer.title': 'Basket' }, 'xx-!!': { 'cart.drawer.title': 'Nope' } } };
+    const msg = asLoad(parseInbound({ ...LOAD, pageSet: { schemaVersion: 1, shell: doc, pages: {}, text } }));
+    expect(msg.pageSet!.text).toEqual(TEXT);
+  });
+
+  it('a pageSet.text left with no valid language has no text key', () => {
+    const msg = asLoad(parseInbound({ ...LOAD, pageSet: { schemaVersion: 1, shell: doc, pages: {}, text: { strings: { EN: { 'cart.drawer.title': 'x' } } } } }));
+    expect('text' in msg.pageSet!).toBe(false);
+  });
+
   it('siteText: present, null, absent', () => {
     expect(asLoad(parseInbound({ ...LOAD, siteText: SITE })).siteText).toEqual(SITE);
     expect(asLoad(parseInbound({ ...LOAD, siteText: null })).siteText).toBeNull();

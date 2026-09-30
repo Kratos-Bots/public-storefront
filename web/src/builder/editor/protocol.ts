@@ -41,7 +41,9 @@ const docSchema = z.looseObject({
 const localeSchema = z.string().refine(isStoreLocale);
 const textValueSchema = z.union([z.string(), z.record(z.string(), z.string())]);
 const stringsSchema = z.record(localeSchema, z.record(z.string(), textValueSchema));
-const pageTextSchema = z.object({ strings: stringsSchema });
+// A layout's overrides are read per language: a bad tag drops that language only (toPageSet), as
+// a malformed siteText drops only the shared layer — never the whole load.
+const pageTextSchema = z.object({ strings: z.record(z.string(), z.record(z.string(), textValueSchema)) });
 const siteTextSchema = z.object({
   schemaVersion: z.literal(1),
   language: z.object({ locale: localeSchema, formatLocale: z.union([z.literal(''), localeSchema]) }),
@@ -128,7 +130,18 @@ function toPageSet(raw: z.infer<typeof pageSetSchema>): PageSet {
   for (const [key, doc] of Object.entries(raw.pages)) {
     if (key !== 'shell' && isDocKey(key)) pages[key as keyof PageSet['pages']] = doc as unknown as PuckDoc;
   }
-  return { schemaVersion: 1, shell: raw.shell as unknown as PuckDoc, pages, ...(raw.text ? { text: raw.text as PageText } : {}) };
+  const text = raw.text ? pageTextOf(raw.text) : undefined;
+  return { schemaVersion: 1, shell: raw.shell as unknown as PuckDoc, pages, ...(text ? { text } : {}) };
+}
+
+/** Languages with a tag the backend refuses (Intl could throw on it) are dropped; none left = none. */
+function pageTextOf(raw: z.infer<typeof pageTextSchema>): PageText | undefined {
+  const strings: PageText['strings'] = {};
+  for (const [locale, map] of Object.entries(raw.strings)) {
+    if (isStoreLocale(locale)) strings[locale] = map as PageText['strings'][string];
+    else if (import.meta.env.DEV) console.warn(`[builder] ignored this layout's wording in "${locale}": not a language tag`);
+  }
+  return Object.keys(strings).length > 0 ? { strings } : undefined;
 }
 
 function siteTextOf(raw: unknown): SiteText | null | undefined {
