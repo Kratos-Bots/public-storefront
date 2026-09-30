@@ -199,6 +199,19 @@ function checkPartPlacement(items: readonly ComponentData[], family: PartFamily 
   }
 }
 
+/**
+ * The first route block or container anywhere under `items` (every slot, hidden ones included, like
+ * `placement`): a container's slots never hold one, however deep in content blocks (spec §3.4).
+ */
+function foreignInside(items: readonly ComponentData[]): ComponentData | undefined {
+  let found: ComponentData | undefined;
+  walk(items, (c) => {
+    const d = blockDef(c.type);
+    if (!found && d && (d.routeBound || d.container)) found = c;
+  }, false);
+  return found;
+}
+
 /** Spec §4 for one container instance: counts through visible slots, stopping at a nested container. */
 function containerIssues(item: ComponentData, def: AnyBlock, docKey: DocKey, layout: LayoutKind): Issue[] {
   const spec = def.container!;
@@ -207,11 +220,12 @@ function containerIssues(item: ComponentData, def: AnyBlock, docKey: DocKey, lay
   const blockId = item.props.id;
   const required = new Set(requiredParts(def.name, layout));
   const counts = new Map<string, number>();
-  const hiddenHolders: Array<{ holder: ComponentData; part: string }> = [];
+  // One issue per hidden holder (its first required part), like the doc-level rule.
+  const hiddenHolders = new Map<ComponentData, string>();
   const visit = (items: readonly ComponentData[], hidden: ComponentData | null) => {
     for (const c of items) {
       counts.set(c.type, (counts.get(c.type) ?? 0) + 1);
-      if (hidden && required.has(c.type)) hiddenHolders.push({ holder: hidden, part: c.type });
+      if (hidden && required.has(c.type) && !hiddenHolders.has(hidden)) hiddenHolders.set(hidden, c.type);
       const d = blockDef(c.type);
       if (!d || d.container) continue;
       const nextHidden = hidden ?? (hiddenAs(d, c.props) ? c : null);
@@ -243,7 +257,7 @@ function containerIssues(item: ComponentData, def: AnyBlock, docKey: DocKey, lay
         message: own(REQUIRES_MESSAGE, `${p}.${needs}`) ?? `${label(p)} needs the ${label(needs)} beside it.` });
     }
   }
-  for (const { holder, part } of hiddenHolders) {
+  for (const [holder, part] of hiddenHolders) {
     const hide = hiddenAs(blockDef(holder.type)!, holder.props);
     issues.push({ docKey, rule: `hidden-required:${holder.type}`, blockId: holder.props.id,
       message: `${label(holder.type)} is hidden ${hide === 'mobile' ? 'below' : 'from'} 992 px but holds the ${label(part)}, which every shopper must see.` });
@@ -252,11 +266,7 @@ function containerIssues(item: ComponentData, def: AnyBlock, docKey: DocKey, lay
     const children = item.props[s];
     if (!Array.isArray(children)) continue;
     const only = spec.slotAccepts ? own(spec.slotAccepts, s) ?? null : null;
-    const bad = (children as ComponentData[]).find((c) => {
-      if (only) return !only.includes(c.type);
-      const d = blockDef(c.type);
-      return !!d && (d.routeBound || !!d.container);
-    });
+    const bad = only ? (children as ComponentData[]).find((c) => !only.includes(c.type)) : foreignInside(children as ComponentData[]);
     if (bad) {
       issues.push({ docKey, rule: `slot-accepts:${def.name}.${s}`, blockId: bad.props.id,
         message: only

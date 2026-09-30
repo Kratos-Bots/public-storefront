@@ -1,5 +1,26 @@
 import { describe, expect, it, vi } from 'vitest';
-vi.mock('@/builder/registry.ts', async (orig) => (await import('./helpers/fake-parts.tsx')).withFakeBlocks(orig));
+vi.mock('@/builder/registry.ts', async (orig) => {
+  const real = await (await import('./helpers/fake-parts.tsx')).withFakeBlocks(orig);
+  const { z } = await import('zod');
+  const cardPart = (name: string, family: 'card-tile' | 'card-row') => ({
+    name, label: name.replace(/^Card(Tile|Row)/, ''), category: 'part', part: { family }, layouts: 'all', routeBound: false, slots: [],
+    style: false, schema: z.object({}), defaultProps: {}, render: () => null,
+  });
+  const card = (name: 'CardTile' | 'CardRow', family: 'card-tile' | 'card-row') => ({
+    name, label: name, category: 'catalogue', layouts: 'all', routeBound: false, slots: ['items'], style: false,
+    schema: z.object({ items: z.array(z.any()) }), defaultProps: { items: [] }, render: () => null,
+    container: {
+      family, insertSlot: 'items', required: [`${name}Name`], unique: [`${name}Name`, `${name}Price`, `${name}Add`],
+      requires: [[`${name}Add`, `${name}Price`]], defaultSlots: () => ({ items: [] }),
+    },
+  });
+  // Stand-ins for the card families until the real card blocks land (Task 11).
+  return { ...real, BLOCKS: { ...real.BLOCKS,
+    CardTile: card('CardTile', 'card-tile'), CardRow: card('CardRow', 'card-row'),
+    CardTileName: cardPart('CardTileName', 'card-tile'), CardTilePrice: cardPart('CardTilePrice', 'card-tile'), CardTileAdd: cardPart('CardTileAdd', 'card-tile'),
+    CardRowName: cardPart('CardRowName', 'card-row'), CardRowPrice: cardPart('CardRowPrice', 'card-row'), CardRowAdd: cardPart('CardRowAdd', 'card-row'),
+  } };
+});
 import { allowedOn, checkRules, requiredParts } from '@/builder/rules.ts';
 import type { ComponentData, DocKey, PuckDoc } from '@/builder/types.ts';
 
@@ -64,5 +85,49 @@ describe('per container instance (spec §4)', () => {
     const issue = checkRules(d, 'product', 'storefront').find((i) => i.rule === 'hidden-required:Section');
     expect(issue?.blockId).toBe('s');
     expect(issue?.message).toMatch(/holds the Price/);
+  });
+});
+
+describe('fix round 1', () => {
+  it('slot-accepts: a container or route block nested in a content block inside a container slot', () => {
+    const inCols = (inner: ComponentData) => doc([box('b', [...full('b'), c('Columns', 'k', { columns: '2', col1: [inner], col2: [], col3: [], col4: [] })])]);
+    const found = checkRules(inCols(box('inner', full('inner'))), 'product', 'storefront').find((i) => i.rule === 'slot-accepts:FakeBox.a');
+    expect(found?.blockId).toBe('inner');
+    expect(rules(inCols(c('ProductDetail', 'pd')), 'product')).toContain('slot-accepts:FakeBox.a');
+    // Hidden column too: slot-accepts reads what is stored, not what renders.
+    const hiddenCol = doc([box('b', [...full('b'), c('Columns', 'k', { columns: '2', col1: [], col2: [], col3: [box('inner', full('inner'))], col4: [] })])]);
+    expect(rules(hiddenCol, 'product')).toContain('slot-accepts:FakeBox.a');
+  });
+  it('hidden-required: one issue per holder, however many required parts it holds', () => {
+    const d = doc([box('b', [c('FakeAdd', 'a'), c('Section', 's', { content: [c('FakeTitle', 't'), c('FakePrice', 'p')], blockStyle: { hide: 'desktop' } })])]);
+    const found = checkRules(d, 'product', 'storefront').filter((i) => i.rule === 'hidden-required:Section');
+    expect(found).toHaveLength(1);
+    expect(found[0]!.message).toMatch(/hidden from 992 px but holds the Title/);
+  });
+  it('hostile child types inside a container slot neither throw nor resolve to the prototype', () => {
+    const d = doc([box('b', [...full('b'), c('constructor', 'x')], [c('__proto__', 'y')])]);
+    let issues: ReturnType<typeof checkRules> = [];
+    expect(() => { issues = checkRules(d, 'product', 'storefront'); }).not.toThrow();
+    const ids = issues.map((i) => i.rule);
+    expect(ids).toContain('placement:constructor');
+    expect(ids).toContain('slot-accepts:FakeBox.b');
+    expect(ids.some((r) => r.startsWith('part-required'))).toBe(false);
+    expect(requiredParts('constructor', 'storefront')).toEqual([]);
+    expect(requiredParts('__proto__', 'storefront')).toEqual([]);
+  });
+  it('card docs: exactly one frame, nothing else, and the add button needs the price', () => {
+    expect(checkRules(doc([]), 'card:tile', 'storefront').map((i) => i.rule)).toContain('exactly-one:CardTile');
+    expect(checkRules(doc([c('CardRow', 'r1', { items: [c('CardRowName', 'n')] }), c('CardRow', 'r2', { items: [c('CardRowName', 'n2')] })]), 'card:row', 'storefront')
+      .map((i) => i.rule)).toContain('exactly-one:CardRow');
+    expect(allowedOn('Heading', 'card:row')).toBe(false);
+    const withHeading = checkRules(doc([c('CardRow', 'r', { items: [c('CardRowName', 'n'), c('Heading', 'h')] })]), 'card:row', 'storefront');
+    expect(withHeading.find((i) => i.rule === 'placement:Heading')?.blockId).toBe('h');
+    expect(allowedOn('CardTileName', 'card:tile')).toBe(true);
+    expect(allowedOn('CardTileName', 'card:row')).toBe(false);
+    const tile = checkRules(doc([c('CardTile', 't', { items: [c('CardTileName', 'n'), c('CardTileAdd', 'a')] })]), 'card:tile', 'storefront');
+    expect(tile.find((i) => i.rule === 'part-requires:CardTileAdd.CardTilePrice')?.message).toBe('A product card with an add button must also show the price.');
+    const row = checkRules(doc([c('CardRow', 'r', { items: [c('CardRowName', 'n'), c('CardRowAdd', 'a')] })]), 'card:row', 'storefront');
+    expect(row.find((i) => i.rule === 'part-requires:CardRowAdd.CardRowPrice')?.message).toBe('A product row with an add button must also show the price.');
+    expect(tile.map((i) => i.rule).filter((r) => r.startsWith('placement') || r.startsWith('exactly-one'))).toEqual([]);
   });
 });
