@@ -416,3 +416,153 @@ export function arrangedEverythingSet(layout: Layout = 'storefront'): PageSet {
     pages: { ...arrangedCart(layout).pages, ...arrangedAccountSet(layout).pages, ...arrangedFlowsSet(layout).pages },
   };
 }
+
+// ---- checkout and order-status parts (spec 2026-09-30-checkout-parts) ----------------------------
+
+export type StepKind = 'contact' | 'address' | 'shipping' | 'payment' | 'review';
+export const STEP_TYPES: Record<StepKind, string> = {
+  contact: 'CheckoutContact', address: 'CheckoutAddress', shipping: 'CheckoutShipping', payment: 'CheckoutPayment', review: 'CheckoutReview',
+};
+/** The four legal step orders (Delivery needs the address first, Payment follows Delivery, Review is last). */
+export const LEGAL_STEP_ORDERS: StepKind[][] = [
+  ['contact', 'address', 'shipping', 'payment', 'review'],
+  ['address', 'contact', 'shipping', 'payment', 'review'],
+  ['address', 'shipping', 'contact', 'payment', 'review'],
+  ['address', 'shipping', 'payment', 'contact', 'review'],
+];
+export const SHIPS_NOTE = 'Orders ship from Northbound within one working day';
+
+interface CheckoutShape {
+  order?: StepKind[];
+  /** Where the coupon sits: Delivery's after slot (the default), the aside, nowhere, or (illegally) in Contact. */
+  coupon?: 'shipping.after' | 'aside' | 'aside-columns' | 'none' | 'contact.before';
+  /** Where the notes sit: Review's after slot (the default), Payment's, or nowhere. */
+  notes?: 'review.after' | 'payment.after' | 'none';
+  /** Content blocks: a RichText before the Delivery fields and a Heading after them. */
+  content?: boolean;
+  progress?: 'default' | 'hide-mobile' | 'none';
+  summary?: boolean;
+}
+
+/** A published checkout document, every slot written out the way the editor saves one. */
+function checkoutDoc(shape: CheckoutShape = {}): PuckDoc {
+  const order = shape.order ?? LEGAL_STEP_ORDERS[0]!;
+  const coupon = shape.coupon ?? 'shipping.after';
+  const notes = shape.notes ?? 'review.after';
+  const couponPart = () => c('CheckoutCoupon', {}, 'CheckoutCoupon-e2e');
+  const notesPart = () => c('CheckoutNotes', {}, 'CheckoutNotes-e2e');
+  const slotsOf = (kind: StepKind) => {
+    const before: ComponentData[] = [];
+    const after: ComponentData[] = [];
+    if (kind === 'shipping') {
+      if (shape.content) {
+        before.push(RT('<p>' + SHIPS_NOTE + '</p>', 'ships-rt'));
+        after.push(c('Heading', { text: 'Tracked and insured', level: 'h3' }, 'ships-h'));
+      }
+      if (coupon === 'shipping.after') after.push(couponPart());
+    }
+    if (kind === 'contact' && coupon === 'contact.before') before.push(couponPart());
+    if (kind === 'payment' && notes === 'payment.after') after.push(notesPart());
+    if (kind === 'review' && notes === 'review.after') after.push(notesPart());
+    return { before, after };
+  };
+  const steps = order.map((k) => c(STEP_TYPES[k], slotsOf(k), STEP_TYPES[k] + '-e2e'));
+  const progress = shape.progress === 'none' ? []
+    : [c('CheckoutProgress', shape.progress === 'hide-mobile' ? { blockStyle: { hide: 'mobile' } } : {}, 'CheckoutProgress-e2e')];
+  return doc([c('CheckoutFlow', {
+    head: [c('CheckoutHeading', {}, 'CheckoutHeading-e2e')],
+    lead: progress,
+    steps,
+    after: [],
+    aside: [
+      ...(shape.summary === false ? [] : [c('CheckoutSummary', {}, 'CheckoutSummary-e2e')]),
+      ...(coupon === 'aside' ? [couponPart()] : []),
+      ...(coupon === 'aside-columns' ? [c('Columns', { columns: '2', stackBelow: 'sm', col1: [couponPart()], col2: [] }, 'coupon-columns')] : []),
+    ],
+  }, 'CheckoutFlow-e2e')]);
+}
+
+const checkoutPages = (layout: Layout, d: PuckDoc): PageSet => ({ schemaVersion: 1, shell: shell(layout, c('Footer')), pages: { checkout: d } });
+
+/** The checkout as v0.7.0 drew it, written out as parts: nothing moved. */
+export function defaultCheckoutSet(layout: Layout): PageSet {
+  return checkoutPages(layout, checkoutDoc());
+}
+
+/**
+ * Address first, then Contact; the coupon in the aside; the notes at the end of Payment; a RichText
+ * and a Heading around the Delivery fields; the progress bar hidden below 992 px.
+ */
+export function arrangedCheckoutSet(layout: Layout, order: StepKind[] = LEGAL_STEP_ORDERS[1]!): PageSet {
+  return checkoutPages(layout, checkoutDoc({ order, coupon: 'aside', notes: 'payment.after', content: true, progress: 'hide-mobile' }));
+}
+
+/** The coupon inside a Columns in the aside (legal there); the editor drags that Columns into a step. */
+export function columnsCouponCheckoutSet(layout: Layout): PageSet {
+  return checkoutPages(layout, checkoutDoc({ coupon: 'aside-columns' }));
+}
+
+/** A checkout document the guard refuses: the default checkout renders instead. */
+export type IllegalCheckout = 'payment-before-shipping' | 'contact-after-review' | 'coupon-in-contact' | 'no-summary';
+export function illegalCheckoutSet(layout: Layout, kind: IllegalCheckout): PageSet {
+  switch (kind) {
+    case 'payment-before-shipping': return checkoutPages(layout, checkoutDoc({ order: ['contact', 'address', 'payment', 'shipping', 'review'] }));
+    case 'contact-after-review': return checkoutPages(layout, checkoutDoc({ order: ['address', 'shipping', 'payment', 'review', 'contact'] }));
+    case 'coupon-in-contact': return checkoutPages(layout, checkoutDoc({ coupon: 'contact.before' }));
+    case 'no-summary': return checkoutPages(layout, checkoutDoc({ summary: false }));
+  }
+}
+
+/** The default arrangement with the coupon and the notes parts removed (`keep` puts either back). */
+export function noCouponCheckoutSet(layout: Layout, keep: { coupon?: boolean; notes?: boolean } = {}): PageSet {
+  return checkoutPages(layout, checkoutDoc({ coupon: keep.coupon ? 'shipping.after' : 'none', notes: keep.notes ? 'review.after' : 'none' }));
+}
+
+const osPart = (type: string) => c(type, {}, type + '-e2e');
+
+function orderDoc(action: ComponentData[], summary: ComponentData[]): PuckDoc {
+  return doc([c('OrderStatus', {
+    top: [osPart('OrderStatusHero')], action, summary, bottom: [osPart('OrderStatusFooter')],
+  }, 'OrderStatus-e2e')]);
+}
+const orderPages = (layout: Layout, d: PuckDoc): PageSet => ({ schemaVersion: 1, shell: shell(layout, c('Footer')), pages: { 'order-status': d } });
+
+export const ORDER_NOTE = 'Parcels are packed by hand at Northbound Supply.';
+
+/** The order page as v0.7.0 drew it, written out as parts. */
+export function defaultOrderSet(layout: Layout): PageSet {
+  return orderPages(layout, orderDoc(
+    [osPart('OrderStatusPayment'), osPart('OrderStatusShipments')],
+    [osPart('OrderStatusItems'), osPart('OrderStatusAddress')],
+  ));
+}
+
+/** Items moved into the action column after Payment, a RichText between them, Address removed. */
+export function arrangedOrderSet(layout: Layout): PageSet {
+  return orderPages(layout, orderDoc(
+    [osPart('OrderStatusPayment'), RT('<p>' + ORDER_NOTE + '</p>', 'order-rt'), osPart('OrderStatusItems'), osPart('OrderStatusShipments')],
+    [],
+  ));
+}
+
+/** Payment inside a Section, the only thing in the action column besides tracking; the summary holds Items and Address. */
+export function sectionedPaymentOrderSet(layout: Layout): PageSet {
+  return orderPages(layout, orderDoc(
+    [c('Section', { padding: 'md', backgroundToken: 'surface', content: [osPart('OrderStatusPayment')] }, 'pay-section'), osPart('OrderStatusShipments')],
+    [osPart('OrderStatusItems'), osPart('OrderStatusAddress')],
+  ));
+}
+
+/** An order document the guard refuses: the default order page renders instead. */
+export type IllegalOrder = 'shipments-first' | 'hidden-payment';
+export function illegalOrderSet(layout: Layout, kind: IllegalOrder): PageSet {
+  switch (kind) {
+    case 'shipments-first':
+      return orderPages(layout, orderDoc([osPart('OrderStatusShipments'), osPart('OrderStatusPayment')], [osPart('OrderStatusItems'), osPart('OrderStatusAddress')]));
+    case 'hidden-payment':
+      return orderPages(layout, orderDoc(
+        [c('Section', { blockStyle: { hide: 'mobile' }, content: [osPart('OrderStatusPayment')] }, 'hidden-pay'), osPart('OrderStatusShipments')],
+        [osPart('OrderStatusItems'), osPart('OrderStatusAddress')],
+      ));
+  }
+}

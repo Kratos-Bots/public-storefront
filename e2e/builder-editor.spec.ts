@@ -3,9 +3,10 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { expect, test, type FrameLocator, type Locator, type Page } from '@playwright/test';
 import { z } from 'zod';
-import { installMocks, ORIGIN, type MockHandle } from './mocks.ts';
+import { installMocks, ORIGIN, type InstallMocksOptions, type MockHandle } from './mocks.ts';
 import {
   arrangedCart, arrangedEverythingSet, arrangedFlowsSet, arrangedShell, checkoutWithoutFlowSet, defaultShellSet, editorStyleSet,
+  arrangedCheckoutSet, arrangedOrderSet, columnsCouponCheckoutSet, defaultCheckoutSet, illegalCheckoutSet, noCouponCheckoutSet, styledFlowSet,
   legacyProductSet, menuSheetSet, productPartsSet, storySet, tileDesignSet, v070Shell,
 } from './page-sets.ts';
 
@@ -135,8 +136,8 @@ const isEditorCode = (url: string) => url.includes('/src/builder/editor/') || ur
 
 interface Framed { frame: FrameLocator; mocks: MockHandle; thirdParty: string[]; editorCode: string[] }
 
-async function openFramed(page: Page, width = 1440): Promise<Framed> {
-  const mocks = await installMocks(page);
+async function openFramed(page: Page, width = 1440, mockOptions: InstallMocksOptions = {}): Promise<Framed> {
+  const mocks = await installMocks(page, mockOptions);
   // Registered after installMocks' catch-all abort, so it takes precedence for the admin origin.
   await page.route(`${ADMIN}/**`, (route) => route.fulfill({ status: 200, contentType: 'text/html', body: parentHtml(width) }));
   const thirdParty: string[] = [];
@@ -902,7 +903,7 @@ test.describe('page builder editor · product parts', () => {
     expect((await productOf(page, msg.loadId))!.content[0]!.props.below).toEqual([]);
   });
 
-  test('a Price dropped at the document root is a flagged issue carried in the change', async ({ page }) => {
+  test('a Price dropped at the document root is undone with a notice, so no stray Price reaches the change', async ({ page }) => {
     const { frame, msg } = await openProduct(page);
     await frame.getByRole('list').getByText('Outline', { exact: true }).click();
     const layer = frame.locator('[class*="LayerTree"] [class*="Layer-inner"]').first();
@@ -917,12 +918,15 @@ test.describe('page builder editor · product parts', () => {
     await page.waitForTimeout(400);
     await page.mouse.move(lb.x + lb.width / 2, lb.y + lb.height + 32, { steps: 2 });
     await page.mouse.up();
-    await expect.poll(async () => (await productOf(page, msg.loadId))?.content.map((c) => c.type)).toEqual(['ProductPrice', 'ProductDetail']);
-    await expect.poll(async () => (await changesFor(page, msg.loadId)).at(-1)?.issues?.some((i) => i.rule === 'part-placement:ProductPrice')).toBe(true);
-    await expect(frame.getByRole('button', { name: /^Issues \d+ issues?, publishing is blocked/ })).toBeVisible();
-    // The stray Price is highlighted on the canvas (leave the outline to see the page again).
-    await frame.getByRole('list').getByText('Blocks', { exact: true }).click();
-    await expect(frame.getByText('Needs attention').first()).toBeVisible();
+    // Stage 5 (spec 10.1): the canvas undoes a drop that breaks a placement rule and says why, so the stray
+    // Price never reaches the document (before stage 5 it landed there as a blocking issue).
+    const notice = frame.locator('[data-sf-builder-legality]');
+    await expect(notice).toBeVisible();
+    await expect(notice).toContainText(/Price/);
+    await page.waitForTimeout(900);
+    expect((await productOf(page, msg.loadId))?.content.map((c) => c.type)).toEqual(['ProductDetail']);
+    expect((await changesFor(page, msg.loadId)).at(-1)?.issues?.some((i) => i.rule === 'part-placement:ProductPrice')).toBe(false);
+    await expect(frame.getByRole('button', { name: /publishing is blocked/ })).toHaveCount(0);
     await page.screenshot({ path: `${SCRATCH}/part-placement-issue.png` });
     await expectAdminAccepts(page);
   });
@@ -1320,5 +1324,370 @@ test.describe('page builder editor · shell, cart and account parts', () => {
     await expect(part(frame, 'TrackingParcels-e2e')).toBeVisible();
     await expect(part(frame, 'TrackingHero-e2e')).toBeVisible();
     await page.screenshot({ path: `${SCRATCH}/tracking-found-2.png` });
+  });
+});
+
+test.describe('page builder editor · checkout and order-status parts', () => {
+  type Item = { type: string; props: Record<string, unknown> };
+  type FlowProps = Record<string, unknown> & { head: Item[]; lead: Item[]; steps: Item[]; after: Item[]; aside: Item[] };
+  const pageSelect = (frame: FrameLocator) => frame.getByLabel('Page', { exact: true });
+  const types = (items: Item[] | undefined) => (items ?? []).map((i) => i.type);
+  const kindsOf = (items: Item[] | undefined) => types(items).map((t) => t.replace(/^Checkout/, '').toLowerCase());
+  const slotTypes = (step: Item | undefined, slot: 'before' | 'after') => types(step?.props[slot] as Item[] | undefined);
+  const stepOf = (flow: FlowProps, type: string) => flow.steps.find((s) => s.type === type);
+
+  /** The checkout container the editor last reported. */
+  const flowOf = async (page: Page, loadId: string): Promise<FlowProps | null> => {
+    const doc = JSON.parse(await lastPage(page, loadId, 'checkout')) as { content: Item[] } | null;
+    return (doc?.content.find((c) => c.type === 'CheckoutFlow')?.props as FlowProps | undefined) ?? null;
+  };
+  const issuesOf = async (page: Page, loadId: string) => (await changesFor(page, loadId)).at(-1)?.issues ?? [];
+
+  const openCheckout = async (page: Page, set: ReturnType<typeof load>['pageSet'], width = 1440, mock: InstallMocksOptions = {}, flowId = 'CheckoutFlow-e2e') => {
+    const framed = await openFramed(page, width, mock);
+    const msg = load({ pageSet: set });
+    await loadAndWait(page, framed.frame, msg);
+    await pageSelect(framed.frame).selectOption('checkout');
+    await expect(part(framed.frame, flowId)).toBeVisible();
+    return { ...framed, msg };
+  };
+  const selectFlow = (frame: FrameLocator) => part(frame, 'CheckoutFlow-e2e').click({ position: { x: 3, y: 3 } });
+  const moveBtn = (frame: FrameLocator, kind: string, dir: 'up' | 'down') =>
+    rightPanel(frame).locator(`[data-step="${kind}"][data-dir="${dir === 'up' ? -1 : 1}"]`);
+
+  test('the checkout canvas stacks five step cards over one inert action band, and says it previews signed in', async ({ page }) => {
+    const { frame } = await openCheckout(page, defaultCheckoutSet('storefront'));
+    await expect(canvas(frame).getByText(/^Step [1-5] of 5$/)).toHaveCount(5);
+    await expect(canvas(frame).locator('[inert]')).toHaveCount(1);
+    await expect(frame.getByText('Checkout previews signed in with a sample cart.')).toBeVisible();
+    // The note is for the editing canvas only: the read-only version view is the page as shoppers see it.
+    await post(page, load({ readOnly: true, pageSet: defaultCheckoutSet('storefront') }));
+    await expect(frame.getByText('Published version · read only')).toBeVisible();
+    await expect(frame.getByText('Checkout previews signed in with a sample cart.')).toHaveCount(0);
+    await page.screenshot({ path: `${SCRATCH}/checkout-canvas.png` });
+  });
+
+  test('Step order moves Contact below Address; the posted change carries the new order', async ({ page }) => {
+    const { frame, msg } = await openCheckout(page, defaultCheckoutSet('storefront'));
+    await selectFlow(frame);
+    await expect(rightPanel(frame).getByRole('heading', { name: 'Step order' })).toBeVisible();
+    await moveBtn(frame, 'contact', 'down').click();
+    await expect.poll(async () => kindsOf((await flowOf(page, msg.loadId))?.steps)).toEqual(['address', 'contact', 'shipping', 'payment', 'review']);
+    await expect(rightPanel(frame).getByRole('status')).toHaveText('Your details moved down');
+    // Each step keeps its own slots when it moves (the coupon is still on Delivery, the notes on Review).
+    const flow = (await flowOf(page, msg.loadId))!;
+    expect(slotTypes(stepOf(flow, 'CheckoutShipping'), 'after')).toEqual(['CheckoutCoupon']);
+    expect(slotTypes(stepOf(flow, 'CheckoutReview'), 'after')).toEqual(['CheckoutNotes']);
+    await expectAdminAccepts(page);
+  });
+
+  test('the step arrows work by keyboard, say why they are disabled, and are 44 px targets', async ({ page }) => {
+    const { frame, msg } = await openCheckout(page, defaultCheckoutSet('storefront'));
+    await selectFlow(frame);
+    const down = moveBtn(frame, 'contact', 'down');
+    await down.focus();
+    await page.keyboard.press('Enter');
+    await expect.poll(async () => kindsOf((await flowOf(page, msg.loadId))?.steps)).toEqual(['address', 'contact', 'shipping', 'payment', 'review']);
+    // Focus follows the step to the same arrow, so the next press moves it again.
+    await expect(rightPanel(frame).locator(':focus')).toHaveAttribute('data-step', 'contact');
+    await page.keyboard.press('Space');
+    await expect.poll(async () => kindsOf((await flowOf(page, msg.loadId))?.steps)).toEqual(['address', 'shipping', 'contact', 'payment', 'review']);
+
+    // Payment cannot go below Review: the arrow stays focusable, says why, and does nothing.
+    const pay = moveBtn(frame, 'payment', 'down');
+    await expect(pay).toHaveAttribute('aria-disabled', 'true');
+    await expect(pay).toHaveAttribute('title', /Review is always last/);
+    const reasonId = await pay.getAttribute('aria-describedby');
+    expect(reasonId).toBeTruthy();
+    await expect(rightPanel(frame).locator(`#${reasonId}`)).toHaveText(/Review is always last/);
+    await pay.focus();
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(900);
+    expect(kindsOf((await flowOf(page, msg.loadId))?.steps)).toEqual(['address', 'shipping', 'contact', 'payment', 'review']);
+    // Review itself: both arrows blocked, always last.
+    await expect(moveBtn(frame, 'review', 'up')).toHaveAttribute('aria-disabled', 'true');
+    await expect(moveBtn(frame, 'review', 'down')).toHaveAttribute('title', /Always last/);
+    // Address cannot go below Delivery's... it can not go up either: nothing is above it.
+    await expect(moveBtn(frame, 'address', 'up')).toHaveAttribute('aria-disabled', 'true');
+    await expect(moveBtn(frame, 'address', 'up')).toHaveAttribute('title', /Already at the end/);
+
+    for (const btn of await rightPanel(frame).locator('[data-step]').all()) {
+      const b = (await btn.boundingBox())!;
+      expect(b.width, `${await btn.getAttribute('aria-label')} width`).toBeGreaterThanOrEqual(44);
+      expect(b.height, `${await btn.getAttribute('aria-label')} height`).toBeGreaterThanOrEqual(44);
+    }
+    await page.screenshot({ path: `${SCRATCH}/step-order.png` });
+  });
+
+  test('a step has no drag handle: dragging one changes nothing, and it has no delete or duplicate', async ({ page }) => {
+    const { frame, msg } = await openCheckout(page, defaultCheckoutSet('storefront'));
+    // Puck marks a step's drag as disabled, so the click is forced past Playwright's enabled check.
+    await part(frame, 'CheckoutContact-e2e').click({ position: { x: 3, y: 3 }, force: true });
+    await expect(bar(frame, 'Delete')).toHaveCount(0);
+    await expect(bar(frame, 'Duplicate')).toHaveCount(0);
+    await drag(page, part(frame, 'CheckoutContact-e2e'), part(frame, 'CheckoutAddress-e2e'), 'below');
+    await page.waitForTimeout(1_000);
+    expect((await changesFor(page, msg.loadId)).length).toBe(1);
+    expect(kindsOf((await flowOf(page, msg.loadId))?.steps)).toEqual(['contact', 'address', 'shipping', 'payment', 'review']);
+  });
+
+  test('the coupon cannot be dragged into the Contact step (the slot does not accept it)', async ({ page }) => {
+    const { frame, msg } = await openCheckout(page, defaultCheckoutSet('storefront'));
+    for (const slot of ['before', 'after'] as const) {
+      await dragInto(page, part(frame, 'CheckoutCoupon-e2e'), contactSlot(frame, slot));
+      await page.waitForTimeout(800);
+    }
+    // Puck's allow list refused both drops: nothing changed, so nothing was posted and nothing needed reverting.
+    expect((await changesFor(page, msg.loadId)).length).toBe(1);
+    await expect(frame.locator('[data-sf-builder-legality]')).toHaveCount(0);
+    const flow = (await flowOf(page, msg.loadId))!;
+    expect(slotTypes(stepOf(flow, 'CheckoutContact'), 'before')).toEqual([]);
+    expect(slotTypes(stepOf(flow, 'CheckoutContact'), 'after')).toEqual([]);
+    expect(slotTypes(stepOf(flow, 'CheckoutShipping'), 'after')).toEqual(['CheckoutCoupon']);
+  });
+
+  /** Drag into the middle of a (possibly empty) slot, and let Puck show where it would land before releasing. */
+  const dragInto = async (page: Page, from: Locator, zone: Locator) => {
+    await expect(zone).toHaveCount(1);
+    const a = (await from.boundingBox())!;
+    const z = (await zone.boundingBox())!;
+    await page.mouse.move(a.x + a.width / 2, a.y + 16);
+    await page.mouse.down();
+    await page.mouse.move(a.x + a.width / 2 - 8, a.y + 30, { steps: 4 });
+    await page.mouse.move(z.x + z.width / 2, z.y + z.height / 2, { steps: 24 });
+    await page.waitForTimeout(500);
+    await page.mouse.move(z.x + z.width / 2 + 2, z.y + z.height / 2 + 2, { steps: 4 });
+    await page.waitForTimeout(300);
+    await page.mouse.up();
+  };
+  const contactSlot = (frame: FrameLocator, slot: 'before' | 'after') => canvas(frame).locator(`[data-puck-dropzone="CheckoutContact-e2e:${slot}"]`);
+  /** A Columns holding the coupon, dropped into the Contact step's before slot: refused by the legality guard, with a notice. */
+  const dropColumnsIntoContact = (page: Page, frame: FrameLocator) => dragInto(page, part(frame, 'coupon-columns'), contactSlot(frame, 'before'));
+
+  test('a Columns holding the coupon dropped into Contact is reverted; the notice stays until dismissed and sits clear of the chrome', async ({ page }) => {
+    const { frame, msg } = await openCheckout(page, columnsCouponCheckoutSet('storefront'));
+    await dropColumnsIntoContact(page, frame);
+    const notice = frame.locator('[data-sf-builder-legality]');
+    await expect(notice).toBeVisible();
+    await expect(notice).toContainText(/Discount code|coupon/i);
+    // Back where it was; the posted document is legal.
+    await expect.poll(async () => types((await flowOf(page, msg.loadId))?.aside)).toEqual(['CheckoutSummary', 'Columns']);
+    expect(slotTypes(stepOf((await flowOf(page, msg.loadId))!, 'CheckoutContact'), 'before')).toEqual([]);
+    expect((await issuesOf(page, msg.loadId)).filter((i) => /^part-/.test(i.rule))).toEqual([]);
+    // It stays: not a toast.
+    await page.waitForTimeout(3_500);
+    await expect(notice).toBeVisible();
+    // Not hidden under Puck's chrome: its centre is the notice itself, and it is below the editor header.
+    const box = (await notice.boundingBox())!;
+    expect(box.y).toBeGreaterThan(0);
+    const hit = await frame.locator('body').evaluate((_b, [x, y]) => !!document.elementFromPoint(x!, y!)?.closest('[data-sf-builder-legality]'), [box.x + box.width / 2, box.y + box.height / 2]);
+    expect(hit, 'something covers the legality notice').toBe(true);
+    await page.screenshot({ path: `${SCRATCH}/legality-notice.png` });
+    await notice.getByRole('button', { name: 'Dismiss' }).click();
+    await expect(notice).toHaveCount(0);
+  });
+
+  test('after a reverted drop one Undo leaves a legal document, and the Undos after it do not skip an earlier legal edit', async ({ page }) => {
+    const { frame, msg } = await openCheckout(page, columnsCouponCheckoutSet('storefront'));
+    // Two legal edits: the heading's background, twice (the step order is left alone so the Contact slot stays on screen).
+    const bg = async () => {
+      const head = (await flowOf(page, msg.loadId))?.head[0];
+      return ((head?.props.blockStyle as { bg?: string } | undefined)?.bg ?? 'none');
+    };
+    await part(frame, 'CheckoutHeading-e2e').click();
+    const panel = frame.locator('[data-sf-style-panel]').locator('visible=true');
+    await panel.locator('summary').click();
+    await panel.getByRole('radiogroup', { name: 'Background' }).getByRole('radio', { name: 'Surface 2' }).click();
+    await expect.poll(bg).toBe('surface-2');
+    await panel.getByRole('radiogroup', { name: 'Background' }).getByRole('radio', { name: 'Surface 3' }).click();
+    await expect.poll(bg).toBe('surface-3');
+    // The illegal drop.
+    await dropColumnsIntoContact(page, frame);
+    await expect(frame.locator('[data-sf-builder-legality]')).toBeVisible();
+    await page.waitForTimeout(900);
+    const legal = async () => {
+      const flow = (await flowOf(page, msg.loadId))!;
+      return (await issuesOf(page, msg.loadId)).filter((i) => /^(part-|slot-)/.test(i.rule)).length === 0
+        && slotTypes(stepOf(flow, 'CheckoutContact'), 'before').length === 0
+        && types(flow.aside).join() === 'CheckoutSummary,Columns';
+    };
+    expect(await legal()).toBe(true);
+    expect(await bg()).toBe('surface-3');
+
+    const undo = frame.getByRole('button', { name: 'Undo' });
+    const seen: string[] = [];
+    for (let i = 0; i < 3; i += 1) {
+      await undo.click();
+      await page.waitForTimeout(900);
+      expect(await legal(), `after Undo ${i + 1}`).toBe(true);
+      seen.push(await bg());
+    }
+    const trail = `states after each Undo: ${seen.join(' | ')}`;
+    test.info().annotations.push({ type: 'undo trail', description: trail });
+    console.log(trail);
+    // Every Undo lands on a legal document, and the two edits are undone one at a time, in order, never skipped.
+    const order = ['surface-3', 'surface-2', 'none'];
+    const positions = seen.map((s) => order.indexOf(s));
+    expect(positions.every((p) => p >= 0), trail).toBe(true);
+    expect(positions, trail).toEqual([...positions].sort((x, y) => x - y));
+    expect(positions.at(-1), trail).toBe(2);
+    // The first edit is seen undone on its own: surface-2 shows between surface-3 and none.
+    expect(seen, trail).toContain('surface-2');
+    await expectAdminAccepts(page);
+  });
+
+  test('Reset arrangement says how many blocks it removes, as text', async ({ page }) => {
+    const { frame, msg } = await openCheckout(page, arrangedCheckoutSet('storefront'));
+    await selectFlow(frame);
+    // The set holds a RichText and a Heading of the owner's: two blocks.
+    await expect(rightPanel(frame).getByText('Also removes 2 blocks you added')).toBeVisible();
+    await rightPanel(frame).getByRole('button', { name: 'Reset arrangement' }).click();
+    await expect(rightPanel(frame).getByRole('status')).toHaveText('Arrangement reset');
+    await expect.poll(async () => kindsOf((await flowOf(page, msg.loadId))?.steps)).toEqual(['contact', 'address', 'shipping', 'payment', 'review']);
+    const flow = (await flowOf(page, msg.loadId))!;
+    expect(slotTypes(stepOf(flow, 'CheckoutShipping'), 'after')).toEqual(['CheckoutCoupon']);
+    expect(types(flow.aside)).toEqual(['CheckoutSummary']);
+    await expect(rightPanel(frame).getByText(/Also removes/)).toHaveCount(0);
+  });
+
+  test('the Parts list adds the notes back on Review and the coupon back on Delivery, never among the steps', async ({ page }) => {
+    const { frame, msg } = await openCheckout(page, noCouponCheckoutSet('storefront'));
+    await selectFlow(frame);
+    await expect(rightPanel(frame).locator('[data-part-type="CheckoutCoupon"]')).toContainText('Removed');
+    await expect(rightPanel(frame).locator('[data-part-type="CheckoutNotes"]')).toContainText('Removed');
+    await rightPanel(frame).getByRole('button', { name: 'Add Order notes' }).click();
+    await expect.poll(async () => slotTypes(stepOf((await flowOf(page, msg.loadId))!, 'CheckoutReview'), 'after')).toEqual(['CheckoutNotes']);
+    await rightPanel(frame).getByRole('button', { name: 'Add Discount code' }).click();
+    await expect.poll(async () => slotTypes(stepOf((await flowOf(page, msg.loadId))!, 'CheckoutShipping'), 'after')).toEqual(['CheckoutCoupon']);
+    const flow = (await flowOf(page, msg.loadId))!;
+    expect(types(flow.steps)).toEqual(['CheckoutContact', 'CheckoutAddress', 'CheckoutShipping', 'CheckoutPayment', 'CheckoutReview']);
+    await expectAdminAccepts(page);
+  });
+
+  test('an already illegal stored document is still editable (no revert); Reset step order clears its issue', async ({ page }) => {
+    const { frame, msg } = await openCheckout(page, illegalCheckoutSet('storefront', 'payment-before-shipping'));
+    const blocked = frame.getByRole('button', { name: /^Issues \d+ issues?, publishing is blocked/ });
+    await expect(blocked).toBeVisible();
+    // An unrelated edit: the heading's background.
+    await part(frame, 'CheckoutHeading-e2e').click();
+    const panel = frame.locator('[data-sf-style-panel]').locator('visible=true');
+    await panel.locator('summary').click();
+    await panel.getByRole('radiogroup', { name: 'Background' }).getByRole('radio', { name: 'Surface 2' }).click();
+    await expect.poll(async () => JSON.stringify((await flowOf(page, msg.loadId))?.head ?? [])).toContain('"blockStyle"');
+    await expect(frame.locator('[data-sf-builder-legality]')).toHaveCount(0);
+    // The stored order is untouched by that edit.
+    expect(kindsOf((await flowOf(page, msg.loadId))?.steps)).toEqual(['contact', 'address', 'payment', 'shipping', 'review']);
+
+    await blocked.click();
+    await frame.getByRole('button', { name: 'Reset step order' }).click();
+    await expect.poll(async () => kindsOf((await flowOf(page, msg.loadId))?.steps)).toEqual(['contact', 'address', 'shipping', 'payment', 'review']);
+    await expect.poll(async () => (await issuesOf(page, msg.loadId)).some((i) => i.rule === 'part-order:CheckoutFlow')).toBe(false);
+    await expect(frame.getByRole('button', { name: /publishing is blocked/ })).toHaveCount(0);
+    // Content survives the fix: the heading keeps its background.
+    expect(JSON.stringify((await flowOf(page, msg.loadId))?.head)).toContain('"blockStyle"');
+  });
+
+  test('opening a v0.7.0-shaped checkout and editing it posts full slots, never []', async ({ page }) => {
+    const { frame, msg } = await openCheckout(page, styledFlowSet('storefront'), 1440, {}, 'styled-flow');
+    await part(frame, 'styled-flow').click({ position: { x: 3, y: 3 } });
+    const panel = frame.locator('[data-sf-style-panel]').locator('visible=true');
+    await panel.locator('summary').click();
+    await panel.getByRole('radiogroup', { name: 'Background' }).getByRole('radio', { name: 'Surface 2' }).click();
+    await expect.poll(async () => JSON.stringify((await flowOf(page, msg.loadId)) ?? {})).toContain('"surface-2"');
+    const flow = (await flowOf(page, msg.loadId))!;
+    expect(types(flow.head)).toEqual(['CheckoutHeading']);
+    expect(types(flow.lead)).toEqual(['CheckoutProgress']);
+    expect(types(flow.steps)).toEqual(['CheckoutContact', 'CheckoutAddress', 'CheckoutShipping', 'CheckoutPayment', 'CheckoutReview']);
+    expect(types(flow.aside)).toEqual(['CheckoutSummary']);
+    expect(slotTypes(stepOf(flow, 'CheckoutShipping'), 'after')).toEqual(['CheckoutCoupon']);
+    expect(slotTypes(stepOf(flow, 'CheckoutReview'), 'after')).toEqual(['CheckoutNotes']);
+    await expectAdminAccepts(page);
+  });
+
+  test('the order page Preview state switches between Awaiting payment and Shipped: the payment card appears and goes', async ({ page }) => {
+    const { frame } = await openFramed(page);
+    await loadAndWait(page, frame, load({ pageSet: arrangedOrderSet('storefront') }));
+    await pageSelect(frame).selectOption('order-status');
+    const select = frame.getByLabel('Preview state');
+    await expect(select).toBeVisible();
+    await expect(select).toHaveValue('shipped');
+    await expect(canvas(frame).getByText('NB000977GB').first()).toBeVisible();
+    await expect(canvas(frame).getByText('Payment required')).toHaveCount(0);
+    await select.selectOption('awaiting-payment');
+    await expect(canvas(frame).getByText('Payment required')).toBeVisible();
+    await expect(canvas(frame).getByText('NB000977GB')).toHaveCount(0);
+    await select.selectOption('shipped');
+    await expect(canvas(frame).getByText('Payment required')).toHaveCount(0);
+    await expect(canvas(frame).getByText('NB000977GB').first()).toBeVisible();
+  });
+
+  test('every order-status Preview state draws, differently from the others, with no request', async ({ page }) => {
+    const { frame, mocks } = await openFramed(page);
+    await loadAndWait(page, frame, load({ pageSet: arrangedOrderSet('storefront') }));
+    await pageSelect(frame).selectOption('order-status');
+    const select = frame.getByLabel('Preview state');
+    await expect(select).toBeVisible();
+    const values = await select.locator('option').evaluateAll((os) => os.map((o) => (o as HTMLOptionElement).value));
+    expect(values).toEqual(['shipped', 'awaiting-payment', 'hosted-open', 'crypto-checking', 'two-parcels', 'cancelled']);
+    const before = mocks.requests().length;
+    const seen = new Map<string, string>();
+    for (const v of values) {
+      await select.selectOption(v);
+      await page.waitForTimeout(350);
+      const text = await canvas(frame).innerText();
+      expect(text.trim().length, `${v} draws nothing`).toBeGreaterThan(0);
+      seen.set(v, text);
+    }
+    expect(new Set(seen.values()).size, 'every state looks different').toBe(values.length);
+    expect(seen.get('hosted-open')).toMatch(/Finish your payment/);
+    expect(seen.get('crypto-checking')).toMatch(/Verifying/);
+    expect(seen.get('two-parcels')).toMatch(/NB000978GB/);
+    expect(mocks.requests().slice(before).filter((r) => /orders\/|storefront\/orders|payment/.test(r))).toEqual([]);
+  });
+
+  test('the checkout canvas, its exact preview and the read-only view never touch real storage, mint a token or post an order', async ({ page }) => {
+    const { frame, mocks } = await openFramed(page, 1440, { tweakSettings: (s) => { s.features.guestCheckout = true; } });
+    const mutations: string[] = [];
+    const turnstile: string[] = [];
+    page.on('request', (r) => {
+      if (r.url().startsWith(`${ORIGIN}/api/`) && r.method() !== 'GET') mutations.push(`${r.method()} ${r.url()}`);
+      if (r.url().includes('challenges.cloudflare.com')) turnstile.push(r.url());
+    });
+    const before = await realStorage(page);
+    expect(before).toEqual({ local: [], session: [] });
+    const set = arrangedCheckoutSet('storefront');
+    const msg = load({ pageSet: set });
+    await loadAndWait(page, frame, msg);
+    await pageSelect(frame).selectOption('checkout');
+    await expect(part(frame, 'CheckoutFlow-e2e')).toBeVisible();
+    // Signed out and an empty cart are asked for: the checkout canvas still previews signed in, with a cart.
+    await frame.getByLabel('Preview as — session').selectOption('signed-out');
+    await frame.getByLabel('Preview as — cart').selectOption('empty');
+    await expect(canvas(frame).getByText(/^Step [1-5] of 5$/)).toHaveCount(5);
+    await page.waitForTimeout(800);
+    expect(await realStorage(page)).toEqual(before);
+
+    // The exact preview (the real page, in the editor's frame).
+    await frame.getByRole('group', { name: 'Preview width' }).getByRole('button', { name: 'Phone' }).click();
+    const exact = frame.locator('[data-sf-builder-exact="360"]');
+    await expect(exact).toBeVisible();
+    await page.waitForTimeout(1_200);
+    expect(await realStorage(page)).toEqual(before);
+    await frame.getByRole('button', { name: 'Back to editing' }).click();
+
+    // The read-only version view: walked as far as Place order, which is refused in place.
+    await post(page, load({ readOnly: true, pageSet: set }));
+    await expect(frame.getByText('Published version · read only')).toBeVisible();
+    await pageSelect(frame).selectOption('checkout');
+    await frame.getByLabel('Preview as — session').selectOption('signed-out');
+    await frame.getByLabel('Preview as — cart').selectOption('items');
+    await expect(frame.getByRole('heading', { name: 'Delivery address' })).toBeVisible();
+    await page.waitForTimeout(1_200);
+
+    expect(await realStorage(page)).toEqual(before);
+    expect(turnstile).toEqual([]);
+    expect(mutations).toEqual([]);
+    expect(mocks.requests().filter((r) => !r.startsWith('GET '))).toEqual([]);
+    expect(mocks.requests().filter((r) => /checkout|storefront\/(orders|profile|cart)/.test(r))).toEqual([]);
   });
 });
