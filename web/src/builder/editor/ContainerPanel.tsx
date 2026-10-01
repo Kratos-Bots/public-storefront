@@ -6,7 +6,7 @@ import { ROOT_ZONE } from '@/builder/editor/config.ts';
 import { forEachComponent } from '@/builder/editor/page-set.ts';
 import { useEditorStore } from '@/builder/editor/store.ts';
 import { useGetPuck, usePuck } from '@/builder/editor/use-puck.ts';
-import { CARD_LINKS, ownerBlockCount, partStates, withDefaultArrangement, withPartAdded, type PartState } from '@/builder/editor/container-parts.ts';
+import { CARD_LINKS, ownerBlockCount, headerNotices, partsHeading, partStates, withDefaultArrangement, withPartAdded, type PartState } from '@/builder/editor/container-parts.ts';
 import { LockIcon, PlusIcon, TipIcon, WarnIcon } from '@/builder/editor/icons.tsx';
 import styles from '@/builder/editor/ContainerPanel.module.css';
 
@@ -17,10 +17,12 @@ export const RESET_HINT = 'Puts every part back where it starts. Your content bl
 
 const WHOLESALE_CONTAINERS = new Set(['ProductGrid', 'ProductList']);
 
-function notices(type: string, layout: LayoutKind, wholesale: boolean): string[] {
+function notices(item: ComponentData, layout: LayoutKind, wholesale: boolean): string[] {
+  const type = item.type;
   const out: string[] = [];
   if (wholesale && WHOLESALE_CONTAINERS.has(type)) out.push(WHOLESALE_NOTICE);
   if (type === 'ProductDetail' && layout !== 'storefront') out.push(PINNED_ADD_NOTICE);
+  out.push(...headerNotices(item, layout));
   return out;
 }
 
@@ -35,6 +37,7 @@ export function ContainerPanel() {
   const dispatch = usePuck((s) => s.dispatch);
   const getPuck = useGetPuck();
   const layout = useEditorStore((s) => s.layout);
+  const docKey = useEditorStore((s) => s.docKey);
   const wholesale = useSettingsQuery().data?.features?.wholesale === true;
   const id = useId().replace(/[^A-Za-z0-9_-]/g, '');
   const rootRef = useRef<HTMLDivElement>(null);
@@ -81,7 +84,7 @@ export function ContainerPanel() {
     setStatus('Arrangement reset');
     resetRef.current?.focus();
   };
-  const shown = isContainer ? notices(type, layout, wholesale) : [];
+  const shown = isContainer ? notices(selected, layout, wholesale) : [];
   const ownedText = owned === 1 ? 'Also removes 1 block you added' : `Also removes ${owned} blocks you added`;
 
   return (
@@ -89,7 +92,7 @@ export function ContainerPanel() {
       <p className={styles.visuallyHidden} role="status" aria-live="polite">{status}</p>
       {isContainer && (
         <section className={styles.section} aria-labelledby={`${id}-parts`}>
-          <h3 id={`${id}-parts`} className={styles.title}>Parts</h3>
+          <h3 id={`${id}-parts`} className={styles.title}>{partsHeading(type, docKey)}</h3>
           {shown.map((text) => (
             <p key={text} className={styles.notice} role="note"><TipIcon />{text}</p>
           ))}

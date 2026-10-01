@@ -2,10 +2,10 @@ import { createElement, type ReactNode } from 'react';
 import type { Config, Field, Fields } from '@puckeditor/core';
 import { BLOCKS } from '@/builder/registry.ts';
 import { parseBlockProps, type BlockCategory, type BlockDef } from '@/builder/define.ts';
-import { containsType, type PartFamily } from '@/builder/parts.ts';
-import { blockDef, countBlocks } from '@/builder/rules.ts';
+import { containsType, offersPart, type PartFamily } from '@/builder/parts.ts';
+import { allowedOn, blockDef, countBlocks } from '@/builder/rules.ts';
 import { isCardKey, type ComponentData, type DocKey, type LayoutKind, type PuckDoc } from '@/builder/types.ts';
-import { familyOfDoc, insertableBlocks, isLockedOn, requiredPartsOn, ROUTE_BOUND } from '@/builder/editor/route-bound.ts';
+import { familiesOfDoc, insertableBlocks, isLockedOn, requiredPartsOn, ROUTE_BOUND } from '@/builder/editor/route-bound.ts';
 import { scopeFields } from '@/builder/editor/derive-fields.ts';
 import { EditorBlock } from '@/builder/editor/EditorBlock.tsx';
 import { PageGround } from '@/builder/editor/page-ground.tsx';
@@ -31,9 +31,9 @@ const CATEGORY_ORDER: BlockCategory[] = ['part', 'content', 'catalogue', 'shell'
 /** The drawer's parts group, named by the family whose container lives on the doc. */
 export const PART_TITLES: Record<PartFamily, string> = {
   product: 'Product page parts', catalogue: 'Catalogue parts', 'card-tile': 'Card parts', 'card-row': 'Card parts',
-  header: 'Header parts', cart: 'Cart parts', 'cart-summary': 'Order summary parts', account: 'Account parts', orders: 'Order history parts',
-  order: 'Order page parts', loyalty: 'Loyalty parts', referrals: 'Referral parts', profile: 'Profile parts', login: 'Sign-in parts',
-  payment: 'Payment page parts', tracking: 'Tracking parts', verify: 'Verification parts',
+  header: 'Header parts', cart: 'Cart parts', 'cart-summary': 'Cart summary parts', account: 'Account header parts', orders: 'Order history parts',
+  order: 'Order parts', loyalty: 'Loyalty parts', referrals: 'Referral parts', profile: 'Profile parts', login: 'Sign-in parts',
+  payment: 'Payment page parts', tracking: 'Tracking parts', verify: 'Verify parts',
 };
 
 const FIELD_MODULES = import.meta.glob<{ fields: Fields }>('./fields/*.ts', { eager: true });
@@ -93,11 +93,24 @@ function uniquePartsShown(content: readonly ComponentData[]): string[] {
 export function blockMenu(docKey: DocKey, layout: LayoutKind, present: ReadonlySet<string>) {
   const insertable = new Set(insertableBlocks(docKey, layout));
   for (const name of present) insertable.delete(name);
-  return CATEGORY_ORDER.map((category) => ({
-    category,
-    title: category === 'part' ? PART_TITLES[familyOfDoc(docKey) ?? 'product'] : CATEGORY_TITLES[category],
-    blocks: inLayout(layout).filter((d) => d.category === category && insertable.has(d.name)).map((d) => ({ name: d.name, label: d.label })),
-  })).filter((g) => g.blocks.length > 0);
+  const containers = inLayout(layout).filter((d) => d.container && allowedOn(d.name, docKey));
+  const groups: Array<{ category: BlockCategory; key: string; title: string; blocks: Array<{ name: string; label: string }> }> = [];
+  for (const category of CATEGORY_ORDER) {
+    const candidates = inLayout(layout).filter((d) => d.category === category && insertable.has(d.name));
+    if (category !== 'part') {
+      groups.push({ category, key: category, title: CATEGORY_TITLES[category], blocks: candidates.map((d) => ({ name: d.name, label: d.label })) });
+      continue;
+    }
+    // One group per family of the doc, listing the family's parts some container of it offers.
+    for (const family of familiesOfDoc(docKey)) {
+      const owners = containers.filter((c) => c.container!.family === family);
+      const blocks = candidates
+        .filter((d) => d.part?.family === family && owners.some((c) => offersPart(c.container!, d.name)))
+        .map((d) => ({ name: d.name, label: d.label }));
+      groups.push({ category, key: `part:${family}`, title: PART_TITLES[family], blocks });
+    }
+  }
+  return groups.filter((g) => g.blocks.length > 0);
 }
 
 // Emitted / previewed props live in prepare.ts (EditorBlock needs them; config imports EditorBlock).
@@ -216,7 +229,7 @@ export function buildEditorConfig(docKey: DocKey, layout: LayoutKind, present: R
   }
   const categories: NonNullable<Config['categories']> = {};
   for (const group of blockMenu(docKey, layout, present)) {
-    categories[group.category] = { title: group.title, components: group.blocks.map((b) => b.name) };
+    categories[group.key] = { title: group.title, components: group.blocks.map((b) => b.name) };
   }
   // Registered but not insertable here (another route's blocks): renderable, never offered.
   categories.other = { visible: false };

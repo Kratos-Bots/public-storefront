@@ -10,6 +10,11 @@ import {
 } from '@/builder/editor/custom-fields/style-model.ts';
 import fieldStyles from '@/builder/editor/custom-fields/fields.module.css';
 import styles from '@/builder/editor/custom-fields/style.module.css';
+import { paymentRequiredNote, requiredByParent } from '@/builder/editor/container-parts.ts';
+import { useEditorStore } from '@/builder/editor/store.ts';
+import { useGetPuck } from '@/builder/editor/use-puck.ts';
+import { blockDef } from '@/builder/rules.ts';
+import type { ComponentData } from '@/builder/types.ts';
 import '@/builder/editor/style-ghost.css';
 
 const COLOURS: ReadonlySet<StyleKey> = new Set(['bg', 'fg', 'borderColor']);
@@ -148,9 +153,37 @@ function ContrastHint({ bg, fg }: { bg?: string; fg?: string }) {
   return <p className={styles.warn} role="status">{low ? `Low contrast (${formatRatio(ratio)})` : null}</p>;
 }
 
-interface PanelProps { name: string; support: StyleSupport; value: BlockStyle | undefined; onChange: (v: BlockStyle | undefined) => void; readOnly: boolean }
+interface PanelProps {
+  name: string; support: StyleSupport; value: BlockStyle | undefined; onChange: (v: BlockStyle | undefined) => void; readOnly: boolean;
+  /** The container this part sits in requires it: it can't be hidden (stage-4 spec §11). */
+  required?: boolean; note?: string | null;
+}
 
-function StylePanel({ name, support, value, onChange, readOnly }: PanelProps) {
+/**
+ * A part the container it sits in requires loses `hide`; payment parts say where they are required.
+ * The container is the nearest ancestor with a container spec (Puck's `getParentById`).
+ */
+function useRequiredHere(def: AnyBlock): { required: boolean; note: string | null } {
+  // Outside a <Puck> (the field's own tests) the hook throws: it then throws on every render.
+  let getPuck: ReturnType<typeof useGetPuck> | null = null;
+  try { getPuck = useGetPuck(); } catch { /* not in a canvas */ }
+  const layout = useEditorStore((s) => s.layout);
+  if (!def.part || !getPuck) return { required: false, note: null };
+  let required = false;
+  try {
+    const api = getPuck();
+    const id = (api.selectedItem as ComponentData | null)?.props?.id;
+    let parent = typeof id === 'string' ? (api.getParentById(id) as ComponentData | undefined) : undefined;
+    for (let guard = 0; parent && guard < 16 && !blockDef(parent.type)?.container; guard += 1) {
+      const pid = parent.props?.id;
+      parent = typeof pid === 'string' ? (api.getParentById(pid) as ComponentData | undefined) : undefined;
+    }
+    required = requiredByParent(def.name, parent, layout);
+  } catch { /* outside a canvas: nothing is required */ }
+  return { required, note: def.part.family === 'payment' ? paymentRequiredNote(def.name, layout) : null };
+}
+
+function StylePanel({ name, support, value, onChange, readOnly, required, note }: PanelProps) {
   const [open, setOpen] = useState(() => openByType.get(name) ?? false);
   const summary = useRef<HTMLElement>(null);
   const count = countSet(value, support);
@@ -167,7 +200,8 @@ function StylePanel({ name, support, value, onChange, readOnly }: PanelProps) {
           <span className={styles.barNote}>Template default unless set</span>
           {count > 0 ? <button type="button" className={styles.resetAll} onClick={() => { onChange(undefined); summary.current?.focus(); }}>Reset style</button> : null}
         </div>
-        {groupsFor(support).map((g) => (
+        {note ? <p className={styles.note}>{note}</p> : null}
+        {groupsFor(support).map((g) => (required ? { ...g, keys: g.keys.filter((k) => k !== 'hide') } : g)).filter((g) => g.keys.length > 0).map((g) => (
           <section key={g.title} className={styles.group} aria-label={g.title}>
             <h4 className={styles.groupTitle}>{g.title}</h4>
             {g.keys.map((k) => (
@@ -182,6 +216,11 @@ function StylePanel({ name, support, value, onChange, readOnly }: PanelProps) {
   );
 }
 
+function StyleField({ def, ...rest }: { def: AnyBlock; support: StyleSupport; value: BlockStyle | undefined; onChange: (v: BlockStyle | undefined) => void; readOnly: boolean }) {
+  const here = useRequiredHere(def);
+  return <StylePanel name={def.name} {...rest} required={here.required} note={here.note} />;
+}
+
 /** Spec §9.1: the Style group, appended last by blockFields for every stylable block. */
 export function styleField(def: AnyBlock): CustomField<BlockStyle | undefined> {
   const support = def.style;
@@ -189,8 +228,6 @@ export function styleField(def: AnyBlock): CustomField<BlockStyle | undefined> {
   return {
     type: 'custom',
     label: 'Style',
-    render: ({ value, onChange, readOnly }) => (
-      <StylePanel name={def.name} support={support} value={value} onChange={onChange} readOnly={Boolean(readOnly)} />
-    ),
+    render: ({ value, onChange, readOnly }) => <StyleField def={def} support={support} value={value} onChange={onChange} readOnly={Boolean(readOnly)} />,
   };
 }

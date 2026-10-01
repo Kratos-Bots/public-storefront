@@ -3,6 +3,7 @@ import type { Field, Fields, SlotField } from '@puckeditor/core';
 import { BLOCKS } from '@/builder/registry.ts';
 import type { BlockDef } from '@/builder/define.ts';
 import { allowedOn } from '@/builder/rules.ts';
+import { offersPart, type PartFamily } from '@/builder/parts.ts';
 import { CARD_KINDS, cardKey, FIXED_ROUTE_KEYS, isCardKey, type DocKey, type LayoutKind } from '@/builder/types.ts';
 import { insertableBlocks } from '@/builder/editor/route-bound.ts';
 import { routeLinkField } from '@/builder/editor/custom-fields/route-link.tsx';
@@ -200,19 +201,51 @@ export function slotAllowEverywhere(): string[] {
 
 const notRouteOrContainer = (n: string): boolean => !BLOCKS[n]!.routeBound && !BLOCKS[n]!.container;
 
+/** The part family a candidate belongs to, or null for a non-part. */
+const familyOfBlock = (n: string): PartFamily | null => BLOCKS[n]?.part?.family ?? null;
+
 /**
- * Spec §3.4: a container slot takes its family's parts, content and non-route blocks —
- * `slotAccepts` narrows it to exactly the listed types.
+ * Spec §3.4, stage 4 §4: a container slot takes its family's parts (only those this container
+ * offers), content and non-route blocks — `slotAccepts` narrows it to exactly the listed types.
+ * Then `slotRejects[slot]` types come out, and the containers it `nests` go in when they may sit on
+ * every doc in `docs` (and every layout in `layouts`): they own their own parts.
  */
-function containerSlotAllow(def: AnyBlock, slot: string, candidates: readonly string[]): string[] {
-  const only = def.container?.slotAccepts && Object.hasOwn(def.container.slotAccepts, slot) ? def.container.slotAccepts[slot]! : null;
-  return candidates.filter((n) => (only ? only.includes(n) : notRouteOrContainer(n)));
+function containerSlotAllow(
+  def: AnyBlock, slot: string, candidates: readonly string[], docs: readonly DocKey[], layouts: readonly LayoutKind[],
+): string[] {
+  const spec = def.container!;
+  const only = spec.slotAccepts && Object.hasOwn(spec.slotAccepts, slot) ? spec.slotAccepts[slot]! : null;
+  const rejects = spec.slotRejects && Object.hasOwn(spec.slotRejects, slot) ? spec.slotRejects[slot]! : [];
+  const base = candidates.filter((n) => {
+    if (rejects.includes(n)) return false;
+    if (only) return only.includes(n);
+    if (!notRouteOrContainer(n)) return false;
+    const family = familyOfBlock(n);
+    return family === null || (family === spec.family && offersPart(spec, n));
+  });
+  const nested = (spec.nests ?? []).filter((n) => !rejects.includes(n) && !base.includes(n) && Object.hasOwn(BLOCKS, n)
+    && docs.length > 0 && docs.every((k) => allowedOn(n, k)) && layouts.every((l) => inLayout(BLOCKS[n]!, l)));
+  return [...base, ...nested];
+}
+
+/**
+ * A group's slots take only parts its container offers: of its own family, offered by a container
+ * of that family on one of `docs` (the doc being edited, or every doc the family lives on).
+ */
+function groupSlotAllow(def: AnyBlock, candidates: readonly string[], docs: readonly DocKey[]): string[] {
+  const family = def.part!.family;
+  const owners = Object.values(BLOCKS).filter((b) => b.container?.family === family && docs.some((k) => allowedOn(b.name, k)));
+  return candidates.filter((n) => {
+    if (!notRouteOrContainer(n)) return false;
+    const f = familyOfBlock(n);
+    return f === null || (f === family && owners.some((o) => offersPart(o.container!, n)));
+  });
 }
 
 /** A slot inside a container (the container's own, or a part's — a group's) never holds a route block or a container. */
-function slotList(def: AnyBlock, slot: string | undefined, candidates: readonly string[]): string[] {
-  if (def.container) return slot ? containerSlotAllow(def, slot, candidates) : candidates.filter(notRouteOrContainer);
-  return def.part ? candidates.filter(notRouteOrContainer) : [...candidates];
+function slotList(def: AnyBlock, slot: string | undefined, candidates: readonly string[], docs: readonly DocKey[], layouts: readonly LayoutKind[]): string[] {
+  if (def.container) return slot ? containerSlotAllow(def, slot, candidates, docs, layouts) : candidates.filter(notRouteOrContainer);
+  return def.part ? groupSlotAllow(def, candidates, docs) : [...candidates];
 }
 
 /**
@@ -226,7 +259,7 @@ export function slotAllowFor(name: string, slot?: string): string[] {
   if (!def) return [];
   const docs = BLOCK_HOMES.filter((k) => allowedOn(name, k));
   const layouts = ALL_LAYOUTS.filter((l) => inLayout(def, l));
-  return docs.length === 0 || layouts.length === 0 ? [] : slotList(def, slot, acceptedOnAll(docs, layouts));
+  return docs.length === 0 || layouts.length === 0 ? [] : slotList(def, slot, acceptedOnAll(docs, layouts), docs, layouts);
 }
 
 /**
@@ -261,7 +294,7 @@ export function scopeFields(name: string, fields: Fields, docKey: DocKey, layout
     for (const slot of def.slots) {
       const f = out[slot] as Field | undefined;
       // In a card doc every slot sits inside the frame: none offers the frame again.
-      const list = def.container || def.part ? slotList(def, slot, allow) : isCardKey(docKey) ? allow.filter(notRouteOrContainer) : [...allow];
+      const list = def.container || def.part ? slotList(def, slot, allow, [docKey], [layout]) : isCardKey(docKey) ? allow.filter(notRouteOrContainer) : [...allow];
       if (f?.type === 'slot') out[slot] = { ...f, allow: list };
     }
   }

@@ -48,14 +48,14 @@ describe('per-block editor fields', () => {
     for (const key of BLOCKS[name]!.container!.legacyProps!) expect(byName[name]).not.toHaveProperty(key);
   });
 
-  it('container slots never take a route block or a container; slotAccepts narrows a slot to its list', () => {
+  it('container slots never take a route block or a container; slotAccepts narrows a slot to its list; only `nests` may be a container', () => {
     for (const def of Object.values(BLOCKS)) {
       if (!def.container) continue;
       for (const slot of def.slots) {
         const allow = slotAllowFor(def.name, slot);
         const only = def.container.slotAccepts?.[slot];
         if (only) expect(allow, `${def.name}.${slot}`).toEqual([...only]);
-        else for (const n of allow) expect(!!BLOCKS[n]!.routeBound || !!BLOCKS[n]!.container, `${def.name}.${slot} ← ${n}`).toBe(false);
+        else for (const n of allow.filter((x) => !def.container!.nests?.includes(x))) expect(!!BLOCKS[n]!.routeBound || !!BLOCKS[n]!.container, `${def.name}.${slot} ← ${n}`).toBe(false);
       }
     }
     expect(slotAllowFor('CardTile', 'content').length).toBeGreaterThan(0);

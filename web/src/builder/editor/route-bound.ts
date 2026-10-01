@@ -1,6 +1,6 @@
 import { BLOCKS } from '@/builder/registry.ts';
 import { allowedOn, requiredParts } from '@/builder/rules.ts';
-import { FAMILY_DOCS, familyAllowedOn, type PartFamily } from '@/builder/parts.ts';
+import { FAMILY_DOCS, type PartFamily } from '@/builder/parts.ts';
 import type { CardKey, DocKey, FixedRouteKey, LayoutKind } from '@/builder/types.ts';
 
 type Entry = { blocks: readonly string[]; exactlyOne: boolean };
@@ -57,17 +57,25 @@ export function insertableBlocks(docKey: DocKey, layout: LayoutKind): string[] {
     .map((d) => d.name);
 }
 
-/** The part family whose container lives on `docKey` (its drawer group, its "Add block" home), or null. */
-export function familyOfDoc(docKey: DocKey): PartFamily | null {
-  for (const [family, keys] of Object.entries(FAMILY_DOCS) as Array<[PartFamily, readonly DocKey[]]>) if (keys.includes(docKey)) return family;
-  return null;
+/** Every part family whose container may live on `docKey`, in `FAMILY_DOCS` key order. */
+export function familiesOfDoc(docKey: DocKey): PartFamily[] {
+  return (Object.entries(FAMILY_DOCS) as Array<[PartFamily, readonly DocKey[]]>).filter(([, keys]) => keys.includes(docKey)).map(([family]) => family);
 }
 
-/** Required parts of every container that lives on `docKey` (locked against delete/duplicate there). */
+/** The first part family whose container lives on `docKey` (its drawer group, its "Add block" home), or null. */
+export function familyOfDoc(docKey: DocKey): PartFamily | null {
+  return familiesOfDoc(docKey)[0] ?? null;
+}
+
+/**
+ * Required parts of every container that lives on `docKey` (locked against delete/duplicate there).
+ * By the container's own placement (`allowedOn`), not its family: several containers share the
+ * payment family and its documents, and only the doc's own container's required parts lock.
+ */
 export function requiredPartsOn(docKey: DocKey, layout: LayoutKind): ReadonlySet<string> {
   const out = new Set<string>();
   for (const def of Object.values(BLOCKS)) {
-    if (def.container && familyAllowedOn(def.container.family, docKey)) for (const r of requiredParts(def.name, layout)) out.add(r);
+    if (def.container && allowedOn(def.name, docKey)) for (const r of requiredParts(def.name, layout)) out.add(r);
   }
   return out;
 }

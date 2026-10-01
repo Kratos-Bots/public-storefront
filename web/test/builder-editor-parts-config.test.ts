@@ -25,7 +25,7 @@ describe('route-bound family helpers', () => {
     expect([...requiredPartsOn('product', 'storefront')].sort()).toEqual(['ProductAddToCart', 'ProductPrice', 'ProductTitle']);
     expect([...requiredPartsOn('product', 'menu')].sort()).toEqual(['ProductPrice', 'ProductTitle']);
     expect([...requiredPartsOn('catalog', 'storefront')].sort()).toEqual(['CatalogEmpty', 'CatalogResults', 'CatalogTitle']);
-    expect([...requiredPartsOn('cart', 'storefront')]).toEqual([]);
+    expect([...requiredPartsOn('cart', 'storefront')].sort()).toEqual(['CartEmpty', 'CartHeading', 'CartLines', 'CartSummaryCheckout', 'CartSummarySubtotal']);
   });
 });
 

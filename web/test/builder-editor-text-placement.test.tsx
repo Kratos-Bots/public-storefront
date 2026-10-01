@@ -15,11 +15,15 @@ import { defaultDoc } from '@/builder/defaults/index.ts';
 import { WIDE_FRAME_QUERY } from '@/builder/editor/panels.ts';
 import { blockTextRows } from '@/builder/editor/text/catalog.ts';
 import { BLOCK_TEXT_SEARCH_OVER } from '@/builder/editor/text/BlockText.tsx';
+import { SETTINGS_KEY } from '@/app/settings.ts';
+import { SETTINGS } from './helpers/product-fixtures.ts';
 import placement from '@/builder/editor/text/TextPlacement.module.css';
 
 function renderCanvas() {
   const router = createMemoryRouter([{ path: '/__builder/*', element: <EditorCanvas /> }], { initialEntries: ['/__builder/doc/shell'] });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  // The editor mounts under the shop's loaded settings; the shell's Header, notices and footer read them.
+  client.setQueryData(SETTINGS_KEY, SETTINGS);
   return render(<MantineProvider><QueryClientProvider client={client}><RouterProvider router={router} /></QueryClientProvider></MantineProvider>);
 }
 async function puckShown() {
@@ -49,8 +53,8 @@ describe('Text panel placement and block text', () => {
   });
 
   it('selecting a block with text patterns shows "Text in this block" under its fields', async () => {
-    const header = defaultDoc('shell', 'storefront')!.content.find((b) => b.type === 'Header')!;
-    expect(BLOCKS.Header!.text?.length ?? 0).toBeGreaterThan(0);
+    const header = defaultDoc('shell', 'storefront')!.content.find((b) => b.type === 'Footer')!;
+    expect(BLOCKS.Footer!.text?.length ?? 0).toBeGreaterThan(0);
     renderCanvas();
     await puckShown();
     const el = document.querySelector(`[data-puck-component="${header.props.id}"]`) as HTMLElement;
@@ -107,9 +111,9 @@ describe('Text panel placement and block text', () => {
   });
 
   it('a block with many lines gets its own search, and "Open in Text panel" carries the query', async () => {
-    expect(blockTextRows('CartContents', 'modern').length).toBeGreaterThan(BLOCK_TEXT_SEARCH_OVER);
-    const block = defaultDoc('cart', 'storefront')!.content.find((b) => b.type === 'CartContents')!;
-    useEditorStore.getState().selectDoc('cart');
+    expect(blockTextRows('CheckoutFlow', 'modern').length).toBeGreaterThan(BLOCK_TEXT_SEARCH_OVER);
+    const block = defaultDoc('checkout', 'storefront')!.content.find((b) => b.type === 'CheckoutFlow')!;
+    useEditorStore.getState().selectDoc('checkout');
     renderCanvas();
     await puckShown();
     const el = document.querySelector(`[data-puck-component="${block.props.id}"]`) as HTMLElement;

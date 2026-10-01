@@ -1,8 +1,9 @@
 import { parseBlockProps } from '@/builder/define.ts';
 import { blockDef, requiredParts } from '@/builder/rules.ts';
 import { BLOCKS } from '@/builder/registry.ts';
-import { containsType, partId } from '@/builder/parts.ts';
-import type { CardKey, ComponentData, LayoutKind } from '@/builder/types.ts';
+import { containsType, offersPart, partId } from '@/builder/parts.ts';
+import { resolveVariant } from '@/builder/blocks/_shared/header-container.ts';
+import type { CardKey, ComponentData, DocKey, LayoutKind } from '@/builder/types.ts';
 
 /** One row of the container panel's Parts list (spec §11). */
 export interface PartState { type: string; label: string; present: boolean; required: boolean }
@@ -49,7 +50,7 @@ export function partStates(item: ComponentData, layout: LayoutKind): PartState[]
   const defaults = defaultsOf(item, layout);
   const order = def.slots.flatMap((s) => flatTypes(defaults[s] ?? []));
   const family = Object.values(BLOCKS)
-    .filter((b) => b.part?.family === def.container!.family && !isGroup(b.name) && inLayout(b.layouts, layout))
+    .filter((b) => b.part?.family === def.container!.family && !isGroup(b.name) && inLayout(b.layouts, layout) && offersPart(def.container!, b.name))
     .map((b) => b.name);
   const rank = (t: string) => (order.includes(t) ? order.indexOf(t) : order.length);
   return family.sort((a, b) => rank(a) - rank(b)).map((type) => ({
@@ -133,3 +134,49 @@ export const CARD_LINKS: Record<string, ReadonlyArray<{ key: CardKey; label: str
   ProductUpsells: [{ key: 'card:tile', label: 'Edit card design' }, { key: 'card:row', label: 'Edit row design' }],
   Upsells: [{ key: 'card:tile', label: 'Edit card design' }, { key: 'card:row', label: 'Edit row design' }],
 };
+
+export const HEADER_FILTER_NOTICE = 'Shows only with the Menu or Web app header style.';
+export const HEADER_TOP_BAR_NOTICE = 'To place the template top bar elsewhere, turn this off and add a Template top bar block.';
+export const HEADER_TALL_NOTICE = 'Tall blocks make the header taller on every page.';
+/** Blocks that sit in a header bar without making it taller. */
+const BAR_SAFE: ReadonlySet<string> = new Set(['NavLinks', 'Button']);
+
+/** Non-blocking notices for a selected container (never sent to the admin). */
+export function headerNotices(item: ComponentData, layout: LayoutKind): string[] {
+  if (item.type !== 'Header') return [];
+  const out: string[] = [];
+  if (item.props.topBar !== false) out.push(HEADER_TOP_BAR_NOTICE);
+  const inside = slotsOf(item).flatMap((s) => asItems(item.props[s]));
+  if (resolveVariant(item.props.variant, layout) === 'storefront' && containsType(inside, 'HeaderFilter')) out.push(HEADER_FILTER_NOTICE);
+  const tall = (items: readonly ComponentData[]): boolean => items.some((c) =>
+    (!blockDef(c.type)?.part && !BAR_SAFE.has(c.type)) || slotsOf(c).some((s) => tall(asItems(c.props[s]))));
+  if (tall(inside)) out.push(HEADER_TALL_NOTICE);
+  return out;
+}
+
+/** Where the five account pages' AccountNav containers are told apart in the Parts list heading. */
+const ACCOUNT_PAGE: Partial<Record<DocKey, string>> = {
+  'account.orders': 'Order history page', 'account.order': 'Order page', 'account.loyalty': 'Loyalty page',
+  'account.referrals': 'Referrals page', 'account.profile': 'Profile page',
+};
+
+/** The Parts list heading: "Parts", or for an account header, which page's header this is. */
+export function partsHeading(type: string, docKey: DocKey): string {
+  const page = type === 'AccountNav' && Object.hasOwn(ACCOUNT_PAGE, docKey) ? ACCOUNT_PAGE[docKey] : undefined;
+  return page ? `Account header — ${page}` : 'Parts';
+}
+
+/** A part's own placement: is it required by the container it sits in (nearest container ancestor)? */
+export function requiredByParent(partName: string, parent: ComponentData | undefined, layout: LayoutKind): boolean {
+  return !!parent && !!blockDef(parent.type)?.container && requiredParts(parent.type, layout).includes(partName);
+}
+
+const PAYMENT_PAGE: Record<string, string> = { PaymentSuccess: 'success', PaymentCancel: 'cancel', OrderPlaced: 'order-placed' };
+
+/** "Required on the cancel and order-placed pages": where a payment part is required, or null when nowhere. */
+export function paymentRequiredNote(partName: string, layout: LayoutKind): string | null {
+  const pages = Object.entries(PAYMENT_PAGE).filter(([container]) => requiredParts(container, layout).includes(partName)).map(([, page]) => page);
+  if (pages.length === 0) return null;
+  const list = pages.length === 1 ? pages[0]! : `${pages.slice(0, -1).join(', ')} and ${pages[pages.length - 1]}`;
+  return `Required on the ${list} ${pages.length === 1 ? 'page' : 'pages'}.`;
+}
