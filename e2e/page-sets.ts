@@ -228,3 +228,71 @@ export function editorStyleSet(): PageSet {
     pages: { catalog: doc([c('Heading', { text: 'Ghost heading', blockStyle: { hide: 'mobile' } }, 'ghost-h'), c('ProductGrid', {}, 'grid-1')]) },
   };
 }
+
+// ---- product parts and card designs (spec 2026-09-30-product-parts) ----------------------------
+
+const p = (type: string, id = `${type}-e2e`, props: Record<string, unknown> = {}) => c(type, props, id);
+const g = (kind: string, items: ComponentData[], type = 'ProductGroup', id = `${type}-${kind}-e2e`) => c(type, { kind, items }, id);
+
+/** Description above the price, a RichText between add to cart and bulk pricing, upsells removed. */
+export function productPartsSet(layout: Layout): PageSet {
+  return { schemaVersion: 1, shell: shell(layout, c('Footer')), pages: { product: doc([c('ProductDetail', {
+    top: [p('ProductBreadcrumbs')], media: [p('ProductGallery')],
+    main: [p('ProductTitle'), p('ProductDescription'), g('priceRow', [p('ProductPrice'), p('ProductStock')]), p('ProductAddToCart'),
+      c('RichText', { bodyHtml: '<p>Packed to order at Northbound Supply.</p>' }, 'between-rt'), p('ProductBulkPricing'), p('ProductProvenance'), p('ProductAsk')],
+    below: [],
+  }, 'pd-e2e')]) } };
+}
+/** A product document without the add button: must render the default page. */
+export function productWithoutAddSet(): PageSet {
+  const set = productPartsSet('storefront');
+  const pd = set.pages.product!.content[0]!;
+  const main = (pd.props.main as ComponentData[]).filter((x) => x.type !== 'ProductAddToCart');
+  return { ...set, pages: { product: doc([{ ...pd, props: { ...pd.props, main } }]) } };
+}
+/** The menu sheet with bulk pricing first; the add button stays in the footer. */
+export function menuSheetSet(layout: 'menu' | 'webapp' = 'menu'): PageSet {
+  return { schemaVersion: 1, shell: shell(layout, c('Footer')), pages: { product: doc([c('ProductDetail', {
+    top: [], media: [], below: [p('ProductUpsells')],
+    main: [p('ProductBulkPricing'), g('identity', [g('identityText', [p('ProductTitle'), p('ProductStock')]), p('ProductGallery')]), p('ProductPrice'), p('ProductDescription')],
+  }, 'pd-sheet-e2e')]) } };
+}
+/** Search moved into main, rail removed (noNav). */
+export function gridArrangedSet(): PageSet {
+  return { schemaVersion: 1, shell: shell('storefront', c('Footer')), pages: { catalog: doc([c('ProductGrid', {
+    top: [p('CatalogIntro')], rail: [], main: [p('CatalogSearch'), p('CatalogTitle'), p('CatalogEmpty'), p('CatalogResults')],
+  }, 'grid-arr-e2e')]) } };
+}
+export function listNoIntroSet(layout: 'menu' | 'webapp' = 'menu'): PageSet {
+  return { schemaVersion: 1, shell: shell(layout, c('Footer')), pages: { catalog: doc([c('ProductList', {
+    content: [p('CatalogTitle'), p('CatalogEmpty'), p('CatalogResults')] }, 'list-e2e')]) } };
+}
+/** Price above name, flags removed; used by the grid, FeaturedProducts on a custom page and page upsells. */
+export function tileDesignSet(layout: Layout): PageSet {
+  const tile = doc([c('CardTile', { content: [p('CardTileImage', 't-img'), g('body', [
+    p('CardTilePrice', 't-price'), p('CardTileName', 't-name'), g('foot', [p('CardTileAdd', 't-add')], 'CardTileGroup', 't-foot'),
+  ], 'CardTileGroup', 't-body')] }, 'tile-e2e')]);
+  const base = storySet(layout);
+  return { ...base, pages: { ...base.pages,
+    'page:featured': doc([c('FeaturedProducts', { title: 'Featured', source: 'picked', items: [{ productId: 101 }, { productId: 102 }] }, 'feat-e2e')], 'Featured · Northbound Supply') },
+    cards: { tile } };
+}
+/** A row design (price first) for the list and the sheet's upsells. */
+export function rowDesignSet(layout: 'menu' | 'webapp' = 'menu'): PageSet {
+  const row = doc([c('CardRow', { content: [p('CardRowPrice', 'r-price'), g('text', [p('CardRowName', 'r-name')], 'CardRowGroup', 'r-text'), p('CardRowAdd', 'r-add')] }, 'row-e2e')]);
+  return { schemaVersion: 1, shell: shell(layout, c('Footer')), pages: {}, cards: { row } };
+}
+/** Add button without price: must fall back to the built-in card. */
+export function brokenTileSet(layout: Layout): PageSet {
+  const tile = doc([c('CardTile', { content: [p('CardTileName', 'b-name'), p('CardTileAdd', 'b-add')] }, 'tile-broken-e2e')]);
+  return { schemaVersion: 1, shell: shell(layout, c('Footer')), pages: {}, cards: { tile } };
+}
+/** A v0.7.0-shaped product document: no slots, gallery off, upsells off. */
+export function legacyProductSet(): PageSet {
+  return { schemaVersion: 1, shell: shell('storefront', c('Footer')), pages: { product: doc([c('ProductDetail', { gallery: false, upsells: false }, 'pd-legacy')]) } };
+}
+
+/** The catalogue page as a published document of just the container: the guard fills every default. */
+export function catalogDefaultSet(layout: Layout): PageSet {
+  return { schemaVersion: 1, shell: shell(layout, c('Footer')), pages: { catalog: doc([listBlock(layout)]) } };
+}

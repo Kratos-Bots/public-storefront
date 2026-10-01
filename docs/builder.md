@@ -998,6 +998,61 @@ live canvas when that page is open, else into the stored draft — as long as th
 reloaded or reset and the block still exists. Otherwise a toast says "Upload finished — the image
 wasn't added because you left the page."
 
+### Parts and card designs
+
+The blocks drawer opens with a **parts group** named for the container on the page: **Product
+page parts** (the product page, and the menu / web-app product sheet), **Catalogue parts** (the
+grid or list) or **Card parts** (the two card designs). A part is offered only on a page that has
+a container of its family, and an at-most-one part that is already on the page is not offered
+again (`Remove` it first, or use **Add** below). The group sits first; the usual content blocks
+follow. Where a drop is allowed is the container's allow list: a part may only land in its own
+family's container, and a container's slots refuse route blocks and other containers. A part
+dropped anywhere else (for instance Price dragged out onto the page root) is accepted but raises
+`part-placement:<Part>`: the block is marked "Needs attention" on the canvas, the issue is in the
+header's list and in `sf-builder-change.issues`, and publishing is blocked until it is moved back.
+
+**Locks.** Required parts (Title, Price and the add button on the product page; the product name
+on a card) have no delete action and read "Required" in the panel; they can still be moved.
+Optional parts can be deleted and come back with Add.
+
+**The Parts panel.** Selecting a container shows, under its fields in the right column, its
+notices, a **Parts** list and **Reset arrangement**. Each part reads *On the page*, *Required* or
+*Removed*; a removed part has an **Add** button that puts it where the default arrangement has it
+(after its nearest default neighbour still present). Add and Reset are each one `replace`, so each
+is one Undo step; after either, focus goes to the part row or to Reset and a polite live region
+says what happened ("Bulk pricing added", "Arrangement reset"). Reset puts every slot back to the
+default arrangement and removes the content blocks the owner added inside (it says how many in a
+warning beside the button); style and text settings are kept. Puck keeps the fields panel
+mounted across a replace, which is what lets focus and the announcement survive.
+The panel also links a grid or list to the two card designs.
+
+**Notices.** On a catalogue container, while the shop's wholesale mode is on: shoppers see the
+trade list instead, and this arrangement shows when it is off. On the menu / web-app product
+sheet: the add to cart button is pinned to the sheet's footer, so it is not a part of the
+arrangement. **Add block** with a part chosen puts it into the selection's own container: right
+after the selected block when that slot takes it, else at the end of the container's main slot,
+never at the page root.
+
+**Preview with.** One header control picks the product the product page, the sheet canvas and the
+card designer show (default: the first product with a photo). It is editor-only and not saved.
+
+**The sheet canvas.** The menu / web-app product document is edited as the real sheet: a 420 px
+column on a dimmed ground between inert copies of the sheet's header and its pinned add button,
+with the document drawn through `ProductSheetBody` for the previewed product. At a phone or tablet
+preview width the same document opens the real sheet through `?p=<id>` over the catalogue (the
+fixture location owns that parameter). The sheet is modal, as it is for a shopper; the exact
+preview's bar sits above its overlay, so **Back to editing** stays clickable.
+
+**The card designer.** Choose **Product card** or **Product row** in the page picker (the
+**Product cards** group; the keys are `card:tile` and `card:row`, and the designs are saved as
+`pageSet.cards.tile` / `.row`, never under `pages`). The canvas shows the real grid (or rows list)
+with the editable card first (Puck's own drop-zone wrapper is the first grid item) followed by
+three inert **state copies**: out of stock, pre-order with a minimum of 3, and no photo. The copies
+render the draft through their own `CardDesignProvider`, remounted whenever the draft changes, so a
+design that threw is dropped for one render only and recovers once fixed, and they fall back to the
+built-in card exactly as the shop does. The page editor's canvas gets the same provider, so a
+catalogue or product page shows the draft designs in its cards.
+
 ### Text
 
 Every shopper-facing line is edited from the **Text** button (spec 2026-09-30 editable text §7).

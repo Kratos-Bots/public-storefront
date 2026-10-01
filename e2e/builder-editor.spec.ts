@@ -1,9 +1,10 @@
 import { readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { expect, test, type FrameLocator, type Page } from '@playwright/test';
+import { expect, test, type FrameLocator, type Locator, type Page } from '@playwright/test';
 import { z } from 'zod';
 import { installMocks, ORIGIN, type MockHandle } from './mocks.ts';
-import { checkoutWithoutFlowSet, editorStyleSet } from './page-sets.ts';
+import { checkoutWithoutFlowSet, editorStyleSet, legacyProductSet, menuSheetSet, productPartsSet, storySet, tileDesignSet } from './page-sets.ts';
 
 /**
  * The page builder, framed exactly as the admin frames it (spec §6, §13 A6): a page on ANOTHER
@@ -745,5 +746,359 @@ test.describe('page builder editor · style', () => {
     await expect(preview.locator('[data-sfs-hide="mobile"]')).toHaveCount(1);
     await expect(preview.getByRole('heading', { name: 'Ghost heading' })).toBeHidden();
     await frame.getByRole('button', { name: 'Back to editing' }).click();
+  });
+});
+
+// ---- product parts and card designs (spec 2026-09-30-product-parts §11) -----------------------
+
+/** Screenshots of this block go to a scratch directory, never into the repo. */
+const SCRATCH = process.env.SF_E2E_SHOTS ?? tmpdir();
+
+const canvas = (frame: FrameLocator) => frame.locator('[data-sf-builder-canvas]');
+const part = (frame: FrameLocator, id: string) => canvas(frame).locator(`[data-puck-component="${id}"]`);
+/** The selected block's action bar (the outline's layer buttons share the title). */
+const bar = (frame: FrameLocator, title: string) => frame.locator(`button[class*="ActionBarAction"][title="${title}"]`);
+/** `a` precedes `b` in document order. */
+const before = (a: Locator, b: Locator) => b.elementHandle().then((h) => a.evaluate((el, other) => !!(el.compareDocumentPosition(other as Node) & Node.DOCUMENT_POSITION_FOLLOWING), h));
+const rightPanel = (frame: FrameLocator) => frame.locator('[data-sfb-container-panel]').locator('visible=true');
+
+/** Drag with real pointer events, in steps (dnd-kit needs movement to start). `where` is the edge of `to` to land on. */
+async function drag(page: Page, from: Locator, to: Locator, where: 'above' | 'below' = 'above') {
+  const a = (await from.boundingBox())!;
+  const b = (await to.boundingBox())!;
+  await page.mouse.move(a.x + a.width / 2, a.y + Math.min(a.height / 2, 12));
+  await page.mouse.down();
+  await page.mouse.move(a.x + a.width / 2 + 8, a.y + 20, { steps: 4 });
+  const ty = where === 'above' ? b.y + 4 : b.y + b.height - 4;
+  await page.mouse.move(b.x + b.width / 2, ty, { steps: 14 });
+  await page.waitForTimeout(250);
+  await page.mouse.move(b.x + b.width / 2, ty + (where === 'above' ? 1 : -1), { steps: 2 });
+  await page.mouse.up();
+}
+
+type Comp = { type: string; props: Record<string, unknown> };
+type ProductDoc = { content: Array<{ type: string; props: Record<string, unknown> & { top?: Comp[]; media?: Comp[]; main?: Comp[]; below?: Comp[] } }> };
+const productOf = async (page: Page, loadId: string) => JSON.parse(await lastPage(page, loadId, 'product')) as ProductDoc | null;
+const mainTypes = async (page: Page, loadId: string): Promise<string[]> => ((await productOf(page, loadId))?.content[0]?.props.main ?? []).map((c) => c.type);
+/** The v0.7.0 default order: description after the add button. */
+function defaultOrderSet() {
+  const set = productPartsSet('storefront');
+  const pd = set.pages.product!.content[0]!;
+  const main = (pd.props.main as Comp[]).filter((x) => x.type !== 'RichText');
+  const byType = (t: string) => main.find((x) => x.type === t)!;
+  const reordered = ['ProductTitle', 'ProductGroup', 'ProductAddToCart', 'ProductDescription', 'ProductBulkPricing', 'ProductProvenance', 'ProductAsk'].map(byType);
+  return { ...set, pages: { product: { ...set.pages.product!, content: [{ ...pd, props: { ...pd.props, main: reordered } }] } } };
+}
+
+test.describe('page builder editor · product parts', () => {
+  const openProduct = async (page: Page, set: ReturnType<typeof load>['pageSet'] = defaultOrderSet(), containerId = 'pd-e2e') => {
+    const framed = await openFramed(page);
+    const msg = load({ pageSet: set });
+    await loadAndWait(page, framed.frame, msg);
+    await framed.frame.getByLabel('Page', { exact: true }).selectOption('product');
+    await expect(part(framed.frame, containerId)).toBeVisible();
+    return { ...framed, msg };
+  };
+
+  test('the Product page parts group is in the drawer on the product page only', async ({ page }) => {
+    const { frame } = await openFramed(page);
+    await loadAndWait(page, frame, load({ pageSet: storySet('storefront') }));
+    await frame.getByLabel('Page', { exact: true }).selectOption('product');
+    await expect(frame.getByRole('button', { name: 'Product page parts' })).toBeVisible();
+    await frame.getByLabel('Page', { exact: true }).selectOption('page:our-story');
+    await expect(frame.getByRole('button', { name: 'Content' })).toBeVisible();
+    await expect(frame.getByRole('button', { name: 'Product page parts' })).toHaveCount(0);
+  });
+
+  test('Price has no delete action; Description does', async ({ page }) => {
+    const { frame } = await openProduct(page);
+    await part(frame, 'ProductPrice-e2e').click();
+    await expect(frame.getByTitle('Select parent').first()).toBeVisible();
+    await expect(bar(frame, 'Delete')).toHaveCount(0);
+    await part(frame, 'ProductDescription-e2e').click();
+    await expect(bar(frame, 'Delete')).toHaveCount(1);
+  });
+
+  test('dragging Description above the price group changes the product document', async ({ page }) => {
+    const { frame, msg } = await openProduct(page);
+    await drag(page, part(frame, 'ProductDescription-e2e'), part(frame, 'ProductGroup-priceRow-e2e'), 'above');
+    await expect.poll(() => mainTypes(page, msg.loadId)).toEqual(['ProductTitle', 'ProductDescription', 'ProductGroup', 'ProductAddToCart', 'ProductBulkPricing', 'ProductProvenance', 'ProductAsk']);
+    await expectAdminAccepts(page);
+  });
+
+  test('a removed part reads Removed in the panel and Add puts it back in its default place, as one undo step', async ({ page }) => {
+    const { frame, msg } = await openProduct(page);
+    await part(frame, 'ProductBulkPricing-e2e').click();
+    await bar(frame, 'Delete').click();
+    await expect.poll(() => mainTypes(page, msg.loadId)).not.toContain('ProductBulkPricing');
+    await part(frame, 'pd-e2e').click({ position: { x: 3, y: 3 } });
+    const row = rightPanel(frame).locator('[data-part-type="ProductBulkPricing"]');
+    await expect(row).toContainText('Removed');
+    // Puck replaces the item on Add: the fields panel must stay mounted, so focus and the announcement survive.
+    await rightPanel(frame).evaluate((el) => el.setAttribute('data-probe', 'kept'));
+    await rightPanel(frame).getByRole('button', { name: 'Add Bulk pricing' }).click();
+    await expect(row).toContainText('On the page');
+    await expect(rightPanel(frame)).toHaveAttribute('data-probe', 'kept');
+    await expect(rightPanel(frame).getByRole('status')).toHaveText('Bulk pricing added');
+    await expect(rightPanel(frame).locator(':focus')).toHaveAttribute('data-part-label', '');
+    await page.screenshot({ path: `${SCRATCH}/parts-added.png` });
+    await expect.poll(() => mainTypes(page, msg.loadId)).toEqual(['ProductTitle', 'ProductGroup', 'ProductAddToCart', 'ProductDescription', 'ProductBulkPricing', 'ProductProvenance', 'ProductAsk']);
+    // One Undo takes the Add back and nothing else.
+    await frame.getByRole('button', { name: 'Undo' }).click();
+    await expect.poll(() => mainTypes(page, msg.loadId)).not.toContain('ProductBulkPricing');
+    await part(frame, 'pd-e2e').click({ position: { x: 3, y: 3 } });
+    await expect(rightPanel(frame).locator('[data-part-type="ProductBulkPricing"]')).toContainText('Removed');
+  });
+
+  test('Add block puts a removed part back inside the container: after the selection, or at the end of main', async ({ page }) => {
+    const { frame, msg } = await openProduct(page);
+    const without = ['ProductTitle', 'ProductGroup', 'ProductAddToCart', 'ProductDescription', 'ProductProvenance', 'ProductAsk'];
+    await part(frame, 'ProductBulkPricing-e2e').click();
+    await bar(frame, 'Delete').click();
+    await expect.poll(() => mainTypes(page, msg.loadId)).toEqual(without);
+
+    // A part selected in main: the new one lands right after it.
+    await part(frame, 'ProductDescription-e2e').click();
+    await frame.getByRole('button', { name: 'Add block' }).click();
+    const menu = frame.getByRole('menu', { name: 'Blocks to add' });
+    await expect(menu).toBeVisible();
+    await page.screenshot({ path: `${SCRATCH}/add-block-parts-menu.png` });
+    await menu.getByRole('menuitem', { name: 'Bulk pricing', exact: true }).click();
+    await expect.poll(() => mainTypes(page, msg.loadId)).toEqual(['ProductTitle', 'ProductGroup', 'ProductAddToCart', 'ProductDescription', 'ProductBulkPricing', 'ProductProvenance', 'ProductAsk']);
+
+    // The container itself selected: the end of its main column, never the page root.
+    await canvas(frame).locator('[data-puck-component^="ProductBulkPricing"]').click();
+    await bar(frame, 'Delete').click();
+    await expect.poll(() => mainTypes(page, msg.loadId)).toEqual(without);
+    await part(frame, 'pd-e2e').click({ position: { x: 3, y: 3 } });
+    await addBlock(frame, 'Bulk pricing');
+    await expect.poll(() => mainTypes(page, msg.loadId)).toEqual([...without, 'ProductBulkPricing']);
+    expect((await productOf(page, msg.loadId))!.content.map((c) => c.type)).toEqual(['ProductDetail']);
+    await expectAdminAccepts(page);
+  });
+
+  test('Reset arrangement restores the four default slots and is one undo step', async ({ page }) => {
+    const { frame, msg } = await openProduct(page);
+    await drag(page, part(frame, 'ProductDescription-e2e'), part(frame, 'ProductGroup-priceRow-e2e'), 'above');
+    await expect.poll(() => mainTypes(page, msg.loadId)).toContain('ProductDescription');
+    await expect.poll(async () => (await mainTypes(page, msg.loadId)).indexOf('ProductDescription')).toBe(1);
+    await part(frame, 'pd-e2e').click({ position: { x: 3, y: 3 } });
+    await rightPanel(frame).getByRole('button', { name: 'Reset arrangement' }).click();
+    await expect(rightPanel(frame).getByRole('status')).toHaveText('Arrangement reset');
+    await expect(rightPanel(frame).getByRole('button', { name: 'Reset arrangement' })).toBeFocused();
+    await expect.poll(async () => JSON.stringify(await productOf(page, msg.loadId).then((d) => {
+      const pr = d!.content[0]!.props;
+      return { top: pr.top!.map((c) => c.type), media: pr.media!.map((c) => c.type), main: pr.main!.map((c) => c.type), below: pr.below!.map((c) => c.type) };
+    }))).toBe(JSON.stringify({
+      top: ['ProductBreadcrumbs'], media: ['ProductGallery'],
+      main: ['ProductTitle', 'ProductGroup', 'ProductAddToCart', 'ProductDescription', 'ProductBulkPricing', 'ProductProvenance', 'ProductAsk'],
+      below: ['ProductUpsells'],
+    }));
+    await frame.getByRole('button', { name: 'Undo' }).click();
+    await expect.poll(() => mainTypes(page, msg.loadId).then((m) => m.indexOf('ProductDescription'))).toBe(1);
+    expect((await productOf(page, msg.loadId))!.content[0]!.props.below).toEqual([]);
+  });
+
+  test('a Price dropped at the document root is a flagged issue carried in the change', async ({ page }) => {
+    const { frame, msg } = await openProduct(page);
+    await frame.getByRole('list').getByText('Outline', { exact: true }).click();
+    const layer = frame.locator('[class*="LayerTree"] [class*="Layer-inner"]').first();
+    await expect(layer).toBeVisible();
+    // The outline's empty area under the last layer is the root zone.
+    const lb = (await layer.boundingBox())!;
+    const pb = (await part(frame, 'ProductPrice-e2e').boundingBox())!;
+    await page.mouse.move(pb.x + 40, pb.y + 10);
+    await page.mouse.down();
+    await page.mouse.move(pb.x + 30, pb.y + 30, { steps: 4 });
+    await page.mouse.move(lb.x + lb.width / 2, lb.y + lb.height + 30, { steps: 20 });
+    await page.waitForTimeout(400);
+    await page.mouse.move(lb.x + lb.width / 2, lb.y + lb.height + 32, { steps: 2 });
+    await page.mouse.up();
+    await expect.poll(async () => (await productOf(page, msg.loadId))?.content.map((c) => c.type)).toEqual(['ProductPrice', 'ProductDetail']);
+    await expect.poll(async () => (await changesFor(page, msg.loadId)).at(-1)?.issues?.some((i) => i.rule === 'part-placement:ProductPrice')).toBe(true);
+    await expect(frame.getByRole('button', { name: /^Issues \d+ issues?, publishing is blocked/ })).toBeVisible();
+    // The stray Price is highlighted on the canvas (leave the outline to see the page again).
+    await frame.getByRole('list').getByText('Blocks', { exact: true }).click();
+    await expect(frame.getByText('Needs attention').first()).toBeVisible();
+    await page.screenshot({ path: `${SCRATCH}/part-placement-issue.png` });
+    await expectAdminAccepts(page);
+  });
+
+  test('on a v0.7.0 document one style change posts the upgraded slot arrays', async ({ page }) => {
+    const { frame, msg } = await openProduct(page, legacyProductSet(), 'pd-legacy');
+    await frame.locator('[data-sf-builder-canvas] [data-puck-component]', { hasText: 'Alpine Extract 10ml' }).last().click();
+    const panel = frame.locator('[data-sf-style-panel]').locator('visible=true');
+    await panel.locator('summary').click();
+    await panel.getByRole('radiogroup', { name: 'Background' }).getByRole('radio', { name: 'Surface 2' }).click();
+    await expect.poll(async () => JSON.stringify((await productOf(page, msg.loadId))?.content[0]?.props ?? {})).toContain('"blockStyle"');
+    const props = (await productOf(page, msg.loadId))!.content[0]!.props as Record<string, unknown> & { top: Comp[]; media: Comp[]; main: Comp[]; below: Comp[] };
+    expect(props.top.length).toBeGreaterThan(0);
+    expect(props.main.length).toBeGreaterThan(0);
+    expect(props.media).toEqual([]);
+    expect(props.below).toEqual([]);
+    expect('gallery' in props).toBe(false);
+    expect('upsells' in props).toBe(false);
+  });
+});
+
+test.describe('page builder editor · card designs', () => {
+  /** A tile design with the name above the price (the built-in order). */
+  function nameFirstSet() {
+    const set = tileDesignSet('storefront');
+    const tile = set.cards!.tile!;
+    const root = tile.content[0]!;
+    const body = (root.props.content as Comp[]).find((c) => c.type === 'CardTileGroup')!;
+    const items = body.props.items as Comp[];
+    body.props.items = [items.find((c) => c.type === 'CardTileName')!, items.find((c) => c.type === 'CardTilePrice')!, items.find((c) => c.type === 'CardTileGroup')!];
+    return set;
+  }
+
+  test('the first grid item is the editable card (Puck\'s wrapper), the same width as the copies', async ({ page }) => {
+    const { frame } = await openFramed(page);
+    await loadAndWait(page, frame, load({ pageSet: nameFirstSet() }));
+    await frame.getByLabel('Page', { exact: true }).selectOption('card:tile');
+    const grid = canvas(frame).locator('[data-sf-part="product-grid"]');
+    await expect(grid).toBeVisible();
+    await page.waitForTimeout(1500); // the cards' entrance animation settles
+    const kids = await grid.evaluate((g) => [...g.children].map((k) => ({ puck: !!k.querySelector('[data-puck-component="tile-e2e"]') || k.getAttribute('data-puck-component') === 'tile-e2e', inert: k.hasAttribute('inert'), w: Math.round((k.hasAttribute('inert') ? k.firstElementChild! : k).getBoundingClientRect().width), top: Math.round((k.hasAttribute('inert') ? k.firstElementChild! : k).getBoundingClientRect().top) })));
+    expect(kids.length).toBe(4);
+    expect(kids[0]!.puck).toBe(true);
+    expect(kids.slice(1).every((k) => k.inert && !k.puck)).toBe(true);
+    expect(Math.abs(kids[0]!.w - kids[1]!.w)).toBeLessThanOrEqual(2);
+    expect(Math.max(...kids.map((k) => k.top)) - Math.min(...kids.map((k) => k.top))).toBeLessThanOrEqual(1);
+  });
+
+  test('moving the price above the name updates the copies, the catalogue canvas and the posted cards', async ({ page }) => {
+    const { frame } = await openFramed(page);
+    const msg = load({ pageSet: nameFirstSet() });
+    await loadAndWait(page, frame, msg);
+    await frame.getByLabel('Page', { exact: true }).selectOption('card:tile');
+    await expect(part(frame, 't-name')).toBeVisible();
+    const copies = canvas(frame).locator('[data-sf-part="product-grid"] > [inert]');
+    await expect(copies).toHaveCount(3);
+    for (let i = 0; i < 3; i += 1) expect(await before(copies.nth(i).locator('a').last(), copies.nth(i).locator('[data-sf-part="price"]'))).toBe(true);
+
+    // Move the name below the price: the drop lands inside the body group, not at its edge.
+    await drag(page, part(frame, 't-name'), part(frame, 't-price'), 'below');
+    await expect.poll(async () => {
+      const c = (await changesFor(page, msg.loadId)).at(-1)?.pageSet as { cards?: { tile?: { content: Array<{ props: { content: Comp[] } }> } } } | undefined;
+      const body = c?.cards?.tile?.content[0]?.props.content.find((x) => x.type === 'CardTileGroup');
+      return (body?.props.items as Comp[] | undefined)?.map((x) => x.type);
+    }).toEqual(['CardTilePrice', 'CardTileName', 'CardTileGroup']);
+    for (let i = 0; i < 3; i += 1) await expect.poll(() => before(copies.nth(i).locator('[data-sf-part="price"]'), copies.nth(i).locator('a').last())).toBe(true);
+    await page.screenshot({ path: `${SCRATCH}/cards-price-first.png` });
+
+    await frame.getByLabel('Page', { exact: true }).selectOption('catalog');
+    const card = canvas(frame).locator('[data-sf-part="product-card"]').first();
+    await expect(card).toBeVisible();
+    expect(await before(card.locator('[data-sf-part="price"]'), card.locator('a').last())).toBe(true);
+
+    const last = (await changesFor(page, msg.loadId)).at(-1)!;
+    expect(last.pageSet!.pages['card:tile']).toBeUndefined();
+    expect(Object.keys(last.pageSet!.pages).some((k) => k.startsWith('card:'))).toBe(false);
+    await expectAdminAccepts(page);
+  });
+});
+
+test.describe('page builder editor · sheet canvas', () => {
+  const stage = (frame: FrameLocator) => frame.locator('[data-sf-builder-sheet]');
+  const openSheet = async (page: Page, width: number) => {
+    const framed = await openFramed(page, width);
+    const msg = load({ layout: 'menu', pageSet: menuSheetSet('menu') });
+    await loadAndWait(page, framed.frame, msg);
+    await framed.frame.getByLabel('Page', { exact: true }).selectOption('product');
+    await expect(stage(framed.frame)).toBeVisible();
+    return { ...framed, msg };
+  };
+  const box = async (l: Locator) => (await l.boundingBox())!;
+  const overlap = (a: { x: number; y: number; width: number; height: number }, b: { x: number; y: number; width: number; height: number }) =>
+    Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x) > 0.5 && Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y) > 0.5;
+
+  for (const width of [360, 1440]) {
+    test(`at a ${width}px frame the sheet stands between its fixed header and footer, the caption clear of both`, async ({ page }) => {
+      const { frame } = await openSheet(page, width);
+      const sheet = stage(frame);
+      // The arrangement shows: bulk pricing above the title, the title in the sheet's own heading.
+      const title = sheet.locator('[data-sf-part="sheet-title"]');
+      await expect(title).toBeVisible();
+      await expect(sheet.getByRole('heading', { name: 'Buy more, pay less' })).toBeVisible();
+      expect(await before(sheet.getByRole('heading', { name: 'Buy more, pay less' }), title)).toBe(true);
+      await expect(sheet.getByText('The sheet’s header and add button are fixed. Arrange the parts between them.')).toBeVisible();
+      // Nothing is wider than the frame; the editor header's controls wrap rather than overflow.
+      const w = await sheet.evaluate((el) => ({ sw: el.scrollWidth, cw: el.clientWidth }));
+      expect(w.sw).toBeLessThanOrEqual(w.cw);
+      expect(await frame.locator('[data-sf-builder-header]').evaluate((el) => el.scrollWidth)).toBeLessThanOrEqual(width);
+      // "Preview with" stays reachable in the header at this width.
+      const pick = frame.getByLabel('Preview with');
+      await expect(pick).toBeVisible();
+      const pb = await box(pick);
+      expect(pb.x).toBeGreaterThanOrEqual(0);
+      expect(pb.x + pb.width).toBeLessThanOrEqual(width + 0.5);
+      // For every product (including a pre-order and an out-of-stock one, whose add button carries a note)
+      // the caption sits under the pinned footer, never over it.
+      for (const name of ['Alpine Extract 10ml', 'Dune Starter Kit', 'Echo Balm 12ml']) {
+        await pick.selectOption({ label: name });
+        await expect(title).toHaveText(name);
+        const foot = sheet.locator('[inert][class*="foot"]');
+        const cap = sheet.getByText('The sheet’s header and add button are fixed.');
+        expect(overlap(await box(foot), await box(cap)), `caption over the footer for ${name}`).toBe(false);
+        expect((await box(cap)).y, `caption above the footer for ${name}`).toBeGreaterThanOrEqual((await box(foot)).y + (await box(foot)).height - 0.5);
+        const notes = await foot.locator('*').evaluateAll((els) => els.map((e) => e.getBoundingClientRect()).map((r) => ({ y: r.y, h: r.height })));
+        const capTop = (await box(cap)).y;
+        expect(notes.every((n) => n.y + n.h <= capTop + 0.5), `something in the footer pokes past the caption for ${name}`).toBe(true);
+      }
+      await page.screenshot({ path: `${SCRATCH}/sheet-canvas-${width}.png` });
+    });
+  }
+
+  test('the exact preview opens the real sheet through ?p= on the picked product', async ({ page }) => {
+    const { frame } = await openSheet(page, 1440);
+    await frame.getByLabel('Preview with').selectOption({ label: 'Alpine Extract 10ml' });
+    await frame.getByRole('group', { name: 'Preview width' }).getByRole('button', { name: 'Phone' }).click();
+    const preview = frame.locator('[data-sf-builder-exact="360"]');
+    await expect(preview).toBeVisible();
+    // The sheet is a drawer, portalled out of the preview's scroller.
+    const sheet = frame.locator('[data-sf-part="sheet"]');
+    await expect(sheet).toBeVisible();
+    await expect(sheet.locator('[data-sf-part="sheet-title"]')).toHaveText('Alpine Extract 10ml');
+    expect(await before(sheet.getByRole('heading', { name: 'Buy more, pay less' }), sheet.locator('[data-sf-part="sheet-title"]'))).toBe(true);
+    await page.screenshot({ path: `${SCRATCH}/sheet-exact-preview.png` });
+    // The sheet is modal, as for a shopper, but the way back to editing stays above its overlay.
+    await frame.getByRole('button', { name: 'Back to editing' }).click();
+    await expect(stage(frame)).toBeVisible();
+    // A different pick, a different sheet.
+    await frame.getByLabel('Preview with').selectOption({ label: 'Citrine Capsules 60ct' });
+    await frame.getByRole('group', { name: 'Preview width' }).getByRole('button', { name: 'Phone' }).click();
+    await expect(frame.locator('[data-sf-part="sheet"] [data-sf-part="sheet-title"]')).toHaveText('Citrine Capsules 60ct');
+  });
+});
+
+test.describe('page builder editor · card designer at a phone width', () => {
+  test('the caption sits under the cards and nothing is wider than a 360px frame', async ({ page }) => {
+    const { frame } = await openFramed(page, 360);
+    await loadAndWait(page, frame, load());
+    await frame.getByLabel('Page', { exact: true }).selectOption('card:tile');
+    const stageEl = frame.locator('[data-sf-builder-cards="tile"]');
+    await expect(stageEl).toBeVisible();
+    await page.waitForTimeout(1200);
+    const geo = await stageEl.evaluate((el) => {
+      const grid = el.querySelector('[data-sf-part="product-grid"]')!;
+      const cap = el.querySelector('[class*="caption"]')!;
+      const cards = [...grid.querySelectorAll('article, [data-puck-component]')].map((c) => c.getBoundingClientRect());
+      const r = cap.getBoundingClientRect();
+      return { sw: el.scrollWidth, cw: el.clientWidth, capTop: r.top, capLeft: r.left, capRight: r.right, cardsBottom: Math.max(...cards.map((c) => c.bottom)), cardsRight: Math.max(...cards.map((c) => c.right)), view: window.innerWidth };
+    });
+    expect(geo.sw).toBeLessThanOrEqual(geo.cw);
+    expect(geo.capTop).toBeGreaterThanOrEqual(geo.cardsBottom - 0.5);
+    expect(geo.capRight).toBeLessThanOrEqual(geo.view);
+    expect(geo.cardsRight).toBeLessThanOrEqual(geo.view);
+    await page.screenshot({ path: `${SCRATCH}/cards-360.png` });
+    // The row designer too.
+    await frame.getByLabel('Page', { exact: true }).selectOption('card:row');
+    const rows = frame.locator('[data-sf-builder-cards="row"]');
+    await expect(rows).toBeVisible();
+    await page.waitForTimeout(800);
+    expect(await rows.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+    await page.screenshot({ path: `${SCRATCH}/cards-row-360.png` });
   });
 });
