@@ -1,6 +1,7 @@
 import { CheckIcon, ClockIcon } from '@/components/icons.tsx';
 import { formatDate } from '@/lib/format.ts';
 import { ROUTE_STEP_KEYS, statusView, type StatusView } from '@/features/order-status/status.ts';
+import type { StyleAttrs } from '@/builder/define.ts';
 import { FADE } from '@/lib/motion.ts';
 import { useText } from '@/text/runtime.tsx';
 import type { PublicOrder } from '@/types/public-order.ts';
@@ -13,7 +14,7 @@ import classes from '@/features/order-status/OrderStatus.module.css';
  * checkout's choice marker uses. It carries a date wherever the order payload
  * actually knows one — nothing is invented to fill the column.
  */
-export function StatusHero({ order }: { order: PublicOrder }) {
+export function StatusHero({ order, rootAttrs }: { order: PublicOrder; rootAttrs?: StyleAttrs }) {
   const { t } = useText();
   const view = statusView(order, t);
   // The route carries the dates it knows. When it isn't on screen — payment
@@ -29,7 +30,7 @@ export function StatusHero({ order }: { order: PublicOrder }) {
       : null;
 
   return (
-    <section className={`${classes.hero} ${FADE}`} aria-label={t('order.hero.ariaLabel')}>
+    <section className={`${classes.hero} ${FADE}`} aria-label={t('order.hero.ariaLabel')} {...rootAttrs}>
       <p className={classes.eyebrow} data-tone={view.tone}>
         {view.eyebrow}
       </p>

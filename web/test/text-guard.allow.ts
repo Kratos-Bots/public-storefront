@@ -5,6 +5,7 @@ export const TEXT_GUARD_ALLOW: AllowEntry[] = [
   { file: 'builder/guard.ts', text: '*', reason: 'editor issue messages — the editor\'s own UI text is a non-goal (spec §12)' },
   { file: 'builder/style/labels.ts', text: '*', reason: 'editor-only Style row labels (Style panel and editor issue messages)' },
   { file: 'builder/rules.ts', text: '*', reason: 'editor issue messages — the editor\'s own UI text is a non-goal (spec §12)' },
+  { file: 'builder/blocks/_shared/order-status-container.ts', text: '*', reason: 'editor issue message for an illegal arrangement (spec §4.2) — surfaced only by the editor rules check' },
   { file: 'builder/define.ts', text: '*', reason: 'zod messages surfaced only as editor field issues' },
   { file: 'text/resolve.ts', text: '*', reason: 'checkValue messages are editor issues (spec §7.2), not shopper text' },
   { file: 'templates/define.ts', text: '*', reason: 'template option labels shown only in the admin theme panel' },

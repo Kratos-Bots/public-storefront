@@ -1,3 +1,4 @@
+import type { StyleAttrs } from '@/builder/define.ts';
 import { formatMoney } from '@/lib/format.ts';
 import { FADE } from '@/lib/motion.ts';
 import { useText } from '@/text/runtime.tsx';
@@ -9,16 +10,18 @@ export interface ItemsCardProps {
   totals: OrderTotals;
   /** The order's own currency, which can differ from the shop's current one. */
   currency: string;
+  /** The OrderStatusItems part's style attributes (none outside a styled part). */
+  rootAttrs?: StyleAttrs;
 }
 
 /** What was ordered, and what it came to. */
-export function ItemsCard({ items, totals, currency }: ItemsCardProps) {
+export function ItemsCard({ items, totals, currency, rootAttrs }: ItemsCardProps) {
   const { t } = useText();
   const money = (amount: number) => formatMoney(amount, currency);
   const fee = totals.paymentFeeAmount ?? 0;
 
   return (
-    <section className={`${classes.card} ${FADE}`} aria-label={t('order.items.title')} data-sf-part="card">
+    <section className={`${classes.card} ${FADE}`} aria-label={t('order.items.title')} data-sf-part="card" {...rootAttrs}>
       <p className={classes.cardEyebrow}>{t('order.items.title')}</p>
 
       <ul className={classes.items}>
