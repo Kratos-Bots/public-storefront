@@ -6,7 +6,8 @@ import { useCartStore, type LocalLine } from '@/stores/cart.ts';
 import { useSessionStore, type SessionCustomer } from '@/stores/session.ts';
 import type { PreviewAs } from '@/builder/mode.ts';
 import type { DocKey } from '@/builder/types.ts';
-import { FIXTURE_CART_LINES, FIXTURE_CUSTOMER, FIXTURE_TOKEN } from '@/builder/editor/fixtures.ts';
+import { FIXTURE_CART_LINES, FIXTURE_CUSTOMER, FIXTURE_TOKEN, fixtureServerCart } from '@/builder/editor/fixtures.ts';
+import { setPreviewServerCart } from '@/features/cart/useServerCart.ts';
 
 export const PREVIEW_ONLY_MESSAGE = 'Preview only — nothing was sent.';
 
@@ -124,5 +125,7 @@ export function applyPreviewAs(p: PreviewAs, client: QueryClient): void {
   );
   // Always a local cart: a server-mode cart would schedule PUTs on every render path.
   useCartStore.setState({ mode: 'local', lines: p.cart === 'items' ? FIXTURE_CART_LINES.map((l) => ({ ...l })) : [] });
+  // The sample server answer carrying the promotion figures; only a signed-in shopper has one.
+  setPreviewServerCart(p.cart === 'items' && p.session !== 'signed-out' ? fixtureServerCart(p) : null);
   void client.resetQueries({ predicate: (q) => !LIVE_QUERY_ROOTS.has(String(q.queryKey[0])) });
 }

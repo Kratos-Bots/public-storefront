@@ -20,6 +20,8 @@ export interface OrderItem {
   unitPrice: number;
   totalPrice: number;
   isPreorder: boolean;
+  /** Absent from a backend that predates promotions. */
+  promotionDiscount?: number;
 }
 
 export interface OrderTotals {
@@ -32,7 +34,12 @@ export interface OrderTotals {
   paymentFeeAmount?: number;
   /** Line label, e.g. 'Crypto discount'. Null when there is no adjustment. */
   paymentFeeLabel?: string | null;
+  /** The part of `discountAmount` that came from automatic promotions (the order's coupon/other discount is the difference). */
+  promotionDiscount?: number;
+  promotions?: PublicOrderPromotion[];
 }
+
+export interface PublicOrderPromotion { label: string; amount: number }
 
 export interface ShippingAddress {
   firstName: string;
@@ -109,6 +116,9 @@ export interface PublicOrder {
   cryptoPayments?: PublicCryptoPayment[];
   /** Payment state + deadline. Optional: absent from older backends. */
   payment?: OrderPaymentState;
+  /** Where the promotion breakdown sits is not pinned down yet — read it with `publicOrderPromotions`, which accepts it here or in `totals`. */
+  promotionDiscount?: number;
+  promotions?: PublicOrderPromotion[];
 }
 
 export type CryptoTxidVerification = 'confirmed' | 'checking' | 'needs_review';

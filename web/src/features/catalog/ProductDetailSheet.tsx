@@ -6,6 +6,7 @@ import { ancestorChain } from '@/features/catalog/category-tree.ts';
 import { Sheet } from '@/components/Sheet.tsx';
 import { ProductImage } from '@/features/catalog/ProductImage.tsx';
 import { StockChip } from '@/features/catalog/StockChip.tsx';
+import { PromoBadge } from '@/features/catalog/PromoBadge.tsx';
 import { AddToCart } from '@/features/catalog/AddToCart.tsx';
 import { BulkPricing } from '@/features/catalog/BulkPricing.tsx';
 import { Provenance } from '@/features/catalog/Provenance.tsx';
@@ -205,6 +206,7 @@ function SheetStock({ styleAttrs }: PartViewProps) {
   return (
     <p className={classes.flags} {...styleAttrs}>
       {showSku ? <span className={classes.sku}>{product.sku}</span> : null}
+      <PromoBadge promotions={product.promotions} />
       <StockChip status={status} />
       {product.isPreorder ? (
         <span className={classes.preorder}>{eta ? t('product.sheet.ships', { eta }) : t('common.product.preorder')}</span>

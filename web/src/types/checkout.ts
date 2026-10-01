@@ -1,4 +1,10 @@
-export interface QuoteItem { productId: number; name: string; sku: string | null; quantity: number; unitPrice: number; lineTotal: number; tierApplied: boolean; isPreorder: boolean }
+export interface QuoteItem {
+  productId: number; name: string; sku: string | null; quantity: number; unitPrice: number; lineTotal: number; tierApplied: boolean; isPreorder: boolean;
+  /** Absent on a backend that predates promotions. */
+  promotionDiscount?: number; promotions?: import('./cart.ts').PromotionTag[];
+}
+/** A promotion the quote applied; `freeShipping` with `amount` 0 is a free-shipping deal with no line discount. */
+export interface QuotePromotion { id: number; label: string; amount: number; freeShipping: boolean }
 export interface QuoteCoupon { code: string; discountAmount: number; shippingDiscount: number; autoApplied: boolean }
 export interface ShippingOption { id: number; name: string; courier: string | null; price: number; freeShipping: boolean }
 export interface CryptoOption { coin: string; network: string; coinLabel: string; networkLabel: string; feeType: string | null; feeValue: number | null; feeRateText: string; feeLabel: string; fee: number; chargeTotal: number }
@@ -12,6 +18,8 @@ export interface Quote {
   selectedShippingOptionId: number | null; shippingAmount: number;
   storeCredit: { balance: number; applied: number; remaining: number };
   grandTotal: number; amountDue: number; paymentMethods: PaymentMethod[];
+  /** `grandTotal` is already net of these; `coupon.discountAmount` stays the coupon's own amount. */
+  promotionDiscount?: number; promotions?: QuotePromotion[]; nudge?: import('./cart.ts').Nudge | null;
   contactModes: import('./settings.ts').ContactModes;
 }
 export interface QuoteInput { country?: string; couponCode?: string; shippingOptionId?: number; useStoreCredit?: boolean }

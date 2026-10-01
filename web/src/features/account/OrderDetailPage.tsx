@@ -6,6 +6,7 @@ import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { Money } from '@/components/Money.tsx';
 import { ApiError } from '@/lib/errors.ts';
 import { formatDate, formatDateTime } from '@/lib/format.ts';
+import { lineFigures, otherDiscount } from '@/lib/promotions.ts';
 import {
   SHIPMENT_TONE,
   shipmentLabelKey,
@@ -84,6 +85,9 @@ function BalanceView({ styleAttrs }: PartViewProps) {
 function ItemsView({ styleAttrs }: PartViewProps) {
   const { t, tp } = useText();
   const { order: data } = OrderFamily.useData();
+  // `discountAmount` includes the promotions; the discount row is what is left once they have their own.
+  const promotions = (data.promotions ?? []).filter((p) => p.amount > 0);
+  const other = otherDiscount(data.discountAmount, data.promotionDiscount);
   return (
     <section className={classes.section} aria-label={t('account.order.items')} {...styleAttrs}>
       <div className={classes.sectionHead}>
@@ -93,17 +97,27 @@ function ItemsView({ styleAttrs }: PartViewProps) {
         </span>
       </div>
       <ul className={classes.items}>
-        {data.items.map((item, i) => (
-          <li key={`${item.name}-${i}`} className={classes.item}>
-            <span className={classes.itemName}>{item.name}</span>
-            <span className={classes.itemQty}>
-              {item.quantity} × <Money amount={item.unitPrice} />
-            </span>
-            <span className={classes.itemTotal}>
-              <Money amount={item.lineTotal} />
-            </span>
-          </li>
-        ))}
+        {data.items.map((item, i) => {
+          const promo = lineFigures(item.lineTotal, item.promotionDiscount);
+          return (
+            <li key={`${item.name}-${i}`} className={classes.item}>
+              <span className={classes.itemName}>{item.name}</span>
+              <span className={classes.itemQty}>
+                {item.quantity} × <Money amount={item.unitPrice} />
+              </span>
+              <span className={classes.itemTotal}>
+                {promo.discounted ? (
+                  <>
+                    <s className={classes.itemWas}><Money amount={item.lineTotal} /></s>
+                    {promo.free ? <span className={classes.free}>{t('common.promo.free')}</span> : <Money amount={promo.net} />}
+                  </>
+                ) : (
+                  <Money amount={item.lineTotal} />
+                )}
+              </span>
+            </li>
+          );
+        })}
       </ul>
 
       <div className={classes.row}>
@@ -118,11 +132,19 @@ function ItemsView({ styleAttrs }: PartViewProps) {
           <Money amount={data.shippingAmount} />
         </span>
       </div>
-      {data.discountAmount > 0 ? (
+      {promotions.map((p, i) => (
+        <div key={`${p.label}-${i}`} className={classes.row}>
+          <span className={`${classes.rowLabel} ${classes.rowLabelWrap}`}>{p.label}</span>
+          <span className={`${classes.rowFigure} ${classes.rowGood}`}>
+            −<Money amount={p.amount} />
+          </span>
+        </div>
+      ))}
+      {other > 0 ? (
         <div className={classes.row}>
           <span className={classes.rowLabel}>{t('common.totals.discount')}</span>
           <span className={classes.rowFigure}>
-            −<Money amount={data.discountAmount} />
+            −<Money amount={other} />
           </span>
         </div>
       ) : null}

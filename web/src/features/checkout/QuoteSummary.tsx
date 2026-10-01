@@ -4,6 +4,9 @@ import type { StyleAttrs } from '@/builder/define.ts';
 import { useCartStore, selectSubtotal } from '@/stores/cart.ts';
 import { Money } from '@/components/Money.tsx';
 import { rowAnim } from '@/lib/motion.ts';
+import { formatMoney } from '@/lib/format.ts';
+import { badgeParts, lineFigures, nudgeSentence } from '@/lib/promotions.ts';
+import { useSettings } from '@/app/settings.ts';
 import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/checkout/QuoteSummary.module.css';
 
@@ -41,7 +44,9 @@ export function QuoteSummary({
   defaultOpen = false,
   rootAttrs,
 }: QuoteSummaryProps) {
-  const { t, tn, tp } = useText();
+  const text = useText();
+  const { t, tn, tp } = text;
+  const { currency } = useSettings();
   const [open, setOpen] = useState(defaultOpen);
   const autoOpened = useRef(defaultOpen);
   const bodyId = useId();
@@ -64,6 +69,8 @@ export function QuoteSummary({
         lineTotal: i.lineTotal,
         tierApplied: i.tierApplied,
         isPreorder: i.isPreorder,
+        promotionDiscount: i.promotionDiscount ?? 0,
+        promotions: i.promotions,
       }))
     : lines.map((l) => ({
         key: l.productId,
@@ -72,6 +79,8 @@ export function QuoteSummary({
         lineTotal: l.unitPrice * l.quantity,
         tierApplied: l.unitPrice < l.basePrice,
         isPreorder: l.isPreorder,
+        promotionDiscount: 0,
+        promotions: undefined,
       }));
   const count = items.reduce((sum, i) => sum + i.quantity, 0);
 
@@ -80,6 +89,8 @@ export function QuoteSummary({
   const heroAmount = charge ?? due;
   const heroLabel =
     due === 0 ? t('checkout.summary.nothingToPay') : charge !== null ? t('checkout.summary.toPay') : t('checkout.summary.amountDue');
+  const promotions = quote?.promotions ?? [];
+  const nudge = quote?.nudge ?? null;
   const fee = combo ? combo.fee : method ? method.fee : 0;
   const feeLabel = (combo?.feeLabel || method?.feeLabel) ?? '';
   const feeRateText = (combo?.feeRateText || method?.feeRateText) ?? '';
@@ -115,7 +126,10 @@ export function QuoteSummary({
         </header>
 
         <ul className={classes.items}>
-          {items.map((item, idx) => (
+          {items.map((item, idx) => {
+            const promo = lineFigures(item.lineTotal, item.promotionDiscount);
+            const badge = badgeParts(item.promotions);
+            return (
             <li
               className={`${classes.item} ${rowAnim(idx).className}`}
               style={rowAnim(idx).style}
@@ -128,12 +142,26 @@ export function QuoteSummary({
                 {item.isPreorder ? (
                   <span className={`${classes.tag} ${classes.tagWarn}`}>{t('common.product.preorder')}</span>
                 ) : null}
+                {promo.discounted && badge ? (
+                  <span className={classes.tag} title={badge.all.join(', ')}>
+                    {badge.label}
+                    {badge.extra > 0 ? ` ${t('common.promo.more', { count: badge.extra })}` : ''}
+                  </span>
+                ) : null}
               </span>
               <span className={classes.itemFigure}>
-                <Money amount={item.lineTotal} />
+                {promo.discounted ? (
+                  <>
+                    <s className={classes.itemWas}>{formatMoney(item.lineTotal, currency)}</s>
+                    {promo.free ? <span className={classes.itemFree}>{t('common.promo.free')}</span> : <Money amount={promo.net} />}
+                  </>
+                ) : (
+                  <Money amount={item.lineTotal} />
+                )}
               </span>
             </li>
-          ))}
+            );
+          })}
         </ul>
 
         <div className={classes.ledger}>
@@ -143,6 +171,19 @@ export function QuoteSummary({
               <Money amount={quote ? quote.subtotal : localSubtotal} />
             </span>
           </div>
+
+          {promotions.map((p) => (
+            <div key={p.id} className={`${classes.row} ${classes.discount}`}>
+              <span className={`${classes.rowLabel} ${classes.rowLabelWrap}`}>
+                {p.freeShipping && p.amount === 0 ? t('common.promo.freeShipping', { label: p.label }) : p.label}
+              </span>
+              {p.amount > 0 ? (
+                <span className={classes.rowFigure}>
+                  −<Money amount={p.amount} />
+                </span>
+              ) : null}
+            </div>
+          ))}
 
           {quote?.coupon ? (
             <div className={`${classes.row} ${classes.discount}`}>
@@ -215,6 +256,8 @@ export function QuoteSummary({
             </span>
           </div>
         ) : null}
+
+        {nudge ? <p className={classes.nudge}>{nudgeSentence(nudge, text, (n) => formatMoney(n, currency))}</p> : null}
 
         {quote ? (
           due === 0 ? (

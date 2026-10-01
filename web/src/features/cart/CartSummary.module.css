@@ -62,6 +62,68 @@
   white-space: nowrap;
 }
 
+/* Promotions applied: the subtotal steps back, one row per promotion, then the basket after them
+   as the figure with weight. Inside the summary's own column gap, so no spacing of its own. */
+.promoBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.quiet .figure {
+  font-size: calc(0.9375rem * var(--sf-text-scale, 1));
+  font-weight: 600;
+  color: var(--sf-block-fg, var(--sf-muted));
+}
+
+.promoRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.promoLabel {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-family: var(--sf-font-mono);
+  font-size: calc(10px * var(--sf-text-scale, 1));
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--sf-block-fg, var(--sf-success));
+}
+
+.promoFigure {
+  flex: none;
+  font-family: var(--sf-font-mono);
+  font-size: calc(0.8125rem * var(--sf-text-scale, 1));
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--sf-block-fg, var(--sf-success));
+}
+
+/* The basket after promotions, not an order total: set off by the lighter hairline, so the rule
+   above the subtotal stays the one that opens the ledger. */
+.net {
+  padding-top: 0.5rem;
+  border-top-color: var(--sf-line);
+}
+
+/* A friendly sentence, not a flag: body type, sentence case, the accent as a rule at its edge. */
+.nudge {
+  margin: 0 0 0.25rem;
+  padding: 0.5rem 0.7rem;
+  border-left: 2px solid var(--sf-primary);
+  border-radius: 0 var(--sf-card-radius) var(--sf-card-radius) 0;
+  background: color-mix(in srgb, var(--sf-primary) 8%, transparent);
+  font-family: var(--sf-font-body);
+  font-size: calc(0.8125rem * var(--sf-text-scale, 1));
+  line-height: 1.45;
+  color: var(--sf-block-fg, var(--sf-text));
+}
+
 .terms {
   margin: 0;
   font-size: calc(0.75rem * var(--sf-text-scale, 1));

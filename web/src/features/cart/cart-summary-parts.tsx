@@ -2,6 +2,7 @@ import { Link } from 'react-router';
 import { CartSummaryFamily } from '@/builder/family-cart.ts';
 import type { FamilyValue, PartViewProps } from '@/builder/parts.ts';
 import { formatMoney } from '@/lib/format.ts';
+import { nudgeSentence } from '@/lib/promotions.ts';
 import { Slot } from '@/templates/runtime.tsx';
 import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/cart/CartSummary.module.css';
@@ -13,17 +14,47 @@ function NoticeView({ styleAttrs }: PartViewProps) {
   return mixedPreorder ? <p className={classes.notice} {...styleAttrs}>{t('cart.summary.mixedNotice')}</p> : null;
 }
 
-/** Micro-caps label and item count left, the one weighty figure right, a heavy rule above. */
+/**
+ * Micro-caps label and item count left, the one weighty figure right, a heavy rule above. With
+ * promotions applied the subtotal steps back, each promotion takes its row, and the weighty figure
+ * becomes the basket after them; a nudge toward the next promotion sits above the lot.
+ */
 function SubtotalView({ styleAttrs }: PartViewProps) {
-  const { t, tp } = useText();
-  const { count, subtotal, currency } = CartSummaryFamily.useData();
-  return (
-    <div className={classes.ledger} {...styleAttrs}>
+  const text = useText();
+  const { t, tp } = text;
+  const { count, subtotal, currency, promotions } = CartSummaryFamily.useData();
+  const subtotalRow = (quiet: boolean, attrs?: typeof styleAttrs) => (
+    <div className={quiet ? `${classes.ledger} ${classes.quiet}` : classes.ledger} {...attrs}>
       <span className={classes.label}>
         {t('common.totals.subtotal')}
         <span className={classes.units}>{tp('cart.summary.items', count)}</span>
       </span>
       <span className={classes.figure}>{formatMoney(subtotal, currency)}</span>
+    </div>
+  );
+  const applied = promotions !== null && promotions.discount > 0;
+  const nudge = promotions?.nudge ?? null;
+  if (!applied && !nudge) return subtotalRow(false, styleAttrs);
+  return (
+    <div className={classes.promoBlock} {...styleAttrs}>
+      {nudge ? <p className={classes.nudge}>{nudgeSentence(nudge, text, (n) => formatMoney(n, currency))}</p> : null}
+      {subtotalRow(applied)}
+      {applied
+        ? (
+          <>
+            {promotions.promotions.map((p) => (
+              <div key={p.id} className={classes.promoRow}>
+                <span className={classes.promoLabel}>{p.label}</span>
+                <span className={classes.promoFigure}>−{formatMoney(p.amount, currency)}</span>
+              </div>
+            ))}
+            <div className={`${classes.ledger} ${classes.net}`}>
+              <span className={classes.label}>{t('cart.summary.afterPromotions')}</span>
+              <span className={classes.figure}>{formatMoney(promotions.total, currency)}</span>
+            </div>
+          </>
+        )
+        : null}
     </div>
   );
 }

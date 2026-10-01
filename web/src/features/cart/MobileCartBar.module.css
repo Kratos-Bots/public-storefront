@@ -46,6 +46,14 @@
   line-height: 1.1;
 }
 
+/* The subtotal a promotion was taken from, struck beside the figure that replaced it. */
+.was {
+  margin-right: 0.4rem;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--sf-faint);
+}
+
 .tally {
   display: inline-flex;
   align-items: center;

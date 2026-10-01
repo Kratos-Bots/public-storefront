@@ -186,6 +186,30 @@
   white-space: nowrap;
 }
 
+/* Money a promotion took off: the line it came from keeps what it was struck, the row says what it was. */
+.rowGood {
+  color: var(--sf-success);
+}
+
+.rowLabelWrap {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.itemWas {
+  display: block;
+  text-align: right;
+  font-size: calc(10px * var(--sf-text-scale, 1));
+  font-weight: 500;
+  color: var(--sf-block-fg, var(--sf-faint));
+}
+
+.free {
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--sf-success);
+}
+
 .grand {
   border-top-color: var(--sf-line-strong);
   border-top-width: 1px;

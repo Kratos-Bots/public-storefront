@@ -4,6 +4,7 @@ import { useSettings } from '@/app/settings.ts';
 import { useSessionStore, selectIsLoggedIn } from '@/stores/session.ts';
 import { useCartStore, selectCount, selectSubtotal } from '@/stores/cart.ts';
 import { formatMoney } from '@/lib/format.ts';
+import { basketPromotions } from '@/lib/promotions.ts';
 import { checkoutTarget } from '@/features/cart/checkout-target.ts';
 import { useServerCart } from '@/features/cart/useServerCart.ts';
 import { ChevronIcon } from '@/components/icons.tsx';
@@ -50,13 +51,18 @@ export function MobileCartBar() {
   const loggedIn = useSessionStore(selectIsLoggedIn);
   const count = useCartStore(selectCount);
   const subtotal = useCartStore((s) => selectSubtotal(s.lines));
-  const { issues } = useServerCart();
+  const { issues, server } = useServerCart();
   const showing = useMobileCartBar();
 
   if (!showing) return null;
 
   const blocked = issues.some((i) => i.inactive || i.belowMin || i.aboveMax);
   const items = tp('cart.summary.items', count);
+  // With promotions applied the bar leads with the basket after them and keeps the subtotal struck
+  // beside it; the server's figures only count while they still match the lines on screen.
+  const promo = basketPromotions(server);
+  const applied = promo !== null && promo.discount > 0;
+  const shown = applied ? promo.total : subtotal;
 
   return (
     <div className={classes.bar} data-sf-part="cart-bar">
@@ -64,9 +70,12 @@ export function MobileCartBar() {
         <Link
           to="/cart"
           className={classes.view}
-          aria-label={t('cart.bar.viewCartLabel', { items, subtotal: formatMoney(subtotal, currency) })}
+          aria-label={t('cart.bar.viewCartLabel', { items, subtotal: formatMoney(shown, currency) })}
         >
-          <span className={classes.subtotal}>{formatMoney(subtotal, currency)}</span>
+          <span className={classes.subtotal}>
+            {applied ? <s className={classes.was}>{formatMoney(subtotal, currency)}</s> : null}
+            {formatMoney(shown, currency)}
+          </span>
           <span className={classes.tally} aria-hidden>
             {items}
             <ChevronIcon size={11} />

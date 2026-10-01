@@ -2,6 +2,7 @@ import { ContactLinks } from '@/components/ContactLinks.tsx';
 import { OrderStatusFamily } from '@/builder/family-order-status.ts';
 import type { FamilyValue, PartViewProps } from '@/builder/parts.ts';
 import { orderChatMessage } from '@/lib/chat-links.ts';
+import { publicOrderPromotions } from '@/lib/promotions.ts';
 import { useText } from '@/text/runtime.tsx';
 import { AddressCard } from '@/features/order-status/AddressCard.tsx';
 import { ItemsCard } from '@/features/order-status/ItemsCard.tsx';
@@ -42,7 +43,7 @@ function ShipmentsView() {
 
 function ItemsView({ styleAttrs }: PartViewProps) {
   const { order } = OrderStatusFamily.useData();
-  return <ItemsCard items={order.items} totals={order.totals} currency={order.currency} rootAttrs={styleAttrs} />;
+  return <ItemsCard items={order.items} totals={order.totals} promotions={publicOrderPromotions(order)} currency={order.currency} rootAttrs={styleAttrs} />;
 }
 
 function AddressView({ styleAttrs }: PartViewProps) {

@@ -4,6 +4,7 @@ import { useCartStore } from '@/stores/cart.ts';
 import { addToCart, setCartQuantity } from '@/features/cart/useServerCart.ts';
 import { deriveStockStatus, formatMoney, resolveUnitPrice } from '@/lib/format.ts';
 import { StockChip } from '@/features/catalog/StockChip.tsx';
+import { PromoBadge } from '@/features/catalog/PromoBadge.tsx';
 import { TierLadder } from '@/features/wholesale/TierLadder.tsx';
 import { ChevronIcon, MinusIcon, PlusIcon } from '@/components/icons.tsx';
 import { rowAnim } from '@/lib/motion.ts';
@@ -48,7 +49,8 @@ export function WholesaleRow({ product, band, groupEnd, ordering, index }: Whole
   const discounted = saving > 0;
   const hasTiers = product.pricingTiers.length > 0;
   const inCart = quantity > 0;
-  const hasStatus = status !== 'in' || product.isPreorder || product.minOrderQuantity != null;
+  const promoted = (product.promotions?.length ?? 0) > 0;
+  const hasStatus = promoted || status !== 'in' || product.isPreorder || product.minOrderQuantity != null;
 
   const floor = Math.max(1, product.minOrderQuantity ?? 1);
   const max = product.maxOrderQuantity;
@@ -124,6 +126,7 @@ export function WholesaleRow({ product, band, groupEnd, ordering, index }: Whole
                   so an ordinary line stays two lines tall. */}
               {hasStatus ? (
                 <span className={classes.status}>
+                  <PromoBadge promotions={product.promotions} />
                   {status !== 'in' ? <StockChip status={status} /> : null}
                   {product.isPreorder ? <span className={classes.preorder}>{t('common.product.preorder')}</span> : null}
                   {product.minOrderQuantity != null ? (

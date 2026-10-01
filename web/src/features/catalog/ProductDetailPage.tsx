@@ -5,6 +5,7 @@ import { useSettings } from '@/app/settings.ts';
 import { useCatalog, useProduct } from '@/features/catalog/use-catalog.ts';
 import { ProductImage } from '@/features/catalog/ProductImage.tsx';
 import { StockChip } from '@/features/catalog/StockChip.tsx';
+import { PromoBadge } from '@/features/catalog/PromoBadge.tsx';
 import { AddToCart } from '@/features/catalog/AddToCart.tsx';
 import { BulkPricing } from '@/features/catalog/BulkPricing.tsx';
 import { Provenance } from '@/features/catalog/Provenance.tsx';
@@ -59,6 +60,7 @@ function PageStock({ styleAttrs }: PartViewProps) {
   const eta = product.isPreorder && product.preorderEta ? formatDate(new Date(product.preorderEta).toISOString()) : '';
   return (
     <div className={classes.flags} {...styleAttrs}>
+      <PromoBadge promotions={product.promotions} />
       <StockChip status={status} />
       {product.isPreorder ? (
         <span className={classes.preorder}>{eta ? t('product.detail.preorderShips', { eta }) : t('common.product.preorder')}</span>

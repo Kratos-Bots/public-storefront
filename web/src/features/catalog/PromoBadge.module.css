@@ -1,0 +1,38 @@
+/* A deal, marked the way a price break is: the same tracked micro-caps as every other flag, but
+   boxed and washed in the theme's accent so it is the one flag that reads as "something is on".
+   Only theme tokens — the box takes whatever the store's accent is. */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0.1rem 0.4rem;
+  border: 1px solid color-mix(in srgb, var(--sf-primary) 50%, transparent);
+  border-radius: var(--sf-card-radius);
+  background: color-mix(in srgb, var(--sf-primary) 9%, transparent);
+  font-family: var(--sf-font-mono);
+  font-size: calc(10px * var(--sf-text-scale, 1));
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  line-height: 1.5;
+  color: var(--sf-block-fg, var(--sf-primary));
+}
+
+/* A long label gives way before the count does. */
+.label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.more {
+  flex: none;
+  padding-left: 0.35rem;
+  border-left: 1px solid color-mix(in srgb, var(--sf-primary) 35%, transparent);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+  color: var(--sf-block-fg, var(--sf-muted));
+}

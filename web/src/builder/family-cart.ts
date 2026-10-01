@@ -1,6 +1,7 @@
 import { createContext, useContext } from 'react';
 import { createFamily } from '@/builder/parts.ts';
 import type { LocalLine } from '@/stores/cart.ts';
+import type { BasketPromotions } from '@/lib/promotions.ts';
 import type { ServerCartLine } from '@/types/cart.ts';
 
 // Type-only imports: this module is in the shopper's entry bundle.
@@ -15,6 +16,8 @@ export interface CartData {
   count: number;
   isSyncing: boolean;
   issueByProduct: ReadonlyMap<number, CartIssue>;
+  /** The server's word on every line while it still matches the lines on screen — carries the promotion figures. Empty before the reconcile and after an edit. */
+  serverByProduct: ReadonlyMap<number, ServerCartLine>;
   /** A line is withdrawn or breaks its order-quantity limit: checkout is held. */
   blocked: boolean;
   setQuantity: (productId: number, quantity: number) => void;
@@ -39,5 +42,7 @@ export interface CartSummaryData {
   /** The web app's primary action is its own checkout bar. */
   primaryElsewhere: boolean;
   checkoutTo: string;
+  /** The server's promotion figures while they still describe the lines on screen; null otherwise (guest cart, before the reconcile, mid-edit). */
+  promotions: BasketPromotions | null;
 }
 export const CartSummaryFamily = createFamily<CartSummaryData>('cart-summary');

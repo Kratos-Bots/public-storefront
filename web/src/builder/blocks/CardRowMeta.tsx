@@ -8,7 +8,7 @@ export const block = defineBlock<{ id: string }>({
   name: 'CardRowMeta', label: 'Details', category: 'part', part: { family: 'card-row' },
   layouts: 'all', routeBound: false, slots: [],
   style: styleSupport('root', [...BOX, ...TEXT, ...VIS]),
-  text: ['product.limit.min', 'common.product.preorder', 'product.stock.*'],
+  text: ['product.limit.min', 'common.product.preorder', 'common.promo.more', 'product.stock.*'],
   schema: z.object({}), defaultProps: {},
   render: (p) => <CardRowFamily.PartHost name="CardRowMeta" props={p as Record<string, unknown>} styleAttrs={p.puck.style} />,
 });

@@ -3,6 +3,7 @@ import { useSettings } from '@/app/settings.ts';
 import { deriveStockStatus, formatMoney } from '@/lib/format.ts';
 import { ProductImage } from '@/features/catalog/ProductImage.tsx';
 import { StockChip } from '@/features/catalog/StockChip.tsx';
+import { PromoBadge } from '@/features/catalog/PromoBadge.tsx';
 import { AddToCart } from '@/features/catalog/AddToCart.tsx';
 import { rowAnim } from '@/lib/motion.ts';
 import { useText } from '@/text/runtime.tsx';
@@ -88,9 +89,11 @@ function TileFlags({ styleAttrs }: PartViewProps) {
   // When the price slot already says "Out of stock", the flags do not repeat it.
   const outInPrice = useOutOfStockInPriceSlot(product);
   const status = outInPrice ? 'in' : deriveStockStatus(product.inStock, product.lowStockAlert);
-  if (!(product.isPreorder || status !== 'in' || product.minOrderQuantity != null)) return null;
+  const promoted = (product.promotions?.length ?? 0) > 0;
+  if (!(promoted || product.isPreorder || status !== 'in' || product.minOrderQuantity != null)) return null;
   return (
     <div className={classes.flags} {...styleAttrs}>
+      <PromoBadge promotions={product.promotions} />
       {product.minOrderQuantity != null ? (
         <span className={classes.limit}>{t('product.limit.min', { min: product.minOrderQuantity })}</span>
       ) : null}

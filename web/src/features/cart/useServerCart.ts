@@ -5,6 +5,7 @@ import { fetchCart, putCart } from '@/api/cart.ts';
 import { useCartStore } from '@/stores/cart.ts';
 import { ApiError, errorMessage } from '@/lib/errors.ts';
 import { textSnapshot } from '@/text/snapshot.ts';
+import { snapshotMatchesLines } from '@/lib/promotions.ts';
 import type { Product } from '@/types/catalog.ts';
 import type { CartLineInput, ServerCart, ServerCartLine } from '@/types/cart.ts';
 
@@ -26,9 +27,11 @@ export const SYNC_DEBOUNCE_MS = 400;
 interface SyncState {
   cart: ServerCart | null;
   syncing: boolean;
+  /** The page builder's sample server cart (see `setPreviewServerCart`); never set in the shop. */
+  preview: ServerCart | null;
 }
 
-const syncStore = create<SyncState>()(() => ({ cart: null, syncing: false }));
+const syncStore = create<SyncState>()(() => ({ cart: null, syncing: false, preview: null }));
 
 let timer: ReturnType<typeof setTimeout> | null = null;
 /** Set from the moment an edit is scheduled until its PUT goes out. */
@@ -212,7 +215,15 @@ export function resetCartSync() {
   ticketSeq = 0;
   inflight = 0;
   inFlightFlush = null;
-  syncStore.setState({ cart: null, syncing: false });
+  syncStore.setState({ cart: null, syncing: false, preview: null });
+}
+
+/**
+ * The editor previews every cart as a local one (a server-mode cart would schedule PUTs), so the
+ * sample server answer that carries the promotion figures is handed over here instead.
+ */
+export function setPreviewServerCart(cart: ServerCart | null) {
+  syncStore.setState({ preview: cart });
 }
 
 export interface ServerCartControls {
@@ -221,6 +232,12 @@ export interface ServerCartControls {
   isSyncing: boolean;
   /** Lines the server flagged: inactive, out of stock, repriced, or violating an order-quantity limit. */
   issues: ServerCartLine[];
+  /**
+   * The server's cart, but only while it still describes the lines on screen — its promotion
+   * figures belong to the quantities it priced. Null for a guest cart, before the first reconcile,
+   * and from the moment the shopper edits a line until the next reconcile lands.
+   */
+  server: ServerCart | null;
   add: (product: Product, quantity?: number) => void;
   setQuantity: (productId: number, quantity: number) => void;
   remove: (productId: number) => void;
@@ -244,6 +261,8 @@ export function useServerCart(): ServerCartControls {
   const mode = useCartStore((s) => s.mode);
   const cart = syncStore((s) => s.cart);
   const syncing = syncStore((s) => s.syncing);
+  const preview = syncStore((s) => s.preview);
+  const lines = useCartStore((s) => s.lines);
 
   // A guest cart has no server snapshot to explain, so a logout must not leave
   // the previous session's flags hanging off the lines.
@@ -261,17 +280,21 @@ export function useServerCart(): ServerCartControls {
     [mode, cart],
   );
 
+  const candidate = preview ?? (mode === 'server' ? cart : null);
+  const server = snapshotMatchesLines(candidate, lines) ? candidate : null;
+
   return useMemo(
     () => ({
       mode,
       isSyncing: syncing,
       issues,
+      server,
       add: addToCart,
       setQuantity: setCartQuantity,
       remove: removeFromCart,
       sync: flush,
       refresh: refreshCart,
     }),
-    [mode, syncing, issues],
+    [mode, syncing, issues, server],
   );
 }

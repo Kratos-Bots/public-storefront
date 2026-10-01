@@ -520,6 +520,15 @@
   color: var(--sf-success);
 }
 
+/* The line a promotion discounted: what it came to, struck, above what is charged. */
+.itemWas {
+  display: block;
+  text-align: right;
+  font-size: calc(10px * var(--sf-text-scale, 1));
+  font-weight: 500;
+  color: var(--sf-block-fg, var(--sf-faint));
+}
+
 .grand {
   margin-top: 0.5rem;
   padding-top: 0.6rem;
