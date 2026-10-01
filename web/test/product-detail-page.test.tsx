@@ -31,7 +31,7 @@ import { ProductDetailPage } from '@/features/catalog/ProductDetailPage.tsx';
 
 function product(overrides: Partial<Product> = {}): Product {
   return {
-    id: 1, sku: 'SKU-1', name: 'Product', displayName: 'Product', shortDisplayName: null, description: null,
+    id: 1, sku: 'SKU-1', name: 'Product', displayName: 'Product', shortDisplayName: null, shortDescription: null, description: null,
     categoryId: null, categoryName: null, sortOrder: 0, price: 29, inStock: true, lowStockAlert: false,
     isActive: true, isPreorder: false, preorderEta: null, pricingTiers: [], upsellProductIds: [],
     excludedFromFreeShipping: false, imageProductId: null, provenance: null,

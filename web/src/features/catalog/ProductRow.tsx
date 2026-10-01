@@ -6,6 +6,7 @@ import { StockChip } from '@/features/catalog/StockChip.tsx';
 import { MinusIcon, PlusIcon } from '@/components/icons.tsx';
 import { rowAnim } from '@/lib/motion.ts';
 import type { Product } from '@/types/catalog.ts';
+import { useOutOfStockInPriceSlot } from '@/features/catalog/stock-price.ts';
 import { bestTier } from '@/features/catalog/best-tier.ts';
 import { useCoreOptions } from '@/templates/hooks.ts';
 import { useText } from '@/text/runtime.tsx';
@@ -53,11 +54,14 @@ function RowGroup({ props, styleAttrs }: PartViewProps) {
 function RowName({ styleAttrs }: PartViewProps) {
   const { product, onSelect } = CardRowFamily.useData();
   return (
-    <h3 className={classes.name} {...styleAttrs}>
-      <button type="button" className={classes.open} onClick={() => onSelect?.(product)}>
-        {product.displayName}
-      </button>
-    </h3>
+    <>
+      <h3 className={classes.name} {...styleAttrs}>
+        <button type="button" className={classes.open} onClick={() => onSelect?.(product)}>
+          {product.displayName}
+        </button>
+      </h3>
+      {product.shortDescription ? <p className={classes.blurb}>{product.shortDescription}</p> : null}
+    </>
   );
 }
 
@@ -66,7 +70,9 @@ function RowMeta({ styleAttrs }: PartViewProps) {
   const { currency } = useSettings();
   const { showSku } = useCoreOptions();
   const { t } = useText();
-  const status = deriveStockStatus(product.inStock, product.lowStockAlert);
+  // When the price slot already says "Out of stock", the meta line does not repeat it.
+  const outInPrice = useOutOfStockInPriceSlot(product);
+  const status = outInPrice ? 'in' : deriveStockStatus(product.inStock, product.lowStockAlert);
   const best = bestTier(product);
   // With product codes hidden an ordinary line can have nothing to say under its name.
   const hasMeta = showSku || product.minOrderQuantity != null || !!best || product.isPreorder || status !== 'in';
@@ -90,7 +96,12 @@ function RowMeta({ styleAttrs }: PartViewProps) {
 function RowPrice({ styleAttrs }: PartViewProps) {
   const { product } = CardRowFamily.useData();
   const { currency } = useSettings();
-  return <p className={classes.price} data-sf-part="price" {...styleAttrs}>{formatMoney(product.price, currency)}</p>;
+  const outInPrice = useOutOfStockInPriceSlot(product);
+  return (
+    <p className={outInPrice ? `${classes.price} ${classes.priceOut}` : classes.price} data-sf-part="price" {...styleAttrs}>
+      {outInPrice ? <StockChip status="out" /> : formatMoney(product.price, currency)}
+    </p>
+  );
 }
 
 function RowAdd({ styleAttrs }: PartViewProps) {

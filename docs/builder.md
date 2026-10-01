@@ -852,12 +852,12 @@ document (route-bound, locked), each with one slot `content`.
 |---|---|
 | `CardTileImage` | `ProductImage variant="thumbnail"`, or the empty well when a sibling has a photo |
 | `CardTileGroup` | `kind` `body` → `<div class="body">`, `foot` → `<div class="foot">`; slot `items` |
-| `CardTileName` *(req.)* | `<h3><Link class="link">` — the stretched link |
+| `CardTileName` *(req.)* | `<h3><Link class="link">` — the stretched link; the product's `shortDescription`, when set, follows as a `<p class="blurb">` sibling (2 lines), so every card design gets it |
 | `CardTileFlags` | minimum, pre-order, stock — only when one applies |
 | `CardTilePrice` | `<p class="prices">` price + best tier |
 | `CardTileAdd` | `<div class="add">` `AddToCart size="sm"` |
 | `CardRowGroup` | `kind` `text` → `<div class="text">`; slot `items` |
-| `CardRowName` *(req.)* | `<h3><button class="open">` → the row's `onSelect` |
+| `CardRowName` *(req.)* | `<h3><button class="open">` → the row's `onSelect` (name wraps to 3 lines); the product's `shortDescription`, when set, follows as a `<p class="blurb">` sibling (2 lines), so every row design gets it |
 | `CardRowMeta` | SKU, minimum, tier, pre-order, stock — only when one applies |
 | `CardRowPrice` | `<p class="price" data-sf-part="price">` |
 | `CardRowAdd` | `<div class="gutter">` quick add / stepper; nothing when ordering is off |

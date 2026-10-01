@@ -28,7 +28,7 @@ function product(overrides: Partial<Product> = {}): Product {
     sku: 'SKU-1',
     name: 'Product',
     displayName: 'Product',
-    shortDisplayName: null,
+    shortDisplayName: null, shortDescription: null,
     description: null,
     categoryId: 1,
     categoryName: 'Peptides',

@@ -22,7 +22,7 @@ export const FIXTURE_ACCESS_KEY = 'preview';
  * and the card designer show. No photo, so nothing is fetched for it.
  */
 export const FIXTURE_PRODUCT: Product = {
-  id: 900201, sku: 'NB-TO-01', name: 'Northbound Trail Oats 1kg', displayName: 'Northbound Trail Oats 1kg', shortDisplayName: null,
+  id: 900201, sku: 'NB-TO-01', name: 'Northbound Trail Oats 1kg', displayName: 'Northbound Trail Oats 1kg', shortDisplayName: null, shortDescription: null,
   description: 'Rolled jumbo oats, milled slow and packed the same week. A kilo is about twenty trail breakfasts.',
   categoryId: null, categoryName: null, sortOrder: 0, price: 12, inStock: true, lowStockAlert: false, isActive: true,
   isPreorder: false, preorderEta: null, pricingTiers: [{ id: 1, minQuantity: 5, price: 10.5 }], upsellProductIds: [],

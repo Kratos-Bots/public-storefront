@@ -27,7 +27,7 @@ import type { TemplateModule } from '@/templates/slots.ts';
 
 function product(id: number, name: string): Product {
   return {
-    id, sku: `SKU-${id}`, name, displayName: name, shortDisplayName: null, description: null,
+    id, sku: `SKU-${id}`, name, displayName: name, shortDisplayName: null, shortDescription: null, description: null,
     categoryId: 1, categoryName: 'Peptides', sortOrder: id, price: 20, inStock: true, lowStockAlert: false,
     isActive: true, isPreorder: false, preorderEta: null, pricingTiers: [], upsellProductIds: [],
     excludedFromFreeShipping: false, imageProductId: null, provenance: null, minOrderQuantity: null, maxOrderQuantity: null,

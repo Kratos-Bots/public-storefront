@@ -14,7 +14,7 @@ export const CATEGORIES: Category[] = [
 
 export function baseProduct(o: Partial<Product> = {}): Product {
   return {
-    id: 1, sku: 'NB-OAT-1', name: 'Trail Oats 1kg', displayName: 'Trail Oats 1kg', shortDisplayName: null, description: null,
+    id: 1, sku: 'NB-OAT-1', name: 'Trail Oats 1kg', displayName: 'Trail Oats 1kg', shortDisplayName: null, shortDescription: null, description: null,
     categoryId: 2, categoryName: 'Pantry > Oats', sortOrder: 0, price: 12, inStock: true, lowStockAlert: false,
     isActive: true, isPreorder: false, preorderEta: null, pricingTiers: [], upsellProductIds: [],
     excludedFromFreeShipping: false, imageProductId: null, provenance: null, minOrderQuantity: null, maxOrderQuantity: null, ...o,

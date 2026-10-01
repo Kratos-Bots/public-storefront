@@ -20,7 +20,7 @@ function product(overrides: Partial<Product> = {}): Product {
     sku: 'BPC-157-5MG',
     name: 'BPC-157 5mg',
     displayName: 'BPC-157 5mg',
-    shortDisplayName: null,
+    shortDisplayName: null, shortDescription: null,
     description: null,
     categoryId: 1,
     categoryName: 'Peptides',

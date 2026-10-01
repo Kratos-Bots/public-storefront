@@ -2,6 +2,7 @@ import type { StyleAttrs } from '@/builder/define.ts';
 import { Link } from 'react-router';
 import { useUiStore } from '@/stores/ui.ts';
 import { useText } from '@/text/runtime.tsx';
+import { useCoreOptions } from '@/templates/hooks.ts';
 import type { CategoryNode } from '@/features/catalog/category-tree.ts';
 import classes from '@/features/catalog/CategoryNav.module.css';
 
@@ -36,7 +37,8 @@ export interface CategoryTreeProps {
 
 /** The index: one row per category, count right-aligned, sub-categories indented. */
 export function CategoryTree({ nodes, activeId, onNavigate, depth = 0, glyphs }: CategoryTreeProps) {
-  const showGlyphs = glyphs ?? treeHasEmoji(nodes);
+  const { showCategoryEmoji } = useCoreOptions();
+  const showGlyphs = showCategoryEmoji && (glyphs ?? treeHasEmoji(nodes));
 
   return (
     <ul className={classes.list} data-depth={depth}>
@@ -88,7 +90,8 @@ export interface CategoryIndexProps {
  * the tree can never drift apart. Callers supply the surrounding `<nav>`.
  */
 export function CategoryIndex({ tree, total, activeId, onNavigate }: CategoryIndexProps) {
-  const glyphs = treeHasEmoji(tree);
+  const { showCategoryEmoji } = useCoreOptions();
+  const glyphs = showCategoryEmoji && treeHasEmoji(tree);
   const { t } = useText();
 
   return (
@@ -126,6 +129,7 @@ export interface CategoryNavProps {
  */
 export function CategoryNav({ tree, total, activeId, navAttrs }: CategoryNavProps) {
   const openFilters = useUiStore((s) => s.open);
+  const { showCategoryEmoji } = useCoreOptions();
   const { t } = useText();
   if (tree.length === 0) return null;
 
@@ -144,7 +148,7 @@ export function CategoryNav({ tree, total, activeId, navAttrs }: CategoryNavProp
               className={classes.chip}
               aria-current={node.id === activeId ? 'page' : undefined}
             >
-              {node.emoji ? <span aria-hidden>{node.emoji}</span> : null}
+              {showCategoryEmoji && node.emoji ? <span aria-hidden>{node.emoji}</span> : null}
               {node.name}
               <span className={classes.chipCount}>{node.productCount}</span>
             </Link>

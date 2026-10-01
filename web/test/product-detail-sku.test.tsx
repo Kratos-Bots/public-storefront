@@ -36,7 +36,7 @@ import { lookupManifest } from '@/templates/registry.ts';
 import type { TemplateModule } from '@/templates/slots.ts';
 
 const PRODUCT: Product = {
-  id: 1, sku: 'BPC-157-5MG', name: 'BPC-157 5mg', displayName: 'BPC-157 5mg', shortDisplayName: null, description: null,
+  id: 1, sku: 'BPC-157-5MG', name: 'BPC-157 5mg', displayName: 'BPC-157 5mg', shortDisplayName: null, shortDescription: null, description: null,
   categoryId: null, categoryName: null, sortOrder: 0, price: 29, inStock: true, lowStockAlert: false,
   isActive: true, isPreorder: false, preorderEta: null, pricingTiers: [], upsellProductIds: [],
   excludedFromFreeShipping: false, imageProductId: null, provenance: null,

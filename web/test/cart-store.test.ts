@@ -3,7 +3,7 @@ import { useCartStore, selectCount, selectSubtotal } from '@/stores/cart.ts';
 import type { Product } from '@/types/catalog.ts';
 
 const p = (id: number, price = 10, tiers: Product['pricingTiers'] = []): Product => ({
-  id, sku: `S${id}`, name: `P${id}`, displayName: `P${id}`, shortDisplayName: null, description: null, categoryId: 1, categoryName: 'C',
+  id, sku: `S${id}`, name: `P${id}`, displayName: `P${id}`, shortDisplayName: null, shortDescription: null, description: null, categoryId: 1, categoryName: 'C',
   sortOrder: 0, price, inStock: true, lowStockAlert: false, isActive: true, isPreorder: false, preorderEta: null, pricingTiers: tiers,
   upsellProductIds: [], excludedFromFreeShipping: false, imageProductId: null, provenance: null,
   minOrderQuantity: null, maxOrderQuantity: null,

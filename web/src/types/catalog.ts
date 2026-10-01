@@ -7,6 +7,8 @@ export interface Product {
   excludedFromFreeShipping: boolean; imageProductId: number | null; provenance: string | null;
   /** Resolved for this shopper's customer group (override → product → parent chain). null = no limit. */
   minOrderQuantity: number | null; maxOrderQuantity: number | null;
+  /** Up to 160 characters shown under the name in lists and cards. Absent on an older backend — treat like null. */
+  shortDescription: string | null;
 }
 export interface Category { id: number; name: string; slug: string | null; parentId: number | null; sortOrder: number; emoji: string | null }
 export interface Catalog { products: Product[]; categories: Category[] }

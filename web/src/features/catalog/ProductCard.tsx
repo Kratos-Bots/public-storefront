@@ -11,6 +11,7 @@ import { CardTileFamily, type CardData } from '@/builder/families.ts';
 import { fixedSlot, type FamilyValue, type PartViewProps } from '@/builder/parts.ts';
 import type { SlotRender } from '@/builder/define.ts';
 import type { Product } from '@/types/catalog.ts';
+import { useOutOfStockInPriceSlot } from '@/features/catalog/stock-price.ts';
 import { bestTier } from '@/features/catalog/best-tier.ts';
 import classes from '@/features/catalog/ProductCard.module.css';
 import imageClasses from '@/features/catalog/ProductImage.module.css';
@@ -70,18 +71,23 @@ function TileGroup({ props, styleAttrs }: PartViewProps) {
 function TileName({ styleAttrs }: PartViewProps) {
   const { product } = CardTileFamily.useData();
   return (
-    <h3 className={classes.name} {...styleAttrs}>
-      <Link to={`/p/${product.id}`} className={classes.link}>
-        {product.displayName}
-      </Link>
-    </h3>
+    <>
+      <h3 className={classes.name} {...styleAttrs}>
+        <Link to={`/p/${product.id}`} className={classes.link}>
+          {product.displayName}
+        </Link>
+      </h3>
+      {product.shortDescription ? <p className={classes.blurb}>{product.shortDescription}</p> : null}
+    </>
   );
 }
 
 function TileFlags({ styleAttrs }: PartViewProps) {
   const { product } = CardTileFamily.useData();
   const { t } = useText();
-  const status = deriveStockStatus(product.inStock, product.lowStockAlert);
+  // When the price slot already says "Out of stock", the flags do not repeat it.
+  const outInPrice = useOutOfStockInPriceSlot(product);
+  const status = outInPrice ? 'in' : deriveStockStatus(product.inStock, product.lowStockAlert);
   if (!(product.isPreorder || status !== 'in' || product.minOrderQuantity != null)) return null;
   return (
     <div className={classes.flags} {...styleAttrs}>
@@ -98,10 +104,11 @@ function TilePrice({ styleAttrs }: PartViewProps) {
   const { product } = CardTileFamily.useData();
   const { currency } = useSettings();
   const best = bestTier(product);
+  const outInPrice = useOutOfStockInPriceSlot(product);
   return (
     <p className={classes.prices} {...styleAttrs}>
-      <span className={classes.price} data-sf-part="price">{formatMoney(product.price, currency)}</span>
-      {best ? (
+      <span className={classes.price} data-sf-part="price">{outInPrice ? <StockChip status="out" /> : formatMoney(product.price, currency)}</span>
+      {best && !outInPrice ? (
         <span className={classes.tier}>
           {best.minQuantity}+ {formatMoney(best.price, currency)}
         </span>
