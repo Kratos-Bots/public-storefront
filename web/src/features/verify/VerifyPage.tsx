@@ -1,9 +1,14 @@
-import { useId, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link } from 'react-router';
 import { z } from 'zod';
 import { verifyProductUnit } from '@/api/verify.ts';
 import type { VerificationResult } from '@/api/verify.ts';
+import type { SlotRender, StyleAttrs } from '@/builder/define.ts';
+import { VerifyFamily, type VerifyData, type VerifyField, type VerifyPreview, type VerifyStatus } from '@/builder/family-verify.ts';
+import { usePreviewFixture } from '@/builder/mode.ts';
+import type { FamilyValue, PartViewProps } from '@/builder/parts.ts';
+import { defaultSlotRenders } from '@/builder/render.tsx';
 import { ContactLinks } from '@/components/ContactLinks.tsx';
 import { CheckIcon } from '@/components/icons.tsx';
 import { dateTimeFormat } from '@/lib/format.ts';
@@ -16,8 +21,10 @@ const schema = z.object({
   authCode: z.string().trim().regex(/^\d+$/, { error: () => textKey('verify.errors.digitsOnly') }),
 });
 
-type Status = 'idle' | 'pending' | 'verified' | 'invalid' | 'error';
 type FieldErrors = { verificationCode?: string; authCode?: string };
+
+/** The VerifyForm container's one slot (spec §5.8). */
+export interface VerifySlots { content: SlotRender }
 
 // Deliberately its own format, not `lib/format.ts`'s `formatDate`: a
 // certificate reads as data (2-digit day, short month), not prose, and a
@@ -32,13 +39,16 @@ function formatDate(iso: string): string {
  * form-then-verdict shape as the rest of the shop's lookup pages, but the
  * verdict here is about the *unit*, not an order: genuine and in date,
  * genuine but expired, or a pair that doesn't match anything on file.
+ * A container of verify parts (spec 5.8); without `slots` it draws the
+ * default arrangement, exactly v0.7.0's.
  */
-export function VerifyPage() {
-  const { t, msg } = useText();
+export function VerifyPage({ slots }: { slots?: VerifySlots } = {}) {
+  const legacy = useMemo(() => (slots ? null : (defaultSlotRenders('VerifyForm', 'storefront', {}, 'verify') as unknown as VerifySlots)), [slots]);
+  const preview = usePreviewFixture<VerifyPreview>('VerifyForm');
   const [verificationCode, setVerificationCode] = useState('');
   const [authCode, setAuthCode] = useState('');
   const [errors, setErrors] = useState<FieldErrors>({});
-  const [status, setStatus] = useState<Status>('idle');
+  const [status, setStatus] = useState<VerifyStatus>('idle');
   const [result, setResult] = useState<VerificationResult | null>(null);
 
   const codeId = useId();
@@ -49,15 +59,15 @@ export function VerifyPage() {
   // Editing either field drops a verdict already on screen — a stale
   // "Authentic" or "Not verified" must never survive an edit to the pair it
   // was answering.
-  function edit(setter: (v: string) => void, value: string) {
-    setter(value);
+  function onChange(field: VerifyField, value: string) {
+    (field === 'verificationCode' ? setVerificationCode : setAuthCode)(value);
     if (status !== 'idle' && status !== 'pending') {
       setStatus('idle');
       setResult(null);
     }
   }
 
-  async function onSubmit(e: FormEvent) {
+  async function submit(e: FormEvent) {
     e.preventDefault();
     const parsed = schema.safeParse({ verificationCode, authCode });
     if (!parsed.success) {
@@ -76,102 +86,137 @@ export function VerifyPage() {
       const outcome = await verifyProductUnit(parsed.data.verificationCode, Number(parsed.data.authCode));
       if (outcome.status === 'verified') {
         setResult(outcome.data);
-        setStatus('verified');
+        setStatus('authentic');
       } else {
-        setStatus('invalid');
+        setStatus('not-verified');
       }
     } catch {
       setStatus('error');
     }
   }
 
+  // The editor previews a verdict from a fixture (no network); shoppers never have one.
+  const shownStatus = preview ? preview.status : status;
+  const shownResult = preview ? (preview.result ?? null) : result;
+  const data: VerifyData = {
+    status: shownStatus, result: shownResult, values: { verificationCode, authCode }, errors, onChange,
+    onSubmit: (e) => void submit(e), ids: { code: codeId, auth: authId, codeError: codeErrorId, authError: authErrorId },
+  };
+
+  const s = slots ?? legacy!;
   return (
-    <div className={classes.page}>
-      <div className={classes.masthead}>
-        <p className={classes.eyebrow}>{t('verify.page.eyebrow')}</p>
-        <h1 className={classes.title}>{t('verify.page.title')}</h1>
-        <p className={classes.lead}>{t('verify.page.lead')}</p>
-      </div>
+    <VerifyFamily.Provider value={{ data, views: VERIFY_VIEWS }}>
+      {s.content({ className: classes.page })}
+    </VerifyFamily.Provider>
+  );
+}
 
-      <form className={classes.form} onSubmit={(e) => void onSubmit(e)}>
-        <div className={classes.field}>
-          <div className={classes.fieldHead}>
-            <label htmlFor={codeId}>{t('verify.form.codeLabel')}</label>
-            {errors.verificationCode ? (
-              <span id={codeErrorId} className={classes.fieldError} role="alert">
-                {msg(errors.verificationCode)}
-              </span>
-            ) : null}
-          </div>
-          <input
-            id={codeId}
-            className={classes.input}
-            type="text"
-            value={verificationCode}
-            onChange={(e) => edit(setVerificationCode, e.target.value)}
-            placeholder={t('verify.form.codePlaceholder')}
-            autoComplete="off"
-            spellCheck={false}
-            autoCapitalize="off"
-            aria-invalid={errors.verificationCode ? 'true' : undefined}
-            aria-describedby={errors.verificationCode ? codeErrorId : undefined}
-          />
-        </div>
-
-        <div className={classes.field}>
-          <div className={classes.fieldHead}>
-            <label htmlFor={authId}>{t('verify.form.authLabel')}</label>
-            {errors.authCode ? (
-              <span id={authErrorId} className={classes.fieldError} role="alert">
-                {msg(errors.authCode)}
-              </span>
-            ) : null}
-          </div>
-          <input
-            id={authId}
-            className={classes.input}
-            type="text"
-            inputMode="numeric"
-            value={authCode}
-            onChange={(e) => edit(setAuthCode, e.target.value)}
-            placeholder="123456"
-            autoComplete="off"
-            spellCheck={false}
-            autoCapitalize="off"
-            aria-invalid={errors.authCode ? 'true' : undefined}
-            aria-describedby={errors.authCode ? authErrorId : undefined}
-          />
-        </div>
-
-        <button
-          className={classes.submit}
-          type="submit"
-          disabled={status === 'pending'}
-          data-sf-part="button"
-          data-variant="filled"
-        >
-          {status === 'pending' ? t('common.status.checking') : t('verify.form.submit')}
-        </button>
-      </form>
-
-      {status === 'verified' && result ? <VerifiedCard result={result} /> : null}
-      {status === 'invalid' ? <InvalidCard /> : null}
-      {status === 'error' ? <ErrorCard /> : null}
-
-      <Link to="/" className={classes.back}>
-        {t('common.actions.backToShop')}
-      </Link>
+function IntroView({ styleAttrs }: PartViewProps) {
+  const { t } = useText();
+  return (
+    <div className={classes.masthead} {...styleAttrs}>
+      <p className={classes.eyebrow}>{t('verify.page.eyebrow')}</p>
+      <h1 className={classes.title}>{t('verify.page.title')}</h1>
+      <p className={classes.lead}>{t('verify.page.lead')}</p>
     </div>
   );
 }
 
-function VerifiedCard({ result }: { result: VerificationResult }) {
+function FieldsView({ styleAttrs }: PartViewProps) {
+  const { t, msg } = useText();
+  const { status, values, errors, onChange, onSubmit, ids } = VerifyFamily.useData();
+  return (
+    <form className={classes.form} onSubmit={onSubmit} {...styleAttrs}>
+      <div className={classes.field}>
+        <div className={classes.fieldHead}>
+          <label htmlFor={ids.code}>{t('verify.form.codeLabel')}</label>
+          {errors.verificationCode ? (
+            <span id={ids.codeError} className={classes.fieldError} role="alert">
+              {msg(errors.verificationCode)}
+            </span>
+          ) : null}
+        </div>
+        <input
+          id={ids.code}
+          className={classes.input}
+          type="text"
+          value={values.verificationCode}
+          onChange={(e) => onChange('verificationCode', e.target.value)}
+          placeholder={t('verify.form.codePlaceholder')}
+          autoComplete="off"
+          spellCheck={false}
+          autoCapitalize="off"
+          aria-invalid={errors.verificationCode ? 'true' : undefined}
+          aria-describedby={errors.verificationCode ? ids.codeError : undefined}
+        />
+      </div>
+
+      <div className={classes.field}>
+        <div className={classes.fieldHead}>
+          <label htmlFor={ids.auth}>{t('verify.form.authLabel')}</label>
+          {errors.authCode ? (
+            <span id={ids.authError} className={classes.fieldError} role="alert">
+              {msg(errors.authCode)}
+            </span>
+          ) : null}
+        </div>
+        <input
+          id={ids.auth}
+          className={classes.input}
+          type="text"
+          inputMode="numeric"
+          value={values.authCode}
+          onChange={(e) => onChange('authCode', e.target.value)}
+          placeholder="123456"
+          autoComplete="off"
+          spellCheck={false}
+          autoCapitalize="off"
+          aria-invalid={errors.authCode ? 'true' : undefined}
+          aria-describedby={errors.authCode ? ids.authError : undefined}
+        />
+      </div>
+
+      <button
+        className={classes.submit}
+        type="submit"
+        disabled={status === 'pending'}
+        data-sf-part="button"
+        data-variant="filled"
+      >
+        {status === 'pending' ? t('common.status.checking') : t('verify.form.submit')}
+      </button>
+    </form>
+  );
+}
+
+function ResultView({ styleAttrs }: PartViewProps) {
+  const { status, result } = VerifyFamily.useData();
+  if ((status === 'authentic' || status === 'expired') && result) return <VerifiedCard result={result} styleAttrs={styleAttrs} />;
+  if (status === 'not-verified') return <InvalidCard styleAttrs={styleAttrs} />;
+  if (status === 'error') return <ErrorCard styleAttrs={styleAttrs} />;
+  return null;
+}
+
+function BackView({ styleAttrs }: PartViewProps) {
+  const { t } = useText();
+  return (
+    <Link to="/" className={classes.back} {...styleAttrs}>
+      {t('common.actions.backToShop')}
+    </Link>
+  );
+}
+
+const VERIFY_VIEWS: FamilyValue<VerifyData>['views'] = {
+  VerifyIntro: IntroView, VerifyFields: FieldsView, VerifyResult: ResultView, VerifyBack: BackView,
+};
+
+function VerifiedCard({ result, styleAttrs }: { result: VerificationResult; styleAttrs?: StyleAttrs }) {
   const { t } = useText();
   const expiry = new Date(result.expiryDate);
   const expired = !Number.isNaN(expiry.getTime()) && expiry.getTime() < Date.now();
 
   return (
-    <div className={`${classes.screen} ${FADE}`} data-tone="success">
+    <div className={`${classes.screen} ${FADE}`} data-tone="success" {...styleAttrs}>
       <div className={classes.screenBadge}>
         <span className={classes.ring} aria-hidden>
           <CheckIcon size={11} />
@@ -194,10 +239,10 @@ function VerifiedCard({ result }: { result: VerificationResult }) {
   );
 }
 
-function InvalidCard() {
+function InvalidCard({ styleAttrs }: { styleAttrs?: StyleAttrs }) {
   const { t } = useText();
   return (
-    <div className={`${classes.screen} ${FADE}`} data-tone="danger">
+    <div className={`${classes.screen} ${FADE}`} data-tone="danger" {...styleAttrs}>
       <p className={classes.screenHead} data-tone="danger">
         {t('verify.result.invalidHead')}
       </p>
@@ -210,10 +255,10 @@ function InvalidCard() {
   );
 }
 
-function ErrorCard() {
+function ErrorCard({ styleAttrs }: { styleAttrs?: StyleAttrs }) {
   const { t } = useText();
   return (
-    <div className={`${classes.screen} ${FADE}`} data-tone="warn">
+    <div className={`${classes.screen} ${FADE}`} data-tone="warn" {...styleAttrs}>
       <p className={classes.screenHead} data-tone="warn">
         {t('verify.result.errorHead')}
       </p>
