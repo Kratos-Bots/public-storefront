@@ -10,6 +10,9 @@ import type { Profile, RedeemOptions } from '@/types/profile.ts';
 interface Q<T> { data?: T; isPending: boolean; isError: boolean; error?: unknown; refetch: () => void }
 interface OrdersQ { data?: { pages: Array<{ data: OrderSummary[]; meta: { totalItems: number; page: number; hasNextPage: boolean } }> }; isPending: boolean; isError: boolean; hasNextPage: boolean; isFetchingNextPage: boolean; fetchNextPage: () => void; refetch: () => void }
 
+// The goldens were captured in Europe/London: pin it so a UTC or US machine formats the same dates and times.
+vi.hoisted(() => { process.env.TZ = 'Europe/London'; });
+
 const s = vi.hoisted(() => ({
   profile: null as unknown, orders: null as unknown, order: null as unknown, redeem: null as unknown,
   inTelegram: false, layout: 'storefront', mode: 'off', links: { whatsapp: null, telegram: null } as { whatsapp: string | null; telegram: string | null },
