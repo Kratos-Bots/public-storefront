@@ -24,8 +24,8 @@ export const CHECKOUT_CONTAINER: ContainerSpec = {
   required: ['CheckoutHeading', 'CheckoutContact', 'CheckoutAddress', 'CheckoutShipping', 'CheckoutPayment', 'CheckoutReview', 'CheckoutSummary'],
   unique: ['CheckoutHeading', 'CheckoutProgress', 'CheckoutContact', 'CheckoutAddress', 'CheckoutShipping', 'CheckoutPayment', 'CheckoutReview', 'CheckoutCoupon', 'CheckoutNotes', 'CheckoutSummary'],
   noHide: ['CheckoutCoupon', 'CheckoutNotes'],
-  // Alphabetical, as the editor's allow list is (builder-editor-fields compares the two in order).
-  slotAccepts: { steps: ['CheckoutAddress', 'CheckoutContact', 'CheckoutPayment', 'CheckoutReview', 'CheckoutShipping'] },
+  // Default order; the editor's allow list for this slot follows it (derive-fields keeps a slotAccepts list's own order).
+  slotAccepts: { steps: ['CheckoutContact', 'CheckoutAddress', 'CheckoutShipping', 'CheckoutPayment', 'CheckoutReview'] },
   homes: {
     CheckoutHeading: ['CheckoutFlow.head'], CheckoutProgress: ['CheckoutFlow.lead'], CheckoutSummary: ['CheckoutFlow.aside'],
     CheckoutContact: ['CheckoutFlow.steps'], CheckoutAddress: ['CheckoutFlow.steps'], CheckoutShipping: ['CheckoutFlow.steps'],

@@ -28,6 +28,8 @@ import { blockDef } from '@/builder/rules.ts';
 import { registerLiveCanvas } from '@/builder/editor/late-upload.ts';
 import type { PreviewAs } from '@/builder/mode.ts';
 import { isCardKey, type DocKey, type Issue } from '@/builder/types.ts';
+import { IssueQuickFix } from '@/builder/editor/IssueQuickFix.tsx';
+import { PuckHandleBridge } from '@/builder/editor/LegalityGuard.tsx';
 import styles from '@/builder/editor/Editor.module.css';
 
 const domId = (reactId: string) => reactId.replace(/[^A-Za-z0-9_-]/g, '');
@@ -557,7 +559,7 @@ let pendingJump: { docKey: DocKey; blockId?: string } | null = null;
 
 /** Rules whose id names a block first: `part-required:ProductDetail.ProductTitle` → the container. */
 export const BLOCK_RULE_RE =
-  /^(?:field|placement|layout|at-most-one|exactly-one|part-required|part-unique|part-requires|part-placement|slot-accepts|slot-rejects|hidden-required):([A-Za-z0-9]+)/;
+  /^(?:field|placement|layout|at-most-one|exactly-one|part-required|part-unique|part-requires|part-home|part-order|part-placement|slot-accepts|slot-rejects|hidden-required):([A-Za-z0-9]+)/;
 
 /** What part of the page an issue is about: a block's name, the page settings, or nothing more. */
 function issuePart(issue: Issue): string | null {
@@ -672,6 +674,7 @@ function IssuesMenu() {
                         <span>{issue.message}</span>
                       </span>
                     </button>
+                    <IssueQuickFix issue={issue} />
                   </li>
                 );
               })}
@@ -787,6 +790,7 @@ export function EditorHeader(_props: { actions: ReactNode; children: ReactNode }
       </div>
     </header>
     {overlay && <TextOverlay onClose={closeOverlay} />}
+    <PuckHandleBridge />
     </>
   );
 }

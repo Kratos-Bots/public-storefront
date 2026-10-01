@@ -8,7 +8,11 @@ import type { CardKey, ComponentData, DocKey, LayoutKind } from '@/builder/types
 /** One row of the container panel's Parts list (spec §11). */
 export interface PartState { type: string; label: string; present: boolean; required: boolean }
 
-const isGroup = (type: string) => (blockDef(type)?.slots.length ?? 0) > 0;
+/** A wrapper, not a piece: has slots and no `defaultSlots` (a checkout step has both, so it is a part with its own slots). */
+const isGroup = (type: string) => {
+  const def = blockDef(type);
+  return (def?.slots.length ?? 0) > 0 && !def?.part?.defaultSlots;
+};
 const asItems = (v: unknown): ComponentData[] => (Array.isArray(v) ? (v as ComponentData[]) : []);
 const slotsOf = (c: ComponentData): readonly string[] => blockDef(c.type)?.slots ?? [];
 
@@ -81,6 +85,69 @@ function insertAfter(items: readonly ComponentData[], anchor: string, node: Comp
 
 const withSlot = (item: ComponentData, slot: string, items: ComponentData[]): ComponentData => ({ ...item, props: { ...item.props, [slot]: items } });
 
+/** The first component of `type` anywhere under `items` (every slot) replaced by `fn` of it, or null when none. */
+function updateFirst(items: readonly ComponentData[], type: string, fn: (c: ComponentData) => ComponentData): ComponentData[] | null {
+  for (let i = 0; i < items.length; i += 1) {
+    const c = items[i]!;
+    if (c.type === type) return items.map((x, j) => (j === i ? fn(c) : x));
+    for (const s of slotsOf(c)) {
+      const next = updateFirst(asItems(c.props[s]), type, fn);
+      if (next) return items.map((x, j) => (j === i ? { ...x, props: { ...x.props, [s]: next } } : x));
+    }
+  }
+  return null;
+}
+
+/** Where the default arrangement puts `type` when that is inside a part with slots of its own (a checkout step): that part and slot. */
+function defaultHolder(defaults: Record<string, ComponentData[]>, type: string): { holder: ComponentData; slot: string } | null {
+  const search = (items: readonly ComponentData[]): { holder: ComponentData; slot: string } | null => {
+    for (const c of items) {
+      const holds = !!blockDef(c.type)?.part?.defaultSlots;
+      for (const s of slotsOf(c)) {
+        if (holds && containsType(asItems(c.props[s]), type)) return { holder: c, slot: s };
+        const deeper = search(asItems(c.props[s]));
+        if (deeper) return deeper;
+      }
+    }
+    return null;
+  };
+  return search(Object.values(defaults).flat());
+}
+
+/**
+ * Default-holder placement: a part whose default home is a slot of a part with its own slots goes
+ * into that holder's same slot (the first such holder in the container), after its default
+ * predecessor there, else first — never straight into the container's own slot. Null when the
+ * default home is not in a holder, or the container has no such holder.
+ */
+function withPartInHolder(
+  item: ComponentData, type: string, defaults: Record<string, ComponentData[]>, taken: ReadonlySet<string>,
+): ComponentData | null {
+  const found = defaultHolder(defaults, type);
+  if (!found) return null;
+  const { holder, slot } = found;
+  const defaultItems = asItems(holder.props[slot]);
+  const order = flatTypes(defaultItems);
+  const depth = Math.max(0, depthOf(defaultItems, type));
+  let result: ComponentData | null = null;
+  for (const s of slotsOf(item)) {
+    const next = updateFirst(asItems(item.props[s]), holder.type, (h) => {
+      const base = partId(String(h.props.id), type);
+      let id = base;
+      for (let n = 2; taken.has(id); n += 1) id = `${base}-${n}`;
+      const node: ComponentData = { type, props: { id } };
+      const inside = asItems(h.props[slot]);
+      for (let i = order.indexOf(type) - 1; i >= 0; i -= 1) {
+        const placed = insertAfter(inside, order[i]!, node, depth);
+        if (placed) return withSlot(h, slot, placed);
+      }
+      return withSlot(h, slot, [node, ...inside]);
+    });
+    if (next) { result = withSlot(item, s, next); break; }
+  }
+  return result;
+}
+
 /**
  * The container with part `type` added where the default arrangement puts it: after the nearest
  * default predecessor present (anywhere in the container), else at the start of its default slot.
@@ -89,6 +156,8 @@ const withSlot = (item: ComponentData, slot: string, items: ComponentData[]): Co
 export function withPartAdded(item: ComponentData, type: string, layout: LayoutKind, taken: ReadonlySet<string>): ComponentData {
   const def = blockDef(item.type)!;
   const defaults = defaultsOf(item, layout);
+  const held = withPartInHolder(item, type, defaults, taken);
+  if (held) return held;
   const home = def.slots.find((s) => flatTypes(defaults[s] ?? []).includes(type)) ?? def.container!.insertSlot;
   const order = flatTypes(defaults[home] ?? []);
   const depth = Math.max(0, depthOf(defaults[home] ?? [], type));
@@ -151,6 +220,22 @@ export function headerNotices(item: ComponentData, layout: LayoutKind): string[]
   const tall = (items: readonly ComponentData[]): boolean => items.some((c) =>
     (!blockDef(c.type)?.part && !BAR_SAFE.has(c.type)) || slotsOf(c).some((s) => tall(asItems(c.props[s]))));
   if (tall(inside)) out.push(HEADER_TALL_NOTICE);
+  return out;
+}
+
+export const CHECKOUT_COUPON_OFF_NOTICE = "Shoppers can't enter discount codes; a code saved in a shopper's browser is ignored.";
+export const CHECKOUT_NOTES_OFF_NOTICE = "Order notes are off; notes saved in a shopper's browser are ignored.";
+export const CHECKOUT_ASIDE_NOTICE = 'On phones the Order summary column shows above the form.';
+export const CHECKOUT_AFTER_NOTICE = 'Content after the form shows under the Place order button on the review step, and under Continue on the others.';
+
+/** Non-blocking notices for a selected checkout container: what a missing part switches off, and where things land. */
+export function checkoutNotices(item: ComponentData): string[] {
+  if (item.type !== 'CheckoutFlow') return [];
+  const inside = slotsOf(item).flatMap((s) => asItems(item.props[s]));
+  const out: string[] = [];
+  if (!containsType(inside, 'CheckoutCoupon')) out.push(CHECKOUT_COUPON_OFF_NOTICE);
+  if (!containsType(inside, 'CheckoutNotes')) out.push(CHECKOUT_NOTES_OFF_NOTICE);
+  out.push(CHECKOUT_ASIDE_NOTICE, CHECKOUT_AFTER_NOTICE);
   return out;
 }
 

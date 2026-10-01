@@ -1,0 +1,28 @@
+/* Quick fix under an issue row (the issues panel is a floating panel: neutral --sfb-* tokens). */
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px 8px 40px;
+  --sfb-ink: #1d2433;
+  --sfb-muted: #5b6475;
+  --sfb-line-strong: #b8bfcc;
+  --sfb-surface: #ffffff;
+  --sfb-wash: #f3f5f8;
+  --sfb-accent: #3355ff;
+  --sfb-radius: 6px;
+}
+.fix {
+  min-block-size: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--sfb-line-strong);
+  border-radius: var(--sfb-radius);
+  background: var(--sfb-surface);
+  color: var(--sfb-ink);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+.fix:hover { background: var(--sfb-wash); }
+.fix:focus-visible { outline: 2px solid var(--sfb-accent); outline-offset: 1px; }
+.status { font-size: 12px; color: var(--sfb-muted); }

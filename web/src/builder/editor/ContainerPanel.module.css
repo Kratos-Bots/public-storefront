@@ -194,3 +194,55 @@
 @media (prefers-reduced-motion: reduce) {
   .add, .secondary { transition: none; }
 }
+
+/* ---- step order (the checkout container) ---- */
+.steps {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.step {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) 44px 44px;
+  align-items: center;
+  column-gap: 6px;
+  min-block-size: 44px;
+}
+.stepNumber {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--sfb-muted);
+}
+.stepLabel {
+  overflow-wrap: anywhere;
+  font-weight: 500;
+}
+.stepMove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 44px;
+  min-block-size: 44px;
+  border: 1px solid var(--sfb-line-strong);
+  border-radius: var(--sfb-radius);
+  background: var(--sfb-surface);
+  color: var(--sfb-ink);
+  font: inherit;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+.stepMove:hover:not(:disabled) { background: var(--sfb-wash); border-color: var(--sfb-muted); }
+.stepMove:disabled { color: var(--sfb-line-strong); border-color: var(--sfb-line); cursor: not-allowed; }
+.stepMove:focus-visible { outline: 2px solid var(--sfb-accent); outline-offset: 1px; }
+.stepNote {
+  grid-column: 2 / -1;
+  padding-block-end: 4px;
+  font-size: 12px;
+  color: var(--sfb-muted);
+}
+@media (prefers-reduced-motion: reduce) {
+  .stepMove { transition: none; }
+}

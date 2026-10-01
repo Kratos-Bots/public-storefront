@@ -2,11 +2,17 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useSettingsQuery } from '@/app/settings.ts';
 import { blockDef } from '@/builder/rules.ts';
 import type { ComponentData, LayoutKind } from '@/builder/types.ts';
-import { ROOT_ZONE } from '@/builder/editor/config.ts';
 import { forEachComponent } from '@/builder/editor/page-set.ts';
 import { useEditorStore } from '@/builder/editor/store.ts';
 import { useGetPuck, usePuck } from '@/builder/editor/use-puck.ts';
-import { CARD_LINKS, ownerBlockCount, headerNotices, partsHeading, partStates, withDefaultArrangement, withPartAdded, type PartState } from '@/builder/editor/container-parts.ts';
+import {
+  CARD_LINKS, checkoutNotices, ownerBlockCount, headerNotices, partsHeading, partStates, withPartAdded, type PartState,
+  CHECKOUT_AFTER_NOTICE, CHECKOUT_ASIDE_NOTICE, CHECKOUT_COUPON_OFF_NOTICE, CHECKOUT_NOTES_OFF_NOTICE,
+} from '@/builder/editor/container-parts.ts';
+import { applyToBlock, resetArrangement } from '@/builder/editor/container-actions.ts';
+import { moveStep, storedStepOrder, withStepOrder, STEP_LABEL } from '@/builder/editor/step-order.ts';
+import { StepOrderControl } from '@/builder/editor/StepOrderControl.tsx';
+import type { StepKind } from '@/builder/family-checkout.ts';
 import { LockIcon, PlusIcon, TipIcon, WarnIcon } from '@/builder/editor/icons.tsx';
 import styles from '@/builder/editor/ContainerPanel.module.css';
 
@@ -14,6 +20,8 @@ import styles from '@/builder/editor/ContainerPanel.module.css';
 export const WHOLESALE_NOTICE = 'Wholesale mode is on: shoppers see the trade list here. This arrangement shows when wholesale mode is off.';
 export const PINNED_ADD_NOTICE = "In the menu and web app the add to cart button is pinned to the sheet's footer, within thumb reach, so it isn't part of this arrangement.";
 export const RESET_HINT = 'Puts every part back where it starts. Your content blocks inside are removed; settings are kept.';
+
+export { CHECKOUT_AFTER_NOTICE, CHECKOUT_ASIDE_NOTICE, CHECKOUT_COUPON_OFF_NOTICE, CHECKOUT_NOTES_OFF_NOTICE };
 
 const WHOLESALE_CONTAINERS = new Set(['ProductGrid', 'ProductList']);
 
@@ -23,6 +31,7 @@ function notices(item: ComponentData, layout: LayoutKind, wholesale: boolean): s
   if (wholesale && WHOLESALE_CONTAINERS.has(type)) out.push(WHOLESALE_NOTICE);
   if (type === 'ProductDetail' && layout !== 'storefront') out.push(PINNED_ADD_NOTICE);
   out.push(...headerNotices(item, layout));
+  out.push(...checkoutNotices(item));
   return out;
 }
 
@@ -64,14 +73,8 @@ export function ContainerPanel() {
   if (!selected || (!isContainer && links.length === 0)) return null;
 
   /** One `replace` built from the item Puck holds now (not the rendered one), so no edit is lost. */
-  const commit = (build: (current: ComponentData) => ComponentData): boolean => {
-    const api = getPuck();
-    const sel = selectedId ? api.getSelectorForId(selectedId) : undefined;
-    const current = sel ? (api.getItemBySelector(sel) as ComponentData | undefined) : undefined;
-    if (!sel || !current) return false;
-    dispatch({ type: 'replace', destinationIndex: sel.index, destinationZone: sel.zone ?? ROOT_ZONE, data: build(current) });
-    return true;
-  };
+  const commit = (build: (current: ComponentData) => ComponentData): boolean =>
+    !!selectedId && applyToBlock(getPuck, dispatch, selectedId, build);
   const add = (p: PartState) => {
     const taken = new Set<string>();
     forEachComponent(getPuck().appState.data.content as ComponentData[], (c) => { if (typeof c.props.id === 'string') taken.add(c.props.id); });
@@ -80,9 +83,16 @@ export function ContainerPanel() {
     setFocusPart(p.type);
   };
   const reset = () => {
-    if (!commit((current) => withDefaultArrangement(current, layout))) return;
+    if (!commit((current) => resetArrangement(current, layout))) return;
     setStatus('Arrangement reset');
     resetRef.current?.focus();
+  };
+  const moveStepBy = (kind: StepKind, dir: -1 | 1) => {
+    const done = commit((current) => {
+      const next = moveStep(storedStepOrder(current), kind, dir);
+      return next ? withStepOrder(current, next) : current;
+    });
+    if (done) setStatus(`${STEP_LABEL[kind]} moved ${dir === -1 ? 'up' : 'down'}`);
   };
   const shown = isContainer ? notices(selected, layout, wholesale) : [];
   const ownedText = owned === 1 ? 'Also removes 1 block you added' : `Also removes ${owned} blocks you added`;
@@ -90,6 +100,7 @@ export function ContainerPanel() {
   return (
     <div ref={rootRef} className={styles.root} data-sfb-container-panel="">
       <p className={styles.visuallyHidden} role="status" aria-live="polite">{status}</p>
+      {isContainer && type === 'CheckoutFlow' && <StepOrderControl order={storedStepOrder(selected)} onMove={moveStepBy} />}
       {isContainer && (
         <section className={styles.section} aria-labelledby={`${id}-parts`}>
           <h3 id={`${id}-parts`} className={styles.title}>{partsHeading(type, docKey)}</h3>

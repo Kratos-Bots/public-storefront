@@ -3,7 +3,7 @@ import type { Field, Fields, SlotField } from '@puckeditor/core';
 import { BLOCKS } from '@/builder/registry.ts';
 import type { BlockDef } from '@/builder/define.ts';
 import { allowedOn } from '@/builder/rules.ts';
-import { offersPart, type PartFamily } from '@/builder/parts.ts';
+import { offersPart, type ContainerSpec, type PartFamily, type SlotRef } from '@/builder/parts.ts';
 import { CARD_KINDS, cardKey, FIXED_ROUTE_KEYS, isCardKey, type DocKey, type LayoutKind } from '@/builder/types.ts';
 import { insertableBlocks } from '@/builder/editor/route-bound.ts';
 import { routeLinkField } from '@/builder/editor/custom-fields/route-link.tsx';
@@ -205,6 +205,19 @@ const notRouteOrContainer = (n: string): boolean => !BLOCKS[n]!.routeBound && !B
 const familyOfBlock = (n: string): PartFamily | null => BLOCKS[n]?.part?.family ?? null;
 
 /**
+ * May candidate `n` sit in `ref` (a slot of a container or of a part with slots of its own) of a
+ * `spec` container? Content blocks when the container is `contentOnly` (any non-part block
+ * otherwise); a part of the family only where `homes` lets it, and a part `homes` doesn't list
+ * goes in any slot (stage 3 behaviour). Puck can't see through a dragged Columns: legality.ts does.
+ */
+function fitsHome(spec: ContainerSpec, ref: string, n: string): boolean {
+  const family = familyOfBlock(n);
+  if (family === null) return !spec.contentOnly || BLOCKS[n]!.category === 'content';
+  if (family !== spec.family || !offersPart(spec, n)) return false;
+  return !spec.homes || !Object.hasOwn(spec.homes, n) || spec.homes[n]!.includes(ref as SlotRef);
+}
+
+/**
  * Spec §3.4, stage 4 §4: a container slot takes its family's parts (only those this container
  * offers), content and non-route blocks — `slotAccepts` narrows it to exactly the listed types.
  * Then `slotRejects[slot]` types come out, and the containers it `nests` go in when they may sit on
@@ -216,12 +229,10 @@ function containerSlotAllow(
   const spec = def.container!;
   const only = spec.slotAccepts && Object.hasOwn(spec.slotAccepts, slot) ? spec.slotAccepts[slot]! : null;
   const rejects = spec.slotRejects && Object.hasOwn(spec.slotRejects, slot) ? spec.slotRejects[slot]! : [];
-  const base = candidates.filter((n) => {
-    if (rejects.includes(n)) return false;
-    if (only) return only.includes(n);
-    if (!notRouteOrContainer(n)) return false;
-    const family = familyOfBlock(n);
-    return family === null || (family === spec.family && offersPart(spec, n));
+  // A slot restricted to a list offers that list in its own order (the order the owner sees).
+  const base = only ? only.filter((n) => candidates.includes(n) && !rejects.includes(n)) : candidates.filter((n) => {
+    if (rejects.includes(n) || !notRouteOrContainer(n)) return false;
+    return fitsHome(spec, `${def.name}.${slot}`, n);
   });
   const nested = (spec.nests ?? []).filter((n) => !rejects.includes(n) && !base.includes(n) && Object.hasOwn(BLOCKS, n)
     && docs.length > 0 && docs.every((k) => allowedOn(n, k)) && layouts.every((l) => inLayout(BLOCKS[n]!, l)));
@@ -232,9 +243,14 @@ function containerSlotAllow(
  * A group's slots take only parts its container offers: of its own family, offered by a container
  * of that family on one of `docs` (the doc being edited, or every doc the family lives on).
  */
-function groupSlotAllow(def: AnyBlock, candidates: readonly string[], docs: readonly DocKey[]): string[] {
+function groupSlotAllow(def: AnyBlock, slot: string | undefined, candidates: readonly string[], docs: readonly DocKey[]): string[] {
   const family = def.part!.family;
   const owners = Object.values(BLOCKS).filter((b) => b.container?.family === family && docs.some((k) => allowedOn(b.name, k)));
+  // A part with default slots (a checkout step) is a holder: its slot takes what its container's `homes` says.
+  if (def.part!.defaultSlots && slot) {
+    const ref = `${def.name}.${slot}`;
+    return candidates.filter((n) => notRouteOrContainer(n) && owners.some((o) => fitsHome(o.container!, ref, n)));
+  }
   return candidates.filter((n) => {
     if (!notRouteOrContainer(n)) return false;
     const f = familyOfBlock(n);
@@ -245,7 +261,7 @@ function groupSlotAllow(def: AnyBlock, candidates: readonly string[], docs: read
 /** A slot inside a container (the container's own, or a part's — a group's) never holds a route block or a container. */
 function slotList(def: AnyBlock, slot: string | undefined, candidates: readonly string[], docs: readonly DocKey[], layouts: readonly LayoutKind[]): string[] {
   if (def.container) return slot ? containerSlotAllow(def, slot, candidates, docs, layouts) : candidates.filter(notRouteOrContainer);
-  return def.part ? groupSlotAllow(def, candidates, docs) : [...candidates];
+  return def.part ? groupSlotAllow(def, slot, candidates, docs) : [...candidates];
 }
 
 /**

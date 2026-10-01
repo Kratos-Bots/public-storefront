@@ -6,6 +6,7 @@ import { containsType, offersPart, type PartFamily } from '@/builder/parts.ts';
 import { allowedOn, blockDef, countBlocks } from '@/builder/rules.ts';
 import { isCardKey, type ComponentData, type DocKey, type LayoutKind, type PuckDoc } from '@/builder/types.ts';
 import { familiesOfDoc, insertableBlocks, isLockedOn, requiredPartsOn, ROUTE_BOUND } from '@/builder/editor/route-bound.ts';
+import { STEP_TYPE } from '@/builder/family-checkout.ts';
 import { scopeFields } from '@/builder/editor/derive-fields.ts';
 import { EditorBlock } from '@/builder/editor/EditorBlock.tsx';
 import { PageGround } from '@/builder/editor/page-ground.tsx';
@@ -123,7 +124,7 @@ type Props = Record<string, unknown>;
 
 /** Advice, not an issue: never sent to the admin and never blocks Publish. */
 export interface EditorHint {
-  id: 'double-intro' | 'category-nav-roots' | 'title-overrides-item' | 'cart-summary-outside';
+  id: 'double-intro' | 'category-nav-roots' | 'title-overrides-item' | 'cart-summary-outside' | 'content-before-payment';
   message: string;
   blockId?: string;
 }
@@ -151,6 +152,18 @@ function walk(items: readonly ComponentData[], visit: (c: ComponentData) => void
       if (Array.isArray(children)) walk(children as ComponentData[], visit);
     }
   }
+}
+
+/** The first block of the order page's action column (not a part) that sits above its Payment part. */
+function contentBeforePayment(content: readonly ComponentData[]): ComponentData | undefined {
+  let found: ComponentData | undefined;
+  walk(content, (c) => {
+    if (found || c.type !== 'OrderStatus' || !Array.isArray(c.props.action)) return;
+    const action = c.props.action as ComponentData[];
+    const pay = action.findIndex((x) => containsType([x], 'OrderStatusPayment'));
+    found = pay < 0 ? undefined : action.slice(0, pay).find((x) => !blockDef(x.type)?.part);
+  });
+  return found;
 }
 
 export function editorHints(doc: PuckDoc, docKey: DocKey): EditorHint[] {
@@ -188,6 +201,14 @@ export function editorHints(doc: PuckDoc, docKey: DocKey): EditorHint[] {
       });
     }
   }
+  const early = docKey === 'order-status' ? contentBeforePayment(doc.content) : undefined;
+  if (early) {
+    hints.push({
+      id: 'content-before-payment',
+      message: 'Customers who still owe payment see this before how to pay.',
+      blockId: early.props.id,
+    });
+  }
   if (categoryNav) {
     hints.push({
       id: 'category-nav-roots',
@@ -201,6 +222,9 @@ export function editorHints(doc: PuckDoc, docKey: DocKey): EditorHint[] {
 // ── config ───────────────────────────────────────────────────────────────────
 
 const LOCKED = { delete: false, duplicate: false } as const;
+/** The five checkout steps are moved with the Step order control, never dragged (their order has four legal forms). */
+const STEP_TYPES: ReadonlySet<string> = new Set(Object.values(STEP_TYPE));
+const LOCKED_STEP = { ...LOCKED, drag: false } as const;
 
 /**
  * One config per (doc, layout): locks, slot allow lists and the drawer depend on which page is
@@ -217,7 +241,8 @@ export function buildEditorConfig(docKey: DocKey, layout: LayoutKind, present: R
       defaultProps: def.defaultProps,
       // A required route block or part can't be deleted or copied; the canvas is one doc, so it can't
       // leave its route either. Any other part shows at most once (spec §11), so it can't be copied.
-      ...(isLockedOn(def.name, docKey) || required.has(def.name) ? { permissions: { ...LOCKED } }
+      ...(STEP_TYPES.has(def.name) ? { permissions: { ...LOCKED_STEP } }
+        : isLockedOn(def.name, docKey) || required.has(def.name) ? { permissions: { ...LOCKED } }
         : def.part ? { permissions: { duplicate: false } } : {}),
       // A container dropped from the drawer arrives with empty slots: give it its default arrangement once.
       ...(container ? {

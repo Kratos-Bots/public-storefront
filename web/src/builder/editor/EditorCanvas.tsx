@@ -1,5 +1,5 @@
-import { Component, useMemo, type ReactNode } from 'react';
-import { Puck, type Data, type Overrides, type UiState } from '@puckeditor/core';
+import { Component, useMemo, useRef, type ReactNode } from 'react';
+import { Puck, type Data, type Overrides, type PuckAction, type UiState } from '@puckeditor/core';
 // Puck's styles without its @import of Inter from rsms.me: the frame loads nothing from third parties.
 import '@puckeditor/core/no-external.css';
 import { DocBoundary, RenderDoc } from '@/builder/render.tsx';
@@ -12,6 +12,8 @@ import { ExactPreview, ExactRuntime } from '@/builder/editor/ExactPreview.tsx';
 import { CARD_KINDS, cardKey, type DocKey, type LayoutKind, type PageSet, type PuckDoc } from '@/builder/types.ts';
 import { CardDesignProvider } from '@/builder/card-design.tsx';
 import { prepareDoc } from '@/builder/editor/prepare.ts';
+import { introducesIllegal } from '@/builder/editor/legality.ts';
+import { announceRevert, LegalityNotice, PuckHandleContext, type GetPuckFn } from '@/builder/editor/LegalityGuard.tsx';
 import { isLockedOn } from '@/builder/editor/route-bound.ts';
 import { useEditorStore } from '@/builder/editor/store.ts';
 import { useCurrentDoc, useIssues, useLockedPresent } from '@/builder/editor/use-issues.ts';
@@ -192,6 +194,11 @@ function RestingMarks() {
   return css ? <style data-sf-builder-marks="">{css}</style> : null;
 }
 
+/** Actions that can put a part somewhere it can't go; the others (undo, remove, setUi...) are never undone. */
+const ARRANGING: ReadonlySet<string> = new Set(['insert', 'move', 'reorder', 'replace']);
+/** Actions that rewrite the data wholesale: a pending drop check no longer applies to what follows. */
+const REWRITING: ReadonlySet<string> = new Set(['set', 'setData', 'replaceRoot', 'remove', 'duplicate']);
+
 export function EditorCanvas() {
   // Before the read-only return: a published version without siteText still needs the shared wording.
   usePublishedTextSync();
@@ -220,6 +227,34 @@ export function EditorCanvas() {
     [docKey, layout, epoch],
   );
 
+  // The last document the canvas accepted: what a drop that breaks the page's arrangement rules reverts to.
+  const handle = useRef<GetPuckFn | null>(null);
+  const lastLegal = useRef<{ for: unknown; doc: PuckDoc } | null>(null);
+  if (lastLegal.current?.for !== data) lastLegal.current = { for: data, doc: data as unknown as PuckDoc };
+  const armed = useRef(false);
+  const onAction = (action: PuckAction) => {
+    if (ARRANGING.has(action.type)) armed.current = true;
+    else if (REWRITING.has(action.type)) armed.current = false;
+  };
+  const onChange = (next: Data) => {
+    const wasArmed = armed.current;
+    armed.current = false;
+    const doc = next as unknown as PuckDoc;
+    const accepted = lastLegal.current!;
+    const message = wasArmed ? introducesIllegal(prepared(accepted.doc), prepared(doc), docKey, layout) : null;
+    const getPuck = handle.current;
+    if (message && getPuck) {
+      // Not for the store; Puck puts the last accepted document back, as one recorded step so history keeps no illegal state.
+      announceRevert(message);
+      getPuck().dispatch({ type: 'setData', data: () => accepted.doc as unknown as Partial<Data>, recordHistory: true });
+      return;
+    }
+    accepted.doc = doc;
+    // The mount epoch travels with every change, so a late onChange from a canvas that a load,
+    // reset or new page replaced is ignored by the store.
+    useEditorStore.getState().updateDoc(docKey, next, epoch);
+  };
+
   if (readOnly) return <ReadOnlyView />;
   const mount = `${docKey}|${epoch}`;
   return (
@@ -227,15 +262,16 @@ export function EditorCanvas() {
       {viewport !== null && <ExactPreview width={viewport} />}
       <div className={styles.puckHost} hidden={viewport !== null}>
         <RestingMarks />
+        <LegalityNotice />
         <CardDesignProvider cards={cards} layout={layout}>
           <CanvasTextScope>
+            <PuckHandleContext.Provider value={handle}>
             <Puck
               key={mount}
               config={config}
               data={data}
-              // The mount epoch travels with every change, so a late onChange from a canvas that a load,
-              // reset or new page replaced is ignored by the store.
-              onChange={(next) => useEditorStore.getState().updateDoc(docKey, next, epoch)}
+              onChange={onChange}
+              onAction={onAction}
               iframe={{ enabled: false }}
               viewports={PUCK_VIEWPORTS}
               ui={ui}
@@ -243,6 +279,7 @@ export function EditorCanvas() {
               plugins={PLUGINS}
               height="100dvh"
             />
+            </PuckHandleContext.Provider>
           </CanvasTextScope>
         </CardDesignProvider>
       </div>
