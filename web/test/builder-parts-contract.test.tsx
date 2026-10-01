@@ -65,6 +65,16 @@ describe('parts contract (spec §9, §13)', () => {
     expect(def.style && def.style.target).toBe(PARTS[name]!.style.target);
     expect(sameKeys(def.style ? def.style.keys : [], PARTS[name]!.style.keys)).toBe(true);
   });
+  it('every part whose spec declares TEXT reach declares the site-text keys it renders', () => {
+    // These render product data only (a name, a price): no useText call, so no site-text keys to declare.
+    const DATA_ONLY = new Set(['ProductTitle', 'CardTileName', 'CardTilePrice', 'CardRowName', 'CardRowPrice']);
+    const missing = Object.entries(PARTS)
+      .filter(([, spec]) => TEXT.every((k) => spec.style.keys.includes(k)))
+      .filter(([name]) => !DATA_ONLY.has(name))
+      .filter(([name]) => !(BLOCKS[name]!.text && BLOCKS[name]!.text!.length > 0))
+      .map(([name]) => name);
+    expect(missing).toEqual([]);
+  });
   it('required parts accept no hide; no part holding an input accepts textSize', () => {
     for (const c of CONTAINERS) for (const r of BLOCKS[c]!.container!.required) expect((BLOCKS[r]!.style || { keys: [] }).keys, r).not.toContain('hide');
     for (const n of ['CatalogSearch', 'ProductAddToCart', 'CardTileAdd', 'CardRowAdd']) expect((BLOCKS[n]!.style || { keys: [] }).keys, n).not.toContain('textSize');
