@@ -11,6 +11,7 @@ const state = vi.hoisted(() => ({
   native: false,
   issues: [] as unknown[],
   isSyncing: false,
+  options: {} as Record<string, unknown>,
 }));
 
 vi.mock('@/app/settings.ts', () => ({
@@ -28,6 +29,7 @@ vi.mock('@/lib/telegram-webapp.ts', async (orig) => ({ ...(await orig<typeof imp
 // Only the TopBar slot is observable; Footer / Overlay / ButtonAdornment draw nothing here.
 vi.mock('@/templates/runtime.tsx', async (orig) => ({
   ...(await orig<typeof import('@/templates/runtime.tsx')>()),
+  useTemplateContext: () => ({ ...(({} as unknown) as object), resolved: { options: state.options } }) as never,
   Slot: ({ name }: { name: string }) => (name === 'TopBar' ? <i data-slot="TopBar" /> : null),
 }));
 // The routed page column is not under test; the default shell document's PageOutlet draws nothing.
@@ -60,7 +62,7 @@ afterEach(() => {
   useSessionStore.setState({ token: null, customer: null });
   useCartStore.setState({ lines: [], mode: 'local' });
   useUiStore.setState({ cartOpen: false, filterOpen: false, loginOpen: false });
-  state.native = false; state.issues = []; state.isSyncing = false;
+  state.native = false; state.issues = []; state.isSyncing = false; state.options = {};
 });
 
 /** Lazy blocks resolve a tick or two after mount: wait until the markup stops changing. */
@@ -107,6 +109,8 @@ type Ov = 'inherit' | 'show' | 'hide';
 interface HeaderCase {
   name: string; variant: Variant; path?: string; signedIn?: boolean; count?: number;
   features?: Record<string, unknown>; native?: boolean;
+  /** Store-wide template options (a store that hides an icon by default). */
+  options?: Record<string, unknown>;
   /** Stored Header props (v0.7.0 shape); the same choice becomes component props / a core-option scope for the entry. */
   props?: HeaderProps & { accountIcon?: Ov; cartIcon?: Ov };
   /** The default document cannot carry a prop tweak. */
@@ -130,6 +134,11 @@ function headerCases(): HeaderCase[] {
     tweak('account-hide', { props: { accountIcon: 'hide' } }, true);
     tweak('cart-show', { props: { cartIcon: 'show' } }, true);
     tweak('cart-hide', { props: { cartIcon: 'hide' } }, true);
+    // `show` only means something where the store-wide option would hide the icon.
+    tweak('account-show-over-none', { options: { headerAccountIcon: 'none' }, props: { accountIcon: 'show' } }, true);
+    tweak('cart-show-over-none', { options: { headerCartIcon: 'none' }, props: { cartIcon: 'show' } }, true);
+    tweak('account-inherit-none', { options: { headerAccountIcon: 'none' } });
+    tweak('cart-inherit-none', { options: { headerCartIcon: 'none' } });
     tweak('accounts-off', { features: { accounts: false } });
     tweak('ordering-off', { features: { ordering: false } });
     if (variant !== 'storefront') {
@@ -157,6 +166,7 @@ const storedHeader = (c: HeaderCase): ComponentData => ({
 describe('stage 4 header goldens (v0.7.0)', () => {
   it.each(headerCases())('$name', async (c) => {
     const path = c.path ?? '/';
+    state.options = c.options ?? {};
     seed({ features: { layout: c.variant, ...c.features }, signedIn: c.signedIn, native: c.native, lines: (c.count ?? 0) > 0 ? [line(1, c.count!)] : [] });
 
     const scope: Partial<CoreOptions> = {};
