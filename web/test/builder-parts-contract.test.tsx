@@ -55,9 +55,9 @@ const PART_CSS: Record<string, string[]> = {
 const sameKeys = (a: readonly string[], b: readonly string[]) => [...a].sort().join() === [...b].sort().join();
 
 describe('parts contract (spec §9, §13)', () => {
-  it('the part table covers every registered part (subset check while stage 4 lands; T15 restores equality)', () => {
-    const expected = new Set([...Object.keys(PARTS), ...Object.keys(STAGE4_PARTS)]);
-    for (const d of Object.values(BLOCKS).filter((x) => x.part)) expect(expected.has(d.name), d.name).toBe(true);
+  it('the part table covers every registered part exactly (stage 3 table plus STAGE4_PARTS)', () => {
+    const expected = [...Object.keys(PARTS), ...Object.keys(STAGE4_PARTS)].sort();
+    expect(Object.values(BLOCKS).filter((x) => x.part).map((d) => d.name).sort()).toEqual(expected);
   });
   it.each(Object.keys(PARTS))('%s: family, target and keys', (name) => {
     const def = BLOCKS[name]!;
@@ -66,6 +66,14 @@ describe('parts contract (spec §9, §13)', () => {
     expect(def.category).toBe('part');
     expect(def.style && def.style.target).toBe(PARTS[name]!.style.target);
     expect(sameKeys(def.style ? def.style.keys : [], PARTS[name]!.style.keys)).toBe(true);
+  });
+  it.each(Object.keys(STAGE4_PARTS))('%s (stage 4): family, target and keys', (name) => {
+    const def = BLOCKS[name]!;
+    expect(def.part).toEqual({ family: STAGE4_PARTS[name]!.family });
+    expect(def.container).toBeUndefined();
+    expect(def.category).toBe('part');
+    expect(def.style && def.style.target).toBe(STAGE4_PARTS[name]!.style.target);
+    expect(sameKeys(def.style ? def.style.keys : [], STAGE4_PARTS[name]!.style.keys)).toBe(true);
   });
   it('every part whose spec declares TEXT reach declares the site-text keys it renders', () => {
     // These render product data only (a name, a price): no useText call, so no site-text keys to declare.
@@ -76,6 +84,21 @@ describe('parts contract (spec §9, §13)', () => {
       .filter(([name]) => !(BLOCKS[name]!.text && BLOCKS[name]!.text!.length > 0))
       .map(([name]) => name);
     expect(missing).toEqual([]);
+  });
+  it('stage-4 families with TEXT parts read --sf-block-fg and --sf-text-scale in their view CSS', () => {
+    const FAMILY_CSS: Partial<Record<PartFamily, string[]>> = {
+      cart: ['cart/CartPage'], 'cart-summary': ['cart/CartSummary'], account: ['account/Account'], orders: ['account/Account'], order: ['account/Account'],
+      loyalty: ['account/Account'], referrals: ['account/Account'], profile: ['account/Account'], login: ['auth/LoginPage'],
+      payment: ['payment-redirect/PaymentRedirect'], tracking: ['tracking/Tracking'], verify: ['verify/VerifyPage'],
+    };
+    const families = new Set(Object.values(STAGE4_PARTS).filter((s) => TEXT.every((k) => s.style.keys.includes(k))).map((s) => s.family));
+    for (const family of families) {
+      const files = FAMILY_CSS[family];
+      expect(files, family).toBeDefined();
+      const rules = files!.flatMap((f) => cssRules(readFileSync(resolve(__dirname, `../src/features/${f}.module.css`), 'utf8')));
+      expect(rules.some((r) => /var\(--sf-block-fg,/.test(r.body)), `${family} fg`).toBe(true);
+      expect(rules.some((r) => /var\(--sf-text-scale, 1\)/.test(r.body)), `${family} textSize`).toBe(true);
+    }
   });
   it('required parts accept no hide; no part holding an input accepts textSize', () => {
     for (const c of CONTAINERS) for (const r of BLOCKS[c]!.container!.required) expect((BLOCKS[r]!.style || { keys: [] }).keys, r).not.toContain('hide');

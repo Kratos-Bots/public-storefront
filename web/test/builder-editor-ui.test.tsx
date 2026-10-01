@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+// Full-suite parallel load stretches Puck's cold start past the 5 s default; green alone.
+vi.setConfig({ testTimeout: 20_000 });
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';

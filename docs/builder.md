@@ -91,6 +91,14 @@ none, the frame mounts it itself** (the safety net; it also applies when a publi
 crashed and the default shell is showing). A page whose root says `chrome: 'none'` gets the
 chromeless frame (`Chromeless`: brand header only, no shell) instead.
 
+The `CartDrawer` mount renders the layout's **cart document**, not a fixed panel: it resolves the
+guarded `cart` document, finds its one `CartContents` and renders it with `renderComponent` inside a
+`CartHostContext` whose `frame()` builds the drawer's `Sheet` from the container's `main` region
+(body) and `summary` region (pinned footer). Content blocks at the document root and in `head` are
+page-only. The panel module is requested when the shell first mounts the drawer and registers the
+cart views, so opening the drawer never suspends. A throw inside the published arrangement falls
+back to the default cart document for the rest of the page load.
+
 ## The block contract
 
 `defineBlock<P>` (`define.ts`) takes:
@@ -138,7 +146,7 @@ The 45 blocks of this release. "All" layouts = storefront, menu and webapp. Slot
 | Block | Layouts | Route-bound | Props |
 |---|---|---|---|
 | `PageOutlet` | all | yes (`shell`) | none — renders the current route |
-| `Header` | all | no | `variant` (auto/storefront/menu/webapp), `topBar`, `search`, `sticky`, `accountIcon` and `cartIcon` (inherit/show/hide), `nav` *(slot)* |
+| `Header` | all | no | `variant` (auto/storefront/menu/webapp), `topBar`, `sticky`, `start`, `nav`, `middle`, `end` *(slots; `HeaderBrand` required)*; legacy `search`, `accountIcon`, `cartIcon` (inherit/show/hide) are read only when the slots are absent |
 | `TopBar` | storefront, menu | no | none — the template's `TopBar` slot |
 | `NavLinks` | all | no | `items` (`{ label, href }`, up to 12), `ariaLabel`, `direction` (row/column) |
 | `NoticeBanners` | all | no | `pinned` |
@@ -170,27 +178,27 @@ The 45 blocks of this release. "All" layouts = storefront, menu and webapp. Slot
 
 | Block | Layouts | Route-bound | Props |
 |---|---|---|---|
-| `CartContents` | all | yes (`cart`) | `summary` *(slot)* |
-| `CartSummary` | all | yes (`cart`) | none |
+| `CartContents` | all | yes (`cart`) | `head`, `main`, `summary` *(slots; `CartHeading`, `CartLines`, `CartEmpty` required)* |
+| `CartSummary` | all | yes (`cart`) | `items` *(slot; `CartSummarySubtotal`, `CartSummaryCheckout` required)* |
 | `CheckoutFlow` | all | yes (`checkout`) | none |
-| `LoginOptions` | all | yes (`login`) | none |
-| `AccountNav` | all | no (placement `account.*`) | `body` *(slot)* |
-| `OrdersList` | all | yes (`account.orders`) | none |
-| `OrderDetail` | all | yes (`account.order`) | none |
-| `Loyalty` | all | yes (`account.loyalty`) | none |
-| `Referrals` | all | yes (`account.referrals`) | none |
-| `Profile` | all | yes (`account.profile`) | none |
+| `LoginOptions` | all | yes (`login`) | `content` *(slot; `LoginHeading`, `LoginMethods` required)* |
+| `AccountNav` | all | no (placement `account.*`) | `head`, `body` *(slots; `AccountGreeting`, `AccountTabs` required)* |
+| `OrdersList` | all | yes (`account.orders`) | `content` *(slot; `OrdersRows`, `OrdersEmpty` required)* |
+| `OrderDetail` | all | yes (`account.order`) | `content` *(slot; `OrderHeading`, `OrderItems` required)* |
+| `Loyalty` | all | yes (`account.loyalty`) | `content` *(slot; `LoyaltyPoints`, `LoyaltyRewards` required)* |
+| `Referrals` | all | yes (`account.referrals`) | `content` *(slot; `ReferralCode` required)* |
+| `Profile` | all | yes (`account.profile`) | `content` *(slot; `ProfileSignOut` required)* |
 
 ### Post-order
 
 | Block | Layouts | Route-bound | Props |
 |---|---|---|---|
 | `OrderStatus` | all | yes (`order-status`) | none |
-| `PaymentSuccess` | all | yes (`payment-success`) | none |
-| `PaymentCancel` | all | yes (`payment-cancel`) | none |
-| `OrderPlaced` | all | yes (`order-placed`) | none |
-| `VerifyForm` | all | yes (`verify`) | none |
-| `TrackingLookup` | all | yes (`tracking`) | none |
+| `PaymentSuccess` | all | yes (`payment-success`) | `content` *(slot; `PaymentHeadline`, `PaymentReference` required)* |
+| `PaymentCancel` | all | yes (`payment-cancel`) | `content` *(slot; `PaymentHeadline`, `PaymentActions` required)* |
+| `OrderPlaced` | all | yes (`order-placed`) | `content` *(slot; `PaymentHeadline`, `PaymentReference`, `PaymentActions` required)* |
+| `VerifyForm` | all | yes (`verify`) | `content` *(slot; `VerifyIntro`, `VerifyFields`, `VerifyResult` required)* |
+| `TrackingLookup` | all | yes (`tracking`) | `top`, `main`, `result` *(slots; `TrackingIntro`, `TrackingState`, `TrackingForm`, `TrackingHero`, `TrackingParcels` required)* |
 
 ### Content
 
@@ -511,8 +519,9 @@ removed) before a change is posted.
 
 ## Containers and parts
 
-The product page, the product sheet, the catalogue grid and list, and the product card and row are
-not single blocks any more: each is a **container** that owns the data, with **parts** that each
+The product page, the product sheet, the catalogue grid and list, the product card and row, the
+header, the cart, the account pages, the sign-in page, the payment pages, order tracking and
+verification are not single blocks any more: each is a **container** that owns the data, with **parts** that each
 draw one piece of it (the title, the price, the add button …). An owner can reorder parts, wrap them
 in content blocks, drop optional ones and style each one; the default arrangement of every container
 renders byte-for-byte the markup of v0.7.0.
@@ -549,6 +558,77 @@ Files:
 `BlockDef` gains `container?: ContainerSpec` and `part?: { family }` (never both), and
 `BlockCategory` gains `'part'`. A `SlotRender` carries the stored children as `.items`, so a
 container can choose classes from what a slot holds (`layoutNoImage`, `noNav`) without rendering it.
+
+### Stage 4 families (shell, cart, account, order pages)
+
+Stage 4 reuses the same pattern for more surfaces; the container still owns the data and parts are
+shells. The families, their containers and the documents they live on:
+
+| Family | Container(s) | Document(s) | Required parts |
+|---|---|---|---|
+| `header` | `Header` | `shell` | `HeaderBrand` |
+| `cart` | `CartContents` | `cart` | `CartHeading`, `CartLines`, `CartEmpty` |
+| `cart-summary` | `CartSummary` (nested in `CartContents`) | `cart` | `CartSummarySubtotal`, `CartSummaryCheckout` |
+| `account` | `AccountNav` (nests the five sections) | `account.*` | `AccountGreeting`, `AccountTabs` |
+| `orders` | `OrdersList` | `account.orders` | `OrdersRows`, `OrdersEmpty` |
+| `order` | `OrderDetail` | `account.order` | `OrderHeading`, `OrderItems` |
+| `loyalty` | `Loyalty` | `account.loyalty` | `LoyaltyPoints`, `LoyaltyRewards` |
+| `referrals` | `Referrals` | `account.referrals` | `ReferralCode` |
+| `profile` | `Profile` | `account.profile` | `ProfileSignOut` |
+| `login` | `LoginOptions` | `login` | `LoginHeading`, `LoginMethods` |
+| `payment` | `PaymentSuccess`, `PaymentCancel`, `OrderPlaced` | `payment-success`, `payment-cancel`, `order-placed` | per container (see the block table) |
+| `tracking` | `TrackingLookup` | `tracking` | `TrackingIntro`, `TrackingState`, `TrackingForm`, `TrackingHero`, `TrackingParcels` |
+| `verify` | `VerifyForm` | `verify` | `VerifyIntro`, `VerifyFields`, `VerifyResult` |
+
+`MobileCartBar`, `PrimaryActionBar`, the notice banners, the footer template and `LoginModal` stay
+whole blocks or system mounts. The header is a single container: `topBar` and `sticky` are
+container props, and only `HeaderBrand` is required, so every other piece can be dropped or moved
+between the `start`, `middle` and `end` slots (`nav` is never filled by default). Header parts take
+no vertical spacing, margins, `maxWidth` or `textSize`: the bar's height is fixed.
+
+**Contract extensions** (`ContainerSpec`, all optional):
+
+- `offers` — the parts of the family this container accepts (default: all). The payment family is
+  shared by three containers, and the success page offers no `PaymentActions` (the hand-off to the
+  saved order is a redirect). A part that is not offered fails `part-placement`.
+- `nests` — containers its slots may hold, at any depth: `CartContents` nests `CartSummary`;
+  `AccountNav` nests the five account sections. A nested container keeps its own placement and
+  `exactly-one` rules, and owns its own parts.
+- `slotRejects` — a slot never holding these types, at any depth, where the area is not shown on
+  every surface (rule id `slot-rejects:<Container>.<slot>`).
+
+**Required parts and `hide`.** A required part never offers `hide`, with two exceptions that are
+required in some payment containers and optional in others: `PaymentReference` and
+`PaymentActions`. A hidden required part (or a hidden block holding one) is reported as
+`hidden-required:<Type>`. Which parts are required is per container; the editor locks them with
+`requiredPartsOn`.
+
+**The cart drawer rule.** The cart container renders in two places, the `/cart` page and the
+drawer, told apart by `CartHostContext` (`null` = the page). The drawer renders the same cart
+document (see "PuckShell and the system mounts"): `main` becomes its body and `summary` its pinned
+footer. The cart views register themselves through `cartViews` (`builder/blocks/_shared/cart-views.ts`)
+instead of being imported by the registry, which keeps the shell, the registry and the cart from
+forming an import cycle.
+
+**Preview states.** A stateful container reads `usePreviewState('<Name>')` and, when the editor has
+set one, draws that state from fixture data instead of its live state machine; the fixtures arrive
+through `previewFixtures` in `BuilderMode`, never by import. Shoppers get the constant `SHOPPER`
+mode (both null), so no fixture can reach them: the fixtures module (`builder/editor/fixtures.ts`)
+is imported only from `builder/editor/**` and its data (including `FIXTURE_TRACKING`) ships only in
+the editor chunk. State ids per container are `PREVIEW_STATE_IDS` in `builder/mode.ts`, first is the
+editor's default: `OrdersList` (orders, none, more), `Loyalty` (rewards, no-points), `Referrals`
+(new, referred), `Profile` (website, webapp), `PaymentSuccess` (reference, missing),
+`PaymentCancel` (saved, unsaved, no-reference), `OrderPlaced` (chat, warning, no-chat, missing),
+`TrackingLookup` (form, found-2, found-1, nothing-shipped, not-found, error), `VerifyForm` (form,
+authentic, expired, not-verified, error). The editor's Page / Drawer switch previews the two cart
+surfaces.
+
+Stage-4 files: `builder/blocks/_shared/<family>-container.ts` (specs), `builder/blocks/<Part>.tsx`
+(shells), and the views in `layouts/header-parts.tsx`, `features/cart/` (`CartPage`,
+`CartSummary`, `CartDrawerPanel`), `features/account/`, `features/auth/LoginPage.tsx`,
+`features/payment-redirect/payment-parts.tsx`, `features/tracking/tracking-parts.tsx` and
+`features/verify/VerifyPage.tsx`. A part block file imports nothing from `@/features/` or
+`@/layouts/` (the stage-4 contract test checks it).
 
 ### Placement and rules
 
@@ -733,7 +813,10 @@ even `[]` — is never touched (idempotent; `[]` is an owner's deliberate empty 
    intended), `unique`, `required`, `requires`, `slotAccepts`.
 4. Add its fields file under `builder/editor/fields/`.
 5. Add it to the table in `test/builder-parts-contract.test.tsx` and `PART_BLOCKS` in
-   `test/builder-editor-contract.test.ts`; regenerate `web/public/blocks.json`
+   `test/builder-editor-contract.test.ts` (stage 3), or to the `STAGE4_PARTS` table in
+   `test/helpers/stage4-parts.ts` (stage 4); the registered parts must equal those tables exactly.
+   `test/builder-parts-stage4-contract.test.ts` checks every stage-4 container's defaults, part
+   key length (at most 19 characters) and the import rules. Regenerate `web/public/blocks.json`
    (`UPDATE_BLOCKS_JSON=1 npm --prefix web test -- test/blocks-manifest.test.ts`).
 6. The golden captures (`test/golden-parity.test.tsx`) and `e2e/dom-parity.spec.ts` must pass
    **unchanged**.

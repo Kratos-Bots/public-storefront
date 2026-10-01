@@ -320,6 +320,9 @@ above, but an owner can reorder, wrap, drop or restyle the parts of the product 
 sheet, the catalogue and the product card and row (see `builder.md`, *Containers and parts*), so a
 card's first child may not be its image. Style the part itself rather than its position where you can.
 
+Header, cart and account parts can be reordered; don't rely on child order or `:first-child` inside
+`[data-sf-part="header"]` or the cart.
+
 ### Shared button-fill rules
 
 `mantine.css` carries the fill recipes for `tokens.button.fill` on every element tagged
