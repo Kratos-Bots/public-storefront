@@ -11,6 +11,9 @@ import { RenderDoc } from '@/builder/render.tsx';
 import { validateDoc } from '@/builder/guard.ts';
 import { defaultDoc } from '@/builder/defaults/index.ts';
 
+// The goldens were captured in Europe/London: pin it so a UTC or US machine formats the same dates and times.
+vi.hoisted(() => { process.env.TZ = 'Europe/London'; });
+
 const state = vi.hoisted(() => ({
   settings: {} as Record<string, unknown>,
   /** Turnstile hands over a token synchronously on mount, or never. */
