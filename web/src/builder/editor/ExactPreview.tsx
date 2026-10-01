@@ -44,12 +44,24 @@ export function ExactPreview({ width }: { width: ViewportWidth }) {
   const back = useRef<HTMLButtonElement>(null);
   // Keyboard users land on the way back, not at the top of the document.
   useEffect(() => back.current?.focus({ preventScroll: true }), []);
+  // A modal the shop opens in the preview (the menu sheet) must start under the bar, not cover it.
+  const bar = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const el = bar.current;
+    if (!el) return;
+    const root = document.documentElement;
+    const set = () => root.style.setProperty('--sfb-exact-bar-h', `${el.offsetHeight}px`);
+    set();
+    const watch = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(set);
+    watch?.observe(el);
+    return () => { watch?.disconnect(); root.style.removeProperty('--sfb-exact-bar-h'); };
+  }, []);
   // Before paint: no keystroke may reach the hidden canvas while this shows.
   useLayoutEffect(() => guardHiddenCanvasHotkeys(window), []);
 
   return (
     <div className={styles.exact} data-sf-builder-exact={width}>
-      <div className={styles.exactBar} role="region" aria-label="Exact preview">
+      <div ref={bar} className={styles.exactBar} role="region" aria-label="Exact preview">
         <span className={styles.exactLabel}>
           <EyeIcon />
           <span>Previewing at <strong>{width} px</strong></span>

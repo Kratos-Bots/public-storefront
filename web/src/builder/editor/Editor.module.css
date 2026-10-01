@@ -897,3 +897,13 @@
     font-size: 16px;
   }
 }
+
+/*
+ * The menu / web-app sheet opens as a real modal inside the exact preview. The shop's root is its
+ * own stacking layer (chassis.css), so the bar cannot rise above the modal's overlay: the overlay
+ * starts under the bar instead, leaving "Back to editing" clickable. ExactPreview sets the variable
+ * while it shows; without it the overlay is untouched.
+ */
+html :global(.mantine-Drawer-overlay) {
+  inset-block-start: var(--sfb-exact-bar-h, 0px);
+}
