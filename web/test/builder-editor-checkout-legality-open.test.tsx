@@ -1,6 +1,5 @@
 // web/test/builder-editor-checkout-legality-open.test.tsx — the guard fails CLOSED when Puck is not at hand to undo a drop
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-vi.setConfig({ testTimeout: 20_000 });
 import { act, cleanup, render } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';

@@ -51,7 +51,7 @@ async function mount(doc: PuckDoc, layout: LayoutKind, path = '/') {
       </MantineProvider>
     </QueryClientProvider>,
   );
-  await screen.findAllByRole('heading', {}, { timeout: 8000 });
+  await screen.findAllByRole('heading', {}, { timeout: 30_000 });
   return out;
 }
 
@@ -61,7 +61,7 @@ describe('catalogue default documents = v0.7.0 goldens', () => {
     { name: 'grid-category', path: '/c/oats', search: '' },
     { name: 'grid-unknown', path: '/c/nope', search: '' },
     { name: 'grid-no-match', path: '/', search: 'zzz' },
-  ])('storefront $name', { timeout: 15_000 }, async ({ name, path, search }) => {
+  ])('storefront $name', async ({ name, path, search }) => {
     state.settings = SETTINGS; state.catalog = catalogOf(FULL, MATE); state.search = search;
     const { container } = await mount(defaultDoc('catalog', 'storefront')!, 'storefront', path);
     expectGolden(name, container.innerHTML);

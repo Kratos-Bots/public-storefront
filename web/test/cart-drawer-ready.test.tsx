@@ -62,5 +62,5 @@ describe('portal order by construction', () => {
     // The other overlay committed first (the panel is a dynamic import); the drawer is still ahead of it.
     expect(children[0]!.textContent).not.toContain('other overlay');
     expect(children[1]!.textContent).toContain('other overlay');
-  }, 30000);
+  });
 });

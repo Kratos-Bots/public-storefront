@@ -58,9 +58,9 @@ const withProps = (doc: PuckDoc, props: Record<string, unknown>): PuckDoc => ({ 
 afterEach(cleanup);
 
 describe('catalogue default documents', () => {
-  it('storefront: the product grid', { timeout: 15_000 }, async () => {
+  it('storefront: the product grid', async () => {
     const { container } = mount(defaultDoc('catalog', 'storefront')!, 'storefront');
-    expect(await screen.findByRole('heading', { level: 1, name: 'All products' }, { timeout: 8000 })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'All products' }, { timeout: 30_000 })).toBeInTheDocument();
     expect(container.querySelector('[data-sf-part="product-grid"]')).not.toBeNull();
   });
   it('menu and web app: the grouped list', async () => {

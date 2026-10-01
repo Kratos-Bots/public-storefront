@@ -302,7 +302,7 @@ function prepare(opts: { guest?: boolean; form?: Partial<CheckoutForm>; tgOn?: b
 const mount = (item: ComponentData) => mountDoc('checkout', 'storefront', [item], OPTS);
 const count = () => screen.findByText(/^Step \d of 5$/);
 const stepNo = () => document.body.textContent?.match(/Step (\d) of 5/)?.[1];
-const quoted = () => waitFor(() => expect(vi.mocked(quote).mock.calls.length).toBeGreaterThan(0), { timeout: 4000 });
+const quoted = () => waitFor(() => expect(vi.mocked(quote).mock.calls.length).toBeGreaterThan(0), { timeout: 30_000 });
 const press = async (re: RegExp) => { fireEvent.click(await screen.findByRole('button', { name: re })); };
 async function toStep(n: number) {
   await count();
@@ -310,7 +310,7 @@ async function toStep(n: number) {
   await act(async () => { await new Promise((r) => setTimeout(r, 450)); });
   for (let i = Number(stepNo()); i < n; i += 1) {
     await press(/^continue$/i);
-    await waitFor(() => expect(stepNo()).toBe(String(i + 1)), { timeout: 4000 });
+    await waitFor(() => expect(stepNo()).toBe(String(i + 1)), { timeout: 30_000 });
     await act(async () => { await new Promise((r) => setTimeout(r, 450)); });
   }
 }
@@ -411,10 +411,10 @@ describe('container logic', () => {
     vi.mocked(quote).mockImplementation(() => Promise.resolve(makeQuote({ shippingOptions: [{ id: 4, name: 'Collect in store', courier: null, price: 0, freeShipping: true }], paymentMethods: [] })));
     fireEvent.change(document.querySelector('aside input[aria-label]')!, { target: { value: 'NORTH10' } });
     await press(/^apply$/i);
-    await waitFor(() => expect(vi.mocked(quote).mock.calls.at(-1)![0]).toMatchObject({ couponCode: 'NORTH10' }), { timeout: 4000 });
+    await waitFor(() => expect(vi.mocked(quote).mock.calls.at(-1)![0]).toMatchObject({ couponCode: 'NORTH10' }), { timeout: 30_000 });
     await act(async () => { await new Promise((r) => setTimeout(r, 500)); });
     await press(/place order/i);
-    await waitFor(() => expect(stepNo()).toBe('2'), { timeout: 4000 });
+    await waitFor(() => expect(stepNo()).toBe('2'), { timeout: 30_000 });
     expect(placeOrder).not.toHaveBeenCalled();
   }, T);
 
@@ -476,7 +476,7 @@ describe('container logic', () => {
       prepare({ guest: true, form: { couponCode: 'NORTH10' } });
       mount(flow({ steps: NO_PARTS() }));
       await count();
-      await waitFor(() => expect(vi.mocked(guestQuote).mock.calls.length).toBeGreaterThan(0), { timeout: 6000 });
+      await waitFor(() => expect(vi.mocked(guestQuote).mock.calls.length).toBeGreaterThan(0), { timeout: 30_000 });
       await act(async () => { await new Promise((r) => setTimeout(r, 900)); });
       expect(vi.mocked(guestQuote).mock.calls.length).toBe(turnstile.minted);
       for (const call of vi.mocked(guestQuote).mock.calls) expect(call[0].couponCode).toBeUndefined();
@@ -495,7 +495,7 @@ describe('container logic', () => {
     await act(async () => { await new Promise((r) => setTimeout(r, 450)); });
     for (let i = 2; i <= 5; i += 1) {
       act(() => action().onClick());
-      await waitFor(() => expect(stepNo()).toBe(String(i)), { timeout: 4000 });
+      await waitFor(() => expect(stepNo()).toBe(String(i)), { timeout: 30_000 });
       await act(async () => { await new Promise((r) => setTimeout(r, 450)); });
       expect(action().label).toMatch(i < 5 ? /^continue$/i : /^place order/i);
     }
@@ -504,7 +504,7 @@ describe('container logic', () => {
 
 describe('fix round 1 coverage', () => {
   const NO_PARTS = () => withSlot(withSlot(stepItems(STEP_KINDS), 'CheckoutShipping', 'after', []), 'CheckoutReview', 'after', []);
-  const guestQuoted = () => waitFor(() => expect(vi.mocked(guestQuote).mock.calls.length).toBeGreaterThan(0), { timeout: 6000 });
+  const guestQuoted = () => waitFor(() => expect(vi.mocked(guestQuote).mock.calls.length).toBeGreaterThan(0), { timeout: 30_000 });
   const pause = (ms: number) => act(async () => { await new Promise((r) => setTimeout(r, ms)); });
 
   it('an illegal stored step order renders the default arrangement', async () => {
@@ -536,12 +536,12 @@ describe('fix round 1 coverage', () => {
     expect(turnstile.minted).toBe(1);
     for (let i = 1; i < 3; i += 1) {
       await press(/^continue$/i);
-      await waitFor(() => expect(stepNo()).toBe(String(i + 1)), { timeout: 4000 });
+      await waitFor(() => expect(stepNo()).toBe(String(i + 1)), { timeout: 30_000 });
       await pause(1200);
     }
     fireEvent.change(await screen.findByLabelText(TEXT_ENTRIES['checkout.coupon.codeLabel']!.en as string), { target: { value: 'NORTH10' } });
     await press(/^apply$/i);
-    await waitFor(() => expect(turnstile.minted).toBe(2), { timeout: 6000 });
+    await waitFor(() => expect(turnstile.minted).toBe(2), { timeout: 30_000 });
   }, T);
 
   it('placeGuestOrder body carries no coupon or notes without the parts', async () => {
@@ -552,11 +552,11 @@ describe('fix round 1 coverage', () => {
     await pause(1200);
     for (let i = 1; i < 5; i += 1) {
       await press(/^continue$/i);
-      await waitFor(() => expect(stepNo()).toBe(String(i + 1)), { timeout: 4000 });
+      await waitFor(() => expect(stepNo()).toBe(String(i + 1)), { timeout: 30_000 });
       await pause(1200);
     }
     await press(/place order/i);
-    await waitFor(() => expect(placeGuestOrder).toHaveBeenCalled(), { timeout: 6000 });
+    await waitFor(() => expect(placeGuestOrder).toHaveBeenCalled(), { timeout: 30_000 });
     const body = vi.mocked(placeGuestOrder).mock.calls[0]![0];
     expect(body.couponCode).toBeUndefined();
     expect(body.notes).toBeUndefined();

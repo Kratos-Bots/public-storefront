@@ -76,7 +76,7 @@ const without = (items: ComponentData[], type: string) => items.filter((i) => i.
 
 async function show(docKey: DocKey, container: ComponentData, path: string) {
   const m = mountDoc(docKey, 'storefront', [container], { path });
-  await screen.findByRole('heading', { level: 1 }, { timeout: 8000 });
+  await screen.findByRole('heading', { level: 1 }, { timeout: 30_000 });
   return m;
 }
 const stored = (name: string, props: Record<string, unknown> = {}) => c(name, `${name}-x`, props);

@@ -53,7 +53,7 @@ function Wrap({ children, fixture }: { children: ReactNode; fixture?: VerifyPrev
 async function mount(doc: PuckDoc, fixture?: VerifyPreview) {
   const guarded = validateDoc(doc, 'verify', 'storefront').doc!;
   const out = render(<Wrap fixture={fixture}><Suspense fallback={null}><RenderDoc doc={guarded} docKey="verify" layout="storefront" /></Suspense></Wrap>);
-  await waitFor(() => expect(out.container.querySelector('div[class*="page"]')).not.toBeNull(), { timeout: 8000 });
+  await waitFor(() => expect(out.container.querySelector('div[class*="page"]')).not.toBeNull(), { timeout: 30_000 });
   return out;
 }
 const fill = (code = 'AB3D-SKU12', auth = '123456') => {

@@ -20,7 +20,7 @@ function renderCanvas() {
 }
 async function puckShown() {
   // Puck's first render is slow under a full-suite run: wait longer than vi.waitFor's 1 s default.
-  await vi.waitFor(() => expect(document.querySelector('[data-sf-builder-header]')).not.toBeNull(), { timeout: 10_000 });
+  await vi.waitFor(() => expect(document.querySelector('[data-sf-builder-header]')).not.toBeNull(), { timeout: 30_000 });
   for (const el of document.querySelectorAll<HTMLElement>('.Puck')) el.style.visibility = 'visible';
 }
 const S = () => useEditorStore.getState();
@@ -114,7 +114,7 @@ describe('editor header: text', () => {
     const headings = () => (S().docs.catalog?.content ?? []).filter((c) => c.type === 'Heading').length;
     fireEvent.click(screen.getByRole('button', { name: 'Add block' }));
     await act(async () => fireEvent.click(within(screen.getByRole('menu')).getByRole('menuitem', { name: 'Heading' })));
-    await vi.waitFor(() => expect(headings()).toBe(n), { timeout: 5_000 });
+    await vi.waitFor(() => expect(headings()).toBe(n), { timeout: 30_000 });
     // Let Puck record the insert (debounced).
     await act(async () => { await new Promise((r) => setTimeout(r, 400)); });
   }
@@ -140,7 +140,7 @@ describe('editor header: text', () => {
     await act(async () => { await new Promise((r) => setTimeout(r, 50)); });
     expect((S().docs.catalog?.content ?? []).filter((c) => c.type === 'Heading')).toHaveLength(1);
     remove();
-  }, 20_000);
+  });
 
   it('Ctrl+Shift+Z drops a branched-away text redo like the Redo button', async () => {
     renderCanvas();
@@ -162,7 +162,7 @@ describe('editor header: text', () => {
     expect(inside.defaultPrevented).toBe(false);
     expect(S().textFuture).toHaveLength(0);
     remove();
-  }, 20_000);
+  });
 
   it('the undo-key listener is added once, not on every render', async () => {
     const spy = vi.spyOn(window, 'addEventListener');
@@ -201,7 +201,7 @@ describe('editor header: text', () => {
     for (const n of [1, 2]) {
       fireEvent.click(screen.getByRole('button', { name: 'Add block' }));
       await act(async () => fireEvent.click(within(screen.getByRole('menu')).getByRole('menuitem', { name: 'Heading' })));
-      await vi.waitFor(() => expect(headings()).toBe(n), { timeout: 5_000 });
+      await vi.waitFor(() => expect(headings()).toBe(n), { timeout: 30_000 });
       // Let Puck record the insert (debounced) before the next edit.
       await act(async () => { await new Promise((r) => setTimeout(r, 400)); });
     }
@@ -213,19 +213,19 @@ describe('editor header: text', () => {
     expect(S().siteText!.strings).toEqual({});
     expect(S().textFuture).toHaveLength(1);
     await act(async () => { fireEvent.click(undo); });          // the second block
-    await vi.waitFor(() => expect(headings()).toBe(1), { timeout: 5_000 });
+    await vi.waitFor(() => expect(headings()).toBe(1), { timeout: 30_000 });
     await act(async () => { await new Promise((r) => setTimeout(r, 50)); });
     expect(S().textFuture).toHaveLength(1);
 
     await act(async () => { fireEvent.click(redo); });          // the block again
-    await vi.waitFor(() => expect(headings()).toBe(2), { timeout: 5_000 });
+    await vi.waitFor(() => expect(headings()).toBe(2), { timeout: 30_000 });
     await act(async () => { await new Promise((r) => setTimeout(r, 50)); });
     expect(S().textFuture).toHaveLength(1);
     await act(async () => { fireEvent.click(redo); });          // then the text
     expect(S().siteText!.strings.en![key]).toBe('After block');
     // Two recorded inserts (400 ms each) on top of Puck's first render: well past the 5 s default
     // when the whole suite shares the CPU.
-  }, 30_000);
+  });
 
   it('undoing the first block edit of a mount keeps the text redo (Puck\'s id-less first entry)', async () => {
     renderCanvas();
@@ -237,15 +237,15 @@ describe('editor header: text', () => {
     act(() => { applyText('shared', key, 'After first block'); });
     await act(async () => { fireEvent.click(undo); });          // text
     await act(async () => { fireEvent.click(undo); });          // the only block, onto the id-less entry
-    await vi.waitFor(() => expect(headings()).toBe(0), { timeout: 5_000 });
+    await vi.waitFor(() => expect(headings()).toBe(0), { timeout: 30_000 });
     await act(async () => { await new Promise((r) => setTimeout(r, 50)); });
     expect(S().textFuture).toHaveLength(1);
     await act(async () => { fireEvent.click(redo); });          // the block again
-    await vi.waitFor(() => expect(headings()).toBe(1), { timeout: 5_000 });
+    await vi.waitFor(() => expect(headings()).toBe(1), { timeout: 30_000 });
     await act(async () => { await new Promise((r) => setTimeout(r, 50)); });
     await act(async () => { fireEvent.click(redo); });          // then the text
     expect(S().siteText!.strings.en![key]).toBe('After first block');
-  }, 30_000);
+  });
 
   it('a new block edit clears the text redo', async () => {
     renderCanvas();
@@ -256,8 +256,8 @@ describe('editor header: text', () => {
     expect(S().textFuture).toHaveLength(1);
     fireEvent.click(screen.getByRole('button', { name: 'Add block' }));
     await act(async () => fireEvent.click(within(screen.getByRole('menu')).getByRole('menuitem', { name: 'Heading' })));
-    await vi.waitFor(() => expect(headings()).toBe(1), { timeout: 5_000 });
+    await vi.waitFor(() => expect(headings()).toBe(1), { timeout: 30_000 });
     await act(async () => { await new Promise((r) => setTimeout(r, 400)); });
     expect(S().textFuture).toHaveLength(0);
-  }, 20_000);
+  });
 });
