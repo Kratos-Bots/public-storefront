@@ -1,4 +1,6 @@
+import type { ReactNode } from 'react';
 import { Link } from 'react-router';
+import type { StyleAttrs } from '@/builder/define.ts';
 import type { ContactModes } from '@/types/settings.ts';
 import type { CheckoutForm } from '@/features/checkout/form-state.ts';
 import { Field } from '@/features/checkout/Field.tsx';
@@ -13,6 +15,10 @@ export interface ContactStepProps {
   errors: Record<string, string>;
   contactModes: ContactModes;
   guest: boolean;
+  /** Content slots of the step part: before everything, after everything. */
+  before?: ReactNode;
+  after?: ReactNode;
+  rootAttrs?: StyleAttrs;
 }
 
 /**
@@ -21,12 +27,13 @@ export interface ContactStepProps {
  * behind them, email or phone has to be there or the order has no identity at
  * all (STOREFRONT.md §3.5a).
  */
-export function ContactStep({ form, patch, errors, contactModes, guest }: ContactStepProps) {
+export function ContactStep({ form, patch, errors, contactModes, guest, before, after, rootAttrs }: ContactStepProps) {
   const { t, tn } = useText();
   const { emailMode, phoneMode } = contactModes;
 
   return (
-    <div className={classes.step}>
+    <div className={classes.step} {...rootAttrs}>
+      {before}
       <p className={classes.blurb}>
         {emailMode !== 'hidden'
           ? t('checkout.contact.blurbEmail')
@@ -88,6 +95,7 @@ export function ContactStep({ form, patch, errors, contactModes, guest }: Contac
           })}
         </p>
       ) : null}
+      {after}
     </div>
   );
 }

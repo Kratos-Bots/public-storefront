@@ -1,8 +1,8 @@
-import { useId } from 'react';
+import { useId, type ReactNode } from 'react';
+import type { StyleAttrs } from '@/builder/define.ts';
 import type { Quote } from '@/types/checkout.ts';
 import type { CheckoutForm } from '@/features/checkout/form-state.ts';
 import { Money } from '@/components/Money.tsx';
-import { CouponField } from '@/features/checkout/CouponField.tsx';
 import { countryName } from '@/features/checkout/CountrySelect.tsx';
 import { useText } from '@/text/runtime.tsx';
 import fields from '@/features/checkout/Fields.module.css';
@@ -13,32 +13,35 @@ export interface ShippingStepProps {
   form: CheckoutForm;
   patch: (patch: Partial<CheckoutForm>) => void;
   errors: Record<string, string>;
-  /** Busy while a quote is in the air — the coupon key waits on it. */
-  busy: boolean;
-  couponError?: string;
   /** A quote error this step is responsible for — an unavailable option, say. */
   notice?: string;
+  /** Content slots of the step part: before everything, after everything. */
+  before?: ReactNode;
+  after?: ReactNode;
+  rootAttrs?: StyleAttrs;
 }
 
 /**
- * How it travels, and any discount code. Both re-price the order, so this step
- * is where the docket does most of its moving.
+ * How it travels. The discount code is its own part (CheckoutCoupon), by default
+ * in this step's `after` slot.
  */
 export function ShippingStep({
   quote,
   form,
   patch,
   errors,
-  busy,
-  couponError,
   notice,
+  before,
+  after,
+  rootAttrs,
 }: ShippingStepProps) {
   const { t, msg } = useText();
   const name = useId();
   const options = quote?.shippingOptions ?? [];
 
   return (
-    <div className={classes.step}>
+    <div className={classes.step} {...rootAttrs}>
+      {before}
       <div className={classes.section}>
         <p className={classes.sectionHead}>
           {t('checkout.shipping.heading')}
@@ -94,16 +97,7 @@ export function ShippingStep({
         ) : null}
       </div>
 
-      <div className={classes.section}>
-        <CouponField
-          applied={quote?.coupon ?? null}
-          code={form.couponCode}
-          busy={busy}
-          error={couponError}
-          onApply={(code) => patch({ couponCode: code })}
-          onRemove={() => patch({ couponCode: '' })}
-        />
-      </div>
+      {after}
     </div>
   );
 }

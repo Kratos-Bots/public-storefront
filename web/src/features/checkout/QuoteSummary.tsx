@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { CryptoOption, PaymentMethod, Quote } from '@/types/checkout.ts';
+import type { StyleAttrs } from '@/builder/define.ts';
 import { useCartStore, selectSubtotal } from '@/stores/cart.ts';
 import { Money } from '@/components/Money.tsx';
 import { rowAnim } from '@/lib/motion.ts';
@@ -19,6 +20,7 @@ export interface QuoteSummaryProps {
   /** Open the collapsed phone head once, when the shopper reaches the review —
    *  that is the one step whose whole job is checking these figures. */
   defaultOpen?: boolean;
+  rootAttrs?: StyleAttrs;
 }
 
 /**
@@ -37,6 +39,7 @@ export function QuoteSummary({
   method,
   combo,
   defaultOpen = false,
+  rootAttrs,
 }: QuoteSummaryProps) {
   const { t, tn, tp } = useText();
   const [open, setOpen] = useState(defaultOpen);
@@ -84,6 +87,7 @@ export function QuoteSummary({
   return (
     <section
       className={classes.docket}
+      {...rootAttrs}
       data-open={open}
       data-stale={stale}
       data-fetching={isFetching}

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { Button, Stepper } from '@mantine/core';
+import { Button } from '@mantine/core';
 import { useDebouncedValue } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { useSettings } from '@/app/settings.ts';
@@ -28,13 +28,20 @@ import {
 } from '@/features/checkout/schemas.ts';
 import { useQuote } from '@/features/checkout/useQuote.ts';
 import { publicOrderPath, resolveCheckoutOutcome } from '@/features/checkout/outcome.ts';
-import { QuoteSummary } from '@/features/checkout/QuoteSummary.tsx';
 import { GuestTurnstile, type GuestTurnstileHandle } from '@/features/checkout/GuestTurnstile.tsx';
-import { ContactStep } from '@/features/checkout/steps/ContactStep.tsx';
-import { AddressStep } from '@/features/checkout/steps/AddressStep.tsx';
-import { ShippingStep } from '@/features/checkout/steps/ShippingStep.tsx';
-import { PaymentStep } from '@/features/checkout/steps/PaymentStep.tsx';
-import { ReviewStep } from '@/features/checkout/steps/ReviewStep.tsx';
+import { CHECKOUT_VIEWS } from '@/features/checkout/checkout-parts.tsx';
+import { STEP_META } from '@/features/checkout/step-meta.ts';
+import { defaultSlotRenders } from '@/builder/render.tsx';
+import { containsVisibleType } from '@/builder/rules.ts';
+import {
+  CheckoutFamily,
+  DEFAULT_STEP_ORDER,
+  isLegalStepOrder,
+  stepKindsOf,
+  type CheckoutData,
+  type CheckoutSlots,
+  type StepKind,
+} from '@/builder/family-checkout.ts';
 import { DIAL_CODES } from '@/lib/dial-codes.ts';
 import { formatMoney } from '@/lib/format.ts';
 import { haptic, isTelegramWebApp, openExternalLink } from '@/lib/telegram-webapp.ts';
@@ -43,14 +50,6 @@ import { FADE } from '@/lib/motion.ts';
 import { Slot } from '@/templates/runtime.tsx';
 import { textKey, useText } from '@/text/runtime.tsx';
 import classes from '@/features/checkout/CheckoutPage.module.css';
-
-const STEPS = [
-  { label: textKey('checkout.steps.contact'), title: textKey('checkout.steps.contactTitle') },
-  { label: textKey('checkout.steps.address'), title: textKey('checkout.steps.addressTitle') },
-  { label: textKey('checkout.steps.shipping'), title: textKey('checkout.steps.shippingTitle') },
-  { label: textKey('checkout.steps.payment'), title: textKey('checkout.steps.paymentTitle') },
-  { label: textKey('checkout.steps.review'), title: textKey('checkout.steps.reviewTitle') },
-] as const;
 
 /**
  * The guest quote driver's debounce. Deliberately longer than `useQuote`'s own
@@ -110,7 +109,12 @@ function firstIssues(issues: Array<{ path: PropertyKey[]; message: string }>): R
   return out;
 }
 
-export function CheckoutPage() {
+export interface CheckoutPageProps {
+  /** The CheckoutFlow block's slots; omitted = the default arrangement (tests, v0.7.0 call sites). */
+  slots?: CheckoutSlots;
+}
+
+export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
   const { t, tn } = useText();
   const settings = useSettings();
   const { contactModes, currency, features } = settings;
@@ -123,6 +127,24 @@ export function CheckoutPage() {
   const lines = useCartStore((s) => s.lines);
   const clearCart = useCartStore((s) => s.clear);
   const { sync } = useServerCart();
+
+  const legacy = useMemo(
+    () => (slots ? null : (defaultSlotRenders('CheckoutFlow', 'storefront', {}, 'checkout') as unknown as CheckoutSlots)),
+    [slots],
+  );
+  const s = slots ?? legacy!;
+
+  // The steps in the owner's order. The guard refuses an illegal document, so the fallback is defence in depth.
+  const order = useMemo<readonly StepKind[]>(() => {
+    const kinds = stepKindsOf(s.steps.items.map((i) => i.type));
+    return isLegalStepOrder(kinds) ? kinds : DEFAULT_STEP_ORDER;
+  }, [s.steps.items]);
+
+  // A discount code or notes the owner took off the page must not travel with the order. The saved
+  // value is kept (the persisted form is never rewritten) and comes back when the part does.
+  const allItems = [...s.head.items, ...s.lead.items, ...s.steps.items, ...s.after.items, ...s.aside.items];
+  const couponShown = containsVisibleType(allItems, 'CheckoutCoupon');
+  const notesShown = containsVisibleType(allItems, 'CheckoutNotes');
 
   const [form, setForm] = useState<CheckoutForm>(() =>
     seedForm(loadPersistedForm() ?? DEFAULT_FORM, contactModes.defaultPhoneCountry),
@@ -176,12 +198,17 @@ export function CheckoutPage() {
     });
   }, []);
 
+  const effective = useMemo<CheckoutForm>(
+    () => ({ ...form, couponCode: couponShown ? form.couponCode : '', notes: notesShown ? form.notes : '' }),
+    [form, couponShown, notesShown],
+  );
+
   // The guest path never hands `useQuote` a token: the hook would then be free to
   // fire a query of its own, and a Turnstile token is spent the first time it is
   // sent (STOREFRONT.md §3.5a). With no token the hook's automatic query stays
   // disabled and every guest quote goes out through `refetchWithToken` below,
   // each with a token minted for that one request.
-  const { quote, isFetching, error: quoteError, needsToken, refetchWithToken } = useQuote(form, {
+  const { quote, isFetching, error: quoteError, needsToken, refetchWithToken } = useQuote(effective, {
     guest,
   });
 
@@ -202,11 +229,11 @@ export function CheckoutPage() {
     () =>
       JSON.stringify({
         country: form.country,
-        couponCode: form.couponCode.trim().toUpperCase(),
+        couponCode: effective.couponCode.trim().toUpperCase(),
         shippingOptionId: form.shippingOptionId,
         lines: lines.map((l) => ({ productId: l.productId, quantity: l.quantity })),
       }),
-    [form.country, form.couponCode, form.shippingOptionId, lines],
+    [form.country, effective.couponCode, form.shippingOptionId, lines],
   );
   const [debouncedGuestKey] = useDebouncedValue(guestQuoteKey, GUEST_QUOTE_DEBOUNCE_MS);
   const quotedKey = useRef<string | null>(null);
@@ -305,7 +332,7 @@ export function CheckoutPage() {
     ? null
     : (combo?.chargeTotal ?? method?.chargeTotal ?? shownQuote?.amountDue ?? null);
 
-  const errorTarget = classifyQuoteError(quoteError, form);
+  const errorTarget = classifyQuoteError(quoteError, effective);
   const quoteMessage = quoteError
     ? quoteError.status === 404
       ? t('checkout.errors.unknownCode')
@@ -325,8 +352,8 @@ export function CheckoutPage() {
     return parsed.success ? { email: parsed.data.email, phone: parsed.data.phone } : {};
   }
 
-  function validate(index: number): boolean {
-    if (index === 0) {
+  function validate(kind: StepKind): boolean {
+    if (kind === 'contact') {
       const parsed = contactSchema.safeParse({
         firstName: form.firstName,
         surname: form.surname,
@@ -338,7 +365,7 @@ export function CheckoutPage() {
       setErrors(firstIssues(parsed.error.issues));
       return false;
     }
-    if (index === 1) {
+    if (kind === 'address') {
       const parsed = addressSchema.safeParse({
         addressLine1: form.addressLine1,
         addressLine2: form.addressLine2,
@@ -351,7 +378,7 @@ export function CheckoutPage() {
       setErrors(firstIssues(parsed.error.issues));
       return false;
     }
-    if (index === 2) {
+    if (kind === 'shipping') {
       const parsed = shippingSchema.safeParse({
         shippingOptionId: form.shippingOptionId ?? undefined,
       });
@@ -375,7 +402,7 @@ export function CheckoutPage() {
       }
       return true;
     }
-    if (index === 3) {
+    if (kind === 'payment') {
       if (!shownQuote) {
         setErrors({ method: textKey('checkout.errors.stillPricing') });
         return false;
@@ -415,20 +442,23 @@ export function CheckoutPage() {
     return true;
   }
 
-  function focusCard() {
+  const focusCard = useCallback(() => {
     const el = cardRef.current;
     if (el && typeof el.scrollIntoView === 'function') el.scrollIntoView({ block: 'start' });
-  }
+  }, []);
 
-  function goTo(index: number) {
-    setErrors({});
-    setStep(index);
-    focusCard();
-  }
+  const goTo = useCallback(
+    (index: number) => {
+      setErrors({});
+      setStep(index);
+      focusCard();
+    },
+    [focusCard],
+  );
 
   function next() {
-    if (!validate(step)) return;
-    goTo(Math.min(step + 1, STEPS.length - 1));
+    if (!validate(order[step]!)) return;
+    goTo(Math.min(step + 1, order.length - 1));
   }
 
   function back() {
@@ -455,11 +485,11 @@ export function CheckoutPage() {
       // blocks a stale selection before we get here, and reading them back off
       // the quote means the body can never carry one even if it ever didn't.
       shippingOptionId: shippingOption?.id ?? form.shippingOptionId ?? 0,
-      couponCode: form.couponCode.trim().toUpperCase() || undefined,
+      couponCode: effective.couponCode.trim().toUpperCase() || undefined,
       paymentMethod: method?.method || undefined,
       coin: combo?.coin || undefined,
       network: combo?.network || undefined,
-      notes: form.notes.trim() || undefined,
+      notes: effective.notes.trim() || undefined,
     };
   }
 
@@ -470,8 +500,8 @@ export function CheckoutPage() {
     // quote, while the shopper is still reading the review. `validate` has set
     // the errors that explain why, so this deliberately isn't `goTo` (which
     // clears them).
-    for (let index = 0; index < STEPS.length - 1; index += 1) {
-      if (validate(index)) continue;
+    for (let index = 0; index < order.length - 1; index += 1) {
+      if (validate(order[index]!)) continue;
       setStep(index);
       focusCard();
       return;
@@ -554,8 +584,35 @@ export function CheckoutPage() {
     }
   }
 
+  const kind = order[step]!;
+  const data = useMemo<CheckoutData>(
+    () => ({
+      form,
+      patch,
+      errors,
+      contactModes,
+      guest,
+      currency,
+      quote: shownQuote,
+      method,
+      combo,
+      busy: isFetching || verifying,
+      quoteStale: Boolean(quoteError),
+      couponError: errorTarget === 'coupon' ? quoteMessage : undefined,
+      shippingNotice: errorTarget === 'shipping' ? quoteMessage : undefined,
+      addressNotice: errorTarget === 'address' ? quoteMessage : undefined,
+      order,
+      step,
+      kind,
+      onReview: step === order.length - 1,
+      goTo,
+    }),
+    [form, patch, errors, contactModes, guest, currency, shownQuote, method, combo, isFetching, verifying, quoteError, errorTarget, quoteMessage, order, step, kind, goTo],
+  );
+  const value = useMemo(() => ({ data, views: CHECKOUT_VIEWS }), [data]);
+
   // Registered before the early returns below — hooks can't sit behind them.
-  const lastStep = step === STEPS.length - 1;
+  const lastStep = step === order.length - 1;
   const showsForm = !(guest && !settings.turnstile) && !(lines.length === 0 && !placed);
   usePrimaryAction(
     inTelegram && showsForm
@@ -609,46 +666,23 @@ export function CheckoutPage() {
     );
   }
 
-  const meta = STEPS[step]!;
-  const onReview = step === STEPS.length - 1;
+  const meta = STEP_META[kind];
+  const onReview = step === order.length - 1;
   const nextDisabled = submitting || locked || (onReview && guest && verifying);
 
   return (
+    <CheckoutFamily.Provider value={value}>
     <div className={classes.page}>
-      <header className={classes.head}>
-        <span className={classes.eyebrow}>{t('checkout.page.eyebrow')}</span>
-        <h1 className={classes.title}>{guest ? t('checkout.page.guestTitle') : t('checkout.page.title')}</h1>
-      </header>
+      {s.head()}
 
       <div className={classes.grid}>
         <div>
-          <Stepper
-            active={step}
-            onStepClick={goTo}
-            allowNextStepsSelect={false}
-            size="xs"
-            iconSize={26}
-            data-sf-part="stepper"
-            classNames={{
-              root: classes.stepper,
-              steps: classes.steps,
-              step: classes.step,
-              stepIcon: classes.stepIcon,
-              stepBody: classes.stepBody,
-              stepLabel: classes.stepLabel,
-              separator: classes.separator,
-              content: classes.content,
-            }}
-          >
-            {STEPS.map((s) => (
-              <Stepper.Step key={s.label} label={t(s.label)} />
-            ))}
-          </Stepper>
+          {s.lead()}
 
           <div key={step} className={`${classes.card} ${FADE}`} ref={cardRef} data-sf-part="card">
             <header className={classes.cardHead}>
               <span className={classes.cardCount}>
-                {t('checkout.steps.count', { current: step + 1, total: STEPS.length })}
+                {t('checkout.steps.count', { current: step + 1, total: order.length })}
               </span>
               <h2 className={classes.cardTitle}>{t(meta.title)}</h2>
             </header>
@@ -674,54 +708,7 @@ export function CheckoutPage() {
               </p>
             ) : null}
 
-            {step === 0 ? (
-              <ContactStep
-                form={form}
-                patch={patch}
-                errors={errors}
-                contactModes={contactModes}
-                guest={guest}
-              />
-            ) : null}
-            {step === 1 ? (
-              <AddressStep
-                form={form}
-                patch={patch}
-                errors={errors}
-                notice={errorTarget === 'address' ? quoteMessage : undefined}
-              />
-            ) : null}
-            {step === 2 ? (
-              <ShippingStep
-                quote={shownQuote}
-                form={form}
-                patch={patch}
-                errors={errors}
-                busy={isFetching || verifying}
-                couponError={errorTarget === 'coupon' ? quoteMessage : undefined}
-                notice={errorTarget === 'shipping' ? quoteMessage : undefined}
-              />
-            ) : null}
-            {step === 3 ? (
-              <PaymentStep
-                quote={shownQuote}
-                form={form}
-                patch={patch}
-                errors={errors}
-                guest={guest}
-                currency={currency}
-              />
-            ) : null}
-            {step === 4 ? (
-              <ReviewStep
-                form={form}
-                patch={patch}
-                quote={shownQuote}
-                method={method}
-                combo={combo}
-                onEdit={goTo}
-              />
-            ) : null}
+            {s.steps()}
           </div>
 
           {/* Inside Telegram the first step has nothing left in the nav — the MainButton
@@ -777,23 +764,17 @@ export function CheckoutPage() {
               {t('checkout.page.terms')}
             </p>
           ) : null}
+
+          {s.after()}
         </div>
 
-        <aside className={classes.aside}>
-          <QuoteSummary
-            defaultOpen={onReview}
-            quote={shownQuote}
-            isFetching={isFetching || verifying}
-            stale={Boolean(quoteError)}
-            method={method}
-            combo={combo}
-          />
-        </aside>
+        {s.aside({ className: classes.aside, as: 'aside' })}
       </div>
 
       {guest && settings.turnstile ? (
         <GuestTurnstile ref={turnstileRef} siteKey={settings.turnstile.siteKey} />
       ) : null}
     </div>
+    </CheckoutFamily.Provider>
   );
 }

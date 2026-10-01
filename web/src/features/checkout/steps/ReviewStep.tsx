@@ -1,7 +1,9 @@
+import type { ReactNode } from 'react';
+import type { StyleAttrs } from '@/builder/define.ts';
+import type { StepKind } from '@/builder/family-checkout.ts';
 import type { CryptoOption, PaymentMethod, Quote } from '@/types/checkout.ts';
 import type { CheckoutForm } from '@/features/checkout/form-state.ts';
 import { countryName } from '@/features/checkout/CountrySelect.tsx';
-import { TextareaField } from '@/features/checkout/Field.tsx';
 import { composePhoneNumber } from '@/lib/dial-codes.ts';
 import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/checkout/steps/Steps.module.css';
@@ -10,12 +12,17 @@ export const NOTES_MAX = 500;
 
 export interface ReviewStepProps {
   form: CheckoutForm;
-  patch: (patch: Partial<CheckoutForm>) => void;
   quote: Quote | undefined;
   method: PaymentMethod | undefined;
   combo: CryptoOption | null;
+  /** The steps in the owner's order; the recap lists every one but review. */
+  order: readonly StepKind[];
   /** Jump back to a step to change what it holds. */
-  onEdit: (step: number) => void;
+  onEdit: (kind: StepKind) => void;
+  /** Content slots of the step part: before everything, after everything. */
+  before?: ReactNode;
+  after?: ReactNode;
+  rootAttrs?: StyleAttrs;
 }
 
 /**
@@ -23,88 +30,81 @@ export interface ReviewStepProps {
  * the step that set it — the figures live in the docket beside this, so nothing
  * here repeats them.
  */
-export function ReviewStep({ form, patch, quote, method, combo, onEdit }: ReviewStepProps) {
+export function ReviewStep({ form, quote, method, combo, order, onEdit, before, after, rootAttrs }: ReviewStepProps) {
   const { t } = useText();
   const shipping = quote?.shippingOptions.find((o) => o.id === form.shippingOptionId);
   const phone = composePhoneNumber(form.phonePrefix, form.phone);
 
+  const slips: Record<Exclude<StepKind, 'review'>, { head: 'checkout.steps.contact' | 'checkout.steps.addressTitle' | 'checkout.steps.shipping' | 'checkout.steps.payment'; body: ReactNode }> = {
+    contact: {
+      head: 'checkout.steps.contact',
+      body: (
+        <>
+          {form.firstName} {form.surname}
+          {form.email ? <span>{form.email}</span> : null}
+          {phone ? <span>{phone}</span> : null}
+        </>
+      ),
+    },
+    address: {
+      head: 'checkout.steps.addressTitle',
+      body: (
+        <>
+          {form.addressLine1}
+          {form.addressLine2 ? <span>{form.addressLine2}</span> : null}
+          <span>
+            {form.city}
+            {form.county ? `, ${form.county}` : ''} {form.zip}
+          </span>
+          <span>{countryName(form.country)}</span>
+        </>
+      ),
+    },
+    shipping: {
+      head: 'checkout.steps.shipping',
+      body: (
+        <>
+          {shipping ? shipping.name : t('checkout.review.notChosen')}
+          {shipping?.courier ? <span>{shipping.courier}</span> : null}
+        </>
+      ),
+    },
+    payment: {
+      head: 'checkout.steps.payment',
+      body: (
+        <>
+          {method ? method.displayName : quote?.amountDue === 0 ? t('common.totals.storeCredit') : t('checkout.review.notChosen')}
+          {combo ? (
+            <span>
+              {combo.coinLabel} · {combo.networkLabel}
+            </span>
+          ) : null}
+        </>
+      ),
+    },
+  };
+
   return (
-    <div className={classes.step}>
+    <div className={classes.step} {...rootAttrs}>
+      {before}
       <p className={classes.blurb}>{t('checkout.review.blurb')}</p>
 
       <div className={classes.recap}>
-        <div className={classes.slip}>
-          <p className={classes.slipHead}>
-            {t('checkout.steps.contact')}
-            <button type="button" className={classes.slipEdit} onClick={() => onEdit(0)}>
-              {t('checkout.review.change')}
-            </button>
-          </p>
-          <p className={classes.slipBody}>
-            {form.firstName} {form.surname}
-            {form.email ? <span>{form.email}</span> : null}
-            {phone ? <span>{phone}</span> : null}
-          </p>
-        </div>
-
-        <div className={classes.slip}>
-          <p className={classes.slipHead}>
-            {t('checkout.steps.addressTitle')}
-            <button type="button" className={classes.slipEdit} onClick={() => onEdit(1)}>
-              {t('checkout.review.change')}
-            </button>
-          </p>
-          <p className={classes.slipBody}>
-            {form.addressLine1}
-            {form.addressLine2 ? <span>{form.addressLine2}</span> : null}
-            <span>
-              {form.city}
-              {form.county ? `, ${form.county}` : ''} {form.zip}
-            </span>
-            <span>{countryName(form.country)}</span>
-          </p>
-        </div>
-
-        <div className={classes.slip}>
-          <p className={classes.slipHead}>
-            {t('checkout.steps.shipping')}
-            <button type="button" className={classes.slipEdit} onClick={() => onEdit(2)}>
-              {t('checkout.review.change')}
-            </button>
-          </p>
-          <p className={classes.slipBody}>
-            {shipping ? shipping.name : t('checkout.review.notChosen')}
-            {shipping?.courier ? <span>{shipping.courier}</span> : null}
-          </p>
-        </div>
-
-        <div className={classes.slip}>
-          <p className={classes.slipHead}>
-            {t('checkout.steps.payment')}
-            <button type="button" className={classes.slipEdit} onClick={() => onEdit(3)}>
-              {t('checkout.review.change')}
-            </button>
-          </p>
-          <p className={classes.slipBody}>
-            {method ? method.displayName : quote?.amountDue === 0 ? t('common.totals.storeCredit') : t('checkout.review.notChosen')}
-            {combo ? (
-              <span>
-                {combo.coinLabel} · {combo.networkLabel}
-              </span>
-            ) : null}
-          </p>
-        </div>
+        {order
+          .filter((kind): kind is Exclude<StepKind, 'review'> => kind !== 'review')
+          .map((kind) => (
+            <div className={classes.slip} key={kind}>
+              <p className={classes.slipHead}>
+                {t(slips[kind].head)}
+                <button type="button" className={classes.slipEdit} onClick={() => onEdit(kind)}>
+                  {t('checkout.review.change')}
+                </button>
+              </p>
+              <p className={classes.slipBody}>{slips[kind].body}</p>
+            </div>
+          ))}
       </div>
-
-      <TextareaField
-        label={t('checkout.review.notes')}
-        value={form.notes}
-        onChange={(v) => patch({ notes: v })}
-        optional
-        maxLength={NOTES_MAX}
-        placeholder={t('checkout.review.notesPlaceholder')}
-        hint={`${form.notes.length} / ${NOTES_MAX}`}
-      />
+      {after}
     </div>
   );
 }

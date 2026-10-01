@@ -1,4 +1,5 @@
 import { useId, type ReactNode } from 'react';
+import type { StyleAttrs } from '@/builder/define.ts';
 import classes from '@/features/checkout/Fields.module.css';
 import { useText } from '@/text/runtime.tsx';
 
@@ -149,6 +150,7 @@ export interface TextareaFieldProps extends CommonProps {
   maxLength?: number;
   placeholder?: string;
   rows?: number;
+  rootAttrs?: StyleAttrs;
 }
 
 export function TextareaField({
@@ -161,11 +163,12 @@ export function TextareaField({
   maxLength,
   placeholder,
   rows = 3,
+  rootAttrs,
 }: TextareaFieldProps) {
   const id = useId();
   const noteId = `${id}-note`;
   return (
-    <div className={classes.field}>
+    <div className={classes.field} {...rootAttrs}>
       <label className={classes.label} htmlFor={id}>
         {label}
         {optional ? <OptionalTag /> : null}

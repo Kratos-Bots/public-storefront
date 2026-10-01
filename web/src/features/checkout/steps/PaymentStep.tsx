@@ -1,4 +1,5 @@
-import { useId } from 'react';
+import { useId, type ReactNode } from 'react';
+import type { StyleAttrs } from '@/builder/define.ts';
 import type { Quote } from '@/types/checkout.ts';
 import type { CheckoutForm } from '@/features/checkout/form-state.ts';
 import { Money } from '@/components/Money.tsx';
@@ -15,6 +16,10 @@ export interface PaymentStepProps {
   /** A guest has no customer row, so no balance to spend. */
   guest: boolean;
   currency: string;
+  /** Content slots of the step part: before everything, after everything. */
+  before?: ReactNode;
+  after?: ReactNode;
+  rootAttrs?: StyleAttrs;
 }
 
 /**
@@ -23,7 +28,7 @@ export interface PaymentStepProps {
  * never a footnote. Crypto opens its combos underneath, because the network
  * changes the number too.
  */
-export function PaymentStep({ quote, form, patch, errors, guest, currency }: PaymentStepProps) {
+export function PaymentStep({ quote, form, patch, errors, guest, currency, before, after, rootAttrs }: PaymentStepProps) {
   const { t, tn, msg } = useText();
   const name = useId();
   const methods = quote?.paymentMethods ?? [];
@@ -31,7 +36,8 @@ export function PaymentStep({ quote, form, patch, errors, guest, currency }: Pay
   const chosen = methods.find((m) => m.method === form.paymentMethod);
 
   return (
-    <div className={classes.step}>
+    <div className={classes.step} {...rootAttrs}>
+      {before}
       {!guest && balance > 0 ? (
         <label className={classes.toggle}>
           <input
@@ -128,6 +134,7 @@ export function PaymentStep({ quote, form, patch, errors, guest, currency }: Pay
           ) : null}
         </div>
       )}
+      {after}
     </div>
   );
 }

@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+import type { StyleAttrs } from '@/builder/define.ts';
 import type { CheckoutForm } from '@/features/checkout/form-state.ts';
 import { Field } from '@/features/checkout/Field.tsx';
 import { CountrySelect } from '@/features/checkout/CountrySelect.tsx';
@@ -12,6 +14,10 @@ export interface AddressStepProps {
   errors: Record<string, string>;
   /** A quote error the address is responsible for — an unserviceable country, say. */
   notice?: string;
+  /** Content slots of the step part: before everything, after everything. */
+  before?: ReactNode;
+  after?: ReactNode;
+  rootAttrs?: StyleAttrs;
 }
 
 /**
@@ -22,10 +28,11 @@ export interface AddressStepProps {
  * quote to `deliveryMethod: 'home'` and strips service-point fields from the
  * submitted address, so a collection-point picker here would be inert.
  */
-export function AddressStep({ form, patch, errors, notice }: AddressStepProps) {
+export function AddressStep({ form, patch, errors, notice, before, after, rootAttrs }: AddressStepProps) {
   const { t } = useText();
   return (
-    <div className={classes.step}>
+    <div className={classes.step} {...rootAttrs}>
+      {before}
       <p className={classes.blurb}>{t('checkout.address.blurb')}</p>
 
       <Field
@@ -91,6 +98,7 @@ export function AddressStep({ form, patch, errors, notice }: AddressStepProps) {
           {notice}
         </p>
       ) : null}
+      {after}
     </div>
   );
 }
