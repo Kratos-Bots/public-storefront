@@ -1,3 +1,4 @@
+import './helpers/pin-locale.ts';
 import '@testing-library/jest-dom/vitest';
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
