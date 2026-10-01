@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup } from '@testing-library/react';
+import { act, cleanup, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import type { StorefrontSettings } from '@/types/settings.ts';
 import type { LayoutKind, ComponentData } from '@/builder/types.ts';
@@ -256,6 +256,8 @@ describe('stage 4 cart drawer goldens (v0.7.0)', () => {
     seedCart(c);
     useUiStore.setState({ cartOpen: true });
     const m = mountAt(<CartDrawer />, { path: '/' });
+    // The drawer's panel is a dynamic chunk requested on mount: the first case pays the cold import.
+    await waitFor(() => expect(m.baseElement.querySelector('[data-sf-part="drawer"]')).not.toBeNull(), { timeout: 10000 });
     await settle({ container: m.baseElement, baseElement: m.baseElement });
     const drawer = m.baseElement.querySelector('[data-sf-part="drawer"]');
     expect(drawer, 'no [data-sf-part="drawer"] root rendered').not.toBeNull();
