@@ -1,13 +1,14 @@
-import { ArrowUpRightIcon, Brand, ContactLinks, useMobileCartBar, type FooterProps } from '@/templates/contract.ts';
+import { ArrowUpRightIcon, Brand, ContactLinks, useMobileCartBar, useText, type FooterProps } from '@/templates/contract.ts';
 import { Crosshairs } from './Crosshairs.tsx';
 import { nodeName } from './readout.ts';
 
 function StatusStrip() {
+  const { t } = useText();
   return (
     <div className="cb-status" data-cb="status" aria-hidden>
-      <span><span className="cb-status__dot" />CONNECTION SECURE</span>
+      <span><span className="cb-status__dot" />{t('templates.cyber-brutalism.footer.secure')}</span>
       <span className="cb-status__fill" data-cb-wide>· · · · · · · · · · · ·</span>
-      <span>&gt; ACCESS GRANTED_</span>
+      <span>{t('templates.cyber-brutalism.footer.granted')}</span>
     </div>
   );
 }
@@ -19,6 +20,7 @@ function StatusStrip() {
  * layout keeps only the strip.
  */
 export function CyberFooter({ brand, layout, supportLinks, hasChat, options, scheme }: FooterProps) {
+  const { t } = useText();
   const barShowing = useMobileCartBar(); // a hook: called before the showFooter bail-out below
   if (options.showFooter === false) return null; // the status strip is part of the footer
   const status = options.statusBar === true && !barShowing ? <StatusStrip /> : null;
@@ -43,8 +45,8 @@ export function CyberFooter({ brand, layout, supportLinks, hasChat, options, sch
         </div>
 
         {supportLinks.length > 0 ? (
-          <nav aria-label="Support">
-            <h2 className="cb-footer__eyebrow">{eyebrow()} Support</h2>
+          <nav aria-label={t('templates.cyber-brutalism.footer.support')}>
+            <h2 className="cb-footer__eyebrow">{eyebrow()} {t('templates.cyber-brutalism.footer.support')}</h2>
             <ul className="cb-footer__list">
               {supportLinks.map((link) => (
                 <li key={link.url}>
@@ -60,7 +62,7 @@ export function CyberFooter({ brand, layout, supportLinks, hasChat, options, sch
 
         {hasChat ? (
           <div>
-            <h2 className="cb-footer__eyebrow">{eyebrow()} Contact</h2>
+            <h2 className="cb-footer__eyebrow">{eyebrow()} {t('templates.cyber-brutalism.footer.contact')}</h2>
             <ContactLinks />
           </div>
         ) : null}

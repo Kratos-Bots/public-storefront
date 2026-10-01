@@ -12,6 +12,8 @@ const byName = Object.fromEntries(Object.entries(modules).map(([path, m]) => [pa
 type AnyField = { type: string; [k: string]: unknown };
 const field = (name: string, key: string) => byName[name]![key] as unknown as AnyField;
 const ALL_DOCS: DocKey[] = ['shell', ...FIXED_ROUTE_KEYS, 'page:about'];
+/** Where a block can sit, card designs included (their frames and parts live only there). */
+const BLOCK_HOMES: DocKey[] = [...ALL_DOCS, 'card:tile', 'card:row'];
 
 describe('per-block editor fields', () => {
   it('has exactly one fields file per registered block', () => {
@@ -20,7 +22,8 @@ describe('per-block editor fields', () => {
 
   it.each(Object.keys(BLOCKS))('%s: every schema key and slot has a field', (name) => {
     const def = BLOCKS[name]!;
-    for (const key of [...schemaKeys(def), ...def.slots]) expect(byName[name], `${name}.${key}`).toHaveProperty(key);
+    const legacy = def.container?.legacyProps ?? [];
+    for (const key of [...schemaKeys(def).filter((k) => !legacy.includes(k)), ...def.slots]) expect(byName[name], `${name}.${key}`).toHaveProperty(key);
   });
 
   it.each(Object.keys(BLOCKS))('%s: slots are slot fields', (name) => {
@@ -29,16 +32,34 @@ describe('per-block editor fields', () => {
 
   it.each(Object.keys(BLOCKS))('%s: slots only accept blocks every doc and layout of the block accepts', (name) => {
     const def = BLOCKS[name]!;
-    const homes = ALL_DOCS.filter((k) => allowedOn(name, k));
+    const homes = BLOCK_HOMES.filter((k) => allowedOn(name, k));
     const layouts = (['storefront', 'menu', 'webapp'] as const).filter((l) => def.layouts === 'all' || def.layouts.includes(l));
     for (const slot of def.slots) {
       const allow = field(name, slot).allow as string[];
-      expect(allow).toEqual(slotAllowFor(name));
+      expect(allow).toEqual(slotAllowFor(name, slot));
       for (const child of allow) {
         for (const k of homes) expect(allowedOn(child, k), `${name}.${slot} ← ${child} on ${k}`).toBe(true);
         for (const l of layouts) expect(insertableBlocks(homes[0]!, l), `${child} in ${l}`).toContain(child);
       }
     }
+  });
+
+  it.each(Object.keys(BLOCKS).filter((n) => BLOCKS[n]!.container?.legacyProps))('%s: legacy toggles are not fields', (name) => {
+    for (const key of BLOCKS[name]!.container!.legacyProps!) expect(byName[name]).not.toHaveProperty(key);
+  });
+
+  it('container slots never take a route block or a container; slotAccepts narrows a slot to its list; only `nests` may be a container', () => {
+    for (const def of Object.values(BLOCKS)) {
+      if (!def.container) continue;
+      for (const slot of def.slots) {
+        const allow = slotAllowFor(def.name, slot);
+        const only = def.container.slotAccepts?.[slot];
+        if (only) expect(allow, `${def.name}.${slot}`).toEqual([...only]);
+        else for (const n of allow.filter((x) => !def.container!.nests?.includes(x))) expect(!!BLOCKS[n]!.routeBound || !!BLOCKS[n]!.container, `${def.name}.${slot} ← ${n}`).toBe(false);
+      }
+    }
+    expect(slotAllowFor('CardTile', 'content').length).toBeGreaterThan(0);
+    expect(slotAllowFor('CardTile', 'content')).not.toContain('Heading');
   });
 
   it('static slot lists: anywhere-blocks get the everywhere list, route blocks their route\'s own blocks', () => {
@@ -112,5 +133,17 @@ describe('per-block editor fields', () => {
         expect(cols.includes('type') && cols.includes('props'), `${name}.${key}`).toBe(false);
       }
     }
+  });
+});
+
+describe('the Style group (block-styling spec §9.1)', () => {
+  it.each(Object.keys(BLOCKS))('%s: fields end with blockStyle exactly when the block is stylable', (name) => {
+    const keys = Object.keys(byName[name]!);
+    if (BLOCKS[name]!.style) expect(keys.at(-1)).toBe('blockStyle');
+    else expect(keys).not.toContain('blockStyle');
+  });
+  it('blockStyle is a custom field and is never a schema key', () => {
+    expect(byName.Heading!.blockStyle).toMatchObject({ type: 'custom', label: 'Style' });
+    for (const def of Object.values(BLOCKS)) expect(schemaKeys(def)).not.toContain('blockStyle');
   });
 });

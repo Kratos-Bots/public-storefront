@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { completeWhatsapp, pollAttempt, startWhatsapp } from '@/api/auth.ts';
 import { useLoginSuccess } from '@/features/auth/useLoginSuccess.ts';
 import { ApiError, errorMessage } from '@/lib/errors.ts';
+import { useText } from '@/text/runtime.tsx';
 import type { WhatsappStart } from '@/types/auth.ts';
 
 /** Gap between attempt polls (spec §4.6). */
@@ -51,6 +52,7 @@ export function useWhatsappLogin(): WhatsappLoginController {
   const [error, setError] = useState<string | undefined>();
 
   const onLogin = useLoginSuccess();
+  const { t } = useText();
   const onLoginRef = useRef(onLogin);
   // Kept in a ref, written in an effect rather than during render: `start` is
   // created once and the watch chain it closes over outlives any single render,
@@ -107,7 +109,7 @@ export function useWhatsappLogin(): WhatsappLoginController {
           setState('expired');
           return;
         }
-        setError(errorMessage(err, "We couldn't finish signing you in"));
+        setError(errorMessage(err, t('auth.whatsapp.finishFailed')));
         setState('error');
       }
     };
@@ -160,14 +162,14 @@ export function useWhatsappLogin(): WhatsappLoginController {
         watch(attempt, until);
       } catch (err) {
         if (!current()) return;
-        setError(errorMessage(err, "We couldn't start a WhatsApp sign-in"));
+        setError(errorMessage(err, t('auth.whatsapp.startFailed')));
         setState('error');
       } finally {
         if (gen === generation.current) starting.current = false;
         if (current()) setPending(false);
       }
     })();
-  }, []);
+  }, [t]);
 
   return { state, start, pending, data, deadline, error };
 }

@@ -1,4 +1,5 @@
 import { useUiStore } from '@/stores/ui.ts';
+import { useText } from '@/text/runtime.tsx';
 import { Sheet } from '@/components/Sheet.tsx';
 import { CategoryIndex } from '@/features/catalog/CategoryNav.tsx';
 import { CloseIcon } from '@/components/icons.tsx';
@@ -19,6 +20,7 @@ export interface FilterSheetProps {
  */
 export function FilterSheet({ tree, total, activeId }: FilterSheetProps) {
   const opened = useUiStore((s) => s.filterOpen);
+  const { t } = useText();
   const close = useUiStore((s) => s.close);
   const dismiss = () => close('filterOpen');
 
@@ -26,20 +28,20 @@ export function FilterSheet({ tree, total, activeId }: FilterSheetProps) {
     <Sheet
       opened={opened}
       onClose={dismiss}
-      label="Categories"
+      label={t('catalog.nav.categories')}
       header={
         <div className={classes.head}>
           <div>
-            <h2 className={classes.title}>Categories</h2>
-            <p className={classes.sub}>Jump to a section of the list</p>
+            <h2 className={classes.title}>{t('catalog.nav.categories')}</h2>
+            <p className={classes.sub}>{t('catalog.filter.sub')}</p>
           </div>
-          <button type="button" className={classes.close} onClick={dismiss} aria-label="Close">
+          <button type="button" className={classes.close} onClick={dismiss} aria-label={t('common.actions.close')}>
             <CloseIcon size={16} />
           </button>
         </div>
       }
     >
-      <nav className={classes.index} aria-label="Categories">
+      <nav className={classes.index} aria-label={t('catalog.nav.categories')}>
         <CategoryIndex tree={tree} total={total} activeId={activeId} onNavigate={dismiss} />
       </nav>
     </Sheet>

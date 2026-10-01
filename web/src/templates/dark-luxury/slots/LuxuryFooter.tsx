@@ -1,11 +1,12 @@
-import { Brand, ContactLinks, useOrderingState, type FooterProps } from '@/templates/contract.ts';
+import { Brand, ContactLinks, useOrderingState, useText, type FooterProps } from '@/templates/contract.ts';
 
 function StatusBadge() {
+  const { t } = useText();
   const { accepting } = useOrderingState();
   return (
     <p className="lux-status" data-state={accepting ? 'open' : 'paused'}>
       <span className="lux-status__dot" aria-hidden />
-      {accepting ? '[ACCEPTING ORDERS]' : '[ORDERING PAUSED]'}
+      {accepting ? t('templates.dark-luxury.status.accepting') : t('templates.dark-luxury.status.paused')}
     </p>
   );
 }
@@ -16,6 +17,7 @@ function StatusBadge() {
  * a compact panel carrying just the badge (or nothing when the badge is off).
  */
 export function LuxuryFooter({ brand, layout, supportLinks, hasChat, options }: FooterProps) {
+  const { t } = useText();
   if (options.showFooter === false) return null; // the badge lives in the footer, so it goes too
   const badge = options.statusBadge === true ? <StatusBadge /> : null;
   const year = new Date().getFullYear();
@@ -42,8 +44,8 @@ export function LuxuryFooter({ brand, layout, supportLinks, hasChat, options }: 
           </div>
 
           {supportLinks.length > 0 ? (
-            <nav aria-label="Support">
-              <h2 className="lux-footer__head">[Support]</h2>
+            <nav aria-label={t('templates.dark-luxury.footer.supportAria')}>
+              <h2 className="lux-footer__head">{t('templates.dark-luxury.footer.support')}</h2>
               <ul className="lux-footer__list">
                 {supportLinks.map((link) => (
                   <li key={link.url}>
@@ -58,7 +60,7 @@ export function LuxuryFooter({ brand, layout, supportLinks, hasChat, options }: 
 
           {hasChat ? (
             <div>
-              <h2 className="lux-footer__head">[Talk to us]</h2>
+              <h2 className="lux-footer__head">{t('templates.dark-luxury.footer.talk')}</h2>
               <ContactLinks />
             </div>
           ) : null}

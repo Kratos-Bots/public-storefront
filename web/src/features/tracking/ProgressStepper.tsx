@@ -1,5 +1,7 @@
 import { VisuallyHidden } from '@mantine/core';
-import { STAGES } from '@/features/tracking/status.ts';
+import { STAGE_KEYS } from '@/features/tracking/status.ts';
+import { useText } from '@/text/runtime.tsx';
+import type { StyleAttrs } from '@/builder/define.ts';
 import classes from '@/features/tracking/Tracking.module.css';
 
 export interface ProgressStepperProps {
@@ -7,6 +9,7 @@ export interface ProgressStepperProps {
   stage: number;
   /** The parcel came back — the rail reads in the danger tone rather than the accent. */
   failed: boolean;
+  rootAttrs?: StyleAttrs;
 }
 
 /**
@@ -20,23 +23,24 @@ export interface ProgressStepperProps {
  * own segment. Narrower than that there is no room for seven, so the rail states
  * the current stage and its place in the sequence instead.
  */
-export function ProgressStepper({ stage, failed }: ProgressStepperProps) {
+export function ProgressStepper({ stage, failed, rootAttrs }: ProgressStepperProps) {
+  const { t } = useText();
   const reached = Math.max(stage, -1);
   const tone = failed ? 'danger' : undefined;
   const summary =
     reached < 0
-      ? 'Awaiting first courier scan'
-      : `Stage ${reached + 1} of ${STAGES.length}: ${STAGES[reached]}`;
+      ? t('tracking.status.awaitingCourierScan')
+      : t('tracking.status.stageSummary', { stage: reached + 1, total: STAGE_KEYS.length, name: t(STAGE_KEYS[reached]!) });
 
   return (
-    <div className={classes.stepper} data-sf-part="stepper">
+    <div className={classes.stepper} data-sf-part="stepper" {...rootAttrs}>
       {/* The rail is a picture of the summary; screen readers get the sentence. */}
       <VisuallyHidden>{summary}</VisuallyHidden>
 
       <div className={classes.rail} aria-hidden>
-        {STAGES.map((label, i) => (
+        {STAGE_KEYS.map((key, i) => (
           <span
-            key={label}
+            key={key}
             className={classes.seg}
             data-fill={i > reached ? 'ahead' : i === reached ? 'here' : 'passed'}
             data-tone={tone}
@@ -45,22 +49,22 @@ export function ProgressStepper({ stage, failed }: ProgressStepperProps) {
       </div>
 
       <div className={classes.stageNow} aria-hidden>
-        <p className={classes.stageName}>{reached < 0 ? 'Awaiting first scan' : STAGES[reached]}</p>
+        <p className={classes.stageName}>{reached < 0 ? t('tracking.parcel.awaitingScan') : t(STAGE_KEYS[reached]!)}</p>
         {reached >= 0 ? (
           <p className={classes.stageCount}>
-            {reached + 1} / {STAGES.length}
+            {reached + 1} / {STAGE_KEYS.length}
           </p>
         ) : null}
       </div>
 
       <div className={classes.stageLabels} aria-hidden>
-        {STAGES.map((label, i) => (
+        {STAGE_KEYS.map((key, i) => (
           <span
-            key={label}
+            key={key}
             className={classes.stageLabel}
             data-state={i > reached ? 'ahead' : i === reached ? 'here' : 'passed'}
           >
-            {label}
+            {t(key)}
           </span>
         ))}
       </div>

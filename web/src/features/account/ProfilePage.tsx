@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button } from '@mantine/core';
 import { EmptyState } from '@/components/EmptyState.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
@@ -15,14 +15,20 @@ import { isTelegramWebApp, tgClose } from '@/lib/telegram-webapp.ts';
 import { useSessionStore } from '@/stores/session.ts';
 import { useCartStore } from '@/stores/cart.ts';
 import { resetCartSync } from '@/features/cart/useServerCart.ts';
+import { textKey, useText } from '@/text/runtime.tsx';
 import { useProfile } from '@/features/account/queries.ts';
 import type { Profile } from '@/types/profile.ts';
+import { ProfileFamily, type ProfileData, type ProfilePreview } from '@/builder/family-profile.ts';
+import { usePreviewFixture } from '@/builder/mode.ts';
+import type { FamilyValue, PartViewProps } from '@/builder/parts.ts';
+import { defaultSlotRenders } from '@/builder/render.tsx';
+import type { SlotRender } from '@/builder/define.ts';
 import classes from '@/features/account/Account.module.css';
 
 const CHANNELS: Array<{ key: keyof Profile['identities']; label: string }> = [
-  { key: 'telegram', label: 'Telegram' },
-  { key: 'whatsapp', label: 'WhatsApp' },
-  { key: 'email', label: 'Email' },
+  { key: 'telegram', label: textKey('common.contact.telegram') },
+  { key: 'whatsapp', label: textKey('common.contact.whatsapp') },
+  { key: 'email', label: textKey('account.profile.email') },
 ];
 
 /**
@@ -31,7 +37,8 @@ const CHANNELS: Array<{ key: keyof Profile['identities']; label: string }> = [
  * resets this chat's menu button and drops a "back to the menu" message in the
  * chat; the Mini App then closes so the shopper lands on that message.
  */
-function ClassicBotSwitch() {
+function ClassicBotSwitch({ rootAttrs }: { rootAttrs?: PartViewProps['styleAttrs'] }) {
+  const { t } = useText();
   const [stage, setStage] = useState<'idle' | 'confirm' | 'busy'>('idle');
   const [error, setError] = useState<string | null>(null);
 
@@ -42,30 +49,30 @@ function ClassicBotSwitch() {
       await setBotMode(true);
       tgClose();
     } catch (err) {
-      setError(errorMessage(err, "We couldn't switch you — try again"));
+      setError(errorMessage(err, t('account.profile.botFailed')));
       setStage('confirm');
     }
   };
 
   return (
-    <section className={classes.section} aria-label="Classic bot">
+    <section className={classes.section} aria-label={t('account.profile.botAria')} {...rootAttrs}>
       <div className={classes.sectionHead}>
-        <h3 className={classes.sectionTitle}>Prefer the classic bot?</h3>
+        <h3 className={classes.sectionTitle}>{t('account.profile.botTitle')}</h3>
       </div>
       <p className={classes.note}>
-        Shop with buttons in the chat instead of this app. You can come back from the bot&rsquo;s menu any time.
+        {t('account.profile.botNote')}
       </p>
       {stage === 'idle' ? (
         <button type="button" className={classes.switchBot} onClick={() => setStage('confirm')}>
-          Switch to the classic bot
+          {t('account.profile.botSwitch')}
         </button>
       ) : (
         <div className={classes.switchConfirm}>
           <button type="button" className={classes.switchBot} onClick={() => void confirm()} disabled={stage === 'busy'}>
-            {stage === 'busy' ? 'Switching…' : 'Yes, switch'}
+            {stage === 'busy' ? t('account.profile.botSwitching') : t('account.profile.botConfirm')}
           </button>
           <button type="button" className={classes.logout} onClick={() => setStage('idle')} disabled={stage === 'busy'}>
-            Cancel
+            {t('common.actions.cancel')}
           </button>
         </div>
       )}
@@ -74,20 +81,137 @@ function ClassicBotSwitch() {
   );
 }
 
+function DetailsView() {
+  const { t } = useText();
+  const { profile: data } = ProfileFamily.useData();
+  return (
+    <>
+      <div className={classes.sectionHead}>
+        <h3 className={classes.sectionTitle}>{t('account.profile.detailsTitle')}</h3>
+      </div>
+
+      <div className={classes.row}>
+        <span className={classes.rowLabel}>{t('account.profile.name')}</span>
+        <span className={classes.rowFigure}>{data.nickname ?? t('account.profile.nameNotSet')}</span>
+      </div>
+      <div className={classes.row}>
+        <span className={classes.rowLabel}>{t('account.profile.memberSince')}</span>
+        <span className={classes.rowFigure}>{formatDate(data.memberSince)}</span>
+      </div>
+      <div className={classes.row}>
+        <span className={classes.rowLabel}>{t('account.profile.orders')}</span>
+        <span className={classes.rowFigure}>{data.totalOrders}</span>
+      </div>
+      <div className={classes.row}>
+        <span className={classes.rowLabel}>{t('account.profile.totalSpend')}</span>
+        <span className={classes.rowFigure}>
+          <Money amount={data.totalSpend} />
+        </span>
+      </div>
+    </>
+  );
+}
+
+function ChannelsView({ styleAttrs }: PartViewProps) {
+  const { t, msg } = useText();
+  const { profile: data } = ProfileFamily.useData();
+  return (
+    <section className={classes.section} aria-label={t('account.profile.channelsAria')} {...styleAttrs}>
+      <div className={classes.sectionHead}>
+        <h3 className={classes.sectionTitle}>{t('account.profile.channelsTitle')}</h3>
+      </div>
+      <ul className={classes.identities}>
+        {CHANNELS.map((channel) => {
+          const linked = data.identities[channel.key];
+          return (
+            <li
+              key={channel.key}
+              className={linked ? `${classes.identity} ${classes.identityOn}` : classes.identity}
+            >
+              <span className={linked ? `${classes.dot} ${classes.dotOn}` : classes.dot} aria-hidden />
+              {linked
+                ? t('account.profile.channelLinked', { channel: msg(channel.label) })
+                : t('account.profile.channelNotLinked', { channel: msg(channel.label) })}
+            </li>
+          );
+        })}
+      </ul>
+      <p className={classes.note}>
+        {t('account.profile.channelsNote')}
+      </p>
+    </section>
+  );
+}
+
+function ContactView({ styleAttrs }: PartViewProps) {
+  const { t } = useText();
+  const { showContact } = ProfileFamily.useData();
+  if (!showContact) return null;
+  return (
+    <section className={classes.section} aria-label={t('account.profile.contactAria')} {...styleAttrs}>
+      <div className={classes.sectionHead}>
+        <h3 className={classes.sectionTitle}>{t('account.profile.talkToUs')}</h3>
+      </div>
+      <ContactLinks variant="inline" />
+    </section>
+  );
+}
+
+function BotSwitchView({ styleAttrs }: PartViewProps) {
+  const { showBotSwitch } = ProfileFamily.useData();
+  return showBotSwitch ? <ClassicBotSwitch rootAttrs={styleAttrs} /> : null;
+}
+
+function SignOutView({ styleAttrs }: PartViewProps) {
+  const { t } = useText();
+  const { surface, signOut, signingOut } = ProfileFamily.useData();
+  // Inside Telegram the identity is the Telegram account: signing out would
+  // only sign straight back in on the next launch.
+  if (surface === 'telegram') return null;
+  return (
+    <button
+      type="button"
+      className={classes.logout}
+      onClick={() => signOut()}
+      disabled={signingOut}
+      {...styleAttrs}
+    >
+      {signingOut ? t('account.profile.signingOut') : t('account.profile.signOut')}
+    </button>
+  );
+}
+
+/** The profile tab's views (spec §5.4): the v0.7.0 JSX of each piece. */
+export const PROFILE_VIEWS: FamilyValue<ProfileData>['views'] = {
+  ProfileDetails: DetailsView, ProfileChannels: ChannelsView, ProfileContact: ContactView,
+  ProfileBotSwitch: BotSwitchView, ProfileSignOut: SignOutView,
+};
+
 /**
  * Who the shop has you down as, and the way out. Signing out is a local act as
  * much as a server one: the token is revoked, the session and the account's cart
  * leave this browser, and the cart goes back to the local mode a guest shops in.
  * The server cart itself is never deleted — it belongs to the customer, not to
  * the browser they happened to sign out of.
+ *
+ * The Profile container: the query and the sign-out (session and cart clearing, hard
+ * navigation) stay here; the `content` slot holds the parts. Without `slots` the default
+ * arrangement is drawn.
  */
-export function ProfilePage() {
-  const profile = useProfile();
+export function ProfilePage({ slots }: { slots?: { content: SlotRender } } = {}) {
+  const { t } = useText();
+  const fixture = usePreviewFixture<ProfilePreview>('Profile');
+  // The editor previews from a fixture (spec §11.3). Its profile replaces the query, which then
+  // never fires; a fixture without a profile still needs the query's.
+  const preview = fixture !== null;
+  const profile = useProfile(fixture?.profile === undefined);
   const [signingOut, setSigningOut] = useState(false);
   const settings = useSettings();
   const inTelegram = isTelegramWebApp();
   const webapp = useEffectiveLayout() === 'webapp';
   const hasChatLinks = Boolean(settings.brand.links.whatsapp || settings.brand.links.telegram);
+  const legacy = useMemo(() => (slots ? null : defaultSlotRenders('Profile', 'storefront', {}, 'account.profile')), [slots]);
+  const content = slots?.content ?? legacy!.content!;
 
   const signOut = async () => {
     setSigningOut(true);
@@ -117,96 +241,34 @@ export function ProfilePage() {
     window.location.assign('/');
   };
 
-  if (profile.isPending) return <PageSkeleton inline />;
+  const usingFixture = preview && fixture.profile !== undefined;
+  const data = usingFixture ? fixture.profile : profile.data;
+  const surface: ProfileData['surface'] = preview ? fixture.surface : inTelegram ? 'telegram' : webapp ? 'webapp' : 'website';
+  const showContact = preview ? fixture.surface === 'webapp' : webapp && hasChatLinks;
+  const showBotSwitch = !preview && inTelegram && settings.telegramWebApp?.mode === 'beta';
+  const value: FamilyValue<ProfileData> | null = useMemo(
+    () => (data ? { data: { profile: data, signOut: () => void signOut(), signingOut, surface, showContact, showBotSwitch }, views: PROFILE_VIEWS } : null),
+    // `signOut` only closes over `setSigningOut` and module state, so it is safe to leave out.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [data, signingOut, surface, showContact, showBotSwitch],
+  );
 
-  if (profile.isError) {
+  if (!usingFixture && profile.isPending) return <PageSkeleton inline />;
+
+  if (!usingFixture && profile.isError) {
     return (
       <EmptyState
-        eyebrow="Profile"
-        title="We couldn't load your profile"
-        description="This was a hiccup between your browser and us."
+        eyebrow={t('account.nav.profile')}
+        title={t('account.profile.loadFailedTitle')}
+        description={t('account.profile.loadFailedBody')}
         action={
           <Button variant="default" size="sm" onClick={() => void profile.refetch()}>
-            Try again
+            {t('common.actions.tryAgain')}
           </Button>
         }
       />
     );
   }
 
-  const data = profile.data;
-
-  return (
-    <div className={classes.body}>
-      <div className={classes.sectionHead}>
-        <h3 className={classes.sectionTitle}>Your details</h3>
-      </div>
-
-      <div className={classes.row}>
-        <span className={classes.rowLabel}>Name</span>
-        <span className={classes.rowFigure}>{data.nickname ?? 'Not set'}</span>
-      </div>
-      <div className={classes.row}>
-        <span className={classes.rowLabel}>Member since</span>
-        <span className={classes.rowFigure}>{formatDate(data.memberSince)}</span>
-      </div>
-      <div className={classes.row}>
-        <span className={classes.rowLabel}>Orders</span>
-        <span className={classes.rowFigure}>{data.totalOrders}</span>
-      </div>
-      <div className={classes.row}>
-        <span className={classes.rowLabel}>Total spend</span>
-        <span className={classes.rowFigure}>
-          <Money amount={data.totalSpend} />
-        </span>
-      </div>
-
-      <section className={classes.section} aria-label="Sign-in channels">
-        <div className={classes.sectionHead}>
-          <h3 className={classes.sectionTitle}>Ways in</h3>
-        </div>
-        <ul className={classes.identities}>
-          {CHANNELS.map((channel) => {
-            const linked = data.identities[channel.key];
-            return (
-              <li
-                key={channel.key}
-                className={linked ? `${classes.identity} ${classes.identityOn}` : classes.identity}
-              >
-                <span className={linked ? `${classes.dot} ${classes.dotOn}` : classes.dot} aria-hidden />
-                {channel.label} {linked ? 'linked' : 'not linked'}
-              </li>
-            );
-          })}
-        </ul>
-        <p className={classes.note}>
-          Any linked channel signs you into this account — talk to us in a chat to add another.
-        </p>
-      </section>
-
-      {webapp && hasChatLinks ? (
-        <section className={classes.section} aria-label="Contact">
-          <div className={classes.sectionHead}>
-            <h3 className={classes.sectionTitle}>Talk to us</h3>
-          </div>
-          <ContactLinks variant="inline" />
-        </section>
-      ) : null}
-
-      {inTelegram && settings.telegramWebApp?.mode === 'beta' ? <ClassicBotSwitch /> : null}
-
-      {/* Inside Telegram the identity is the Telegram account: signing out would
-          only sign straight back in on the next launch. */}
-      {inTelegram ? null : (
-        <button
-          type="button"
-          className={classes.logout}
-          onClick={() => void signOut()}
-          disabled={signingOut}
-        >
-          {signingOut ? 'Signing out' : 'Sign out'}
-        </button>
-      )}
-    </div>
-  );
+  return <ProfileFamily.Provider value={value!}>{content({ className: classes.body })}</ProfileFamily.Provider>;
 }

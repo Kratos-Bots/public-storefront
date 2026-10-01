@@ -16,13 +16,13 @@ vi.mock('@/components/ContactLinks.tsx', () => ({ ContactLinks: () => <i data-ma
 vi.mock('@/features/notices/NoticeBanners.tsx', () => ({ NoticeBanners: ({ pinned }: { pinned?: boolean }) => <i data-mark={pinned ? 'notices-pinned' : 'notices'} /> }));
 vi.mock('@/features/notices/CutoffBar.tsx', () => ({ CutoffBar: () => <i data-mark="cutoff" /> }));
 vi.mock('@/features/auth/LoginModal.tsx', () => ({ LoginModal: () => <i data-mark="login-modal" /> }));
-vi.mock('@/features/cart/CartDrawer.tsx', () => ({ CartDrawer: () => <i data-mark="cart-drawer" /> }));
+vi.mock('@/features/cart/CartDrawer.tsx', () => ({ CartDrawer: () => <i data-mark="cart-drawer" />, useCartDrawerReady: () => true }));
 vi.mock('@/features/cart/MobileCartBar.tsx', () => ({ MobileCartBar: () => <i data-mark="cart-bar" />, useMobileCartBar: () => false }));
 vi.mock('@/features/webapp/PrimaryActionBar.tsx', () => ({ PrimaryActionBar: () => <i data-mark="primary-bar" />, usePrimaryBarShowing: () => false }));
 vi.mock('@/features/webapp/useTelegramChrome.ts', () => ({ useTelegramChrome: () => {}, isFirstHistoryEntry: () => true }));
 vi.mock('@/lib/telegram-webapp.ts', () => ({ isTelegramWebApp: () => false }));
 // Only the no-override skeleton test reaches the network; it must stay pending.
-vi.mock('@/api/pages.ts', () => ({ fetchPageSet: () => new Promise(() => {}) }));
+vi.mock('@/api/pages.ts', () => ({ fetchPageSet: () => new Promise(() => {}), fetchPublished: () => new Promise(() => {}) }));
 
 import { StorefrontShell } from '@/layouts/StorefrontShell.tsx';
 import { MenuShell } from '@/layouts/MenuShell.tsx';
@@ -271,5 +271,53 @@ describe('PuckShell safety nets', () => {
     const css = readFileSync(resolve(__dirname, '../src/layouts', cssFile), 'utf8');
     expect(css).not.toMatch(/\.shell:has\(>\s*\.unstuck\)/);
     expect(css).toMatch(/\.shell:has\(\.unstuck\)\s*\{[^}]*--sf-bar-h:\s*0px[^}]*--sf-pin-h:\s*0px/);
+  });
+  it.each([
+    'StorefrontShell.module.css',
+    'MenuShell.module.css',
+    'WebAppShell.module.css',
+  ])('%s: a Header hidden at a breakpoint zeroes the sticky offsets at that breakpoint only (keyed on data-sfs-hide, so the editor ghost keeps them)', (cssFile) => {
+    const css = readFileSync(resolve(__dirname, '../src/layouts', cssFile), 'utf8');
+    for (const [query, value] of [['max-width: 61.99em', 'mobile'], ['min-width: 62em', 'desktop']] as const) {
+      const block = new RegExp(
+        `@media \\(${query}\\)\\s*\\{\\s*\\.shell:has\\(\\[data-sf-part='header'\\]\\[data-sfs-hide='${value}'\\]\\)\\s*\\{([^}]*)\\}`,
+      );
+      const m = css.match(block);
+      expect(m, `${cssFile} zeroes offsets for a ${value}-hidden header`).not.toBeNull();
+      expect(m![1]).toMatch(/--sf-bar-h:\s*0px/);
+      expect(m![1]).toMatch(/--sf-pin-h:\s*0px/);
+    }
+    expect(css).not.toMatch(/\[data-sfs-ghost/);
+  });
+});
+
+describe('PuckShell · a styled Header (block-styling spec §4 pass target)', () => {
+  it.each(['storefront', 'menu', 'webapp'] as const)('%s: attributes land on <header data-sf-part="header"> only', (layout) => {
+    settings(layout);
+    const shell = defaultDoc('shell', layout)!;
+    const content = shell.content.map((b) => (b.type === 'Header'
+      ? { ...b, props: { ...b.props, blockStyle: { bg: 'surface-2', shadow: 'raised', padTop: 'lg' } } }
+      : b));
+    const { container } = mount(PuckShell, { schemaVersion: 1, shell: { ...shell, content }, pages: {} });
+    const marked = [...container.querySelectorAll('[data-sf-style]')];
+    expect(marked).toHaveLength(1);
+    expect(marked[0]!.tagName).toBe('HEADER');
+    expect(marked[0]!.getAttribute('data-sf-part')).toBe('header');
+    expect(marked[0]!.getAttribute('data-sfs-bg')).toBe('surface-2');
+    expect(marked[0]!.getAttribute('data-sfs-shadow')).toBe('raised');
+    expect(marked[0]!.hasAttribute('data-sfs-pt')).toBe(false);
+  });
+  it('an unstyled published Header renders exactly the default shell', () => {
+    settings('storefront');
+    const plain = normalize(mount(PuckShell, null).container.innerHTML);
+    cleanup();
+    const shell = defaultDoc('shell', 'storefront')!;
+    const content = shell.content.map((b) => (b.type === 'Header' ? { ...b, props: { ...b.props, blockStyle: {} } } : b));
+    expect(normalize(mount(PuckShell, { schemaVersion: 1, shell: { ...shell, content }, pages: {} }).container.innerHTML)).toBe(plain);
+  });
+  it('PageOutlet and MobileCartBar are not stylable', async () => {
+    const { BLOCKS } = await import('@/builder/registry.ts');
+    expect(BLOCKS.PageOutlet!.style).toBe(false);
+    expect(BLOCKS.MobileCartBar!.style).toBe(false);
   });
 });

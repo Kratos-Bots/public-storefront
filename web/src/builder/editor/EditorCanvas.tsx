@@ -1,15 +1,19 @@
-import { Component, useMemo, type ReactNode } from 'react';
-import { Puck, type Data, type Overrides, type UiState } from '@puckeditor/core';
+import { Component, useMemo, useRef, type ReactNode } from 'react';
+import { Puck, type Data, type Overrides, type PuckAction, type UiState } from '@puckeditor/core';
 // Puck's styles without its @import of Inter from rsms.me: the frame loads nothing from third parties.
 import '@puckeditor/core/no-external.css';
 import { DocBoundary, RenderDoc } from '@/builder/render.tsx';
 import { validateDoc } from '@/builder/guard.ts';
 import { defaultDoc } from '@/builder/defaults/index.ts';
 import { buildEditorConfig } from '@/builder/editor/config.ts';
-import { docFor, isCustomKey } from '@/builder/editor/page-set.ts';
+import { docFor, isCustomKey, type DocMap } from '@/builder/editor/page-set.ts';
 import { PageGround } from '@/builder/editor/page-ground.tsx';
 import { ExactPreview, ExactRuntime } from '@/builder/editor/ExactPreview.tsx';
-import type { DocKey, LayoutKind, PuckDoc } from '@/builder/types.ts';
+import { CARD_KINDS, cardKey, type DocKey, type LayoutKind, type PageSet, type PuckDoc } from '@/builder/types.ts';
+import { CardDesignProvider } from '@/builder/card-design.tsx';
+import { prepareDoc } from '@/builder/editor/prepare.ts';
+import { introducesIllegal } from '@/builder/editor/legality.ts';
+import { announceRevert, clearRevert, LegalityNotice, PuckHandleContext, type GetPuckFn } from '@/builder/editor/LegalityGuard.tsx';
 import { isLockedOn } from '@/builder/editor/route-bound.ts';
 import { useEditorStore } from '@/builder/editor/store.ts';
 import { useCurrentDoc, useIssues, useLockedPresent } from '@/builder/editor/use-issues.ts';
@@ -18,7 +22,11 @@ import { restingMarkIds, restingMarksCss } from '@/builder/editor/resting-marks.
 import { PagePicker } from '@/builder/editor/PagePicker.tsx';
 import { EyeIcon, LockIcon, WarnIcon } from '@/builder/editor/icons.tsx';
 import { PUCK_VIEWPORTS } from '@/builder/editor/viewports.ts';
+import { CanvasTextScope } from '@/builder/editor/text/scope.tsx';
+import { usePublishedTextSync } from '@/builder/editor/text/hooks.ts';
 import { initialPanels } from '@/builder/editor/panels.ts';
+import { TEXT_PLUGIN } from '@/builder/editor/text/plugin.tsx';
+import { FieldsWithText } from '@/builder/editor/text/BlockText.tsx';
 import styles from '@/builder/editor/Editor.module.css';
 
 function BlockOverlay({ children, componentId, componentType }: { children: ReactNode; hover: boolean; isSelected: boolean; componentId: string; componentType: string }) {
@@ -39,7 +47,9 @@ function BlockOverlay({ children, componentId, componentType }: { children: Reac
   );
 }
 
-const OVERRIDES: Partial<Overrides> = { header: EditorHeader, componentOverlay: BlockOverlay };
+const OVERRIDES: Partial<Overrides> = { header: EditorHeader, componentOverlay: BlockOverlay, fields: FieldsWithText };
+// Module constant: a new array per render would rebuild Puck's plugin rail every time.
+const PLUGINS = [TEXT_PLUGIN];
 // The canvas always fills the frame; the admin sizes the frame (sf-builder-viewport). Puck's own
 // viewport controls stay hidden so there is one width control, in our header.
 const INITIAL_UI: Partial<UiState> = {
@@ -89,6 +99,28 @@ function CanvasFailed() {
   );
 }
 
+// One prepared object per draft object: compileCard memoises per document object, so an edit to
+// another page must not hand the provider a fresh (uncompiled) copy of an unchanged card doc.
+const preparedDocs = new WeakMap<PuckDoc, PuckDoc>();
+function prepared(doc: PuckDoc): PuckDoc {
+  let out = preparedDocs.get(doc);
+  if (!out) { out = prepareDoc(doc); preparedDocs.set(doc, out); }
+  return out;
+}
+
+/**
+ * The drafts' card designs, as the canvas shows them (spec §6.2): every card doc in the set,
+ * prepared as the session emits it; none ⇒ undefined (the built-in cards).
+ */
+export function draftCards(docs: DocMap): PageSet['cards'] | undefined {
+  const cards: NonNullable<PageSet['cards']> = {};
+  for (const kind of CARD_KINDS) {
+    const doc = docs[cardKey(kind)];
+    if (doc) cards[kind] = prepared(doc);
+  }
+  return Object.keys(cards).length > 0 ? cards : undefined;
+}
+
 function ReadOnlyView() {
   const docKey = useEditorStore((s) => s.docKey);
   const layout = useEditorStore((s) => s.layout);
@@ -96,6 +128,7 @@ function ReadOnlyView() {
   const epoch = useEditorStore((s) => s.epoch);
   const viewport = useEditorStore((s) => s.viewport);
   const doc = useMemo(() => shownDoc(docFor(docs, docKey, layout), docKey, layout), [docs, docKey, layout]);
+  const cards = useMemo(() => draftCards(docs), [docs]);
   return (
     <div className={styles.readOnly} data-exact={viewport !== null ? '' : undefined}>
       <header className={styles.bar}>
@@ -133,9 +166,13 @@ function ReadOnlyView() {
               </div>
             }
           >
-            <PageGround docKey={docKey} layout={layout}>
-              <RenderDoc doc={doc} docKey={docKey} layout={layout} />
-            </PageGround>
+            <CardDesignProvider cards={cards} layout={layout}>
+              <CanvasTextScope>
+                <PageGround docKey={docKey} layout={layout}>
+                  <RenderDoc doc={doc} docKey={docKey} layout={layout} />
+                </PageGround>
+              </CanvasTextScope>
+            </CardDesignProvider>
           </DocBoundary>
         </div>
       )}
@@ -157,7 +194,31 @@ function RestingMarks() {
   return css ? <style data-sf-builder-marks="">{css}</style> : null;
 }
 
+/** The block tree of a doc as one string: every block's type and id and where it nests (what the arrangement rules read). */
+const shapeCache = new WeakMap<object, string>();
+function shapeOf(doc: PuckDoc): string {
+  let out = shapeCache.get(doc);
+  if (out === undefined) {
+    const walk = (list: unknown[]): string => list.map((c) => {
+      const { type, props } = c as { type: string; props: Record<string, unknown> };
+      const kids = Object.entries(props ?? {}).filter(([, v]) => Array.isArray(v) && v.length > 0 && v.every((x) => x && typeof x === 'object' && 'type' in (x as object)))
+        .map(([k, v]) => `${k}[${walk(v as unknown[])}]`).join(',');
+      return `${type}#${String(props?.id)}{${kids}}`;
+    }).join(';');
+    out = walk(doc.content as unknown[]);
+    shapeCache.set(doc, out);
+  }
+  return out;
+}
+
+/** Actions that can put a part somewhere it can't go; the others (undo, remove, setUi...) are never undone. */
+const ARRANGING: ReadonlySet<string> = new Set(['insert', 'move', 'reorder', 'replace']);
+/** Actions that rewrite the data wholesale: a pending drop check no longer applies to what follows. */
+const REWRITING: ReadonlySet<string> = new Set(['set', 'setData', 'replaceRoot', 'remove', 'duplicate']);
+
 export function EditorCanvas() {
+  // Before the read-only return: a published version without siteText still needs the shared wording.
+  usePublishedTextSync();
   const docKey = useEditorStore((s) => s.docKey);
   const layout = useEditorStore((s) => s.layout);
   const epoch = useEditorStore((s) => s.epoch);
@@ -165,6 +226,10 @@ export function EditorCanvas() {
   const viewport = useEditorStore((s) => s.viewport);
   // Memoised on the sorted names of the locked blocks present, not the doc: edits don't rebuild it.
   const present = useLockedPresent();
+  // The drafts' card designs, so a catalogue on the canvas shows the card being designed. Inside
+  // the (doc, epoch)-keyed boundary: a design that failed on one page is tried afresh on the next.
+  const docs = useEditorStore((s) => s.docs);
+  const cards = useMemo(() => draftCards(docs), [docs]);
   const config = useMemo(() => buildEditorConfig(docKey, layout, present), [docKey, layout, present]);
   // Puck's `data` is initial state: read the store once per (doc, epoch) and let Puck own it after.
   const data = useMemo(() => {
@@ -179,6 +244,45 @@ export function EditorCanvas() {
     [docKey, layout, epoch],
   );
 
+  // The last document the canvas accepted: what a drop that breaks the page's arrangement rules reverts to.
+  const handle = useRef<GetPuckFn | null>(null);
+  const lastLegal = useRef<{ for: unknown; doc: PuckDoc } | null>(null);
+  if (lastLegal.current?.for !== data) lastLegal.current = { for: data, doc: data as unknown as PuckDoc };
+  const armed = useRef(false);
+  // A reverted drop echoes one more onChange (Puck's own undo): it must not clear the notice about it.
+  const echo = useRef(false);
+  const onAction = (action: PuckAction) => {
+    if (ARRANGING.has(action.type)) armed.current = true;
+    else if (REWRITING.has(action.type)) armed.current = false;
+  };
+  const onChange = (next: Data) => {
+    const wasArmed = armed.current;
+    armed.current = false;
+    const doc = next as unknown as PuckDoc;
+    const accepted = lastLegal.current!;
+    // Only a change to the block tree (types and nesting) can break an arrangement rule: a keystroke in a field skips the check.
+    const message = wasArmed && shapeOf(accepted.doc) !== shapeOf(doc) ? introducesIllegal(prepared(accepted.doc), prepared(doc), docKey, layout) : null;
+    if (message) {
+      // Never for the store, with or without Puck at hand to undo it: the store keeps the last accepted document.
+      announceRevert(message);
+      const getPuck = handle.current;
+      if (getPuck) {
+        echo.current = true;
+        // Puck puts the last accepted document back, as one recorded step so history keeps no illegal state.
+        getPuck().dispatch({ type: 'setData', data: () => accepted.doc as unknown as Partial<Data>, recordHistory: true });
+        // Puck's echo, if any, arrives within the dispatch; if none came, do not let the flag swallow the next real edit's clear.
+        queueMicrotask(() => { echo.current = false; });
+      }
+      return;
+    }
+    if (echo.current) echo.current = false;
+    else clearRevert();
+    accepted.doc = doc;
+    // The mount epoch travels with every change, so a late onChange from a canvas that a load,
+    // reset or new page replaced is ignored by the store.
+    useEditorStore.getState().updateDoc(docKey, next, epoch);
+  };
+
   if (readOnly) return <ReadOnlyView />;
   const mount = `${docKey}|${epoch}`;
   return (
@@ -186,19 +290,26 @@ export function EditorCanvas() {
       {viewport !== null && <ExactPreview width={viewport} />}
       <div className={styles.puckHost} hidden={viewport !== null}>
         <RestingMarks />
-        <Puck
-          key={mount}
-          config={config}
-          data={data}
-          // The mount epoch travels with every change, so a late onChange from a canvas that a load,
-          // reset or new page replaced is ignored by the store.
-          onChange={(next) => useEditorStore.getState().updateDoc(docKey, next, epoch)}
-          iframe={{ enabled: false }}
-          viewports={PUCK_VIEWPORTS}
-          ui={ui}
-          overrides={OVERRIDES}
-          height="100dvh"
-        />
+        <LegalityNotice />
+        <CardDesignProvider cards={cards} layout={layout}>
+          <CanvasTextScope>
+            <PuckHandleContext.Provider value={handle}>
+            <Puck
+              key={mount}
+              config={config}
+              data={data}
+              onChange={onChange}
+              onAction={onAction}
+              iframe={{ enabled: false }}
+              viewports={PUCK_VIEWPORTS}
+              ui={ui}
+              overrides={OVERRIDES}
+              plugins={PLUGINS}
+              height="100dvh"
+            />
+            </PuckHandleContext.Provider>
+          </CanvasTextScope>
+        </CardDesignProvider>
       </div>
     </CanvasBoundary>
   );

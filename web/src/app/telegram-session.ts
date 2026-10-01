@@ -3,6 +3,7 @@ import { fetchCart } from '@/api/cart.ts';
 import { adoptAccountCart } from '@/features/auth/useLoginSuccess.ts';
 import { resetCartSync } from '@/features/cart/useServerCart.ts';
 import { errorMessage } from '@/lib/errors.ts';
+import { textSnapshot } from '@/text/snapshot.ts';
 import { isTelegramWebApp, telegramInitData } from '@/lib/telegram-webapp.ts';
 import { useCartStore } from '@/stores/cart.ts';
 import { useSessionStore } from '@/stores/session.ts';
@@ -66,7 +67,7 @@ export async function bootTelegramSession(overrides: Partial<TelegramSessionDeps
   const initData = d.initData();
   if (!initData) {
     d.forgetAccount();
-    auth.setStatus('failed', "Telegram didn't pass your account to the shop");
+    auth.setStatus('failed', textSnapshot().t('auth.telegram.noAccount'));
     return;
   }
 
@@ -81,6 +82,6 @@ export async function bootTelegramSession(overrides: Partial<TelegramSessionDeps
     useTelegramAuthStore.getState().setStatus('ready');
   } catch (err) {
     d.forgetAccount();
-    useTelegramAuthStore.getState().setStatus('failed', errorMessage(err, "Couldn't sign you in through Telegram"));
+    useTelegramAuthStore.getState().setStatus('failed', errorMessage(err, textSnapshot().t('auth.telegram.signInFailed')));
   }
 }

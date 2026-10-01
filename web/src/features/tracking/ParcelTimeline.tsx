@@ -1,5 +1,6 @@
 import { formatStamp, partitionEvents } from '@/features/tracking/status.ts';
 import { rowAnim } from '@/lib/motion.ts';
+import { useText } from '@/text/runtime.tsx';
 import type { TrackedEvent } from '@/types/tracking.ts';
 import classes from '@/features/tracking/Tracking.module.css';
 
@@ -11,6 +12,7 @@ import classes from '@/features/tracking/Tracking.module.css';
  * spine as hollow, unconnected nodes instead of being threaded onto it.
  */
 export function ParcelTimeline({ events }: { events: TrackedEvent[] }) {
+  const { t, tp } = useText();
   const { newestFirst, undated } = partitionEvents(events);
   const total = newestFirst.length + undated.length;
   if (total === 0) return null;
@@ -18,9 +20,9 @@ export function ParcelTimeline({ events }: { events: TrackedEvent[] }) {
   return (
     <div className={classes.timeline}>
       <div className={classes.timelineHead}>
-        <p className={classes.timelineTitle}>Scan history</p>
+        <p className={classes.timelineTitle}>{t('tracking.timeline.title')}</p>
         <p className={classes.timelineCount}>
-          {total} {total === 1 ? 'scan' : 'scans'}
+          {tp('tracking.timeline.count', total)}
         </p>
       </div>
 
@@ -50,6 +52,7 @@ interface RowProps {
 }
 
 function Row({ event, latest = false, muted = false, connector = false, index }: RowProps) {
+  const { t } = useText();
   const text = [classes.eventText, latest ? classes.eventTextLatest : '', muted ? classes.eventTextMuted : '']
     .filter(Boolean)
     .join(' ');
@@ -70,7 +73,7 @@ function Row({ event, latest = false, muted = false, connector = false, index }:
       <div className={classes.eventBody}>
         <p className={text}>{event.text}</p>
         <p className={classes.eventStamp}>
-          {muted ? 'No timestamp' : formatStamp(event.occurredAt)}
+          {muted ? t('tracking.timeline.noTimestamp') : formatStamp(event.occurredAt)}
           {event.place ? ` · ${event.place}` : ''}
         </p>
       </div>

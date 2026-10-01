@@ -1,27 +1,34 @@
 import type { QueryClient } from '@tanstack/react-query';
 import { setApiInterceptor } from '@/api/client.ts';
 import { builderOverrides } from '@/app/builder-gate.ts';
-import type { LayoutKind } from '@/builder/types.ts';
 import { createBridge, setActiveBridge, type Bridge } from '@/builder/editor/bridge.ts';
 import { createFixtureInterceptor } from '@/builder/editor/fixture-api.ts';
-import { applyPreviewAs, enterFixtureMode } from '@/builder/editor/fixture-mode.ts';
+import { applyPreviewAs, effectivePreviewAs, enterFixtureMode } from '@/builder/editor/fixture-mode.ts';
 import { configureCatalogSource } from '@/builder/editor/custom-fields/pickers.ts';
-import { collectIssues, stableStringify, toPageSet, type DocMap } from '@/builder/editor/page-set.ts';
-import { parseInbound } from '@/builder/editor/protocol.ts';
+import { collectIssues, stableStringify, toPageSet } from '@/builder/editor/page-set.ts';
+import { parseInbound, type ChangeText } from '@/builder/editor/protocol.ts';
 import { prepareDocs } from '@/builder/editor/prepare.ts';
-import { useEditorStore } from '@/builder/editor/store.ts';
+import { textIssuesOf, useEditorStore, type EditorState } from '@/builder/editor/store.ts';
+import { postablePageText, postableSiteText } from '@/builder/editor/text/model.ts';
 
 /**
- * What the admin receives: the sparse set with editor-only leftovers (unpicked rows) removed, and
- * its issues. Returns the change's signature; nothing is posted when it equals `last` (an edit that
- * only touched editor-only state, such as adding a row not picked yet).
+ * What the admin receives: the sparse set (editor-only leftovers such as unpicked rows removed)
+ * with this layout's overrides, its issues, the text issues (always, even when empty), and — iff
+ * the load carried siteText — the full shared doc. Text values the backend would refuse (a
+ * half-typed `{`, a plural without `other`) stay in the editor as issues and are left out: the
+ * admin drops a whole change it cannot parse (spec §4.3). Returns the change's signature; nothing
+ * is posted when it equals `last` (an edit that only touched editor-only state).
  */
-function postDocs(bridge: Bridge, docs: DocMap, layout: LayoutKind, last: string | null): string {
-  const emitted = prepareDocs(docs);
-  const pageSet = toPageSet(emitted, layout);
-  const issues = collectIssues(emitted, layout);
-  const signature = stableStringify({ pageSet, issues });
-  if (signature !== last) bridge.postChange(pageSet, issues);
+function postDocs(bridge: Bridge, s: EditorState, last: string | null): string {
+  const emitted = prepareDocs(s.docs);
+  const pageSet = toPageSet(emitted, s.layout, postablePageText(s.pageText));
+  const issues = collectIssues(emitted, s.layout);
+  const text: ChangeText = {
+    textIssues: textIssuesOf(s),
+    ...(s.sharedEditable && s.siteText ? { siteText: postableSiteText(s.siteText) } : {}),
+  };
+  const signature = stableStringify({ pageSet, issues, text });
+  if (signature !== last) bridge.postChange(pageSet, issues, text);
   return signature;
 }
 
@@ -36,14 +43,17 @@ function postDocs(bridge: Bridge, docs: DocMap, layout: LayoutKind, last: string
  * Load identity: the bridge adopts each load's loadId and drops any pending change first; the
  * store's `load` bumps `epoch`, so a canvas keyed on `epoch` remounts and a late onChange from the
  * old canvas (passed with its mount epoch to `updateDoc`) is ignored. Right after each accepted
- * load exactly one change goes out, built from the loaded docs (none when read-only), followed by
+ * load exactly one change goes out, built from the loaded docs and text (none when read-only), followed by
  * the current viewport. While a width preset shows its exact preview, no change is posted.
  */
 export function startBuilderSession(win: Window, client: QueryClient): () => void {
   // Fixture mode and the interceptor come first: from here on no request reaches the live shop
   // with shopper state, and no store writes to the frame's real storage.
   enterFixtureMode();
-  const offApi = setApiInterceptor(createFixtureInterceptor(() => useEditorStore.getState().previewAs));
+  const offApi = setApiInterceptor(createFixtureInterceptor(() => {
+    const st = useEditorStore.getState();
+    return effectivePreviewAs(st.docKey, st.previewAs);
+  }));
   configureCatalogSource(client);
 
   // The store's load() replaces `docs`; the change it triggers is the baseline, posted explicitly below.
@@ -55,14 +65,17 @@ export function startBuilderSession(win: Window, client: QueryClient): () => voi
       builderOverrides.setState({ theme: msg.theme, layout: msg.layout });
       loading = true;
       try {
-        useEditorStore.getState().load({ layout: msg.layout, pageSet: msg.pageSet, readOnly: msg.readOnly });
+        useEditorStore.getState().load({
+          layout: msg.layout, pageSet: msg.pageSet, readOnly: msg.readOnly,
+          // Key presence is the signal (absent = shared text read-only): never pass `siteText: undefined`.
+          ...(msg.siteText === undefined ? {} : { siteText: msg.siteText }),
+        });
       } finally {
         loading = false;
       }
       if (!msg.readOnly) {
-        const s = useEditorStore.getState();
         // The baseline always goes out, whatever the previous load posted.
-        lastPosted = postDocs(bridge, s.docs, s.layout, null);
+        lastPosted = postDocs(bridge, useEditorStore.getState(), null);
         bridge.flushChange();
       }
       // The admin (re)builds its frame on load; tell it which width we are showing.
@@ -76,10 +89,17 @@ export function startBuilderSession(win: Window, client: QueryClient): () => voi
     },
   });
   setActiveBridge(bridge);
-  applyPreviewAs(useEditorStore.getState().previewAs, client);
+  {
+    const st = useEditorStore.getState();
+    applyPreviewAs(effectivePreviewAs(st.docKey, st.previewAs), client);
+  }
 
   const offStore = useEditorStore.subscribe((s, prev) => {
-    if (s.previewAs !== prev.previewAs) applyPreviewAs(s.previewAs, client);
+    if (s.previewAs !== prev.previewAs || s.docKey !== prev.docKey) {
+      const now = effectivePreviewAs(s.docKey, s.previewAs);
+      const was = effectivePreviewAs(prev.docKey, prev.previewAs);
+      if (now.session !== was.session || now.cart !== was.cart) applyPreviewAs(now, client);
+    }
     // Media queries only follow a real frame width, so the admin resizes the iframe itself.
     if (s.viewport !== prev.viewport) bridge.postViewport(s.viewport);
     if (loading || s.readOnly || s.status !== 'ready') return;
@@ -88,8 +108,9 @@ export function startBuilderSession(win: Window, client: QueryClient): () => voi
     // editing — postDocs sends nothing when the docs match what the admin already has.
     if (s.viewport !== null) return;
     const backToEditing = prev.viewport !== null;
-    if (s.docs === prev.docs && !backToEditing) return;
-    lastPosted = postDocs(bridge, s.docs, s.layout, lastPosted);
+    const textChanged = s.siteText !== prev.siteText || s.pageText !== prev.pageText || s.published !== prev.published;
+    if (s.docs === prev.docs && !textChanged && !backToEditing) return;
+    lastPosted = postDocs(bridge, s, lastPosted);
   });
 
   // The bridge drops anything it can't parse without a word; in development, say so.

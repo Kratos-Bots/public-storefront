@@ -1,0 +1,2 @@
+# DOM-parity baselines are compared byte for byte; keep them LF on every checkout (core.autocrlf=true would make them CRLF).
+e2e/__baseline__/*.txt text eol=lf

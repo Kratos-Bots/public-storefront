@@ -1,3 +1,5 @@
+import { defaultText, type StringKey } from '@/text/registry.ts';
+import { textKey, textSnapshot, type TextApi } from '@/text/snapshot.ts';
 import type { PublicOrder, PublicOrderStatus, ShipmentStatus } from '@/types/public-order.ts';
 
 // Ported from `ecommerce-menu/web/src/features/order-status/status.ts` (plus
@@ -10,7 +12,14 @@ export type Tone = 'default' | 'success' | 'danger' | 'muted';
 
 // The customer-facing milestones the timeline renders. Distinct from the many
 // internal order statuses — several statuses collapse onto the same milestone.
-export const ROUTE_STEPS = ['Received', 'Confirmed', 'Shipped', 'Delivered'] as const;
+export const ROUTE_STEP_KEYS = [
+  textKey('order.steps.received'),
+  textKey('order.steps.confirmed'),
+  textKey('order.steps.shipped'),
+  textKey('order.steps.delivered'),
+] as const;
+/** The milestones' built-in English (read by tests); the timeline renders ROUTE_STEP_KEYS. */
+export const ROUTE_STEPS = ROUTE_STEP_KEYS.map(defaultText);
 
 export interface StatusView {
   /** Small mono eyebrow above the headline. */
@@ -31,119 +40,88 @@ export interface StatusView {
   tone: Tone;
 }
 
-export function statusView(order: PublicOrder): StatusView {
+type Shape = Omit<StatusView, 'eyebrow' | 'headline' | 'detail'>;
+const PROGRESS: Shape = { activeStep: 0, done: false, partial: false, terminal: null, tone: 'default' };
+
+type HeroKey = Extract<StringKey, `order.hero.${string}`>;
+
+/**
+ * Wording comes from `t`: a component passes `useText().t` (the nearest provider, and it re-renders on
+ * a text change); non-React callers may omit it and get the mounted text at call time.
+ */
+export function statusView(order: PublicOrder, t: TextApi['t'] = textSnapshot().t): StatusView {
+  const view = (eyebrow: HeroKey, headline: HeroKey, detail: HeroKey, shape: Shape): StatusView =>
+    ({ eyebrow: t(eyebrow), headline: t(headline), detail: t(detail), ...shape });
   const status: PublicOrderStatus = order.status;
+  const eyebrow = textKey('order.hero.eyebrow');
 
   switch (status) {
     case 'pending':
-      return {
-        eyebrow: 'Order status',
-        headline: 'Order received',
-        detail: "We've got your order and we're getting it ready.",
-        activeStep: 0,
-        done: false,
-        partial: false,
-        terminal: null,
-        tone: 'default',
-      };
+      return view(eyebrow, 'order.hero.pendingHeadline', 'order.hero.pendingDetail', PROGRESS);
     case 'confirmed':
-      return {
-        eyebrow: 'Order status',
-        headline: 'Order confirmed',
-        detail: 'Your order is confirmed and moving into preparation.',
-        activeStep: 1,
-        done: false,
-        partial: false,
-        terminal: null,
-        tone: 'default',
-      };
+      return view(eyebrow, 'order.hero.confirmedHeadline', 'order.hero.confirmedDetail', { ...PROGRESS, activeStep: 1 });
     case 'processing':
-      return {
-        eyebrow: 'Order status',
-        headline: 'Being prepared',
-        detail: "We're packing your order now.",
-        // No dedicated "Preparing" step — packing shows as progress toward Shipped.
-        activeStep: 2,
-        done: false,
-        partial: false,
-        terminal: null,
-        tone: 'default',
-      };
+      // No dedicated "Preparing" step — packing shows as progress toward Shipped.
+      return view(eyebrow, 'order.hero.processingHeadline', 'order.hero.processingDetail', { ...PROGRESS, activeStep: 2 });
     case 'partially_shipped':
-      return {
-        eyebrow: 'Order status',
-        headline: 'Partially shipped',
-        detail: 'Some items are on their way. The rest will follow shortly.',
+      return view(eyebrow, 'order.hero.partiallyShippedHeadline', 'order.hero.partiallyShippedDetail', {
+        ...PROGRESS,
         activeStep: 2,
-        done: false,
         partial: true,
-        terminal: null,
-        tone: 'default',
-      };
+      });
     case 'shipped':
-      return {
-        eyebrow: 'Order status',
-        headline: 'On its way',
-        detail: 'Your order has shipped. Track it below.',
-        activeStep: 2,
-        done: false,
-        partial: false,
-        terminal: null,
-        tone: 'default',
-      };
+      return view(eyebrow, 'order.hero.shippedHeadline', 'order.hero.shippedDetail', { ...PROGRESS, activeStep: 2 });
     case 'delivered':
-      return {
-        eyebrow: 'Delivered',
-        headline: 'Delivered',
-        detail: 'Your order has arrived. Thanks for shopping with us.',
+      return view('order.hero.deliveredEyebrow', 'order.hero.deliveredHeadline', 'order.hero.deliveredDetail', {
+        ...PROGRESS,
         activeStep: 3,
         done: true,
-        partial: false,
-        terminal: null,
         tone: 'success',
-      };
+      });
     case 'cancelled':
-      return {
-        eyebrow: 'Order status',
-        headline: 'Order cancelled',
-        detail: "This order has been cancelled and won't be dispatched.",
+      return view(eyebrow, 'order.hero.cancelledHeadline', 'order.hero.cancelledDetail', {
+        ...PROGRESS,
         activeStep: null,
-        done: false,
-        partial: false,
         terminal: 'cancelled',
         tone: 'danger',
-      };
+      });
     case 'refunded':
-      return {
-        eyebrow: 'Order status',
-        headline: 'Order refunded',
-        detail: 'This order has been refunded.',
+      return view(eyebrow, 'order.hero.refundedHeadline', 'order.hero.refundedDetail', {
+        ...PROGRESS,
         activeStep: null,
-        done: false,
-        partial: false,
         terminal: 'refunded',
         tone: 'muted',
-      };
+      });
     default:
-      return {
-        eyebrow: 'Order status',
-        headline: 'Order received',
-        detail: "We've got your order and we're getting it ready.",
-        activeStep: 0,
-        done: false,
-        partial: false,
-        terminal: null,
-        tone: 'default',
-      };
+      return view(eyebrow, 'order.hero.pendingHeadline', 'order.hero.pendingDetail', PROGRESS);
   }
 }
 
-export const SHIPMENT_LABEL: Record<ShipmentStatus, string> = {
-  shipped: 'Shipped',
-  in_transit: 'In transit',
-  delivered: 'Delivered',
-  returned: 'Returned',
+export const SHIPMENT_LABEL_KEYS: Record<ShipmentStatus, Extract<StringKey, `order.shipment.status.${string}` | 'common.shipment.inTransit'>> = {
+  shipped: textKey('order.shipment.status.shipped'),
+  in_transit: textKey('common.shipment.inTransit'),
+  delivered: textKey('order.shipment.status.delivered'),
+  returned: textKey('order.shipment.status.returned'),
 };
+
+/** The label key of a parcel status, or null for a status this release doesn't know (the wire value is a plain string). */
+export function shipmentLabelKey(status: string): (typeof SHIPMENT_LABEL_KEYS)[ShipmentStatus] | null {
+  return Object.hasOwn(SHIPMENT_LABEL_KEYS, status) ? SHIPMENT_LABEL_KEYS[status as ShipmentStatus] : null;
+}
+
+/**
+ * Parcel status names, resolved on every read (each property is a getter over
+ * SHIPMENT_LABEL_KEYS), so callers outside React still see published text.
+ */
+export const SHIPMENT_LABEL = Object.defineProperties(
+  {} as Record<ShipmentStatus, string>,
+  Object.fromEntries(
+    Object.entries(SHIPMENT_LABEL_KEYS).map(([status, key]) => [
+      status,
+      { enumerable: true, get: () => textSnapshot().t(key) },
+    ]),
+  ),
+);
 
 /** Pill tone per shipment status. */
 export const SHIPMENT_TONE: Record<ShipmentStatus, Tone> = {
@@ -153,20 +131,24 @@ export const SHIPMENT_TONE: Record<ShipmentStatus, Tone> = {
   returned: 'danger',
 };
 
-export const ORDER_STATUS_LABEL: Record<string, string> = {
-  pending: 'Order received',
-  confirmed: 'Confirmed',
-  processing: 'Being prepared',
-  partially_shipped: 'Partially shipped',
-  shipped: 'On its way',
-  delivered: 'Delivered',
-  cancelled: 'Cancelled',
-  refunded: 'Refunded',
+export const ORDER_STATUS_LABEL: Record<string, Extract<StringKey, `order.status.${string}`>> = {
+  pending: textKey('order.status.pending'),
+  confirmed: textKey('order.status.confirmed'),
+  processing: textKey('order.status.processing'),
+  partially_shipped: textKey('order.status.partiallyShipped'),
+  shipped: textKey('order.status.shipped'),
+  delivered: textKey('order.status.delivered'),
+  cancelled: textKey('order.status.cancelled'),
+  refunded: textKey('order.status.refunded'),
 };
 
-/** Default case is mandatory: new statuses ship without a client release. */
-export function orderStatusLabel(status: string): string {
-  return ORDER_STATUS_LABEL[status] ?? 'Order received';
+/**
+ * Default case is mandatory: new statuses ship without a client release. Components pass `useText().t`;
+ * non-React callers may omit it (the mounted text at call time).
+ */
+export function orderStatusLabel(status: string, t: TextApi['t'] = textSnapshot().t): string {
+  const key = Object.hasOwn(ORDER_STATUS_LABEL, status) ? ORDER_STATUS_LABEL[status]! : textKey('order.status.pending');
+  return t(key);
 }
 
 /**

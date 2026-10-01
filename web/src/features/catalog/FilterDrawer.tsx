@@ -1,5 +1,6 @@
 import { Drawer } from '@mantine/core';
 import { useUiStore } from '@/stores/ui.ts';
+import { useText } from '@/text/runtime.tsx';
 import { CategoryIndex } from '@/features/catalog/CategoryNav.tsx';
 import type { CategoryNode } from '@/features/catalog/category-tree.ts';
 import classes from '@/features/catalog/FilterDrawer.module.css';
@@ -18,6 +19,7 @@ export interface FilterDrawerProps {
  */
 export function FilterDrawer({ tree, total, activeId }: FilterDrawerProps) {
   const opened = useUiStore((s) => s.filterOpen);
+  const { t } = useText();
   const close = useUiStore((s) => s.close);
   const dismiss = () => close('filterOpen');
 
@@ -27,7 +29,7 @@ export function FilterDrawer({ tree, total, activeId }: FilterDrawerProps) {
       onClose={dismiss}
       position="bottom"
       size="auto"
-      title="Categories"
+      title={t('catalog.nav.categories')}
       classNames={{
         content: classes.content,
         header: classes.header,
@@ -35,7 +37,7 @@ export function FilterDrawer({ tree, total, activeId }: FilterDrawerProps) {
         body: classes.body,
       }}
     >
-      <nav aria-label="Categories">
+      <nav aria-label={t('catalog.nav.categories')}>
         <CategoryIndex tree={tree} total={total} activeId={activeId} onNavigate={dismiss} />
       </nav>
     </Drawer>

@@ -12,7 +12,7 @@
   gap: 0.35rem 0.5rem;
   padding: 0.5rem 0 1rem;
   font-family: var(--sf-font-mono);
-  font-size: 10px;
+  font-size: calc(10px * var(--sf-text-scale, 1));
   font-weight: 500;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -28,7 +28,7 @@
 }
 
 .crumb {
-  color: var(--sf-faint);
+  color: var(--sf-block-fg, var(--sf-faint));
   text-decoration: none;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -72,23 +72,23 @@ a.crumb:hover {
 .name {
   margin: 0;
   font-family: var(--sf-font-heading);
-  font-size: 1.5rem;
+  font-size: calc(1.5rem * var(--sf-text-scale, 1));
   font-weight: var(--sf-heading-weight);
   line-height: 1.2;
   letter-spacing: -0.01em;
-  color: var(--sf-text);
+  color: var(--sf-block-fg, var(--sf-text));
   text-wrap: balance;
 }
 
 .sku {
   margin: 0;
   font-family: var(--sf-font-mono);
-  font-size: 10px;
+  font-size: calc(10px * var(--sf-text-scale, 1));
   font-weight: 500;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   font-variant-numeric: tabular-nums;
-  color: var(--sf-faint);
+  color: var(--sf-block-fg, var(--sf-faint));
 }
 
 /* Price and availability share one line above the action — the three facts a
@@ -106,11 +106,11 @@ a.crumb:hover {
 .price {
   margin: 0;
   font-family: var(--sf-font-mono);
-  font-size: 1.75rem;
+  font-size: calc(1.75rem * var(--sf-text-scale, 1));
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
-  color: var(--sf-text);
+  color: var(--sf-block-fg, var(--sf-text));
 }
 
 .flags {
@@ -122,32 +122,32 @@ a.crumb:hover {
 
 .preorder {
   font-family: var(--sf-font-mono);
-  font-size: 10px;
+  font-size: calc(10px * var(--sf-text-scale, 1));
   font-weight: 500;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   font-variant-numeric: tabular-nums;
-  color: var(--sf-primary);
+  color: var(--sf-block-fg, var(--sf-primary));
 }
 
 /* The floor the Add button already opens at — shown so tapping it is never a
    surprise about how many units just landed in the cart. */
 .limit {
   font-family: var(--sf-font-mono);
-  font-size: 10px;
+  font-size: calc(10px * var(--sf-text-scale, 1));
   font-weight: 500;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   font-variant-numeric: tabular-nums;
-  color: var(--sf-muted);
+  color: var(--sf-block-fg, var(--sf-muted));
 }
 
 .description {
   margin: 0;
   max-width: 62ch;
-  font-size: 0.9375rem;
+  font-size: calc(0.9375rem * var(--sf-text-scale, 1));
   line-height: 1.7;
-  color: var(--sf-muted);
+  color: var(--sf-block-fg, var(--sf-muted));
   white-space: pre-line;
 }
 
@@ -160,19 +160,19 @@ a.crumb:hover {
 .sectionHead {
   margin: 0 0 0.85rem;
   font-family: var(--sf-font-mono);
-  font-size: 10px;
+  font-size: calc(10px * var(--sf-text-scale, 1));
   font-weight: 500;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--sf-faint);
+  color: var(--sf-block-fg, var(--sf-faint));
 }
 
 .askText {
   margin: 0 0 0.85rem;
   max-width: 46ch;
-  font-size: 0.875rem;
+  font-size: calc(0.875rem * var(--sf-text-scale, 1));
   line-height: 1.6;
-  color: var(--sf-muted);
+  color: var(--sf-block-fg, var(--sf-muted));
 }
 
 .notFoundActions {
@@ -189,7 +189,7 @@ a.crumb:hover {
     align-items: start;
   }
   .name {
-    font-size: 1.75rem;
+    font-size: calc(1.75rem * var(--sf-text-scale, 1));
   }
   /* The photo holds its place while the facts scroll past it. */
   .media {

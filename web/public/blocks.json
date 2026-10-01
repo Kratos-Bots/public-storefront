@@ -2,6 +2,39 @@
   "schemaVersion": 1,
   "blocks": [
     {
+      "name": "AccountGreeting",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "account"
+      }
+    },
+    {
       "name": "AccountNav",
       "category": "commerce",
       "layouts": [
@@ -9,7 +42,73 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "container": {
+        "family": "account",
+        "slots": [
+          "head",
+          "body"
+        ],
+        "required": [
+          "AccountGreeting",
+          "AccountTabs"
+        ],
+        "unique": [
+          "AccountGreeting",
+          "AccountTabs"
+        ],
+        "insertSlot": "head"
+      }
+    },
+    {
+      "name": "AccountTabs",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "account"
+      }
     },
     {
       "name": "Button",
@@ -19,7 +118,471 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      }
+    },
+    {
+      "name": "CardRow",
+      "category": "catalogue",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": true,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "container": {
+        "family": "card-row",
+        "slots": [
+          "content"
+        ],
+        "required": [
+          "CardRowName"
+        ],
+        "unique": [
+          "CardRowName",
+          "CardRowMeta",
+          "CardRowPrice",
+          "CardRowAdd"
+        ],
+        "insertSlot": "content"
+      }
+    },
+    {
+      "name": "CardRowAdd",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "card-row"
+      }
+    },
+    {
+      "name": "CardRowGroup",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "card-row"
+      }
+    },
+    {
+      "name": "CardRowMeta",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "card-row"
+      }
+    },
+    {
+      "name": "CardRowName",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "card-row"
+      }
+    },
+    {
+      "name": "CardRowPrice",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "card-row"
+      }
+    },
+    {
+      "name": "CardTile",
+      "category": "catalogue",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": true,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "container": {
+        "family": "card-tile",
+        "slots": [
+          "content"
+        ],
+        "required": [
+          "CardTileName"
+        ],
+        "unique": [
+          "CardTileImage",
+          "CardTileName",
+          "CardTileFlags",
+          "CardTilePrice",
+          "CardTileAdd"
+        ],
+        "insertSlot": "content"
+      }
+    },
+    {
+      "name": "CardTileAdd",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "card-tile"
+      }
+    },
+    {
+      "name": "CardTileFlags",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "card-tile"
+      }
+    },
+    {
+      "name": "CardTileGroup",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "card-tile"
+      }
+    },
+    {
+      "name": "CardTileImage",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "card-tile"
+      }
+    },
+    {
+      "name": "CardTileName",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "card-tile"
+      }
+    },
+    {
+      "name": "CardTilePrice",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "card-tile"
+      }
     },
     {
       "name": "CartContents",
@@ -29,7 +592,139 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "container": {
+        "family": "cart",
+        "slots": [
+          "head",
+          "main",
+          "summary"
+        ],
+        "required": [
+          "CartHeading",
+          "CartLines",
+          "CartEmpty"
+        ],
+        "unique": [
+          "CartHeading",
+          "CartLines",
+          "CartEmpty"
+        ],
+        "insertSlot": "main"
+      }
+    },
+    {
+      "name": "CartEmpty",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "cart"
+      }
+    },
+    {
+      "name": "CartHeading",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "cart"
+      }
+    },
+    {
+      "name": "CartLines",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "cart"
+      }
     },
     {
       "name": "CartSummary",
@@ -39,7 +734,271 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "container": {
+        "family": "cart-summary",
+        "slots": [
+          "items"
+        ],
+        "required": [
+          "CartSummarySubtotal",
+          "CartSummaryCheckout"
+        ],
+        "unique": [
+          "CartSummaryNotice",
+          "CartSummarySubtotal",
+          "CartSummaryTerms",
+          "CartSummaryCheckout",
+          "CartSummaryContinue"
+        ],
+        "insertSlot": "items"
+      }
+    },
+    {
+      "name": "CartSummaryCheckout",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "cart-summary"
+      }
+    },
+    {
+      "name": "CartSummaryContinue",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "cart-summary"
+      }
+    },
+    {
+      "name": "CartSummaryNotice",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "cart-summary"
+      }
+    },
+    {
+      "name": "CartSummarySubtotal",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "cart-summary"
+      }
+    },
+    {
+      "name": "CartSummaryTerms",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "cart-summary"
+      }
+    },
+    {
+      "name": "CatalogCategories",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "pass",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "catalogue"
+      }
+    },
+    {
+      "name": "CatalogEmpty",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "catalogue"
+      }
     },
     {
       "name": "CatalogHero",
@@ -49,7 +1008,150 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      }
+    },
+    {
+      "name": "CatalogIntro",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "catalogue"
+      }
+    },
+    {
+      "name": "CatalogResults",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "catalogue"
+      }
+    },
+    {
+      "name": "CatalogSearch",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "catalogue"
+      }
+    },
+    {
+      "name": "CatalogTitle",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "catalogue"
+      }
     },
     {
       "name": "CategoryNav",
@@ -59,7 +1161,115 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      }
+    },
+    {
+      "name": "CheckoutAddress",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "checkout"
+      }
+    },
+    {
+      "name": "CheckoutContact",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "checkout"
+      }
+    },
+    {
+      "name": "CheckoutCoupon",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "checkout"
+      }
     },
     {
       "name": "CheckoutFlow",
@@ -69,7 +1279,270 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "container": {
+        "family": "checkout",
+        "slots": [
+          "head",
+          "lead",
+          "steps",
+          "after",
+          "aside"
+        ],
+        "required": [
+          "CheckoutHeading",
+          "CheckoutContact",
+          "CheckoutAddress",
+          "CheckoutShipping",
+          "CheckoutPayment",
+          "CheckoutReview",
+          "CheckoutSummary"
+        ],
+        "unique": [
+          "CheckoutHeading",
+          "CheckoutProgress",
+          "CheckoutContact",
+          "CheckoutAddress",
+          "CheckoutShipping",
+          "CheckoutPayment",
+          "CheckoutReview",
+          "CheckoutCoupon",
+          "CheckoutNotes",
+          "CheckoutSummary"
+        ],
+        "insertSlot": "steps"
+      }
+    },
+    {
+      "name": "CheckoutHeading",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "checkout"
+      }
+    },
+    {
+      "name": "CheckoutNotes",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "checkout"
+      }
+    },
+    {
+      "name": "CheckoutPayment",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "checkout"
+      }
+    },
+    {
+      "name": "CheckoutProgress",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "checkout"
+      }
+    },
+    {
+      "name": "CheckoutReview",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "checkout"
+      }
+    },
+    {
+      "name": "CheckoutShipping",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "checkout"
+      }
+    },
+    {
+      "name": "CheckoutSummary",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "checkout"
+      }
     },
     {
       "name": "Columns",
@@ -79,7 +1552,28 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      }
     },
     {
       "name": "ContactStrip",
@@ -89,7 +1583,25 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "pass",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      }
     },
     {
       "name": "CutoffBar",
@@ -99,7 +1611,25 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      }
     },
     {
       "name": "Divider",
@@ -109,7 +1639,15 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      }
     },
     {
       "name": "FAQ",
@@ -119,7 +1657,28 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      }
     },
     {
       "name": "FeaturedProducts",
@@ -129,7 +1688,25 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      }
     },
     {
       "name": "Footer",
@@ -138,7 +1715,25 @@
         "storefront",
         "menu"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      }
     },
     {
       "name": "Header",
@@ -148,7 +1743,188 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "pass",
+        "keys": [
+          "bg",
+          "shadow",
+          "hide"
+        ]
+      },
+      "container": {
+        "family": "header",
+        "slots": [
+          "start",
+          "nav",
+          "middle",
+          "end"
+        ],
+        "required": [
+          "HeaderBrand"
+        ],
+        "unique": [
+          "HeaderBrand",
+          "HeaderBack",
+          "HeaderSearch",
+          "HeaderFilter",
+          "HeaderAccount",
+          "HeaderCart"
+        ],
+        "insertSlot": "end"
+      }
+    },
+    {
+      "name": "HeaderAccount",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padX",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "header"
+      }
+    },
+    {
+      "name": "HeaderBack",
+      "category": "part",
+      "layouts": [
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padX",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "header"
+      }
+    },
+    {
+      "name": "HeaderBrand",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padX",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius"
+        ]
+      },
+      "part": {
+        "family": "header"
+      }
+    },
+    {
+      "name": "HeaderCart",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padX",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "header"
+      }
+    },
+    {
+      "name": "HeaderFilter",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padX",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "header"
+      }
+    },
+    {
+      "name": "HeaderSearch",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padX",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "header"
+      }
     },
     {
       "name": "Heading",
@@ -158,7 +1934,27 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "maxWidth",
+          "hide"
+        ]
+      }
     },
     {
       "name": "Image",
@@ -168,7 +1964,87 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "hide"
+        ]
+      }
+    },
+    {
+      "name": "LoginHeading",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "login"
+      }
+    },
+    {
+      "name": "LoginMethods",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "login"
+      }
     },
     {
       "name": "LoginOptions",
@@ -178,7 +2054,39 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "container": {
+        "family": "login",
+        "slots": [
+          "content"
+        ],
+        "required": [
+          "LoginHeading",
+          "LoginMethods"
+        ],
+        "unique": [
+          "LoginHeading",
+          "LoginMethods"
+        ],
+        "insertSlot": "content"
+      }
     },
     {
       "name": "Loyalty",
@@ -188,7 +2096,175 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "container": {
+        "family": "loyalty",
+        "slots": [
+          "content"
+        ],
+        "required": [
+          "LoyaltyPoints",
+          "LoyaltyRewards"
+        ],
+        "unique": [
+          "LoyaltyPoints",
+          "LoyaltyCredit",
+          "LoyaltyNoPoints",
+          "LoyaltyRewards"
+        ],
+        "insertSlot": "content"
+      }
+    },
+    {
+      "name": "LoyaltyCredit",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "loyalty"
+      }
+    },
+    {
+      "name": "LoyaltyNoPoints",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "loyalty"
+      }
+    },
+    {
+      "name": "LoyaltyPoints",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "loyalty"
+      }
+    },
+    {
+      "name": "LoyaltyRewards",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "loyalty"
+      }
     },
     {
       "name": "MobileCartBar",
@@ -197,7 +2273,8 @@
         "storefront",
         "menu"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": false
     },
     {
       "name": "NavLinks",
@@ -207,7 +2284,28 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      }
     },
     {
       "name": "NoticeBanners",
@@ -217,7 +2315,93 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      }
+    },
+    {
+      "name": "OrderBackLink",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "order"
+      }
+    },
+    {
+      "name": "OrderBalance",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "order"
+      }
     },
     {
       "name": "OrderDetail",
@@ -227,7 +2411,212 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "container": {
+        "family": "order",
+        "slots": [
+          "content"
+        ],
+        "required": [
+          "OrderHeading",
+          "OrderItems"
+        ],
+        "unique": [
+          "OrderBackLink",
+          "OrderHeading",
+          "OrderBalance",
+          "OrderItems",
+          "OrderPayments",
+          "OrderParcels",
+          "OrderPageLink"
+        ],
+        "insertSlot": "content"
+      }
+    },
+    {
+      "name": "OrderHeading",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "order"
+      }
+    },
+    {
+      "name": "OrderItems",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "order"
+      }
+    },
+    {
+      "name": "OrderPageLink",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "order"
+      }
+    },
+    {
+      "name": "OrderParcels",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "order"
+      }
+    },
+    {
+      "name": "OrderPayments",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "order"
+      }
     },
     {
       "name": "OrderPlaced",
@@ -237,7 +2626,113 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "container": {
+        "family": "payment",
+        "slots": [
+          "content"
+        ],
+        "required": [
+          "PaymentHeadline",
+          "PaymentReference",
+          "PaymentActions"
+        ],
+        "unique": [
+          "PaymentMark",
+          "PaymentEyebrow",
+          "PaymentHeadline",
+          "PaymentMessage",
+          "PaymentReference",
+          "PaymentActions",
+          "PaymentContact",
+          "PaymentBack"
+        ],
+        "insertSlot": "content"
+      }
+    },
+    {
+      "name": "OrdersEmpty",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "orders"
+      }
+    },
+    {
+      "name": "OrdersHeading",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "orders"
+      }
     },
     {
       "name": "OrdersList",
@@ -247,7 +2742,108 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "container": {
+        "family": "orders",
+        "slots": [
+          "content"
+        ],
+        "required": [
+          "OrdersRows",
+          "OrdersEmpty"
+        ],
+        "unique": [
+          "OrdersHeading",
+          "OrdersRows",
+          "OrdersMore",
+          "OrdersEmpty"
+        ],
+        "insertSlot": "content"
+      }
+    },
+    {
+      "name": "OrdersMore",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "orders"
+      }
+    },
+    {
+      "name": "OrdersRows",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "orders"
+      }
     },
     {
       "name": "OrderStatus",
@@ -257,7 +2853,242 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "container": {
+        "family": "order-status",
+        "slots": [
+          "top",
+          "action",
+          "summary",
+          "bottom"
+        ],
+        "required": [
+          "OrderStatusHero",
+          "OrderStatusPayment",
+          "OrderStatusShipments",
+          "OrderStatusItems",
+          "OrderStatusFooter"
+        ],
+        "unique": [
+          "OrderStatusHero",
+          "OrderStatusPayment",
+          "OrderStatusShipments",
+          "OrderStatusItems",
+          "OrderStatusAddress",
+          "OrderStatusFooter"
+        ],
+        "insertSlot": "summary"
+      }
+    },
+    {
+      "name": "OrderStatusAddress",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "order-status"
+      }
+    },
+    {
+      "name": "OrderStatusFooter",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "order-status"
+      }
+    },
+    {
+      "name": "OrderStatusHero",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "order-status"
+      }
+    },
+    {
+      "name": "OrderStatusItems",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "order-status"
+      }
+    },
+    {
+      "name": "OrderStatusPayment",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "order-status"
+      }
+    },
+    {
+      "name": "OrderStatusShipments",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "order-status"
+      }
     },
     {
       "name": "PageOutlet",
@@ -267,7 +3098,70 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": false
+    },
+    {
+      "name": "PaymentActions",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "payment"
+      }
+    },
+    {
+      "name": "PaymentBack",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "payment"
+      }
     },
     {
       "name": "PaymentCancel",
@@ -277,7 +3171,242 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "container": {
+        "family": "payment",
+        "slots": [
+          "content"
+        ],
+        "required": [
+          "PaymentHeadline",
+          "PaymentActions"
+        ],
+        "unique": [
+          "PaymentMark",
+          "PaymentEyebrow",
+          "PaymentHeadline",
+          "PaymentMessage",
+          "PaymentReference",
+          "PaymentActions",
+          "PaymentContact",
+          "PaymentBack"
+        ],
+        "insertSlot": "content"
+      }
+    },
+    {
+      "name": "PaymentContact",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "payment"
+      }
+    },
+    {
+      "name": "PaymentEyebrow",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "payment"
+      }
+    },
+    {
+      "name": "PaymentHeadline",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "payment"
+      }
+    },
+    {
+      "name": "PaymentMark",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "payment"
+      }
+    },
+    {
+      "name": "PaymentMessage",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "payment"
+      }
+    },
+    {
+      "name": "PaymentReference",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "payment"
+      }
     },
     {
       "name": "PaymentSuccess",
@@ -287,7 +3416,209 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "container": {
+        "family": "payment",
+        "slots": [
+          "content"
+        ],
+        "required": [
+          "PaymentHeadline",
+          "PaymentReference"
+        ],
+        "unique": [
+          "PaymentMark",
+          "PaymentEyebrow",
+          "PaymentHeadline",
+          "PaymentMessage",
+          "PaymentReference",
+          "PaymentActions",
+          "PaymentContact",
+          "PaymentBack"
+        ],
+        "insertSlot": "content"
+      }
+    },
+    {
+      "name": "ProductAddToCart",
+      "category": "part",
+      "layouts": [
+        "storefront"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "product"
+      }
+    },
+    {
+      "name": "ProductAsk",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "product"
+      }
+    },
+    {
+      "name": "ProductBreadcrumbs",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "product"
+      }
+    },
+    {
+      "name": "ProductBulkPricing",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "product"
+      }
+    },
+    {
+      "name": "ProductDescription",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "product"
+      }
     },
     {
       "name": "ProductDetail",
@@ -297,7 +3628,83 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "container": {
+        "family": "product",
+        "slots": [
+          "top",
+          "media",
+          "main",
+          "below"
+        ],
+        "required": [
+          "ProductTitle",
+          "ProductPrice",
+          "ProductAddToCart"
+        ],
+        "unique": [
+          "ProductBreadcrumbs",
+          "ProductGallery",
+          "ProductTitle",
+          "ProductPrice",
+          "ProductStock",
+          "ProductAddToCart",
+          "ProductDescription",
+          "ProductBulkPricing",
+          "ProductProvenance",
+          "ProductAsk",
+          "ProductUpsells"
+        ],
+        "insertSlot": "main"
+      }
+    },
+    {
+      "name": "ProductGallery",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "product"
+      }
     },
     {
       "name": "ProductGrid",
@@ -307,7 +3714,78 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "container": {
+        "family": "catalogue",
+        "slots": [
+          "top",
+          "rail",
+          "main"
+        ],
+        "required": [
+          "CatalogTitle",
+          "CatalogResults",
+          "CatalogEmpty"
+        ],
+        "unique": [
+          "CatalogIntro",
+          "CatalogSearch",
+          "CatalogCategories",
+          "CatalogTitle",
+          "CatalogResults",
+          "CatalogEmpty"
+        ],
+        "insertSlot": "main"
+      }
+    },
+    {
+      "name": "ProductGroup",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "product"
+      }
     },
     {
       "name": "ProductList",
@@ -317,7 +3795,209 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "container": {
+        "family": "catalogue",
+        "slots": [
+          "content"
+        ],
+        "required": [
+          "CatalogTitle",
+          "CatalogResults",
+          "CatalogEmpty"
+        ],
+        "unique": [
+          "CatalogIntro",
+          "CatalogSearch",
+          "CatalogCategories",
+          "CatalogTitle",
+          "CatalogResults",
+          "CatalogEmpty"
+        ],
+        "insertSlot": "content"
+      }
+    },
+    {
+      "name": "ProductPrice",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "product"
+      }
+    },
+    {
+      "name": "ProductProvenance",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "product"
+      }
+    },
+    {
+      "name": "ProductStock",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "product"
+      }
+    },
+    {
+      "name": "ProductTitle",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "product"
+      }
+    },
+    {
+      "name": "ProductUpsells",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "product"
+      }
     },
     {
       "name": "Profile",
@@ -327,7 +4007,271 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "container": {
+        "family": "profile",
+        "slots": [
+          "content"
+        ],
+        "required": [
+          "ProfileSignOut"
+        ],
+        "unique": [
+          "ProfileDetails",
+          "ProfileChannels",
+          "ProfileContact",
+          "ProfileBotSwitch",
+          "ProfileSignOut"
+        ],
+        "insertSlot": "content"
+      }
+    },
+    {
+      "name": "ProfileBotSwitch",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "profile"
+      }
+    },
+    {
+      "name": "ProfileChannels",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "profile"
+      }
+    },
+    {
+      "name": "ProfileContact",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "profile"
+      }
+    },
+    {
+      "name": "ProfileDetails",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "profile"
+      }
+    },
+    {
+      "name": "ProfileSignOut",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "profile"
+      }
+    },
+    {
+      "name": "ReferralCode",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "referrals"
+      }
+    },
+    {
+      "name": "ReferralReferrer",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "referrals"
+      }
     },
     {
       "name": "Referrals",
@@ -337,7 +4281,108 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "container": {
+        "family": "referrals",
+        "slots": [
+          "content"
+        ],
+        "required": [
+          "ReferralCode"
+        ],
+        "unique": [
+          "ReferralCode",
+          "ReferralShare",
+          "ReferralStats",
+          "ReferralReferrer"
+        ],
+        "insertSlot": "content"
+      }
+    },
+    {
+      "name": "ReferralShare",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "referrals"
+      }
+    },
+    {
+      "name": "ReferralStats",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "referrals"
+      }
     },
     {
       "name": "RichText",
@@ -347,7 +4392,27 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "hide"
+        ]
+      }
     },
     {
       "name": "SearchField",
@@ -357,7 +4422,25 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      }
     },
     {
       "name": "Section",
@@ -367,7 +4450,23 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "hide"
+        ]
+      }
     },
     {
       "name": "Spacer",
@@ -377,7 +4476,13 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "hide"
+        ]
+      }
     },
     {
       "name": "Testimonial",
@@ -387,7 +4492,28 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      }
     },
     {
       "name": "TopBar",
@@ -396,7 +4522,118 @@
         "storefront",
         "menu"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      }
+    },
+    {
+      "name": "TrackingForm",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "tracking"
+      }
+    },
+    {
+      "name": "TrackingHero",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "tracking"
+      }
+    },
+    {
+      "name": "TrackingIntro",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "tracking"
+      }
     },
     {
       "name": "TrackingLookup",
@@ -406,7 +4643,203 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "container": {
+        "family": "tracking",
+        "slots": [
+          "top",
+          "main",
+          "result"
+        ],
+        "required": [
+          "TrackingIntro",
+          "TrackingState",
+          "TrackingForm",
+          "TrackingHero",
+          "TrackingParcels"
+        ],
+        "unique": [
+          "TrackingIntro",
+          "TrackingState",
+          "TrackingForm",
+          "TrackingHero",
+          "TrackingProgress",
+          "TrackingRefresh",
+          "TrackingNotice",
+          "TrackingParcels"
+        ],
+        "insertSlot": "main"
+      }
+    },
+    {
+      "name": "TrackingNotice",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "tracking"
+      }
+    },
+    {
+      "name": "TrackingParcels",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "tracking"
+      }
+    },
+    {
+      "name": "TrackingProgress",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "tracking"
+      }
+    },
+    {
+      "name": "TrackingRefresh",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "tracking"
+      }
+    },
+    {
+      "name": "TrackingState",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "tracking"
+      }
     },
     {
       "name": "Upsells",
@@ -416,7 +4849,86 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      }
+    },
+    {
+      "name": "VerifyBack",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "verify"
+      }
+    },
+    {
+      "name": "VerifyFields",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "verify"
+      }
     },
     {
       "name": "VerifyForm",
@@ -426,7 +4938,108 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "container": {
+        "family": "verify",
+        "slots": [
+          "content"
+        ],
+        "required": [
+          "VerifyIntro",
+          "VerifyFields",
+          "VerifyResult"
+        ],
+        "unique": [
+          "VerifyIntro",
+          "VerifyFields",
+          "VerifyResult",
+          "VerifyBack"
+        ],
+        "insertSlot": "content"
+      }
+    },
+    {
+      "name": "VerifyIntro",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "verify"
+      }
+    },
+    {
+      "name": "VerifyResult",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "verify"
+      }
     },
     {
       "name": "Video",
@@ -436,7 +5049,25 @@
         "menu",
         "webapp"
       ],
-      "routeBound": false
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      }
     },
     {
       "name": "WholesaleTable",
@@ -446,7 +5077,17 @@
         "menu",
         "webapp"
       ],
-      "routeBound": true
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "marginTop",
+          "marginBottom",
+          "shadow"
+        ]
+      }
     }
   ]
 }

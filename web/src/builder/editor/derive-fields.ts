@@ -3,13 +3,15 @@ import type { Field, Fields, SlotField } from '@puckeditor/core';
 import { BLOCKS } from '@/builder/registry.ts';
 import type { BlockDef } from '@/builder/define.ts';
 import { allowedOn } from '@/builder/rules.ts';
-import { FIXED_ROUTE_KEYS, type DocKey, type LayoutKind } from '@/builder/types.ts';
+import { offersPart, type ContainerSpec, type PartFamily, type SlotRef } from '@/builder/parts.ts';
+import { CARD_KINDS, cardKey, FIXED_ROUTE_KEYS, isCardKey, type DocKey, type LayoutKind } from '@/builder/types.ts';
 import { insertableBlocks } from '@/builder/editor/route-bound.ts';
 import { routeLinkField } from '@/builder/editor/custom-fields/route-link.tsx';
 import { imageField } from '@/builder/editor/custom-fields/image.tsx';
 import { richtextField } from '@/builder/editor/custom-fields/richtext.tsx';
 import { humanizeValue, paletteTokenField } from '@/builder/editor/custom-fields/palette-token.tsx';
 import { categoryPickerField, productPickerField } from '@/builder/editor/custom-fields/pickers.ts';
+import { styleField } from '@/builder/editor/custom-fields/style.tsx';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyBlock = BlockDef<any>;
@@ -159,8 +161,10 @@ export function deriveFields(def: AnyBlock): { fields: Fields; uncovered: string
   const fields: Fields = {};
   const uncovered: string[] = [];
   const slots = new Set<string>(def.slots);
+  // Product-parts §8: legacy toggles are read only while slots are absent — never edited.
+  const legacy = new Set<string>(def.container?.legacyProps ?? []);
   for (const [key, prop] of Object.entries(toJson(def).properties ?? {})) {
-    if (slots.has(key)) continue; // a slot is `ComponentData[]`, not an editable array
+    if (slots.has(key) || legacy.has(key)) continue; // a slot is `ComponentData[]`, not an editable array
     const f = fieldFor(key, prop);
     if (f) fields[key] = f;
     else uncovered.push(key);
@@ -177,6 +181,9 @@ const EVERY_DOC: readonly DocKey[] = ['shell', ...FIXED_ROUTE_KEYS, 'page:any'];
 const ALL_LAYOUTS: readonly LayoutKind[] = ['storefront', 'menu', 'webapp'];
 const inLayout = (d: AnyBlock, layout: LayoutKind) => d.layouts === 'all' || d.layouts.includes(layout);
 
+/** Where a block may sit: every doc a slot can be on, card designs included (they take only frames and parts). */
+const BLOCK_HOMES: readonly DocKey[] = [...EVERY_DOC, ...CARD_KINDS.map(cardKey)];
+
 /** Blocks accepted on every one of `docs` in every one of `layouts`. */
 function acceptedOnAll(docs: readonly DocKey[], layouts: readonly LayoutKind[]): string[] {
   return Object.values(BLOCKS)
@@ -192,30 +199,98 @@ export function slotAllowEverywhere(): string[] {
   return acceptedOnAll(EVERY_DOC, ALL_LAYOUTS);
 }
 
+const notRouteOrContainer = (n: string): boolean => !BLOCKS[n]!.routeBound && !BLOCKS[n]!.container;
+
+/** The part family a candidate belongs to, or null for a non-part. */
+const familyOfBlock = (n: string): PartFamily | null => BLOCKS[n]?.part?.family ?? null;
+
+/**
+ * May candidate `n` sit in `ref` (a slot of a container or of a part with slots of its own) of a
+ * `spec` container? Content blocks when the container is `contentOnly` (any non-part block
+ * otherwise); a part of the family only where `homes` lets it, and a part `homes` doesn't list
+ * goes in any slot (stage 3 behaviour). Puck can't see through a dragged Columns: legality.ts does.
+ */
+function fitsHome(spec: ContainerSpec, ref: string, n: string): boolean {
+  const family = familyOfBlock(n);
+  if (family === null) return !spec.contentOnly || BLOCKS[n]!.category === 'content';
+  if (family !== spec.family || !offersPart(spec, n)) return false;
+  return !spec.homes || !Object.hasOwn(spec.homes, n) || spec.homes[n]!.includes(ref as SlotRef);
+}
+
+/**
+ * Spec §3.4, stage 4 §4: a container slot takes its family's parts (only those this container
+ * offers), content and non-route blocks — `slotAccepts` narrows it to exactly the listed types.
+ * Then `slotRejects[slot]` types come out, and the containers it `nests` go in when they may sit on
+ * every doc in `docs` (and every layout in `layouts`): they own their own parts.
+ */
+function containerSlotAllow(
+  def: AnyBlock, slot: string, candidates: readonly string[], docs: readonly DocKey[], layouts: readonly LayoutKind[],
+): string[] {
+  const spec = def.container!;
+  const only = spec.slotAccepts && Object.hasOwn(spec.slotAccepts, slot) ? spec.slotAccepts[slot]! : null;
+  const rejects = spec.slotRejects && Object.hasOwn(spec.slotRejects, slot) ? spec.slotRejects[slot]! : [];
+  // A slot restricted to a list offers that list in its own order (the order the owner sees).
+  const base = only ? only.filter((n) => candidates.includes(n) && !rejects.includes(n)) : candidates.filter((n) => {
+    if (rejects.includes(n) || !notRouteOrContainer(n)) return false;
+    return fitsHome(spec, `${def.name}.${slot}`, n);
+  });
+  const nested = (spec.nests ?? []).filter((n) => !rejects.includes(n) && !base.includes(n) && Object.hasOwn(BLOCKS, n)
+    && docs.length > 0 && docs.every((k) => allowedOn(n, k)) && layouts.every((l) => inLayout(BLOCKS[n]!, l)));
+  return [...base, ...nested];
+}
+
+/**
+ * A group's slots take only parts its container offers: of its own family, offered by a container
+ * of that family on one of `docs` (the doc being edited, or every doc the family lives on).
+ */
+function groupSlotAllow(def: AnyBlock, slot: string | undefined, candidates: readonly string[], docs: readonly DocKey[]): string[] {
+  const family = def.part!.family;
+  const owners = Object.values(BLOCKS).filter((b) => b.container?.family === family && docs.some((k) => allowedOn(b.name, k)));
+  // A part with default slots (a checkout step) is a holder: its slot takes what its container's `homes` says.
+  if (def.part!.defaultSlots && slot) {
+    const ref = `${def.name}.${slot}`;
+    return candidates.filter((n) => notRouteOrContainer(n) && owners.some((o) => fitsHome(o.container!, ref, n)));
+  }
+  return candidates.filter((n) => {
+    if (!notRouteOrContainer(n)) return false;
+    const f = familyOfBlock(n);
+    return f === null || (f === family && owners.some((o) => offersPart(o.container!, n)));
+  });
+}
+
+/** A slot inside a container (the container's own, or a part's — a group's) never holds a route block or a container. */
+function slotList(def: AnyBlock, slot: string | undefined, candidates: readonly string[], docs: readonly DocKey[], layouts: readonly LayoutKind[]): string[] {
+  if (def.container) return slot ? containerSlotAllow(def, slot, candidates, docs, layouts) : candidates.filter(notRouteOrContainer);
+  return def.part ? groupSlotAllow(def, slot, candidates, docs) : [...candidates];
+}
+
 /**
  * The static allow list for `name`'s slots. A slot's children count toward the doc they sit in, so
  * without knowing the doc a slot may accept only what every doc and layout the block itself can be
  * in accepts: `slotAllowEverywhere()` for a block that goes anywhere, more for a route block (the
  * cart's CartContents.summary takes CartSummary). `scopeFields` narrows or widens it to one doc.
  */
-export function slotAllowFor(name: string): string[] {
+export function slotAllowFor(name: string, slot?: string): string[] {
   const def = Object.hasOwn(BLOCKS, name) ? BLOCKS[name] : undefined;
   if (!def) return [];
-  const docs = EVERY_DOC.filter((k) => allowedOn(name, k));
+  const docs = BLOCK_HOMES.filter((k) => allowedOn(name, k));
   const layouts = ALL_LAYOUTS.filter((l) => inLayout(def, l));
-  return docs.length === 0 || layouts.length === 0 ? [] : acceptedOnAll(docs, layouts);
+  return docs.length === 0 || layouts.length === 0 ? [] : slotList(def, slot, acceptedOnAll(docs, layouts), docs, layouts);
 }
 
-/** Used by every fields/<Block>.ts: derived fields (slots carrying the static allow list), with that block's overrides on top. */
+/**
+ * Used by every fields/<Block>.ts: derived fields (slots carrying the static allow list), with that
+ * block's overrides on top, then — for a stylable block — the Style group (`blockStyle`) last.
+ */
 export function blockFields(name: string, overrides: Fields = {}): Fields {
   const def = Object.hasOwn(BLOCKS, name) ? BLOCKS[name] : undefined;
   if (!def) throw new Error(`Unknown block ${name}`);
   const { fields } = deriveFields(def);
-  if (def.slots.length > 0) {
-    const allow = slotAllowFor(name);
-    for (const slot of def.slots) fields[slot] = { ...(fields[slot] as SlotField), allow: [...allow] };
-  }
-  return { ...fields, ...overrides };
+  for (const slot of def.slots) fields[slot] = { ...(fields[slot] as SlotField), allow: slotAllowFor(name, slot) };
+  const out: Fields = { ...fields, ...overrides };
+  // The Style group always comes last, after any overrides (block-styling spec §9.1).
+  if (def.style) out.blockStyle = styleField(def) as Field;
+  return out;
 }
 
 /** Header variants that only render in one layout: `auto` follows the layout, `webapp` falls back to `menu` outside the web app. */
@@ -234,7 +309,9 @@ export function scopeFields(name: string, fields: Fields, docKey: DocKey, layout
     const allow = insertableBlocks(docKey, layout);
     for (const slot of def.slots) {
       const f = out[slot] as Field | undefined;
-      if (f?.type === 'slot') out[slot] = { ...f, allow: [...allow] };
+      // In a card doc every slot sits inside the frame: none offers the frame again.
+      const list = def.container || def.part ? slotList(def, slot, allow, [docKey], [layout]) : isCardKey(docKey) ? allow.filter(notRouteOrContainer) : [...allow];
+      if (f?.type === 'slot') out[slot] = { ...f, allow: list };
     }
   }
   const variant = out.variant as Field | undefined;

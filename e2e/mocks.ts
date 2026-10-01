@@ -51,6 +51,38 @@ const PIXEL_PNG = Buffer.from(
 
 export type Layout = 'storefront' | 'menu' | 'webapp';
 
+/**
+ * Public-order variants, selectable per test (`installMocks(page, { order: publicOrderVariant(...) })`).
+ * - `crypto`:   awaiting payment, a USDT payment open with its address and txid form (the default fixture)
+ * - `choose`:   awaiting payment, no method chosen yet — the picker shows
+ * - `shipped`:  paid and on its way — one parcel, nothing owed
+ * - `paid`:     paid, nothing shipped yet, nothing owed (every payment and tracking part is silent)
+ * - `legacy`:   an older backend's body — no `payment` block, no `cryptoPayments`
+ */
+export type OrderVariant = 'crypto' | 'choose' | 'shipped' | 'paid' | 'legacy';
+
+export function publicOrderVariant(kind: OrderVariant): PublicOrder {
+  const o = read<PublicOrder>('public-order.json');
+  const owed = { canPay: false, payBy: null, activePayment: { paymentId: 9001, method: 'crypto_static', kind: 'crypto' as const, status: 'completed', checkoutUrl: null, canChange: false } };
+  switch (kind) {
+    case 'crypto':
+      return o;
+    case 'choose':
+      return { ...o, cryptoPayments: [], payment: { canPay: true, payBy: o.payment!.payBy, activePayment: null } };
+    case 'paid':
+      return { ...o, status: 'confirmed', cryptoPayments: [], payment: owed };
+    case 'shipped':
+      return {
+        ...o, status: 'shipped', cryptoPayments: [], payment: owed,
+        shipments: [{ status: 'shipped', carrier: 'Royal Mail', trackingNumber: 'NB000977GB', trackingUrl: 'https://track.example.invalid/NB000977GB', trackingStatusDescription: 'Handed to the courier', shippedAt: '2026-08-25T09:00:00.000Z', deliveredAt: null }],
+      };
+    case 'legacy': {
+      const { payment: _payment, cryptoPayments: _crypto, ...rest } = o;
+      return rest;
+    }
+  }
+}
+
 /** What the stub hands the app as `Telegram.WebApp.initData`, verbatim. */
 export const TELEGRAM_INIT_DATA =
   'query_id=AAE&user=%7B%22id%22%3A777000111%2C%22first_name%22%3A%22Ada%22%7D&auth_date=1790000000&hash=' + 'a'.repeat(64);
@@ -85,6 +117,20 @@ export interface InstallMocksOptions {
   pages?: Partial<Record<Layout, PageSet | null>>;
   /** Make the pages route fail (503 or 404) so specs can exercise the built-in fallback. */
   pagesFail?: 503 | 404;
+  /** Published site text served alongside the page set. Omitted = today's body
+   *  exactly (`null`, or `{ version: 1, data: set }`) with no `text` field. */
+  text?: MockText;
+  /** Serve the text-era body with `text: null` (nothing published yet) instead of a text object. */
+  textNull?: boolean;
+}
+
+/** The published site text the pages route serves (spec §4.6), active locale only. */
+export interface MockText {
+  version?: number;                 // default 1
+  locale?: string;                  // default 'en'
+  formatLocale?: string;            // default ''
+  shared?: Record<string, unknown>; // active-locale shared strings
+  layout?: Partial<Record<Layout, Record<string, unknown>>>; // per-layout overrides
 }
 
 export interface MockState {
@@ -109,6 +155,10 @@ export interface MockState {
   checkouts: Array<Record<string, unknown>>;
   /** Bodies posted to the guest quote route, for assertions. */
   guestQuotes: Array<Record<string, unknown>>;
+  /** Bodies posted to the signed-in quote route, for assertions. */
+  quotes: Array<Record<string, unknown>>;
+  /** Bodies posted to the order's payment-method route (a method / coin / network selection). */
+  methods: Array<Record<string, unknown>>;
   /** Bodies posted to the crypto-txid route, for assertions. */
   txids: Array<Record<string, unknown>>;
   /** Bodies posted to the Mini App sign-in route. */
@@ -119,6 +169,10 @@ export interface MockState {
   pages: Partial<Record<Layout, PageSet | null>>;
   /** When set, the pages route answers this error status instead of the fixture. */
   pagesFail: 503 | 404 | null;
+  /** Published site text; `null` = the pages route serves the pre-text body. */
+  text: MockText | null;
+  /** The pages route answers `{ version, data, text: null }`. */
+  textNull: boolean;
 }
 
 export interface MockHandle {
@@ -181,6 +235,25 @@ function buildCart(items: CartLineInput[], catalog: Catalog): ServerCart {
     subtotal: Math.round(lines.reduce((sum, l) => sum + l.lineTotal, 0) * 100) / 100,
     itemCount: lines.reduce((sum, l) => sum + l.quantity, 0),
   };
+}
+
+/** The one discount code the mock knows: 10% off the goods, `NORTH10`. Any other code leaves the quote as served. */
+export const COUPON_CODE = 'NORTH10';
+export const COUPON_DISCOUNT = 4.25;
+
+/** The quote as the backend would price this request: the code, when it is the known one, takes the discount off every total. */
+function quoteFor(base: Quote, asked: Record<string, unknown>): Quote {
+  if (String(asked.couponCode ?? '').trim().toUpperCase() !== COUPON_CODE) return base;
+  const q = clone(base);
+  const take = (n: number) => Math.round((n - COUPON_DISCOUNT) * 100) / 100;
+  q.coupon = { code: COUPON_CODE, discountAmount: COUPON_DISCOUNT, shippingDiscount: 0, autoApplied: false };
+  q.grandTotal = take(q.grandTotal);
+  q.amountDue = take(q.amountDue);
+  for (const m of q.paymentMethods) {
+    m.chargeTotal = take(m.chargeTotal);
+    for (const o of m.cryptoOptions ?? []) o.chargeTotal = take(o.chargeTotal);
+  }
+  return q;
 }
 
 function maskTxid(txid: string): string {
@@ -255,11 +328,15 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     requests: [],
     checkouts: [],
     guestQuotes: [],
+    quotes: [],
+    methods: [],
     txids: [],
     webappLogins: [],
     botModes: [],
     pages: options.pages ?? {},
     pagesFail: options.pagesFail ?? null,
+    text: options.text ?? null,
+    textNull: options.textNull ?? false,
   };
 
   options.tweakSettings?.(state.settings);
@@ -322,7 +399,25 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
         return;
       }
       const set = state.pages[pages[1] as Layout] ?? null;
-      await envelope(route, set ? { version: 1, data: set } : null);
+      if (state.textNull) {
+        await envelope(route, { version: set ? 1 : 0, data: set, text: null });
+        return;
+      }
+      if (!state.text) {
+        await envelope(route, set ? { version: 1, data: set } : null);
+        return;
+      }
+      await envelope(route, {
+        version: set ? 1 : 0,
+        data: set,
+        text: {
+          version: state.text.version ?? 1,
+          locale: state.text.locale ?? 'en',
+          formatLocale: state.text.formatLocale ?? '',
+          shared: state.text.shared ?? {},
+          layout: state.text.layout?.[pages[1] as Layout] ?? {},
+        },
+      });
       return;
     }
 
@@ -364,8 +459,10 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     }
 
     if ((path === 'storefront/checkout/quote' || path === 'storefront/checkout/guest/quote') && method === 'POST') {
-      if (path.includes('guest')) state.guestQuotes.push(body(route));
-      await envelope(route, state.quote);
+      const asked = body(route);
+      if (path.includes('guest')) state.guestQuotes.push(asked);
+      else state.quotes.push(asked);
+      await envelope(route, quoteFor(state.quote, asked));
       return;
     }
 
@@ -413,6 +510,7 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
       }
       if (tail === 'payment-method' && method === 'POST') {
         const selection = body(route);
+        state.methods.push(selection);
         const result: SelectPaymentResult = {
           paymentId: 9002,
           method: String(selection.method ?? 'crypto_static'),

@@ -5,11 +5,13 @@ import { defineBlock } from '@/builder/define.ts';
 import { useCatalog } from '@/features/catalog/use-catalog.ts';
 import { buildCategoryTree } from '@/features/catalog/category-tree.ts';
 import { categoryCounts, findCategoryBySlugOrId } from '@/features/catalog/filter.ts';
+import { BOX, styleSupport, VIS } from '@/builder/style/model.ts';
+import type { StyleAttrs } from '@/builder/define.ts';
 import classes from '@/builder/blocks/CategoryNav.module.css';
 
 const CategoryNav = lazy(() => import('@/features/catalog/CategoryNav.tsx').then((m) => ({ default: m.CategoryNav })));
 
-function CategoryNavView() {
+function CategoryNavView({ styleAttrs }: { styleAttrs?: StyleAttrs }) {
   const catalog = useCatalog();
   const { categorySlug } = useParams();
   const products = useMemo(() => catalog.data?.products ?? [], [catalog.data]);
@@ -18,7 +20,7 @@ function CategoryNavView() {
   if (!catalog.data) return null;
   const active = categorySlug ? findCategoryBySlugOrId(categories, categorySlug) : undefined;
   return (
-    <div className={classes.wrap} data-sf-block="CategoryNav">
+    <div className={classes.wrap} data-sf-block="CategoryNav" {...styleAttrs}>
       <CategoryNav tree={tree} total={products.length} activeId={active?.id ?? null} />
     </div>
   );
@@ -30,6 +32,8 @@ function CategoryNavView() {
  */
 export const block = defineBlock<{ id: string }>({
   name: 'CategoryNav', label: 'Categories (always shown)', category: 'catalogue', layouts: 'all', routeBound: false, slots: [],
+  text: ['catalog.nav.*', 'catalog.list.*'],
+  style: styleSupport('root', [...BOX, ...VIS]),
   schema: z.object({}), defaultProps: {},
-  render: () => <CategoryNavView />,
+  render: ({ puck }) => <CategoryNavView styleAttrs={puck.style} />,
 });

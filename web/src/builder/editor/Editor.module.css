@@ -861,3 +861,58 @@
   color: var(--sfb-accent-strong);
   background: var(--sfb-accent-wash);
 }
+
+/* Touch: 44px targets and 16px select/input text (iOS zooms on focus below 16px). */
+@media (pointer: coarse) {
+  .bar,
+  .exactBar,
+  .dialog,
+  .readOnly,
+  .issuesPanel,
+  .menuPanel {
+    --sfb-control-h: 44px;
+  }
+  /* The page picker sits inside .where's 1px border: grow the frame, not the select. */
+  .where {
+    block-size: calc(var(--sfb-control-h) + 2px);
+    min-inline-size: 0;
+  }
+  /* At 16px the page names would set the header's width on a phone: let the select shrink. */
+  .pagePick {
+    flex: 1 1 auto;
+  }
+  .bar .pagePick select {
+    inline-size: 100%;
+    min-inline-size: 0;
+  }
+  .segmented button {
+    block-size: var(--sfb-control-h);
+    min-inline-size: 44px;
+  }
+  .menuItem {
+    min-block-size: 44px;
+  }
+  .bar select,
+  .dialog input {
+    font-size: 16px;
+  }
+}
+
+/*
+ * The menu / web-app sheet opens as a real modal inside the exact preview. The shop's root is its
+ * own stacking layer (chassis.css), so the bar cannot rise above the modal's overlay: the overlay
+ * starts under the bar instead, leaving "Back to editing" clickable. ExactPreview sets the variable
+ * while it shows; without it the overlay is untouched.
+ */
+html :global(.mantine-Drawer-overlay) {
+  inset-block-start: var(--sfb-exact-bar-h, 0px);
+}
+
+/*
+ * The cart drawer (the exact preview of the cart document in Drawer mode) is a full-height panel on the
+ * right, so it would sit over the bar's "Back to editing" the same way: its positioning wrapper starts
+ * under the bar too. Bottom sheets are unaffected (they rise from the foot, below the bar).
+ */
+html :global(.mantine-Drawer-inner) {
+  inset-block-start: var(--sfb-exact-bar-h, 0px);
+}

@@ -129,13 +129,14 @@ describe('page-set model', () => {
     expect(collectIssues(ok, L)).toEqual([]);
   });
 
-  it('loading a stored set drops pages equal to their default and product outside the storefront', () => {
+  // Stage 3 (spec §7.2, §11): every layout keeps its product document (the storefront page, the menu/webapp sheet).
+  it('loading a stored set drops pages equal to their default and keeps an edited product doc in every layout', () => {
     const product = normalizeDoc(defaultDoc('product', L), 'product');
     const editedProduct: PuckDoc = { ...product, content: [...product.content, heading('Heading-p')] };
     for (const layout of ['storefront', 'menu', 'webapp'] as const) {
       const catalog = normalizeDoc(defaultDoc('catalog', layout), 'catalog');
       const stored = { schemaVersion: 1 as const, shell: shell(), pages: { catalog, product: editedProduct } };
-      expect(Object.keys(docsFromPageSet(stored, layout)), layout).toEqual(layout === 'storefront' ? ['shell', 'product'] : ['shell']);
+      expect(Object.keys(docsFromPageSet(stored, layout)), layout).toEqual(['shell', 'product']);
     }
   });
 

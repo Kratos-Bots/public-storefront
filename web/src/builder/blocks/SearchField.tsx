@@ -3,16 +3,18 @@ import { z } from 'zod';
 import { defineBlock } from '@/builder/define.ts';
 import { SearchField } from '@/layouts/SearchField.tsx';
 import { useShellSearch } from '@/layouts/shell-context.ts';
+import { BOX, styleSupport, VIS } from '@/builder/style/model.ts';
+import type { StyleAttrs } from '@/builder/define.ts';
 import classes from '@/builder/blocks/SearchField.module.css';
 
-function SearchFieldView({ placeholder }: { placeholder: string }) {
+function SearchFieldView({ placeholder, styleAttrs }: { placeholder: string; styleAttrs?: StyleAttrs }) {
   // The same state the list blocks filter on (outlet context, else the shell provider).
   const { search, setSearch } = useShellSearch();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const onCatalog = pathname === '/' || pathname.startsWith('/c/');
   return (
-    <div className={classes.root} data-sf-block="SearchField">
+    <div className={classes.root} data-sf-block="SearchField" {...styleAttrs}>
       <SearchField
         className={classes.field}
         value={search}
@@ -29,6 +31,9 @@ function SearchFieldView({ placeholder }: { placeholder: string }) {
 
 export const block = defineBlock<{ id: string; placeholder: string }>({
   name: 'SearchField', label: 'Search field', category: 'catalogue', layouts: 'all', routeBound: false, slots: [],
-  schema: z.object({ placeholder: z.string().min(1).max(60) }), defaultProps: { placeholder: 'Search products' },
-  render: ({ placeholder }) => <SearchFieldView placeholder={placeholder} />,
+  text: ['catalog.search.*'],
+  style: styleSupport('root', [...BOX, ...VIS]),
+  schema: z.object({ placeholder: z.string().max(60) }), defaultProps: { placeholder: '' },
+  textProps: { placeholder: 'catalog.search.placeholder' },
+  render: ({ placeholder, puck }) => <SearchFieldView placeholder={placeholder} styleAttrs={puck.style} />,
 });

@@ -5,6 +5,8 @@ import '@/styles/global.css';
 import '@/styles/chassis.css';
 import '@/styles/motion.css';
 import '@/styles/mantine.css';
+// Block styling (builder): owner styles at (0,4,0), in the main bundle so template CSS loads after it.
+import '@/builder/style/block-style.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from '@/app/App.tsx';

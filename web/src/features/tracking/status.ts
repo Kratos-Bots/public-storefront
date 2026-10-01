@@ -1,3 +1,6 @@
+import { dateTimeFormat } from '@/lib/format.ts';
+import type { StringKey } from '@/text/registry.ts';
+import { textKey, textSnapshot } from '@/text/snapshot.ts';
 import type { ParcelTracking, TrackedEvent, TrackedParcel } from '@/types/tracking.ts';
 
 // Ported from `ecommerce-menu/web/src/features/tracking/status.ts`. The stage
@@ -11,14 +14,15 @@ import type { ParcelTracking, TrackedEvent, TrackedParcel } from '@/types/tracki
 // Stepper stages (§6 of TRACKING_API.MD)
 // ------------------------------------------------------------------
 
-export const STAGES = [
-  'Ordered',
-  'Collected',
-  'In flight',
-  'Customs',
-  'Local carrier',
-  'Out for delivery',
-  'Delivered',
+/** Registry keys of the seven stages, in route order — components render from these. */
+export const STAGE_KEYS = [
+  textKey('tracking.status.stageOrdered'),
+  textKey('tracking.status.stageCollected'),
+  textKey('tracking.status.stageInFlight'),
+  textKey('tracking.status.stageCustoms'),
+  textKey('tracking.status.stageLocalCarrier'),
+  textKey('tracking.status.stageOutForDelivery'),
+  textKey('tracking.status.stageDelivered'),
 ] as const;
 
 const STAGE_BY_CODE: Record<string, number> = {
@@ -68,16 +72,23 @@ export function furthestStage(events: TrackedEvent[]): number {
 /** Accent role, resolved to a theme token by whatever renders it. */
 export type Tone = 'neutral' | 'info' | 'warn' | 'success' | 'danger';
 
-export const PARCEL_LABEL: Record<string, string> = {
-  PRE_TRANSIT: 'Label created',
-  IN_TRANSIT: 'In transit',
-  CUSTOMS: 'In customs',
-  OUT_FOR_DELIVERY: 'Out for delivery',
-  AVAILABLE_FOR_PICKUP: 'Ready for pickup',
-  DELIVERED: 'Delivered',
-  EXCEPTION: 'Needs attention',
-  RETURNED: 'Returned to sender',
-  UNKNOWN: 'Status unavailable',
+/** The nine parcel-status keys — a narrow union, so `t(key)` needs no params. */
+export type ParcelLabelKey = Extract<
+  StringKey,
+  | `tracking.status.${'preTransit' | 'customs' | 'outForDelivery' | 'availableForPickup' | 'delivered' | 'exception' | 'returned' | 'unknown'}`
+  | 'common.shipment.inTransit'
+>;
+
+export const PARCEL_LABEL_KEYS: Record<string, ParcelLabelKey> = {
+  PRE_TRANSIT: textKey('tracking.status.preTransit'),
+  IN_TRANSIT: textKey('common.shipment.inTransit'),
+  CUSTOMS: textKey('tracking.status.customs'),
+  OUT_FOR_DELIVERY: textKey('tracking.status.outForDelivery'),
+  AVAILABLE_FOR_PICKUP: textKey('tracking.status.availableForPickup'),
+  DELIVERED: textKey('tracking.status.delivered'),
+  EXCEPTION: textKey('tracking.status.exception'),
+  RETURNED: textKey('tracking.status.returned'),
+  UNKNOWN: textKey('tracking.status.unknown'),
 };
 
 export const PARCEL_TONE: Record<string, Tone> = {
@@ -93,8 +104,13 @@ export const PARCEL_TONE: Record<string, Tone> = {
 };
 
 /** Default case is mandatory: new statuses ship without a client release. */
+export function parcelLabelKey(status: string | null): ParcelLabelKey {
+  return (status && Object.hasOwn(PARCEL_LABEL_KEYS, status) && PARCEL_LABEL_KEYS[status]) || textKey('tracking.status.unknown');
+}
+
+/** Resolved at call time through the mounted text; components render `t(parcelLabelKey(...))`. */
 export function parcelLabel(status: string | null): string {
-  return (status && PARCEL_LABEL[status]) || 'Status unavailable';
+  return textSnapshot().t(parcelLabelKey(status));
 }
 
 export function parcelTone(status: string | null): Tone {
@@ -138,27 +154,25 @@ export function partitionEvents(events: TrackedEvent[]): {
 // Time
 // ------------------------------------------------------------------
 
-const stampFmt = new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
-
 /** Null-safe: occurredAt is nullable on every event. */
 export function formatStamp(iso: string | null): string {
-  if (!iso) return 'Date unknown';
+  if (!iso) return textSnapshot().t('tracking.time.unknown');
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? 'Date unknown' : stampFmt.format(d);
+  return Number.isNaN(d.getTime()) ? textSnapshot().t('tracking.time.unknown') : dateTimeFormat('date', { dateStyle: 'medium', timeStyle: 'short' }).format(d);
 }
 
 /** "just now" / "12 min ago" / "2h ago" / "3 days ago". Empty string for null. */
 export function formatRelative(iso: string | null, now = Date.now()): string {
   if (!iso) return '';
-  const t = Date.parse(iso);
-  if (Number.isNaN(t)) return '';
-  const mins = Math.floor((now - t) / 60_000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins} min ago`;
+  const at = Date.parse(iso);
+  if (Number.isNaN(at)) return '';
+  const { t, tp } = textSnapshot();
+  const mins = Math.floor((now - at) / 60_000);
+  if (mins < 1) return t('tracking.time.justNow');
+  if (mins < 60) return t('tracking.time.minutesAgo', { minutes: mins });
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return days === 1 ? '1 day ago' : `${days} days ago`;
+  if (hours < 24) return t('tracking.time.hoursAgo', { hours });
+  return tp('tracking.time.daysAgo', Math.floor(hours / 24));
 }
 
 // ------------------------------------------------------------------

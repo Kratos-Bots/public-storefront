@@ -28,7 +28,7 @@ const g = vi.hoisted(() => ({
 vi.mock('@/app/builder-gate.ts', async (orig) => ({ ...(await orig<typeof import('@/app/builder-gate.ts')>()), isBuilderMode: () => g.builder }));
 vi.mock('@/app/settings.ts', async (orig) => ({ ...(await orig<typeof import('@/app/settings.ts')>()), useSettings: () => g.settings }));
 vi.mock('@/lib/telegram-webapp.ts', async (orig) => ({ ...(await orig<typeof import('@/lib/telegram-webapp.ts')>()), isTelegramWebApp: () => false }));
-vi.mock('@/api/pages.ts', () => ({ fetchPageSet: (layout: string) => { g.pageFetches.push(layout); return Promise.resolve(null); } }));
+vi.mock('@/api/pages.ts', () => ({ fetchPageSet: (layout: string) => { g.pageFetches.push(layout); return Promise.resolve(null); }, fetchPublished: (layout: string) => { g.pageFetches.push(layout); return Promise.resolve({ pageSet: null, text: null }); } }));
 vi.mock('@/api/auth.ts', async (orig) => ({ ...(await orig<typeof import('@/api/auth.ts')>()), logout: vi.fn(() => Promise.reject(new Error('Preview only'))) }));
 vi.mock('@/api/public-order.ts', () => ({
   PaymentConflictError: class PaymentConflictError extends Error {},

@@ -1,7 +1,10 @@
+import type { ReactNode } from 'react';
+import type { StyleAttrs } from '@/builder/define.ts';
 import type { CheckoutForm } from '@/features/checkout/form-state.ts';
 import { Field } from '@/features/checkout/Field.tsx';
 import { CountrySelect } from '@/features/checkout/CountrySelect.tsx';
 import { DIAL_CODES } from '@/lib/dial-codes.ts';
+import { useText } from '@/text/runtime.tsx';
 import fields from '@/features/checkout/Fields.module.css';
 import classes from '@/features/checkout/steps/Steps.module.css';
 
@@ -11,6 +14,10 @@ export interface AddressStepProps {
   errors: Record<string, string>;
   /** A quote error the address is responsible for — an unserviceable country, say. */
   notice?: string;
+  /** Content slots of the step part: before everything, after everything. */
+  before?: ReactNode;
+  after?: ReactNode;
+  rootAttrs?: StyleAttrs;
 }
 
 /**
@@ -21,13 +28,15 @@ export interface AddressStepProps {
  * quote to `deliveryMethod: 'home'` and strips service-point fields from the
  * submitted address, so a collection-point picker here would be inert.
  */
-export function AddressStep({ form, patch, errors, notice }: AddressStepProps) {
+export function AddressStep({ form, patch, errors, notice, before, after, rootAttrs }: AddressStepProps) {
+  const { t } = useText();
   return (
-    <div className={classes.step}>
-      <p className={classes.blurb}>Where should we send it?</p>
+    <div className={classes.step} {...rootAttrs}>
+      {before}
+      <p className={classes.blurb}>{t('checkout.address.blurb')}</p>
 
       <Field
-        label="Address line 1"
+        label={t('checkout.address.line1')}
         value={form.addressLine1}
         onChange={(v) => patch({ addressLine1: v })}
         error={errors.addressLine1}
@@ -35,7 +44,7 @@ export function AddressStep({ form, patch, errors, notice }: AddressStepProps) {
         maxLength={255}
       />
       <Field
-        label="Address line 2"
+        label={t('checkout.address.line2')}
         value={form.addressLine2}
         onChange={(v) => patch({ addressLine2: v })}
         optional
@@ -45,7 +54,7 @@ export function AddressStep({ form, patch, errors, notice }: AddressStepProps) {
 
       <div className={fields.pair}>
         <Field
-          label="City"
+          label={t('checkout.address.city')}
           value={form.city}
           onChange={(v) => patch({ city: v })}
           error={errors.city}
@@ -53,7 +62,7 @@ export function AddressStep({ form, patch, errors, notice }: AddressStepProps) {
           maxLength={100}
         />
         <Field
-          label="ZIP / Postcode"
+          label={t('checkout.address.zip')}
           value={form.zip}
           onChange={(v) => patch({ zip: v })}
           error={errors.zip}
@@ -63,7 +72,7 @@ export function AddressStep({ form, patch, errors, notice }: AddressStepProps) {
       </div>
 
       <Field
-        label="County / Region"
+        label={t('checkout.address.county')}
         value={form.county}
         onChange={(v) => patch({ county: v })}
         optional
@@ -89,6 +98,7 @@ export function AddressStep({ form, patch, errors, notice }: AddressStepProps) {
           {notice}
         </p>
       ) : null}
+      {after}
     </div>
   );
 }

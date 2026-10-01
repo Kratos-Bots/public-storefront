@@ -3,8 +3,9 @@ import { ArrowUpRightIcon } from '@/components/icons.tsx';
 import { CopyRow } from '@/features/order-status/CopyRow.tsx';
 import { ParcelTimeline } from '@/features/tracking/ParcelTimeline.tsx';
 import { ProgressStepper } from '@/features/tracking/ProgressStepper.tsx';
-import { furthestStage, hasHandover, parcelLabel, parcelTone } from '@/features/tracking/status.ts';
+import { furthestStage, hasHandover, parcelLabelKey, parcelTone } from '@/features/tracking/status.ts';
 import { staggerAnim } from '@/lib/motion.ts';
+import { useText } from '@/text/runtime.tsx';
 import type { TrackedParcel } from '@/types/tracking.ts';
 import classes from '@/features/tracking/Tracking.module.css';
 
@@ -25,11 +26,12 @@ export interface ParcelCardProps {
  * case the hero cannot speak for.
  */
 export function ParcelCard({ parcel, index, count, onRetry }: ParcelCardProps) {
+  const { t: text } = useText();
   const t = parcel.tracking;
-  const title = count > 1 ? `Parcel ${index + 1} of ${count}` : 'Parcel';
+  const title = count > 1 ? text('common.shipment.parcelOf', { index: index + 1, count }) : text('tracking.parcel.single');
   const destination = count > 1 ? t?.destination ?? null : null;
   const tone = t?.outcome === 'ok' ? parcelTone(t.status) : 'neutral';
-  const badge = t?.outcome === 'ok' ? parcelLabel(t.status) : null;
+  const badge = t?.outcome === 'ok' ? text(parcelLabelKey(t.status)) : null;
   // The local carrier only knows the parcel after handover; before that its page
   // reports "not found", so the link stays hidden.
   const lastMile = hasHandover(t) ? t?.lastMile ?? null : null;
@@ -49,7 +51,7 @@ export function ParcelCard({ parcel, index, count, onRetry }: ParcelCardProps) {
         <div className={classes.cardHeadBody}>
           <h2 className={classes.cardTitle}>{title}</h2>
           {destination ? (
-            <p className={classes.cardDest}>Heading to {destination.name ?? destination.code}</p>
+            <p className={classes.cardDest}>{text('tracking.hero.headingTo', { place: destination.name ?? destination.code })}</p>
           ) : null}
         </div>
         {badge ? (
@@ -63,12 +65,12 @@ export function ParcelCard({ parcel, index, count, onRetry }: ParcelCardProps) {
       {parcel.trackingNumber || t?.courierNumber ? (
         <div className={classes.numbers}>
           {parcel.trackingNumber ? (
-            <CopyRow label="Tracking number" value={parcel.trackingNumber} />
+            <CopyRow label={text('common.shipment.trackingNumber')} value={parcel.trackingNumber} />
           ) : null}
 
           {t?.courierNumber && t.courierNumber !== parcel.trackingNumber ? (
             <div className={classes.refRow}>
-              <p className={classes.refLabel}>Carrier ref</p>
+              <p className={classes.refLabel}>{text('tracking.parcel.carrierRef')}</p>
               <p className={classes.refValue}>{t.courierNumber}</p>
             </div>
           ) : null}
@@ -89,7 +91,7 @@ export function ParcelCard({ parcel, index, count, onRetry }: ParcelCardProps) {
           target="_blank"
           rel="noopener noreferrer"
         >
-          Track with {lastMile.name}
+          {text('tracking.parcel.trackWith', { carrier: lastMile.name })}
           <ArrowUpRightIcon size={12} />
         </a>
       ) : null}
@@ -97,23 +99,20 @@ export function ParcelCard({ parcel, index, count, onRetry }: ParcelCardProps) {
       {t?.outcome === 'ok' ? <ParcelTimeline events={t.events} /> : null}
 
       {t?.outcome === 'not_found' ? (
-        <Note eyebrow="Awaiting first scan">
-          The label exists but the courier hasn't scanned this parcel yet. That's normal for the
-          first day or so after dispatch — check back later.
-        </Note>
+        <Note eyebrow={text('tracking.parcel.awaitingScan')}>{text('tracking.parcel.notFoundBody')}</Note>
       ) : null}
 
       {t?.outcome === 'error' ? (
         <Note
-          eyebrow="Carrier not responding"
+          eyebrow={text('tracking.parcel.errorEyebrow')}
           tone="warn"
           action={
             <button className={classes.ghost} type="button" onClick={onRetry}>
-              Try again
+              {text('common.actions.tryAgain')}
             </button>
           }
         >
-          The carrier isn't answering right now. Nothing is wrong with your parcel.
+          {text('tracking.parcel.errorBody')}
         </Note>
       ) : null}
 
@@ -123,11 +122,11 @@ export function ParcelCard({ parcel, index, count, onRetry }: ParcelCardProps) {
           is unreachable. Telling a customer with no number to "search the number
           above" is the mistake worth not repeating. */}
       {!t ? (
-        <Note eyebrow={parcel.trackingNumber ? 'Last known' : 'Awaiting tracking number'}>
+        <Note eyebrow={parcel.trackingNumber ? text('tracking.parcel.lastKnown') : text('tracking.parcel.awaitingNumber')}>
           {parcel.fallbackDescription ??
             (parcel.trackingNumber
-              ? 'Live tracking is unavailable right now. Search the tracking number above on your carrier’s website for the latest scan.'
-              : 'This parcel doesn’t have a tracking number yet. One appears here as soon as the carrier issues it.')}
+              ? text('tracking.parcel.unavailableBody')
+              : text('tracking.parcel.noNumberBody'))}
         </Note>
       ) : null}
     </section>

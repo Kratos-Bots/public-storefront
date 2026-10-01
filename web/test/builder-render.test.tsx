@@ -11,7 +11,7 @@ vi.mock('@/builder/registry.ts', async () => {
   function Thrower(): never { throw new Error('boom'); }
   function Flaky() { if (flaky.broken) throw new Error('flaky'); return <p>recovered</p>; }
   function Mode() { return <i>{useBuilderMode().editing ? 'editing' : 'live'}</i>; }
-  const base = { category: 'content' as const, layouts: 'all' as const, routeBound: false };
+  const base = { category: 'content' as const, layouts: 'all' as const, routeBound: false, style: false as const };
   return {
     BLOCKS: {
       Text: defineBlock<{ id: string; text: string }>({ ...base, name: 'Text', label: 'Text', slots: [], schema: z.object({ text: z.string() }), defaultProps: { text: '' }, render: ({ text }) => <p>{text}</p> }),
@@ -21,6 +21,8 @@ vi.mock('@/builder/registry.ts', async () => {
       BoundBoom: defineBlock<{ id: string }>({ ...base, routeBound: true, name: 'BoundBoom', label: 'Bound', slots: [], schema: z.object({}), defaultProps: {}, render: () => <Thrower /> }),
       Flaky: defineBlock<{ id: string }>({ ...base, name: 'Flaky', label: 'Flaky', slots: [], schema: z.object({}), defaultProps: {}, render: () => <Flaky /> }),
       Mode: defineBlock<{ id: string }>({ ...base, name: 'Mode', label: 'Mode', slots: [], schema: z.object({}), defaultProps: {}, render: () => <Mode /> }),
+      RootBox: defineBlock<{ id: string; text: string }>({ ...base, name: 'RootBox', label: 'Root box', slots: [], style: { target: 'root', keys: ['bg', 'hide'] }, schema: z.object({ text: z.string() }), defaultProps: { text: '' }, render: ({ text, puck }) => <p data-sf-block="RootBox" {...puck.style}>{text}</p> }),
+      WrapBox: defineBlock<{ id: string; text: string }>({ ...base, name: 'WrapBox', label: 'Wrap box', slots: [], style: { target: 'wrap', keys: ['bg', 'padTop'] }, schema: z.object({ text: z.string() }), defaultProps: { text: '' }, render: ({ text }) => (text ? <p>{text}</p> : null) }),
     },
   };
 });
@@ -76,5 +78,30 @@ describe('RenderDoc', () => {
   it('passes the builder mode through', () => {
     render(<BuilderModeProvider value={{ editing: true, previewAs: null }}><RenderDoc doc={d([c('Mode')])} docKey="page:x" layout="menu" /></BuilderModeProvider>);
     expect(screen.getByText('editing')).toBeInTheDocument();
+  });
+});
+
+describe('RenderDoc · block styles', () => {
+  const html = (content: ComponentData[], editing = false) => {
+    const out = render(<BuilderModeProvider value={{ editing, previewAs: null }}><RenderDoc doc={d(content)} docKey="page:x" layout="storefront" /></BuilderModeProvider>).container.innerHTML;
+    cleanup();
+    return out;
+  };
+  it('absent, {} and disallowed-only styles render byte-identical DOM', () => {
+    const plain = html([c('RootBox', { text: 'a' })]);
+    expect(plain).toBe('<p data-sf-block="RootBox">a</p>');
+    expect(html([c('RootBox', { text: 'a', blockStyle: {} })])).toBe(plain);
+    expect(html([c('RootBox', { text: 'a', blockStyle: { padTop: 'lg' } })])).toBe(plain);
+  });
+  it('root: attributes on the block root', () => {
+    expect(html([c('RootBox', { text: 'a', blockStyle: { bg: 'surface', hide: 'mobile' } })]))
+      .toBe('<p data-sf-block="RootBox" data-sf-style="RootBox" data-sfs-bg="surface" data-sfs-hide="mobile">a</p>');
+  });
+  it('hide is a ghost on the editor canvas', () => {
+    expect(html([c('RootBox', { text: 'a', blockStyle: { hide: 'mobile' } })], true)).toContain('data-sfs-ghost="mobile"');
+  });
+  it('wrap: one added div', () => {
+    expect(html([c('WrapBox', { text: 'a', blockStyle: { bg: 'surface', padTop: 'lg' } })]))
+      .toBe('<div data-sf-style="WrapBox" data-sfs-bg="surface" data-sfs-pt="lg"><p>a</p></div>');
   });
 });

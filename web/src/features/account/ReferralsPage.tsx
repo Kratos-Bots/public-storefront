@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button } from '@mantine/core';
 import { useClipboard } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
@@ -10,6 +10,12 @@ import { errorMessage } from '@/lib/errors.ts';
 import { setReferralCode } from '@/api/profile.ts';
 import { PROFILE_KEY, useProfile } from '@/features/account/queries.ts';
 import { referralShareLinks, referralShareText } from '@/features/account/referral-share.ts';
+import { useText } from '@/text/runtime.tsx';
+import { ReferralsFamily, type ReferralsData, type ReferralsPreview } from '@/builder/family-referrals.ts';
+import { usePreviewFixture, usePreviewState } from '@/builder/mode.ts';
+import type { FamilyValue, PartViewProps } from '@/builder/parts.ts';
+import { defaultSlotRenders } from '@/builder/render.tsx';
+import type { SlotRender } from '@/builder/define.ts';
 import classes from '@/features/account/Account.module.css';
 
 /**
@@ -26,174 +32,240 @@ function canShare(): boolean {
   return typeof navigator !== 'undefined' && typeof navigator.share === 'function';
 }
 
+function CodeView({ styleAttrs }: PartViewProps) {
+  const { t } = useText();
+  const { profile, canCopy: copyable, copied, copy } = ReferralsFamily.useData();
+  return (
+    <div className={classes.plate} {...styleAttrs}>
+      <span className={classes.plateLabel}>{t('account.referrals.yourCode')}</span>
+      <div className={classes.plateRow}>
+        <span className={classes.code}>{profile.referralCode}</span>
+        {copyable ? (
+          <button
+            type="button"
+            className={classes.copy}
+            onClick={copy}
+            aria-label={t('account.referrals.copyAria', { code: profile.referralCode })}
+          >
+            {copied ? t('common.actions.copied') : t('common.actions.copy')}
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function ShareView() {
+  const { t } = useText();
+  const { links, canShare: shareable, share } = ReferralsFamily.useData();
+  if (!(shareable || links.whatsapp || links.telegram)) return null;
+  return (
+    <>
+      <div className={classes.share}>
+        {shareable ? (
+          <button type="button" className={classes.ghost} onClick={share}>
+            {t('account.referrals.share')}
+          </button>
+        ) : null}
+        {links.whatsapp ? (
+          <a
+            className={classes.ghost}
+            href={links.whatsapp}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {t('common.contact.whatsapp')}
+          </a>
+        ) : null}
+        {links.telegram ? (
+          <a
+            className={classes.ghost}
+            href={links.telegram}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {t('common.contact.telegram')}
+          </a>
+        ) : null}
+      </div>
+      <p className={classes.note}>
+        {t('account.referrals.shareNote')}
+      </p>
+    </>
+  );
+}
+
+function StatsView({ styleAttrs }: PartViewProps) {
+  const { t } = useText();
+  const { profile } = ReferralsFamily.useData();
+  return (
+    <section className={classes.section} aria-label={t('account.referrals.broughtInAria')} {...styleAttrs}>
+      <div className={classes.sectionHead}>
+        <h3 className={classes.sectionTitle}>{t('account.referrals.broughtInTitle')}</h3>
+      </div>
+      <div className={classes.counts}>
+        <div className={classes.count}>
+          <span className={classes.countFigure}>{profile.referredPeopleCount}</span>
+          <span className={classes.countLabel}>{t('account.referrals.peopleReferred')}</span>
+        </div>
+        <div className={classes.count}>
+          <span className={classes.countFigure}>{profile.referralsCount}</span>
+          <span className={classes.countLabel}>{t('account.referrals.ordersEarned')}</span>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ReferrerView({ styleAttrs }: PartViewProps) {
+  const { t } = useText();
+  const { profile, draft, setDraft, claim } = ReferralsFamily.useData();
+  return (
+    <section className={classes.section} aria-label={t('account.referrals.referrerAria')} {...styleAttrs}>
+      <div className={classes.sectionHead}>
+        <h3 className={classes.sectionTitle}>{t('account.referrals.referrerTitle')}</h3>
+      </div>
+
+      {profile.hasReferrer ? (
+        <div className={classes.referrer}>
+          <span className={classes.rowLabel}>{t('account.referrals.referredBy')}</span>
+          <span className={classes.rowFigure}>{profile.referrerNickname ?? t('account.referrals.someone')}</span>
+        </div>
+      ) : (
+        <>
+          <p className={classes.note}>
+            {t('account.referrals.enterCodeNote')}
+          </p>
+          <form
+            className={classes.form}
+            onSubmit={(e) => {
+              e.preventDefault();
+              const code = draft.trim();
+              if (code) claim.submit(code);
+            }}
+          >
+            <input
+              className={classes.input}
+              value={draft}
+              onChange={(e) => setDraft(e.currentTarget.value)}
+              aria-label={t('account.referrals.codeAria')}
+              aria-invalid={claim.isError ? true : undefined}
+              placeholder={t('account.referrals.codePlaceholder')}
+              autoComplete="off"
+              spellCheck={false}
+              maxLength={64}
+            />
+            <button
+              type="submit"
+              className={classes.ghost}
+              disabled={claim.pending || draft.trim().length === 0}
+            >
+              {claim.pending ? t('account.referrals.checking') : t('account.referrals.apply')}
+            </button>
+          </form>
+          {claim.isError ? (
+            <span className={classes.error}>
+              {errorMessage(claim.error, t('account.referrals.codeFailed'))}
+            </span>
+          ) : null}
+        </>
+      )}
+    </section>
+  );
+}
+
+/** The referral tab's views (spec §5.4): the v0.7.0 JSX of each piece. */
+export const REFERRALS_VIEWS: FamilyValue<ReferralsData>['views'] = {
+  ReferralCode: CodeView, ReferralShare: ShareView, ReferralStats: StatsView, ReferralReferrer: ReferrerView,
+};
+
 /**
  * The referral tab: one code, the ways to pass it on, and what it has earned.
  * The share links open the shop's own chat with the invite written out — that
  * is where a customer's friends already talk to the shop, and it is the same
  * route the bot's referral entry point expects.
+ *
+ * The Referrals container: the profile query, the claim mutation, the clipboard and the share
+ * handler stay here; the `content` slot holds the parts. Without `slots` the default arrangement is drawn.
  */
-export function ReferralsPage() {
+export function ReferralsPage({ slots }: { slots?: { content: SlotRender } } = {}) {
+  const { t } = useText();
   const { brand } = useSettings();
-  const profile = useProfile();
+  const state = usePreviewState('Referrals');
+  const fixture = usePreviewFixture<ReferralsPreview>('Referrals');
+  // The editor previews from a fixture (spec §11.3): the query neither fires nor is read.
+  const preview = fixture !== null;
+  const profile = useProfile(!preview);
   const client = useQueryClient();
   const clipboard = useClipboard({ timeout: 1600 });
   const [draft, setDraft] = useState('');
+  const legacy = useMemo(() => (slots ? null : defaultSlotRenders('Referrals', 'storefront', {}, 'account.referrals')), [slots]);
+  const content = slots?.content ?? legacy!.content!;
 
   const claim = useMutation({
     mutationFn: (code: string) => setReferralCode(code),
     onSuccess: async (result) => {
       setDraft('');
-      notifications.show({ message: `You're now referred by ${result.referrerNickname}.` });
+      notifications.show({ message: t('account.referrals.referredToast', { name: result.referrerNickname }) });
       await client.invalidateQueries({ queryKey: PROFILE_KEY });
     },
   });
 
-  if (profile.isPending) return <PageSkeleton inline />;
+  const data = useMemo(
+    () => (preview
+      ? state === null
+        ? fixture.info
+        : { ...fixture.info, hasReferrer: state === 'referred', referrerNickname: state === 'referred' ? fixture.info.referrerNickname ?? 'Ada' : null }
+      : profile.data),
+    [preview, state, fixture, profile.data],
+  );
+  const copied = clipboard.copied;
+  const copy = clipboard.copy;
+  const claimPending = claim.isPending;
+  const claimError = claim.error;
+  const claimIsError = claim.isError;
+  const claimMutate = claim.mutate;
+  const value = useMemo<FamilyValue<ReferralsData> | null>(() => {
+    if (!data) return null;
+    const links = referralShareLinks(data.referralCode, brand);
+    const text = referralShareText(data.referralCode, brand.name);
+    return {
+      data: {
+        profile: data,
+        links,
+        canCopy: canCopy(),
+        canShare: canShare(),
+        copied,
+        copy: () => copy(data.referralCode),
+        share: () => {
+          void navigator.share({ text }).catch(() => undefined);
+        },
+        draft,
+        setDraft,
+        claim: { pending: claimPending, error: claimError, isError: claimIsError, submit: (code: string) => claimMutate(code) },
+      },
+      views: REFERRALS_VIEWS,
+    };
+  }, [data, brand, t, copied, copy, draft, claimPending, claimError, claimIsError, claimMutate]);
 
-  if (profile.isError) {
-    return (
-      <EmptyState
-        eyebrow="Referrals"
-        title="We couldn't load your referrals"
-        description="Your code hasn't gone anywhere — this was a hiccup between your browser and us."
-        action={
-          <Button variant="default" size="sm" onClick={() => void profile.refetch()}>
-            Try again
-          </Button>
-        }
-      />
-    );
+  if (!preview) {
+    if (profile.isPending) return <PageSkeleton inline />;
+
+    if (profile.isError) {
+      return (
+        <EmptyState
+          eyebrow={t('account.nav.referrals')}
+          title={t('account.referrals.loadFailedTitle')}
+          description={t('account.referrals.loadFailedBody')}
+          action={
+            <Button variant="default" size="sm" onClick={() => void profile.refetch()}>
+              {t('common.actions.tryAgain')}
+            </Button>
+          }
+        />
+      );
+    }
   }
 
-  const data = profile.data;
-  const links = referralShareLinks(data.referralCode, brand);
-  const text = referralShareText(data.referralCode, brand.name);
-
-  const share = () => {
-    void navigator.share({ text }).catch(() => undefined);
-  };
-
-  return (
-    <div className={classes.body}>
-      <div className={classes.plate}>
-        <span className={classes.plateLabel}>Your referral code</span>
-        <div className={classes.plateRow}>
-          <span className={classes.code}>{data.referralCode}</span>
-          {canCopy() ? (
-            <button
-              type="button"
-              className={classes.copy}
-              onClick={() => clipboard.copy(data.referralCode)}
-              aria-label={`Copy your referral code ${data.referralCode}`}
-            >
-              {clipboard.copied ? 'Copied' : 'Copy'}
-            </button>
-          ) : null}
-        </div>
-      </div>
-
-      {canShare() || links.whatsapp || links.telegram ? (
-        <>
-          <div className={classes.share}>
-            {canShare() ? (
-              <button type="button" className={classes.ghost} onClick={share}>
-                Share
-              </button>
-            ) : null}
-            {links.whatsapp ? (
-              <a
-                className={classes.ghost}
-                href={links.whatsapp}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                WhatsApp
-              </a>
-            ) : null}
-            {links.telegram ? (
-              <a
-                className={classes.ghost}
-                href={links.telegram}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Telegram
-              </a>
-            ) : null}
-          </div>
-          <p className={classes.note}>
-            The invite goes out with your code already in it — send it to whoever you want to bring
-            in.
-          </p>
-        </>
-      ) : null}
-
-      <section className={classes.section} aria-label="Your referrals">
-        <div className={classes.sectionHead}>
-          <h3 className={classes.sectionTitle}>What it has brought in</h3>
-        </div>
-        <div className={classes.counts}>
-          <div className={classes.count}>
-            <span className={classes.countFigure}>{data.referredPeopleCount}</span>
-            <span className={classes.countLabel}>People referred</span>
-          </div>
-          <div className={classes.count}>
-            <span className={classes.countFigure}>{data.referralsCount}</span>
-            <span className={classes.countLabel}>Orders earned on</span>
-          </div>
-        </div>
-      </section>
-
-      <section className={classes.section} aria-label="Who referred you">
-        <div className={classes.sectionHead}>
-          <h3 className={classes.sectionTitle}>Were you referred?</h3>
-        </div>
-
-        {data.hasReferrer ? (
-          <div className={classes.referrer}>
-            <span className={classes.rowLabel}>Referred by</span>
-            <span className={classes.rowFigure}>{data.referrerNickname ?? 'Someone at the shop'}</span>
-          </div>
-        ) : (
-          <>
-            <p className={classes.note}>
-              Enter their code once and it stays on your account. You can&rsquo;t change it later.
-            </p>
-            <form
-              className={classes.form}
-              onSubmit={(e) => {
-                e.preventDefault();
-                const code = draft.trim();
-                if (code) claim.mutate(code);
-              }}
-            >
-              <input
-                className={classes.input}
-                value={draft}
-                onChange={(e) => setDraft(e.currentTarget.value)}
-                aria-label="Referral code"
-                aria-invalid={claim.isError ? true : undefined}
-                placeholder="Their code"
-                autoComplete="off"
-                spellCheck={false}
-                maxLength={64}
-              />
-              <button
-                type="submit"
-                className={classes.ghost}
-                disabled={claim.isPending || draft.trim().length === 0}
-              >
-                {claim.isPending ? 'Checking' : 'Apply'}
-              </button>
-            </form>
-            {claim.isError ? (
-              <span className={classes.error}>
-                {errorMessage(claim.error, "That code didn't work")}
-              </span>
-            ) : null}
-          </>
-        )}
-      </section>
-    </div>
-  );
+  return <ReferralsFamily.Provider value={value!}>{content({ className: classes.body })}</ReferralsFamily.Provider>;
 }

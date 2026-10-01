@@ -1,9 +1,11 @@
-import { ContactLinks, useCutoffInfo, useOrderingState, type CatalogHeroProps } from '@/templates/contract.ts';
+import { ContactLinks, useCutoffInfo, useOrderingState, useText, textKey, type CatalogHeroProps } from '@/templates/contract.ts';
 import { LayoutGridIcon, MessageCircleIcon, PackageIcon, StoreIcon, TruckIcon } from './icons.tsx';
 
-const DAY_LABEL: Record<string, string> = {
-  mon: 'Monday', tue: 'Tuesday', wed: 'Wednesday', thu: 'Thursday', fri: 'Friday', sat: 'Saturday', sun: 'Sunday',
-};
+const DAY_KEY = {
+  mon: textKey('templates.bento.day.mon'), tue: textKey('templates.bento.day.tue'), wed: textKey('templates.bento.day.wed'),
+  thu: textKey('templates.bento.day.thu'), fri: textKey('templates.bento.day.fri'), sat: textKey('templates.bento.day.sat'),
+  sun: textKey('templates.bento.day.sun'),
+} as const;
 
 /**
  * Grid: the shop board — a small bento of the shop's real facts. The tagline (or, without one,
@@ -13,6 +15,7 @@ const DAY_LABEL: Record<string, string> = {
  * and the cart bar own those. List/wholesale surfaces are dense — the welcome line only.
  */
 export function BentoCatalogHero({ surface, brand, tagline, welcomeMessage, productCount, categoryCount, options }: CatalogHeroProps) {
+  const { t, tp, tn } = useText();
   const { accepting } = useOrderingState();
   const { next } = useCutoffInfo();
 
@@ -31,7 +34,7 @@ export function BentoCatalogHero({ surface, brand, tagline, welcomeMessage, prod
   const wideSingle = showShip !== showTalk;
 
   return (
-    <section className="bento-board" aria-label="About this shop" data-sf-part="hero" data-hero={headline ? 'on' : 'off'}>
+    <section className="bento-board" aria-label={t('templates.bento.hero.aboutAria')} data-sf-part="hero" data-hero={headline ? 'on' : 'off'}>
       {headline ? (
         <div className="bento-cell bento-cell--hero">
           <p className="bento-hero__headline">{headline}</p>
@@ -43,7 +46,7 @@ export function BentoCatalogHero({ surface, brand, tagline, welcomeMessage, prod
         <PackageIcon />
         <p className="bento-stat">
           <span className="bento-stat__num">{productCount}</span>
-          <span className="bento-stat__label">{productCount === 1 ? 'Product' : 'Products'}</span>
+          <span className="bento-stat__label">{tp('templates.bento.hero.product', productCount)}</span>
         </p>
       </div>
 
@@ -52,7 +55,7 @@ export function BentoCatalogHero({ surface, brand, tagline, welcomeMessage, prod
           <LayoutGridIcon />
           <p className="bento-fact">
             <span className="bento-fact__value">{categoryCount}</span>
-            <span className="bento-fact__label">{categoryCount === 1 ? 'Category' : 'Categories'}</span>
+            <span className="bento-fact__label">{tp('templates.bento.hero.category', categoryCount)}</span>
           </p>
         </div>
       ) : null}
@@ -62,9 +65,9 @@ export function BentoCatalogHero({ surface, brand, tagline, welcomeMessage, prod
         <p className="bento-fact">
           <span className="bento-fact__status">
             <span className="bento-dot" aria-hidden />
-            {accepting ? 'Open' : 'Paused'}
+            {accepting ? t('templates.bento.hero.open') : t('templates.bento.hero.paused')}
           </span>
-          <span className="bento-fact__label">{accepting ? 'Taking orders' : 'Ordering paused'}</span>
+          <span className="bento-fact__label">{accepting ? t('templates.bento.hero.takingOrders') : t('templates.bento.hero.orderingPaused')}</span>
         </p>
       </div>
 
@@ -73,10 +76,14 @@ export function BentoCatalogHero({ surface, brand, tagline, welcomeMessage, prod
           <TruckIcon />
           <p className="bento-fact">
             <span className="bento-fact__headline">
-              Order by <time dateTime={next.at.toISOString()}>{next.cutoff}</time>
-              {next.isToday ? ' today' : ` ${DAY_LABEL[next.day] ?? next.day}`}
+              {next.isToday
+                ? tn('templates.bento.hero.orderByToday', { cutoff: <time dateTime={next.at.toISOString()}>{next.cutoff}</time> })
+                : tn('templates.bento.hero.orderByDay', {
+                    cutoff: <time dateTime={next.at.toISOString()}>{next.cutoff}</time>,
+                    day: Object.hasOwn(DAY_KEY, next.day) ? t(DAY_KEY[next.day as keyof typeof DAY_KEY]) : next.day,
+                  })}
             </span>
-            <span className="bento-fact__label">for {next.shipsOn} dispatch</span>
+            <span className="bento-fact__label">{t('templates.bento.hero.dispatch', { date: next.shipsOn })}</span>
           </p>
         </div>
       ) : null}
@@ -85,7 +92,7 @@ export function BentoCatalogHero({ surface, brand, tagline, welcomeMessage, prod
         <div className={`bento-cell bento-cell--wide bento-cell--talk${wideSingle ? ' bento-cell--full' : ''}`}>
           <MessageCircleIcon />
           <div className="bento-fact">
-            <span className="bento-fact__headline">Questions before you order?</span>
+            <span className="bento-fact__headline">{t('templates.bento.hero.questions')}</span>
             <ContactLinks />
           </div>
         </div>

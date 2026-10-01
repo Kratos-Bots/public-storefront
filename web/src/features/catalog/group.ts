@@ -1,5 +1,6 @@
 import type { CategoryNode } from '@/features/catalog/category-tree.ts';
 import type { Product } from '@/types/catalog.ts';
+import { textSnapshot, type TextApi } from '@/text/snapshot.ts';
 
 export interface ProductGroup {
   key: string;
@@ -26,7 +27,7 @@ function walk(nodes: CategoryNode[], trail: string[] = []): { node: CategoryNode
  * whose category the catalogue no longer carries keeps its place at the end
  * rather than vanishing.
  */
-export function groupProducts(visible: Product[], tree: CategoryNode[]): ProductGroup[] {
+export function groupProducts(visible: Product[], tree: CategoryNode[], t: TextApi['t'] = textSnapshot().t): ProductGroup[] {
   const buckets = new Map<number, Product[]>();
   const loose: Product[] = [];
   for (const product of visible) {
@@ -47,10 +48,10 @@ export function groupProducts(visible: Product[], tree: CategoryNode[]): Product
     groups.push({ key: String(node.id), label: node.name, trail: trail.join(' / '), emoji: node.emoji, products });
   }
   for (const [id, products] of buckets) {
-    groups.push({ key: String(id), label: products[0]?.categoryName ?? 'Other', trail: '', emoji: null, products });
+    groups.push({ key: String(id), label: products[0]?.categoryName ?? t('catalog.group.other'), trail: '', emoji: null, products });
   }
   if (loose.length > 0) {
-    groups.push({ key: 'none', label: 'Uncategorised', trail: '', emoji: null, products: loose });
+    groups.push({ key: 'none', label: t('catalog.group.uncategorised'), trail: '', emoji: null, products: loose });
   }
   return groups;
 }

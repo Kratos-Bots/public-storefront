@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { Button, Stepper } from '@mantine/core';
+import { Button } from '@mantine/core';
 import { useDebouncedValue } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { useSettings } from '@/app/settings.ts';
@@ -28,28 +28,29 @@ import {
 } from '@/features/checkout/schemas.ts';
 import { useQuote } from '@/features/checkout/useQuote.ts';
 import { publicOrderPath, resolveCheckoutOutcome } from '@/features/checkout/outcome.ts';
-import { QuoteSummary } from '@/features/checkout/QuoteSummary.tsx';
 import { GuestTurnstile, type GuestTurnstileHandle } from '@/features/checkout/GuestTurnstile.tsx';
-import { ContactStep } from '@/features/checkout/steps/ContactStep.tsx';
-import { AddressStep } from '@/features/checkout/steps/AddressStep.tsx';
-import { ShippingStep } from '@/features/checkout/steps/ShippingStep.tsx';
-import { PaymentStep } from '@/features/checkout/steps/PaymentStep.tsx';
-import { ReviewStep } from '@/features/checkout/steps/ReviewStep.tsx';
+import { CHECKOUT_VIEWS, InertActionBand } from '@/features/checkout/checkout-parts.tsx';
+import { STEP_META } from '@/features/checkout/step-meta.ts';
+import { defaultSlotRenders } from '@/builder/render.tsx';
+import { useBuilderMode } from '@/builder/mode.ts';
+import { containsVisibleType } from '@/builder/rules.ts';
+import {
+  CheckoutFamily,
+  DEFAULT_STEP_ORDER,
+  isLegalStepOrder,
+  stepKindsOf,
+  type CheckoutData,
+  type CheckoutSlots,
+  type StepKind,
+} from '@/builder/family-checkout.ts';
 import { DIAL_CODES } from '@/lib/dial-codes.ts';
 import { formatMoney } from '@/lib/format.ts';
 import { haptic, isTelegramWebApp, openExternalLink } from '@/lib/telegram-webapp.ts';
 import { usePrimaryAction } from '@/stores/primary-action.ts';
 import { FADE } from '@/lib/motion.ts';
 import { Slot } from '@/templates/runtime.tsx';
+import { textKey, useText } from '@/text/runtime.tsx';
 import classes from '@/features/checkout/CheckoutPage.module.css';
-
-const STEPS = [
-  { label: 'Contact', title: 'Your details' },
-  { label: 'Address', title: 'Delivery address' },
-  { label: 'Shipping', title: 'Delivery and discounts' },
-  { label: 'Payment', title: 'How you’ll pay' },
-  { label: 'Review', title: 'Review your order' },
-] as const;
 
 /**
  * The guest quote driver's debounce. Deliberately longer than `useQuote`'s own
@@ -109,11 +110,19 @@ function firstIssues(issues: Array<{ path: PropertyKey[]; message: string }>): R
   return out;
 }
 
-export function CheckoutPage() {
+export interface CheckoutPageProps {
+  /** The CheckoutFlow block's slots; omitted = the default arrangement (tests, v0.7.0 call sites). */
+  slots?: CheckoutSlots;
+}
+
+export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
+  const { t, tn } = useText();
   const settings = useSettings();
   const { contactModes, currency, features } = settings;
   const loggedIn = useSessionStore(selectIsLoggedIn);
   const guest = !loggedIn && features.guestCheckout;
+  // The editor canvas stacks every step (spec section 10.3). The only thing here that reads builder mode.
+  const stack = useBuilderMode().editing;
   const navigate = useNavigate();
   // Inside Telegram the nav's primary button is Telegram's MainButton (Back stays in the page).
   const inTelegram = isTelegramWebApp();
@@ -121,6 +130,30 @@ export function CheckoutPage() {
   const lines = useCartStore((s) => s.lines);
   const clearCart = useCartStore((s) => s.clear);
   const { sync } = useServerCart();
+
+  const legacy = useMemo(
+    () => (slots ? null : (defaultSlotRenders('CheckoutFlow', 'storefront', {}, 'checkout') as unknown as CheckoutSlots)),
+    [slots],
+  );
+  const s = slots ?? legacy!;
+
+  // The steps in the owner's order. The guard refuses an illegal document, so the fallback is defence in depth.
+  const warnedOrder = useRef(false);
+  const storedKinds = useMemo(() => stepKindsOf(s.steps.items.map((i) => i.type)), [s.steps.items]);
+  const orderLegal = isLegalStepOrder(storedKinds);
+  const order: readonly StepKind[] = orderLegal ? storedKinds : DEFAULT_STEP_ORDER;
+  // Say so once per mounted page, never per render and never on the editor canvas.
+  useEffect(() => {
+    if (orderLegal || stack || warnedOrder.current) return;
+    warnedOrder.current = true;
+    console.warn('[checkout] the stored step order is not legal; using the default order');
+  }, [orderLegal, stack]);
+
+  // A discount code or notes the owner took off the page must not travel with the order. The saved
+  // value is kept (the persisted form is never rewritten) and comes back when the part does.
+  const allItems = [...s.head.items, ...s.lead.items, ...s.steps.items, ...s.after.items, ...s.aside.items];
+  const couponShown = containsVisibleType(allItems, 'CheckoutCoupon');
+  const notesShown = containsVisibleType(allItems, 'CheckoutNotes');
 
   const [form, setForm] = useState<CheckoutForm>(() =>
     seedForm(loadPersistedForm() ?? DEFAULT_FORM, contactModes.defaultPhoneCountry),
@@ -174,12 +207,17 @@ export function CheckoutPage() {
     });
   }, []);
 
+  const effective = useMemo<CheckoutForm>(
+    () => ({ ...form, couponCode: couponShown ? form.couponCode : '', notes: notesShown ? form.notes : '' }),
+    [form, couponShown, notesShown],
+  );
+
   // The guest path never hands `useQuote` a token: the hook would then be free to
   // fire a query of its own, and a Turnstile token is spent the first time it is
   // sent (STOREFRONT.md §3.5a). With no token the hook's automatic query stays
   // disabled and every guest quote goes out through `refetchWithToken` below,
   // each with a token minted for that one request.
-  const { quote, isFetching, error: quoteError, needsToken, refetchWithToken } = useQuote(form, {
+  const { quote, isFetching, error: quoteError, needsToken, refetchWithToken } = useQuote(effective, {
     guest,
   });
 
@@ -200,16 +238,17 @@ export function CheckoutPage() {
     () =>
       JSON.stringify({
         country: form.country,
-        couponCode: form.couponCode.trim().toUpperCase(),
+        couponCode: effective.couponCode.trim().toUpperCase(),
         shippingOptionId: form.shippingOptionId,
         lines: lines.map((l) => ({ productId: l.productId, quantity: l.quantity })),
       }),
-    [form.country, form.couponCode, form.shippingOptionId, lines],
+    [form.country, effective.couponCode, form.shippingOptionId, lines],
   );
   const [debouncedGuestKey] = useDebouncedValue(guestQuoteKey, GUEST_QUOTE_DEBOUNCE_MS);
   const quotedKey = useRef<string | null>(null);
 
   useEffect(() => {
+    if (stack) return; // the canvas never mints a token or quotes as a guest
     if (!guest || !form.country) return;
     if (!settings.turnstile) return;
     if (!needsToken) return;
@@ -236,7 +275,7 @@ export function CheckoutPage() {
         if (cancelled) return;
         settled = true;
         quotedKey.current = null;
-        setVerifyError(errorMessage(err, "We couldn't verify your browser"));
+        setVerifyError(errorMessage(err, t('checkout.errors.verifyBrowser')));
         setVerifying(false);
         return;
       }
@@ -266,7 +305,9 @@ export function CheckoutPage() {
       // is the way a shopper hits it.
       if (!settled && quotedKey.current === debouncedGuestKey) quotedKey.current = null;
     };
-  }, [guest, settings.turnstile, form.country, needsToken, placed, debouncedGuestKey, retryTick]);
+    // `t` is left out on purpose: it only words an error set once per run, and a text edit
+    // must not re-run the mint and quote.
+  }, [stack, guest, settings.turnstile, form.country, needsToken, placed, debouncedGuestKey, retryTick]);
 
   const contactSchema = useMemo(
     () => buildContactSchema(contactModes, { guest }),
@@ -301,10 +342,10 @@ export function CheckoutPage() {
     ? null
     : (combo?.chargeTotal ?? method?.chargeTotal ?? shownQuote?.amountDue ?? null);
 
-  const errorTarget = classifyQuoteError(quoteError, form);
+  const errorTarget = classifyQuoteError(quoteError, effective);
   const quoteMessage = quoteError
     ? quoteError.status === 404
-      ? 'Unknown code'
+      ? t('checkout.errors.unknownCode')
       : errorMessage(quoteError)
     : undefined;
   // Anything the steps can't own (429, 502, a timeout) belongs at the top of the page.
@@ -321,8 +362,8 @@ export function CheckoutPage() {
     return parsed.success ? { email: parsed.data.email, phone: parsed.data.phone } : {};
   }
 
-  function validate(index: number): boolean {
-    if (index === 0) {
+  function validate(kind: StepKind): boolean {
+    if (kind === 'contact') {
       const parsed = contactSchema.safeParse({
         firstName: form.firstName,
         surname: form.surname,
@@ -334,7 +375,7 @@ export function CheckoutPage() {
       setErrors(firstIssues(parsed.error.issues));
       return false;
     }
-    if (index === 1) {
+    if (kind === 'address') {
       const parsed = addressSchema.safeParse({
         addressLine1: form.addressLine1,
         addressLine2: form.addressLine2,
@@ -347,7 +388,7 @@ export function CheckoutPage() {
       setErrors(firstIssues(parsed.error.issues));
       return false;
     }
-    if (index === 2) {
+    if (kind === 'shipping') {
       const parsed = shippingSchema.safeParse({
         shippingOptionId: form.shippingOptionId ?? undefined,
       });
@@ -356,7 +397,7 @@ export function CheckoutPage() {
         return false;
       }
       if (!shownQuote) {
-        setErrors({ shippingOptionId: 'Still pricing your order — one moment' });
+        setErrors({ shippingOptionId: textKey('checkout.errors.stillPricing') });
         return false;
       }
       // The schema can only say "a positive integer". Whether that integer is
@@ -365,15 +406,15 @@ export function CheckoutPage() {
       if (shippingStale) {
         setForm((f) => ({ ...f, shippingOptionId: null }));
         setErrors({
-          shippingOptionId: 'That delivery option is no longer available — choose another',
+          shippingOptionId: textKey('checkout.errors.shippingStale'),
         });
         return false;
       }
       return true;
     }
-    if (index === 3) {
+    if (kind === 'payment') {
       if (!shownQuote) {
-        setErrors({ method: 'Still pricing your order — one moment' });
+        setErrors({ method: textKey('checkout.errors.stillPricing') });
         return false;
       }
       // Store credit covers the order: no method is required, and a method left
@@ -385,17 +426,17 @@ export function CheckoutPage() {
         return true;
       }
       if (!form.paymentMethod) {
-        setErrors({ method: 'Choose how you’d like to pay' });
+        setErrors({ method: textKey('checkout.errors.paymentMissing') });
         return false;
       }
       if (methodStale) {
         setForm((f) => ({ ...f, paymentMethod: '', coin: '', network: '' }));
-        setErrors({ method: 'That payment method is no longer available — choose another' });
+        setErrors({ method: textKey('checkout.errors.methodStale') });
         return false;
       }
       if (comboStale) {
         setForm((f) => ({ ...f, coin: '', network: '' }));
-        setErrors({ coin: 'That coin and network are no longer available — choose another' });
+        setErrors({ coin: textKey('checkout.errors.comboStale') });
         return false;
       }
       const parsed = paymentSchema.safeParse({
@@ -411,20 +452,23 @@ export function CheckoutPage() {
     return true;
   }
 
-  function focusCard() {
+  const focusCard = useCallback(() => {
     const el = cardRef.current;
     if (el && typeof el.scrollIntoView === 'function') el.scrollIntoView({ block: 'start' });
-  }
+  }, []);
 
-  function goTo(index: number) {
-    setErrors({});
-    setStep(index);
-    focusCard();
-  }
+  const goTo = useCallback(
+    (index: number) => {
+      setErrors({});
+      setStep(index);
+      focusCard();
+    },
+    [focusCard],
+  );
 
   function next() {
-    if (!validate(step)) return;
-    goTo(Math.min(step + 1, STEPS.length - 1));
+    if (!validate(order[step]!)) return;
+    goTo(Math.min(step + 1, order.length - 1));
   }
 
   function back() {
@@ -451,11 +495,11 @@ export function CheckoutPage() {
       // blocks a stale selection before we get here, and reading them back off
       // the quote means the body can never carry one even if it ever didn't.
       shippingOptionId: shippingOption?.id ?? form.shippingOptionId ?? 0,
-      couponCode: form.couponCode.trim().toUpperCase() || undefined,
+      couponCode: effective.couponCode.trim().toUpperCase() || undefined,
       paymentMethod: method?.method || undefined,
       coin: combo?.coin || undefined,
       network: combo?.network || undefined,
-      notes: form.notes.trim() || undefined,
+      notes: effective.notes.trim() || undefined,
     };
   }
 
@@ -466,8 +510,8 @@ export function CheckoutPage() {
     // quote, while the shopper is still reading the review. `validate` has set
     // the errors that explain why, so this deliberately isn't `goTo` (which
     // clears them).
-    for (let index = 0; index < STEPS.length - 1; index += 1) {
-      if (validate(index)) continue;
+    for (let index = 0; index < order.length - 1; index += 1) {
+      if (validate(order[index]!)) continue;
       setStep(index);
       focusCard();
       return;
@@ -535,14 +579,14 @@ export function CheckoutPage() {
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         notifications.show({
-          message: err.message || 'Checkout already in progress',
+          message: err.message || t('checkout.errors.inProgress'),
           color: 'red',
         });
         setLocked(true);
         if (lockTimer.current) clearTimeout(lockTimer.current);
         lockTimer.current = setTimeout(() => setLocked(false), LOCK_MS);
       } else {
-        setSubmitError(errorMessage(err, "We couldn't place your order"));
+        setSubmitError(errorMessage(err, t('checkout.errors.placeFailed')));
       }
     } finally {
       submitLatch.current = false;
@@ -550,19 +594,47 @@ export function CheckoutPage() {
     }
   }
 
+  const kind = order[step]!;
+  const data = useMemo<CheckoutData>(
+    () => ({
+      form,
+      patch,
+      errors,
+      contactModes,
+      guest,
+      currency,
+      quote: shownQuote,
+      method,
+      combo,
+      busy: isFetching || verifying,
+      quoteStale: Boolean(quoteError),
+      couponError: errorTarget === 'coupon' ? quoteMessage : undefined,
+      shippingNotice: errorTarget === 'shipping' ? quoteMessage : undefined,
+      addressNotice: errorTarget === 'address' ? quoteMessage : undefined,
+      order,
+      step,
+      kind,
+      onReview: step === order.length - 1,
+      stack,
+      goTo,
+    }),
+    [form, patch, errors, contactModes, guest, currency, shownQuote, method, combo, isFetching, verifying, quoteError, errorTarget, quoteMessage, order, step, kind, stack, goTo],
+  );
+  const value = useMemo(() => ({ data, views: CHECKOUT_VIEWS }), [data]);
+
   // Registered before the early returns below — hooks can't sit behind them.
-  const lastStep = step === STEPS.length - 1;
+  const lastStep = step === order.length - 1;
   const showsForm = !(guest && !settings.turnstile) && !(lines.length === 0 && !placed);
   usePrimaryAction(
-    inTelegram && showsForm
+    inTelegram && showsForm && !stack
       ? {
           label: !lastStep
-            ? 'Continue'
+            ? t('checkout.actions.continue')
             : submitting
-              ? 'Placing order…'
+              ? t('checkout.actions.placing')
               : chargeTotal !== null && chargeTotal > 0
-                ? `Place order · ${formatMoney(chargeTotal, currency)}`
-                : 'Place order',
+                ? t('checkout.actions.placeOrderTotal', { total: formatMoney(chargeTotal, currency) })
+                : t('checkout.actions.placeOrder'),
           onClick: lastStep ? () => void submit() : next,
           disabled: submitting || locked || (lastStep && guest && verifying),
           busy: submitting,
@@ -578,12 +650,12 @@ export function CheckoutPage() {
   if (guest && !settings.turnstile) {
     return (
       <EmptyState
-        eyebrow="Checkout"
-        title="Guest checkout isn't available right now"
-        description="Sign in and we'll pick your order up from here."
+        eyebrow={t('checkout.page.eyebrow')}
+        title={t('checkout.page.guestUnavailableTitle')}
+        description={t('checkout.page.guestUnavailableBody')}
         action={
           <Button component={Link} to="/login?returnTo=%2Fcheckout" variant="default" size="sm">
-            Sign in
+            {t('common.actions.signIn')}
           </Button>
         }
       />
@@ -593,136 +665,72 @@ export function CheckoutPage() {
   if (lines.length === 0 && !placed) {
     return (
       <EmptyState
-        eyebrow="Checkout"
-        title="There's nothing to check out"
-        description="Add something to your cart and we'll pick this back up."
+        eyebrow={t('checkout.page.eyebrow')}
+        title={t('checkout.page.emptyTitle')}
+        description={t('checkout.page.emptyBody')}
         action={
           <Button component={Link} to="/" variant="default" size="sm">
-            Browse the catalogue
+            {t('common.actions.browseCatalogue')}
           </Button>
         }
       />
     );
   }
 
-  const meta = STEPS[step]!;
-  const onReview = step === STEPS.length - 1;
+  const meta = STEP_META[kind];
+  const onReview = step === order.length - 1;
   const nextDisabled = submitting || locked || (onReview && guest && verifying);
 
   return (
+    <CheckoutFamily.Provider value={value}>
     <div className={classes.page}>
-      <header className={classes.head}>
-        <span className={classes.eyebrow}>Checkout</span>
-        <h1 className={classes.title}>{guest ? 'Guest checkout' : 'Checkout'}</h1>
-      </header>
+      {s.head()}
 
       <div className={classes.grid}>
         <div>
-          <Stepper
-            active={step}
-            onStepClick={goTo}
-            allowNextStepsSelect={false}
-            size="xs"
-            iconSize={26}
-            data-sf-part="stepper"
-            classNames={{
-              root: classes.stepper,
-              steps: classes.steps,
-              step: classes.step,
-              stepIcon: classes.stepIcon,
-              stepBody: classes.stepBody,
-              stepLabel: classes.stepLabel,
-              separator: classes.separator,
-              content: classes.content,
-            }}
-          >
-            {STEPS.map((s) => (
-              <Stepper.Step key={s.label} label={s.label} />
-            ))}
-          </Stepper>
+          {s.lead()}
 
-          <div key={step} className={`${classes.card} ${FADE}`} ref={cardRef} data-sf-part="card">
-            <header className={classes.cardHead}>
-              <span className={classes.cardCount}>
-                Step {step + 1} of {STEPS.length}
-              </span>
-              <h2 className={classes.cardTitle}>{meta.title}</h2>
-            </header>
+          {stack ? (
+            <div>{s.steps()}</div>
+          ) : (
+            <div key={step} className={`${classes.card} ${FADE}`} ref={cardRef} data-sf-part="card">
+              <header className={classes.cardHead}>
+                <span className={classes.cardCount}>
+                  {t('checkout.steps.count', { current: step + 1, total: order.length })}
+                </span>
+                <h2 className={classes.cardTitle}>{t(meta.title)}</h2>
+              </header>
 
-            {pageQuoteError ? <p className={classes.alert}>{pageQuoteError}</p> : null}
-            {verifyError ? (
-              <p className={classes.alert}>
-                {verifyError}
-                <button
-                  type="button"
-                  className={classes.alertAction}
-                  onClick={() => setRetryTick((t) => t + 1)}
-                >
-                  Try again
-                </button>
-              </p>
-            ) : null}
-            {submitError ? <p className={classes.alert}>{submitError}</p> : null}
-            {guest && verifying ? (
-              <p className={classes.verifying}>
-                <span className={classes.pulse} aria-hidden />
-                Verifying…
-              </p>
-            ) : null}
+              {pageQuoteError ? <p className={classes.alert}>{pageQuoteError}</p> : null}
+              {verifyError ? (
+                <p className={classes.alert}>
+                  {verifyError}
+                  <button
+                    type="button"
+                    className={classes.alertAction}
+                    onClick={() => setRetryTick((t) => t + 1)}
+                  >
+                    {t('common.actions.tryAgain')}
+                  </button>
+                </p>
+              ) : null}
+              {submitError ? <p className={classes.alert}>{submitError}</p> : null}
+              {guest && verifying ? (
+                <p className={classes.verifying}>
+                  <span className={classes.pulse} aria-hidden />
+                  {t('checkout.page.verifying')}
+                </p>
+              ) : null}
 
-            {step === 0 ? (
-              <ContactStep
-                form={form}
-                patch={patch}
-                errors={errors}
-                contactModes={contactModes}
-                guest={guest}
-              />
-            ) : null}
-            {step === 1 ? (
-              <AddressStep
-                form={form}
-                patch={patch}
-                errors={errors}
-                notice={errorTarget === 'address' ? quoteMessage : undefined}
-              />
-            ) : null}
-            {step === 2 ? (
-              <ShippingStep
-                quote={shownQuote}
-                form={form}
-                patch={patch}
-                errors={errors}
-                busy={isFetching || verifying}
-                couponError={errorTarget === 'coupon' ? quoteMessage : undefined}
-                notice={errorTarget === 'shipping' ? quoteMessage : undefined}
-              />
-            ) : null}
-            {step === 3 ? (
-              <PaymentStep
-                quote={shownQuote}
-                form={form}
-                patch={patch}
-                errors={errors}
-                guest={guest}
-                currency={currency}
-              />
-            ) : null}
-            {step === 4 ? (
-              <ReviewStep
-                form={form}
-                patch={patch}
-                quote={shownQuote}
-                method={method}
-                combo={combo}
-                onEdit={goTo}
-              />
-            ) : null}
-          </div>
+              {s.steps()}
+            </div>
+          )}
 
-          {/* Inside Telegram the first step has nothing left in the nav — the MainButton
-              is Continue — so the sticky band would be an empty strip over the form. */}
-          {inTelegram && step === 0 ? null : (
+          {stack ? (
+            <InertActionBand />
+          ) : /* Inside Telegram the first step has nothing left in the nav — the MainButton
+              is Continue — so the sticky band would be an empty strip over the form. */
+          inTelegram && step === 0 ? null : (
             <div className={classes.nav}>
               {step > 0 ? (
                 <button
@@ -732,7 +740,7 @@ export function CheckoutPage() {
                   data-sf-part="button"
                   data-variant="default"
                 >
-                  Back
+                  {t('checkout.actions.back')}
                 </button>
               ) : null}
               {inTelegram ? null : onReview ? (
@@ -745,15 +753,11 @@ export function CheckoutPage() {
                   data-variant="filled"
                   data-sf-cta="main"
                 >
-                  {submitting ? (
-                    'Placing order…'
-                  ) : chargeTotal !== null && chargeTotal > 0 ? (
-                    <>
-                      Place order · <Money amount={chargeTotal} />
-                    </>
-                  ) : (
-                    'Place order'
-                  )}
+                  {submitting
+                    ? t('checkout.actions.placing')
+                    : chargeTotal !== null && chargeTotal > 0
+                      ? tn('checkout.actions.placeOrderTotal', { total: <Money amount={chargeTotal} /> })
+                      : t('checkout.actions.placeOrder')}
                   <Slot name="ButtonAdornment" variant="primary" cta busy={submitting} />
                 </button>
               ) : (
@@ -765,35 +769,29 @@ export function CheckoutPage() {
                   data-variant="filled"
                   data-sf-cta="main"
                 >
-                  Continue
+                  {t('checkout.actions.continue')}
                   <Slot name="ButtonAdornment" variant="primary" cta />
                 </button>
               )}
             </div>
           )}
 
-          {onReview ? (
+          {stack || onReview ? (
             <p className={classes.terms}>
-              Placing the order confirms the details above. We&rsquo;ll send you a link to track it.
+              {t('checkout.page.terms')}
             </p>
           ) : null}
+
+          {s.after()}
         </div>
 
-        <aside className={classes.aside}>
-          <QuoteSummary
-            defaultOpen={onReview}
-            quote={shownQuote}
-            isFetching={isFetching || verifying}
-            stale={Boolean(quoteError)}
-            method={method}
-            combo={combo}
-          />
-        </aside>
+        {s.aside({ className: classes.aside, as: 'aside' })}
       </div>
 
-      {guest && settings.turnstile ? (
+      {!stack && guest && settings.turnstile ? (
         <GuestTurnstile ref={turnstileRef} siteKey={settings.turnstile.siteKey} />
       ) : null}
     </div>
+    </CheckoutFamily.Provider>
   );
 }

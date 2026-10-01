@@ -1,10 +1,13 @@
 import { z } from 'zod';
 import { parseBlockPropsDetailed } from '@/builder/define.ts';
 import { blockDef, checkRules } from '@/builder/rules.ts';
+import { STYLE_LABELS } from '@/builder/style/labels.ts';
+import { isStyleKey } from '@/builder/style/model.ts';
 import {
   EMPTY_ROOT, isComponentLike, isRecord, MAX_COMPONENTS, MAX_DEPTH,
   type ComponentData, type DocKey, type Issue, type LayoutKind, type PageRootProps, type PuckDoc,
 } from '@/builder/types.ts';
+import { fillAbsentSlots } from '@/builder/upgrade.ts';
 
 export interface GuardResult { doc: PuckDoc | null; issues: Issue[] }
 
@@ -28,8 +31,13 @@ function drop(w: Walk, issue: Omit<Issue, 'docKey'>): void {
   if (w.drops.length < MAX_DROP_ISSUES) w.drops.push({ docKey: w.docKey, ...issue });
 }
 
-/** `items[2]` → an item that was left out; `title` → a field that was left empty. */
+/** `items[2]` → an item that was left out; `title` → a field that was left empty; `blockStyle.<key>` → a style row left at its default. */
 function fieldMessage(label: string, f: string): string {
+  if (f === 'blockStyle') return `${label}: the style settings are not valid and were left at their defaults.`;
+  if (f.startsWith('blockStyle.')) {
+    const key = f.slice('blockStyle.'.length);
+    return `${label}: the style setting "${isStyleKey(key) ? STYLE_LABELS[key] : key}" is not valid here and was left at its default.`;
+  }
   const item = /^(.+)\[(\d+)\]$/.exec(f);
   return item
     ? `${label}: item ${Number(item[2]) + 1} of "${item[1]}" is not valid and is left out.`
@@ -68,8 +76,11 @@ function cleanItems(items: unknown, w: Walk): ComponentData[] {
       continue;
     }
     w.budget.left -= 1;
-    const props: Record<string, unknown> = { ...raw.props };
-    for (const s of def.slots) props[s] = cleanItems(raw.props[s], { ...w, depth: w.depth + 1 });
+    // Spec §8: an absent container slot takes its default content BEFORE cleaning, so the filled
+    // parts get the same id de-duplication, budget and checks. Never `?? []` here (Review Focus 1).
+    const source = def.container || def.part?.defaultSlots ? fillAbsentSlots(def, raw.props, w.layout) : raw.props;
+    const props: Record<string, unknown> = { ...source };
+    for (const s of def.slots) props[s] = cleanItems(source[s], { ...w, depth: w.depth + 1 });
     // Neutral fallbacks: a broken field renders empty, never the block's placeholder copy.
     const { props: parsed, fallbacks } = parseBlockPropsDetailed(def, props, 'neutral');
     let id = blockId;

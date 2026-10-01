@@ -1,4 +1,5 @@
 import { withPrefilledText } from '@/lib/chat-links.ts';
+import { textSnapshot } from '@/text/snapshot.ts';
 import type { Brand } from '@/types/settings.ts';
 
 export interface ReferralShareLinks {
@@ -8,7 +9,7 @@ export interface ReferralShareLinks {
 
 /** The invite a customer sends on. Short enough to survive a forward, and the code is the point of it. */
 export function referralShareText(code: string, brandName: string): string {
-  return `Shopping with ${brandName}? Use my referral code ${code} on your first order.`;
+  return textSnapshot().t('account.referrals.shareText', { shop: brandName, code });
 }
 
 /**

@@ -1,9 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ComponentType, type ReactNode } from 'react';
 import { Navigate, useMatches } from 'react-router';
-import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSettings } from '@/app/settings.ts';
 import { useEffectiveLayout } from '@/app/layout.ts';
-import { fetchPageSet } from '@/api/pages.ts';
+import { PAGES_QUERY, pageSetQueryFn, pagesKey } from '@/builder/published.ts';
 import { validateDoc } from '@/builder/guard.ts';
 import { defaultDoc } from '@/builder/defaults/index.ts';
 import { DocBoundary, RenderDoc } from '@/builder/render.tsx';
@@ -14,33 +14,22 @@ import { StorefrontFrame } from '@/layouts/StorefrontShell.tsx';
 import { MenuFrame } from '@/layouts/MenuShell.tsx';
 import { WebAppFrame } from '@/layouts/WebAppShell.tsx';
 import { ShellStateContext, useShellStateValue } from '@/layouts/shell-context.ts';
-import { customPageKey, isFixedRouteKey } from '@/builder/types.ts';
+import { customPageKey, isCardKey, isFixedRouteKey } from '@/builder/types.ts';
 import type { DocKey, LayoutKind, PageRootProps, PageSet, PuckDoc, RouteKey } from '@/builder/types.ts';
+import { TextLayerProvider } from '@/text/runtime.tsx';
+import { CardDesignProvider } from '@/builder/card-design.tsx';
+import { PageSetContext } from '@/builder/page-set-context.ts';
+import type { EditorText } from '@/text/types.ts';
 
-export const pagesKey = (layout: LayoutKind) => ['pages', layout] as const;
-
-/**
- * Read once per page load and never again: nothing (a remount, focus, a reconnect, time) refetches
- * it — a publish must not swap the page under a shopper mid-checkout. A new set shows on reload.
- */
-export const PAGES_QUERY = {
-  staleTime: Infinity, refetchOnMount: false, refetchOnReconnect: false, refetchOnWindowFocus: false, retry: false,
-} as const;
-
-/**
- * The query function for a layout's set. fetchPageSet resolves null on any failure, so should the
- * query ever run again (an invalidation), a failed read keeps the set this page load already has.
- */
-export function pageSetQueryFn(client: QueryClient, layout: LayoutKind): () => Promise<PageSet | null> {
-  return async () => (await fetchPageSet(layout)) ?? client.getQueryData<PageSet | null>(pagesKey(layout)) ?? null;
-}
+export { pagesKey, PAGES_QUERY, pageSetQueryFn } from '@/builder/published.ts';
 
 const PageSetOverrideContext = createContext<{ pageSet: PageSet | null } | null>(null);
 
-/** The editor and preview frames inject a draft set; nothing inside fetches the published one. */
-export function PageSetOverrideProvider({ pageSet, children }: { pageSet: PageSet | null; children: ReactNode }) {
+/** The editor and preview frames inject a draft set (and, with `text`, the edited words); nothing inside fetches the published one. */
+export function PageSetOverrideProvider({ pageSet, text, children }: { pageSet: PageSet | null; text?: EditorText; children: ReactNode }) {
   const value = useMemo(() => ({ pageSet }), [pageSet]);
-  return <PageSetOverrideContext.Provider value={value}>{children}</PageSetOverrideContext.Provider>;
+  const inner = <PageSetOverrideContext.Provider value={value}>{children}</PageSetOverrideContext.Provider>;
+  return text === undefined ? inner : <TextLayerProvider text={text}>{inner}</TextLayerProvider>;
 }
 
 export function usePageSet(layout: LayoutKind): { pageSet: PageSet | null; isLoading: boolean } {
@@ -53,14 +42,14 @@ export function usePageSet(layout: LayoutKind): { pageSet: PageSet | null; isLoa
     enabled: override === null,
   });
   if (override) return { pageSet: override.pageSet, isLoading: false };
-  return { pageSet: query.data ?? null, isLoading: query.isPending };
+  return { pageSet: query.data?.pageSet ?? null, isLoading: query.isPending };
 }
 
 export interface ResolvedDoc { doc: PuckDoc; isDefault: boolean }
 
 /** The published doc if it passes the guard, else the route's default; null only for an unknown custom page. */
 export function resolveDoc(pageSet: PageSet | null, docKey: DocKey, layout: LayoutKind): ResolvedDoc | null {
-  const stored = pageSet ? (docKey === 'shell' ? pageSet.shell : pageSet.pages[docKey]) : undefined;
+  const stored = !pageSet || isCardKey(docKey) ? undefined : docKey === 'shell' ? pageSet.shell : pageSet.pages[docKey];
   if (stored) {
     const { doc } = validateDoc(stored, docKey, layout);
     if (doc) return { doc, isDefault: false };
@@ -149,6 +138,8 @@ export function PuckShell() {
   // resets for the shell, so neither does this): the bar decision must follow the doc on screen.
   const [shellFailed, setShellFailed] = useState(false);
   const onShellFallback = useCallback(() => setShellFailed(true), []);
+  // The set on screen, for the product sheet; card designs compile once per document (spec §6.2).
+  const setValue = useMemo(() => ({ pageSet, layout }), [pageSet, layout]);
 
   // As PuckPage: wait for the published set rather than paint the default shell and swap it.
   // A route whose default document is chromeless (the shared order link) paints its brand header
@@ -163,7 +154,16 @@ export function PuckShell() {
   }
 
   const page = routeKey ? resolveDoc(pageSet, routeKey, layout) : null;
-  if (page?.doc.root.props.chrome === 'none') return <Chromeless />;
+  // Chrome-less pages still see the set on screen and its card designs (no DOM added).
+  if (page?.doc.root.props.chrome === 'none') {
+    return (
+      <PageSetContext.Provider value={setValue}>
+        <CardDesignProvider cards={pageSet?.cards} layout={layout}>
+          <Chromeless />
+        </CardDesignProvider>
+      </PageSetContext.Provider>
+    );
+  }
 
   const shell = resolveDoc(pageSet, 'shell', layout);
   if (!shell) throw new Error(`[builder] no default shell document for the ${layout} layout`);
@@ -173,15 +173,19 @@ export function PuckShell() {
   const onScreen = fallback && shellFailed ? fallback : shell.doc;
 
   return (
-    <ShellStateContext.Provider value={shellState}>
-      {/* The phone cart bar is a block owners can place; if the shell has none, the frame mounts it. */}
-      <Frame cartBar={!countBlocks(onScreen).has('MobileCartBar')}>
-        {fallback ? (
-          <DocBoundary docKey="shell" onFallback={onShellFallback} fallback={<RenderDoc doc={fallback} docKey="shell" layout={layout} />}>{body}</DocBoundary>
-        ) : (
-          body
-        )}
-      </Frame>
-    </ShellStateContext.Provider>
+    <PageSetContext.Provider value={setValue}>
+      <CardDesignProvider cards={pageSet?.cards} layout={layout}>
+        <ShellStateContext.Provider value={shellState}>
+          {/* The phone cart bar is a block owners can place; if the shell has none, the frame mounts it. */}
+          <Frame cartBar={!countBlocks(onScreen).has('MobileCartBar')}>
+            {fallback ? (
+              <DocBoundary docKey="shell" onFallback={onShellFallback} fallback={<RenderDoc doc={fallback} docKey="shell" layout={layout} />}>{body}</DocBoundary>
+            ) : (
+              body
+            )}
+          </Frame>
+        </ShellStateContext.Provider>
+      </CardDesignProvider>
+    </PageSetContext.Provider>
   );
 }

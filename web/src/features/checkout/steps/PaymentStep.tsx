@@ -1,8 +1,10 @@
-import { useId } from 'react';
+import { useId, type ReactNode } from 'react';
+import type { StyleAttrs } from '@/builder/define.ts';
 import type { Quote } from '@/types/checkout.ts';
 import type { CheckoutForm } from '@/features/checkout/form-state.ts';
 import { Money } from '@/components/Money.tsx';
 import { CryptoComboPicker } from '@/features/checkout/CryptoComboPicker.tsx';
+import { useText } from '@/text/runtime.tsx';
 import fields from '@/features/checkout/Fields.module.css';
 import classes from '@/features/checkout/steps/Steps.module.css';
 
@@ -14,6 +16,10 @@ export interface PaymentStepProps {
   /** A guest has no customer row, so no balance to spend. */
   guest: boolean;
   currency: string;
+  /** Content slots of the step part: before everything, after everything. */
+  before?: ReactNode;
+  after?: ReactNode;
+  rootAttrs?: StyleAttrs;
 }
 
 /**
@@ -22,44 +28,46 @@ export interface PaymentStepProps {
  * never a footnote. Crypto opens its combos underneath, because the network
  * changes the number too.
  */
-export function PaymentStep({ quote, form, patch, errors, guest, currency }: PaymentStepProps) {
+export function PaymentStep({ quote, form, patch, errors, guest, currency, before, after, rootAttrs }: PaymentStepProps) {
+  const { t, tn, msg } = useText();
   const name = useId();
   const methods = quote?.paymentMethods ?? [];
   const balance = quote?.storeCredit.balance ?? 0;
   const chosen = methods.find((m) => m.method === form.paymentMethod);
 
   return (
-    <div className={classes.step}>
+    <div className={classes.step} {...rootAttrs}>
+      {before}
       {!guest && balance > 0 ? (
         <label className={classes.toggle}>
           <input
             type="checkbox"
             checked={form.useStoreCredit}
             onChange={(e) => patch({ useStoreCredit: e.currentTarget.checked })}
-            aria-label="Use store credit"
+            aria-label={t('checkout.payment.useStoreCredit')}
           />
           <span className={classes.toggleBox} aria-hidden />
-          <span className={classes.toggleLabel}>Use store credit</span>
+          <span className={classes.toggleLabel}>{t('checkout.payment.useStoreCredit')}</span>
           <span className={classes.toggleFigure}>
-            <Money amount={balance} /> available
+            {tn('checkout.payment.creditAvailable', { amount: <Money amount={balance} /> })}
           </span>
         </label>
       ) : null}
 
       {!quote ? (
-        <p className={classes.note}>Pricing your order…</p>
+        <p className={classes.note}>{t('checkout.quote.pricing')}</p>
       ) : quote.amountDue === 0 ? (
         <p className={classes.note} data-tone="success">
-          Nothing left to pay — store credit covers this order.
+          {t('checkout.payment.allCovered')}
         </p>
       ) : methods.length === 0 ? (
         <p className={classes.note} data-tone="warn">
-          No payment method is available right now. Message us and we&rsquo;ll take it from here.
+          {t('checkout.payment.noMethods')}
         </p>
       ) : (
         <div className={classes.section}>
           <p className={classes.sectionHead}>
-            Payment method
+            {t('checkout.payment.methodHeading')}
             <span className={classes.sectionRule} aria-hidden />
           </p>
 
@@ -85,7 +93,7 @@ export function PaymentStep({ quote, form, patch, errors, guest, currency }: Pay
                     <span className={fields.choiceName}>{m.displayName}</span>
                     {m.feeRateText ? (
                       <span className={fields.choiceNote}>
-                        {m.feeLabel || 'Fee'} {m.feeRateText}
+                        {m.feeLabel || t('checkout.payment.fee')} {m.feeRateText}
                       </span>
                     ) : null}
                   </span>
@@ -110,22 +118,23 @@ export function PaymentStep({ quote, form, patch, errors, guest, currency }: Pay
 
           {errors.method ? (
             <p className={classes.note} data-tone="danger">
-              {errors.method}
+              {msg(errors.method)}
             </p>
           ) : null}
           {errors.coin ? (
             <p className={classes.note} data-tone="danger">
-              {errors.coin}
+              {msg(errors.coin)}
             </p>
           ) : null}
 
           {chosen?.type === 'offline' ? (
             <p className={classes.aside}>
-              We&rsquo;ll send the transfer details once the order is placed.
+              {t('checkout.payment.offlineNote')}
             </p>
           ) : null}
         </div>
       )}
+      {after}
     </div>
   );
 }

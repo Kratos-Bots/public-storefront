@@ -1,8 +1,10 @@
+import type { StyleAttrs } from '@/builder/define.ts';
 import { useEffect, useRef, useState } from 'react';
 import { useSettings } from '@/app/settings.ts';
 import { addToCart } from '@/features/cart/useServerCart.ts';
 import { deriveStockStatus, formatMoney, resolveUnitPrice } from '@/lib/format.ts';
 import { Slot } from '@/templates/runtime.tsx';
+import { useText } from '@/text/runtime.tsx';
 import type { Product } from '@/types/catalog.ts';
 import classes from '@/features/catalog/AddToCart.module.css';
 
@@ -15,6 +17,8 @@ export interface AddToCartProps {
   size?: 'sm' | 'lg';
   /** Print the price in the label. Off on cards, where the price is already set beside it. */
   showPrice?: boolean;
+  /** A page-builder part's style attributes (stage 2), spread on the root; undefined adds nothing. */
+  rootAttrs?: StyleAttrs;
 }
 
 /**
@@ -25,8 +29,9 @@ export interface AddToCartProps {
  * browse-only, so a shop with `ordering: false` never shows a control that leads
  * nowhere. The label carries the state — no toast, no badge animation.
  */
-export function AddToCart({ product, size = 'lg', showPrice = true }: AddToCartProps) {
+export function AddToCart({ product, size = 'lg', showPrice = true, rootAttrs }: AddToCartProps) {
   const { features, currency } = useSettings();
+  const { t } = useText();
   const [phase, setPhase] = useState<'idle' | 'added' | 'again'>('idle');
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -48,17 +53,17 @@ export function AddToCart({ product, size = 'lg', showPrice = true }: AddToCartP
   const quantity = Math.max(1, product.minOrderQuantity ?? 1);
   const totalPrice = resolveUnitPrice(product, quantity) * quantity;
 
-  const verb = product.isPreorder ? 'Pre-order' : 'Add';
+  const verb = product.isPreorder ? t('common.product.preorder') : t('product.add.verb');
   const qty = quantity > 1 ? ` ${quantity}` : '';
   const price = showPrice ? ` · ${formatMoney(totalPrice, currency)}` : '';
   const label = !product.isActive
-    ? 'Unavailable'
+    ? t('product.add.unavailable')
     : outOfStock
-      ? 'Out of stock'
+      ? t('common.product.outOfStock')
       : phase === 'added'
-        ? 'Added'
+        ? t('product.add.added')
         : phase === 'again'
-          ? 'Add another'
+          ? t('product.add.another')
           : `${verb}${qty}${price}`;
 
   const onClick = () => {
@@ -74,9 +79,10 @@ export function AddToCart({ product, size = 'lg', showPrice = true }: AddToCartP
       className={`${classes.button} ${size === 'sm' ? classes.sm : classes.lg} ${phase === 'added' ? classes.done : ''}`}
       disabled={disabled}
       onClick={onClick}
-      aria-label={showPrice ? undefined : `${label} — ${product.displayName}`}
+      aria-label={showPrice ? undefined : t('product.add.labelWithName', { label, name: product.displayName })}
       data-sf-part="button"
       data-variant="filled"
+      {...rootAttrs}
     >
       <span className={classes.label} aria-live="polite">
         {label}

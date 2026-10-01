@@ -35,29 +35,29 @@
 .eyebrow {
   margin: 0;
   font-family: var(--sf-font-mono);
-  font-size: 10px;
+  font-size: calc(10px * var(--sf-text-scale, 1));
   font-weight: 600;
   letter-spacing: 0.28em;
   text-transform: uppercase;
-  color: var(--sf-primary);
+  color: var(--sf-block-fg, var(--sf-primary));
 }
 
 .title {
   margin: 0;
   font-family: var(--sf-font-heading);
-  font-size: 1.75rem;
+  font-size: calc(1.75rem * var(--sf-text-scale, 1));
   font-weight: 700;
   line-height: 1.08;
   letter-spacing: -0.02em;
-  color: var(--sf-text);
+  color: var(--sf-block-fg, var(--sf-text));
 }
 
 .lead {
   margin: 0;
   max-width: 30rem;
-  font-size: 0.875rem;
+  font-size: calc(0.875rem * var(--sf-text-scale, 1));
   line-height: 1.6;
-  color: var(--sf-muted);
+  color: var(--sf-block-fg, var(--sf-muted));
 }
 
 /* Once there is an answer — or one is a moment away — the masthead is dead
@@ -76,11 +76,11 @@
 .stripLabel {
   margin: 0;
   font-family: var(--sf-font-mono);
-  font-size: 10px;
+  font-size: calc(10px * var(--sf-text-scale, 1));
   font-weight: 600;
   letter-spacing: 0.24em;
   text-transform: uppercase;
-  color: var(--sf-faint);
+  color: var(--sf-block-fg, var(--sf-faint));
 }
 
 .stripLink {
@@ -89,12 +89,12 @@
   min-height: 44px;
   margin-block: -0.75rem;
   font-family: var(--sf-font-mono);
-  font-size: 10px;
+  font-size: calc(10px * var(--sf-text-scale, 1));
   font-weight: 600;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   text-decoration: none;
-  color: var(--sf-muted);
+  color: var(--sf-block-fg, var(--sf-muted));
   transition: color 120ms ease;
 }
 

@@ -36,6 +36,23 @@
   --sf-pin-h: 0px;
 }
 
+/* A Header block hidden at a breakpoint (Style → Visibility) leaves nothing to stick
+   under there, so its pinned notices and sticky page heads come to rest at the top too.
+   Keyed on the published `data-sfs-hide` only: the editor's ghosted header
+   (`data-sfs-ghost`) is still drawn, so it keeps its offsets. */
+@media (max-width: 61.99em) {
+  .shell:has([data-sf-part='header'][data-sfs-hide='mobile']) {
+    --sf-bar-h: 0px;
+    --sf-pin-h: 0px;
+  }
+}
+@media (min-width: 62em) {
+  .shell:has([data-sf-part='header'][data-sfs-hide='desktop']) {
+    --sf-bar-h: 0px;
+    --sf-pin-h: 0px;
+  }
+}
+
 .headerInner {
   display: flex;
   align-items: center;
@@ -47,6 +64,7 @@
 }
 
 .home {
+  --sf-brand-fg: var(--sf-block-fg, var(--sf-text));
   display: flex;
   align-items: center;
   flex: none;
@@ -86,14 +104,14 @@
   justify-content: center;
   width: 44px;
   height: 44px;
-  color: var(--sf-muted);
+  color: var(--sf-block-fg, var(--sf-muted));
   border-radius: var(--sf-card-radius);
   text-decoration: none;
   transition: color 120ms ease, background-color 120ms ease;
 }
 
 .action:hover {
-  color: var(--sf-text);
+  color: var(--sf-block-fg, var(--sf-text));
   background: var(--sf-surface);
 }
 
@@ -125,14 +143,14 @@
   font-weight: 500;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--sf-muted);
+  color: var(--sf-block-fg, var(--sf-muted));
   border-radius: var(--sf-card-radius);
   text-decoration: none;
   white-space: nowrap;
 }
 
 .signIn:hover {
-  color: var(--sf-text);
+  color: var(--sf-block-fg, var(--sf-text));
   background: var(--sf-surface);
 }
 

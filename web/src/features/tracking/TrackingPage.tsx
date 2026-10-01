@@ -1,29 +1,19 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useParams } from 'react-router';
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 import { TrackingLookupError, lookupTracking } from '@/api/tracking.ts';
 import { useSettings } from '@/app/settings.ts';
 import { isBuilderMode } from '@/app/builder-gate.ts';
-import { LookupForm } from '@/features/tracking/LookupForm.tsx';
-import { OrderHero } from '@/features/tracking/OrderHero.tsx';
-import { ParcelCard } from '@/features/tracking/ParcelCard.tsx';
-import { ProgressStepper } from '@/features/tracking/ProgressStepper.tsx';
-import { RefreshButton } from '@/features/tracking/RefreshButton.tsx';
-import {
-  DegradedNotice,
-  ErrorScreen,
-  NotFoundScreen,
-  NothingShippedScreen,
-  PendingSkeleton,
-  TrackingUnavailableScreen,
-  VerifyBlockedScreen,
-  VerifyingNote,
-} from '@/features/tracking/StateScreens.tsx';
-import { allTerminal, furthestStage } from '@/features/tracking/status.ts';
+import type { SlotRender } from '@/builder/define.ts';
+import { TrackingFamily, type TrackingData, type TrackingPhase, type TrackingPreview } from '@/builder/family-tracking.ts';
+import { usePreviewFixture } from '@/builder/mode.ts';
+import { defaultSlotRenders } from '@/builder/render.tsx';
+import { TRACKING_VIEWS } from '@/features/tracking/tracking-parts.tsx';
+import { TrackingUnavailableScreen } from '@/features/tracking/StateScreens.tsx';
 import type { TrackingLookup } from '@/types/tracking.ts';
 import classes from '@/features/tracking/Tracking.module.css';
 
-type Phase = 'idle' | 'pending' | 'found' | 'notFound' | 'error' | 'blocked';
+type Phase = TrackingPhase;
 
 /**
  * How long to wait for the invisible Turnstile challenge to hand over a token
@@ -45,7 +35,11 @@ const PREVIEW_TOKEN = 'sf-builder-preview';
  * fiddliest part of the page. Four effects, in this order, each guarding a
  * failure the others create.
  */
-export function TrackingPage() {
+export function TrackingPage({ slots }: { slots?: Record<string, SlotRender> } = {}) {
+  const legacy = useMemo(() => (slots ? null : defaultSlotRenders('TrackingLookup', 'storefront', {}, 'tracking')), [slots]);
+  const s = slots ?? legacy!;
+  /** The editor's preview state: replaces the state machine's outputs, no lookup and no challenge. */
+  const fixture = usePreviewFixture<TrackingPreview>('TrackingLookup');
   const { reference } = useParams<{ reference?: string }>();
   const ref = reference?.trim().toUpperCase() ?? '';
   const settings = useSettings();
@@ -81,7 +75,7 @@ export function TrackingPage() {
   const [tokenSeq, setTokenSeq] = useState(0);
 
   const run = useCallback(async (refresh: boolean) => {
-    if (!ref) return;
+    if (!ref || fixture) return;
     const token = tokenRef.current;
     if (!token) {
       // No token in hand — the challenge is still resolving, or it expired or
@@ -123,7 +117,7 @@ export function TrackingPage() {
       if (latestRef.current === ref) setIsRefreshing(false);
       turnstileRef.current?.reset(); // mint the next token
     }
-  }, [ref]);
+  }, [ref, fixture]);
 
   // 1. A new :reference means a different order — drop the old result. Updating
   //    latestRef here (rather than inline where `ref` is computed) keeps it in
@@ -162,7 +156,7 @@ export function TrackingPage() {
   useEffect(() => {
     // No site key means no widget to wait for — that page says so directly and
     // has no use for a countdown to a screen it will never show.
-    if (!siteKey || phase !== 'pending' || tokenRef.current || inFlight.current) {
+    if (fixture || !siteKey || phase !== 'pending' || tokenRef.current || inFlight.current) {
       setAwaitingToken(false);
       return;
     }
@@ -172,7 +166,7 @@ export function TrackingPage() {
     // Deliberately not keyed on anything that flips while the challenge retries:
     // the deadline is wall-clock from the moment the wait starts, and an extra
     // dep would restart the timer instead of letting it expire.
-  }, [siteKey, phase, tokenSeq, ref]);
+  }, [siteKey, phase, tokenSeq, ref, fixture]);
 
   // 3. Fetch ONCE per reference, as soon as a token exists.
   //
@@ -181,15 +175,38 @@ export function TrackingPage() {
   //    `data`/`phase` instead would re-enter this forever on the notFound and
   //    error paths, where data stays null.
   useEffect(() => {
-    if (!ref || !tokenRef.current || attemptedFor.current === ref) return;
+    if (fixture || !ref || !tokenRef.current || attemptedFor.current === ref) return;
     attemptedFor.current = ref;
     void run(false);
-  }, [ref, tokenSeq, run]);
+  }, [ref, tokenSeq, run, fixture]);
+
+  // Once there is an answer — or one is a moment away — the masthead is dead
+  // weight above the fold, so it collapses to a line of context and the status
+  // itself starts the page.
+  const livePhase: Phase = phase;
+  const outPhase = fixture ? fixture.phase : livePhase;
+  const outData = fixture ? fixture.data : data ?? undefined;
+  const compact = fixture ? fixture.compact : phase === 'pending' || (phase === 'found' && !!data);
+  const outBusy = fixture ? false : isRefreshing;
+  const outAwaiting = fixture ? fixture.phase === 'pending' : awaitingToken;
+  const outErrorStatus = fixture ? fixture.errorStatus ?? null : errorStatus;
+  const value = useMemo<{ data: TrackingData; views: typeof TRACKING_VIEWS }>(
+    () => ({
+      data: {
+        phase: outPhase, compact, data: outData, isRefreshing: outBusy, awaitingToken: outAwaiting, errorStatus: outErrorStatus,
+        retry: () => void run(false),
+        refresh: () => void run(true),
+        reload: () => (fixture ? undefined : window.location.reload()),
+      },
+      views: TRACKING_VIEWS,
+    }),
+    [outPhase, compact, outData, outBusy, outAwaiting, outErrorStatus, run, fixture],
+  );
 
   // The flag is on but no site key is configured, so the widget can never mount
   // and every lookup would hang on a token that will never come — and the
-  // backend answers this route 503 anyway.
-  if (!siteKey) {
+  // backend answers this route 503 anyway. (The editor's preview has no use for the screen.)
+  if (!siteKey && !fixture) {
     return (
       <div className={classes.page}>
         <TrackingUnavailableScreen />
@@ -197,133 +214,44 @@ export function TrackingPage() {
     );
   }
 
-  // Once there is an answer — or one is a moment away — the masthead is dead
-  // weight above the fold, so it collapses to a line of context and the status
-  // itself starts the page.
-  const compact = phase === 'pending' || (phase === 'found' && !!data);
-
   return (
-    <div className={classes.page}>
-      {compact ? (
-        <div className={classes.strip}>
-          <p className={classes.stripLabel}>Order tracking</p>
-          <Link className={classes.stripLink} to="/tracking">
-            Track another →
-          </Link>
-        </div>
-      ) : (
-        <div className={classes.masthead}>
-          <p className={classes.eyebrow}>Delivery</p>
-          <h1 className={classes.title}>Track your order</h1>
-          <p className={classes.lead}>
-            See where your parcel is and every scan along the way.
-          </p>
-        </div>
-      )}
+    <TrackingFamily.Provider value={value}>
+      <div className={classes.page}>
+        {s.top()}
+        {s.main()}
+        {outPhase === 'found' && outData ? (
+          // aria-busy reflects a background refresh: the answer already on screen
+          // stays readable underneath while a fresher one is fetched.
+          <div aria-busy={outBusy}>{s.result()}</div>
+        ) : null}
 
-      {phase === 'idle' ? <LookupForm /> : null}
-
-      {phase === 'pending' ? (
-        <>
-          {awaitingToken ? <VerifyingNote /> : null}
-          <PendingSkeleton />
-        </>
-      ) : null}
-
-      {phase === 'error' ? <ErrorScreen status={errorStatus} onRetry={() => void run(false)} /> : null}
-
-      {/* No token means no lookup is possible, and a reset can't help a widget
-          that never mounted — a reload is the only honest action. */}
-      {phase === 'blocked' ? <VerifyBlockedScreen onReload={() => window.location.reload()} /> : null}
-
-      {/* The number was wrong, so the next thing the visitor needs is a way to
-          type a different one — not a dead end. */}
-      {phase === 'notFound' ? (
-        <>
-          <NotFoundScreen />
-          <div className={classes.retry}>
-            <LookupForm />
-          </div>
-        </>
-      ) : null}
-
-      {phase === 'found' && data ? (
-        // aria-busy reflects a background refresh: the answer already on screen
-        // stays readable underneath while a fresher one is fetched.
-        <div aria-busy={isRefreshing}>
-          <OrderHero data={data} />
-
-          <SingleParcelStepper data={data} />
-
-          {/* Hidden once everything is delivered or returned (nothing left to
-              poll for), hidden in degraded mode (no live tracking to refresh),
-              and hidden when nothing has shipped — trackingAvailable is true
-              there, but a freshness line above "No parcels yet" is noise. */}
-          {data.trackingAvailable && data.parcels.length > 0 && !allTerminal(data.parcels) ? (
-            <RefreshButton
-              checkedAt={data.checkedAt}
-              busy={isRefreshing}
-              onRefresh={() => void run(true)}
-            />
-          ) : null}
-
-          {!data.trackingAvailable && data.parcels.length > 0 ? <DegradedNotice /> : null}
-
-          {data.parcels.length === 0 ? (
-            <NothingShippedScreen data={data} />
-          ) : (
-            data.parcels.map((p, i) => (
-              <ParcelCard
-                key={p.trackingNumber ?? `parcel-${i}`}
-                parcel={p}
-                index={i}
-                count={data.parcels.length}
-                onRetry={() => void run(true)}
-              />
-            ))
-          )}
-        </div>
-      ) : null}
-
-      {/* Invisible: runs silently and resolves a token without any UI. Never in the builder frame. */}
-      {isBuilderMode() ? null : <Turnstile
-        ref={turnstileRef}
-        siteKey={siteKey}
-        options={{ size: 'invisible' }}
-        onSuccess={(token) => {
-          tokenRef.current = token;
-          setTokenSeq((n) => n + 1);
-        }}
-        onExpire={() => {
-          tokenRef.current = '';
-          turnstileRef.current?.reset();
-        }}
-        onError={() => {
-          tokenRef.current = '';
-          // Re-arm as onExpire does — otherwise one transient challenge failure
-          // leaves the page with no token and every control dead. Bounded,
-          // because unlike expiry an error can be permanent (script blocked,
-          // wrong key) and an unbounded reset loop would hammer the challenge
-          // endpoint; the bounded wait above then takes over.
-          if (errorResets.current < 2) {
-            errorResets.current += 1;
+        {/* Invisible: runs silently and resolves a token without any UI. Never in the builder frame. */}
+        {isBuilderMode() || fixture ? null : <Turnstile
+          ref={turnstileRef}
+          siteKey={siteKey!}
+          options={{ size: 'invisible' }}
+          onSuccess={(token) => {
+            tokenRef.current = token;
+            setTokenSeq((n) => n + 1);
+          }}
+          onExpire={() => {
+            tokenRef.current = '';
             turnstileRef.current?.reset();
-          }
-        }}
-      />}
-    </div>
+          }}
+          onError={() => {
+            tokenRef.current = '';
+            // Re-arm as onExpire does — otherwise one transient challenge failure
+            // leaves the page with no token and every control dead. Bounded,
+            // because unlike expiry an error can be permanent (script blocked,
+            // wrong key) and an unbounded reset loop would hammer the challenge
+            // endpoint; the bounded wait above then takes over.
+            if (errorResets.current < 2) {
+              errorResets.current += 1;
+              turnstileRef.current?.reset();
+            }
+          }}
+        />}
+      </div>
+    </TrackingFamily.Provider>
   );
-}
-
-/**
- * A single-parcel order gets its rail under the hero, where the headline already
- * speaks for that parcel. Keyed on parcel COUNT, not resolved-tracking count, so
- * it can never overlap the per-card rail a multi-parcel order draws — the two
- * gates partition on the same quantity by construction.
- */
-function SingleParcelStepper({ data }: { data: TrackingLookup }) {
-  if (data.parcels.length !== 1) return null;
-  const t = data.parcels[0]!.tracking;
-  if (t?.outcome !== 'ok') return null;
-  return <ProgressStepper stage={furthestStage(t.events)} failed={t.status === 'RETURNED'} />;
 }

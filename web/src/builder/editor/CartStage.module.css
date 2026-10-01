@@ -1,0 +1,126 @@
+/*
+ * The cart document's canvas (stage 4 spec §11.3): a page/drawer switch above the stage, and in
+ * Drawer mode a 420 px column wearing the shop's own sheet chrome. The editor's own paper uses the
+ * neutral --sfb-* tokens; the sheet reads exactly as shoppers see it.
+ */
+
+.root {
+  --sfb-ink: #1d2433;
+  --sfb-paper: rgb(255 255 255 / 0.94);
+  --sfb-radius: 6px;
+  --sfb-accent: #2f5fd0;
+  --sfb-backdrop: rgb(29 36 51 / 0.35);
+}
+
+.switch {
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  padding: 12px 16px 0;
+}
+
+.group {
+  display: inline-flex;
+  padding: 2px;
+  gap: 2px;
+  border-radius: var(--sfb-radius);
+  background: var(--sfb-paper);
+  border: 1px solid rgb(29 36 51 / 0.2);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+.option {
+  min-inline-size: 44px;
+  min-block-size: 44px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--sfb-ink);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.option[aria-checked='true'] {
+  background: var(--sfb-ink);
+  color: #fff;
+}
+
+.option:focus-visible {
+  outline: 2px solid var(--sfb-accent);
+  outline-offset: 1px;
+}
+
+.stage {
+  box-sizing: border-box;
+  min-block-size: 100%;
+  padding: 16px 16px 32px;
+  background: var(--sfb-backdrop);
+}
+
+.stage .sheet {
+  box-sizing: border-box;
+  inline-size: min(420px, 100%);
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--sf-line-strong);
+  border-radius: 16px;
+  overflow: clip;
+  background: var(--sf-bg-deep);
+}
+
+.head {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  background: var(--sf-bg-deep);
+}
+
+.foot {
+  position: sticky;
+  inset-block-end: 0;
+  z-index: 1;
+}
+
+.caption {
+  box-sizing: border-box;
+  inline-size: fit-content;
+  max-inline-size: min(420px, 100%);
+  margin: 12px auto 0;
+  padding: 6px 10px;
+  border-radius: var(--sfb-radius);
+  background: var(--sfb-paper);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 12px;
+  line-height: 1.45;
+  text-align: center;
+  color: var(--sfb-ink);
+}
+
+/* Blocks the drawer never draws: the root's own content is page-only. CartHeading (the cart's head slot) is edited on the Page surface. */
+.pageOnly :is([data-puck-dropzone='root:default-zone']) > *:not(:has([data-puck-dropzone$=':main'])) {
+  position: relative;
+  opacity: 0.55;
+}
+
+.pageOnly :is([data-puck-dropzone='root:default-zone']) > *:not(:has([data-puck-dropzone$=':main']))::after {
+  content: 'Cart page only';
+  position: absolute;
+  inset-block-start: 4px;
+  inset-inline-end: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--sfb-paper);
+  color: var(--sfb-ink);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 11px;
+  line-height: 1.4;
+  pointer-events: none;
+}
+
+/* The drawer ignores the cart container's blockStyle, so its wrapper draws no box here either. */
+.stage .sheet [data-sf-style='CartContents'] {
+  display: contents !important;
+}

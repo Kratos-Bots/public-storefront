@@ -1,17 +1,19 @@
 import { Button } from '@mantine/core';
 import { Link } from 'react-router';
 import { EmptyState } from '@/components/EmptyState.tsx';
+import { useText } from '@/text/runtime.tsx';
 
 /** Shown for unknown paths and for routes whose feature the client has turned off. */
 export function NotFoundPage() {
+  const { t } = useText();
   return (
     <EmptyState
       eyebrow="404"
-      title="This page isn't here"
-      description="The link may be out of date, or this part of the shop is switched off."
+      title={t('shell.notFound.title')}
+      description={t('shell.notFound.description')}
       action={
         <Button component={Link} to="/" variant="default" size="sm">
-          Back to the shop
+          {t('shell.notFound.backToShop')}
         </Button>
       }
     />

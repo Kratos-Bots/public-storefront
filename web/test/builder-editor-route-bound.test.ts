@@ -3,7 +3,7 @@ import { BLOCKS } from '@/builder/registry.ts';
 import { allowedOn, checkRules } from '@/builder/rules.ts';
 import { defaultDoc } from '@/builder/defaults/index.ts';
 import { homeDocKeys, insertableBlocks, isLockedOn, ROUTE_BOUND } from '@/builder/editor/route-bound.ts';
-import { FIXED_ROUTE_KEYS, type ComponentData, type DocKey, type FixedRouteKey, type PuckDoc } from '@/builder/types.ts';
+import { FIXED_ROUTE_KEYS, type CardKey, type ComponentData, type DocKey, type FixedRouteKey, type PuckDoc } from '@/builder/types.ts';
 
 function strip(content: ComponentData[], names: ReadonlySet<string>): ComponentData[] {
   return content
@@ -82,7 +82,7 @@ describe('editor placement rules', () => {
   });
 
   it('covers the shell and every fixed route', () => {
-    const keys: Array<'shell' | FixedRouteKey> = ['shell', 'catalog', 'product', 'cart', 'checkout', 'login', 'account.orders', 'account.order', 'account.loyalty', 'account.referrals', 'account.profile', 'order-status', 'payment-success', 'payment-cancel', 'order-placed', 'verify', 'tracking'];
+    const keys: Array<'shell' | FixedRouteKey | CardKey> = ['shell', 'catalog', 'product', 'cart', 'checkout', 'login', 'account.orders', 'account.order', 'account.loyalty', 'account.referrals', 'account.profile', 'order-status', 'payment-success', 'payment-cancel', 'order-placed', 'verify', 'tracking', 'card:tile', 'card:row'];
     expect(Object.keys(ROUTE_BOUND).sort()).toEqual(keys.sort());
   });
 });

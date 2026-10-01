@@ -4,6 +4,7 @@ import { notifications } from '@mantine/notifications';
 import { fetchCart, putCart } from '@/api/cart.ts';
 import { useCartStore } from '@/stores/cart.ts';
 import { ApiError, errorMessage } from '@/lib/errors.ts';
+import { textSnapshot } from '@/text/snapshot.ts';
 import type { Product } from '@/types/catalog.ts';
 import type { CartLineInput, ServerCart, ServerCartLine } from '@/types/cart.ts';
 
@@ -118,11 +119,11 @@ async function flush(): Promise<void> {
         // on as a guest cart — nothing the shopper picked out is lost.
         useCartStore.getState().setMode('local');
         syncStore.setState({ cart: null });
-        notifications.show({ message: 'Please sign in again', color: 'red' });
+        notifications.show({ message: textSnapshot().t('cart.sync.signInAgain'), color: 'red' });
         return;
       }
       notifications.show({
-        message: errorMessage(err, "We couldn't update your cart"),
+        message: errorMessage(err, textSnapshot().t('cart.sync.updateFailed')),
         color: 'red',
       });
       await resync();

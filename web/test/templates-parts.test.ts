@@ -58,9 +58,10 @@ describe('shared button fills', () => {
 
 describe('parts', () => {
   it.each([
-    ['../src/layouts/StorefrontShell.tsx', ['data-sf-part="header"', 'data-sf-part="main"', 'data-sf-part="badge"']],
-    ['../src/layouts/MenuShell.tsx', ['data-sf-part="header"', 'data-sf-part="main"', 'data-sf-part="badge"']],
+    ['../src/layouts/StorefrontShell.tsx', ['data-sf-part="main"']],
+    ['../src/layouts/MenuShell.tsx', ['data-sf-part="main"']],
     ['../src/layouts/Chromeless.tsx', ['data-sf-part="header"', 'data-sf-part="main"']],
+    ['../src/layouts/header-parts.tsx', ['data-sf-part="header"', 'data-sf-part="badge"']],
     ['../src/features/catalog/ProductCard.tsx', ['data-sf-part="product-card"', 'data-sf-part="price"']],
     ['../src/features/catalog/ProductRow.tsx', ['data-sf-part="product-row"', 'data-sf-part="price"']],
     ['../src/features/catalog/ProductDetailPage.tsx', ['data-sf-part="page-title"', 'data-sf-part="price"']],
@@ -69,14 +70,15 @@ describe('parts', () => {
     ['../src/features/catalog/ProductList.tsx', ['data-sf-part="page-title"', 'data-sf-part="group-title"']],
     ['../src/features/wholesale/WholesaleCatalogPage.tsx', ['data-sf-part="page-title"']],
     ['../src/features/catalog/AddToCart.tsx', ['data-sf-part="button"', 'data-variant="filled"']],
-    ['../src/features/cart/CartSummary.tsx', ['data-sf-part="button"', 'data-sf-cta="main"']],
+    ['../src/features/cart/cart-summary-parts.tsx', ['data-sf-part="button"', 'data-sf-cta="main"']],
     ['../src/features/cart/MobileCartBar.tsx', ['data-sf-part="cart-bar"', 'data-sf-part="button"', 'data-sf-cta="main"']],
-    ['../src/features/checkout/CheckoutPage.tsx', ['data-sf-cta="main"', 'data-sf-part="button"', 'data-variant="filled"', 'data-variant="default"', 'data-sf-part="stepper"']],
+    ['../src/features/checkout/CheckoutPage.tsx', ['data-sf-cta="main"', 'data-sf-part="button"', 'data-variant="filled"', 'data-variant="default"']],
+    ['../src/features/checkout/checkout-parts.tsx', ['data-sf-part="stepper"']],
     ['../src/features/checkout/Field.tsx', ['data-sf-part="input"']],
     ['../src/features/catalog/StockChip.tsx', ['data-sf-part="badge"']],
     ['../src/features/account/StatusPill.tsx', ['data-sf-part="badge"']],
     ['../src/components/Sheet.tsx', ['data-sf-part={part}', "part = 'sheet'"]],
-    ['../src/features/cart/CartDrawer.tsx', ['part="drawer"']],
+    ['../src/features/cart/CartDrawerPanel.tsx', ['part="drawer"']],
     ['../src/features/notices/NoticeBanners.tsx', ['data-sf-part="notice"']],
     ['../src/features/notices/CutoffBar.tsx', ['data-sf-part="cutoff"']],
     ['../src/features/tracking/ProgressStepper.tsx', ['data-sf-part="stepper"']],
@@ -87,8 +89,7 @@ describe('parts', () => {
     ['../src/features/order-status/PaymentSection.tsx', ['data-sf-part="button"', 'data-variant="filled"']],
     ['../src/features/tracking/LookupForm.tsx', ['data-sf-part="button"', 'data-variant="filled"']],
     ['../src/features/verify/VerifyPage.tsx', ['data-sf-part="button"', 'data-variant="filled"']],
-    ['../src/features/payment-redirect/OrderPlacedPage.tsx', ['data-sf-part="button"', 'data-variant="filled"']],
-    ['../src/features/payment-redirect/PaymentCancelPage.tsx', ['data-sf-part="button"', 'data-variant="filled"']],
+    ['../src/features/payment-redirect/payment-parts.tsx', ['data-sf-part="button"', 'data-variant="filled"']],
     ['../src/features/wholesale/WholesaleBar.tsx', ['data-sf-part="button"', 'data-variant="filled"']],
   ])('%s carries its parts', (file, parts) => {
     const src = read(file);
@@ -128,8 +129,7 @@ describe('parts', () => {
     ['../src/features/order-status/PaymentSection.tsx', 1],
     ['../src/features/tracking/LookupForm.tsx', 1],
     ['../src/features/verify/VerifyPage.tsx', 1],
-    ['../src/features/payment-redirect/OrderPlacedPage.tsx', 2],
-    ['../src/features/payment-redirect/PaymentCancelPage.tsx', 2],
+    ['../src/features/payment-redirect/payment-parts.tsx', 4],
     ['../src/features/wholesale/WholesaleBar.tsx', 1],
   ])('%s tags exactly its %i primary-CTA button(s) as shared filled buttons', (file, n) => {
     const src = read(file);

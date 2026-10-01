@@ -1,6 +1,7 @@
 import { useId, useMemo } from 'react';
 import type { CryptoOption } from '@/types/checkout.ts';
 import { formatMoney } from '@/lib/format.ts';
+import { textKey, useText } from '@/text/runtime.tsx';
 import fields from '@/features/checkout/Fields.module.css';
 import classes from '@/features/checkout/CryptoComboPicker.module.css';
 
@@ -29,7 +30,7 @@ export interface CryptoComboPickerProps {
   currency: string;
 }
 
-function groupOptions(options: CryptoOption[]): Array<{ label: string; options: CryptoOption[] }> {
+function groupOptions(options: CryptoOption[]) {
   const coins = options.filter((o) => !STABLECOIN_TICKERS.has(o.coin));
   const stables = options.filter((o) => STABLECOIN_TICKERS.has(o.coin));
   // Within a group, cluster the networks of one coin together, in first-seen coin order.
@@ -38,8 +39,8 @@ function groupOptions(options: CryptoOption[]): Array<{ label: string; options: 
     return [...list].sort((a, b) => order.indexOf(a.coin) - order.indexOf(b.coin));
   };
   return [
-    { label: 'Coins', options: cluster(coins) },
-    { label: 'Stablecoins', options: cluster(stables) },
+    { label: textKey('checkout.crypto.coins'), options: cluster(coins) },
+    { label: textKey('checkout.crypto.stablecoins'), options: cluster(stables) },
   ].filter((g) => g.options.length > 0);
 }
 
@@ -49,6 +50,7 @@ function groupOptions(options: CryptoOption[]): Array<{ label: string; options: 
  * number a shopper compares has to be per-combo, not per-coin.
  */
 export function CryptoComboPicker({ options, value, onChange, currency }: CryptoComboPickerProps) {
+  const { t } = useText();
   const name = useId();
   const groups = useMemo(() => groupOptions(options), [options]);
 
@@ -60,7 +62,7 @@ export function CryptoComboPicker({ options, value, onChange, currency }: Crypto
         <div key={group.label} className={classes.group}>
           {groups.length > 1 ? (
             <p className={classes.groupHead}>
-              {group.label}
+              {t(group.label)}
               <span className={classes.groupRule} aria-hidden />
             </p>
           ) : null}

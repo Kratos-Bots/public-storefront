@@ -13,26 +13,28 @@ export const ORDERS_PAGE_SIZE = 10;
  * The customer's standing. Read by four of the five account surfaces, so it is
  * one query with one cache entry — a tab change re-reads nothing.
  */
-export function useProfile() {
-  return useQuery({ queryKey: PROFILE_KEY, queryFn: fetchProfile, staleTime: 30_000 });
+export function useProfile(enabled = true) {
+  return useQuery({ queryKey: PROFILE_KEY, queryFn: fetchProfile, staleTime: 30_000, enabled });
 }
 
 /** `null` data means the shop has redemption switched off, not that it failed. */
-export function useRedeemOptions() {
+export function useRedeemOptions(enabled = true) {
   return useQuery({
     queryKey: REDEEM_OPTIONS_KEY,
     queryFn: fetchRedeemOptions,
     staleTime: 30_000,
+    enabled,
   });
 }
 
-export function useOrders() {
+export function useOrders(enabled = true) {
   return useInfiniteQuery({
     queryKey: ORDERS_KEY,
     queryFn: ({ pageParam }) => fetchOrders(pageParam, ORDERS_PAGE_SIZE),
     initialPageParam: 1,
     getNextPageParam: (last) => (last.meta.hasNextPage ? last.meta.page + 1 : undefined),
     staleTime: 30_000,
+    enabled,
   });
 }
 

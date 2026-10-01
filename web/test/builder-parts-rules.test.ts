@@ -1,0 +1,133 @@
+import { describe, expect, it, vi } from 'vitest';
+vi.mock('@/builder/registry.ts', async (orig) => {
+  const real = await (await import('./helpers/fake-parts.tsx')).withFakeBlocks(orig);
+  const { z } = await import('zod');
+  const cardPart = (name: string, family: 'card-tile' | 'card-row') => ({
+    name, label: name.replace(/^Card(Tile|Row)/, ''), category: 'part', part: { family }, layouts: 'all', routeBound: false, slots: [],
+    style: false, schema: z.object({}), defaultProps: {}, render: () => null,
+  });
+  const card = (name: 'CardTile' | 'CardRow', family: 'card-tile' | 'card-row') => ({
+    name, label: name, category: 'catalogue', layouts: 'all', routeBound: false, slots: ['items'], style: false,
+    schema: z.object({ items: z.array(z.any()) }), defaultProps: { items: [] }, render: () => null,
+    container: {
+      family, insertSlot: 'items', required: [`${name}Name`], unique: [`${name}Name`, `${name}Price`, `${name}Add`],
+      requires: [[`${name}Add`, `${name}Price`]], defaultSlots: () => ({ items: [] }),
+    },
+  });
+  // Stand-ins for the card families until the real card blocks land (Task 11).
+  return { ...real, BLOCKS: { ...real.BLOCKS,
+    CardTile: card('CardTile', 'card-tile'), CardRow: card('CardRow', 'card-row'),
+    CardTileName: cardPart('CardTileName', 'card-tile'), CardTilePrice: cardPart('CardTilePrice', 'card-tile'), CardTileAdd: cardPart('CardTileAdd', 'card-tile'),
+    CardRowName: cardPart('CardRowName', 'card-row'), CardRowPrice: cardPart('CardRowPrice', 'card-row'), CardRowAdd: cardPart('CardRowAdd', 'card-row'),
+  } };
+});
+import { allowedOn, checkRules, requiredParts } from '@/builder/rules.ts';
+import type { ComponentData, DocKey, PuckDoc } from '@/builder/types.ts';
+
+const c = (type: string, id: string, props: Record<string, unknown> = {}): ComponentData => ({ type, props: { id, ...props } });
+const doc = (content: ComponentData[]): PuckDoc => ({ root: { props: { title: '', description: '', chrome: 'shell' } }, content });
+const box = (id: string, a: ComponentData[], b: ComponentData[] = [], extra: Record<string, unknown> = {}) => c('FakeBox', id, { a, b, ...extra });
+const full = (id: string) => [c('FakeTitle', `${id}-t`), c('FakePrice', `${id}-p`), c('FakeAdd', `${id}-a`)];
+const rules = (d: PuckDoc, key: DocKey = 'page:x', layout: 'storefront' | 'menu' = 'storefront') =>
+  checkRules(d, key, layout).map((i) => i.rule).filter((r) => r.startsWith('part-') || r.startsWith('slot-accepts') || r.startsWith('hidden-required'));
+
+describe('placement (spec §3.4)', () => {
+  it('parts are allowed only on their family doc', () => {
+    expect(allowedOn('FakeTitle', 'product')).toBe(true);
+    for (const k of ['catalog', 'shell', 'page:x', 'card:tile', 'cart'] as DocKey[]) expect(allowedOn('FakeTitle', k), k).toBe(false);
+  });
+  it('card docs accept nothing but their frame and their parts', () => {
+    for (const t of ['Heading', 'Section', 'RichText', 'FakeBox']) expect(allowedOn(t, 'card:tile'), t).toBe(false);
+  });
+  it('part-placement: a part at the root, or in a Section outside the container', () => {
+    expect(rules(doc([box('b', full('b')), c('FakeNote', 'n')]), 'product')).toContain('part-placement:FakeNote');
+    expect(rules(doc([box('b', full('b')), c('Section', 's', { content: [c('FakeNote', 'n')] })]), 'product')).toContain('part-placement:FakeNote');
+  });
+  it('content blocks may sit between a container and its parts', () => {
+    const d = doc([box('b', [c('Columns', 'k', { columns: '2', col1: [c('FakeTitle', 't'), c('FakePrice', 'p')], col2: [c('FakeAdd', 'a')], col3: [], col4: [] })])]);
+    expect(rules(d, 'product')).toEqual([]);
+  });
+});
+
+describe('per container instance (spec §4)', () => {
+  it('required: missing and doubled', () => {
+    expect(rules(doc([box('b', [c('FakeTitle', 't')])]), 'product')).toContain('part-required:FakeBox.FakePrice');
+    expect(rules(doc([box('b', [...full('b'), c('FakePrice', 'p2')])]), 'product')).toContain('part-required:FakeBox.FakePrice');
+  });
+  it('two containers are counted separately', () => {
+    const d = doc([box('one', full('one')), box('two', [c('FakeTitle', 'two-t')])]);
+    const found = checkRules(d, 'product', 'storefront').filter((i) => i.rule.startsWith('part-required'));
+    expect(found.map((i) => [i.rule, i.blockId])).toEqual([['part-required:FakeBox.FakePrice', 'two']]);
+  });
+  it('a required part not available in the layout is skipped', () => {
+    expect(requiredParts('FakeBox', 'menu')).toEqual(['FakeTitle', 'FakePrice']);
+    expect(requiredParts('FakeBox', 'storefront')).toEqual(['FakeTitle', 'FakePrice']);
+    expect(rules(doc([box('b', [c('FakeTitle', 't'), c('FakePrice', 'p')])]), 'product', 'menu')).toEqual([]);
+  });
+  it('unique and requires', () => {
+    expect(rules(doc([box('b', full('b'), [c('FakeNote', 'n1'), c('FakeNote', 'n2')])]), 'product')).toContain('part-unique:FakeBox.FakeNote');
+    expect(rules(doc([box('b', [c('FakeTitle', 't'), c('FakeAdd', 'a')])]), 'product')).toContain('part-requires:FakeAdd.FakePrice');
+  });
+  it('slot-accepts: a restricted slot, and route blocks / containers in any container slot', () => {
+    expect(rules(doc([box('b', full('b'), [c('Heading', 'h')])]), 'product')).toContain('slot-accepts:FakeBox.b');
+    expect(rules(doc([box('b', [...full('b'), c('ProductDetail', 'pd')])]), 'product')).toContain('slot-accepts:FakeBox.a');
+    expect(rules(doc([box('b', [...full('b'), box('inner', full('inner'))])]), 'product')).toContain('slot-accepts:FakeBox.a');
+  });
+  it('a required part in a hidden Columns column is reported by part-required only', () => {
+    const d = doc([box('b', [c('FakeTitle', 't'), c('FakeAdd', 'a'), c('Columns', 'k', { columns: '2', col1: [], col2: [], col3: [c('FakePrice', 'p')], col4: [] })])]);
+    const found = rules(d, 'product');
+    expect(found).toContain('part-required:FakeBox.FakePrice');
+    expect(found.some((r) => r.startsWith('hidden-required'))).toBe(false);
+    expect(found.some((r) => r.startsWith('part-placement'))).toBe(false);
+  });
+  it('hidden-required: a hidden block holding a required part', () => {
+    const d = doc([box('b', [c('FakeTitle', 't'), c('FakeAdd', 'a'), c('Section', 's', { content: [c('FakePrice', 'p')], blockStyle: { hide: 'mobile' } })])]);
+    const issue = checkRules(d, 'product', 'storefront').find((i) => i.rule === 'hidden-required:Section');
+    expect(issue?.blockId).toBe('s');
+    expect(issue?.message).toMatch(/holds the Price/);
+  });
+});
+
+describe('fix round 1', () => {
+  it('slot-accepts: a container or route block nested in a content block inside a container slot', () => {
+    const inCols = (inner: ComponentData) => doc([box('b', [...full('b'), c('Columns', 'k', { columns: '2', col1: [inner], col2: [], col3: [], col4: [] })])]);
+    const found = checkRules(inCols(box('inner', full('inner'))), 'product', 'storefront').find((i) => i.rule === 'slot-accepts:FakeBox.a');
+    expect(found?.blockId).toBe('inner');
+    expect(rules(inCols(c('ProductDetail', 'pd')), 'product')).toContain('slot-accepts:FakeBox.a');
+    // Hidden column too: slot-accepts reads what is stored, not what renders.
+    const hiddenCol = doc([box('b', [...full('b'), c('Columns', 'k', { columns: '2', col1: [], col2: [], col3: [box('inner', full('inner'))], col4: [] })])]);
+    expect(rules(hiddenCol, 'product')).toContain('slot-accepts:FakeBox.a');
+  });
+  it('hidden-required: one issue per holder, however many required parts it holds', () => {
+    const d = doc([box('b', [c('FakeAdd', 'a'), c('Section', 's', { content: [c('FakeTitle', 't'), c('FakePrice', 'p')], blockStyle: { hide: 'desktop' } })])]);
+    const found = checkRules(d, 'product', 'storefront').filter((i) => i.rule === 'hidden-required:Section');
+    expect(found).toHaveLength(1);
+    expect(found[0]!.message).toMatch(/hidden from 992 px but holds the Title/);
+  });
+  it('hostile child types inside a container slot neither throw nor resolve to the prototype', () => {
+    const d = doc([box('b', [...full('b'), c('constructor', 'x')], [c('__proto__', 'y')])]);
+    let issues: ReturnType<typeof checkRules> = [];
+    expect(() => { issues = checkRules(d, 'product', 'storefront'); }).not.toThrow();
+    const ids = issues.map((i) => i.rule);
+    expect(ids).toContain('placement:constructor');
+    expect(ids).toContain('slot-accepts:FakeBox.b');
+    expect(ids.some((r) => r.startsWith('part-required'))).toBe(false);
+    expect(requiredParts('constructor', 'storefront')).toEqual([]);
+    expect(requiredParts('__proto__', 'storefront')).toEqual([]);
+  });
+  it('card docs: exactly one frame, nothing else, and the add button needs the price', () => {
+    expect(checkRules(doc([]), 'card:tile', 'storefront').map((i) => i.rule)).toContain('exactly-one:CardTile');
+    expect(checkRules(doc([c('CardRow', 'r1', { items: [c('CardRowName', 'n')] }), c('CardRow', 'r2', { items: [c('CardRowName', 'n2')] })]), 'card:row', 'storefront')
+      .map((i) => i.rule)).toContain('exactly-one:CardRow');
+    expect(allowedOn('Heading', 'card:row')).toBe(false);
+    const withHeading = checkRules(doc([c('CardRow', 'r', { items: [c('CardRowName', 'n'), c('Heading', 'h')] })]), 'card:row', 'storefront');
+    expect(withHeading.find((i) => i.rule === 'placement:Heading')?.blockId).toBe('h');
+    expect(allowedOn('CardTileName', 'card:tile')).toBe(true);
+    expect(allowedOn('CardTileName', 'card:row')).toBe(false);
+    const tile = checkRules(doc([c('CardTile', 't', { items: [c('CardTileName', 'n'), c('CardTileAdd', 'a')] })]), 'card:tile', 'storefront');
+    expect(tile.find((i) => i.rule === 'part-requires:CardTileAdd.CardTilePrice')?.message).toBe('A product card with an add button must also show the price.');
+    const row = checkRules(doc([c('CardRow', 'r', { items: [c('CardRowName', 'n'), c('CardRowAdd', 'a')] })]), 'card:row', 'storefront');
+    expect(row.find((i) => i.rule === 'part-requires:CardRowAdd.CardRowPrice')?.message).toBe('A product row with an add button must also show the price.');
+    expect(tile.map((i) => i.rule).filter((r) => r.startsWith('placement') || r.startsWith('exactly-one'))).toEqual([]);
+  });
+});

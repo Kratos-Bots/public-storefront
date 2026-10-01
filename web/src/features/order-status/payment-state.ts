@@ -4,6 +4,8 @@ import type {
   PublicOrder,
 } from '@/types/public-order.ts';
 import type { PaymentMethod } from '@/types/checkout.ts';
+import type { StringKey } from '@/text/registry.ts';
+import { textKey, textSnapshot } from '@/text/snapshot.ts';
 
 // The order page's payment logic, kept out of the components that render it.
 // Ported from `ecommerce-menu/web/src/features/order-status/{PaymentSection,
@@ -77,9 +79,9 @@ export function pollInterval(order: PublicOrder): number | false {
 }
 
 /** What the customer is offered, named by what it is rather than by who settles it. */
-const SLOT_BASE: Record<PaymentMethod['slot'], string | null> = {
-  card: 'Card',
-  crypto: 'Crypto',
+const SLOT_BASE: Record<PaymentMethod['slot'], Extract<StringKey, `order.method.${'card' | 'crypto'}`> | null> = {
+  card: textKey('order.method.card'),
+  crypto: textKey('order.method.crypto'),
   // A bank transfer's display name describes the method ('UK Bank Transfer'),
   // so it is the honest label; the card and crypto slots carry a processor's
   // brand instead, which only raises questions the customer can't act on.
@@ -92,11 +94,13 @@ const SLOT_BASE: Record<PaymentMethod['slot'], string | null> = {
  * a fee at a glance, so the sign becomes a word.
  */
 export function slotLabel(method: PaymentMethod): string {
-  const base = SLOT_BASE[method.slot] ?? method.displayName;
+  const { t } = textSnapshot();
+  const slot = SLOT_BASE[method.slot];
+  const base = slot ? t(slot) : method.displayName;
   const rate = method.feeRateText?.trim();
   if (!rate) return base;
-  if (rate.startsWith('−') || rate.startsWith('-')) return `${base} (${rate.slice(1)} discount)`;
-  return `${base} (${rate.replace(/^\+/, '')} fee)`;
+  if (rate.startsWith('−') || rate.startsWith('-')) return t('order.method.withDiscount', { method: base, rate: rate.slice(1) });
+  return t('order.method.withFee', { method: base, rate: rate.replace(/^\+/, '') });
 }
 
 /**

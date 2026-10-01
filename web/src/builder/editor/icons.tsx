@@ -49,3 +49,9 @@ export const PanelLeftIcon = () => (
 export const PanelRightIcon = () => (
   <Icon><rect x="2" y="2.5" width="12" height="11" rx="1.5" /><path d="M10 2.5v11" /></Icon>
 );
+export const TextIcon = () => (
+  <Icon><path d="M2.5 4V2.5h7V4" /><path d="M6 2.5v11" /><path d="M4.5 13.5h3" /><path d="M10 8.5h4" /><path d="M12 8.5v5" /></Icon>
+);
+export const CloseIcon = () => (
+  <Icon><path d="m4 4 8 8" /><path d="m12 4-8 8" /></Icon>
+);

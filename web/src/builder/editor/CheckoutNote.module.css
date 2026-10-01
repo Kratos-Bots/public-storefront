@@ -1,0 +1,14 @@
+/*
+ * The one-line editor note above the checkout canvas. Editor chrome, not the shop: neutral --sfb-*
+ * tokens with their own fallbacks (the canvas is not inside the editor header's token scope).
+ */
+
+.note {
+  margin: 0 0 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--sfb-line, #d9dde5);
+  border-radius: 6px;
+  background: var(--sfb-wash, #f3f5f8);
+  color: var(--sfb-muted, #5b6475);
+  font: 500 0.8125rem/1.4 system-ui, sans-serif;
+}

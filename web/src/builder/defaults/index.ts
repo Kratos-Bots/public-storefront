@@ -1,5 +1,6 @@
 import type { DefaultEntry } from '@/builder/defaults/helpers.ts';
 import type { DocKey, LayoutKind, PuckDoc } from '@/builder/types.ts';
+import { upgradeDoc } from '@/builder/upgrade.ts';
 
 const LAYOUTS: readonly LayoutKind[] = ['storefront', 'menu', 'webapp'];
 
@@ -10,7 +11,7 @@ export function buildDefaultTable(groups: Record<string, { DEFAULTS?: DefaultEnt
       for (const layout of entry.layouts === 'all' ? LAYOUTS : entry.layouts) {
         const key = `${layout}|${entry.docKey}`;
         if (table.has(key)) throw new Error(`[builder] two default documents for ${key} (${path})`);
-        table.set(key, entry.doc);
+        table.set(key, upgradeDoc(entry.doc, entry.docKey, layout));
       }
     }
   }

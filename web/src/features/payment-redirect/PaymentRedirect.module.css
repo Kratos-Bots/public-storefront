@@ -42,37 +42,37 @@
 .eyebrow {
   margin: 0;
   font-family: var(--sf-font-mono);
-  font-size: 10px;
+  font-size: calc(10px * var(--sf-text-scale, 1));
   font-weight: 600;
   letter-spacing: 0.28em;
   text-transform: uppercase;
-  color: var(--sf-primary);
+  color: var(--sf-block-fg, var(--sf-primary));
 }
 
 .eyebrow[data-tone='success'] {
-  color: var(--sf-success);
+  color: var(--sf-block-fg, var(--sf-success));
 }
 
 .eyebrow[data-tone='warn'] {
-  color: var(--sf-warn);
+  color: var(--sf-block-fg, var(--sf-warn));
 }
 
 .headline {
   margin: 0.4rem 0 0;
   font-family: var(--sf-font-heading);
-  font-size: 1.75rem;
+  font-size: calc(1.75rem * var(--sf-text-scale, 1));
   font-weight: 700;
   line-height: 1.12;
   letter-spacing: -0.02em;
-  color: var(--sf-text);
+  color: var(--sf-block-fg, var(--sf-text));
 }
 
 .detail {
   margin: 0.45rem 0 0;
   max-width: 24rem;
-  font-size: 0.875rem;
+  font-size: calc(0.875rem * var(--sf-text-scale, 1));
   line-height: 1.6;
-  color: var(--sf-muted);
+  color: var(--sf-block-fg, var(--sf-muted));
 }
 
 /* The one thing checkout couldn't do — same left-rule-in-a-tone the order
@@ -85,9 +85,9 @@
   border-radius: 0 var(--sf-card-radius) var(--sf-card-radius) 0;
   background: var(--sf-bg-deep);
   text-align: left;
-  font-size: 0.8125rem;
+  font-size: calc(0.8125rem * var(--sf-text-scale, 1));
   line-height: 1.55;
-  color: var(--sf-warn);
+  color: var(--sf-block-fg, var(--sf-warn));
 }
 
 /* ------------------------------------------------------------- reference */
@@ -113,21 +113,21 @@
 .referenceLabel {
   margin: 0;
   font-family: var(--sf-font-mono);
-  font-size: 9px;
+  font-size: calc(9px * var(--sf-text-scale, 1));
   font-weight: 600;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--sf-faint);
+  color: var(--sf-block-fg, var(--sf-faint));
 }
 
 .referenceValue {
   margin: 0.15rem 0 0;
   font-family: var(--sf-font-mono);
   font-variant-numeric: tabular-nums;
-  font-size: 1rem;
+  font-size: calc(1rem * var(--sf-text-scale, 1));
   font-weight: 700;
   letter-spacing: 0.03em;
-  color: var(--sf-text);
+  color: var(--sf-block-fg, var(--sf-text));
   overflow-wrap: anywhere;
   user-select: all;
 }

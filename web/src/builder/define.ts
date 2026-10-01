@@ -3,13 +3,28 @@ import { z } from 'zod';
 import type { CoreOptions } from '@/templates/hooks.ts';
 import type { HeaderIconMode } from '@/templates/define.ts';
 import { isComponentLike, type ComponentData, type DocKey, type LayoutKind } from '@/builder/types.ts';
+import type { StringKey, TextKeyPattern } from '@/text/registry.ts';
+import { parseBlockStyle, type StyleSupport } from '@/builder/style/model.ts';
+import type { ContainerSpec, PartFamily } from '@/builder/parts.ts';
+export type { StyleKey, StyleSupport, StyleTarget } from '@/builder/style/model.ts';
+
+/** `data-sf-style` + `data-sfs-*` attributes for a styled block (block-styling spec §5.1). */
+export type StyleAttrs = Readonly<Record<`data-sf${string}`, string>>;
 
 // Runtime-safe: nothing here may value-import @puckeditor/core (spec §13 A1).
 
-export type BlockCategory = 'shell' | 'catalogue' | 'product' | 'commerce' | 'post-order' | 'content';
-/** A slot prop at render time. No argument (or none of the three keys) = the children with no wrapper. */
-export type SlotRender = (p?: { className?: string; style?: CSSProperties; as?: ElementType }) => ReactNode;
-export interface BlockRenderContext { editing: boolean; docKey: DocKey; layout: LayoutKind }
+export type BlockCategory = 'shell' | 'catalogue' | 'product' | 'commerce' | 'post-order' | 'content' | 'part';
+/**
+ * A slot prop at render time. No argument (or none of the three keys) = the children with no wrapper.
+ * `items` = the stored children, so a container can choose classes from what a slot holds without
+ * rendering it (spec §3.2).
+ */
+export type SlotRender = ((p?: { className?: string; style?: CSSProperties; as?: ElementType }) => ReactNode) & { readonly items: readonly ComponentData[] };
+export interface BlockRenderContext {
+  editing: boolean; docKey: DocKey; layout: LayoutKind;
+  /** A `root`/`pass` block spreads this onto the element it owns (`{...puck.style}`); absent when unstyled. */
+  style?: StyleAttrs;
+}
 /** Slot props (declared as REQUIRED `ComponentData[]` in P; an optional slot won't map) arrive at render as `SlotRender`. */
 export type SlotProps<P> = { [K in keyof P]: P[K] extends ComponentData[] ? SlotRender : P[K] };
 
@@ -36,11 +51,32 @@ export interface BlockDef<P extends Record<string, unknown>> {
    * may invoke it as a plain function.
    */
   render(props: SlotProps<P> & { puck: BlockRenderContext }): ReactNode;
+  /** Site-text keys this block renders — exact keys or `area.part.*` prefixes (text spec §7.3). Set in Task 15. */
+  text?: readonly TextKeyPattern[];
+  /** Owner props that fall back to a site-text key when blank: render uses `prop.trim() || t(key)` (text spec §6.4). */
+  textProps?: Partial<Record<keyof P & string, StringKey>>;
+  /**
+   * Required: which `blockStyle` keys the block accepts and where they land (block-styling spec §4):
+   * `root` (its own root element), `wrap` (a div renderBlock adds), `pass` (forwarded to a named inner
+   * element). `false` = not stylable. Keys may be added in a later release, never removed.
+   */
+  style: StyleSupport | false;
+  /** A container (product-parts §3.2): owns data, its slots hold its family's parts. Never with `part`. */
+  container?: ContainerSpec;
+  /** A part (§3.2): renders one thing from its family's context; lives only inside that family's container. */
+  part?: {
+    family: PartFamily;
+    /** A part with slots of its own: default content for its absent slots (same contract as `container.defaultSlots`). */
+    defaultSlots?: (props: Record<string, unknown>, ctx: { layout: LayoutKind; id: string }) => Record<string, ComponentData[]>;
+  };
 }
 
 export function defineBlock<P extends Record<string, unknown>>(def: BlockDef<P>): BlockDef<P> {
   return def;
 }
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type AnyBlock = BlockDef<any>;
 
 /**
  * How a failed field is filled. `neutral` (every stored doc, via the guard): '' for a string, [] for
@@ -61,12 +97,8 @@ function neutralValue(schema: z.ZodType, safeDefault: unknown): unknown {
   return structuredClone(safeDefault);
 }
 
-/**
- * The block's props from stored data: whole-object parse, else field by field. An array field keeps
- * its valid items (each invalid one is reported as `key[i]`) before the whole field falls back.
- */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function parseBlockPropsDetailed(def: BlockDef<any>, raw: Record<string, unknown>, fallback: FieldFallback = 'neutral'): ParsedBlockProps {
+function parseSchemaProps(def: BlockDef<any>, raw: Record<string, unknown>, fallback: FieldFallback): ParsedBlockProps {
   const whole = def.schema.safeParse(raw);
   if (whole.success) return { props: whole.data as Record<string, unknown>, fallbacks: [] };
   const defaults = def.defaultProps as Record<string, unknown>;
@@ -98,6 +130,23 @@ export function parseBlockPropsDetailed(def: BlockDef<any>, raw: Record<string, 
     }
   }
   return { props: out, fallbacks };
+}
+
+/**
+ * The block's props from stored data: whole-object parse, else field by field. An array field keeps
+ * its valid items (each invalid one is reported as `key[i]`) before the whole field falls back.
+ * `blockStyle` is parsed beside the schema (a plain z.object would strip it): kept when any key
+ * survives, each dropped key reported as `blockStyle.<key>` (block-styling spec §10.1).
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function parseBlockPropsDetailed(def: BlockDef<any>, raw: Record<string, unknown>, fallback: FieldFallback = 'neutral'): ParsedBlockProps {
+  const base = parseSchemaProps(def, raw, fallback);
+  const styled = parseBlockStyle(def.style, raw.blockStyle);
+  if (!styled.style && styled.issues.length === 0) return base;
+  return {
+    props: styled.style ? { ...base.props, blockStyle: styled.style } : base.props,
+    fallbacks: [...base.fallbacks, ...styled.issues],
+  };
 }
 
 /** As parseBlockPropsDetailed with `defaults` fallbacks (the editor's view of a block); props only. */

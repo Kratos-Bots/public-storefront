@@ -88,7 +88,8 @@ describe('ProductDetail', () => {
     await screen.findByRole('heading', { level: 1, name: 'Trail Oats 1kg' });
     expect(shown.container.querySelector('img')).not.toBeNull();
     cleanup();
-    const hidden = mount(withProps(defaultDoc('product', 'storefront')!, { gallery: false }), 'storefront', '/p/7');
+    // Stage 3: the photo is the media slot's ProductGallery; an empty slot shows no photo (spec §5.1).
+    const hidden = mount(withProps(defaultDoc('product', 'storefront')!, { media: [] }), 'storefront', '/p/7');
     await screen.findByRole('heading', { level: 1, name: 'Trail Oats 1kg' });
     expect(hidden.container.querySelector('img')).toBeNull();
   });

@@ -3,7 +3,7 @@ import type { PreviewAs } from '@/builder/mode.ts';
 import { notifyPreviewOnly, PREVIEW_ONLY_MESSAGE } from '@/builder/editor/fixture-mode.ts';
 import {
   FIXTURE_ACCESS_KEY, FIXTURE_ORDER_DETAIL, FIXTURE_ORDER_REF, FIXTURE_ORDERS, FIXTURE_PUBLIC_ORDER, FIXTURE_QUOTE,
-  FIXTURE_REDEEM, fixtureProfile, fixtureServerCart,
+  FIXTURE_PRODUCT, FIXTURE_REDEEM, fixtureProfile, fixtureServerCart,
 } from '@/builder/editor/fixtures.ts';
 
 /**
@@ -30,6 +30,8 @@ function safeDecode(segment: string): string | null {
 const LIVE_GET = /^(?:storefront\/settings|catalog|catalog\/products\/\d+|storefront\/pages\/[a-z]+)$/;
 const PUBLIC_ORDER = /^orders\/([^/]+)\/([^/]+)(?:\/(.+))?$/;
 const ACCOUNT_ORDER = /^storefront\/orders\/([^/]+)$/;
+/** The "Preview with" sample (spec §11): an empty catalogue still has a product to show. */
+const FIXTURE_PRODUCT_PATH = `catalog/products/${FIXTURE_PRODUCT.id}`;
 
 /**
  * The api client's interceptor while the editor is open. No token ever leaves the frame; no
@@ -51,6 +53,7 @@ export function createFixtureInterceptor(getPreviewAs: () => PreviewAs, notify: 
       return respond(400, PREVIEW_ONLY_MESSAGE);
     };
 
+    if (method === 'GET' && (path === FIXTURE_PRODUCT_PATH || path === `storefront/${FIXTURE_PRODUCT_PATH}`)) return respond(200, FIXTURE_PRODUCT);
     if (method === 'GET' && (path === 'storefront/catalog' || path.startsWith('storefront/catalog/'))) {
       const publicPath = path.slice('storefront/'.length);
       // Only a rewrite that lands on a live read (the same check a ky retry of it will meet).

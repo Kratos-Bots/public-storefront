@@ -9,6 +9,7 @@ import { useServerCart } from '@/features/cart/useServerCart.ts';
 import { ChevronIcon } from '@/components/icons.tsx';
 import { Slot } from '@/templates/runtime.tsx';
 import classes from '@/features/cart/MobileCartBar.module.css';
+import { useText } from '@/text/runtime.tsx';
 
 /** Mantine's `md` breakpoint — above it the cart is a drawer and needs no band. */
 const DESKTOP = '(min-width: 62em)';
@@ -44,6 +45,7 @@ export function useMobileCartBar(): boolean {
  * jobs, two targets, both a thumb's width.
  */
 export function MobileCartBar() {
+  const { t, tp } = useText();
   const { currency, features } = useSettings();
   const loggedIn = useSessionStore(selectIsLoggedIn);
   const count = useCartStore(selectCount);
@@ -54,7 +56,7 @@ export function MobileCartBar() {
   if (!showing) return null;
 
   const blocked = issues.some((i) => i.inactive || i.belowMin || i.aboveMax);
-  const items = `${count} ${count === 1 ? 'item' : 'items'}`;
+  const items = tp('cart.summary.items', count);
 
   return (
     <div className={classes.bar} data-sf-part="cart-bar">
@@ -62,7 +64,7 @@ export function MobileCartBar() {
         <Link
           to="/cart"
           className={classes.view}
-          aria-label={`View cart — ${items}, ${formatMoney(subtotal, currency)}`}
+          aria-label={t('cart.bar.viewCartLabel', { items, subtotal: formatMoney(subtotal, currency) })}
         >
           <span className={classes.subtotal}>{formatMoney(subtotal, currency)}</span>
           <span className={classes.tally} aria-hidden>
@@ -80,7 +82,7 @@ export function MobileCartBar() {
             data-variant="filled"
             data-sf-cta="main"
           >
-            Checkout
+            {t('cart.summary.checkout')}
             <Slot name="ButtonAdornment" variant="primary" cta />
           </button>
         ) : (
@@ -91,7 +93,7 @@ export function MobileCartBar() {
             data-variant="filled"
             data-sf-cta="main"
           >
-            Checkout
+            {t('cart.summary.checkout')}
             <Slot name="ButtonAdornment" variant="primary" cta />
           </Link>
         )}

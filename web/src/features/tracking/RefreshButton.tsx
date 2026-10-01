@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { RotateIcon } from '@/components/icons.tsx';
 import { formatRelative, refreshReadyAt } from '@/features/tracking/status.ts';
+import { useText } from '@/text/runtime.tsx';
+import type { StyleAttrs } from '@/builder/define.ts';
 import classes from '@/features/tracking/Tracking.module.css';
 
 export interface RefreshButtonProps {
@@ -8,6 +10,7 @@ export interface RefreshButtonProps {
   checkedAt: string | null;
   busy: boolean;
   onRefresh: () => void;
+  rootAttrs?: StyleAttrs;
 }
 
 /**
@@ -19,7 +22,8 @@ export interface RefreshButtonProps {
  * otherwise be a bare "7:42", and a disabled control would dim the one number
  * the visitor is trying to read.
  */
-export function RefreshButton({ checkedAt, busy, onRefresh }: RefreshButtonProps) {
+export function RefreshButton({ checkedAt, busy, onRefresh, rootAttrs }: RefreshButtonProps) {
+  const { t } = useText();
   const [now, setNow] = useState(() => Date.now());
   const readyAt = refreshReadyAt(checkedAt, now);
   const waiting = readyAt !== null;
@@ -36,9 +40,9 @@ export function RefreshButton({ checkedAt, busy, onRefresh }: RefreshButtonProps
   const counting = waiting && !busy;
 
   return (
-    <div className={classes.refresh}>
+    <div className={classes.refresh} {...rootAttrs}>
       <p className={classes.refreshNote}>
-        {checkedAt ? `Checked ${formatRelative(checkedAt, now)}` : 'Not checked yet'}
+        {checkedAt ? t('tracking.refresh.checked', { when: formatRelative(checkedAt, now) }) : t('tracking.refresh.notChecked')}
       </p>
       <button
         className={classes.ghost}
@@ -46,10 +50,10 @@ export function RefreshButton({ checkedAt, busy, onRefresh }: RefreshButtonProps
         onClick={onRefresh}
         disabled={waiting || busy}
         data-counting={counting ? 'true' : undefined}
-        aria-label={counting ? `Refresh available in ${countdown}` : undefined}
+        aria-label={counting ? t('tracking.refresh.availableIn', { countdown }) : undefined}
       >
         <RotateIcon size={12} />
-        {busy ? 'Checking…' : waiting ? countdown : 'Refresh'}
+        {busy ? t('common.status.checking') : waiting ? countdown : t('tracking.refresh.label')}
       </button>
     </div>
   );

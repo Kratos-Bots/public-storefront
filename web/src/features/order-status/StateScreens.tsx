@@ -1,11 +1,13 @@
 import { EmptyState } from '@/components/EmptyState.tsx';
 import { ContactLinks } from '@/components/ContactLinks.tsx';
+import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/order-status/OrderStatus.module.css';
 
 /** The hero's silhouette, blocked out while the order loads. */
 export function LoadingScreen() {
+  const { t } = useText();
   return (
-    <div className={classes.skeleton} role="status" aria-label="Loading your order">
+    <div className={classes.skeleton} role="status" aria-label={t('order.screens.loading')}>
       <span className={classes.block} style={{ width: 96, height: 12 }} />
       <span className={classes.block} style={{ width: 216, height: 30 }} />
       <span className={classes.block} style={{ width: 264, height: 14 }} />
@@ -20,13 +22,14 @@ export function LoadingScreen() {
  * arrived in.
  */
 export function InvalidLinkScreen() {
+  const { t } = useText();
   return (
     <div className={classes.screen}>
       <span className={classes.screenRule} aria-hidden />
       <EmptyState
-        eyebrow="Order link"
-        title="This link isn't valid"
-        description="The link looks incomplete or has expired. Reply to the message that sent it and we'll share a fresh one."
+        eyebrow={t('order.link.eyebrow')}
+        title={t('order.screens.invalidTitle')}
+        description={t('order.screens.invalidDescription')}
       />
       <ContactLinks />
     </div>
@@ -35,16 +38,17 @@ export function InvalidLinkScreen() {
 
 /** We couldn't reach the shop. The order is fine; the connection wasn't. */
 export function NetworkErrorScreen({ onRetry }: { onRetry: () => void }) {
+  const { t } = useText();
   return (
     <div className={classes.screen}>
       <span className={classes.screenRule} aria-hidden />
       <EmptyState
-        eyebrow="Connection"
-        title="We couldn't load your order"
-        description="Your order is safe — this was a hiccup between your browser and us."
+        eyebrow={t('order.screens.networkEyebrow')}
+        title={t('order.screens.networkTitle')}
+        description={t('order.screens.networkDescription')}
         action={
           <button type="button" className={classes.ghost} onClick={onRetry}>
-            Try again
+            {t('common.actions.tryAgain')}
           </button>
         }
       />

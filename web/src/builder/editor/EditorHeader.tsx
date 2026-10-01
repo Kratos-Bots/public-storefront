@@ -1,21 +1,35 @@
-import { useEffect, useId, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
-import { useEditorStore } from '@/builder/editor/store.ts';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
+import { setPuckHistorySource, useEditorStore } from '@/builder/editor/store.ts';
 import { usePuck, useGetPuck } from '@/builder/editor/use-puck.ts';
 import { useHints, useIssues, useLockedPresent } from '@/builder/editor/use-issues.ts';
 import { blockMenu } from '@/builder/editor/config.ts';
-import { insertTarget, type InsertApi } from '@/builder/editor/insert-target.ts';
-import { docLabel } from '@/builder/editor/page-catalog.ts';
+import { insertTarget, type InsertApi, type InsertTarget } from '@/builder/editor/insert-target.ts';
+import { ROOT_ZONE } from '@/builder/editor/config.ts';
+import { usePreviewProduct } from '@/builder/editor/preview-product.ts';
+import { FIXTURE_PRODUCT } from '@/builder/editor/fixtures.ts';
+import { useCatalog } from '@/features/catalog/use-catalog.ts';
+import { docLabel, LAYOUT_LABELS } from '@/builder/editor/page-catalog.ts';
+import { containerOfDoc, PREVIEW_STATE_LABELS } from '@/builder/editor/preview-states.ts';
 import { isCustomKey } from '@/builder/editor/page-set.ts';
 import { focusPagePickerSoon, PagePicker } from '@/builder/editor/PagePicker.tsx';
 import { FloatingPanel } from '@/builder/editor/floating.tsx';
 import { VIEWPORT_OPTIONS } from '@/builder/editor/viewports.ts';
 import { cssString } from '@/builder/editor/resting-marks.ts';
 import { rememberPanel, shouldAutoCloseBlocks, WIDE_FRAME_QUERY } from '@/builder/editor/panels.ts';
-import { CheckIcon, PanelLeftIcon, PanelRightIcon, PlusIcon, RedoIcon, TipIcon, UndoIcon, WarnIcon } from '@/builder/editor/icons.tsx';
+import { CheckIcon, PanelLeftIcon, PanelRightIcon, PlusIcon, RedoIcon, TextIcon, TipIcon, UndoIcon, WarnIcon } from '@/builder/editor/icons.tsx';
+import { useTextIssues } from '@/builder/editor/text/hooks.ts';
+import { useTextUi } from '@/builder/editor/text/ui-store.ts';
+import { TextOverlay } from '@/builder/editor/text/TextOverlay.tsx';
+import { useWideFrame } from '@/builder/editor/text/plugin.tsx';
+import { puckHistoryView, redoStep, setAnchorSource, undoStep } from '@/builder/editor/text/history.ts';
+import { rowFor } from '@/builder/editor/text/catalog.ts';
+import { LAYER_ISSUE_LABELS } from '@/builder/editor/text/issues.ts';
 import { blockDef } from '@/builder/rules.ts';
 import { registerLiveCanvas } from '@/builder/editor/late-upload.ts';
 import type { PreviewAs } from '@/builder/mode.ts';
-import type { DocKey, Issue } from '@/builder/types.ts';
+import { isCardKey, type DocKey, type Issue } from '@/builder/types.ts';
+import { IssueQuickFix } from '@/builder/editor/IssueQuickFix.tsx';
+import { PuckHandleBridge } from '@/builder/editor/LegalityGuard.tsx';
 import styles from '@/builder/editor/Editor.module.css';
 
 const domId = (reactId: string) => reactId.replace(/[^A-Za-z0-9_-]/g, '');
@@ -89,6 +103,22 @@ function NewPage() {
 // ── add block ────────────────────────────────────────────────────────────────
 
 /**
+ * The Add block menu's placement hint for `target` (insert-target.ts's choice). A block goes after
+ * the selection or at the end of the page; a part (`part` given) lands in its family container —
+ * named by `container` — or, with no container on the page, at the root where it must be moved.
+ */
+export function addBlockHint(
+  target: InsertTarget,
+  selected: { index: number; zone?: string } | null,
+  part?: { container: string | null },
+): string {
+  if (!part) return selected ? 'Adds after the selected block.' : 'Adds at the end of the page.';
+  if (!target.nested || !part.container) return 'Parts belong inside their container. Add one first, or move the part into it.';
+  const afterSelected = selected !== null && (selected.zone ?? ROOT_ZONE) === target.zone && selected.index + 1 === target.index;
+  return afterSelected ? 'Parts go after the selected block.' : `Parts go at the end of the ${part.container} block.`;
+}
+
+/**
  * A button and a menu — not a native <select>: on Windows and in Firefox the arrow keys fire
  * `change` on a closed select, which would insert a block per keypress. Arrow keys move, Enter
  * inserts, Escape closes; focus returns to the button.
@@ -101,14 +131,24 @@ function AddBlock() {
   const getPuck = useGetPuck();
   const groups = useMemo(() => blockMenu(docKey, layout, present), [docKey, layout, present]);
   const [open, setOpen] = useState(false);
-  const [afterSelected, setAfterSelected] = useState(false);
+  const [hints, setHints] = useState<{ block: string; part: string | null }>({ block: '', part: null });
   const button = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);
   const id = domId(useId());
 
   const items = () => [...(menu.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])];
   const show = () => {
-    setAfterSelected(getPuck().appState.ui.itemSelector !== null);
+    const api = getPuck() as unknown as InsertApi;
+    const selected = api.appState.ui.itemSelector;
+    const firstPart = groups.find((g) => g.category === 'part')?.blocks[0]?.name;
+    let part: string | null = null;
+    if (firstPart) {
+      // Every part of a family lands in the same place; one stands for the group.
+      const target = insertTarget(api, firstPart);
+      const owner = target.nested ? api.getItemById(target.zone.slice(0, target.zone.lastIndexOf(':'))) : undefined;
+      part = addBlockHint(target, selected, { container: owner ? blockDef(owner.type)?.label ?? null : null });
+    }
+    setHints({ block: addBlockHint({ zone: ROOT_ZONE, index: -1, nested: false }, selected), part });
     setOpen(true);
   };
   const hide = (refocus: boolean) => {
@@ -126,6 +166,9 @@ function AddBlock() {
     const target = insertTarget(api as unknown as InsertApi, componentType);
     dispatch({ type: 'insert', componentType, destinationIndex: target.index, destinationZone: target.zone });
     dispatch({ type: 'setUi', ui: { itemSelector: { index: target.index, zone: target.zone } }, recordHistory: false });
+    // A bare `insert` action skips resolveData (the drawer's drop runs it): a container needs it
+    // to arrive with its default arrangement rather than empty slots (spec §11).
+    if (blockDef(componentType)?.container) getPuck().resolveDataBySelector({ index: target.index, zone: target.zone }, 'insert');
     hide(true);
   };
 
@@ -166,14 +209,20 @@ function AddBlock() {
       >
         {/* Only menu items may live inside role="menu": the hints sit beside it and describe it. */}
         <p id={`${id}-hint`} className={styles.menuHint}>
-          {groups.length === 0
-            ? 'Nothing more can go on this page.'
-            : afterSelected ? 'Adds after the selected block.' : 'Adds at the end of the page.'}
+          {groups.length === 0 ? 'Nothing more can go on this page.' : hints.block}
         </p>
+        {/* Parts don't follow the page: they land in their container (insert-target.ts). */}
+        {hints.part && <p id={`${id}-part-hint`} className={styles.menuHint}>{hints.part}</p>}
         <div ref={menu} id={`${id}-menu`} role="menu" aria-label="Blocks to add" aria-describedby={`${id}-hint`} onKeyDown={onMenuKey}>
           {groups.map((g) => (
-            <div key={g.category} role="group" aria-labelledby={`${id}-${g.category}`} className={styles.menuGroup}>
-              <div id={`${id}-${g.category}`} className={styles.menuGroupTitle}>{g.title}</div>
+            <div
+              key={g.key}
+              role="group"
+              aria-labelledby={`${id}-${g.key}`}
+              aria-describedby={g.category === 'part' && hints.part ? `${id}-part-hint` : undefined}
+              className={styles.menuGroup}
+            >
+              <div id={`${id}-${g.key}`} className={styles.menuGroupTitle}>{g.title}</div>
               {g.blocks.map((b) => (
                 <button key={b.name} type="button" role="menuitem" tabIndex={-1} className={styles.menuItem} data-block={b.name} onClick={() => insert(b.name)}>
                   {b.label}
@@ -189,21 +238,138 @@ function AddBlock() {
 
 // ── history / panels ─────────────────────────────────────────────────────────
 
-function History() {
-  const back = usePuck((s) => s.history.back);
-  const forward = usePuck((s) => s.history.forward);
+/**
+ * One timeline for block and text edits (spec §7.4): Puck owns block history, the store owns text
+ * snapshots anchored to Puck's entries (text/history.ts decides which to step).
+ *
+ * Every read of Puck's history goes through `getPuck()` at call time — Puck updates that store
+ * synchronously from its app store, so it is live — never a value captured at render, which is
+ * stale inside Puck's onChange and the microtask after it.
+ */
+function useUnifiedHistory() {
+  const getPuck = useGetPuck();
   const hasPast = usePuck((s) => s.history.hasPast);
   const hasFuture = usePuck((s) => s.history.hasFuture);
+  const textPast = useEditorStore((s) => s.textPast.length > 0);
+  const textFuture = useEditorStore((s) => s.textFuture.length > 0);
+  const view = () => puckHistoryView(getPuck().history);
+  const undo = () => {
+    const s = useEditorStore.getState();
+    const step = undoStep(s.textPast.at(-1), view());
+    if (step === 'text') s.undoText();
+    else if (step === 'doc') getPuck().history.back();
+  };
+  const redo = () => {
+    const s = useEditorStore.getState();
+    const step = redoStep(s.textFuture.at(-1), view());
+    if (step === 'text') s.redoText();
+    else if (step === 'doc') getPuck().history.forward();
+    else if (step === 'discard') s.discardTextFuture();
+  };
+  return { undo, redo, view, canUndo: hasPast || textPast, canRedo: hasFuture || textFuture };
+}
+
+function History() {
+  const getPuck = useGetPuck();
+  const { undo, redo, view, canUndo, canRedo } = useUnifiedHistory();
+  // Text edits are stamped with the Puck entry current when they were made, and the store reads
+  // Puck's history to tell a canvas undo/redo from a new block edit. Both read Puck live.
+  useEffect(() => {
+    setAnchorSource(() => puckHistoryView(getPuck().history).anchor);
+    setPuckHistorySource(() => puckHistoryView(getPuck().history));
+    return () => { setAnchorSource(null); setPuckHistorySource(null); };
+  }, [getPuck]);
+  // Puck's own hotkeys listen on document and would undo a block while the owner types in a text
+  // field. Take the keys first when the next step is a text step. Inside the text UI nothing else
+  // is taken: with no text step (a block step, or nothing), the field keeps its own native undo.
+  const onKey = (e: globalThis.KeyboardEvent) => {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+    const key = e.key.toLowerCase();
+    const z = key === 'z' || e.code === 'KeyZ';
+    const isUndo = z && !e.shiftKey;
+    const isRedo = (z && e.shiftKey) || key === 'y' || e.code === 'KeyY';
+    if (!isUndo && !isRedo) return;
+    const s = useEditorStore.getState();
+    if (s.viewport !== null) return; // the exact preview's guard owns these keys (preview-keys.ts)
+    const target = e.target as Element | null;
+    const inText = typeof target?.closest === 'function' && target.closest('[data-sfb-text]') !== null;
+    const step = isUndo ? undoStep(s.textPast.at(-1), view()) : redoStep(s.textFuture.at(-1), view());
+    if (step === 'discard') {
+      // A text redo the owner branched away from: drop it, as the Redo button does. In a field the
+      // key then stays the field's own redo; elsewhere it is spent on the drop, like one click.
+      s.discardTextFuture();
+      if (inText) return;
+    } else if (step !== 'text') {
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    if (step === 'text') { if (isUndo) undo(); else redo(); }
+  };
+  // One listener per mount; it calls the latest handler through a ref.
+  const onKeyRef = useRef(onKey);
+  onKeyRef.current = onKey;
+  useEffect(() => {
+    const listener = (e: globalThis.KeyboardEvent) => onKeyRef.current(e);
+    window.addEventListener('keydown', listener, true);
+    return () => window.removeEventListener('keydown', listener, true);
+  }, []);
   return (
     <span className={styles.pair}>
-      <button type="button" className={styles.iconButton} aria-label="Undo" title="Undo" disabled={!hasPast} onClick={() => back()}>
+      <button type="button" className={styles.iconButton} aria-label="Undo" title="Undo" disabled={!canUndo} onClick={undo}>
         <UndoIcon />
       </button>
-      <button type="button" className={styles.iconButton} aria-label="Redo" title="Redo" disabled={!hasFuture} onClick={() => forward()}>
+      <button type="button" className={styles.iconButton} aria-label="Redo" title="Redo" disabled={!canRedo} onClick={redo}>
         <RedoIcon />
       </button>
     </span>
   );
+}
+
+/** Opens the Text panel (every wording on the site); pressed while it shows. */
+function TextButton({ buttonRef }: { buttonRef: RefObject<HTMLButtonElement | null> }) {
+  const open = useTextUi((s) => s.open);
+  return (
+    <button ref={buttonRef} type="button" className={styles.button} aria-pressed={open} onClick={() => (open ? useTextUi.getState().hide() : useTextUi.getState().show())}>
+      <TextIcon />
+      Text
+    </button>
+  );
+}
+
+/**
+ * Wide: the Text panel is Puck's `text` sidebar tab. Narrow: an overlay. Keeps the two in step
+ * (spec §7.2): opening shows the tab, closing returns to Blocks; picking another rail tab or
+ * hiding the left sidebar closes the panel.
+ */
+export function useTextPanelPlacement(): { overlay: boolean } {
+  const wide = useWideFrame();
+  const open = useTextUi((s) => s.open);
+  const dispatch = usePuck((s) => s.dispatch);
+  const current = usePuck((s) => s.appState.ui.plugin?.current ?? null);
+  const leftVisible = usePuck((s) => s.appState.ui.leftSideBarVisible);
+  useEffect(() => {
+    if (!wide) {
+      // Narrowed while the tab showed: its body is empty below the wide width, so give Blocks back.
+      if (current === 'text') dispatch({ type: 'setUi', ui: { plugin: { current: 'blocks' } }, recordHistory: false });
+      return;
+    }
+    if (open && (current !== 'text' || !leftVisible)) {
+      dispatch({ type: 'setUi', ui: { plugin: { current: 'text' }, leftSideBarVisible: true }, recordHistory: false });
+    } else if (!open && current === 'text') {
+      dispatch({ type: 'setUi', ui: { plugin: { current: 'blocks' } }, recordHistory: false });
+    }
+    // Only when the owner asks (open changes) or the width class flips.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, wide]);
+  useEffect(() => {
+    if (!wide) return;
+    const ui = useTextUi.getState();
+    const showing = current === 'text' && leftVisible;
+    if (showing && !ui.open) ui.show();
+    if (!showing && ui.open) ui.hide();
+  }, [current, leftVisible, wide]);
+  return { overlay: open && !wide };
 }
 
 /**
@@ -273,6 +439,28 @@ export function ViewportToggle() {
   );
 }
 
+/**
+ * "Preview state" (stage 4 §11.3): which state the open page's stateful container is drawn in. Shown
+ * only on a page that has one; the choice resets when another page opens.
+ */
+export function PreviewStateControl() {
+  const docKey = useEditorStore((s) => s.docKey);
+  const layout = useEditorStore((s) => s.layout);
+  const picked = useEditorStore((s) => s.previewStates);
+  const container = containerOfDoc(docKey, layout);
+  if (!container) return null;
+  const options = PREVIEW_STATE_LABELS[container];
+  const value = Object.hasOwn(picked, container) && options.some((o) => o.id === picked[container]) ? picked[container]! : options[0]!.id;
+  return (
+    <label className={styles.previewAs}>
+      <span className={styles.caption}>Preview state</span>
+      <select aria-label="Preview state" value={value} onChange={(e) => useEditorStore.getState().setPreviewState(container, e.target.value)}>
+        {options.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+      </select>
+    </label>
+  );
+}
+
 export function PreviewAsControls() {
   const previewAs = useEditorStore((s) => s.previewAs);
   const set = (patch: Partial<PreviewAs>) => useEditorStore.getState().setPreviewAs(patch);
@@ -289,6 +477,40 @@ export function PreviewAsControls() {
         <option value="items">Cart with items</option>
       </select>
     </div>
+  );
+}
+
+/**
+ * "Preview with" (spec §11): the product the product page, the sheet and the card designer show.
+ * Shown on the `product` and card docs only; the options are the live catalogue, or the built-in
+ * sample while it is empty. Mounted only there, so no other page reads the catalogue for it.
+ */
+export function PreviewProductPicker() {
+  const docKey = useEditorStore((s) => s.docKey);
+  if (docKey !== 'product' && !isCardKey(docKey)) return null;
+  return <PreviewProductSelect />;
+}
+
+function PreviewProductSelect() {
+  const { data } = useCatalog();
+  const current = usePreviewProduct();
+  const products = data?.products ?? [];
+  return (
+    <label className={styles.previewAs}>
+      <span className={styles.caption}>Preview with</span>
+      <select
+        aria-label="Preview with"
+        style={{ maxInlineSize: '16rem' }}
+        value={String(current.id)}
+        onChange={(e) => useEditorStore.getState().setPreviewProduct(Number(e.target.value))}
+      >
+        {products.length === 0 ? (
+          <option value={String(FIXTURE_PRODUCT.id)}>{`${FIXTURE_PRODUCT.displayName} (sample)`}</option>
+        ) : (
+          products.map((p) => <option key={p.id} value={String(p.id)}>{p.displayName}</option>)
+        )}
+      </select>
+    </label>
   );
 }
 
@@ -335,7 +557,9 @@ function ResetPage() {
 /** A block to select once the canvas for another doc has mounted (jumping across pages). */
 let pendingJump: { docKey: DocKey; blockId?: string } | null = null;
 
-const BLOCK_RULE_RE = /^(?:field|placement|layout|at-most-one|exactly-one):([A-Za-z0-9]+)/;
+/** Rules whose id names a block first: `part-required:ProductDetail.ProductTitle` → the container. */
+export const BLOCK_RULE_RE =
+  /^(?:field|placement|layout|at-most-one|exactly-one|part-required|part-unique|part-requires|part-home|part-order|part-placement|slot-accepts|slot-rejects|hidden-required):([A-Za-z0-9]+)/;
 
 /** What part of the page an issue is about: a block's name, the page settings, or nothing more. */
 function issuePart(issue: Issue): string | null {
@@ -366,13 +590,20 @@ function useJump() {
 
 function IssuesMenu() {
   const issues = useIssues();
+  const textIssues = useTextIssues();
   const hints = useHints();
+  const layout = useEditorStore((s) => s.layout);
   const docs = useEditorStore((s) => s.docs);
   const docKey = useEditorStore((s) => s.docKey);
   const jump = useJump();
   const trigger = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const id = domId(useId());
+  // A quick fix removes its own row: the result is announced here, and focus lands on the panel heading.
+  const [fixStatus, setFixStatus] = useState('');
+  const issuesHeading = useRef<HTMLHeadingElement>(null);
+  const fixed = (text: string) => { setFixStatus(text); requestAnimationFrame(() => issuesHeading.current?.focus()); };
+  useEffect(() => { if (!open) setFixStatus(''); }, [open]);
 
   // Arriving from an issue on another page: select its block once this canvas is up.
   useEffect(() => {
@@ -396,7 +627,7 @@ function IssuesMenu() {
     jump(target.blockId);
   };
 
-  const count = issues.length;
+  const count = issues.length + textIssues.length;
   const summary = count === 0 ? 'No issues' : `${count} issue${count === 1 ? '' : 's'}, publishing is blocked`;
   return (
     <>
@@ -428,12 +659,12 @@ function IssuesMenu() {
         aria-labelledby={`${id}-issues`}
       >
         <section>
-          <h2 id={`${id}-issues`} className={styles.panelTitle}>
+          <p className={styles.srOnly} role="status">{fixStatus}</p>
+          <h2 id={`${id}-issues`} ref={issuesHeading} tabIndex={-1} className={styles.panelTitle}>
             {count === 0 ? 'Nothing blocks publishing' : 'Fix these to publish'}
           </h2>
-          {count === 0 ? (
-            <p className={styles.panelEmpty}>Every page in this layout passes its checks.</p>
-          ) : (
+          {count === 0 && <p className={styles.panelEmpty}>Every page in this layout passes its checks.</p>}
+          {issues.length > 0 && (
             <ul className={styles.panelList}>
               {issues.map((issue, i) => {
                 const part = issuePart(issue);
@@ -443,18 +674,45 @@ function IssuesMenu() {
                       <WarnIcon />
                       <span className={styles.panelItemBody}>
                         <span className={styles.panelWhere}>
-                          <span>{docLabel(issue.docKey, docs)}</span>
+                          <span>{docLabel(issue.docKey, docs, layout)}</span>
                           {part && <span className={styles.panelPart}>{part}</span>}
                         </span>
                         <span>{issue.message}</span>
                       </span>
                     </button>
+                    <IssueQuickFix issue={issue} onFixed={fixed} />
                   </li>
                 );
               })}
             </ul>
           )}
         </section>
+        {textIssues.length > 0 && (
+          <section aria-labelledby={`${id}-text`} className={styles.panelTips}>
+            <h2 id={`${id}-text`} className={styles.panelTitle}>Text</h2>
+            <ul className={styles.panelList}>
+              {textIssues.map((issue) => (
+                <li key={`${issue.scope}-${issue.key}-${issue.rule}`}>
+                  <button
+                    type="button"
+                    className={styles.panelItem}
+                    data-kind="issue"
+                    onClick={() => { setOpen(false); useTextUi.getState().show({ key: issue.key, filter: 'issues' }); }}
+                  >
+                    <WarnIcon />
+                    <span className={styles.panelItemBody}>
+                      <span className={styles.panelWhere}>
+                        <span>{rowFor(issue.key)?.label ?? LAYER_ISSUE_LABELS[issue.key] ?? issue.key}</span>
+                        <span className={styles.panelPart}>{issue.scope === 'shared' ? 'All layouts' : `Only ${LAYOUT_LABELS[layout]}`}</span>
+                      </span>
+                      <span>{issue.message}</span>
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
         {hints.length > 0 && (
           <section aria-labelledby={`${id}-tipsTitle`} className={styles.panelTips}>
             <h2 id={`${id}-tipsTitle`} className={styles.panelTitle}>Tips for this page</h2>
@@ -510,7 +768,11 @@ function useLiveCanvas() {
 export function EditorHeader(_props: { actions: ReactNode; children: ReactNode }) {
   const docKey = useEditorStore((s) => s.docKey);
   useLiveCanvas();
+  const { overlay } = useTextPanelPlacement();
+  const textButton = useRef<HTMLButtonElement>(null);
+  const closeOverlay = useCallback(() => { useTextUi.getState().hide(); textButton.current?.focus(); }, []);
   return (
+    <>
     <header className={styles.bar} data-sf-builder-header="">
       <div className={styles.group}>
         <PagePicker />
@@ -518,17 +780,23 @@ export function EditorHeader(_props: { actions: ReactNode; children: ReactNode }
       </div>
       <div className={styles.group}>
         <AddBlock />
+        <TextButton buttonRef={textButton} />
         <History />
         <PanelToggles />
       </div>
       <div className={styles.group}>
         <ViewportToggle />
         <PreviewAsControls />
+        <PreviewStateControl />
+        <PreviewProductPicker />
       </div>
       <div className={`${styles.group} ${styles.groupEnd}`}>
         <ResetPage key={docKey} />
         <IssuesMenu />
       </div>
     </header>
+    {overlay && <TextOverlay onClose={closeOverlay} />}
+    <PuckHandleBridge />
+    </>
   );
 }

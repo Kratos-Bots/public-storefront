@@ -7,15 +7,15 @@ import type { ReactNode } from 'react';
 import type { PageSet, PuckDoc } from '@/builder/types.ts';
 
 const fetched = vi.hoisted(() => ({ fn: vi.fn() }));
-vi.mock('@/api/pages.ts', () => ({ fetchPageSet: fetched.fn }));
+vi.mock('@/api/pages.ts', () => ({ fetchPageSet: fetched.fn, fetchPublished: async (layout: string) => ({ pageSet: (await fetched.fn(layout)) ?? null, text: null }) }));
 vi.mock('@/app/settings.ts', () => ({ useSettings: () => ({ brand: { name: 'Northbound Supply', title: 'Northbound Supply' } }) }));
 vi.mock('@/app/layout.ts', () => ({ useEffectiveLayout: () => 'storefront' }));
 vi.mock('@/builder/registry.ts', async () => {
   const { defineBlock } = await import('@/builder/define.ts');
   return {
     BLOCKS: {
-      Text: defineBlock<{ id: string; text: string }>({ name: 'Text', label: 'Text', category: 'content', layouts: 'all', routeBound: false, slots: [], schema: z.object({ text: z.string() }), defaultProps: { text: '' }, render: ({ text }) => <p>{text}</p> }),
-      CheckoutFlow: defineBlock<{ id: string }>({ name: 'CheckoutFlow', label: 'Checkout flow', category: 'commerce', layouts: 'all', routeBound: true, slots: [], schema: z.object({}), defaultProps: {}, render: () => <p>checkout flow</p> }),
+      Text: defineBlock<{ id: string; text: string }>({ style: false, name: 'Text', label: 'Text', category: 'content', layouts: 'all', routeBound: false, slots: [], schema: z.object({ text: z.string() }), defaultProps: { text: '' }, render: ({ text }) => <p>{text}</p> }),
+      CheckoutFlow: defineBlock<{ id: string }>({ style: false, name: 'CheckoutFlow', label: 'Checkout flow', category: 'commerce', layouts: 'all', routeBound: true, slots: [], schema: z.object({}), defaultProps: {}, render: () => <p>checkout flow</p> }),
     },
   };
 });

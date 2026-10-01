@@ -1,0 +1,22 @@
+/*
+ * Editor canvas only (block-styling spec §9.1): a block hidden at this width stays visible, ghosted,
+ * so it can still be selected. Exact previews and the shop emit data-sfs-hide instead and hide for real.
+ */
+@media (max-width: 61.99em) {
+  [data-sf-style][data-sfs-ghost='mobile'] { opacity: 0.4; outline: 2px dashed #5b6475; outline-offset: -2px; }
+  [data-sf-style][data-sfs-ghost='mobile']:not([data-sf-part]) { position: relative; }
+  [data-sf-style][data-sfs-ghost='mobile']::after {
+    content: 'Hidden on this width'; position: absolute; inset-block-start: 4px; inset-inline-end: 4px; z-index: 1;
+    padding: 2px 6px; font: 600 11px/1.4 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    color: #1d2433; background: #f3f5f8; border: 1px solid #b8bfcc; border-radius: 4px; pointer-events: none;
+  }
+}
+@media (min-width: 62em) {
+  [data-sf-style][data-sfs-ghost='desktop'] { opacity: 0.4; outline: 2px dashed #5b6475; outline-offset: -2px; }
+  [data-sf-style][data-sfs-ghost='desktop']:not([data-sf-part]) { position: relative; }
+  [data-sf-style][data-sfs-ghost='desktop']::after {
+    content: 'Hidden on this width'; position: absolute; inset-block-start: 4px; inset-inline-end: 4px; z-index: 1;
+    padding: 2px 6px; font: 600 11px/1.4 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    color: #1d2433; background: #f3f5f8; border: 1px solid #b8bfcc; border-radius: 4px; pointer-events: none;
+  }
+}

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ReactNode, Ref } from 'react';
 import { Drawer } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import classes from '@/components/Sheet.module.css';
@@ -18,6 +18,8 @@ export interface SheetProps {
   children: ReactNode;
   /** `drawer` for the cart's own sheet (`CartDrawer`); every other sheet is `sheet`. */
   part?: 'sheet' | 'drawer';
+  /** The drawer's root element, once it is in the document (it exists while the sheet is closed). */
+  rootRef?: Ref<HTMLDivElement>;
 }
 
 /**
@@ -27,13 +29,14 @@ export interface SheetProps {
  * body and action foot are three rows of one flex column, so the action never
  * scrolls away from the thing it acts on.
  */
-export function Sheet({ opened, onClose, label, header, footer, children, part = 'sheet' }: SheetProps) {
+export function Sheet({ opened, onClose, label, header, footer, children, part = 'sheet', rootRef }: SheetProps) {
   // Read synchronously: a deferred match renders the bottom sheet first and snaps
   // it to the side panel a frame later.
   const desktop = useMediaQuery(DESKTOP, false, { getInitialValueInEffect: false });
 
   return (
     <Drawer.Root
+      ref={rootRef}
       opened={opened}
       onClose={onClose}
       position={desktop ? 'right' : 'bottom'}

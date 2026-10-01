@@ -8,13 +8,25 @@ import { stableStringify, toPageSet } from '@/builder/editor/page-set.ts';
 import { prepareDocs } from '@/builder/editor/prepare.ts';
 import { guardHiddenCanvasHotkeys } from '@/builder/editor/preview-keys.ts';
 import { useEditorStore } from '@/builder/editor/store.ts';
+import { useEditorMode } from '@/builder/editor/preview-states.ts';
+import { useEditorText } from '@/builder/editor/text/hooks.ts';
 import { EyeIcon } from '@/builder/editor/icons.tsx';
 import type { ViewportWidth } from '@/builder/editor/protocol.ts';
-import type { DocKey, RouteKey } from '@/builder/types.ts';
+import { DRAWER_PREVIEW_WIDTH, exactPreviewPath, useCartSurface } from '@/builder/editor/cart-surface.ts';
+import { OpenCartDrawer } from '@/builder/editor/CartStage.tsx';
+import { CardDesignProvider } from '@/builder/card-design.tsx';
+import { PageSetContext } from '@/builder/page-set-context.ts';
+import { isCardKey, type DocKey, type LayoutKind, type RouteKey } from '@/builder/types.ts';
 import styles from '@/builder/editor/Editor.module.css';
 
-/** The shell doc has no page of its own: preview it around the catalogue, the shop's front door. */
-const routeKeyFor = (docKey: DocKey): RouteKey => (docKey === 'shell' ? 'catalog' : docKey);
+/**
+ * The route a doc is previewed on. The shell and the card docs have no page of their own: preview
+ * them around the catalogue, the shop's front door. So is the menu / web-app product doc, a sheet
+ * over the catalogue: the fixture location carries `?p=<preview id>`, so the real sheet opens on
+ * the draft (spec §11).
+ */
+export const routeKeyFor = (docKey: DocKey, layout: LayoutKind): RouteKey =>
+  docKey === 'shell' || isCardKey(docKey) || (docKey === 'product' && layout !== 'storefront') ? 'catalog' : docKey;
 
 /**
  * A width preset (Phone / Tablet / Desktop) is an exact preview: the admin has sized the frame to
@@ -32,15 +44,31 @@ const routeKeyFor = (docKey: DocKey): RouteKey => (docKey === 'shell' ? 'catalog
  * canvas carries on with its selection and undo history.
  */
 export function ExactPreview({ width }: { width: ViewportWidth }) {
+  // The cart drawer exists only at desktop width: its exact preview is forced there (cart-surface.ts).
+  const [cartSurface] = useCartSurface();
+  const drawerPreview = exactPreviewPath(useEditorStore((s) => s.docKey), cartSurface, useEditorStore((s) => s.layout), useEditorStore((s) => s.readOnly)) !== null;
+  useEffect(() => { if (drawerPreview && width !== DRAWER_PREVIEW_WIDTH) useEditorStore.getState().setViewport(DRAWER_PREVIEW_WIDTH); }, [drawerPreview, width]);
   const back = useRef<HTMLButtonElement>(null);
   // Keyboard users land on the way back, not at the top of the document.
   useEffect(() => back.current?.focus({ preventScroll: true }), []);
+  // A modal the shop opens in the preview (the menu sheet) must start under the bar, not cover it.
+  const bar = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const el = bar.current;
+    if (!el) return;
+    const root = document.documentElement;
+    const set = () => root.style.setProperty('--sfb-exact-bar-h', `${el.offsetHeight}px`);
+    set();
+    const watch = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(set);
+    watch?.observe(el);
+    return () => { watch?.disconnect(); root.style.removeProperty('--sfb-exact-bar-h'); };
+  }, []);
   // Before paint: no keystroke may reach the hidden canvas while this shows.
   useLayoutEffect(() => guardHiddenCanvasHotkeys(window), []);
 
   return (
     <div className={styles.exact} data-sf-builder-exact={width}>
-      <div className={styles.exactBar} role="region" aria-label="Exact preview">
+      <div ref={bar} className={styles.exactBar} role="region" aria-label="Exact preview">
         <span className={styles.exactLabel}>
           <EyeIcon />
           <span>Previewing at <strong>{width} px</strong></span>
@@ -68,16 +96,22 @@ export function ExactRuntime({ failTitle, failBody }: { failTitle: string; failB
   const docKey = useEditorStore((s) => s.docKey);
   const layout = useEditorStore((s) => s.layout);
   const docs = useEditorStore((s) => s.docs);
-  const previewAs = useEditorStore((s) => s.previewAs);
-  const mode = useMemo(() => ({ editing: false, previewAs }), [previewAs]);
-  const pageSet = useMemo(() => toPageSet(prepareDocs(docs), layout), [docs, layout]);
-  const routeKey = routeKeyFor(docKey);
+  const mode = useEditorMode(false);
+  const pageText = useEditorStore((s) => s.pageText);
+  const text = useEditorText();
+  const pageSet = useMemo(() => toPageSet(prepareDocs(docs), layout, pageText), [docs, layout, pageText]);
+  const routeKey = routeKeyFor(docKey, layout);
+  const [cartSurface] = useCartSurface();
+  const readOnly = useEditorStore((s) => s.readOnly);
+  const drawerPath = exactPreviewPath(docKey, cartSurface, layout, readOnly);
   const page = resolveDoc(pageSet, routeKey, layout);
   const chromeless = page?.doc.root.props.chrome === 'none';
+  // PuckShell mounts these itself; the chrome-less frame gets them here, as PuckShell would (spec §6.2).
+  const setValue = useMemo(() => ({ pageSet, layout }), [pageSet, layout]);
 
   return (
     <BuilderModeProvider value={mode}>
-      <PageSetOverrideProvider pageSet={pageSet}>
+      <PageSetOverrideProvider pageSet={pageSet} text={text}>
         <DocBoundary
           key={stableStringify(pageSet)}
           docKey={routeKey}
@@ -90,8 +124,16 @@ export function ExactRuntime({ failTitle, failBody }: { failTitle: string; failB
         >
           {page ? (
             <Routes>
-              <Route element={chromeless ? <Chromeless /> : <PuckShell />}>
-                <Route index element={<PuckPage key={routeKey} routeKey={routeKey} />} />
+              <Route
+                element={chromeless ? (
+                  <PageSetContext.Provider value={setValue}>
+                    <CardDesignProvider cards={pageSet.cards} layout={layout}>
+                      <Chromeless />
+                    </CardDesignProvider>
+                  </PageSetContext.Provider>
+                ) : <PuckShell />}
+              >
+                <Route index element={drawerPath ? <OpenCartDrawer /> : <PuckPage key={routeKey} routeKey={routeKey} />} />
               </Route>
             </Routes>
           ) : (

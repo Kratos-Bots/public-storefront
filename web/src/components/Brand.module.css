@@ -22,7 +22,7 @@
   font-weight: 700;
   line-height: 1;
   letter-spacing: 0.08em;
-  color: var(--sf-text);
+  color: var(--sf-brand-fg, var(--sf-text));
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

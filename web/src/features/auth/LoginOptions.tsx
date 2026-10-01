@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { useSettings } from '@/app/settings.ts';
 import { loginTelegram } from '@/api/auth.ts';
 import { errorMessage } from '@/lib/errors.ts';
+import { useText } from '@/text/runtime.tsx';
 import { ContactLinks } from '@/components/ContactLinks.tsx';
 import { EmptyState } from '@/components/EmptyState.tsx';
 import { TelegramIcon, WhatsAppIcon } from '@/components/icons.tsx';
@@ -10,6 +11,7 @@ import { TelegramLogin } from '@/features/auth/TelegramLogin.tsx';
 import { WhatsappLogin } from '@/features/auth/WhatsappLogin.tsx';
 import { useLoginSuccess } from '@/features/auth/useLoginSuccess.ts';
 import type { TelegramAuthPayload } from '@/types/auth.ts';
+import type { StyleAttrs } from '@/builder/define.ts';
 import classes from '@/features/auth/LoginOptions.module.css';
 
 /**
@@ -26,8 +28,9 @@ interface PasswordSlot {
  * a prompt raised from the cart is the same instrument as the page it would
  * otherwise have navigated to.
  */
-export function LoginOptions() {
+export function LoginOptions({ rootAttrs }: { rootAttrs?: StyleAttrs } = {}) {
   const settings = useSettings();
+  const { t } = useText();
   const { login, brand } = settings;
   const onLogin = useLoginSuccess();
   const [telegramBusy, setTelegramBusy] = useState(false);
@@ -45,13 +48,13 @@ export function LoginOptions() {
           const result = await loginTelegram(user);
           await onLogin(result);
         } catch (err) {
-          setTelegramError(errorMessage(err, "We couldn't sign you in with Telegram"));
+          setTelegramError(errorMessage(err, t('auth.telegram.widgetFailed')));
         } finally {
           setTelegramBusy(false);
         }
       })();
     },
-    [onLogin],
+    [onLogin, t],
   );
 
   const whatsapp = login.whatsapp.available;
@@ -63,33 +66,34 @@ export function LoginOptions() {
   if (!whatsapp && !telegramBot && !password) {
     return (
       <EmptyState
-        eyebrow="Sign in"
-        title="Sign-in isn’t available right now"
-        description={`Message ${brand.shortName || brand.name} and we'll sort it out with you directly.`}
+        eyebrow={t('common.actions.signIn')}
+        title={t('auth.options.unavailableTitle')}
+        description={t('auth.options.unavailableBody', { name: brand.shortName || brand.name })}
         action={<ContactLinks />}
+        rootAttrs={rootAttrs}
       />
     );
   }
 
   return (
-    <div className={classes.options}>
+    <div className={classes.options} {...rootAttrs}>
       {whatsapp ? (
-        <AuthCard name="WhatsApp" icon={<WhatsAppIcon size={15} />}>
+        <AuthCard name={t('common.contact.whatsapp')} icon={<WhatsAppIcon size={15} />}>
           <WhatsappLogin number={login.whatsapp.number} />
         </AuthCard>
       ) : null}
 
       {telegramBot ? (
-        <AuthCard name="Telegram" icon={<TelegramIcon size={15} />}>
+        <AuthCard name={t('common.contact.telegram')} icon={<TelegramIcon size={15} />}>
           <TelegramLogin botUsername={telegramBot} onAuth={onTelegram} />
-          {telegramBusy ? <AuthNote>Signing you in</AuthNote> : null}
+          {telegramBusy ? <AuthNote>{t('auth.options.signingIn')}</AuthNote> : null}
           {telegramError ? <AuthNote tone="danger">{telegramError}</AuthNote> : null}
         </AuthCard>
       ) : null}
 
       {password ? (
-        <AuthCard name="Email or phone" dim>
-          <p className={classes.soon}>Coming soon.</p>
+        <AuthCard name={t('auth.options.emailOrPhone')} dim>
+          <p className={classes.soon}>{t('auth.options.soon')}</p>
         </AuthCard>
       ) : null}
     </div>

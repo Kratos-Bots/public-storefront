@@ -1,28 +1,9 @@
 import { SelectField } from '@/features/checkout/Field.tsx';
 import { DIAL_CODES } from '@/lib/dial-codes.ts';
+import { compareNames, getFormatProfile, regionName } from '@/lib/format.ts';
+import { useText } from '@/text/runtime.tsx';
 
-/**
- * Built once, at module scope, behind a try/catch: `Intl.DisplayNames` is absent
- * on a few old WebViews and throws on construction there. A throw here would take
- * the whole checkout chunk down at import time, before any error boundary exists
- * — so a missing formatter degrades to bare ISO codes instead.
- */
-const regionDisplay: Intl.DisplayNames | null = (() => {
-  try {
-    return new Intl.DisplayNames(['en'], { type: 'region' });
-  } catch {
-    return null;
-  }
-})();
-
-/** Country name for an ISO-3166-1 alpha-2 code, falling back to the code itself. */
-export function regionName(iso: string): string {
-  try {
-    return regionDisplay?.of(iso) ?? iso;
-  } catch {
-    return iso;
-  }
-}
+export { regionName } from '@/lib/format.ts';
 
 /**
  * Every ISO-3166-1 alpha-2 the app knows, sorted by name. There is no
@@ -34,9 +15,21 @@ export function regionName(iso: string): string {
  * `DIAL_CODES` is the app's canonical ISO list — it is deliberately unscoped
  * for exactly this reason, so it doubles as the country roster here.
  */
-export const COUNTRY_OPTIONS = Object.keys(DIAL_CODES)
-  .map((iso) => ({ iso, name: regionName(iso) }))
-  .sort((a, b) => a.name.localeCompare(b.name));
+const optionsByLocale = new Map<string, Array<{ iso: string; name: string }>>();
+export function countryOptions(): Array<{ iso: string; name: string }> {
+  // Names depend on the regions locale, their order on the collation — key on both (en + formatLocale
+  // 'en' has the legacy regions but a different collation).
+  const { regions, collation } = getFormatProfile();
+  const k = `${(regions ?? []).join(',')}|${collation ?? ''}`;
+  let list = optionsByLocale.get(k);
+  if (!list) {
+    list = Object.keys(DIAL_CODES).map((iso) => ({ iso, name: regionName(iso) })).sort((a, b) => compareNames(a.name, b.name));
+    optionsByLocale.set(k, list);
+  }
+  return list;
+}
+/** v0.7.0 export, still read by dial-codes.test.ts; render paths call countryOptions(). */
+export const COUNTRY_OPTIONS = countryOptions();
 
 export interface CountrySelectProps {
   value: string;
@@ -45,19 +38,20 @@ export interface CountrySelectProps {
   label?: string;
 }
 
-export function CountrySelect({ value, onChange, error, label = 'Country' }: CountrySelectProps) {
+export function CountrySelect({ value, onChange, error, label }: CountrySelectProps) {
+  const { t } = useText();
   return (
     <SelectField
-      label={label}
+      label={label ?? t('checkout.address.country')}
       value={value}
       onChange={onChange}
       error={error}
       autoComplete="country"
     >
       <option value="" disabled>
-        Choose a country
+        {t('checkout.address.chooseCountry')}
       </option>
-      {COUNTRY_OPTIONS.map((c) => (
+      {countryOptions().map((c) => (
         <option key={c.iso} value={c.iso}>
           {c.name}
         </option>

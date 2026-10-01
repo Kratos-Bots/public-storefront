@@ -7,23 +7,28 @@ vi.mock('@/builder/registry.ts', async () => {
     BLOCKS: {
       Heading: defineBlock<{ id: string; text: string; level: 'h2' | 'h3' }>({
         name: 'Heading', label: 'Heading', category: 'content', layouts: 'all', routeBound: false, slots: [],
+        style: { target: 'root', keys: ['bg', 'padTop', 'hide'] },
         schema: z.object({ text: z.string().max(20), level: z.enum(['h2', 'h3']) }),
         defaultProps: { text: 'Heading', level: 'h2' }, render: () => null,
       }),
       Section: defineBlock({
+        style: false,
         name: 'Section', label: 'Section', category: 'content', layouts: 'all', routeBound: false, slots: ['content'],
         schema: z.object({ content: slot() }), defaultProps: { content: [] }, render: () => null,
       }),
       Faq: defineBlock<{ id: string; title: string; items: { q: string }[] }>({
+        style: false,
         name: 'Faq', label: 'FAQ', category: 'content', layouts: 'all', routeBound: false, slots: [],
         schema: z.object({ title: z.string(), items: z.array(z.object({ q: z.string().min(1) })).max(5) }),
         defaultProps: { title: 'Questions', items: [{ q: 'Placeholder question?' }] }, render: () => null,
       }),
       MenuOnly: defineBlock<{ id: string }>({
+        style: false,
         name: 'MenuOnly', label: 'Menu only', category: 'content', layouts: ['menu'], routeBound: false, slots: [],
         schema: z.object({}), defaultProps: {}, render: () => null,
       }),
       CheckoutFlow: defineBlock<{ id: string }>({
+        style: false,
         name: 'CheckoutFlow', label: 'Checkout flow', category: 'commerce', layouts: 'all', routeBound: true, slots: [],
         schema: z.object({}), defaultProps: {}, render: () => null,
       }),
@@ -147,5 +152,27 @@ describe('validateDoc', () => {
   it('memoises per doc object', () => {
     const doc = { root, content: [] };
     expect(validateDoc(doc, 'page:about', 'storefront')).toBe(validateDoc(doc, 'page:about', 'storefront'));
+  });
+});
+
+describe('validateDoc · blockStyle (block-styling spec §10.1)', () => {
+  const doc = (blockStyle: unknown) => ({ root, content: [{ type: 'Heading', props: { id: 'h', text: 'Hi', level: 'h2', blockStyle } }] });
+  it('keeps valid keys, drops the rest with field issues that name the row', () => {
+    const r = validateDoc(doc({ bg: 'surface', padTop: 'huge', align: 'center', glow: 'x' }), 'page:about', 'storefront');
+    expect(r.doc!.content[0]!.props.blockStyle).toEqual({ bg: 'surface' });
+    expect(r.issues.map((i) => i.rule)).toEqual(['field:Heading.blockStyle.padTop', 'field:Heading.blockStyle.align']);
+    expect(r.issues[0]!.message).toBe('Heading: the style setting "Padding top" is not valid here and was left at its default.');
+    expect(r.issues[0]!.blockId).toBe('h');
+  });
+  it('a non-object style is one issue and no blockStyle', () => {
+    const r = validateDoc(doc('surface'), 'page:about', 'storefront');
+    expect(r.doc!.content[0]!.props).not.toHaveProperty('blockStyle');
+    expect(r.issues.map((i) => i.rule)).toEqual(['field:Heading.blockStyle']);
+    expect(r.issues[0]!.message).toBe('Heading: the style settings are not valid and were left at their defaults.');
+  });
+  it('{} is removed silently', () => {
+    const r = validateDoc(doc({}), 'page:about', 'storefront');
+    expect(r.doc!.content[0]!.props).not.toHaveProperty('blockStyle');
+    expect(r.issues).toEqual([]);
   });
 });

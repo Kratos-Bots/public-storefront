@@ -4,15 +4,32 @@ import type { PreviewAs } from '@/builder/mode.ts';
 import type { LocalLine } from '@/stores/cart.ts';
 import type { SessionCustomer } from '@/stores/session.ts';
 import type { ServerCart } from '@/types/cart.ts';
+import type { Product } from '@/types/catalog.ts';
 import type { Quote } from '@/types/checkout.ts';
 import type { OrderDetail, OrderSummary } from '@/types/orders.ts';
 import type { Profile, RedeemOptions } from '@/types/profile.ts';
 import type { PublicOrder } from '@/types/public-order.ts';
+import type { TrackedParcel, TrackingLookup } from '@/types/tracking.ts';
+import type { VerificationResult } from '@/api/verify.ts';
 
 export const FIXTURE_TOKEN = 'sf-builder-fixture-token';
 export const FIXTURE_CUSTOMER: SessionCustomer = { id: 900001, nickname: 'Morgan' };
 export const FIXTURE_ORDER_REF = 'NB0977';
 export const FIXTURE_ACCESS_KEY = 'preview';
+
+/**
+ * "Preview with" when the catalogue is empty (spec §11): the product the product page, the sheet
+ * and the card designer show. No photo, so nothing is fetched for it.
+ */
+export const FIXTURE_PRODUCT: Product = {
+  id: 900201, sku: 'NB-TO-01', name: 'Northbound Trail Oats 1kg', displayName: 'Northbound Trail Oats 1kg', shortDisplayName: null,
+  description: 'Rolled jumbo oats, milled slow and packed the same week. A kilo is about twenty trail breakfasts.',
+  categoryId: null, categoryName: null, sortOrder: 0, price: 12, inStock: true, lowStockAlert: false, isActive: true,
+  isPreorder: false, preorderEta: null, pricingTiers: [{ id: 1, minQuantity: 5, price: 10.5 }], upsellProductIds: [],
+  excludedFromFreeShipping: false, imageProductId: null,
+  provenance: 'Grown and milled by Northbound Supply partners; packed at shop.example.',
+  minOrderQuantity: null, maxOrderQuantity: null,
+};
 
 export const FIXTURE_CART_LINES: LocalLine[] = [
   {
@@ -97,6 +114,59 @@ export const FIXTURE_PUBLIC_ORDER: PublicOrder = {
   payment: { canPay: false, payBy: null, activePayment: null },
 };
 
+// ── Stage 5 previews: the order-status page's states (spec section 11.3) ────────
+
+type OrderStateId = 'shipped' | 'awaiting-payment' | 'hosted-open' | 'crypto-checking' | 'two-parcels' | 'cancelled';
+const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+
+/** The order page's preview states; an unpaid order's pay-by date is `now` + 3 days, so it never reads as past. */
+export function fixtureOrderStates(now: Date): Record<OrderStateId, PublicOrder> {
+  const FIXTURE_PAY_BY = new Date(now.getTime() + THREE_DAYS_MS).toISOString();
+  const FIXTURE_AWAITING: PublicOrder = {
+    ...FIXTURE_PUBLIC_ORDER,
+    status: 'pending',
+    shipments: [],
+    payment: { canPay: true, payBy: FIXTURE_PAY_BY, activePayment: null },
+  };
+  return {
+  shipped: FIXTURE_PUBLIC_ORDER,
+  'awaiting-payment': FIXTURE_AWAITING,
+  'hosted-open': {
+    ...FIXTURE_AWAITING,
+    payment: {
+      canPay: true, payBy: FIXTURE_PAY_BY,
+      activePayment: {
+        paymentId: 900301, method: 'card', kind: 'gateway', status: 'pending',
+        checkoutUrl: `https://shop.example/pay/${FIXTURE_ORDER_REF}`, canChange: true, settlementAmount: null, settlementCurrency: null,
+      },
+    },
+  },
+  'crypto-checking': {
+    ...FIXTURE_AWAITING,
+    cryptoPayments: [{
+      paymentId: 900302, paymentStatus: 'pending', coin: 'usdt', network: 'polygon', coinLabel: 'USDT', networkLabel: 'Polygon',
+      address: '0xNB0977000000000000000000000000000000EXAMPLE', coinAmount: '64.90', fiatAmount: 64.9,
+      verificationStatus: 'checking', needsAttention: false, txidMasked: '1a2b3c…d4e5f6',
+    }],
+    payment: {
+      canPay: true, payBy: FIXTURE_PAY_BY,
+      activePayment: { paymentId: 900302, method: 'crypto', kind: 'crypto', status: 'pending', checkoutUrl: null, canChange: false },
+    },
+  },
+  'two-parcels': {
+    ...FIXTURE_PUBLIC_ORDER,
+    shipments: [
+      ...FIXTURE_PUBLIC_ORDER.shipments,
+      {
+        status: 'delivered', carrier: 'Royal Mail', trackingNumber: 'NB000978GB', trackingUrl: 'https://shop.example/track/NB000978GB',
+        trackingStatusDescription: 'Delivered', shippedAt: '2026-09-03T08:00:00.000Z', deliveredAt: '2026-09-05T12:30:00.000Z',
+      },
+    ],
+  },
+  cancelled: { ...FIXTURE_PUBLIC_ORDER, status: 'cancelled', shipments: [], payment: { canPay: false, payBy: null, activePayment: null } },
+  };
+}
+
 export const FIXTURE_REDEEM: RedeemOptions = {
   loyaltyPoints: 860,
   options: [
@@ -128,3 +198,66 @@ export function fixtureServerCart(p: PreviewAs): ServerCart {
     itemCount: items.reduce((sum, i) => sum + i.quantity, 0),
   };
 }
+
+// ── Stage 4 previews: tracking, verification, payment chat links ───────────────
+
+const parcel = (trackingNumber: string, status: string, shipmentStatus: 'shipped' | 'in_transit' | 'delivered', n: number): TrackedParcel => ({
+  trackingNumber,
+  shipmentStatus,
+  shippedAt: '2026-09-03T08:00:00.000Z',
+  deliveredAt: shipmentStatus === 'delivered' ? '2026-09-05T14:20:00.000Z' : null,
+  fallbackDescription: null,
+  tracking: {
+    outcome: 'ok',
+    status,
+    courierNumber: trackingNumber,
+    destination: { code: 'GB', name: 'United Kingdom' },
+    lastEventAt: '2026-09-04T09:40:00.000Z',
+    deliveredAt: shipmentStatus === 'delivered' ? '2026-09-05T14:20:00.000Z' : null,
+    events: [
+      { occurredAt: '2026-09-04T09:40:00.000Z', place: 'Northbound Sorting Centre', code: 'IT', text: 'Arrived at the sorting centre' },
+      { occurredAt: '2026-09-03T17:05:00.000Z', place: 'Northbound Depot', code: 'PT', text: `Parcel ${n} collected from the sender` },
+    ],
+    lastMile: { name: 'Royal Mail', url: 'https://shop.example/track/last-mile' },
+    lastMileNumber: trackingNumber,
+    checkedAt: '2026-09-04T10:00:00.000Z',
+    errorCode: null,
+  },
+});
+
+const trackingOrder = (parcels: TrackedParcel[]): TrackingLookup => ({
+  reference: FIXTURE_ORDER_REF,
+  status: parcels.length > 0 ? 'shipped' : 'confirmed',
+  createdAt: '2026-09-02T10:15:00.000Z',
+  itemCount: 3,
+  isPreorder: false,
+  parcels,
+  trackingAvailable: true,
+  checkedAt: '2026-09-04T10:00:00.000Z',
+});
+
+/** The order-tracking answers the tracking preview states draw (no lookup, no challenge). */
+export const FIXTURE_TRACKING: { twoParcels: TrackingLookup; oneParcel: TrackingLookup; nothingShipped: TrackingLookup } = {
+  twoParcels: trackingOrder([parcel('NB000977GB', 'IN_TRANSIT', 'in_transit', 1), parcel('NB000978GB', 'PRE_TRANSIT', 'shipped', 2)]),
+  oneParcel: trackingOrder([parcel('NB000977GB', 'IN_TRANSIT', 'in_transit', 1)]),
+  nothingShipped: trackingOrder([]),
+};
+
+/**
+ * The record behind the verification previews. Verified cards derive "expired" from the date
+ * against today, so the dates are built relative to `now`: authentic is in date, expired is not.
+ */
+export function fixtureVerification(now: Date = new Date()): { authentic: VerificationResult; expired: VerificationResult; notVerified: null } {
+  const shift = (days: number) => new Date(now.getTime() + days * 86_400_000).toISOString();
+  return {
+    authentic: { createdAt: shift(-120), expiryDate: shift(600) },
+    expired: { createdAt: shift(-900), expiryDate: shift(-30) },
+    notVerified: null,
+  };
+}
+
+/** Invented chat links for the "Order placed" preview (placeholders on shop.example's brand). */
+export const FIXTURE_CHAT_LINKS = {
+  whatsapp: 'https://wa.me/440000000000?text=Hi%2C%20my%20order%20is%20NB0977',
+  telegram: 'https://t.me/northbound_supply_example?text=Hi%2C%20my%20order%20is%20NB0977',
+} as const;

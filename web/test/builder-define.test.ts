@@ -8,6 +8,7 @@ import type { ComponentData } from '@/builder/types.ts';
 
 type P = { id: string; title: string; size: 'sm' | 'lg'; items: ComponentData[] };
 const def = defineBlock<{ id: string; title: string; size: 'sm' | 'lg' }>({
+  style: false,
   name: 'Probe', label: 'Probe', category: 'content', layouts: 'all', routeBound: false, slots: [],
   schema: z.object({ title: z.string().max(10), size: z.enum(['sm', 'lg']) }),
   defaultProps: { title: 'Hello', size: 'sm' },
@@ -24,6 +25,7 @@ describe('parseBlockProps', () => {
   });
   it('does not share default objects between parses', () => {
     const withSlot = defineBlock<P>({
+      style: false,
       name: 'Box', label: 'Box', category: 'content', layouts: 'all', routeBound: false, slots: ['items'],
       schema: z.object({ title: z.string(), size: z.enum(['sm', 'lg']), items: slot() }),
       defaultProps: { title: 't', size: 'sm', items: [] },
@@ -37,6 +39,7 @@ describe('parseBlockProps', () => {
 
 describe('parseBlockPropsDetailed', () => {
   const rich = defineBlock<{ id: string; title: string; src: string; size: 'sm' | 'lg'; n: number; on: boolean; links: { label: string }[] }>({
+    style: false,
     name: 'Rich', label: 'Rich', category: 'content', layouts: 'all', routeBound: false, slots: [],
     schema: z.object({
       title: z.string().min(1).max(10), src: mediaSrc(), size: z.enum(['sm', 'lg']), n: z.number().int().min(1), on: z.boolean(),

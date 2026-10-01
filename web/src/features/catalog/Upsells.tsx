@@ -1,3 +1,5 @@
+import type { StyleAttrs } from '@/builder/define.ts';
+import { CardDesignBoundary } from '@/builder/card-design.tsx';
 import { useMemo } from 'react';
 import { useSettings } from '@/app/settings.ts';
 import { useCatalog } from '@/features/catalog/use-catalog.ts';
@@ -5,6 +7,7 @@ import { upsellsFor } from '@/features/catalog/filter.ts';
 import { ProductCard } from '@/features/catalog/ProductCard.tsx';
 import { ProductRow } from '@/features/catalog/ProductRow.tsx';
 import { rowAnim } from '@/lib/motion.ts';
+import { useText } from '@/text/runtime.tsx';
 import type { Product } from '@/types/catalog.ts';
 import classes from '@/features/catalog/Upsells.module.css';
 
@@ -18,6 +21,8 @@ export interface UpsellsProps {
    * instead of cards that navigate away. The menu layout's detail sheet does.
    */
   onSelect?: (product: Product) => void;
+  /** A page-builder part's style attributes (stage 2), spread on the root; undefined adds nothing. */
+  rootAttrs?: StyleAttrs;
 }
 
 /**
@@ -25,8 +30,9 @@ export interface UpsellsProps {
  * is off, when nothing is curated, or when the curated ids are no longer in the
  * catalogue — an empty "you may also like" rail is worse than none.
  */
-export function Upsells({ product, onSelect }: UpsellsProps) {
+export function Upsells({ product, onSelect, rootAttrs }: UpsellsProps) {
   const { features } = useSettings();
+  const { t } = useText();
   const catalog = useCatalog();
   const items = useMemo(
     () => upsellsFor(product, catalog.data).slice(0, MAX_UPSELLS),
@@ -36,29 +42,33 @@ export function Upsells({ product, onSelect }: UpsellsProps) {
   if (!features.upsell || items.length === 0) return null;
 
   return (
-    <section className={classes.root} aria-labelledby="upsells-heading">
+    <section className={classes.root} aria-labelledby="upsells-heading" {...rootAttrs}>
       <h2 id="upsells-heading" className={classes.head}>
-        Often bought with this
+        {t('product.upsells.heading')}
       </h2>
       {onSelect ? (
-        <ul className={classes.rows}>
-          {items.map((item, i) => (
-            <li key={item.id} {...rowAnim(i)}>
-              <ProductRow product={item} onSelect={onSelect} />
-            </li>
-          ))}
-        </ul>
+        <CardDesignBoundary kind="row">
+          <ul className={classes.rows}>
+            {items.map((item, i) => (
+              <li key={item.id} {...rowAnim(i)}>
+                <ProductRow product={item} onSelect={onSelect} />
+              </li>
+            ))}
+          </ul>
+        </CardDesignBoundary>
       ) : (
-        <div className={classes.row}>
-          {items.map((item, i) => (
-            <ProductCard
-              key={item.id}
-              product={item}
-              index={i}
-              hasSiblingImages={items.some((p) => p.imageProductId !== null)}
-            />
-          ))}
-        </div>
+        <CardDesignBoundary kind="tile">
+          <div className={classes.row}>
+            {items.map((item, i) => (
+              <ProductCard
+                key={item.id}
+                product={item}
+                index={i}
+                hasSiblingImages={items.some((p) => p.imageProductId !== null)}
+              />
+            ))}
+          </div>
+        </CardDesignBoundary>
       )}
     </section>
   );

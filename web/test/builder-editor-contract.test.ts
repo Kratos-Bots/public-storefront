@@ -9,6 +9,8 @@ import { defaultDoc } from '@/builder/defaults/index.ts';
 import { RenderDoc } from '@/builder/render.tsx';
 import * as runtime from '@/builder/runtime.tsx';
 import * as mode from '@/builder/mode.ts';
+import { STAGE4_PARTS } from './helpers/stage4-parts.ts';
+import { STAGE5_PARTS } from './helpers/stage5-parts.ts';
 import { sanitizeRichtext, RICHTEXT_ALLOWED_TAGS } from '@/builder/sanitize.ts';
 import { FIXED_ROUTE_KEYS } from '@/builder/types.ts';
 
@@ -20,10 +22,19 @@ const pkg = JSON.parse(readFileSync(resolve(__dirname, '../package.json'), 'utf8
 export const SPEC_BLOCKS = [
   'PageOutlet', 'Header', 'NavLinks', 'Footer', 'TopBar', 'NoticeBanners', 'CutoffBar', 'ContactStrip', 'MobileCartBar',
   'CatalogHero', 'CategoryNav', 'SearchField', 'ProductGrid', 'ProductList', 'WholesaleTable', 'FeaturedProducts', 'Upsells',
-  'ProductDetail',
+  'ProductDetail', 'CardTile', 'CardRow',
   'CartContents', 'CartSummary', 'CheckoutFlow', 'LoginOptions', 'AccountNav', 'OrdersList', 'OrderDetail', 'Loyalty', 'Referrals', 'Profile',
   'OrderStatus', 'PaymentSuccess', 'PaymentCancel', 'OrderPlaced', 'VerifyForm', 'TrackingLookup',
   'Heading', 'RichText', 'Image', 'Button', 'Columns', 'Section', 'Spacer', 'Divider', 'FAQ', 'Testimonial', 'Video',
+] as const;
+
+/** Product-parts spec §9: the stage-3 parts. The editor's Parts panel is keyed by these names. */
+export const PART_BLOCKS = [
+  'ProductBreadcrumbs', 'ProductGallery', 'ProductTitle', 'ProductPrice', 'ProductStock', 'ProductAddToCart', 'ProductDescription',
+  'ProductBulkPricing', 'ProductProvenance', 'ProductAsk', 'ProductUpsells', 'ProductGroup',
+  'CatalogIntro', 'CatalogSearch', 'CatalogCategories', 'CatalogTitle', 'CatalogResults', 'CatalogEmpty',
+  'CardTileImage', 'CardTileGroup', 'CardTileName', 'CardTileFlags', 'CardTilePrice', 'CardTileAdd',
+  'CardRowGroup', 'CardRowName', 'CardRowMeta', 'CardRowPrice', 'CardRowAdd',
 ] as const;
 
 describe('Plan 2 contract the editor builds on (spec §13 A7)', () => {
@@ -45,8 +56,13 @@ describe('Plan 2 contract the editor builds on (spec §13 A7)', () => {
   });
 
   it('registers exactly the §7 blocks, each under its own name', () => {
-    expect(Object.keys(BLOCKS).sort()).toEqual([...SPEC_BLOCKS].sort());
+    expect(Object.keys(BLOCKS).filter((n) => !BLOCKS[n]!.part).sort()).toEqual([...SPEC_BLOCKS].sort());
     for (const [key, def] of Object.entries(BLOCKS)) expect(def.name).toBe(key);
+  });
+
+  it('registers exactly the stage 3 list, stage-4 and stage-5 parts', () => {
+    const expected = new Set([...PART_BLOCKS, ...Object.keys(STAGE4_PARTS), ...Object.keys(STAGE5_PARTS)]);
+    expect(Object.values(BLOCKS).filter((x) => x.part).map((d) => d.name).sort()).toEqual([...expected].sort());
   });
 
   it('has a default doc for the shell and every fixed route of the storefront layout', () => {

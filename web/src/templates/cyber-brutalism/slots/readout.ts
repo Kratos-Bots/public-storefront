@@ -1,3 +1,5 @@
+import { textSnapshot, type TextApi } from '@/templates/contract.ts';
+
 export const DEFAULT_NODE = 'NODE_01';
 export const NODE_MAX = 24;
 
@@ -11,10 +13,11 @@ export function nodeName(value: boolean | string | undefined): string {
 export interface ReadoutInput { productCount: number | null; cutoff: string | null; accepting: boolean }
 
 /** Terminal readout lines — real store data only, no invented metrics. */
-export function readoutLines({ productCount, cutoff, accepting }: ReadoutInput): string[] {
+export function readoutLines({ productCount, cutoff, accepting }: ReadoutInput, api: Pick<TextApi, 't'> = textSnapshot()): string[] {
+  const { t } = api;
   const lines: string[] = [];
-  if (cutoff) lines.push(`DISPATCH CUTOFF ${cutoff}`);
-  lines.push(`ITEMS ${productCount ?? '---'}`);
-  lines.push(`ORDERING ${accepting ? 'ONLINE' : 'PAUSED'}`);
+  if (cutoff) lines.push(t('templates.cyber-brutalism.readout.cutoff', { cutoff }));
+  lines.push(t('templates.cyber-brutalism.readout.items', { count: productCount ?? '---' }));
+  lines.push(accepting ? t('templates.cyber-brutalism.readout.online') : t('templates.cyber-brutalism.readout.paused'));
   return lines;
 }

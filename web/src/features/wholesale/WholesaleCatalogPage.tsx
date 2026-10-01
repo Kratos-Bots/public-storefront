@@ -18,6 +18,7 @@ import { useShellSearch } from '@/layouts/shell-context.ts';
 import { Slot } from '@/templates/runtime.tsx';
 import { useCoreOptions } from '@/templates/hooks.ts';
 import classes from '@/features/wholesale/WholesaleCatalogPage.module.css';
+import { useText } from '@/text/runtime.tsx';
 
 /**
  * The wholesale sheet: the whole range as one ruled trade list, priced at the
@@ -30,6 +31,7 @@ import classes from '@/features/wholesale/WholesaleCatalogPage.module.css';
  * and `bandRows` fills alternate runs. Search is the navigation.
  */
 export function WholesaleCatalogPage() {
+  const { t, tp } = useText();
   const { brand, features, welcomeMessage } = useSettings();
   const { search, setSearch } = useShellSearch();
   const { categorySlug } = useParams();
@@ -67,8 +69,8 @@ export function WholesaleCatalogPage() {
     [categories, products],
   );
   const rows = useMemo(
-    () => bandRows(groupProducts(visible, tree).flatMap((g) => g.products)),
-    [visible, tree],
+    () => bandRows(groupProducts(visible, tree, t).flatMap((g) => g.products)),
+    [visible, tree, t],
   );
 
   if (catalog.isPending) return <PageSkeleton inline />;
@@ -76,12 +78,12 @@ export function WholesaleCatalogPage() {
   if (catalog.isError) {
     return (
       <EmptyState
-        eyebrow="Trade list"
-        title="We couldn't load the products"
-        description="The list is still there — this was a hiccup between your browser and us."
+        eyebrow={t('wholesale.page.eyebrow')}
+        title={t('common.list.loadFailed')}
+        description={t('wholesale.page.loadFailedHint')}
         action={
           <Button variant="default" size="sm" onClick={() => void catalog.refetch()}>
-            Try again
+            {t('common.actions.tryAgain')}
           </Button>
         }
       />
@@ -97,12 +99,12 @@ export function WholesaleCatalogPage() {
   if (unknownCategory) {
     return (
       <EmptyState
-        eyebrow="Category"
-        title="That category isn't here"
-        description="It may have been renamed or retired. The full list is still one tap away."
+        eyebrow={t('wholesale.page.categoryEyebrow')}
+        title={t('common.list.categoryMissing')}
+        description={t('wholesale.page.categoryMissingHint')}
         action={
           <Button component={Link} to="/" variant="default" size="sm">
-            Show the whole list
+            {t('wholesale.page.showWholeList')}
           </Button>
         }
       />
@@ -114,17 +116,17 @@ export function WholesaleCatalogPage() {
       {/* The page-title core option hides the heading block (label, title, tally) and leaves
           the h1 in the accessibility tree only. "Whole list" is navigation, not decoration: it
           stays, alone on a slim row, while a category is open. */}
-      {showPageTitle ? <Slot name="SectionLabel" index={1} title={active ? active.name : 'Trade list'} level="page" /> : null}
+      {showPageTitle ? <Slot name="SectionLabel" index={1} title={active ? active.name : t('wholesale.page.title')} level="page" /> : null}
       <div className={showPageTitle ? classes.head : active ? classes.headBare : undefined}>
-        <h1 className={showPageTitle ? classes.title : 'sf-visually-hidden'} data-sf-part="page-title">{active ? active.name : 'Trade list'}</h1>
+        <h1 className={showPageTitle ? classes.title : 'sf-visually-hidden'} data-sf-part="page-title">{active ? active.name : t('wholesale.page.title')}</h1>
         {showPageTitle ? (
           <p className={classes.tally}>
             <span className={classes.shown}>{visible.length}</span>
             {visible.length === products.length ? (
-              <span className={classes.tallyUnit}>{products.length === 1 ? 'line' : 'lines'}</span>
+              <span className={classes.tallyUnit}>{tp('wholesale.tally.unit', products.length)}</span>
             ) : (
               <>
-                <span className={classes.tallyUnit}>of</span>
+                <span className={classes.tallyUnit}>{t('wholesale.tally.of')}</span>
                 <span>{products.length}</span>
               </>
             )}
@@ -132,7 +134,7 @@ export function WholesaleCatalogPage() {
         ) : null}
         {active ? (
           <Link className={classes.clear} to="/">
-            Whole list
+            {t('wholesale.page.wholeList')}
           </Link>
         ) : null}
       </div>
@@ -144,27 +146,27 @@ export function WholesaleCatalogPage() {
           className={classes.search}
           value={search}
           onChange={setSearch}
-          placeholder={showSku ? 'Search name or code' : 'Search'}
+          placeholder={showSku ? t('wholesale.search.withCode') : t('wholesale.search.plain')}
         />
       ) : null}
 
       {rows.length === 0 ? (
         query ? (
           <EmptyState
-            eyebrow="Search"
-            title={`Nothing matches "${query}"`}
-            description="Try a shorter word, or the product code from your last order."
+            eyebrow={t('wholesale.page.searchEyebrow')}
+            title={t('common.list.noMatches', { query })}
+            description={t('wholesale.page.noMatchesHint')}
             action={
               <Button variant="default" size="sm" onClick={() => setSearch('')}>
-                Clear search
+                {t('common.list.clearSearch')}
               </Button>
             }
           />
         ) : (
           <EmptyState
-            eyebrow="Trade list"
-            title="Nothing stocked here yet"
-            description="The list is empty for now — message us and we'll send the current sheet."
+            eyebrow={t('wholesale.page.eyebrow')}
+            title={t('common.list.emptyCategory')}
+            description={t('wholesale.page.emptyHint')}
           />
         )
       ) : (
@@ -175,25 +177,25 @@ export function WholesaleCatalogPage() {
             <tr className={classes.headRow} role="row">
               {showSku ? (
                 <th className={classes.hCode} scope="col" role="columnheader">
-                  Code
+                  {t('wholesale.table.code')}
                 </th>
               ) : null}
               <th className={classes.hProduct} scope="col" role="columnheader">
-                Product
+                {t('wholesale.table.product')}
               </th>
               <th className={classes.hUnit} scope="col" role="columnheader">
-                Unit
+                {t('wholesale.table.unit')}
               </th>
               <th className={classes.hBulk} scope="col" role="columnheader">
-                Bulk
+                {t('wholesale.table.bulk')}
               </th>
               {features.ordering ? (
                 <>
                   <th className={classes.hLine} scope="col" role="columnheader">
-                    Line
+                    {t('wholesale.table.line')}
                   </th>
                   <th className={classes.hQty} scope="col" role="columnheader">
-                    Qty
+                    {t('wholesale.table.qty')}
                   </th>
                 </>
               ) : null}

@@ -7,6 +7,7 @@ import { useCartStore } from '@/stores/cart.ts';
 import { useSessionStore } from '@/stores/session.ts';
 import { resetCartSync } from '@/features/cart/useServerCart.ts';
 import { errorMessage } from '@/lib/errors.ts';
+import { textSnapshot } from '@/text/snapshot.ts';
 import type { LoginResult } from '@/types/auth.ts';
 import type { CartLineInput, ServerCartLine } from '@/types/cart.ts';
 
@@ -61,7 +62,7 @@ export async function adoptAccountCart(client?: QueryClient): Promise<void> {
     await client?.invalidateQueries({ queryKey: ['cart'] });
   } catch (err) {
     notifications.show({
-      message: errorMessage(err, "We couldn't add your basket to your account"),
+      message: errorMessage(err, textSnapshot().t('auth.login.basketFailed')),
       color: 'red',
     });
   }

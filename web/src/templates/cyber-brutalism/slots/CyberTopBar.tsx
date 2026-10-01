@@ -1,20 +1,21 @@
-import { formatClock, useCatalogStats, useCutoffInfo, useServerClock, utcOffsetLabel, type TopBarProps } from '@/templates/contract.ts';
+import { formatClock, useCatalogStats, useCutoffInfo, useServerClock, useText, utcOffsetLabel, type TopBarProps } from '@/templates/contract.ts';
 import { nodeName } from './readout.ts';
 
 function SystemBar({ node }: { node: string }) {
+  const { t } = useText();
   const now = useServerClock(1000);
   const { timezone } = useCutoffInfo();
   const { productCount } = useCatalogStats();
   return (
     <div className="cb-sysbar" data-cb="sysbar" aria-hidden>
       <span>
-        SYS.TIME <span className="cb-sysbar__time">{formatClock(now, timezone)}</span>
+        {t('templates.cyber-brutalism.bar.time')} <span className="cb-sysbar__time">{formatClock(now, timezone)}</span>
         <span data-cb-wide> / {utcOffsetLabel(now, timezone)}</span>
       </span>
       <span className="cb-sysbar__sep">·</span>
-      <span>NODE: {node}</span>
+      <span>{t('templates.cyber-brutalism.bar.node', { node })}</span>
       <span className="cb-sysbar__sep" data-cb-wide>·</span>
-      <span className="cb-sysbar__end" data-cb-wide>SKU: {productCount ?? '---'}</span>
+      <span className="cb-sysbar__end" data-cb-wide>{t('templates.cyber-brutalism.bar.sku', { count: productCount ?? '---' })}</span>
     </div>
   );
 }

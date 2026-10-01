@@ -1,0 +1,47 @@
+/*
+ * Where the Text panel sits (spec §7.2, §7.3). Kept apart from Text.module.css (the panel's own
+ * look); tokens (--sfb-*) come from Text.module.css's .root, which both places also carry.
+ */
+
+/* "Text in this block": under Puck's fields in the ~260 px right column. */
+.blockText[data-sfb-block-text] {
+  gap: 0;
+  padding: 14px 16px 16px;
+  border-block-start: 1px solid var(--sfb-line);
+}
+.blockTitle {
+  margin: 0 0 2px;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.04em;
+  color: var(--sfb-muted);
+}
+.blockText .blockTools {
+  margin-inline: -16px;
+  padding-inline: 16px;
+  margin-block-end: 2px;
+}
+.blockText .blockTools button { justify-self: start; }
+
+/* Narrow frames: a sheet over the canvas, pinned under the editor header on the left. */
+.overlay {
+  --sfb-shadow-pop: 0 12px 32px rgb(29 36 51 / 0.16), 0 2px 6px rgb(29 36 51 / 0.08);
+  position: fixed;
+  inset-block: var(--sfb-overlay-top, 56px) 0;
+  inset-inline-start: 0;
+  inline-size: min(360px, 100%);
+  overflow: auto;
+  overscroll-behavior: contain;
+  z-index: 20;
+  background: #ffffff;
+  border-inline-end: 1px solid #d9dde5;
+  box-shadow: var(--sfb-shadow-pop);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .overlay { animation: sfb-overlay-in 140ms ease-out; }
+}
+@keyframes sfb-overlay-in {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: none; }
+}

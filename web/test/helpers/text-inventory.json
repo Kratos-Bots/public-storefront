@@ -1,0 +1,1033 @@
+{
+  "api/client.ts": [
+    "Request failed",
+    "The request timed out",
+    "Network error"
+  ],
+  "api/tracking.ts": [
+    "Network error"
+  ],
+  "app/App.tsx": [
+    "Connection",
+    "We can't reach ${}",
+    "We can't reach the shop",
+    "Check your connection and try again.",
+    "Try again"
+  ],
+  "app/telegram-session.ts": [
+    "Telegram didn't pass your account to the shop",
+    "Couldn't sign you in through Telegram"
+  ],
+  "builder/blocks/FeaturedProducts.tsx": [
+    "Featured products"
+  ],
+  "builder/blocks/Video.tsx": [
+    "Video"
+  ],
+  "components/ContactLinks.tsx": [
+    "WhatsApp",
+    "Telegram"
+  ],
+  "components/PageSkeleton.tsx": [
+    "Loading"
+  ],
+  "features/NotFoundPage.tsx": [
+    "This page isn't here",
+    "The link may be out of date, or this part of the shop is switched off.",
+    "Back to the shop"
+  ],
+  "features/account/AccountLayout.tsx": [
+    "Orders",
+    "Loyalty",
+    "Referrals",
+    "Profile",
+    "Account",
+    "Your account",
+    "Member since ",
+    "order",
+    "orders",
+    "Account sections"
+  ],
+  "features/account/LoyaltyPage.tsx": [
+    "${} credit added — you now have ${} points and ${} in credit.",
+    "red",
+    "We couldn't redeem that",
+    "Loyalty",
+    "We couldn't load your points",
+    "Your balance is safe — this was a hiccup between your browser and us.",
+    "Try again",
+    "Points",
+    "Store credit",
+    "Points land on your orders — they’ll show up here.",
+    "Redeem points",
+    "Redeem",
+    "There’s nothing to redeem for right now.",
+    " pts",
+    "Worth ${}",
+    "${} points to go",
+    "Confirm redemption",
+    " costs ",
+    " points, and adds",
+    " of credit to your account. Credit is spent at checkout.",
+    "Cancel",
+    "Redeeming"
+  ],
+  "features/account/OrderDetailPage.tsx": [
+    "Order",
+    "We can't find that order",
+    "We couldn't load that order",
+    "It may belong to another account, or the reference may be wrong.",
+    "The order is safe — this was a hiccup between your browser and us.",
+    "All orders",
+    "Try again",
+    "← All orders",
+    "Placed ",
+    "Balance due",
+    "Items",
+    "line",
+    "lines",
+    "Subtotal",
+    "Shipping",
+    "Discount",
+    "Total",
+    "Payments",
+    "Parcels",
+    "parcel",
+    "parcels",
+    "Parcel",
+    "Awaiting dispatch",
+    "Track this parcel",
+    "Open order page",
+    "The order page is where you pay, change payment method and follow the parcel — share it with us if you need help with this order."
+  ],
+  "features/account/OrdersPage.tsx": [
+    "Orders",
+    "We couldn't load your orders",
+    "Your history is safe — this was a hiccup between your browser and us.",
+    "Try again",
+    "No orders yet",
+    "Everything you order shows up here, with what you paid and where it is.",
+    "Browse the catalogue",
+    "Order history",
+    "order",
+    "orders",
+    "Balance due ",
+    "Loading",
+    "Load more"
+  ],
+  "features/account/ProfilePage.tsx": [
+    "Telegram",
+    "WhatsApp",
+    "Email",
+    "We couldn't switch you — try again",
+    "Classic bot",
+    "Prefer the classic bot?",
+    "Shop with buttons in the chat instead of this app. You can come back from the bot’s menu any time.",
+    "Switch to the classic bot",
+    "Switching…",
+    "Yes, switch",
+    "Cancel",
+    "Profile",
+    "We couldn't load your profile",
+    "This was a hiccup between your browser and us.",
+    "Try again",
+    "Your details",
+    "Name",
+    "Not set",
+    "Member since",
+    "Orders",
+    "Total spend",
+    "Sign-in channels",
+    "Ways in",
+    "linked",
+    "not linked",
+    "Any linked channel signs you into this account — talk to us in a chat to add another.",
+    "Contact",
+    "Talk to us",
+    "Signing out",
+    "Sign out"
+  ],
+  "features/account/ReferralsPage.tsx": [
+    "You're now referred by ${}.",
+    "Referrals",
+    "We couldn't load your referrals",
+    "Your code hasn't gone anywhere — this was a hiccup between your browser and us.",
+    "Try again",
+    "Your referral code",
+    "Copy your referral code ${}",
+    "Copied",
+    "Copy",
+    "Share",
+    "WhatsApp",
+    "Telegram",
+    "The invite goes out with your code already in it — send it to whoever you want to bring in.",
+    "Your referrals",
+    "What it has brought in",
+    "People referred",
+    "Orders earned on",
+    "Who referred you",
+    "Were you referred?",
+    "Referred by",
+    "Someone at the shop",
+    "Enter their code once and it stays on your account. You can’t change it later.",
+    "Referral code",
+    "Their code",
+    "Checking",
+    "Apply",
+    "That code didn't work"
+  ],
+  "features/account/referral-share.ts": [
+    "Shopping with ${}? Use my referral code ${} on your first order."
+  ],
+  "features/auth/LoginModal.tsx": [
+    "Sign in",
+    "There’s no password — sign in from a chat app you already use."
+  ],
+  "features/auth/LoginOptions.tsx": [
+    "We couldn't sign you in with Telegram",
+    "Sign in",
+    "Sign-in isn’t available right now",
+    "Message ${} and we'll sort it out with you directly.",
+    "Signing you in",
+    "Coming soon."
+  ],
+  "features/auth/LoginPage.tsx": [
+    "Sign in to ",
+    "There’s no password. Sign in from a chat app you already use, and your orders, points and referrals are waiting."
+  ],
+  "features/auth/TelegramLogin.tsx": [
+    "Preview: Telegram’s sign-in button shows here on your live shop",
+    "Telegram sign-in isn’t loading on this address"
+  ],
+  "features/auth/TelegramSignInError.tsx": [
+    "Telegram",
+    "Couldn’t sign you in through Telegram",
+    "Close and reopen the shop from the bot.${}",
+    "Try again"
+  ],
+  "features/auth/WhatsappLogin.tsx": [
+    "Message received — signing you in",
+    "That code expired",
+    "A code is only good for a few minutes. Start a new one when you’re ready to send it.",
+    "Start again",
+    "Something went wrong",
+    "Try again",
+    "Open WhatsApp",
+    "Or send this code to ${}",
+    "Or send this code to us on WhatsApp",
+    "Copy the code ${}",
+    "Copied",
+    "Copy",
+    "Waiting for your message",
+    "Send us one message from WhatsApp and you’re in. Nothing to remember, nothing to type back.",
+    "Starting…",
+    "Continue with WhatsApp"
+  ],
+  "features/auth/useLoginSuccess.ts": [
+    "red",
+    "We couldn't add your basket to your account"
+  ],
+  "features/auth/useWhatsappLogin.ts": [
+    "We couldn't finish signing you in",
+    "We couldn't start a WhatsApp sign-in"
+  ],
+  "features/cart/CartDrawer.tsx": [
+    "Your cart",
+    "item",
+    "items",
+    "Close",
+    "Cart",
+    "Nothing on the order yet",
+    "Everything you add shows up here, with the price at the quantity you're buying.",
+    "Browse the catalogue"
+  ],
+  "features/cart/CartLine.tsx": [
+    "Remove ${}",
+    "Remove",
+    "/ea",
+    "Pre-order",
+    "Price updated",
+    "One fewer ${}",
+    "${} quantity",
+    "One more ${}",
+    "No longer available — remove to continue",
+    "Minimum ",
+    " per order",
+    "Set to ",
+    "Maximum ",
+    "Out of stock"
+  ],
+  "features/cart/CartPage.tsx": [
+    "Cart",
+    "Nothing on the order yet",
+    "Everything you add shows up here, with the price at the quantity you're buying.",
+    "Browse the catalogue",
+    "Your cart",
+    "item",
+    "items"
+  ],
+  "features/cart/CartSummary.tsx": [
+    "This order mixes in-stock and pre-order items — pre-orders dispatch when they land.",
+    "Subtotal",
+    "item",
+    "items",
+    "Shipping and discounts are calculated at checkout.",
+    "Resolve the flagged items to continue.",
+    "Checkout",
+    "Continue shopping"
+  ],
+  "features/cart/MobileCartBar.tsx": [
+    "View cart — ${}, ${}",
+    "Checkout"
+  ],
+  "features/cart/useServerCart.ts": [
+    "Please sign in again",
+    "red",
+    "We couldn't update your cart"
+  ],
+  "features/catalog/AddToCart.tsx": [
+    "Out of stock",
+    "Add another",
+    "Unavailable",
+    "Added"
+  ],
+  "features/catalog/BulkPricing.tsx": [
+    "Quantity",
+    "Unit price",
+    "Saving"
+  ],
+  "features/catalog/CategoryNav.tsx": [
+    "All products",
+    "Categories",
+    "All",
+    "All categories"
+  ],
+  "features/catalog/FilterDrawer.tsx": [
+    "Categories"
+  ],
+  "features/catalog/FilterSheet.tsx": [
+    "Categories",
+    "Jump to a section of the list",
+    "Close"
+  ],
+  "features/catalog/ProductCard.tsx": [
+    "Min ",
+    "Pre-order"
+  ],
+  "features/catalog/ProductDetailPage.tsx": [
+    "Breadcrumb",
+    "Shop",
+    "Pre-order · ships ${}",
+    "Pre-order",
+    "Min ",
+    "Buy more, pay less",
+    "Provenance",
+    "Ask first",
+    "Send us a message about ",
+    " and we'll answer before you order.",
+    "Product",
+    "We can't find that product",
+    "It may have sold out and been retired, or the link may be out of date.",
+    "Try again",
+    "Browse the shop"
+  ],
+  "features/catalog/ProductDetailSheet.tsx": [
+    "Product",
+    "Close",
+    "We couldn't load this product.",
+    "Try again",
+    "Ships ${}",
+    "Pre-order",
+    "Min ",
+    "Unit",
+    "Description",
+    "Buy more, pay less",
+    "Provenance",
+    "Ask first",
+    "Send us a message about ",
+    " and we'll answer before you order.",
+    "Loading"
+  ],
+  "features/catalog/ProductGrid.tsx": [
+    "Catalogue",
+    "We couldn't load the products",
+    "The shop is still there — this was a hiccup between your browser and us.",
+    "Try again",
+    "All products",
+    "${} matching",
+    "${} products",
+    "Category",
+    "That category isn't here",
+    "It may have been renamed or retired. The full range is still one tap away.",
+    "Show all products",
+    "Search",
+    "Nothing matches \"${}\"",
+    "Try a shorter word, or the product code from your last order.",
+    "Clear search",
+    "Nothing stocked here yet",
+    "This part of the shop is empty for now — check back soon."
+  ],
+  "features/catalog/ProductList.tsx": [
+    "Catalogue",
+    "We couldn't load the products",
+    "The shop is still there — this was a hiccup between your browser and us.",
+    "Try again",
+    "All products",
+    "product",
+    "products",
+    "of",
+    "Category",
+    "That category isn't here",
+    "It may have been renamed or retired. The full range is still one tap away.",
+    "Show all products",
+    "Search",
+    "Nothing matches \"${}\"",
+    "Try a shorter word, or the product code from your last order.",
+    "Clear search",
+    "Nothing stocked here yet",
+    "This part of the shop is empty for now — check back soon."
+  ],
+  "features/catalog/ProductRow.tsx": [
+    "Min ",
+    "Pre-order",
+    "One fewer ${}",
+    "One more ${}",
+    "Unavailable — ${}",
+    "Out of stock — ${}"
+  ],
+  "features/catalog/Upsells.tsx": [
+    "Often bought with this"
+  ],
+  "features/catalog/group.ts": [
+    "Other",
+    "Uncategorised"
+  ],
+  "features/checkout/CheckoutPage.tsx": [
+    "Contact",
+    "Your details",
+    "Address",
+    "Delivery address",
+    "Shipping",
+    "Delivery and discounts",
+    "Payment",
+    "How you’ll pay",
+    "Review",
+    "Review your order",
+    "We couldn't verify your browser",
+    "Unknown code",
+    "Still pricing your order — one moment",
+    "That delivery option is no longer available — choose another",
+    "Choose how you’d like to pay",
+    "That payment method is no longer available — choose another",
+    "That coin and network are no longer available — choose another",
+    "Checkout already in progress",
+    "red",
+    "We couldn't place your order",
+    "Continue",
+    "Placing order…",
+    "Place order · ${}",
+    "Place order",
+    "Checkout",
+    "Guest checkout isn't available right now",
+    "Sign in and we'll pick your order up from here.",
+    "Sign in",
+    "There's nothing to check out",
+    "Add something to your cart and we'll pick this back up.",
+    "Browse the catalogue",
+    "Guest checkout",
+    "Step ",
+    " of ",
+    "Try again",
+    "Verifying…",
+    "Back",
+    "Place order · ",
+    "Placing the order confirms the details above. We’ll send you a link to track it."
+  ],
+  "features/checkout/CountrySelect.tsx": [
+    "Choose a country"
+  ],
+  "features/checkout/CouponField.tsx": [
+    "Coupon code",
+    "Have a code?",
+    "Checking",
+    "Apply",
+    "Discount",
+    "Checking…",
+    "Not applied",
+    "Remove",
+    "Applied automatically",
+    "Use another"
+  ],
+  "features/checkout/CryptoComboPicker.tsx": [
+    "Coins",
+    "Stablecoins"
+  ],
+  "features/checkout/Field.tsx": [
+    "Optional"
+  ],
+  "features/checkout/GuestTurnstile.tsx": [
+    "We couldn't verify your browser — please try again"
+  ],
+  "features/checkout/PhoneField.tsx": [
+    "Phone country code",
+    "Code",
+    "Phone",
+    "Couriers may use this for delivery."
+  ],
+  "features/checkout/QuoteSummary.tsx": [
+    "Nothing to pay",
+    "To pay",
+    "Amount due",
+    "Order summary",
+    "Hide summary",
+    "Your order",
+    "item",
+    "items",
+    "Bulk",
+    "Pre-order",
+    "Subtotal",
+    "Discount ",
+    "Shipping",
+    "Free",
+    "Total",
+    "Store credit",
+    "Payment fee",
+    "Store credit covers this order.",
+    "Shipping and discounts are added once we have your address."
+  ],
+  "features/checkout/schemas.ts": [
+    "Valid email required",
+    "Required",
+    "Email or phone is required",
+    "Select your country",
+    "Choose a shipping method",
+    "Choose a coin and network",
+    "coin"
+  ],
+  "features/checkout/steps/AddressStep.tsx": [
+    "Where should we send it?",
+    "Address line 1",
+    "Address line 2",
+    "City",
+    "ZIP / Postcode",
+    "County / Region"
+  ],
+  "features/checkout/steps/ContactStep.tsx": [
+    "Order updates and the receipt go to this email.",
+    "Who is this order for?",
+    "First name",
+    "Surname",
+    "Email",
+    "Have an account?",
+    "Sign in",
+    "to use your saved details and store credit."
+  ],
+  "features/checkout/steps/PaymentStep.tsx": [
+    "Use store credit",
+    " available",
+    "Pricing your order…",
+    "Nothing left to pay — store credit covers this order.",
+    "No payment method is available right now. Message us and we’ll take it from here.",
+    "Payment method",
+    "Fee",
+    "We’ll send the transfer details once the order is placed."
+  ],
+  "features/checkout/steps/ReviewStep.tsx": [
+    "One last look before we place it.",
+    "Contact",
+    "Change",
+    "Delivery address",
+    "Shipping",
+    "Not chosen",
+    "Payment",
+    "Store credit",
+    "Order notes",
+    "Anything the courier or our packing team should know"
+  ],
+  "features/checkout/steps/ShippingStep.tsx": [
+    "Delivery",
+    "Pricing your order…",
+    "We can’t ship to ",
+    "that country",
+    " yet. Choose another country, or message us and we’ll sort it.",
+    "Free"
+  ],
+  "features/closed/ClosedPage.tsx": [
+    "Currently closed",
+    "${} isn't taking orders right now. Check back shortly.",
+    "Support"
+  ],
+  "features/notices/CutoffBar.tsx": [
+    "Dispatch cut-off",
+    "Order by ",
+    " for ",
+    " dispatch",
+    " left"
+  ],
+  "features/notices/NoticeBanners.tsx": [
+    "Pinned store notices",
+    "Store notices",
+    "Dismiss: ${}",
+    "Dismiss notice"
+  ],
+  "features/order-status/AddressCard.tsx": [
+    "Delivery address"
+  ],
+  "features/order-status/CopyRow.tsx": [
+    "${} copied",
+    "Copy ${}",
+    "Copied",
+    "Copy"
+  ],
+  "features/order-status/CryptoPaymentCard.tsx": [
+    "Awaiting payment",
+    "Verifying",
+    "Confirmed",
+    "In review",
+    "Verifying your payment",
+    "Payment confirmed",
+    "Payment in review",
+    "Crypto payment",
+    "Payment required",
+    "Send ${} ${}",
+    " network ·",
+    "Amount to send",
+    "${} address (${})",
+    "Send exactly ",
+    " on the ",
+    " network. A different amount or network can delay or lose your payment.",
+    "Transaction ID",
+    "Once you’ve sent it, paste the transaction ID from your wallet and we’ll verify it on-chain.",
+    "Paste transaction ID",
+    "Sending…",
+    "Submit",
+    "That transaction ID was not accepted. Check it and try again.",
+    "Reading it off the chain — this can take a few minutes. The page updates on its own.",
+    " Payment received in full",
+    "We’re taking a closer look at this payment — nothing more is needed from you. Message us if it stays here."
+  ],
+  "features/order-status/ItemsCard.tsx": [
+    "Items",
+    "Pre-order",
+    "Subtotal",
+    "Delivery",
+    "Discount",
+    "Payment discount",
+    "Payment fee",
+    "Tax",
+    "Total"
+  ],
+  "features/order-status/MethodPicker.tsx": [
+    "Loading payment methods…",
+    "We couldn't load the payment methods",
+    "Try again",
+    "There’s no online payment method for this order right now. Message us and we’ll arrange it.",
+    "Opening checkout…",
+    "Preparing payment…",
+    "Pay with ${}",
+    "Choose a coin above",
+    "The address and the exact amount appear right here.",
+    "That payment method isn't available right now",
+    "Pay by ",
+    "Amount to send",
+    "Payment reference",
+    "Use the order reference so we can match your transfer. Message us once it’s sent and we’ll confirm the order.",
+    "Message us and we’ll send the transfer details for order "
+  ],
+  "features/order-status/OrderStatusPage.tsx": [
+    "Order ",
+    "Questions about this order? Message us and quote that reference."
+  ],
+  "features/order-status/PaymentSection.tsx": [
+    "Payment",
+    "Payment required",
+    "Choose how to pay ",
+    "Finish your payment",
+    " · secure hosted checkout",
+    "Awaiting payment",
+    "Open secure checkout",
+    "The checkout opens in a new tab. This page updates on its own once the payment lands.",
+    "Payment pending",
+    "We’re waiting on your payment",
+    "This one is arranged with us directly. Message us if anything is unclear.",
+    "Pay by ",
+    " — after that the order cancels itself.",
+    "Change payment method",
+    "Keep this method"
+  ],
+  "features/order-status/ShipmentCard.tsx": [
+    "On its way",
+    "Tracking number",
+    "Track this parcel",
+    "Parcel ${} of ${}",
+    "Parcel",
+    "Shipped ${}",
+    "Delivered ${}"
+  ],
+  "features/order-status/StateScreens.tsx": [
+    "Loading your order",
+    "Order link",
+    "This link isn't valid",
+    "The link looks incomplete or has expired. Reply to the message that sent it and we'll share a fresh one.",
+    "Connection",
+    "We couldn't load your order",
+    "Your order is safe — this was a hiccup between your browser and us.",
+    "Try again"
+  ],
+  "features/order-status/StatusHero.tsx": [
+    "Order status",
+    "Contains pre-order items",
+    "Order progress",
+    "Partial",
+    "If that isn't right, reply to the message that sent you this link and we'll sort it out.",
+    "Refunds take 5–10 business days to appear on your statement.",
+    "Delivered ${}",
+    "Placed ${}"
+  ],
+  "features/order-status/status.ts": [
+    "Order status",
+    "Order received",
+    "We've got your order and we're getting it ready.",
+    "Order confirmed",
+    "Your order is confirmed and moving into preparation.",
+    "Being prepared",
+    "We're packing your order now.",
+    "Partially shipped",
+    "Some items are on their way. The rest will follow shortly.",
+    "On its way",
+    "Your order has shipped. Track it below.",
+    "Delivered",
+    "Your order has arrived. Thanks for shopping with us.",
+    "Order cancelled",
+    "This order has been cancelled and won't be dispatched.",
+    "Order refunded",
+    "This order has been refunded.",
+    "In transit"
+  ],
+  "features/payment-redirect/MissingReferenceScreen.tsx": [
+    "Order link",
+    "Order reference missing",
+    "Return to the shop and try again, or message us for help.",
+    "← Back to shop"
+  ],
+  "features/payment-redirect/OrderPlacedPage.tsx": [
+    "Order confirmed",
+    "Order placed",
+    "We couldn’t set up online payment for this order — message us and we’ll help you pay.",
+    "Message us on WhatsApp or Telegram to arrange payment — your order reference is already filled in for you.",
+    "Pay via WhatsApp",
+    "Pay via Telegram",
+    "Contact us through your usual channel and quote your order reference to arrange payment.",
+    "← Back to shop"
+  ],
+  "features/payment-redirect/PaymentCancelPage.tsx": [
+    "Payment cancelled",
+    "No charge taken",
+    "Your order is still saved. Return to it to try again or choose another way to pay, or message us if you’d like a hand.",
+    "Return to your order",
+    "Back to shop"
+  ],
+  "features/payment-redirect/PaymentSuccessPage.tsx": [
+    "Payment received",
+    "Thanks — your order’s being confirmed",
+    "We’re finalising your order now. You’ll hear from us as soon as it’s confirmed — keep this reference handy if you need to get in touch.",
+    "← Back to shop"
+  ],
+  "features/payment-redirect/ReferenceRow.tsx": [
+    "${} copied",
+    "Copy ${}",
+    "Copied",
+    "Copy"
+  ],
+  "features/tracking/LookupForm.tsx": [
+    "Check that reference",
+    "Order number",
+    "A7K2QM",
+    "Six characters, on your order confirmation.",
+    "Track order",
+    "Recent"
+  ],
+  "features/tracking/OrderHero.tsx": [
+    "Heading to ${}",
+    "${} parcels dispatched",
+    "Placed",
+    "Items",
+    "Last scan",
+    "Parcels",
+    "Type",
+    "Order tracking summary",
+    "Order ",
+    "Delivered ${}"
+  ],
+  "features/tracking/ParcelCard.tsx": [
+    "Heading to ",
+    "Tracking number",
+    "Carrier ref",
+    "Track with ",
+    "Awaiting first scan",
+    "The label exists but the courier hasn't scanned this parcel yet. That's normal for the first day or so after dispatch — check back later.",
+    "Carrier not responding",
+    "Try again",
+    "The carrier isn't answering right now. Nothing is wrong with your parcel.",
+    "Last known",
+    "Awaiting tracking number",
+    "Live tracking is unavailable right now. Search the tracking number above on your carrier’s website for the latest scan.",
+    "This parcel doesn’t have a tracking number yet. One appears here as soon as the carrier issues it.",
+    "Parcel ${} of ${}",
+    "Parcel"
+  ],
+  "features/tracking/ParcelTimeline.tsx": [
+    "Scan history",
+    "scan",
+    "scans",
+    "No timestamp"
+  ],
+  "features/tracking/ProgressStepper.tsx": [
+    "Awaiting first courier scan",
+    "Awaiting first scan",
+    "Stage ${} of ${}: ${}"
+  ],
+  "features/tracking/RefreshButton.tsx": [
+    "Checked ${}",
+    "Not checked yet",
+    "Refresh available in ${}",
+    "Checking…",
+    "Refresh"
+  ],
+  "features/tracking/StateScreens.tsx": [
+    "Loading tracking",
+    "Checking you're human",
+    "Verification unavailable",
+    "We couldn't finish the security check that protects order lookups, so we can't fetch your tracking. A privacy extension or network filter blocking Cloudflare challenges is the usual cause.",
+    "Reload page",
+    "No order found",
+    "We couldn't find an order with that number. Check it against your confirmation — it's six characters, letters and numbers.",
+    "Tracking unavailable",
+    "Order tracking isn't switched on right now. Message us with your order number and we'll look it up for you.",
+    "Too many lookups",
+    "This connection has made a lot of lookups in the last few minutes. Wait a minute, then try again.",
+    "Try again",
+    "Verification didn't go through",
+    "The security check that protects order lookups didn't complete. Try again — we'll run a fresh one.",
+    "Connection error",
+    "We couldn't reach the tracking service. Try again in a moment.",
+    "This order",
+    "No parcels yet",
+    "This order was ${}. Nothing will be dispatched.",
+    "This is a pre-order, so it ships once stock lands. We'll send a tracking number then.",
+    "Your order hasn't been dispatched yet. A tracking number appears here as soon as it's on its way.",
+    "Live updates paused",
+    "We can't reach the courier network right now. The shipment details below are still accurate.",
+    "Tracking",
+    "Tracking isn't available right now",
+    "Order lookups are switched off on this shop. Message us with your order number and we'll check on it for you."
+  ],
+  "features/tracking/TrackingPage.tsx": [
+    "Order tracking",
+    "Track another →",
+    "Delivery",
+    "Track your order",
+    "See where your parcel is and every scan along the way."
+  ],
+  "features/tracking/status.ts": [
+    "In flight",
+    "Local carrier",
+    "Out for delivery",
+    "Label created",
+    "In transit",
+    "In customs",
+    "Ready for pickup",
+    "Needs attention",
+    "Returned to sender",
+    "Status unavailable",
+    "Date unknown",
+    "just now",
+    "${} min ago",
+    "1 day ago",
+    "${} days ago"
+  ],
+  "features/verify/VerifyPage.tsx": [
+    "Required",
+    "Digits only",
+    "Authenticity",
+    "Verify a product",
+    "Enter the codes printed on your product label to confirm it's genuine.",
+    "Verification code",
+    "AB3D-SKU12",
+    "Authentication code",
+    "Checking…",
+    "Verify product",
+    "← Back to shop",
+    "Authentic Product",
+    "This code matches a genuine unit from our records.",
+    "Issued",
+    "Expires",
+    "Note: this unit is past its expiry date.",
+    "Not Verified",
+    "We couldn't match this code pair to a genuine unit. Double-check both codes exactly as printed on the label.",
+    "If they're correct and still don't verify, contact us and our team will check manually.",
+    "Connection Error",
+    "We couldn't reach the verification service. Try again in a moment, or contact us below."
+  ],
+  "features/webapp/default-action.ts": [
+    "Checkout · ${}",
+    "View cart · ${}"
+  ],
+  "features/wholesale/TierLadder.tsx": [
+    "+ units",
+    "your price",
+    "/ea"
+  ],
+  "features/wholesale/WholesaleBar.tsx": [
+    "View basket — ${} ${}, ${} ${}, ${}",
+    "line",
+    "lines",
+    "unit",
+    "units",
+    "View basket"
+  ],
+  "features/wholesale/WholesaleCatalogPage.tsx": [
+    "Trade list",
+    "We couldn't load the products",
+    "The list is still there — this was a hiccup between your browser and us.",
+    "Try again",
+    "Category",
+    "That category isn't here",
+    "It may have been renamed or retired. The full list is still one tap away.",
+    "Show the whole list",
+    "line",
+    "lines",
+    "of",
+    "Whole list",
+    "Search name or code",
+    "Search",
+    "Nothing matches \"${}\"",
+    "Try a shorter word, or the product code from your last order.",
+    "Clear search",
+    "Nothing stocked here yet",
+    "The list is empty for now — message us and we'll send the current sheet.",
+    "Code",
+    "Product",
+    "Unit",
+    "Bulk",
+    "Line",
+    "Qty"
+  ],
+  "features/wholesale/WholesaleRow.tsx": [
+    "Pre-order",
+    "Min ",
+    "/ea",
+    "Bulk price applied, ${}% off — show the price breaks for ${}",
+    "Show the price breaks for ${}",
+    "Bulk",
+    "Remove ${} from the order",
+    "Remove",
+    "One fewer ${}",
+    "${} quantity",
+    "One more ${}"
+  ],
+  "layouts/MenuShell.tsx": [
+    "${} — home",
+    "Search",
+    "Categories — one category selected",
+    "Categories",
+    "Your account",
+    "Sign in",
+    "Cart, ${} item${}"
+  ],
+  "layouts/SearchField.tsx": [
+    "Search products"
+  ],
+  "layouts/StorefrontShell.tsx": [
+    "${} — home",
+    "Your account",
+    "Sign in",
+    "Cart, ${} item${}"
+  ],
+  "layouts/WebAppShell.tsx": [
+    "Back",
+    "${} — home",
+    "Search",
+    "Categories — one category selected",
+    "Categories",
+    "Your account",
+    "Sign in",
+    "Cart, ${} item${}"
+  ],
+  "lib/chat-links.ts": [
+    "I've just placed an order, here is my Order ID: ${}. I'd like to pay.",
+    "Hi — checking in about my order ${}."
+  ],
+  "lib/errors.ts": [
+    "Something went wrong",
+    "Too many attempts — please wait a moment and try again",
+    "The store is temporarily unavailable"
+  ],
+  "lib/format.ts": [
+    "In Stock",
+    "Low Stock",
+    "Out of Stock"
+  ],
+  "templates/bento/slots/BentoCatalogHero.tsx": [
+    "About this shop",
+    "Product",
+    "Products",
+    "Category",
+    "Categories",
+    "Open",
+    "Paused",
+    "Taking orders",
+    "Ordering paused",
+    "Order by ",
+    " today",
+    "for ",
+    " dispatch",
+    "Questions before you order?"
+  ],
+  "templates/bento/slots/BentoFooter.tsx": [
+    "Support",
+    "Talk to us"
+  ],
+  "templates/cyber-brutalism/slots/CyberCatalogHero.tsx": [
+    "Store status",
+    "About this shop",
+    "//SCN_01"
+  ],
+  "templates/cyber-brutalism/slots/CyberFooter.tsx": [
+    "CONNECTION SECURE",
+    "> ACCESS GRANTED_",
+    "Support",
+    " Support",
+    " Contact"
+  ],
+  "templates/cyber-brutalism/slots/CyberTopBar.tsx": [
+    "SYS.TIME ",
+    "NODE: ",
+    "SKU: "
+  ],
+  "templates/cyber-brutalism/slots/readout.ts": [
+    "DISPATCH CUTOFF ${}"
+  ],
+  "templates/dark-luxury/slots/LuxuryCatalogHero.tsx": [
+    "About this shop"
+  ],
+  "templates/dark-luxury/slots/LuxuryFooter.tsx": [
+    "[ACCEPTING ORDERS]",
+    "[ORDERING PAUSED]",
+    "Support",
+    "[Support]",
+    "[Talk to us]"
+  ],
+  "templates/dark-luxury/slots/LuxurySectionLabel.tsx": [
+    "[Catalogue]"
+  ],
+  "templates/defaults/DefaultCatalogHero.tsx": [
+    "About this shop",
+    " products",
+    " · ${} categories"
+  ],
+  "templates/defaults/DefaultFooter.tsx": [
+    "Support",
+    "Talk to us"
+  ]
+}

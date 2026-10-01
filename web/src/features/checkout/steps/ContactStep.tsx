@@ -1,8 +1,11 @@
+import type { ReactNode } from 'react';
 import { Link } from 'react-router';
+import type { StyleAttrs } from '@/builder/define.ts';
 import type { ContactModes } from '@/types/settings.ts';
 import type { CheckoutForm } from '@/features/checkout/form-state.ts';
 import { Field } from '@/features/checkout/Field.tsx';
 import { PhoneField } from '@/features/checkout/PhoneField.tsx';
+import { useText } from '@/text/runtime.tsx';
 import fields from '@/features/checkout/Fields.module.css';
 import classes from '@/features/checkout/steps/Steps.module.css';
 
@@ -12,6 +15,10 @@ export interface ContactStepProps {
   errors: Record<string, string>;
   contactModes: ContactModes;
   guest: boolean;
+  /** Content slots of the step part: before everything, after everything. */
+  before?: ReactNode;
+  after?: ReactNode;
+  rootAttrs?: StyleAttrs;
 }
 
 /**
@@ -20,20 +27,22 @@ export interface ContactStepProps {
  * behind them, email or phone has to be there or the order has no identity at
  * all (STOREFRONT.md §3.5a).
  */
-export function ContactStep({ form, patch, errors, contactModes, guest }: ContactStepProps) {
+export function ContactStep({ form, patch, errors, contactModes, guest, before, after, rootAttrs }: ContactStepProps) {
+  const { t, tn } = useText();
   const { emailMode, phoneMode } = contactModes;
 
   return (
-    <div className={classes.step}>
+    <div className={classes.step} {...rootAttrs}>
+      {before}
       <p className={classes.blurb}>
         {emailMode !== 'hidden'
-          ? 'Order updates and the receipt go to this email.'
-          : 'Who is this order for?'}
+          ? t('checkout.contact.blurbEmail')
+          : t('checkout.contact.blurbNoEmail')}
       </p>
 
       <div className={fields.pair}>
         <Field
-          label="First name"
+          label={t('checkout.contact.firstName')}
           value={form.firstName}
           onChange={(v) => patch({ firstName: v })}
           error={errors.firstName}
@@ -41,7 +50,7 @@ export function ContactStep({ form, patch, errors, contactModes, guest }: Contac
           maxLength={100}
         />
         <Field
-          label="Surname"
+          label={t('checkout.contact.surname')}
           value={form.surname}
           onChange={(v) => patch({ surname: v })}
           error={errors.surname}
@@ -52,7 +61,7 @@ export function ContactStep({ form, patch, errors, contactModes, guest }: Contac
 
       {emailMode !== 'hidden' ? (
         <Field
-          label="Email"
+          label={t('checkout.contact.email')}
           type="email"
           inputMode="email"
           value={form.email}
@@ -77,13 +86,16 @@ export function ContactStep({ form, patch, errors, contactModes, guest }: Contac
 
       {guest ? (
         <p className={classes.aside}>
-          Have an account?{' '}
-          <Link className={classes.link} to="/login?returnTo=%2Fcheckout">
-            Sign in
-          </Link>{' '}
-          to use your saved details and store credit.
+          {tn('checkout.contact.haveAccount', {
+            signIn: (
+              <Link className={classes.link} to="/login?returnTo=%2Fcheckout">
+                {t('common.actions.signIn')}
+              </Link>
+            ),
+          })}
         </p>
       ) : null}
+      {after}
     </div>
   );
 }

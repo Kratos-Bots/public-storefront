@@ -1,0 +1,54 @@
+/* A drop the page can't use was undone: the admin's tool, neutral --sfb-* tokens, never the shop's --sf-*. */
+.region {
+  --sfb-ink: #1d2433;
+  --sfb-line-strong: #b8bfcc;
+  --sfb-surface: #ffffff;
+  --sfb-wash: #f3f5f8;
+  --sfb-accent: #3355ff;
+  --sfb-warn-ink: #6b4a00;
+  --sfb-warn-line: #e2c27a;
+  --sfb-warn-wash: #fdf6e3;
+  --sfb-radius: 6px;
+
+  position: fixed;
+  inset-inline: 16px;
+  inset-block-end: 16px;
+  z-index: 40;
+  display: grid;
+  justify-items: center;
+  pointer-events: none;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.notice {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-inline-size: min(560px, 100%);
+  margin: 0;
+  padding: 8px 8px 8px 14px;
+  border: 1px solid var(--sfb-warn-line);
+  border-radius: var(--sfb-radius);
+  background: var(--sfb-warn-wash);
+  color: var(--sfb-warn-ink);
+  box-shadow: 0 12px 32px rgb(29 36 51 / 0.16), 0 2px 6px rgb(29 36 51 / 0.08);
+  pointer-events: auto;
+}
+.text { min-inline-size: 0; overflow-wrap: anywhere; }
+.dismiss {
+  flex: none;
+  min-inline-size: 44px;
+  min-block-size: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--sfb-line-strong);
+  border-radius: var(--sfb-radius);
+  background: var(--sfb-surface);
+  color: var(--sfb-ink);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+.dismiss:hover { background: var(--sfb-wash); }
+.dismiss:focus-visible { outline: 2px solid var(--sfb-accent); outline-offset: 1px; }

@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 import { z } from 'zod';
 import { defineBlock, paletteToken, slot, spacing, SPACING, tokenVar, type PaletteToken, type SpacingKey } from '@/builder/define.ts';
 import type { ComponentData } from '@/builder/types.ts';
+import { BOX, styleSupport, VIS } from '@/builder/style/model.ts';
 import classes from '@/builder/blocks/Section.module.css';
 
 type Props = { id: string; padding: SpacingKey; backgroundToken: PaletteToken; textToken: PaletteToken; width: 'rail' | 'full'; content: ComponentData[] };
@@ -13,9 +14,10 @@ type Props = { id: string; padding: SpacingKey; backgroundToken: PaletteToken; t
  */
 export const block = defineBlock<Props>({
   name: 'Section', label: 'Section', category: 'content', layouts: 'all', routeBound: false, slots: ['content'],
+  style: styleSupport('root', [...BOX, 'textSize', 'align', ...VIS], ['bg', 'padTop', 'padBottom', 'maxWidth']),
   schema: z.object({ padding: spacing(), backgroundToken: paletteToken(), textToken: paletteToken(), width: z.enum(['rail', 'full']), content: slot() }),
   defaultProps: { padding: 'lg', backgroundToken: 'none', textToken: 'none', width: 'rail', content: [] },
-  render: ({ padding, backgroundToken, textToken, width, content }) => (
+  render: ({ padding, backgroundToken, textToken, width, content, puck }) => (
     <section
       className={`${classes.section} ${classes[width]} ${backgroundToken === 'none' ? '' : classes.filled}`.trim()}
       style={{
@@ -24,6 +26,7 @@ export const block = defineBlock<Props>({
         '--section-fg': tokenVar(textToken) ?? 'inherit',
       } as CSSProperties}
       data-sf-block="Section"
+      {...puck.style}
     >
       {content()}
     </section>

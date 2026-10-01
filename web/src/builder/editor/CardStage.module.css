@@ -1,0 +1,36 @@
+/*
+ * The card designer on the editor canvas (spec §11). The grid and the rows list are the shop's own
+ * (ProductGrid.module.css, ProductList.module.css), so the active template's rules apply; only the
+ * breathing room around them and the caption belong to the editor. The caption uses the neutral
+ * --sfb-* tokens, as SheetStage's does, so it reads the same over every template's ground.
+ */
+
+.stage {
+  --sfb-ink: #1d2433;
+  --sfb-paper: rgb(255 255 255 / 0.94);
+  --sfb-line: rgb(29 36 51 / 0.14);
+  --sfb-radius: 6px;
+
+  box-sizing: border-box;
+  padding-block: 24px 32px;
+}
+
+/* The state copies: a label for assistive tech, no box of their own, so the card is the grid item. */
+.copy {
+  display: contents;
+}
+
+.caption {
+  box-sizing: border-box;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  margin: 20px 0 0;
+  padding: 6px 10px;
+  border: 1px solid var(--sfb-line);
+  border-radius: var(--sfb-radius);
+  background: var(--sfb-paper);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--sfb-ink);
+}

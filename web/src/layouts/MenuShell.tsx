@@ -1,98 +1,28 @@
-import { Suspense, type ReactNode } from 'react';
-import { Link, Outlet, useLocation } from 'react-router';
+import type { StyleAttrs } from '@/builder/define.ts';
+import { Suspense, useMemo, type ReactNode } from 'react';
+import { Outlet, useLocation } from 'react-router';
 import { useSettings } from '@/app/settings.ts';
-import { useSessionStore, selectIsLoggedIn } from '@/stores/session.ts';
 import { useCartStore, selectCount } from '@/stores/cart.ts';
-import { useUiStore } from '@/stores/ui.ts';
-import { Brand } from '@/components/Brand.tsx';
 import { ContactLinks } from '@/components/ContactLinks.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
-import { BagIcon, FilterIcon, UserIcon } from '@/components/icons.tsx';
 import { NoticeBanners } from '@/features/notices/NoticeBanners.tsx';
 import { CutoffBar } from '@/features/notices/CutoffBar.tsx';
 import { LoginModal } from '@/features/auth/LoginModal.tsx';
 import { CartDrawer } from '@/features/cart/CartDrawer.tsx';
 import { MobileCartBar, useMobileCartBar } from '@/features/cart/MobileCartBar.tsx';
-import { SearchField } from '@/layouts/SearchField.tsx';
+import { HeaderBar, legacyHeaderSlots } from '@/layouts/header-parts.tsx';
 import { ShellFooter } from '@/layouts/ShellFooter.tsx';
 import type { ShellHeaderProps } from '@/layouts/StorefrontShell.tsx';
 import { ShellStateContext, useShellState, useShellStateValue } from '@/layouts/shell-context.ts';
 import { Slot } from '@/templates/runtime.tsx';
-import { headerIconClass, useCoreOptions } from '@/templates/hooks.ts';
 import classes from '@/layouts/MenuShell.module.css';
 
 const onCatalogPath = (pathname: string) => pathname === '/' || pathname.startsWith('/c/');
 
-/** TopBar slot + the one compact bar. */
-export function MenuHeader({ topBar = true, search: withSearch = true, sticky = true, nav }: ShellHeaderProps) {
-  const { brand, features } = useSettings();
-  const loggedIn = useSessionStore(selectIsLoggedIn);
-  const cartCount = useCartStore(selectCount);
-  const openPanel = useUiStore((s) => s.open);
-  const { pathname } = useLocation();
-  const { search, setSearch } = useShellState();
-  const onCatalog = onCatalogPath(pathname);
-  // Only the catalogue body carries the sheet this button opens — wholesale replaces
-  // it, so the button would have nothing to show.
-  const { showCategoryPicker, headerAccountIcon, headerCartIcon } = useCoreOptions();
-  const canFilter = onCatalog && !features.wholesale && showCategoryPicker;
-  const accountClass = headerIconClass(headerAccountIcon);
-  const cartClass = headerIconClass(headerCartIcon);
-  // A category in the path is the only filter this layout has — the dot says one is on.
-  const filtered = pathname.startsWith('/c/');
-
-  return (
-    <>
-      {topBar ? <Slot name="TopBar" /> : null}
-      <header className={sticky ? classes.bar : `${classes.bar} ${classes.unstuck}`} data-sf-part="header">
-        <NoticeBanners pinned />
-        <div className={classes.barInner}>
-          <Link to="/" className={classes.home} aria-label={`${brand.name} — home`}>
-            <Brand size="sm" />
-          </Link>
-
-          {nav}
-
-          {withSearch ? <SearchField className={classes.search} value={search} onChange={setSearch} placeholder="Search" /> : null}
-
-          <div className={classes.actions}>
-            {canFilter ? (
-              <button
-                type="button"
-                className={classes.action}
-                onClick={() => openPanel('filterOpen')}
-                aria-label={filtered ? 'Categories — one category selected' : 'Categories'}
-              >
-                <FilterIcon size={17} />
-                {filtered ? <span className={classes.mark} aria-hidden /> : null}
-              </button>
-            ) : null}
-
-            {features.accounts && accountClass !== null ? (
-              <Link
-                to={loggedIn ? '/account' : '/login'}
-                className={`${classes.action} ${accountClass}`}
-                aria-label={loggedIn ? 'Your account' : 'Sign in'}
-              >
-                <UserIcon size={17} />
-              </Link>
-            ) : null}
-
-            {features.ordering && cartClass !== null ? (
-              <Link
-                to="/cart"
-                className={`${classes.action} ${cartClass}`}
-                aria-label={`Cart, ${cartCount} item${cartCount === 1 ? '' : 's'}`}
-              >
-                <BagIcon size={17} />
-                {cartCount > 0 ? <span className={classes.count} data-sf-part="badge">{cartCount}</span> : null}
-              </Link>
-            ) : null}
-          </div>
-        </div>
-      </header>
-    </>
-  );
+/** TopBar slot + the one compact bar: the Header container's default arrangement (v0.7.0 markup). */
+export function MenuHeader({ topBar = true, search: withSearch = true, sticky = true, nav, styleAttrs }: ShellHeaderProps) {
+  const slots = useMemo(() => legacyHeaderSlots('menu', withSearch, nav), [withSearch, nav]);
+  return <HeaderBar variant="menu" topBar={topBar} sticky={sticky} slots={slots} styleAttrs={styleAttrs} />;
 }
 
 /** The narrow list column: the routed page, with the shell's search handed down as outlet context. */
@@ -113,13 +43,13 @@ export function MenuMain() {
  * phone — and both bands want `bottom: 0`. The tab wins, the way it replaces the
  * contact strip in the chat menu this layout is ported from.
  */
-export function MenuContactStrip({ catalogOnly = true }: { catalogOnly?: boolean }) {
+export function MenuContactStrip({ catalogOnly = true, styleAttrs }: { catalogOnly?: boolean; styleAttrs?: StyleAttrs }) {
   const { features } = useSettings();
   const cartCount = useCartStore(selectCount);
   const { pathname } = useLocation();
   const barShowing = useMobileCartBar();
   const show = (!catalogOnly || onCatalogPath(pathname)) && !barShowing && !(features.wholesale && cartCount > 0);
-  return show ? <ContactLinks variant="strip" /> : null;
+  return show ? <ContactLinks variant="strip" styleAttrs={styleAttrs} /> : null;
 }
 
 /** The shell root and the system mounts that sit after the page chrome (spec §5.4). */

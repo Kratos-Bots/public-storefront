@@ -1,88 +1,46 @@
-import { useEffect, useMemo } from 'react';
-import { Button } from '@mantine/core';
-import { Link } from 'react-router';
+import { useEffect, useState, type ComponentType } from 'react';
 import { useUiStore } from '@/stores/ui.ts';
-import { useCartStore, selectCount } from '@/stores/cart.ts';
-import { Sheet } from '@/components/Sheet.tsx';
-import { EmptyState } from '@/components/EmptyState.tsx';
-import { CloseIcon } from '@/components/icons.tsx';
-import { CartLine } from '@/features/cart/CartLine.tsx';
-import { CartSummary } from '@/features/cart/CartSummary.tsx';
-import { useServerCart } from '@/features/cart/useServerCart.ts';
-import classes from '@/features/cart/CartDrawer.module.css';
 
 /**
- * The cart as a panel: it slides in from the right on a desktop and rises as a
- * bottom sheet on a phone, in the same chassis the product and filter sheets
- * use. Opening it in server mode pulls the customer's cart first — they may
- * have added to it from the bot since this tab was last awake.
+ * The cart drawer. The panel (the layout's cart document rendered inside the Sheet, stage 4 spec
+ * §7.3) lives in its own module because it needs the block registry, and the shell that mounts this
+ * component is itself reachable from the registry: a static import would close that cycle. The panel
+ * is requested when the shell first mounts the drawer (the drawer is mounted for the whole visit),
+ * long before a shopper can open it, so opening it never waits on the network and never suspends.
  */
-export function CartDrawer() {
-  const opened = useUiStore((s) => s.cartOpen);
-  const close = useUiStore((s) => s.close);
-  const lines = useCartStore((s) => s.lines);
-  const count = useCartStore(selectCount);
-  const { setQuantity, remove, issues, isSyncing, refresh } = useServerCart();
+let Panel: ComponentType | null = null;
+let loading: Promise<void> | null = null;
+let failed = false;
+function load(): Promise<void> {
+  // A rejected import (a deploy replaced the hashed chunk, or the shopper is offline) is not cached:
+  // the next mount or the next open of the drawer asks again.
+  loading ??= import('@/features/cart/CartDrawerPanel.tsx').then(
+    (m) => {
+      Panel = m.CartDrawerPanel;
+      failed = false;
+    },
+    () => {
+      loading = null;
+      failed = true;
+    },
+  );
+  return loading;
+}
 
-  const dismiss = () => close('cartOpen');
-
+/**
+ * Is the panel settled (loaded, or failed)? Opening the drawer retries a failed import. The portal
+ * order no longer depends on it: the panel moves its own portal to the front when it mounts.
+ */
+export function useCartDrawerReady(): boolean {
+  const [, rerender] = useState(0);
+  const open = useUiStore((s) => s.cartOpen);
   useEffect(() => {
-    if (opened) void refresh();
-  }, [opened, refresh]);
+    if (!Panel) void load().then(() => rerender((n) => n + 1));
+  }, [open]);
+  return Panel !== null || failed;
+}
 
-  const issueByProduct = useMemo(
-    () => new Map(issues.map((i) => [i.productId, i])),
-    [issues],
-  );
-  const blocked = issues.some((i) => i.inactive || i.belowMin || i.aboveMax);
-
-  return (
-    <Sheet
-      opened={opened}
-      onClose={dismiss}
-      label="Your cart"
-      part="drawer"
-      header={
-        <div className={classes.head}>
-          <div>
-            <h2 className={classes.title}>Your cart</h2>
-            <p className={classes.sub}>
-              {count} {count === 1 ? 'item' : 'items'}
-              {isSyncing ? <span className={classes.pulse} aria-hidden /> : null}
-            </p>
-          </div>
-          <button type="button" className={classes.close} onClick={dismiss} aria-label="Close">
-            <CloseIcon size={16} />
-          </button>
-        </div>
-      }
-      footer={lines.length > 0 ? <CartSummary blocked={blocked} onNavigate={dismiss} /> : undefined}
-    >
-      {lines.length === 0 ? (
-        <EmptyState
-          eyebrow="Cart"
-          title="Nothing on the order yet"
-          description="Everything you add shows up here, with the price at the quantity you're buying."
-          action={
-            <Button component={Link} to="/" variant="default" size="sm" onClick={dismiss}>
-              Browse the catalogue
-            </Button>
-          }
-        />
-      ) : (
-        <ul className={classes.lines}>
-          {lines.map((line, i) => (
-            <CartLine
-              key={line.productId}
-              line={line}
-              issue={issueByProduct.get(line.productId)}
-              onQuantity={setQuantity}
-              onRemove={remove}
-              index={i}
-            />
-          ))}
-        </ul>
-      )}
-    </Sheet>
-  );
+export function CartDrawer() {
+  useCartDrawerReady();
+  return Panel ? <Panel /> : null;
 }

@@ -1,0 +1,105 @@
+import { defineTextArea } from '@/text/define.ts';
+
+/** Area `tracking`: the order-tracking page (/tracking and /tracking/:reference). */
+export default defineTextArea('tracking', {
+  // ── lookup form + masthead ────────────────────────────────────────────────
+  'lookup.eyebrow': { en: 'Delivery', max: 40 },
+  'lookup.title': { en: 'Track your order', max: 80 },
+  'lookup.lead': { en: 'See where your parcel is and every scan along the way.' },
+  'lookup.strip': { en: 'Order tracking', max: 40 },
+  'lookup.another': { en: 'Track another →', max: 40 },
+  'lookup.label': { en: 'Order number', max: 40 },
+  'lookup.placeholder': { en: 'A7K2QM', max: 40 },
+  'lookup.hint': { en: 'Six characters, on your order confirmation.' },
+  'lookup.submit': { en: 'Track order', max: 40 },
+  'lookup.recent': { en: 'Recent', max: 40 },
+  'lookup.invalidReference': { en: 'Check that reference', max: 60 },
+
+  // ── hero (summary above the fold) ─────────────────────────────────────────
+  'hero.summaryAria': { en: 'Order tracking summary', max: 80 },
+  'hero.orderRef': { en: 'Order {reference}', max: 60 },
+  'hero.headingTo': { en: 'Heading to {place}', max: 60 },
+  'hero.parcelsDispatched': { en: '{count} parcels dispatched', max: 60 },
+  'hero.factPlaced': { en: 'Placed', max: 30 },
+  'hero.factItems': { en: 'Items', max: 30 },
+  'hero.factLastScan': { en: 'Last scan', max: 30 },
+  'hero.factParcels': { en: 'Parcels', max: 30 },
+  'hero.factType': { en: 'Type', max: 30 },
+
+  // ── parcel card ───────────────────────────────────────────────────────────
+  'parcel.single': { en: 'Parcel', max: 40 },
+  'parcel.carrierRef': { en: 'Carrier ref', max: 40 },
+  'parcel.trackWith': { en: 'Track with {carrier}', max: 60 },
+  'parcel.awaitingScan': { en: 'Awaiting first scan', max: 60 },
+  'parcel.notFoundBody': { en: 'The label exists but the courier hasn\'t scanned this parcel yet. That\'s normal for the first day or so after dispatch — check back later.' },
+  'parcel.errorEyebrow': { en: 'Carrier not responding', max: 60 },
+  'parcel.errorBody': { en: 'The carrier isn\'t answering right now. Nothing is wrong with your parcel.' },
+  'parcel.lastKnown': { en: 'Last known', max: 60 },
+  'parcel.awaitingNumber': { en: 'Awaiting tracking number', max: 60 },
+  'parcel.unavailableBody': { en: 'Live tracking is unavailable right now. Search the tracking number above on your carrier’s website for the latest scan.' },
+  'parcel.noNumberBody': { en: 'This parcel doesn’t have a tracking number yet. One appears here as soon as the carrier issues it.' },
+
+  // ── scan timeline ─────────────────────────────────────────────────────────
+  'timeline.title': { en: 'Scan history', max: 40 },
+  'timeline.count': { en: { one: '{count} scan', other: '{count} scans' }, max: 40 },
+  'timeline.noTimestamp': { en: 'No timestamp', max: 40 },
+
+  // ── status labels ─────────────────────────────────────────────────────────
+  'status.preTransit': { en: 'Label created', max: 40 },
+  'status.customs': { en: 'In customs', max: 40 },
+  'status.outForDelivery': { en: 'Out for delivery', max: 40 },
+  'status.availableForPickup': { en: 'Ready for pickup', max: 40 },
+  'status.delivered': { en: 'Delivered', max: 40 },
+  'status.exception': { en: 'Needs attention', max: 40 },
+  'status.returned': { en: 'Returned to sender', max: 40 },
+  'status.unknown': { en: 'Status unavailable', max: 40 },
+  'status.stageOrdered': { en: 'Ordered', max: 30 },
+  'status.stageCollected': { en: 'Collected', max: 30 },
+  'status.stageInFlight': { en: 'In flight', max: 30 },
+  'status.stageCustoms': { en: 'Customs', max: 30 },
+  'status.stageLocalCarrier': { en: 'Local carrier', max: 30 },
+  'status.stageOutForDelivery': { en: 'Out for delivery', max: 30 },
+  'status.stageDelivered': { en: 'Delivered', max: 30 },
+  'status.stageSummary': { en: 'Stage {stage} of {total}: {name}', max: 80 },
+  'status.awaitingCourierScan': { en: 'Awaiting first courier scan', max: 80 },
+
+  // ── relative times ────────────────────────────────────────────────────────
+  'time.justNow': { en: 'just now', max: 30 },
+  'time.minutesAgo': { en: '{minutes} min ago', max: 30 },
+  'time.hoursAgo': { en: '{hours}h ago', max: 30 },
+  'time.daysAgo': { en: { one: '1 day ago', other: '{count} days ago' }, max: 30 },
+  'time.unknown': { en: 'Date unknown', max: 30 },
+
+  // ── refresh control ───────────────────────────────────────────────────────
+  'refresh.checked': { en: 'Checked {when}', max: 60 },
+  'refresh.notChecked': { en: 'Not checked yet', max: 60 },
+  'refresh.availableIn': { en: 'Refresh available in {countdown}', max: 80 },
+  'refresh.label': { en: 'Refresh', max: 30 },
+
+  // ── screens and notices ───────────────────────────────────────────────────
+  'states.loading': { en: 'Loading tracking', max: 60 },
+  'states.verifying': { en: 'Checking you\'re human', max: 60 },
+  'states.blockedHead': { en: 'Verification unavailable', max: 60 },
+  'states.blockedBody': { en: 'We couldn\'t finish the security check that protects order lookups, so we can\'t fetch your tracking. A privacy extension or network filter blocking Cloudflare challenges is the usual cause.' },
+  'states.reload': { en: 'Reload page', max: 40 },
+  'states.notFoundHead': { en: 'No order found', max: 60 },
+  'states.notFoundBody': { en: 'We couldn\'t find an order with that number. Check it against your confirmation — it\'s six characters, letters and numbers.' },
+  'states.offHead': { en: 'Tracking unavailable', max: 60 },
+  'states.offBody': { en: 'Order tracking isn\'t switched on right now. Message us with your order number and we\'ll look it up for you.' },
+  'states.rateHead': { en: 'Too many lookups', max: 60 },
+  'states.rateBody': { en: 'This connection has made a lot of lookups in the last few minutes. Wait a minute, then try again.' },
+  'states.challengeHead': { en: 'Verification didn\'t go through', max: 60 },
+  'states.challengeBody': { en: 'The security check that protects order lookups didn\'t complete. Try again — we\'ll run a fresh one.' },
+  'states.connectionHead': { en: 'Connection error', max: 60 },
+  'states.connectionBody': { en: 'We couldn\'t reach the tracking service. Try again in a moment.' },
+  'states.thisOrder': { en: 'This order', max: 40 },
+  'states.noParcels': { en: 'No parcels yet', max: 40 },
+  'states.cancelledBody': { en: 'This order was {status}. Nothing will be dispatched.' },
+  'states.preorderBody': { en: 'This is a pre-order, so it ships once stock lands. We\'ll send a tracking number then.' },
+  'states.notDispatchedBody': { en: 'Your order hasn\'t been dispatched yet. A tracking number appears here as soon as it\'s on its way.' },
+  'states.degradedHead': { en: 'Live updates paused', max: 60 },
+  'states.degradedBody': { en: 'We can\'t reach the courier network right now. The shipment details below are still accurate.' },
+  'states.disabledEyebrow': { en: 'Tracking', max: 40 },
+  'states.disabledTitle': { en: 'Tracking isn\'t available right now', max: 80 },
+  'states.disabledBody': { en: 'Order lookups are switched off on this shop. Message us with your order number and we\'ll check on it for you.' },
+});

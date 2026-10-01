@@ -6,6 +6,7 @@ import { MethodPicker } from '@/features/order-status/MethodPicker.tsx';
 import { visibleCryptoPayments } from '@/features/order-status/payment-state.ts';
 import { FADE } from '@/lib/motion.ts';
 import type { PublicOrder } from '@/types/public-order.ts';
+import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/order-status/OrderStatus.module.css';
 
 export interface PaymentSectionProps {
@@ -27,6 +28,7 @@ export function PaymentSection({ order, reference, accessKey }: PaymentSectionPr
   // an address or a checkout button mid-switch invites paying the payment that
   // is about to be replaced.
   const [changing, setChanging] = useState(false);
+  const { t } = useText();
 
   const cards = (skip?: number) =>
     crypto
@@ -54,22 +56,22 @@ export function PaymentSection({ order, reference, accessKey }: PaymentSectionPr
       {payment.canPay ? <Deadline payBy={payment.payBy} /> : null}
 
       {payment.canPay && !active ? (
-        <section className={`${classes.card} ${classes.cardAction}`} aria-label="Payment" data-sf-part="card">
-          <p className={`${classes.cardEyebrow} ${classes.cardEyebrowAction}`}>Payment required</p>
-          <h2 className={classes.cardTitle}>Choose how to pay {total}</h2>
+        <section className={`${classes.card} ${classes.cardAction}`} aria-label={t('order.payment.ariaLabel')} data-sf-part="card">
+          <p className={`${classes.cardEyebrow} ${classes.cardEyebrowAction}`}>{t('order.payment.required')}</p>
+          <h2 className={classes.cardTitle}>{t('order.payment.chooseHowToPay', { total })}</h2>
           <MethodPicker order={order} reference={reference} accessKey={accessKey} />
         </section>
       ) : null}
 
       {payment.canPay && active?.kind === 'gateway' && !changing ? (
-        <section className={`${classes.card} ${classes.cardAction}`} aria-label="Payment" data-sf-part="card">
+        <section className={`${classes.card} ${classes.cardAction}`} aria-label={t('order.payment.ariaLabel')} data-sf-part="card">
           <div className={classes.cardHead}>
             <div className={classes.cardHeadBody}>
-              <p className={`${classes.cardEyebrow} ${classes.cardEyebrowAction}`}>Payment required</p>
-              <h2 className={classes.cardTitle}>Finish your payment</h2>
-              <p className={classes.cardFigure}>{total} · secure hosted checkout</p>
+              <p className={`${classes.cardEyebrow} ${classes.cardEyebrowAction}`}>{t('order.payment.required')}</p>
+              <h2 className={classes.cardTitle}>{t('order.payment.finishTitle')}</h2>
+              <p className={classes.cardFigure}>{t('order.payment.hostedFigure', { total })}</p>
             </div>
-            <span className={classes.pill}>Awaiting payment</span>
+            <span className={classes.pill}>{t('order.payment.awaiting')}</span>
           </div>
           {active.checkoutUrl ? (
             <a
@@ -80,24 +82,20 @@ export function PaymentSection({ order, reference, accessKey }: PaymentSectionPr
               data-sf-part="button"
               data-variant="filled"
             >
-              Open secure checkout
+              {t('order.payment.openCheckout')}
               <ArrowUpRightIcon size={12} />
             </a>
           ) : null}
           <div className={classes.waiting} aria-hidden />
-          <p className={classes.waitingNote}>
-            The checkout opens in a new tab. This page updates on its own once the payment lands.
-          </p>
+          <p className={classes.waitingNote}>{t('order.payment.hostedNote')}</p>
         </section>
       ) : null}
 
       {payment.canPay && active?.kind === 'other' && !changing ? (
-        <section className={classes.card} aria-label="Payment" data-sf-part="card">
-          <p className={classes.cardEyebrow}>Payment pending</p>
-          <h2 className={classes.cardTitle}>We&rsquo;re waiting on your payment</h2>
-          <p className={classes.cardNote}>
-            This one is arranged with us directly. Message us if anything is unclear.
-          </p>
+        <section className={classes.card} aria-label={t('order.payment.ariaLabel')} data-sf-part="card">
+          <p className={classes.cardEyebrow}>{t('order.payment.pendingEyebrow')}</p>
+          <h2 className={classes.cardTitle}>{t('order.payment.pendingTitle')}</h2>
+          <p className={classes.cardNote}>{t('order.payment.pendingNote')}</p>
         </section>
       ) : null}
 
@@ -119,13 +117,13 @@ export function PaymentSection({ order, reference, accessKey }: PaymentSectionPr
 
 /** The auto-cancel deadline, when the shop runs one. */
 function Deadline({ payBy }: { payBy: string | null }) {
+  const { tn } = useText();
   if (!payBy) return null;
   const when = formatDateTime(payBy);
   if (!when) return null;
   return (
     <p className={classes.deadline}>
-      Pay by <span className={classes.deadlineWhen}>{when}</span> — after that the order cancels
-      itself.
+      {tn('order.payment.deadline', { when: <span className={classes.deadlineWhen}>{when}</span> })}
     </p>
   );
 }
@@ -139,10 +137,11 @@ function ChangeMethod({
   onToggle,
   onSelected,
 }: PaymentSectionProps & { open: boolean; onToggle: () => void; onSelected: () => void }) {
+  const { t } = useText();
   return (
-    <section className={FADE} aria-label="Change payment method">
+    <section className={FADE} aria-label={t('order.payment.changeMethod')}>
       <button type="button" className={classes.disclosure} onClick={onToggle} aria-expanded={open}>
-        <span>{open ? 'Keep this method' : 'Change payment method'}</span>
+        <span>{open ? t('order.payment.keepMethod') : t('order.payment.changeMethod')}</span>
         <span className={classes.disclosureSign} aria-hidden>
           {open ? '−' : '+'}
         </span>
