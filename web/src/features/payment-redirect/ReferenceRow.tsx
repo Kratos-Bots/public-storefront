@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { CheckIcon, CopyIcon } from '@/components/icons.tsx';
 import { useText } from '@/text/runtime.tsx';
+import type { StyleAttrs } from '@/builder/define.ts';
 import classes from '@/features/payment-redirect/PaymentRedirect.module.css';
 
 export interface ReferenceRowProps {
   value: string;
   label?: string;
+  /** A page-builder part's style attributes, spread on the root; undefined adds nothing. */
+  rootAttrs?: StyleAttrs;
 }
 
 /**
@@ -14,7 +17,7 @@ export interface ReferenceRowProps {
  * a 44px target and the value is `user-select: all` for the browsers where
  * the clipboard API is unavailable.
  */
-export function ReferenceRow({ value, label: labelProp }: ReferenceRowProps) {
+export function ReferenceRow({ value, label: labelProp, rootAttrs }: ReferenceRowProps) {
   const { t } = useText();
   const label = labelProp ?? t('payment.reference.label');
   const [copied, setCopied] = useState(false);
@@ -34,7 +37,7 @@ export function ReferenceRow({ value, label: labelProp }: ReferenceRowProps) {
   };
 
   return (
-    <div className={classes.referenceRow}>
+    <div className={classes.referenceRow} {...rootAttrs}>
       <div className={classes.referenceBody}>
         <p className={classes.referenceLabel}>{label}</p>
         <p className={classes.referenceValue}>{value}</p>

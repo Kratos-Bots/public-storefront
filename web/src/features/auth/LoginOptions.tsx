@@ -11,6 +11,7 @@ import { TelegramLogin } from '@/features/auth/TelegramLogin.tsx';
 import { WhatsappLogin } from '@/features/auth/WhatsappLogin.tsx';
 import { useLoginSuccess } from '@/features/auth/useLoginSuccess.ts';
 import type { TelegramAuthPayload } from '@/types/auth.ts';
+import type { StyleAttrs } from '@/builder/define.ts';
 import classes from '@/features/auth/LoginOptions.module.css';
 
 /**
@@ -27,7 +28,7 @@ interface PasswordSlot {
  * a prompt raised from the cart is the same instrument as the page it would
  * otherwise have navigated to.
  */
-export function LoginOptions() {
+export function LoginOptions({ rootAttrs }: { rootAttrs?: StyleAttrs } = {}) {
   const settings = useSettings();
   const { t } = useText();
   const { login, brand } = settings;
@@ -69,12 +70,13 @@ export function LoginOptions() {
         title={t('auth.options.unavailableTitle')}
         description={t('auth.options.unavailableBody', { name: brand.shortName || brand.name })}
         action={<ContactLinks />}
+        rootAttrs={rootAttrs}
       />
     );
   }
 
   return (
-    <div className={classes.options}>
+    <div className={classes.options} {...rootAttrs}>
       {whatsapp ? (
         <AuthCard name={t('common.contact.whatsapp')} icon={<WhatsAppIcon size={15} />}>
           <WhatsappLogin number={login.whatsapp.number} />

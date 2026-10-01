@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Navigate, useSearchParams } from 'react-router';
 import { useSettings } from '@/app/settings.ts';
 import { useSessionStore } from '@/stores/session.ts';
@@ -7,7 +7,35 @@ import { TelegramSignInError } from '@/features/auth/TelegramSignInError.tsx';
 import { LoginOptions } from '@/features/auth/LoginOptions.tsx';
 import { useText } from '@/text/runtime.tsx';
 import { DEFAULT_LANDING, safeReturnTo } from '@/features/auth/useLoginSuccess.ts';
+import { LoginFamily, type LoginData } from '@/builder/family-login.ts';
+import type { PartViewProps, FamilyValue } from '@/builder/parts.ts';
+import { defaultSlotRenders } from '@/builder/render.tsx';
+import type { SlotRender } from '@/builder/define.ts';
 import classes from '@/features/auth/LoginPage.module.css';
+
+function LoginHeadingView({ styleAttrs }: PartViewProps) {
+  const { brand } = useSettings();
+  const { t } = useText();
+  return (
+    <div className={classes.head} {...styleAttrs}>
+      {/* No mark here on purpose: the shell's header already carries it, and a
+          client with no logo uploaded gets the wordmark fallback — which would
+          print the shop's name twice in a row, immediately above the heading
+          that names it a third time. */}
+      <h1 className={classes.title}>{t('auth.page.title', { name: brand.name })}</h1>
+      <p className={classes.lede}>
+        {t('auth.page.lede')}
+      </p>
+    </div>
+  );
+}
+
+function LoginMethodsView({ styleAttrs }: PartViewProps) {
+  return <LoginOptions rootAttrs={styleAttrs} />;
+}
+
+export const LOGIN_VIEWS: FamilyValue<LoginData>['views'] = { LoginHeading: LoginHeadingView, LoginMethods: LoginMethodsView };
+const LOGIN_VALUE: FamilyValue<LoginData> = { data: {}, views: LOGIN_VIEWS };
 
 /**
  * The sign-in page. One column, a card per way in — and a guarded route sends
@@ -15,9 +43,8 @@ import classes from '@/features/auth/LoginPage.module.css';
  * parked in the session store so whichever provider answers first can hand the
  * customer back to what they were doing.
  */
-export function LoginPage() {
-  const { brand } = useSettings();
-  const { t } = useText();
+export function LoginPage({ slots }: { slots?: { content: SlotRender } } = {}) {
+  const legacy = useMemo(() => (slots ? null : (defaultSlotRenders('LoginOptions', 'storefront', {}, 'login') as unknown as { content: SlotRender })), [slots]);
   const [params] = useSearchParams();
   const setReturnTo = useSessionStore((s) => s.setReturnTo);
   const telegramStatus = useTelegramAuthStore((s) => s.status);
@@ -53,19 +80,6 @@ export function LoginPage() {
   }
 
   return (
-    <div className={classes.page}>
-      <div className={classes.head}>
-        {/* No mark here on purpose: the shell's header already carries it, and a
-            client with no logo uploaded gets the wordmark fallback — which would
-            print the shop's name twice in a row, immediately above the heading
-            that names it a third time. */}
-        <h1 className={classes.title}>{t('auth.page.title', { name: brand.name })}</h1>
-        <p className={classes.lede}>
-          {t('auth.page.lede')}
-        </p>
-      </div>
-
-      <LoginOptions />
-    </div>
+    <LoginFamily.Provider value={LOGIN_VALUE}>{(slots ?? legacy!).content({ className: classes.page })}</LoginFamily.Provider>
   );
 }

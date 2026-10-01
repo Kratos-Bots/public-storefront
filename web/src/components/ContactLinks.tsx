@@ -12,10 +12,12 @@ export interface ContactLinksProps {
   variant?: 'inline' | 'strip';
   /** Block-styling attributes for the `strip` variant's sticky bar (no wrapper may sit around it). */
   styleAttrs?: StyleAttrs;
+  /** A page-builder part's style attributes, spread on the `inline` root; undefined adds nothing. */
+  rootAttrs?: StyleAttrs;
 }
 
 /** WhatsApp / Telegram links from the client's brand settings. Renders nothing when neither is configured. */
-export function ContactLinks({ prefill, variant = 'inline', styleAttrs }: ContactLinksProps) {
+export function ContactLinks({ prefill, variant = 'inline', styleAttrs, rootAttrs }: ContactLinksProps) {
   const { brand } = useSettings();
   const { t } = useText();
   const resolve = (link: string | null) => (prefill ? withPrefilledText(link, prefill) : link);
@@ -42,5 +44,5 @@ export function ContactLinks({ prefill, variant = 'inline', styleAttrs }: Contac
     );
   }
 
-  return <div className={classes.inline}>{items}</div>;
+  return <div className={classes.inline} {...rootAttrs}>{items}</div>;
 }

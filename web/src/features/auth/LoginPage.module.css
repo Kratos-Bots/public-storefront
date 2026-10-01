@@ -20,19 +20,19 @@
 .title {
   margin: 0.15rem 0 0;
   font-family: var(--sf-font-heading);
-  font-size: 1.5rem;
+  font-size: calc(1.5rem * var(--sf-text-scale, 1));
   font-weight: 700;
   line-height: 1.15;
   letter-spacing: -0.02em;
-  color: var(--sf-text);
+  color: var(--sf-block-fg, var(--sf-text));
   text-wrap: balance;
 }
 
 .lede {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: calc(0.875rem * var(--sf-text-scale, 1));
   line-height: 1.6;
-  color: var(--sf-muted);
+  color: var(--sf-block-fg, var(--sf-muted));
 }
 
 @media (min-width: 48em) {
