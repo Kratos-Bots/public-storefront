@@ -9,6 +9,7 @@ import { defaultDoc } from '@/builder/defaults/index.ts';
 import { RenderDoc } from '@/builder/render.tsx';
 import * as runtime from '@/builder/runtime.tsx';
 import * as mode from '@/builder/mode.ts';
+import { STAGE4_PARTS } from './helpers/stage4-parts.ts';
 import { sanitizeRichtext, RICHTEXT_ALLOWED_TAGS } from '@/builder/sanitize.ts';
 import { FIXED_ROUTE_KEYS } from '@/builder/types.ts';
 
@@ -58,8 +59,11 @@ describe('Plan 2 contract the editor builds on (spec §13 A7)', () => {
     for (const [key, def] of Object.entries(BLOCKS)) expect(def.name).toBe(key);
   });
 
-  it('registers exactly the stage-3 parts', () =>
-    expect(Object.values(BLOCKS).filter((d) => d.part).map((d) => d.name).sort()).toEqual([...PART_BLOCKS].sort()));
+  // Subset while stage 4 lands its parts; T15 restores equality.
+  it('registers only known parts', () => {
+    const expected = new Set<string>([...PART_BLOCKS, ...Object.keys(STAGE4_PARTS)]);
+    for (const d of Object.values(BLOCKS).filter((x) => x.part)) expect(expected.has(d.name), d.name).toBe(true);
+  });
 
   it('has a default doc for the shell and every fixed route of the storefront layout', () => {
     expect(defaultDoc('shell', 'storefront')).not.toBeNull();

@@ -31,6 +31,9 @@ const CATEGORY_ORDER: BlockCategory[] = ['part', 'content', 'catalogue', 'shell'
 /** The drawer's parts group, named by the family whose container lives on the doc. */
 export const PART_TITLES: Record<PartFamily, string> = {
   product: 'Product page parts', catalogue: 'Catalogue parts', 'card-tile': 'Card parts', 'card-row': 'Card parts',
+  header: 'Header parts', cart: 'Cart parts', 'cart-summary': 'Order summary parts', account: 'Account parts', orders: 'Order history parts',
+  order: 'Order page parts', loyalty: 'Loyalty parts', referrals: 'Referral parts', profile: 'Profile parts', login: 'Sign-in parts',
+  payment: 'Payment page parts', tracking: 'Tracking parts', verify: 'Verification parts',
 };
 
 const FIELD_MODULES = import.meta.glob<{ fields: Fields }>('./fields/*.ts', { eager: true });

@@ -50,7 +50,7 @@ describe('card keys', () => {
     expect(['card:grid', 'cards', 'card:', 'catalog', 'page:card'].some(isCardKey)).toBe(false);
   });
   it('maps every family to the docs its container lives on (spec §3.4)', () => {
-    expect(FAMILY_DOCS).toEqual({ product: ['product'], catalogue: ['catalog'], 'card-tile': ['card:tile'], 'card-row': ['card:row'] });
+    expect(FAMILY_DOCS).toMatchObject({ product: ['product'], catalogue: ['catalog'], 'card-tile': ['card:tile'], 'card-row': ['card:row'] }); // stage 4's thirteen families: builder-parts-stage4.test.ts
   });
   it("familyAllowedOn: the family's own docs only, own-key safe", () => {
     expect(familyAllowedOn('product', 'product')).toBe(true);

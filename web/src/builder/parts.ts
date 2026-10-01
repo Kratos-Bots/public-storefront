@@ -4,7 +4,9 @@ import { isComponentLike, isRecord, type ComponentData, type DocKey, type Layout
 
 // Runtime-safe and registry-free: part blocks import this module while the registry is still loading.
 
-export type PartFamily = 'product' | 'catalogue' | 'card-tile' | 'card-row'; // stages 4–5 add theirs
+export type PartFamily = 'product' | 'catalogue' | 'card-tile' | 'card-row'
+  | 'header' | 'cart' | 'cart-summary' | 'account' | 'orders' | 'order' | 'loyalty'
+  | 'referrals' | 'profile' | 'login' | 'payment' | 'tracking' | 'verify';
 
 /** Product-parts spec §3.2. */
 export interface ContainerSpec {
@@ -23,6 +25,12 @@ export interface ContainerSpec {
   requires?: ReadonlyArray<readonly [part: string, needs: string]>;
   /** A slot restricted to these types only. */
   slotAccepts?: Readonly<Record<string, readonly string[]>>;
+  /** Parts of the family this container accepts (default: all of them). */
+  offers?: readonly string[];
+  /** Containers (by block name) its slots may hold, at any depth: they own their own parts. */
+  nests?: readonly string[];
+  /** A slot never holding these types, at any depth (the area is never shown there). */
+  slotRejects?: Readonly<Record<string, readonly string[]>>;
   /** Read only when slots are absent (§8); hidden in the editor, dropped on save. */
   legacyProps?: readonly string[];
   /** Where "Add block" puts a part when nothing inside the container is selected. */
@@ -80,6 +88,25 @@ export function containsType(items: readonly ComponentData[], type: string): boo
   return false;
 }
 
+/** Depth-first: the first block of `type` in the subtree, or undefined (same walk as `containsType`). */
+export function findComponent(items: readonly ComponentData[], type: string): ComponentData | undefined {
+  for (const item of items) {
+    if (item.type === type) return item;
+    if (!isRecord(item.props)) continue;
+    for (const value of Object.values(item.props)) {
+      if (!isComponentArray(value)) continue;
+      const found = findComponent(value, type);
+      if (found) return found;
+    }
+  }
+  return undefined;
+}
+
+/** Does `spec` accept the part `type`? Omitted `offers` means every part of the family. */
+export function offersPart(spec: ContainerSpec, type: string): boolean {
+  return !spec.offers || spec.offers.includes(type);
+}
+
 /** `${containerId.slice(0, 40)}-${key}` — at most 40 + 1 + 18 chars with this stage's keys. */
 export const partId = (containerId: string, key: string): string => `${containerId.slice(0, 40)}-${key}`;
 export const part = (type: string, containerId: string, key: string = type): ComponentData => ({ type, props: { id: partId(containerId, key) } });
@@ -102,6 +129,11 @@ export function fixedSlot(children: ReactNode, items: readonly ComponentData[] =
  */
 export const FAMILY_DOCS: Readonly<Record<PartFamily, readonly DocKey[]>> = {
   product: ['product'], catalogue: ['catalog'], 'card-tile': ['card:tile'], 'card-row': ['card:row'],
+  header: ['shell'], cart: ['cart'], 'cart-summary': ['cart'],
+  account: ['account.orders', 'account.order', 'account.loyalty', 'account.referrals', 'account.profile'],
+  orders: ['account.orders'], order: ['account.order'], loyalty: ['account.loyalty'], referrals: ['account.referrals'],
+  profile: ['account.profile'], login: ['login'], payment: ['payment-success', 'payment-cancel', 'order-placed'],
+  tracking: ['tracking'], verify: ['verify'],
 };
 
 /** May `family`'s container live on `docKey`? Own-key lookup: an unguarded family string never hits the prototype. */

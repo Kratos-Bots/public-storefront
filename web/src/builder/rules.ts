@@ -1,6 +1,6 @@
 import { BLOCKS } from '@/builder/registry.ts';
 import type { AnyBlock, BlockDef } from '@/builder/define.ts';
-import { familyAllowedOn, type PartFamily } from '@/builder/parts.ts';
+import { familyAllowedOn, offersPart, type ContainerSpec, type PartFamily } from '@/builder/parts.ts';
 import { isCardKey, isRecord, type ComponentData, type DocKey, type FixedRouteKey, type Issue, type LayoutKind, type PuckDoc } from '@/builder/types.ts';
 
 const ACCOUNT: readonly DocKey[] = ['account.orders', 'account.order', 'account.loyalty', 'account.referrals', 'account.profile'];
@@ -137,8 +137,18 @@ export function allowedOn(type: string, docKey: DocKey): boolean {
 const label = (type: string) => blockDef(type)?.label ?? type.slice(0, 60);
 
 /** Editor copy naming each family's container, as a shopper-neutral noun. */
-export const FAMILY_NOUN: Record<PartFamily, string> = { product: 'product page', catalogue: 'catalogue', 'card-tile': 'product card', 'card-row': 'product row' };
-const FAMILY_HOME: Record<PartFamily, string> = { product: 'Product detail', catalogue: 'product grid or product list', 'card-tile': 'product card', 'card-row': 'product row' };
+export const FAMILY_NOUN: Record<PartFamily, string> = {
+  product: 'product page', catalogue: 'catalogue', 'card-tile': 'product card', 'card-row': 'product row',
+  header: 'header', cart: 'cart', 'cart-summary': 'order summary', account: 'account page', orders: 'order history', order: 'order page',
+  loyalty: 'loyalty page', referrals: 'referrals page', profile: 'profile page', login: 'sign-in page', payment: 'payment page',
+  tracking: 'tracking page', verify: 'verification page',
+};
+const FAMILY_HOME: Record<PartFamily, string> = {
+  product: 'Product detail', catalogue: 'product grid or product list', 'card-tile': 'product card', 'card-row': 'product row',
+  header: 'Header', cart: 'Cart contents', 'cart-summary': 'Cart summary', account: 'account navigation', orders: 'Orders list',
+  order: 'Order detail', loyalty: 'Loyalty block', referrals: 'Referrals block', profile: 'Profile block', login: 'Login options',
+  payment: 'payment page block', tracking: 'Tracking lookup', verify: 'Verify form',
+};
 const REQUIRES_MESSAGE: Record<string, string> = {
   'CardTileAdd.CardTilePrice': 'A product card with an add button must also show the price.',
   'CardRowAdd.CardRowPrice': 'A product row with an add button must also show the price.',
@@ -183,15 +193,22 @@ function requiredInside(item: ComponentData, required: ReadonlySet<string>): str
 }
 
 /** Every part must have a container of its family as its nearest container ancestor (all slots, hidden ones too). */
-function checkPartPlacement(items: readonly ComponentData[], family: PartFamily | null, docKey: DocKey, flagged: Set<string>, issues: Issue[]): void {
+function checkPartPlacement(items: readonly ComponentData[], owner: ContainerSpec | null, docKey: DocKey, flagged: Set<string>, issues: Issue[]): void {
   for (const c of items) {
     const def = blockDef(c.type);
     if (!def) continue;
-    if (def.part && def.part.family !== family && !flagged.has(`part-placement:${c.type}`)) {
+    const sameFamily = !!def.part && !!owner && owner.family === def.part.family;
+    const bad = !!def.part && !(sameFamily && offersPart(owner!, c.type));
+    if (def.part && bad && !flagged.has(`part-placement:${c.type}`)) {
       flagged.add(`part-placement:${c.type}`);
-      issues.push({ docKey, rule: `part-placement:${c.type}`, message: `${label(c.type)} can only sit inside the ${FAMILY_HOME[def.part.family]}.`, blockId: c.props.id });
+      issues.push({
+        docKey, rule: `part-placement:${c.type}`, blockId: c.props.id,
+        message: sameFamily
+          ? `${label(c.type)} isn't available on this page's ${FAMILY_NOUN[def.part.family]}.`
+          : `${label(c.type)} can only sit inside the ${FAMILY_HOME[def.part.family]}.`,
+      });
     }
-    const next = def.container ? def.container.family : family;
+    const next = def.container ?? owner;
     for (const s of def.slots) {
       const children = c.props[s];
       if (Array.isArray(children)) checkPartPlacement(children as ComponentData[], next, docKey, flagged, issues);
@@ -203,13 +220,39 @@ function checkPartPlacement(items: readonly ComponentData[], family: PartFamily 
  * The first route block or container anywhere under `items` (every slot, hidden ones included, like
  * `placement`): a container's slots never hold one, however deep in content blocks (spec §3.4).
  */
-function foreignInside(items: readonly ComponentData[]): ComponentData | undefined {
+function foreignInside(items: readonly ComponentData[], nests: readonly string[] = []): ComponentData | undefined {
   let found: ComponentData | undefined;
+  // A nested container (listed in `nests`) is allowed, and what it holds is its own business: the walk
+  // skips its descendants by collecting them first.
+  const skipped = new Set<ComponentData>();
+  const mark = (list: readonly ComponentData[]) => walk(list, (x) => { skipped.add(x); }, false);
   walk(items, (c) => {
+    if (skipped.has(c)) return;
+    if (nests.includes(c.type)) {
+      const d = blockDef(c.type);
+      if (d) for (const s of d.slots) { const kids = c.props[s]; if (Array.isArray(kids)) mark(kids as ComponentData[]); }
+      return;
+    }
     const d = blockDef(c.type);
     if (!found && d && (d.routeBound || d.container)) found = c;
   }, false);
   return found;
+}
+
+/** The first block of one of `types` under `items`, through every slot; a nested container is tested but not entered. */
+function rejectedInside(items: readonly ComponentData[], types: readonly string[]): ComponentData | undefined {
+  for (const c of items) {
+    if (types.includes(c.type)) return c;
+    const d = blockDef(c.type);
+    if (!d || d.container) continue;
+    for (const s of d.slots) {
+      const kids = c.props[s];
+      if (!Array.isArray(kids)) continue;
+      const hit = rejectedInside(kids as ComponentData[], types);
+      if (hit) return hit;
+    }
+  }
+  return undefined;
 }
 
 /** Spec §4 for one container instance: counts through visible slots, stopping at a nested container. */
@@ -222,11 +265,14 @@ function containerIssues(item: ComponentData, def: AnyBlock, docKey: DocKey, lay
   const counts = new Map<string, number>();
   // One issue per hidden holder (its first required part), like the doc-level rule.
   const hiddenHolders = new Map<ComponentData, string>();
+  const hiddenParts = new Map<string, ComponentData>();
   const visit = (items: readonly ComponentData[], hidden: ComponentData | null) => {
     for (const c of items) {
       counts.set(c.type, (counts.get(c.type) ?? 0) + 1);
       if (hidden && required.has(c.type) && !hiddenHolders.has(hidden)) hiddenHolders.set(hidden, c.type);
       const d = blockDef(c.type);
+      // A required part that carries its own `hide` (header brand, payment reference...): once per type.
+      if (d && required.has(c.type) && hiddenAs(d, c.props) && !hiddenParts.has(c.type)) hiddenParts.set(c.type, c);
       if (!d || d.container) continue;
       const nextHidden = hidden ?? (hiddenAs(d, c.props) ? c : null);
       for (const s of shownSlots(d, c.props)) {
@@ -262,16 +308,30 @@ function containerIssues(item: ComponentData, def: AnyBlock, docKey: DocKey, lay
     issues.push({ docKey, rule: `hidden-required:${holder.type}`, blockId: holder.props.id,
       message: `${label(holder.type)} is hidden ${hide === 'mobile' ? 'below' : 'from'} 992 px but holds the ${label(part)}, which every shopper must see.` });
   }
+  for (const [type, part] of hiddenParts) {
+    issues.push({ docKey, rule: `hidden-required:${type}`, blockId: part.props.id,
+      message: `${label(type)} can't be hidden: every shopper must see it.` });
+  }
   for (const s of def.slots) {
     const children = item.props[s];
     if (!Array.isArray(children)) continue;
     const only = spec.slotAccepts ? own(spec.slotAccepts, s) ?? null : null;
-    const bad = only ? (children as ComponentData[]).find((c) => !only.includes(c.type)) : foreignInside(children as ComponentData[]);
+    const bad = only ? (children as ComponentData[]).find((c) => !only.includes(c.type)) : foreignInside(children as ComponentData[], spec.nests);
     if (bad) {
       issues.push({ docKey, rule: `slot-accepts:${def.name}.${s}`, blockId: bad.props.id,
         message: only
           ? `${label(bad.type)} can't sit there: that area of the ${noun} holds only ${only.map(label).join(', ')}.`
           : `${label(bad.type)} can't sit inside the ${label(def.name)}.` });
+    }
+  }
+  for (const s of def.slots) {
+    const rejects = spec.slotRejects ? own(spec.slotRejects, s) : undefined;
+    const children = item.props[s];
+    if (!rejects || !Array.isArray(children)) continue;
+    const bad = rejectedInside(children as ComponentData[], rejects);
+    if (bad) {
+      issues.push({ docKey, rule: `slot-rejects:${def.name}.${s}`, blockId: bad.props.id,
+        message: `${label(bad.type)} can't sit there: that area of the ${noun} never shows it.` });
     }
   }
   return issues;

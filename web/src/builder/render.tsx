@@ -110,6 +110,11 @@ function BlockNode({ item, ctx }: { item: ComponentData; ctx: BlockRenderContext
   );
 }
 
+/** One component exactly as `RenderDoc` renders an entry: boundary, style and slots. */
+export function renderComponent(item: ComponentData, ctx: BlockRenderContext): ReactNode {
+  return <BlockNode key={`${item.type}:${item.props.id}`} item={item} ctx={ctx} />;
+}
+
 /** Our own renderer over Puck's Data format (spec §13 A1). Expects a guarded document. */
 export function RenderDoc({ doc, docKey, layout }: { doc: PuckDoc; docKey: DocKey; layout: LayoutKind }): ReactNode {
   const { editing } = useBuilderMode();
