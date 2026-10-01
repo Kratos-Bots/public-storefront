@@ -324,6 +324,16 @@ describe('wide only when both columns show something', () => {
     expect(sels(m)).toEqual({ page: false, layout: false });
     expect(m.container.textContent).toContain('Trail Mix 500g');
   });
+  it('a Section wrapping only silent parts does not count as showing => narrow', async () => {
+    const section = c('Section', 'sec-silent', { content: [p('OrderStatusPayment'), p('OrderStatusShipments')] });
+    const m = await mountStatus(NOTHING, { action: [section] });
+    expect(sels(m)).toEqual({ page: false, layout: false });
+  });
+  it('a Section holding a silent part and a RichText still shows => wide', async () => {
+    const section = c('Section', 'sec-mixed', { content: [p('OrderStatusPayment'), p('OrderStatusShipments'), rich('rt-mixed')] });
+    const m = await mountStatus(NOTHING, { action: [section] });
+    expect(sels(m)).toEqual({ page: true, layout: true });
+  });
   it('a RichText in summary makes it show', async () => {
     const m = await mountStatus(order({ status: 'confirmed', shippingAddress: null, shipments: [PARCEL] }), {
       action: [p('OrderStatusPayment'), p('OrderStatusShipments'), c('OrderStatusItems', 'os-OrderStatusItems')], summary: [p('OrderStatusAddress'), rich('rt-sum', '<p>Free returns</p>')],

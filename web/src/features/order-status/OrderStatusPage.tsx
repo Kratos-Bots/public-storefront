@@ -4,8 +4,9 @@ import { useQuery } from '@tanstack/react-query';
 import { InvalidLinkError, fetchPublicOrder } from '@/api/public-order.ts';
 import { useSettings } from '@/app/settings.ts';
 import { OrderStatusFamily, type OrderStatusData, type OrderStatusSlots } from '@/builder/family-order-status.ts';
+import type { SlotRender } from '@/builder/define.ts';
 import { usePreviewFixture } from '@/builder/mode.ts';
-import { slotShows } from '@/builder/parts.ts';
+import { flattenTypes } from '@/builder/parts.ts';
 import { defaultSlotRenders } from '@/builder/render.tsx';
 import { saveOrder } from '@/stores/saved-orders.ts';
 import {
@@ -96,7 +97,14 @@ export function OrderStatusPage({ slots }: OrderStatusPageProps = {}) {
   if (!order.shippingAddress) silent.add('OrderStatusAddress');
   // The action column earns its own track only when it has something in it — otherwise the wide
   // layout would draw an empty half beside the summary.
-  const wide = slotShows(s.action.items, silent) && slotShows(s.summary.items, silent);
+  // A content block (Section, Columns) wrapping only silent parts draws nothing either.
+  const shows = (items: SlotRender['items']) =>
+    items.some((item) => {
+      if (silent.has(item.type)) return false;
+      const inner = flattenTypes([item]).slice(1);
+      return inner.length === 0 || inner.some((t) => !silent.has(t));
+    });
+  const wide = shows(s.action.items) && shows(s.summary.items);
 
   return (
     <OrderStatusFamily.Provider value={value}>
