@@ -55,7 +55,8 @@ import {
   DEFAULT_STEP_ORDER, STEP_KINDS, STEP_TYPE, isLegalStepOrder, stepKindsOf, stepOrderProblem, type StepKind,
 } from '@/builder/family-checkout.ts';
 import { STAGE5_PARTS } from './helpers/stage5-parts.ts';
-import { mountDoc } from './helpers/stage4-golden.tsx';
+import { RenderDoc } from '@/builder/render.tsx';
+import { mountAt, mountDoc } from './helpers/stage4-golden.tsx';
 import stepCss from '@/features/checkout/steps/Steps.module.css';
 
 const CHECKOUT_PARTS = ['CheckoutHeading', 'CheckoutProgress', 'CheckoutContact', 'CheckoutAddress', 'CheckoutShipping', 'CheckoutPayment', 'CheckoutReview', 'CheckoutCoupon', 'CheckoutNotes', 'CheckoutSummary'];
@@ -498,6 +499,67 @@ describe('container logic', () => {
       await act(async () => { await new Promise((r) => setTimeout(r, 450)); });
       expect(action().label).toMatch(i < 5 ? /^continue$/i : /^place order/i);
     }
+  }, T);
+});
+
+describe('fix round 1 coverage', () => {
+  const NO_PARTS = () => withSlot(withSlot(stepItems(STEP_KINDS), 'CheckoutShipping', 'after', []), 'CheckoutReview', 'after', []);
+  const guestQuoted = () => waitFor(() => expect(vi.mocked(guestQuote).mock.calls.length).toBeGreaterThan(0), { timeout: 6000 });
+  const pause = (ms: number) => act(async () => { await new Promise((r) => setTimeout(r, ms)); });
+
+  it('an illegal stored step order renders the default arrangement', async () => {
+    prepare();
+    mountAt(<RenderDoc doc={docOf(flow({ steps: stepItems(['review', 'contact', 'address', 'shipping', 'payment']) }))} docKey="checkout" layout="storefront" />, OPTS);
+    await count();
+    expect(labels()).toEqual(STEP_KINDS.map((k) => (TEXT_ENTRIES[`checkout.steps.${k}`]!.en as string)));
+    expect(screen.queryByRole('button', { name: /place order/i })).toBeNull();
+    await toStep(5);
+    expect(await screen.findByRole('button', { name: /place order/i })).toBeTruthy();
+  }, T);
+
+  it('guest, coupon part absent, saved code: one mint and one quote', async () => {
+    prepare({ guest: true, form: { couponCode: 'NORTH10' } });
+    mount(flow({ steps: NO_PARTS() }));
+    await count();
+    await guestQuoted();
+    await pause(1200);
+    expect(turnstile.minted).toBe(1);
+    expect(vi.mocked(guestQuote).mock.calls).toHaveLength(1);
+  }, T);
+
+  it('positive control: with the coupon part, applying a code mints again', async () => {
+    prepare({ guest: true });
+    mount(flow());
+    await count();
+    await guestQuoted();
+    await pause(1200);
+    expect(turnstile.minted).toBe(1);
+    for (let i = 1; i < 3; i += 1) {
+      await press(/^continue$/i);
+      await waitFor(() => expect(stepNo()).toBe(String(i + 1)), { timeout: 4000 });
+      await pause(1200);
+    }
+    fireEvent.change(await screen.findByLabelText(TEXT_ENTRIES['checkout.coupon.codeLabel']!.en as string), { target: { value: 'NORTH10' } });
+    await press(/^apply$/i);
+    await waitFor(() => expect(turnstile.minted).toBe(2), { timeout: 6000 });
+  }, T);
+
+  it('placeGuestOrder body carries no coupon or notes without the parts', async () => {
+    prepare({ guest: true, form: { couponCode: 'NORTH10', notes: 'leave at door' } });
+    mount(flow({ steps: NO_PARTS() }));
+    await count();
+    await guestQuoted();
+    await pause(1200);
+    for (let i = 1; i < 5; i += 1) {
+      await press(/^continue$/i);
+      await waitFor(() => expect(stepNo()).toBe(String(i + 1)), { timeout: 4000 });
+      await pause(1200);
+    }
+    await press(/place order/i);
+    await waitFor(() => expect(placeGuestOrder).toHaveBeenCalled(), { timeout: 6000 });
+    const body = vi.mocked(placeGuestOrder).mock.calls[0]![0];
+    expect(body.couponCode).toBeUndefined();
+    expect(body.notes).toBeUndefined();
   }, T);
 });
 
