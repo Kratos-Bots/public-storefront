@@ -270,6 +270,8 @@ export function EditorCanvas() {
         echo.current = true;
         // Puck puts the last accepted document back, as one recorded step so history keeps no illegal state.
         getPuck().dispatch({ type: 'setData', data: () => accepted.doc as unknown as Partial<Data>, recordHistory: true });
+        // Puck's echo, if any, arrives within the dispatch; if none came, do not let the flag swallow the next real edit's clear.
+        queueMicrotask(() => { echo.current = false; });
       }
       return;
     }

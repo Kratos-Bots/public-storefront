@@ -744,8 +744,11 @@ stepper. The checkout previews as a signed-in shopper with a sample cart; the or
 shipped, awaiting-payment, hosted-open, crypto-checking, two-parcels, cancelled). Placing an order
 or choosing a payment in the editor is refused by the fixture API ("Preview only — nothing was
 sent."). The step parts cannot be deleted, duplicated or dragged; other required parts can be moved
-within their homes but not deleted. A legality guard in the editor reverts a drop or reorder that
-would break a locked order, so an owner cannot save one by accident.
+within their homes but not deleted. A legality guard in the editor reverts any insert, move, reorder
+or replace that would break an arrangement rule (`part-home`, `part-placement`, `part-order`,
+`slot-accepts`, `slot-rejects`), on every document, so an owner cannot save one by accident. A second
+violation of a rule id already present in a stored document is tolerated in the editor (publishing
+stays blocked).
 
 Files: `builder/family-checkout.ts` and `family-order-status.ts` (family data and the step-order
 helpers; type-only feature imports, in the entry), `builder/blocks/_shared/checkout-container.ts`
@@ -1222,9 +1225,10 @@ a container of its family, and an at-most-one part that is already on the page i
 again (`Remove` it first, or use **Add** below). The group sits first; the usual content blocks
 follow. Where a drop is allowed is the container's allow list: a part may only land in its own
 family's container, and a container's slots refuse route blocks and other containers. A part
-dropped anywhere else (for instance Price dragged out onto the page root) is accepted but raises
-`part-placement:<Part>`: the block is marked "Needs attention" on the canvas, the issue is in the
-header's list and in `sf-builder-change.issues`, and publishing is blocked until it is moved back.
+dropped anywhere else (for instance Price dragged out onto the page root) is undone by the editor,
+which says why. A stored document that is already misplaced still raises `part-placement:<Part>`:
+the block is marked "Needs attention" on the canvas, the issue is in the header's list and in
+`sf-builder-change.issues`, and publishing is blocked until it is moved back.
 
 **Locks.** Required parts (Title, Price and the add button on the product page; the product name
 on a card) have no delete action and read "Required" in the panel; they can still be moved.

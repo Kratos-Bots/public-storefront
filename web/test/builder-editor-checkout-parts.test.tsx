@@ -154,6 +154,22 @@ describe('the checkout canvas', () => {
     if (stored) expect(items(stepOf(stored, 'CheckoutContact').props.before)).toEqual([]);
   });
 
+  it('the next legal edit after a reverted drop clears the notice (the revert flag does not linger)', async () => {
+    renderCanvas();
+    await puckShown();
+    const contact = stepOf(puckStore().getState().state.data, 'CheckoutContact');
+    const zone = `${String(contact.props.id)}:before`;
+    await act(async () => puckStore().getState().dispatch({
+      type: 'insert', componentType: 'CheckoutCoupon', destinationIndex: 0, destinationZone: zone, id: 'cp-dropped', recordHistory: true,
+    }));
+    expect(document.querySelector('[data-sf-builder-legality]')).not.toBeNull();
+    await act(async () => { await Promise.resolve(); });
+    await act(async () => puckStore().getState().dispatch({
+      type: 'insert', componentType: 'RichText', destinationIndex: 0, destinationZone: zone, id: 'rt-dropped', recordHistory: true,
+    }));
+    expect(document.querySelector('[data-sf-builder-legality]')).toBeNull();
+  });
+
   it('a legal drop goes through untouched (a content block in the Contact step)', async () => {
     renderCanvas();
     await puckShown();

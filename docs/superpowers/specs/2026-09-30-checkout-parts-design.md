@@ -416,6 +416,12 @@ restores the previous data in the same tick and shows the rule's message as a to
 reaches autosave through the canvas; a stored document (older editor, API) that is illegal shows
 its blocking issue with a **Reset step order** / **Reset arrangement** quick fix.
 
+Decided: the guard covers every family and all five arrangement rules (`part-home`, `part-placement`,
+`part-order`, `slot-accepts`, `slot-rejects`) for the four action kinds insert, move, reorder and
+replace. A second violation of a rule id already present in a stored document is tolerated in the
+editor (publish stays blocked). The first Undo after a reverted drop is a no-op, because the revert
+is itself recorded as one history step.
+
 ### 10.2 Locks and the Step order control
 
 - The five step parts: `permissions: { delete: false, duplicate: false, drag: false }`. Steps are

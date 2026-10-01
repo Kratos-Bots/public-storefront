@@ -167,8 +167,6 @@ export function fixtureOrderStates(now: Date): Record<OrderStateId, PublicOrder>
   };
 }
 
-export const FIXTURE_ORDER_STATES = fixtureOrderStates(new Date());
-
 export const FIXTURE_REDEEM: RedeemOptions = {
   loyaltyPoints: 860,
   options: [

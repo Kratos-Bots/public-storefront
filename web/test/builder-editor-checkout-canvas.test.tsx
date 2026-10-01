@@ -57,7 +57,7 @@ import { CHECKOUT_CONTAINER } from '@/builder/blocks/_shared/checkout-container.
 import { STEP_TYPE, type CheckoutSlots, type StepKind } from '@/builder/family-checkout.ts';
 import type { ComponentData, PuckDoc } from '@/builder/types.ts';
 import { effectivePreviewAs } from '@/builder/editor/fixture-mode.ts';
-import { FIXTURE_ORDER_STATES, fixtureOrderStates } from '@/builder/editor/fixtures.ts';
+import { fixtureOrderStates } from '@/builder/editor/fixtures.ts';
 import { containerOfDoc, PREVIEW_STATE_LABELS, previewFixturesFor } from '@/builder/editor/preview-states.ts';
 import { CheckoutNote } from '@/builder/editor/CheckoutNote.tsx';
 import { CheckoutPage } from '@/features/checkout/CheckoutPage.tsx';
@@ -239,12 +239,13 @@ describe('effectivePreviewAs', () => {
 
 describe('order-status fixtures', () => {
   const ids = ['shipped', 'awaiting-payment', 'hosted-open', 'crypto-checking', 'two-parcels', 'cancelled'] as const;
+  const states = fixtureOrderStates(new Date());
   it('has the six states, all for NB0977', () => {
-    expect(Object.keys(FIXTURE_ORDER_STATES).sort()).toEqual([...ids].sort());
-    for (const id of ids) expect(FIXTURE_ORDER_STATES[id].reference, id).toBe('NB0977');
+    expect(Object.keys(states).sort()).toEqual([...ids].sort());
+    for (const id of ids) expect(states[id].reference, id).toBe('NB0977');
   });
   it('each state carries what its variant needs', () => {
-    const s = FIXTURE_ORDER_STATES;
+    const s = states;
     expect(s['awaiting-payment'].status).toBe('pending');
     expect(s['awaiting-payment'].payment).toMatchObject({ canPay: true, activePayment: null });
     expect(new Date(s['awaiting-payment'].payment!.payBy!).getTime()).toBeGreaterThan(Date.now());
@@ -262,7 +263,7 @@ describe('order-status fixtures', () => {
   });
   it('invents everything: no email, and every URL is on shop.example', () => {
     for (const id of ids) {
-      const json = JSON.stringify(FIXTURE_ORDER_STATES[id]);
+      const json = JSON.stringify(states[id]);
       expect(json, id).not.toContain('@');
       for (const url of json.match(/https?:\/\/[^"\s]+/g) ?? []) expect(new URL(url).host, `${id} ${url}`).toBe('shop.example');
     }
@@ -272,7 +273,7 @@ describe('order-status fixtures', () => {
     for (const id of ids) expect(previewFixturesFor({ OrderStatus: id }, now).OrderStatus).toEqual(fixtureOrderStates(now)[id]);
     expect(previewFixturesFor({}, now).OrderStatus).toEqual(fixtureOrderStates(now).shipped);
     // The pay-by date follows the clock it is given, three days out.
-    const payBy = (previewFixturesFor({ OrderStatus: 'awaiting-payment' }, now).OrderStatus as typeof FIXTURE_ORDER_STATES.shipped).payment!.payBy!;
+    const payBy = (previewFixturesFor({ OrderStatus: 'awaiting-payment' }, now).OrderStatus as ReturnType<typeof fixtureOrderStates>['shipped']).payment!.payBy!;
     expect(new Date(payBy).getTime()).toBe(now.getTime() + 3 * 24 * 60 * 60 * 1000);
     expect(PREVIEW_STATE_LABELS.OrderStatus.map((o) => o.label)).toEqual([
       'Shipped', 'Awaiting payment', 'Hosted checkout open', 'Crypto sent, checking', 'Two parcels', 'Cancelled',
