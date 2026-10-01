@@ -135,7 +135,7 @@ text version that was live right after this page-set version was published or re
 when none existed; `null` on rows published before this migration and on drafts).
 
 One migration via `npm run db:generate` (the next number after the latest in `drizzle/` —
-`0046` at the time of writing). No backfill.
+`0047` at the time of writing). No backfill.
 
 ### 4.2 Module `src/modules/storefront-text/`
 
