@@ -29,9 +29,23 @@ vi.mock('@/lib/telegram-webapp.ts', async (orig) => ({ ...(await orig<typeof imp
 // Only the TopBar slot is observable; Footer / Overlay / ButtonAdornment draw nothing here.
 vi.mock('@/templates/runtime.tsx', async (orig) => ({
   ...(await orig<typeof import('@/templates/runtime.tsx')>()),
-  useTemplateContext: () => ({ ...(({} as unknown) as object), resolved: { options: state.options } }) as never,
   Slot: ({ name }: { name: string }) => (name === 'TopBar' ? <i data-slot="TopBar" /> : null),
 }));
+// A store whose template option hides a header icon by default; a block-level scope still wins over it.
+vi.mock('@/templates/hooks.ts', async (orig) => {
+  const real = await orig<typeof import('@/templates/hooks.ts')>();
+  const { useContext } = await import('react');
+  const { CoreOptionsScopeContext } = await import('@/templates/core-scope.ts');
+  return {
+    ...real,
+    useCoreOptions: () => {
+      const base = real.useCoreOptions();
+      const scope = useContext(CoreOptionsScopeContext);
+      const o = state.options as Partial<Record<'headerAccountIcon' | 'headerCartIcon', typeof base.headerAccountIcon>>;
+      return { ...base, headerAccountIcon: scope.headerAccountIcon ?? o.headerAccountIcon ?? base.headerAccountIcon, headerCartIcon: scope.headerCartIcon ?? o.headerCartIcon ?? base.headerCartIcon };
+    },
+  };
+});
 // The routed page column is not under test; the default shell document's PageOutlet draws nothing.
 vi.mock('@/layouts/StorefrontShell.tsx', async (orig) => ({ ...(await orig<typeof import('@/layouts/StorefrontShell.tsx')>()), StorefrontMain: () => null }));
 vi.mock('@/layouts/MenuShell.tsx', async (orig) => ({ ...(await orig<typeof import('@/layouts/MenuShell.tsx')>()), MenuMain: () => null }));
