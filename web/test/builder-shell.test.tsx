@@ -16,7 +16,7 @@ vi.mock('@/components/ContactLinks.tsx', () => ({ ContactLinks: () => <i data-ma
 vi.mock('@/features/notices/NoticeBanners.tsx', () => ({ NoticeBanners: ({ pinned }: { pinned?: boolean }) => <i data-mark={pinned ? 'notices-pinned' : 'notices'} /> }));
 vi.mock('@/features/notices/CutoffBar.tsx', () => ({ CutoffBar: () => <i data-mark="cutoff" /> }));
 vi.mock('@/features/auth/LoginModal.tsx', () => ({ LoginModal: () => <i data-mark="login-modal" /> }));
-vi.mock('@/features/cart/CartDrawer.tsx', () => ({ CartDrawer: () => <i data-mark="cart-drawer" /> }));
+vi.mock('@/features/cart/CartDrawer.tsx', () => ({ CartDrawer: () => <i data-mark="cart-drawer" />, useCartDrawerReady: () => true }));
 vi.mock('@/features/cart/MobileCartBar.tsx', () => ({ MobileCartBar: () => <i data-mark="cart-bar" />, useMobileCartBar: () => false }));
 vi.mock('@/features/webapp/PrimaryActionBar.tsx', () => ({ PrimaryActionBar: () => <i data-mark="primary-bar" />, usePrimaryBarShowing: () => false }));
 vi.mock('@/features/webapp/useTelegramChrome.ts', () => ({ useTelegramChrome: () => {}, isFirstHistoryEntry: () => true }));

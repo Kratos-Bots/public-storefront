@@ -16,10 +16,20 @@ function load(): Promise<void> {
   return loading;
 }
 
-export function CartDrawer() {
+/**
+ * Has the panel loaded? The shells mount their other portalled overlays (the sign-in modal) only
+ * once it has, so the document's portal roots keep v0.7.0's order (the drawer's first) however the
+ * dynamic import races the first render.
+ */
+export function useCartDrawerReady(): boolean {
   const [, rerender] = useState(0);
   useEffect(() => {
     if (!Panel) void load().then(() => rerender((n) => n + 1));
   }, []);
+  return Panel !== null;
+}
+
+export function CartDrawer() {
+  useCartDrawerReady();
   return Panel ? <Panel /> : null;
 }

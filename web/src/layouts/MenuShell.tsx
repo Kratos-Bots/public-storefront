@@ -8,7 +8,7 @@ import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { NoticeBanners } from '@/features/notices/NoticeBanners.tsx';
 import { CutoffBar } from '@/features/notices/CutoffBar.tsx';
 import { LoginModal } from '@/features/auth/LoginModal.tsx';
-import { CartDrawer } from '@/features/cart/CartDrawer.tsx';
+import { CartDrawer, useCartDrawerReady } from '@/features/cart/CartDrawer.tsx';
 import { MobileCartBar, useMobileCartBar } from '@/features/cart/MobileCartBar.tsx';
 import { HeaderBar, legacyHeaderSlots } from '@/layouts/header-parts.tsx';
 import { ShellFooter } from '@/layouts/ShellFooter.tsx';
@@ -55,6 +55,7 @@ export function MenuContactStrip({ catalogOnly = true, styleAttrs }: { catalogOn
 /** The shell root and the system mounts that sit after the page chrome (spec §5.4). */
 export function MenuFrame({ children, cartBar = true }: { children: ReactNode; cartBar?: boolean }) {
   const { features } = useSettings();
+  const drawerReady = useCartDrawerReady();
   const barShowing = useMobileCartBar();
   return (
     <div className={barShowing ? `${classes.shell} ${classes.withBar}` : classes.shell}>
@@ -67,7 +68,8 @@ export function MenuFrame({ children, cartBar = true }: { children: ReactNode; c
         </>
       ) : null}
 
-      {features.accounts ? <LoginModal /> : null}
+      {/* After the drawer's panel, so the portal roots keep v0.7.0's order. */}
+      {features.accounts && (!features.ordering || drawerReady) ? <LoginModal /> : null}
 
       <Slot name="Overlay" />
     </div>

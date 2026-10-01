@@ -437,6 +437,14 @@ describe('drawer renders the cart document', () => {
     await tick();
     expect(document.body.querySelectorAll('[class*="ledger"]')).toHaveLength(1);
   });
+  it('a styled CartContents leaves no empty styled box in the shell: the page styling is the page\'s, not the drawer\'s', async () => {
+    seed([line(1)]);
+    const doc = docOf(contents({ blockStyle: { padTop: 'md', border: 'thin' } } as never));
+    mountDrawer(pageSetWith(doc));
+    await tick();
+    expect(drawerEl()!.querySelectorAll('li')).toHaveLength(1);
+    expect(document.querySelectorAll('[data-sf-style="CartContents"]')).toHaveLength(0);
+  });
   it('an empty cart with a summary outside has no footer', async () => {
     seed([]);
     mountDrawer(pageSetWith(docOf(contents({ summary: [] }), summaryOf(DEFAULT_SUMMARY(), 'outside'))));

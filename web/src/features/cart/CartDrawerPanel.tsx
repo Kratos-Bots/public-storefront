@@ -35,6 +35,17 @@ const FALLBACK_ITEM: ComponentData = {
   props: { id: FALLBACK_ID, ...CART_CONTAINER.defaultSlots({}, { layout: 'storefront', id: FALLBACK_ID }) },
 };
 
+/**
+ * The container without its page styling. The container draws nothing where it stands (its frame
+ * portals the Sheet), so a style wrapper would be an empty, padded, bordered box in the shell; the
+ * owner's cart-page spacing and background are the page's, not the drawer's.
+ */
+function unstyled(item: ComponentData): ComponentData {
+  if (!isRecord(item.props) || !('blockStyle' in item.props)) return item;
+  const { blockStyle: _blockStyle, ...props } = item.props;
+  return { ...item, props };
+}
+
 /** A block of `type` anywhere under `items` except inside `skip`'s own subtree (depth-first). */
 function findOutside(items: readonly ComponentData[], skip: ComponentData, type: string): ComponentData | undefined {
   for (const item of items) {
@@ -121,7 +132,7 @@ export function CartDrawerPanel() {
   return (
     <CartHostContext.Provider value={host}>
       <DocBoundary docKey="cart" onFallback={markFailed} fallback={renderComponent(FALLBACK_ITEM, renderCtx)}>
-        {renderComponent(item, renderCtx)}
+        {renderComponent(unstyled(item), renderCtx)}
       </DocBoundary>
     </CartHostContext.Provider>
   );

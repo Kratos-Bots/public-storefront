@@ -907,3 +907,12 @@
 html :global(.mantine-Drawer-overlay) {
   inset-block-start: var(--sfb-exact-bar-h, 0px);
 }
+
+/*
+ * The cart drawer (the exact preview of the cart document in Drawer mode) is a full-height panel on the
+ * right, so it would sit over the bar's "Back to editing" the same way: its positioning wrapper starts
+ * under the bar too. Bottom sheets are unaffected (they rise from the foot, below the bar).
+ */
+html :global(.mantine-Drawer-inner) {
+  inset-block-start: var(--sfb-exact-bar-h, 0px);
+}

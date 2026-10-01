@@ -14,7 +14,7 @@ vi.mock('@/components/ContactLinks.tsx', () => ({ ContactLinks: () => null }));
 vi.mock('@/features/notices/NoticeBanners.tsx', () => ({ NoticeBanners: () => null }));
 vi.mock('@/features/notices/CutoffBar.tsx', () => ({ CutoffBar: () => null }));
 vi.mock('@/features/auth/LoginModal.tsx', () => ({ LoginModal: () => null }));
-vi.mock('@/features/cart/CartDrawer.tsx', () => ({ CartDrawer: () => null }));
+vi.mock('@/features/cart/CartDrawer.tsx', () => ({ CartDrawer: () => null, useCartDrawerReady: () => true }));
 vi.mock('@/features/cart/MobileCartBar.tsx', () => ({ MobileCartBar: () => null, useMobileCartBar: () => false }));
 vi.mock('@/features/webapp/PrimaryActionBar.tsx', () => ({ PrimaryActionBar: () => null, usePrimaryBarShowing: () => false }));
 vi.mock('@/features/webapp/useTelegramChrome.ts', () => ({ useTelegramChrome: () => {}, isFirstHistoryEntry: () => true }));

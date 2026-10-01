@@ -17,7 +17,7 @@ vi.mock('@/components/Brand.tsx', () => ({ Brand: () => <span>brand</span> }));
 vi.mock('@/features/notices/NoticeBanners.tsx', () => ({ NoticeBanners: () => null }));
 vi.mock('@/features/notices/CutoffBar.tsx', () => ({ CutoffBar: () => null }));
 vi.mock('@/features/auth/LoginModal.tsx', () => ({ LoginModal: () => <i data-mark="login-modal" /> }));
-vi.mock('@/features/cart/CartDrawer.tsx', () => ({ CartDrawer: () => <i data-mark="cart-drawer" /> }));
+vi.mock('@/features/cart/CartDrawer.tsx', () => ({ CartDrawer: () => <i data-mark="cart-drawer" />, useCartDrawerReady: () => true }));
 vi.mock('@/features/cart/MobileCartBar.tsx', () => ({ MobileCartBar: () => <i data-mark="cart-bar" />, useMobileCartBar: () => false }));
 // A route-bound shell block that breaks on demand, so a *valid* published shell can crash at render
 // time and take the whole shell to its default (spec §5.6).
