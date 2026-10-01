@@ -1,22 +1,16 @@
-import { Suspense, type ReactNode } from 'react';
-import { Link, Outlet } from 'react-router';
+import { Suspense, useMemo, type ReactNode } from 'react';
+import { Outlet } from 'react-router';
 import { useSettings } from '@/app/settings.ts';
-import { useSessionStore, selectIsLoggedIn } from '@/stores/session.ts';
-import { useCartStore, selectCount } from '@/stores/cart.ts';
-import { Brand } from '@/components/Brand.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
-import { BagIcon, UserIcon } from '@/components/icons.tsx';
 import { NoticeBanners } from '@/features/notices/NoticeBanners.tsx';
 import { CutoffBar } from '@/features/notices/CutoffBar.tsx';
 import { LoginModal } from '@/features/auth/LoginModal.tsx';
 import { CartDrawer } from '@/features/cart/CartDrawer.tsx';
 import { MobileCartBar, useMobileCartBar } from '@/features/cart/MobileCartBar.tsx';
-import { SearchField } from '@/layouts/SearchField.tsx';
+import { HeaderBar, legacyHeaderSlots } from '@/layouts/header-parts.tsx';
 import { ShellFooter } from '@/layouts/ShellFooter.tsx';
 import { ShellStateContext, useShellState, useShellStateValue } from '@/layouts/shell-context.ts';
 import { Slot } from '@/templates/runtime.tsx';
-import { headerIconClass, useCoreOptions } from '@/templates/hooks.ts';
-import { useText } from '@/text/runtime.tsx';
 import classes from '@/layouts/StorefrontShell.module.css';
 import type { StyleAttrs } from '@/builder/define.ts';
 
@@ -33,59 +27,10 @@ export interface ShellHeaderProps {
   styleAttrs?: StyleAttrs;
 }
 
-/** TopBar slot + the header bar. */
+/** TopBar slot + the header bar: the Header container's default arrangement (v0.7.0 markup). */
 export function StorefrontHeader({ topBar = true, search: withSearch = true, sticky = true, nav, styleAttrs }: ShellHeaderProps) {
-  const { brand, features } = useSettings();
-  const { t, tp } = useText();
-  const loggedIn = useSessionStore(selectIsLoggedIn);
-  const cartCount = useCartStore(selectCount);
-  const { search, setSearch } = useShellState();
-  const { headerAccountIcon, headerCartIcon } = useCoreOptions();
-  const accountClass = headerIconClass(headerAccountIcon);
-  const cartClass = headerIconClass(headerCartIcon);
-
-  return (
-    <>
-      {topBar ? <Slot name="TopBar" /> : null}
-      <header className={sticky ? classes.header : `${classes.header} ${classes.unstuck}`} data-sf-part="header" {...styleAttrs}>
-        <NoticeBanners pinned />
-        <div className={classes.headerInner}>
-          <Link to="/" className={classes.home} aria-label={t('shell.header.homeAriaLabel', { shop: brand.name })}>
-            <Brand size="md" />
-          </Link>
-
-          {nav}
-
-          {withSearch ? <SearchField className={classes.search} value={search} onChange={setSearch} /> : null}
-
-          <div className={classes.actions}>
-            {features.accounts && accountClass !== null ? (
-              loggedIn ? (
-                <Link to="/account" className={`${classes.action} ${accountClass}`} aria-label={t('common.nav.yourAccount')}>
-                  <UserIcon size={18} />
-                </Link>
-              ) : (
-                <Link to="/login" className={`${classes.signIn} ${accountClass}`}>
-                  {t('common.actions.signIn')}
-                </Link>
-              )
-            ) : null}
-
-            {features.ordering && cartClass !== null ? (
-              <Link
-                to="/cart"
-                className={`${classes.action} ${cartClass}`}
-                aria-label={tp('shell.header.cartAriaLabel', cartCount)}
-              >
-                <BagIcon size={18} />
-                {cartCount > 0 ? <span className={classes.count} data-sf-part="badge">{cartCount}</span> : null}
-              </Link>
-            ) : null}
-          </div>
-        </div>
-      </header>
-    </>
-  );
+  const slots = useMemo(() => legacyHeaderSlots('storefront', withSearch, nav), [withSearch, nav]);
+  return <HeaderBar variant="storefront" topBar={topBar} sticky={sticky} slots={slots} styleAttrs={styleAttrs} />;
 }
 
 /** The content column: the routed page, with the shell's search handed down as outlet context. */

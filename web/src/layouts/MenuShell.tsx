@@ -1,101 +1,28 @@
 import type { StyleAttrs } from '@/builder/define.ts';
-import { Suspense, type ReactNode } from 'react';
-import { Link, Outlet, useLocation } from 'react-router';
+import { Suspense, useMemo, type ReactNode } from 'react';
+import { Outlet, useLocation } from 'react-router';
 import { useSettings } from '@/app/settings.ts';
-import { useSessionStore, selectIsLoggedIn } from '@/stores/session.ts';
 import { useCartStore, selectCount } from '@/stores/cart.ts';
-import { useUiStore } from '@/stores/ui.ts';
-import { Brand } from '@/components/Brand.tsx';
 import { ContactLinks } from '@/components/ContactLinks.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
-import { BagIcon, FilterIcon, UserIcon } from '@/components/icons.tsx';
 import { NoticeBanners } from '@/features/notices/NoticeBanners.tsx';
 import { CutoffBar } from '@/features/notices/CutoffBar.tsx';
 import { LoginModal } from '@/features/auth/LoginModal.tsx';
 import { CartDrawer } from '@/features/cart/CartDrawer.tsx';
 import { MobileCartBar, useMobileCartBar } from '@/features/cart/MobileCartBar.tsx';
-import { SearchField } from '@/layouts/SearchField.tsx';
+import { HeaderBar, legacyHeaderSlots } from '@/layouts/header-parts.tsx';
 import { ShellFooter } from '@/layouts/ShellFooter.tsx';
 import type { ShellHeaderProps } from '@/layouts/StorefrontShell.tsx';
 import { ShellStateContext, useShellState, useShellStateValue } from '@/layouts/shell-context.ts';
 import { Slot } from '@/templates/runtime.tsx';
-import { headerIconClass, useCoreOptions } from '@/templates/hooks.ts';
-import { useText } from '@/text/runtime.tsx';
 import classes from '@/layouts/MenuShell.module.css';
 
 const onCatalogPath = (pathname: string) => pathname === '/' || pathname.startsWith('/c/');
 
-/** TopBar slot + the one compact bar. */
+/** TopBar slot + the one compact bar: the Header container's default arrangement (v0.7.0 markup). */
 export function MenuHeader({ topBar = true, search: withSearch = true, sticky = true, nav, styleAttrs }: ShellHeaderProps) {
-  const { brand, features } = useSettings();
-  const { t, tp } = useText();
-  const loggedIn = useSessionStore(selectIsLoggedIn);
-  const cartCount = useCartStore(selectCount);
-  const openPanel = useUiStore((s) => s.open);
-  const { pathname } = useLocation();
-  const { search, setSearch } = useShellState();
-  const onCatalog = onCatalogPath(pathname);
-  // Only the catalogue body carries the sheet this button opens — wholesale replaces
-  // it, so the button would have nothing to show.
-  const { showCategoryPicker, headerAccountIcon, headerCartIcon } = useCoreOptions();
-  const canFilter = onCatalog && !features.wholesale && showCategoryPicker;
-  const accountClass = headerIconClass(headerAccountIcon);
-  const cartClass = headerIconClass(headerCartIcon);
-  // A category in the path is the only filter this layout has — the dot says one is on.
-  const filtered = pathname.startsWith('/c/');
-
-  return (
-    <>
-      {topBar ? <Slot name="TopBar" /> : null}
-      <header className={sticky ? classes.bar : `${classes.bar} ${classes.unstuck}`} data-sf-part="header" {...styleAttrs}>
-        <NoticeBanners pinned />
-        <div className={classes.barInner}>
-          <Link to="/" className={classes.home} aria-label={t('shell.header.homeAriaLabel', { shop: brand.name })}>
-            <Brand size="sm" />
-          </Link>
-
-          {nav}
-
-          {withSearch ? <SearchField className={classes.search} value={search} onChange={setSearch} placeholder={t('shell.header.searchPlaceholder')} /> : null}
-
-          <div className={classes.actions}>
-            {canFilter ? (
-              <button
-                type="button"
-                className={classes.action}
-                onClick={() => openPanel('filterOpen')}
-                aria-label={filtered ? t('shell.header.categoriesFiltered') : t('shell.header.categories')}
-              >
-                <FilterIcon size={17} />
-                {filtered ? <span className={classes.mark} aria-hidden /> : null}
-              </button>
-            ) : null}
-
-            {features.accounts && accountClass !== null ? (
-              <Link
-                to={loggedIn ? '/account' : '/login'}
-                className={`${classes.action} ${accountClass}`}
-                aria-label={loggedIn ? t('common.nav.yourAccount') : t('common.actions.signIn')}
-              >
-                <UserIcon size={17} />
-              </Link>
-            ) : null}
-
-            {features.ordering && cartClass !== null ? (
-              <Link
-                to="/cart"
-                className={`${classes.action} ${cartClass}`}
-                aria-label={tp('shell.header.cartAriaLabel', cartCount)}
-              >
-                <BagIcon size={17} />
-                {cartCount > 0 ? <span className={classes.count} data-sf-part="badge">{cartCount}</span> : null}
-              </Link>
-            ) : null}
-          </div>
-        </div>
-      </header>
-    </>
-  );
+  const slots = useMemo(() => legacyHeaderSlots('menu', withSearch, nav), [withSearch, nav]);
+  return <HeaderBar variant="menu" topBar={topBar} sticky={sticky} slots={slots} styleAttrs={styleAttrs} />;
 }
 
 /** The narrow list column: the routed page, with the shell's search handed down as outlet context. */

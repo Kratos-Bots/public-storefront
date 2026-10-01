@@ -65,6 +65,7 @@
 }
 
 .home {
+  --sf-brand-fg: var(--sf-block-fg, var(--sf-text));
   display: flex;
   align-items: center;
   flex: none;
@@ -102,7 +103,7 @@
   padding: 0;
   border: 0;
   background: none;
-  color: var(--sf-muted);
+  color: var(--sf-block-fg, var(--sf-muted));
   border-radius: var(--sf-card-radius);
   text-decoration: none;
   cursor: pointer;
@@ -110,7 +111,7 @@
 }
 
 .action:hover {
-  color: var(--sf-text);
+  color: var(--sf-block-fg, var(--sf-text));
   background: var(--sf-surface);
 }
 
