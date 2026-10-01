@@ -14,6 +14,12 @@ export function resetCardDesignLog(): void {
 /** Spec §6.2: the layout's card designs, compiled once; a kind that threw stays built-in for this page load. */
 export function CardDesignProvider({ cards, layout, children }: { cards: PageSet['cards'] | undefined; layout: LayoutKind; children: ReactNode }) {
   const [failed, setFailed] = useState<ReadonlySet<CardKind>>(() => new Set());
+  // A failure belongs to the document object that threw: when the owner changes a design, give it another go.
+  const [seen, setSeen] = useState({ tile: cards?.tile, row: cards?.row });
+  if (seen.tile !== cards?.tile || seen.row !== cards?.row) {
+    setSeen({ tile: cards?.tile, row: cards?.row });
+    setFailed(new Set());
+  }
   const fail = useCallback((kind: CardKind) => setFailed((s) => (s.has(kind) ? s : new Set([...s, kind]))), []);
   // compileCard is memoised per (doc object, layout): these are map lookups after the first render.
   const tile = cards?.tile && !failed.has('tile') ? compileCard(cards.tile, 'tile', layout) : null;

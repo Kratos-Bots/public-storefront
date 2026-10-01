@@ -136,6 +136,22 @@ describe('CardDesignProvider / CardDesignBoundary', () => {
     expect(error.mock.calls.filter((c) => String(c[0]).includes('[builder] card design')).length).toBe(1);
     error.mockRestore();
   });
+  it('a new design object gets another go after one threw', () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const tree = (cards: PageSet['cards'], throwing: boolean) => (
+      <CardDesignProvider cards={cards} layout="storefront">
+        <CardDesignBoundary kind="tile"><Consumer throwing={throwing} /></CardDesignBoundary>
+      </CardDesignProvider>
+    );
+    const first = { tile: tileDoc() };
+    const { container, rerender } = render(tree(first, true));
+    expect(container.textContent).toBe('built-in');
+    rerender(tree(first, false));
+    expect(container.textContent).toBe('built-in');
+    rerender(tree({ tile: tileDoc() }, false));
+    expect(container.textContent).toBe('Oats');
+    error.mockRestore();
+  });
   it('useCardDesign outside a provider is null', () => {
     expect(render(<Consumer />).container.textContent).toBe('built-in');
   });
