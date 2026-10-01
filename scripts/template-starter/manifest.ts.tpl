@@ -19,5 +19,5 @@ export default defineTemplate({
   defaultPreset: 'default',
   tokens: BASE_TOKENS,
   editable: { colors: [...COLOR_KEYS], fonts: true, radius: true, density: true },
-  options: [], // your own toggles; every template also gets the ten core options in define.ts CORE_OPTIONS (reserved keys, max 20 of your own)
+  options: [], // your own toggles; every template also gets the twelve core options in define.ts CORE_OPTIONS (reserved keys, max 18 of your own)
 });

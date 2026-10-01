@@ -44,11 +44,11 @@ describe('validateManifest', () => {
     expect(errors.length).toBeGreaterThan(0);
     expect(errors.join('\n')).toContain(fragment);
   });
-  it('rejects more than 20 own options (30 minus the ten core options)', () => {
-    expect(MAX_TEMPLATE_OPTIONS).toBe(20);
-    const options = Array.from({ length: 21 }, (_, i) => ({ key: `o${i}`, type: 'boolean' as const, label: 'x', default: true }));
-    expect(validateManifest(manifest({ options }), 'acme').join('\n')).toContain('at most 20 options (10 more are added to every template)');
-    expect(validateManifest(manifest({ options: options.slice(0, 20) }), 'acme')).toEqual([]);
+  it('rejects more than 18 own options (30 minus the twelve core options)', () => {
+    expect(MAX_TEMPLATE_OPTIONS).toBe(18);
+    const options = Array.from({ length: 19 }, (_, i) => ({ key: `o${i}`, type: 'boolean' as const, label: 'x', default: true }));
+    expect(validateManifest(manifest({ options }), 'acme').join('\n')).toContain('at most 18 options (12 more are added to every template)');
+    expect(validateManifest(manifest({ options: options.slice(0, 18) }), 'acme')).toEqual([]);
   });
   it.each(CORE_OPTIONS.map((o) => o.key))('reserves the core option key %s', (key) => {
     expect(validateManifest(manifest({ options: [{ key, type: 'boolean', label: 'x', default: false }] }), 'acme'))
@@ -156,7 +156,7 @@ describe('validateManifest — tokens', () => {
 });
 
 describe('core options', () => {
-  it('are ten options whose defaults leave the store as it was: shown, everywhere, built-in wording', () => {
+  it('are twelve options whose defaults leave the store as it was: shown, everywhere, built-in wording', () => {
     expect(CORE_OPTIONS.map((o) => [o.key, o.type, o.label, o.default])).toEqual([
       ['showPageTitle', 'boolean', 'Page title', true],
       ['showCatalogIntro', 'boolean', 'Catalogue intro', true],
@@ -168,6 +168,8 @@ describe('core options', () => {
       ['showCutoffBar', 'boolean', 'Dispatch cut-off banner', true],
       ['cutoffMessage', 'text', 'Cut-off banner wording', ''],
       ['showCutoffCountdown', 'boolean', 'Cut-off countdown', true],
+      ['showCategoryEmoji', 'boolean', 'Category emojis', true],
+      ['showOutOfStockPrice', 'boolean', 'Price on out-of-stock products', true],
     ]);
   });
   it('offers the header icons on phones and desktop, desktop only, phones only or hidden', () => {

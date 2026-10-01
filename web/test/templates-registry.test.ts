@@ -29,6 +29,8 @@ describe('buildRegistry', () => {
       ['showCutoffBar', 'boolean', true],
       ['cutoffMessage', 'text', ''],
       ['showCutoffCountdown', 'boolean', true],
+      ['showCategoryEmoji', 'boolean', true],
+      ['showOutOfStockPrice', 'boolean', true],
     ];
     for (const { manifest } of REGISTRY.values()) {
       for (const [key, type, def] of defaults) {
