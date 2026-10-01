@@ -632,6 +632,128 @@ Stage-4 files: `builder/blocks/_shared/<family>-container.ts` (specs), `builder/
 `features/verify/VerifyPage.tsx`. A part block file imports nothing from `@/features/` or
 `@/layouts/` (the stage-4 contract test checks it).
 
+### Checkout and order status parts
+
+Stage 5 turns the checkout page and the order-status page into containers. **`CheckoutFlow`**
+(`family: 'checkout'`, document `checkout`) and **`OrderStatus`** (`family: 'order-status'`,
+document `order-status`) keep everything that spends money or talks to the backend: the quote, the
+guest identity and Turnstile token, the place-order call, the payment hand-off, the order queries
+and the pay-by timer. The parts only decide what the shopper *sees* and where. The action band
+(Back / Continue / Place order), the terms line, the alerts and the Turnstile widget are not parts;
+they stay in the container, so no arrangement can remove a consent or a way to place the order.
+The checkout is steps only (there is no single-page mode).
+
+**Checkout parts** (`CheckoutFlow`; every part is unique):
+
+| Part | Required | Home | Why |
+|---|---|---|---|
+| `CheckoutHeading` | yes | `CheckoutFlow.head` | the page's only `h1` |
+| `CheckoutProgress` | no | `CheckoutFlow.lead` | a navigation aid only; Back and the review's Change links remain |
+| `CheckoutContact` | yes | `CheckoutFlow.steps` | who the order is for; the guest identity floor (email or phone) |
+| `CheckoutAddress` | yes | `CheckoutFlow.steps` | where it goes; the country drives the quote |
+| `CheckoutShipping` | yes | `CheckoutFlow.steps` | the delivery option the order is priced with |
+| `CheckoutPayment` | yes | `CheckoutFlow.steps` | the method the charge total depends on |
+| `CheckoutReview` | yes | `CheckoutFlow.steps` | the last look; the place-order step |
+| `CheckoutCoupon` | no | `before` / `after` of `CheckoutShipping`, `CheckoutPayment`, `CheckoutReview`; `CheckoutFlow.aside` | never before a quote can exist |
+| `CheckoutNotes` | no | `before` / `after` of any of the five steps | no quote dependency |
+| `CheckoutSummary` | yes | `CheckoutFlow.aside` | no one should place an order without seeing the total; the phone collapse and "open on review" belong to the aside |
+
+**Order-status parts** (`OrderStatus`; every part is unique):
+
+| Part | Required | Home | Why |
+|---|---|---|---|
+| `OrderStatusHero` | yes | `OrderStatus.top` | the page's only `h1`; the order's state |
+| `OrderStatusPayment` | yes | `OrderStatus.action` | the only thing on the page the customer can still change; payment actions while unpaid |
+| `OrderStatusShipments` | yes | `action`, `summary` | where the parcel is |
+| `OrderStatusItems` | yes | `action`, `summary` | what the total is made of (fees, discounts) |
+| `OrderStatusAddress` | no | `action`, `summary` | informational |
+| `OrderStatusFooter` | yes | `OrderStatus.bottom` | the only visible order reference and the support contact for this order |
+
+`CheckoutFlow.steps` accepts only the five step parts (a content block between two steps would
+render inside every step's card); `CheckoutFlow.after` accepts content only. Each step part has
+`before` and `after` slots for content blocks and the optional parts that have a home there. Every
+required part and `CheckoutCoupon` / `CheckoutNotes` are `noHide`: they may not carry `hide`, nor
+sit inside a block that hides. In checkout only `CheckoutProgress` and content blocks accept
+`hide`; on the order page only `OrderStatusAddress` and content blocks.
+
+**The four legal step orders.** Over the step parts in stored order: Review is last; Address comes
+before Shipping, and Shipping before Payment; Contact may sit anywhere before Review. That admits
+exactly four orders:
+
+1. Contact, Address, Shipping, Payment, Review (the default)
+2. Address, Contact, Shipping, Payment, Review
+3. Address, Shipping, Contact, Payment, Review
+4. Address, Shipping, Payment, Contact, Review
+
+Shipping options only exist once the country (the address) is known, the charge total depends on
+the chosen shipping option, and the review recaps everything and carries Place order, so it is
+always last. Contact depends on nothing and nothing depends on it before submit, so it floats. The
+rule id is `part-order:CheckoutFlow`. The editor's **Step order** list in the `CheckoutFlow` panel
+is the only way to reorder steps (the steps are not draggable on the canvas) and disables every
+move that would break the rule, with the reason as its tooltip.
+
+A document with an illegal order is not served. The shop guard rejects it like any other rule
+failure, so the shopper gets the **default** checkout page. The container keeps a second line of
+defence: if an illegal order ever reaches it (a path that bypasses the guard), it falls back to the
+default step order and logs a console warning once per page load.
+
+**Order status: payment first.** Inside `action`, no `OrderStatusItems`, `OrderStatusAddress` or
+`OrderStatusShipments` may come before `OrderStatusPayment` (rule id `part-order:OrderStatus`).
+Content blocks (a rich text, an image) may precede payment; tracking and the order details may
+not. `action` renders before `summary` at every width, so this keeps payment ahead of every other
+order card in reading order.
+
+**The effective form.** The shopper's checkout form persists in the browser and outlives any one
+arrangement. The container derives `couponShown` / `notesShown` from the *visible* slots (a part
+in a hidden `Columns` column counts as absent). An absent coupon or notes part means that field is
+**ignored** in the quote and in the order body, while the saved value is kept: restoring the part
+brings the saved code back, and a removed coupon box can never price an order through a field the
+shopper cannot see or clear. Nothing in the guest path reads the arrangement otherwise: the quote
+key, the Turnstile token per quote and the retry are container code, and a token is never spent
+on a coupon the shopper cannot see.
+
+**Contract additions** (`ContainerSpec` and `part`, all optional; a container or part without them
+behaves exactly as in stages 3 and 4):
+
+- `homes` — per part, the slots it may live in, written `Container.slot` (for the step parts, the
+  step's own type: `CheckoutShipping.before`). The nearest family ancestor slot decides, through
+  content blocks. A part outside its homes fails `part-home:<Part>`. `homeWhy` supplies the reason
+  shown in the message (the coupon: "no prices exist there yet").
+- `order` — `(slots, props) => { message, blockId? } | null`, run on the stored (not
+  visibility-filtered) slots. A non-null result is `part-order:<Container>`; a missing member is
+  only a `part-required` problem.
+- `noHide` — parts guarded like required ones (`hidden-required`) without being required.
+- `contentOnly` — the container's slots, and the step parts' slots, accept content blocks and the
+  parts that have a home there, and nothing else (no route blocks, no other containers).
+- `part.defaultSlots` — a part with slots of its own (the step parts) can supply their default
+  content. `fillAbsentSlots` fills an absent slot **before** the guard cleans the document, so the
+  filled parts get the same id de-duplication, block budget and checks as stored ones; a present
+  slot, even `[]`, is never touched. The shipping step's default `after` is the coupon and the
+  review step's is the notes, which is how the default document keeps today's arrangement.
+
+Counting for `part-required`, `part-unique` and `part-home` goes through the slots of slotted parts
+(a part inside a step's `before` counts for the container); a required part parked in a hidden
+`Columns` column inside a step does not count, and raises `part-required`.
+
+**The editor.** The checkout canvas renders **every step stacked**, each in its own card with its
+step head, in the owner's order, so each step's `before` / `after` slots are droppable and the whole
+flow is visible; one inert copy of the action band follows the last card, then the terms line and
+`after`. Alerts and the Turnstile widget are not mounted. The exact preview renders the real
+stepper. The checkout previews as a signed-in shopper with a sample cart; the order page has a
+**Preview order** control with six Northbound Supply states (`PREVIEW_STATE_IDS.OrderStatus`:
+shipped, awaiting-payment, hosted-open, crypto-checking, two-parcels, cancelled). Placing an order
+or choosing a payment in the editor is refused by the fixture API ("Preview only — nothing was
+sent."). The step parts cannot be deleted, duplicated or dragged; other required parts can be moved
+within their homes but not deleted. A legality guard in the editor reverts a drop or reorder that
+would break a locked order, so an owner cannot save one by accident.
+
+Files: `builder/family-checkout.ts` and `family-order-status.ts` (family data and the step-order
+helpers; type-only feature imports, in the entry), `builder/blocks/_shared/checkout-container.ts`
+and `order-status-container.ts` (specs), `builder/blocks/Checkout*.tsx` and `OrderStatus*.tsx`
+(sixteen shells), and the views in `features/checkout/checkout-parts.tsx` and
+`features/order-status/order-status-parts.tsx` (both in their lazy page chunks, so the entry grows
+by shells and specs only). Part keys stay within the `partId` budget (at most 23 characters).
+
 ### Placement and rules
 
 A part is allowed on a document exactly where its family's container is (`FAMILY_DOCS`):
@@ -815,16 +937,24 @@ even `[]` — is never touched (idempotent; `[]` is an owner's deliberate empty 
    intended), `unique`, `required`, `requires`, `slotAccepts`.
 4. Add its fields file under `builder/editor/fields/`.
 5. Add it to the table in `test/builder-parts-contract.test.tsx` and `PART_BLOCKS` in
-   `test/builder-editor-contract.test.ts` (stage 3), or to the `STAGE4_PARTS` table in
-   `test/helpers/stage4-parts.ts` (stage 4); the registered parts must equal those tables exactly.
-   `test/builder-parts-stage4-contract.test.ts` checks every stage-4 container's defaults, part
-   key length (at most 19 characters) and the import rules. Regenerate `web/public/blocks.json`
+   `test/builder-editor-contract.test.ts` (stage 3), to the `STAGE4_PARTS` table in
+   `test/helpers/stage4-parts.ts` (stage 4), or to the `STAGE5_PARTS` table in
+   `test/helpers/stage5-parts.ts` (checkout and order status: `{ family, style: T(target, ...key
+   groups) }` per part, the same shape as the other tables); the registered parts must equal the
+   union of those tables exactly. `test/builder-parts-stage4-contract.test.ts` checks every
+   stage-4 container's defaults, part key length (at most 19 characters) and the import rules;
+   `test/builder-parts-stage5-contract.test.ts` does the same for the two stage-5 containers
+   (defaults pass their own rules in every layout, required parts carry no `hide`, `noHide` covers
+   what must not be hidden, every pattern of the sixteen parts is a valid text key, no part block
+   imports a view or the registry). Regenerate `web/public/blocks.json`
    (`UPDATE_BLOCKS_JSON=1 npm --prefix web test -- test/blocks-manifest.test.ts`).
 6. The golden captures (`test/golden-parity.test.tsx`) and `e2e/dom-parity.spec.ts` must pass
    **unchanged**.
 
 `blocks.json` lists, per block, `part: { family }` or `container: { family, slots, required,
-unique, insertSlot }` when the block has one, so the admin can mirror the part rules.
+unique, insertSlot }` when the block has one, so the admin can mirror the part rules. It carries structure
+only: the stage-5 contract fields (`homes`, `order`, `noHide`, `contentOnly`, `defaultSlots`) are
+code and are not emitted.
 
 ## Card designs
 

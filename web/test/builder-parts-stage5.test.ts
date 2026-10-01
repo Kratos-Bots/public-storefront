@@ -165,6 +165,10 @@ describe('counting through slotted parts', () => {
   it('a required part inside a visible slot of a slotted part counts', () => {
     expect(rules([flow({ head: [], steps: [A({ before: [HEAD] }), B()] })], ['part-required'])).toEqual([]);
   });
+  it('a required part parked in a hidden Columns column inside a slotted part does not count', () => {
+    const parked = cols('k', { columns: '2', col3: [HEAD] });
+    expect(rules([flow({ head: [], steps: [A(), B({ after: [parked] })] })], ['part-required'])).toEqual(['part-required:FakeFlow.FakeHead']);
+  });
 });
 
 describe('upgrade and guard', () => {
@@ -194,6 +198,29 @@ describe('upgrade and guard', () => {
     expect((stepB.props.after as ComponentData[]).map((x) => x.type)).toEqual(['FakeCoupon']);
   });
 });
+
+describe('guard orders filling before cleaning', () => {
+  it('a default part whose id collides with an earlier block is de-duplicated, not left duplicated', () => {
+    // stepB's absent `after` fills to a FakeCoupon with id 'stepB-FakeCoupon'; an earlier block already holds that id.
+    const squatter = c('RichText', 'stepB-FakeCoupon');
+    const { doc: clean } = validateDoc(doc([flow({ steps: [A({ before: [], after: [squatter] }), c('FakeStepB', 'stepB')] }), c('CheckoutFlow', 'real')]), 'checkout', 'storefront');
+    expect(clean).not.toBeNull();
+    const steps = clean!.content[0]!.props.steps as ComponentData[];
+    const ids = [...flattenIds(steps)];
+    expect(new Set(ids).size).toBe(ids.length);
+    const filled = (steps[1]!.props.after as ComponentData[])[0]!;
+    expect(filled.type).toBe('FakeCoupon');
+    expect(filled.props.id).toBe('stepB-FakeCoupon~2');
+    expect(((steps[0]!.props.after as ComponentData[])[0]!).props.id).toBe('stepB-FakeCoupon');
+  });
+});
+
+function* flattenIds(items: readonly ComponentData[]): Generator<string> {
+  for (const it of items) {
+    yield String(it.props.id);
+    for (const v of Object.values(it.props)) if (Array.isArray(v) && v.every((x) => x && typeof x === 'object' && 'type' in x)) yield* flattenIds(v as ComponentData[]);
+  }
+}
 
 describe('flattenTypes and containsVisibleType', () => {
   it('flattenTypes is pre-order through nested slots and ignores non-component arrays', () => {

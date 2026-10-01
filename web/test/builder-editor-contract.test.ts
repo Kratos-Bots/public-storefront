@@ -60,9 +60,9 @@ describe('Plan 2 contract the editor builds on (spec §13 A7)', () => {
     for (const [key, def] of Object.entries(BLOCKS)) expect(def.name).toBe(key);
   });
 
-  it('registers only known parts (subset over stage 3 list, stage-4 and stage-5 parts; Task 8 restores equality)', () => {
+  it('registers exactly the stage 3 list, stage-4 and stage-5 parts', () => {
     const expected = new Set([...PART_BLOCKS, ...Object.keys(STAGE4_PARTS), ...Object.keys(STAGE5_PARTS)]);
-    expect(Object.values(BLOCKS).filter((x) => x.part).map((d) => d.name).filter((n) => !expected.has(n))).toEqual([]);
+    expect(Object.values(BLOCKS).filter((x) => x.part).map((d) => d.name).sort()).toEqual([...expected].sort());
   });
 
   it('has a default doc for the shell and every fixed route of the storefront layout', () => {

@@ -323,6 +323,9 @@ card's first child may not be its image. Style the part itself rather than its p
 Header, cart and account parts can be reordered; don't rely on child order or `:first-child` inside
 `[data-sf-part="header"]` or the cart.
 
+Checkout steps and order cards can be reordered; don't rely on child order or `:first-child` inside
+the checkout card or the order page columns.
+
 ### Shared button-fill rules
 
 `mantine.css` carries the fill recipes for `tokens.button.fill` on every element tagged
