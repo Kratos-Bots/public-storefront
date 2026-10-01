@@ -5,7 +5,7 @@ import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { NoticeBanners } from '@/features/notices/NoticeBanners.tsx';
 import { CutoffBar } from '@/features/notices/CutoffBar.tsx';
 import { LoginModal } from '@/features/auth/LoginModal.tsx';
-import { CartDrawer, useCartDrawerReady } from '@/features/cart/CartDrawer.tsx';
+import { CartDrawer } from '@/features/cart/CartDrawer.tsx';
 import { MobileCartBar, useMobileCartBar } from '@/features/cart/MobileCartBar.tsx';
 import { HeaderBar, legacyHeaderSlots } from '@/layouts/header-parts.tsx';
 import { ShellFooter } from '@/layouts/ShellFooter.tsx';
@@ -48,7 +48,6 @@ export function StorefrontMain() {
 /** The shell root and the system mounts that sit after the page chrome (spec §5.4). */
 export function StorefrontFrame({ children, cartBar = true }: { children: ReactNode; cartBar?: boolean }) {
   const { features } = useSettings();
-  const drawerReady = useCartDrawerReady();
   // The tab is fixed to the foot of the phone; the shell owes it the clearance.
   const barShowing = useMobileCartBar();
   return (
@@ -62,8 +61,7 @@ export function StorefrontFrame({ children, cartBar = true }: { children: ReactN
         </>
       ) : null}
 
-      {/* After the drawer's panel, so the portal roots keep v0.7.0's order. */}
-      {features.accounts && (!features.ordering || drawerReady) ? <LoginModal /> : null}
+      {features.accounts ? <LoginModal /> : null}
 
       <Slot name="Overlay" />
     </div>

@@ -62,6 +62,22 @@ function findOutside(items: readonly ComponentData[], skip: ComponentData, type:
 }
 
 /**
+ * The panel is a dynamic import, so its portal lands after every overlay that mounted before the
+ * chunk resolved (the catalogue's product sheet). v0.7.0 mounted the drawer with the shell, ahead
+ * of all of them. The sheet's root ref (set in the commit that fills its portal) moves its wrapper to the front of Mantine's
+ * shared portal node (behind the app's notification roots): same nodes, same markup, and the v0.7.0 order by construction, not by timing.
+ */
+function drawerFirst(root: HTMLDivElement | null): void {
+  const shared = document.querySelector('[data-mantine-shared-portal-node]');
+  let wrapper: Element | null = root;
+  while (wrapper && wrapper.parentElement !== shared) wrapper = wrapper.parentElement;
+  if (!shared || !wrapper) return;
+  // The app's own notification roots mount above the shell and keep their place; every overlay after them follows the drawer.
+  const first = [...shared.children].find((c) => !c.classList.contains('mantine-Notifications-root'));
+  if (first && first !== wrapper) shared.insertBefore(wrapper, first);
+}
+
+/**
  * The cart as a panel: it slides in from the right on a desktop and rises as a
  * bottom sheet on a phone, in the same chassis the product and filter sheets
  * use. Opening it in server mode pulls the customer's cart first — they may
@@ -108,6 +124,7 @@ export function CartDrawerPanel() {
         onClose={dismiss}
         label={t('cart.drawer.title')}
         part="drawer"
+        rootRef={drawerFirst}
         header={
           <div className={classes.head}>
             <div>

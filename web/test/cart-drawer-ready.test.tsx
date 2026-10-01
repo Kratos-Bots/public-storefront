@@ -42,3 +42,25 @@ describe('useCartDrawerReady', () => {
     expect(root!.compareDocumentPosition(getByTestId('after-drawer')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
+
+describe('portal order by construction', () => {
+  it('the drawer takes the first place among the body-level overlays however late its panel loads', async () => {
+    const { Drawer } = await import('@mantine/core');
+    render(
+      <QueryClientProvider client={new QueryClient()}><MantineProvider>
+        <MemoryRouter>
+          <CartDrawer />
+          <Drawer opened={false} keepMounted onClose={() => {}} title="other overlay" />
+        </MemoryRouter>
+      </MantineProvider></QueryClientProvider>,
+    );
+    for (let i = 0; i < 150 && document.querySelectorAll('.mantine-Drawer-root').length < 2; i += 1) await act(async () => { await new Promise((r) => setTimeout(r, 40)); });
+    const shared = document.querySelector('[data-mantine-shared-portal-node]')!;
+    const children = [...shared.children];
+
+    expect(children.length).toBe(2);
+    // The other overlay committed first (the panel is a dynamic import); the drawer is still ahead of it.
+    expect(children[0]!.textContent).not.toContain('other overlay');
+    expect(children[1]!.textContent).toContain('other overlay');
+  }, 30000);
+});

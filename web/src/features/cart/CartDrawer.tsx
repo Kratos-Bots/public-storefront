@@ -28,10 +28,8 @@ function load(): Promise<void> {
 }
 
 /**
- * Is the panel settled? The shells mount their other portalled overlays (the sign-in modal) only
- * once it is, so the document's portal roots keep v0.7.0's order (the drawer's first) however the
- * dynamic import races the first render. A failed load settles too, so the modal never waits forever;
- * opening the drawer retries the import.
+ * Is the panel settled (loaded, or failed)? Opening the drawer retries a failed import. The portal
+ * order no longer depends on it: the panel moves its own portal to the front when it mounts.
  */
 export function useCartDrawerReady(): boolean {
   const [, rerender] = useState(0);
