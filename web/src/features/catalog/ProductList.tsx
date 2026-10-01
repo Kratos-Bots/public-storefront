@@ -121,7 +121,7 @@ export function ProductList({ slots }: { slots?: ListSlots } = {}) {
   const { categorySlug } = useParams();
   const [params, setParams] = useSearchParams();
   const catalog = useCatalog();
-  const { showCategoryPicker } = useCoreOptions();
+  const { showCategoryPicker, showCategoryEmoji } = useCoreOptions();
   const { t } = useText();
 
   const products = useMemo(() => catalog.data?.products ?? [], [catalog.data]);
@@ -170,7 +170,7 @@ export function ProductList({ slots }: { slots?: ListSlots } = {}) {
   const s = slots ?? legacy!;
   const data: CatalogueData = {
     surface: 'list', products, tree, active, unknownCategory, visible, groups, search, query: search.trim(), setSearch,
-    imageless: false, glyphs: treeHasEmoji(tree), openProduct: (p) => showProduct(p),
+    imageless: false, glyphs: showCategoryEmoji && treeHasEmoji(tree), openProduct: (p) => showProduct(p),
   };
 
   return (

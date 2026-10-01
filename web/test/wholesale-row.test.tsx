@@ -12,7 +12,7 @@ import { useCartStore, type LocalLine } from '@/stores/cart.ts';
 
 function product(overrides: Partial<Product> = {}): Product {
   return {
-    id: 7, sku: 'BPC-157-5MG', name: 'BPC-157 5mg', displayName: 'BPC-157 5mg', shortDisplayName: null,
+    id: 7, sku: 'BPC-157-5MG', name: 'BPC-157 5mg', displayName: 'BPC-157 5mg', shortDisplayName: null, shortDescription: null,
     description: null, categoryId: 1, categoryName: 'Peptides', sortOrder: 0, price: 20, inStock: true,
     lowStockAlert: false, isActive: true, isPreorder: false, preorderEta: null, pricingTiers: [],
     upsellProductIds: [], excludedFromFreeShipping: false, imageProductId: null, provenance: null,

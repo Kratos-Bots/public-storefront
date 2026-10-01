@@ -20,7 +20,7 @@ import { pickFeatured } from '@/builder/blocks/_shared/featured.ts';
 
 function product(id: number, name: string, categoryId: number): Product {
   return {
-    id, sku: `NB-${id}`, name, displayName: name, shortDisplayName: null, description: null, categoryId, categoryName: '',
+    id, sku: `NB-${id}`, name, displayName: name, shortDisplayName: null, shortDescription: null, description: null, categoryId, categoryName: '',
     sortOrder: id, price: 10, inStock: true, lowStockAlert: false, isActive: true, isPreorder: false, preorderEta: null,
     pricingTiers: [], upsellProductIds: [], excludedFromFreeShipping: false, imageProductId: id, provenance: null, minOrderQuantity: null, maxOrderQuantity: null,
   };

@@ -20,7 +20,7 @@ import { ShellStateContext, useShellStateValue, useShellState } from '@/layouts/
 
 function product(id: number, name: string, extra: Partial<Product> = {}): Product {
   return {
-    id, sku: `NB-${id}`, name, displayName: name, shortDisplayName: null, description: null, categoryId: 1, categoryName: 'Pantry',
+    id, sku: `NB-${id}`, name, displayName: name, shortDisplayName: null, shortDescription: null, description: null, categoryId: 1, categoryName: 'Pantry',
     sortOrder: id, price: 12, inStock: true, lowStockAlert: false, isActive: true, isPreorder: false, preorderEta: null,
     pricingTiers: [], upsellProductIds: [], excludedFromFreeShipping: false, imageProductId: null, provenance: null,
     minOrderQuantity: null, maxOrderQuantity: null, ...extra,

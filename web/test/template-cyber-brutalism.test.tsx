@@ -77,7 +77,7 @@ describe('cyber-brutalism locks', () => {
     expect(r.fonts.heading?.family).toBe('Tektur');
     expect(r.fonts.mono).toEqual({ family: 'Share Tech Mono', weights: [400] });
     expect(r.density).toBe('compact');
-    expect(r.options).toEqual({ showPageTitle: true, showCatalogIntro: true, showSectionLabels: true, showSku: true, showCategoryPicker: true, headerAccountIcon: 'all', headerCartIcon: 'all', showCutoffBar: true, cutoffMessage: '', showCutoffCountdown: true, systemBar: true, statusBar: true, crosshairs: true, showFooter: true, buttonArrow: true, nodeLabel: 'LDN_02' });
+    expect(r.options).toEqual({ showPageTitle: true, showCatalogIntro: true, showSectionLabels: true, showSku: true, showCategoryPicker: true, headerAccountIcon: 'all', headerCartIcon: 'all', showCutoffBar: true, cutoffMessage: '', showCutoffCountdown: true, showCategoryEmoji: true, showOutOfStockPrice: true, systemBar: true, statusBar: true, crosshairs: true, showFooter: true, buttonArrow: true, nodeLabel: 'LDN_02' });
   });
 });
 

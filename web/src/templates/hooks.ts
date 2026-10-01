@@ -30,6 +30,7 @@ export interface CoreOptions {
   showSku: boolean; showCategoryPicker: boolean;
   headerAccountIcon: HeaderIconMode; headerCartIcon: HeaderIconMode;
   showCutoffBar: boolean; cutoffMessage: string; showCutoffCountdown: boolean;
+  showCategoryEmoji: boolean; showOutOfStockPrice: boolean;
 }
 const ICON_MODES: readonly HeaderIconMode[] = ['all', 'desktop', 'mobile', 'none'];
 const iconMode = (v: unknown): HeaderIconMode => (ICON_MODES.includes(v as HeaderIconMode) ? (v as HeaderIconMode) : 'all');
@@ -51,6 +52,8 @@ export function useCoreOptions(): CoreOptions {
     showCutoffBar: o.showCutoffBar !== false,
     cutoffMessage: typeof o.cutoffMessage === 'string' ? o.cutoffMessage.trim() : '',
     showCutoffCountdown: o.showCutoffCountdown !== false,
+    showCategoryEmoji: o.showCategoryEmoji !== false,
+    showOutOfStockPrice: o.showOutOfStockPrice !== false,
     ...definedScope(scope),
   };
 }

@@ -29,7 +29,9 @@
   letter-spacing: -0.005em;
 }
 
-/* Plain text that happens to be the row's target — the pseudo stretches it over
+/* The name wraps (up to four lines) rather than truncating. `line-clamp` does not
+   apply to a <button> (its `-webkit-box` display computes to flow-root), so the
+   cap is a max-height of four of the name's 1.25 lines. Plain text that happens to be the row's target — the pseudo stretches it over
    the whole line, and the gutter is lifted above it so a tap on `+` never opens
    the sheet. */
 .open {
@@ -45,8 +47,8 @@
   text-align: left;
   cursor: pointer;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  max-height: calc(1.25em * 4);
 }
 
 .open::after {
@@ -64,6 +66,23 @@
 .open:focus-visible::after {
   outline: 2px solid var(--sf-primary);
   outline-offset: -2px;
+}
+
+/* The owner's one-line pitch, under the name: plain sentence-case body text, a size
+   below the name, held to two lines. */
+.blurb {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  margin: 0.15rem 0 0;
+  font-family: var(--sf-font-body);
+  font-size: calc(0.8125rem * var(--sf-text-scale, 1));
+  font-weight: 400;
+  line-height: 1.35;
+  color: var(--sf-block-fg, var(--sf-muted));
 }
 
 /* Code, bulk rung, flags — one quiet line, middot separated. */
@@ -117,6 +136,12 @@
   line-height: 1;
   color: var(--sf-block-fg, var(--sf-text));
   text-align: right;
+}
+
+/* "Out of stock" standing in for the price (showOutOfStockPrice off): same column,
+   same right edge, the chip's own micro-caps and tone. */
+.priceOut {
+  line-height: 1.2;
 }
 
 .gutter {

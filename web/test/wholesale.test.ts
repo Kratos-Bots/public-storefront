@@ -7,7 +7,7 @@ function product(overrides: Partial<Product> & { id: number }): Product {
     sku: `SKU-${overrides.id}`,
     name: `Product ${overrides.id}`,
     displayName: `Product ${overrides.id}`,
-    shortDisplayName: null,
+    shortDisplayName: null, shortDescription: null,
     description: null,
     categoryId: 1,
     categoryName: 'Cat 1',

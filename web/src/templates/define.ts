@@ -130,6 +130,8 @@ export const CORE_OPTIONS: readonly TemplateOption[] = Object.freeze([
   { key: 'showCutoffBar', type: 'boolean', label: 'Dispatch cut-off banner', help: 'The "Order by 15:00 for same day dispatch" line under the header. Shows only when a cut-off is scheduled.', default: true },
   { key: 'cutoffMessage', type: 'text', label: 'Cut-off banner wording', help: 'Leave blank for "Order by {time} for {dispatch} dispatch". {time} is the cut-off, {dispatch} the day it ships.', default: '', maxLength: 100 },
   { key: 'showCutoffCountdown', type: 'boolean', label: 'Cut-off countdown', help: 'The time left ("4h 12m left") and the meter along the banner.', default: true },
+  { key: 'showCategoryEmoji', type: 'boolean', label: 'Category emojis', help: 'The emoji beside each category in the catalogue sections and the category picker.', default: true },
+  { key: 'showOutOfStockPrice', type: 'boolean', label: 'Price on out-of-stock products', help: 'When off, a product that is out of stock shows "Out of stock" where its price would be, in the catalogue lists and cards.', default: true },
 ] satisfies TemplateOption[]);
 export const CORE_OPTION_KEYS: readonly string[] = Object.freeze(CORE_OPTIONS.map((o) => o.key));
 /** How many options a manifest may declare itself — the backend's cap minus the core options. */

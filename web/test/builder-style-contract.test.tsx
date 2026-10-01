@@ -36,7 +36,7 @@ state.settings = {
 state.catalog = {
   categories: [{ id: 1, name: 'Pantry', slug: 'pantry', parentId: null, sortOrder: 0, emoji: null }],
   products: [{
-    id: 7, sku: 'NB-7', name: 'Trail Oats 1kg', displayName: 'Trail Oats 1kg', shortDisplayName: null, description: null, categoryId: 1,
+    id: 7, sku: 'NB-7', name: 'Trail Oats 1kg', displayName: 'Trail Oats 1kg', shortDisplayName: null, shortDescription: null, description: null, categoryId: 1,
     categoryName: 'Pantry', sortOrder: 0, price: 12, inStock: true, lowStockAlert: false, isActive: true, isPreorder: false, preorderEta: null,
     pricingTiers: [], upsellProductIds: [], excludedFromFreeShipping: false, imageProductId: null, provenance: null,
     minOrderQuantity: null, maxOrderQuantity: null,
