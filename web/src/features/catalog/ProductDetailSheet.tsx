@@ -110,7 +110,7 @@ function SheetDocument() {
   const stored = layout === 'storefront' ? undefined : ctx?.pageSet?.pages.product;
   // Guard once per stored document object, not on every sheet render.
   const guarded = useMemo(() => (stored ? validateDoc(stored, 'product', docLayout).doc : null), [stored, docLayout]);
-  const fallback = defaultDoc('product', docLayout)!;
+  const fallback = useMemo(() => defaultDoc('product', docLayout)!, [docLayout]);
   if (!guarded) return <RenderDoc doc={fallback} docKey="product" layout={docLayout} />;
   return (
     <DocBoundary docKey="product" fallback={<RenderDoc doc={fallback} docKey="product" layout={docLayout} />}>

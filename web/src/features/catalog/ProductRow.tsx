@@ -6,6 +6,7 @@ import { StockChip } from '@/features/catalog/StockChip.tsx';
 import { MinusIcon, PlusIcon } from '@/components/icons.tsx';
 import { rowAnim } from '@/lib/motion.ts';
 import type { Product } from '@/types/catalog.ts';
+import { bestTier } from '@/features/catalog/best-tier.ts';
 import { useCoreOptions } from '@/templates/hooks.ts';
 import { useText } from '@/text/runtime.tsx';
 import { useCardDesign } from '@/builder/card-design.tsx';
@@ -26,14 +27,6 @@ export interface ProductRowProps {
 
 const NONE: Record<string, unknown> = {};
 const rowData = ({ product, onSelect, index }: ProductRowProps): CardData => ({ product, onSelect, index, eager: false, hasSiblingImages: true });
-
-/** The lowest-price bulk rung, or null. */
-function bestTier(product: Product): Product['pricingTiers'][number] | null {
-  return product.pricingTiers.reduce<Product['pricingTiers'][number] | null>(
-    (lowest, tier) => (!lowest || tier.price < lowest.price ? tier : lowest),
-    null,
-  );
-}
 
 // ── views (spec §5.3): each renders one part of the row from the card's context ──────────────
 

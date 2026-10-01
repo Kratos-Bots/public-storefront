@@ -11,6 +11,7 @@ import { CardTileFamily, type CardData } from '@/builder/families.ts';
 import { fixedSlot, type FamilyValue, type PartViewProps } from '@/builder/parts.ts';
 import type { SlotRender } from '@/builder/define.ts';
 import type { Product } from '@/types/catalog.ts';
+import { bestTier } from '@/features/catalog/best-tier.ts';
 import classes from '@/features/catalog/ProductCard.module.css';
 import imageClasses from '@/features/catalog/ProductImage.module.css';
 
@@ -26,14 +27,6 @@ export interface ProductCardProps {
 
 const NONE: Record<string, unknown> = {};
 const tileData = ({ product, eager = false, hasSiblingImages = true, index = 0 }: ProductCardProps): CardData => ({ product, eager, hasSiblingImages, index });
-
-/** The lowest-price bulk rung, or null. */
-function bestTier(product: Product): Product['pricingTiers'][number] | null {
-  return product.pricingTiers.reduce<Product['pricingTiers'][number] | null>(
-    (lowest, tier) => (!lowest || tier.price < lowest.price ? tier : lowest),
-    null,
-  );
-}
 
 // ── views (spec §5.3): each renders one part of the tile from the card's context ─────────────
 
