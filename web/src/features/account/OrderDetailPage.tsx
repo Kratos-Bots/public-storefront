@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Button } from '@mantine/core';
 import { Link, useParams } from 'react-router';
 import { EmptyState } from '@/components/EmptyState.tsx';
@@ -15,6 +16,10 @@ import {
 import { StatusPill } from '@/features/account/StatusPill.tsx';
 import { useOrder } from '@/features/account/queries.ts';
 import { useText, type TextApi } from '@/text/runtime.tsx';
+import { OrderFamily, type OrderData } from '@/builder/family-order.ts';
+import type { FamilyValue, PartViewProps } from '@/builder/parts.ts';
+import { defaultSlotRenders } from '@/builder/render.tsx';
+import type { SlotRender } from '@/builder/define.ts';
 import type { OrderShipment } from '@/types/orders.ts';
 import type { ShipmentStatus } from '@/types/public-order.ts';
 import classes from '@/features/account/Account.module.css';
@@ -41,21 +46,217 @@ function shipmentTone(shipment: OrderShipment): Tone {
   return SHIPMENT_TONE[shipment.status as ShipmentStatus] ?? 'default';
 }
 
+function BackLinkView({ styleAttrs }: PartViewProps) {
+  const { t } = useText();
+  return (
+    <Link to="/account/orders" className={classes.back} {...styleAttrs}>
+      {t('account.order.backToOrders')}
+    </Link>
+  );
+}
+
+function HeadingView({ styleAttrs }: PartViewProps) {
+  const { t } = useText();
+  const { order: data } = OrderFamily.useData();
+  return (
+    <div className={classes.detailHead} {...styleAttrs}>
+      <h2 className={classes.detailRef}>{data.reference}</h2>
+      <StatusPill tone={orderStatusTone(data.status)}>{orderStatusLabel(data.status, t)}</StatusPill>
+      <span className={classes.detailDate}>{t('account.order.placed', { date: formatDate(data.createdAt) })}</span>
+    </div>
+  );
+}
+
+function BalanceView({ styleAttrs }: PartViewProps) {
+  const { t } = useText();
+  const { order: data } = OrderFamily.useData();
+  if (!(data.outstandingBalance > 0)) return null;
+  return (
+    <p className={classes.band} {...styleAttrs}>
+      <span>{t('account.order.balanceDue')}</span>
+      <span>
+        <Money amount={data.outstandingBalance} />
+      </span>
+    </p>
+  );
+}
+
+function ItemsView({ styleAttrs }: PartViewProps) {
+  const { t, tp } = useText();
+  const { order: data } = OrderFamily.useData();
+  return (
+    <section className={classes.section} aria-label={t('account.order.items')} {...styleAttrs}>
+      <div className={classes.sectionHead}>
+        <h3 className={classes.sectionTitle}>{t('account.order.items')}</h3>
+        <span className={classes.sectionNote}>
+          {tp('account.order.lines', data.items.length)}
+        </span>
+      </div>
+      <ul className={classes.items}>
+        {data.items.map((item, i) => (
+          <li key={`${item.name}-${i}`} className={classes.item}>
+            <span className={classes.itemName}>{item.name}</span>
+            <span className={classes.itemQty}>
+              {item.quantity} × <Money amount={item.unitPrice} />
+            </span>
+            <span className={classes.itemTotal}>
+              <Money amount={item.lineTotal} />
+            </span>
+          </li>
+        ))}
+      </ul>
+
+      <div className={classes.row}>
+        <span className={classes.rowLabel}>{t('common.totals.subtotal')}</span>
+        <span className={classes.rowFigure}>
+          <Money amount={data.subtotal} />
+        </span>
+      </div>
+      <div className={classes.row}>
+        <span className={classes.rowLabel}>{t('common.totals.shipping')}</span>
+        <span className={classes.rowFigure}>
+          <Money amount={data.shippingAmount} />
+        </span>
+      </div>
+      {data.discountAmount > 0 ? (
+        <div className={classes.row}>
+          <span className={classes.rowLabel}>{t('common.totals.discount')}</span>
+          <span className={classes.rowFigure}>
+            −<Money amount={data.discountAmount} />
+          </span>
+        </div>
+      ) : null}
+      <div className={`${classes.row} ${classes.grand}`}>
+        <span className={classes.rowLabel}>{t('common.totals.total')}</span>
+        <span className={`${classes.rowFigure} ${classes.grandFigure}`}>
+          <Money amount={data.totalAmount} />
+        </span>
+      </div>
+    </section>
+  );
+}
+
+function PaymentsView({ styleAttrs }: PartViewProps) {
+  const { t } = useText();
+  const { order: data } = OrderFamily.useData();
+  if (data.payments.length === 0) return null;
+  return (
+    <section className={classes.section} aria-label={t('account.order.payments')} {...styleAttrs}>
+      <div className={classes.sectionHead}>
+        <h3 className={classes.sectionTitle}>{t('account.order.payments')}</h3>
+      </div>
+      <ul className={classes.items}>
+        {data.payments.map((payment, i) => (
+          <li key={`${payment.method}-${payment.createdAt}-${i}`} className={classes.event}>
+            <span className={classes.eventName}>{methodLabel(payment.method)}</span>
+            <span className={classes.eventWhen}>{formatDateTime(payment.createdAt)}</span>
+            <span className={classes.eventFigure}>
+              <Money amount={payment.amount} />
+            </span>
+            <span className={classes.eventStatus}>
+              <StatusPill tone={paymentTone(payment.status)}>{payment.status}</StatusPill>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function ParcelsView({ styleAttrs }: PartViewProps) {
+  const { t, tp } = useText();
+  const { order: data } = OrderFamily.useData();
+  if (data.shipments.length === 0) return null;
+  return (
+    <section className={classes.section} aria-label={t('account.order.parcels')} {...styleAttrs}>
+      <div className={classes.sectionHead}>
+        <h3 className={classes.sectionTitle}>{t('account.order.parcels')}</h3>
+        <span className={classes.sectionNote}>
+          {tp('account.order.parcelCount', data.shipments.length)}
+        </span>
+      </div>
+      <ul className={classes.items}>
+        {data.shipments.map((shipment, i) => (
+          <li key={`${shipment.trackingNumber ?? 'parcel'}-${i}`} className={classes.event}>
+            <span className={classes.eventName}>{shipment.carrier ?? t('account.order.parcelFallback')}</span>
+            <span className={classes.eventWhen}>
+              {shipment.trackingNumber ??
+                (shipment.shippedAt ? formatDate(shipment.shippedAt) : t('account.order.awaitingDispatch'))}
+            </span>
+            <span className={classes.eventStatus}>
+              <StatusPill tone={shipmentTone(shipment)}>{shipmentLabel(shipment, t)}</StatusPill>
+            </span>
+            {shipment.trackingStatusDescription ? (
+              <p className={classes.eventDetail}>{shipment.trackingStatusDescription}</p>
+            ) : null}
+            {shipment.trackingUrl ? (
+              <a
+                className={classes.tracking}
+                href={shipment.trackingUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {t('account.order.trackParcel')}
+              </a>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/** Two siblings (the link and its note): the part's style, if any, lands on the block's wrapper. */
+function PageLinkView() {
+  const { t } = useText();
+  const { order: data } = OrderFamily.useData();
+  if (!data.publicUrl) return null;
+  return (
+    <>
+      <a
+        className={classes.cta}
+        href={data.publicUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        data-sf-part="button"
+        data-variant="filled"
+      >
+        {t('account.order.openOrderPage')}
+      </a>
+      <p className={classes.note}>
+        {t('account.order.orderPageNote')}
+      </p>
+    </>
+  );
+}
+
+/** The order's views (spec §5.4): the v0.7.0 JSX of each piece. */
+export const ORDER_VIEWS: FamilyValue<OrderData>['views'] = {
+  OrderBackLink: BackLinkView, OrderHeading: HeadingView, OrderBalance: BalanceView, OrderItems: ItemsView,
+  OrderPayments: PaymentsView, OrderParcels: ParcelsView, OrderPageLink: PageLinkView,
+};
+
 /**
  * One order, in full: what was bought, what it came to, every payment against
  * it, and every parcel out of it. Payment actions deliberately live on the
  * order's own public page — that page already owns paying, switching method and
  * submitting a crypto txid, and duplicating them here would be a second
  * implementation of the most consequential screen in the shop.
+ *
+ * The OrderDetail container: the query and its pending / error / not-found screens stay
+ * here; the content slot holds the parts. Without slots the default arrangement is drawn.
  */
-export function OrderDetailPage() {
-  const { t, tp } = useText();
+export function OrderDetailPage({ slots }: { slots?: { content: SlotRender } }) {
+  const { t } = useText();
   const { ref } = useParams();
   const order = useOrder(ref);
+  const legacy = useMemo(() => (slots ? null : defaultSlotRenders('OrderDetail', 'storefront', {}, 'account.order')), [slots]);
+  const content = slots?.content ?? legacy!.content!;
+  const value = useMemo(() => (order.data ? { data: { order: order.data }, views: ORDER_VIEWS } : null), [order.data]);
 
   if (order.isPending) return <PageSkeleton inline />;
 
-  if (order.isError) {
+  if (order.isError || !value) {
     const missing = order.error instanceof ApiError && order.error.status === 404;
     return (
       <EmptyState
@@ -81,155 +282,9 @@ export function OrderDetailPage() {
     );
   }
 
-  const data = order.data;
-
   return (
-    <div className={classes.body}>
-      <Link to="/account/orders" className={classes.back}>
-        {t('account.order.backToOrders')}
-      </Link>
-
-      <div className={classes.detailHead}>
-        <h2 className={classes.detailRef}>{data.reference}</h2>
-        <StatusPill tone={orderStatusTone(data.status)}>{orderStatusLabel(data.status, t)}</StatusPill>
-        <span className={classes.detailDate}>{t('account.order.placed', { date: formatDate(data.createdAt) })}</span>
-      </div>
-
-      {data.outstandingBalance > 0 ? (
-        <p className={classes.band}>
-          <span>{t('account.order.balanceDue')}</span>
-          <span>
-            <Money amount={data.outstandingBalance} />
-          </span>
-        </p>
-      ) : null}
-
-      <section className={classes.section} aria-label={t('account.order.items')}>
-        <div className={classes.sectionHead}>
-          <h3 className={classes.sectionTitle}>{t('account.order.items')}</h3>
-          <span className={classes.sectionNote}>
-            {tp('account.order.lines', data.items.length)}
-          </span>
-        </div>
-        <ul className={classes.items}>
-          {data.items.map((item, i) => (
-            <li key={`${item.name}-${i}`} className={classes.item}>
-              <span className={classes.itemName}>{item.name}</span>
-              <span className={classes.itemQty}>
-                {item.quantity} × <Money amount={item.unitPrice} />
-              </span>
-              <span className={classes.itemTotal}>
-                <Money amount={item.lineTotal} />
-              </span>
-            </li>
-          ))}
-        </ul>
-
-        <div className={classes.row}>
-          <span className={classes.rowLabel}>{t('common.totals.subtotal')}</span>
-          <span className={classes.rowFigure}>
-            <Money amount={data.subtotal} />
-          </span>
-        </div>
-        <div className={classes.row}>
-          <span className={classes.rowLabel}>{t('common.totals.shipping')}</span>
-          <span className={classes.rowFigure}>
-            <Money amount={data.shippingAmount} />
-          </span>
-        </div>
-        {data.discountAmount > 0 ? (
-          <div className={classes.row}>
-            <span className={classes.rowLabel}>{t('common.totals.discount')}</span>
-            <span className={classes.rowFigure}>
-              −<Money amount={data.discountAmount} />
-            </span>
-          </div>
-        ) : null}
-        <div className={`${classes.row} ${classes.grand}`}>
-          <span className={classes.rowLabel}>{t('common.totals.total')}</span>
-          <span className={`${classes.rowFigure} ${classes.grandFigure}`}>
-            <Money amount={data.totalAmount} />
-          </span>
-        </div>
-      </section>
-
-      {data.payments.length > 0 ? (
-        <section className={classes.section} aria-label={t('account.order.payments')}>
-          <div className={classes.sectionHead}>
-            <h3 className={classes.sectionTitle}>{t('account.order.payments')}</h3>
-          </div>
-          <ul className={classes.items}>
-            {data.payments.map((payment, i) => (
-              <li key={`${payment.method}-${payment.createdAt}-${i}`} className={classes.event}>
-                <span className={classes.eventName}>{methodLabel(payment.method)}</span>
-                <span className={classes.eventWhen}>{formatDateTime(payment.createdAt)}</span>
-                <span className={classes.eventFigure}>
-                  <Money amount={payment.amount} />
-                </span>
-                <span className={classes.eventStatus}>
-                  <StatusPill tone={paymentTone(payment.status)}>{payment.status}</StatusPill>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      {data.shipments.length > 0 ? (
-        <section className={classes.section} aria-label={t('account.order.parcels')}>
-          <div className={classes.sectionHead}>
-            <h3 className={classes.sectionTitle}>{t('account.order.parcels')}</h3>
-            <span className={classes.sectionNote}>
-              {tp('account.order.parcelCount', data.shipments.length)}
-            </span>
-          </div>
-          <ul className={classes.items}>
-            {data.shipments.map((shipment, i) => (
-              <li key={`${shipment.trackingNumber ?? 'parcel'}-${i}`} className={classes.event}>
-                <span className={classes.eventName}>{shipment.carrier ?? t('account.order.parcelFallback')}</span>
-                <span className={classes.eventWhen}>
-                  {shipment.trackingNumber ??
-                    (shipment.shippedAt ? formatDate(shipment.shippedAt) : t('account.order.awaitingDispatch'))}
-                </span>
-                <span className={classes.eventStatus}>
-                  <StatusPill tone={shipmentTone(shipment)}>{shipmentLabel(shipment, t)}</StatusPill>
-                </span>
-                {shipment.trackingStatusDescription ? (
-                  <p className={classes.eventDetail}>{shipment.trackingStatusDescription}</p>
-                ) : null}
-                {shipment.trackingUrl ? (
-                  <a
-                    className={classes.tracking}
-                    href={shipment.trackingUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {t('account.order.trackParcel')}
-                  </a>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      {data.publicUrl ? (
-        <>
-          <a
-            className={classes.cta}
-            href={data.publicUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            data-sf-part="button"
-            data-variant="filled"
-          >
-            {t('account.order.openOrderPage')}
-          </a>
-          <p className={classes.note}>
-            {t('account.order.orderPageNote')}
-          </p>
-        </>
-      ) : null}
-    </div>
+    <OrderFamily.Provider value={value}>
+      {content({ className: classes.body })}
+    </OrderFamily.Provider>
   );
 }
