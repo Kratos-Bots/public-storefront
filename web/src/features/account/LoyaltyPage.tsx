@@ -145,12 +145,14 @@ export const LOYALTY_VIEWS: FamilyValue<LoyaltyData>['views'] = {
 export function LoyaltyPage({ slots }: { slots?: { content: SlotRender } } = {}) {
   const { t } = useText();
   const { currency } = useSettings();
-  const profile = useProfile();
-  const options = useRedeemOptions();
-  const client = useQueryClient();
-  const [confirming, setConfirming] = useState<RedeemOption | null>(null);
   const state = usePreviewState('Loyalty');
   const fixture = usePreviewFixture<LoyaltyPreview>('Loyalty');
+  // The editor previews from a fixture (spec §11.3): the queries neither fire nor are read.
+  const preview = fixture !== null;
+  const profile = useProfile(!preview);
+  const options = useRedeemOptions(!preview);
+  const client = useQueryClient();
+  const [confirming, setConfirming] = useState<RedeemOption | null>(null);
   const legacy = useMemo(() => (slots ? null : defaultSlotRenders('Loyalty', 'storefront', {}, 'account.loyalty')), [slots]);
   const content = slots?.content ?? legacy!.content!;
 
@@ -175,8 +177,6 @@ export function LoyaltyPage({ slots }: { slots?: { content: SlotRender } } = {})
     },
   });
 
-  // The editor previews a state from a fixture and never touches the queries (spec §11.3).
-  const preview = state !== null && fixture !== null;
   const profileData = useMemo(
     () => (preview ? { ...fixture.profile, ...(state === 'no-points' ? { loyaltyPoints: 0 } : {}) } : profile.data),
     [preview, state, fixture, profile.data],

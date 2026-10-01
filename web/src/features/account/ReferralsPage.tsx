@@ -191,12 +191,14 @@ export const REFERRALS_VIEWS: FamilyValue<ReferralsData>['views'] = {
 export function ReferralsPage({ slots }: { slots?: { content: SlotRender } } = {}) {
   const { t } = useText();
   const { brand } = useSettings();
-  const profile = useProfile();
+  const state = usePreviewState('Referrals');
+  const fixture = usePreviewFixture<ReferralsPreview>('Referrals');
+  // The editor previews from a fixture (spec §11.3): the query neither fires nor is read.
+  const preview = fixture !== null;
+  const profile = useProfile(!preview);
   const client = useQueryClient();
   const clipboard = useClipboard({ timeout: 1600 });
   const [draft, setDraft] = useState('');
-  const state = usePreviewState('Referrals');
-  const fixture = usePreviewFixture<ReferralsPreview>('Referrals');
   const legacy = useMemo(() => (slots ? null : defaultSlotRenders('Referrals', 'storefront', {}, 'account.referrals')), [slots]);
   const content = slots?.content ?? legacy!.content!;
 
@@ -209,10 +211,12 @@ export function ReferralsPage({ slots }: { slots?: { content: SlotRender } } = {
     },
   });
 
-  // The editor previews a state from a fixture and never touches the query (spec §11.3).
-  const preview = state !== null && fixture !== null;
   const data = useMemo(
-    () => (preview ? { ...fixture.info, hasReferrer: state === 'referred', referrerNickname: state === 'referred' ? fixture.info.referrerNickname ?? 'Ada' : null } : profile.data),
+    () => (preview
+      ? state === null
+        ? fixture.info
+        : { ...fixture.info, hasReferrer: state === 'referred', referrerNickname: state === 'referred' ? fixture.info.referrerNickname ?? 'Ada' : null }
+      : profile.data),
     [preview, state, fixture, profile.data],
   );
   const copied = clipboard.copied;

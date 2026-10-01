@@ -8,6 +8,7 @@ import { stableStringify, toPageSet } from '@/builder/editor/page-set.ts';
 import { prepareDocs } from '@/builder/editor/prepare.ts';
 import { guardHiddenCanvasHotkeys } from '@/builder/editor/preview-keys.ts';
 import { useEditorStore } from '@/builder/editor/store.ts';
+import { useEditorMode } from '@/builder/editor/preview-states.ts';
 import { useEditorText } from '@/builder/editor/text/hooks.ts';
 import { EyeIcon } from '@/builder/editor/icons.tsx';
 import type { ViewportWidth } from '@/builder/editor/protocol.ts';
@@ -89,8 +90,7 @@ export function ExactRuntime({ failTitle, failBody }: { failTitle: string; failB
   const docKey = useEditorStore((s) => s.docKey);
   const layout = useEditorStore((s) => s.layout);
   const docs = useEditorStore((s) => s.docs);
-  const previewAs = useEditorStore((s) => s.previewAs);
-  const mode = useMemo(() => ({ editing: false, previewAs }), [previewAs]);
+  const mode = useEditorMode(false);
   const pageText = useEditorStore((s) => s.pageText);
   const text = useEditorText();
   const pageSet = useMemo(() => toPageSet(prepareDocs(docs), layout, pageText), [docs, layout, pageText]);

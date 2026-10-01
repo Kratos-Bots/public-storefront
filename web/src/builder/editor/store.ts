@@ -33,6 +33,8 @@ export interface EditorState {
   /** Bumped whenever the canvas must remount from the store (load, reset, new page). */
   epoch: number;
   previewAs: PreviewAs;
+  /** "Preview state" per stateful container (stage 4 §11.3); absent = the container's default. Reset when the document changes. */
+  previewStates: Record<string, string>;
   /** The frame width the admin should give us; null = fill. Survives reloads of the set. */
   viewport: ViewportWidth | null;
   /**
@@ -108,6 +110,7 @@ export interface EditorState {
   patchOffCanvas(docKey: DocKey, epoch: number, patch: (doc: PuckDoc) => PuckDoc | null): boolean;
   createPage(slug: string, title: string): string | null;
   setPreviewAs(patch: Partial<PreviewAs>): void;
+  setPreviewState(container: string, id: string): void;
   setViewport(width: ViewportWidth | null): void;
   setPreviewProduct(id: number | null): void;
 }
@@ -199,6 +202,7 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
   docKey: 'catalog',
   epoch: 0,
   previewAs: DEFAULT_PREVIEW_AS,
+  previewStates: {},
   viewport: null,
   previewProductId: null,
   ...TEXT_INITIAL,
@@ -210,7 +214,7 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
     lastTextEdit = null;
     const editable = siteText !== undefined;
     set((s) => ({
-      status: 'ready', layout, readOnly, docs, docKey: keep ? current : 'catalog', epoch: s.epoch + 1,
+      status: 'ready', layout, readOnly, docs, docKey: keep ? current : 'catalog', epoch: s.epoch + 1, previewStates: {},
       siteText: editable ? siteText ?? emptySiteText() : null,
       sharedEditable: editable,
       pageText: pageSet?.text ? { strings: pageSet.text.strings } : emptyPageText(),
@@ -227,7 +231,7 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
     const s = get();
     if (isCustomKey(docKey) && !s.docs[docKey]) return;
     if (!isShownIn(docKey, s.layout)) return;
-    if (docKey !== s.docKey) set({ docKey });
+    if (docKey !== s.docKey) set({ docKey, previewStates: {} });
   },
 
   updateDoc(docKey, raw, epoch) {
@@ -276,6 +280,10 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
     set({ docs: result.docs, docKey: result.docKey, epoch: s.epoch + 1 });
     blockEdited(false);
     return null;
+  },
+
+  setPreviewState(container, id) {
+    set((s) => ({ previewStates: { ...s.previewStates, [container]: id } }));
   },
 
   setPreviewAs(patch) {

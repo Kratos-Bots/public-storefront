@@ -9,6 +9,8 @@ import type { Quote } from '@/types/checkout.ts';
 import type { OrderDetail, OrderSummary } from '@/types/orders.ts';
 import type { Profile, RedeemOptions } from '@/types/profile.ts';
 import type { PublicOrder } from '@/types/public-order.ts';
+import type { TrackedParcel, TrackingLookup } from '@/types/tracking.ts';
+import type { VerificationResult } from '@/api/verify.ts';
 
 export const FIXTURE_TOKEN = 'sf-builder-fixture-token';
 export const FIXTURE_CUSTOMER: SessionCustomer = { id: 900001, nickname: 'Morgan' };
@@ -143,3 +145,66 @@ export function fixtureServerCart(p: PreviewAs): ServerCart {
     itemCount: items.reduce((sum, i) => sum + i.quantity, 0),
   };
 }
+
+// ── Stage 4 previews: tracking, verification, payment chat links ───────────────
+
+const parcel = (trackingNumber: string, status: string, shipmentStatus: 'shipped' | 'in_transit' | 'delivered', n: number): TrackedParcel => ({
+  trackingNumber,
+  shipmentStatus,
+  shippedAt: '2026-09-03T08:00:00.000Z',
+  deliveredAt: shipmentStatus === 'delivered' ? '2026-09-05T14:20:00.000Z' : null,
+  fallbackDescription: null,
+  tracking: {
+    outcome: 'ok',
+    status,
+    courierNumber: trackingNumber,
+    destination: { code: 'GB', name: 'United Kingdom' },
+    lastEventAt: '2026-09-04T09:40:00.000Z',
+    deliveredAt: shipmentStatus === 'delivered' ? '2026-09-05T14:20:00.000Z' : null,
+    events: [
+      { occurredAt: '2026-09-04T09:40:00.000Z', place: 'Northbound Sorting Centre', code: 'IT', text: 'Arrived at the sorting centre' },
+      { occurredAt: '2026-09-03T17:05:00.000Z', place: 'Northbound Depot', code: 'PT', text: `Parcel ${n} collected from the sender` },
+    ],
+    lastMile: { name: 'Royal Mail', url: 'https://shop.example/track/last-mile' },
+    lastMileNumber: trackingNumber,
+    checkedAt: '2026-09-04T10:00:00.000Z',
+    errorCode: null,
+  },
+});
+
+const trackingOrder = (parcels: TrackedParcel[]): TrackingLookup => ({
+  reference: FIXTURE_ORDER_REF,
+  status: parcels.length > 0 ? 'shipped' : 'confirmed',
+  createdAt: '2026-09-02T10:15:00.000Z',
+  itemCount: 3,
+  isPreorder: false,
+  parcels,
+  trackingAvailable: true,
+  checkedAt: '2026-09-04T10:00:00.000Z',
+});
+
+/** The order-tracking answers the tracking preview states draw (no lookup, no challenge). */
+export const FIXTURE_TRACKING: { twoParcels: TrackingLookup; oneParcel: TrackingLookup; nothingShipped: TrackingLookup } = {
+  twoParcels: trackingOrder([parcel('NB000977GB', 'IN_TRANSIT', 'in_transit', 1), parcel('NB000978GB', 'PRE_TRANSIT', 'shipped', 2)]),
+  oneParcel: trackingOrder([parcel('NB000977GB', 'IN_TRANSIT', 'in_transit', 1)]),
+  nothingShipped: trackingOrder([]),
+};
+
+/**
+ * The record behind the verification previews. Verified cards derive "expired" from the date
+ * against today, so the dates are built relative to `now`: authentic is in date, expired is not.
+ */
+export function fixtureVerification(now: Date = new Date()): { authentic: VerificationResult; expired: VerificationResult; notVerified: null } {
+  const shift = (days: number) => new Date(now.getTime() + days * 86_400_000).toISOString();
+  return {
+    authentic: { createdAt: shift(-120), expiryDate: shift(600) },
+    expired: { createdAt: shift(-900), expiryDate: shift(-30) },
+    notVerified: null,
+  };
+}
+
+/** Invented chat links for the "Order placed" preview (placeholders on shop.example's brand). */
+export const FIXTURE_CHAT_LINKS = {
+  whatsapp: 'https://wa.me/440000000000?text=Hi%2C%20my%20order%20is%20NB0977',
+  telegram: 'https://t.me/northbound_supply_example?text=Hi%2C%20my%20order%20is%20NB0977',
+} as const;

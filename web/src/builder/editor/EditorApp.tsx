@@ -1,8 +1,8 @@
-import { useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { BuilderModeProvider } from '@/builder/mode.ts';
 import { startBuilderSession } from '@/builder/editor/session.ts';
 import { useEditorStore } from '@/builder/editor/store.ts';
+import { useEditorMode } from '@/builder/editor/preview-states.ts';
 import { FixtureRoutes, useNavigationLock } from '@/builder/editor/fixture-routes.tsx';
 import { EditorCanvas } from '@/builder/editor/EditorCanvas.tsx';
 import styles from '@/builder/editor/Editor.module.css';
@@ -32,10 +32,10 @@ export default function EditorApp() {
   useBuilderSessionOnce();
   useNavigationLock();
   const status = useEditorStore((s) => s.status);
-  const previewAs = useEditorStore((s) => s.previewAs);
   const readOnly = useEditorStore((s) => s.readOnly);
   // The read-only view shows the published page as shoppers see it: no editor-only hints.
-  const mode = useMemo(() => ({ editing: !readOnly, previewAs }), [readOnly, previewAs]);
+  // Preview states and fixtures are the editor's; a read-only version gets null for both.
+  const mode = useEditorMode(!readOnly);
 
   if (status === 'waiting') {
     return (

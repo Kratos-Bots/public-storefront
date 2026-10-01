@@ -9,6 +9,7 @@ import { usePreviewProduct } from '@/builder/editor/preview-product.ts';
 import { FIXTURE_PRODUCT } from '@/builder/editor/fixtures.ts';
 import { useCatalog } from '@/features/catalog/use-catalog.ts';
 import { docLabel, LAYOUT_LABELS } from '@/builder/editor/page-catalog.ts';
+import { containerOfDoc, PREVIEW_STATE_LABELS } from '@/builder/editor/preview-states.ts';
 import { isCustomKey } from '@/builder/editor/page-set.ts';
 import { focusPagePickerSoon, PagePicker } from '@/builder/editor/PagePicker.tsx';
 import { FloatingPanel } from '@/builder/editor/floating.tsx';
@@ -436,6 +437,28 @@ export function ViewportToggle() {
   );
 }
 
+/**
+ * "Preview state" (stage 4 §11.3): which state the open page's stateful container is drawn in. Shown
+ * only on a page that has one; the choice resets when another page opens.
+ */
+export function PreviewStateControl() {
+  const docKey = useEditorStore((s) => s.docKey);
+  const layout = useEditorStore((s) => s.layout);
+  const picked = useEditorStore((s) => s.previewStates);
+  const container = containerOfDoc(docKey, layout);
+  if (!container) return null;
+  const options = PREVIEW_STATE_LABELS[container];
+  const value = Object.hasOwn(picked, container) && options.some((o) => o.id === picked[container]) ? picked[container]! : options[0]!.id;
+  return (
+    <label className={styles.previewAs}>
+      <span className={styles.caption}>Preview state</span>
+      <select aria-label="Preview state" value={value} onChange={(e) => useEditorStore.getState().setPreviewState(container, e.target.value)}>
+        {options.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+      </select>
+    </label>
+  );
+}
+
 export function PreviewAsControls() {
   const previewAs = useEditorStore((s) => s.previewAs);
   const set = (patch: Partial<PreviewAs>) => useEditorStore.getState().setPreviewAs(patch);
@@ -534,7 +557,7 @@ let pendingJump: { docKey: DocKey; blockId?: string } | null = null;
 
 /** Rules whose id names a block first: `part-required:ProductDetail.ProductTitle` → the container. */
 export const BLOCK_RULE_RE =
-  /^(?:field|placement|layout|at-most-one|exactly-one|part-required|part-unique|part-requires|part-placement|slot-accepts|hidden-required):([A-Za-z0-9]+)/;
+  /^(?:field|placement|layout|at-most-one|exactly-one|part-required|part-unique|part-requires|part-placement|slot-accepts|slot-rejects|hidden-required):([A-Za-z0-9]+)/;
 
 /** What part of the page an issue is about: a block's name, the page settings, or nothing more. */
 function issuePart(issue: Issue): string | null {
@@ -755,6 +778,7 @@ export function EditorHeader(_props: { actions: ReactNode; children: ReactNode }
       <div className={styles.group}>
         <ViewportToggle />
         <PreviewAsControls />
+        <PreviewStateControl />
         <PreviewProductPicker />
       </div>
       <div className={`${styles.group} ${styles.groupEnd}`}>

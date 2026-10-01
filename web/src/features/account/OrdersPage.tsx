@@ -115,23 +115,23 @@ export const ORDERS_VIEWS: FamilyValue<OrdersData>['views'] = {
  */
 export function OrdersPage({ slots }: { slots?: { content: SlotRender } }) {
   const { t } = useText();
-  const orders = useOrders();
   const state = usePreviewState('OrdersList');
   const fixture = usePreviewFixture<OrdersPreview>('OrdersList');
+  // The editor previews from a fixture (spec §11.3): the query neither fires nor is read.
+  const preview = fixture !== null;
+  const orders = useOrders(!preview);
   const legacy = useMemo(() => (slots ? null : defaultSlotRenders('OrdersList', 'storefront', {}, 'account.orders')), [slots]);
   const content = slots?.content ?? legacy!.content!;
 
-  // The editor previews a state from a fixture and never touches the query (spec §11.3).
-  const preview = state !== null;
   const rows = useMemo(
-    () => (preview ? (state === 'none' ? [] : fixture?.rows ?? []) : orders.data?.pages.flatMap((page) => page.data) ?? []),
+    () => (preview ? (state === 'none' ? [] : fixture.rows) : orders.data?.pages.flatMap((page) => page.data) ?? []),
     [preview, state, fixture, orders.data],
   );
   const value = useMemo<FamilyValue<OrdersData>>(
     () => ({
       data: {
         rows,
-        hasNextPage: preview ? state === 'more' : orders.hasNextPage,
+        hasNextPage: preview ? fixture.hasNextPage || state === 'more' : orders.hasNextPage,
         isFetchingNextPage: preview ? false : orders.isFetchingNextPage,
         loadMore: () => void orders.fetchNextPage(),
         count: preview ? rows.length : orders.data?.pages[0]?.meta.totalItems ?? rows.length,

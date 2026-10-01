@@ -37,7 +37,13 @@ export function usePreviewState(container: string): string | null {
   return states && Object.hasOwn(states, container) ? states[container] ?? null : null;
 }
 
-/** The fixture the editor supplies for `container`; null for shoppers and when unset. */
+/**
+ * The fixture the editor supplies for `container`; null for shoppers and when unset.
+ *
+ * THE PREVIEW RULE (every container): a container is in preview iff its fixture is non-null. The
+ * state id (usePreviewState) only picks a variant inside that preview and is never a switch on its
+ * own; a preview never fires the container's queries or lookups.
+ */
 export function usePreviewFixture<T>(container: string): T | null {
   const fixtures = useContext(BuilderModeContext).previewFixtures;
   return fixtures && Object.hasOwn(fixtures, container) ? (fixtures[container] as T) : null;

@@ -19,7 +19,7 @@ import { textKey, useText } from '@/text/runtime.tsx';
 import { useProfile } from '@/features/account/queries.ts';
 import type { Profile } from '@/types/profile.ts';
 import { ProfileFamily, type ProfileData, type ProfilePreview } from '@/builder/family-profile.ts';
-import { usePreviewFixture, usePreviewState } from '@/builder/mode.ts';
+import { usePreviewFixture } from '@/builder/mode.ts';
 import type { FamilyValue, PartViewProps } from '@/builder/parts.ts';
 import { defaultSlotRenders } from '@/builder/render.tsx';
 import type { SlotRender } from '@/builder/define.ts';
@@ -200,14 +200,16 @@ export const PROFILE_VIEWS: FamilyValue<ProfileData>['views'] = {
  */
 export function ProfilePage({ slots }: { slots?: { content: SlotRender } } = {}) {
   const { t } = useText();
-  const profile = useProfile();
+  const fixture = usePreviewFixture<ProfilePreview>('Profile');
+  // The editor previews from a fixture (spec §11.3). Its profile replaces the query, which then
+  // never fires; a fixture without a profile still needs the query's.
+  const preview = fixture !== null;
+  const profile = useProfile(fixture?.profile === undefined);
   const [signingOut, setSigningOut] = useState(false);
   const settings = useSettings();
   const inTelegram = isTelegramWebApp();
   const webapp = useEffectiveLayout() === 'webapp';
   const hasChatLinks = Boolean(settings.brand.links.whatsapp || settings.brand.links.telegram);
-  const state = usePreviewState('Profile');
-  const fixture = usePreviewFixture<ProfilePreview>('Profile');
   const legacy = useMemo(() => (slots ? null : defaultSlotRenders('Profile', 'storefront', {}, 'account.profile')), [slots]);
   const content = slots?.content ?? legacy!.content!;
 
@@ -239,9 +241,6 @@ export function ProfilePage({ slots }: { slots?: { content: SlotRender } } = {})
     window.location.assign('/');
   };
 
-  // The editor previews a state from a fixture and never touches the query (spec §11.3).
-  // A fixture without a profile still needs the query's.
-  const preview = state !== null && fixture !== null;
   const usingFixture = preview && fixture.profile !== undefined;
   const data = usingFixture ? fixture.profile : profile.data;
   const surface: ProfileData['surface'] = preview ? fixture.surface : inTelegram ? 'telegram' : webapp ? 'webapp' : 'website';
