@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { cardKind, isCardKey, type DocKey, type LayoutKind } from '@/builder/types.ts';
 import { SheetStage } from '@/builder/editor/SheetStage.tsx';
+import { CartStage } from '@/builder/editor/CartStage.tsx';
 import { CardStage } from '@/builder/editor/CardStage.tsx';
 import styles from '@/builder/editor/PageGround.module.css';
 
@@ -23,6 +24,14 @@ export function PageGround({ docKey, layout, children }: { docKey: DocKey; layou
     return (
       <div data-sf-builder-canvas="" className={styles.ground} data-layout={layout}>
         <div className={styles.column} data-sf-builder-column=""><CardStage kind={cardKind(docKey)}>{children}</CardStage></div>
+      </div>
+    );
+  }
+  // The cart doc is a page on phones and a drawer on desktop shops: switch between them (stage 4 §11.3). The web app has no drawer.
+  if (docKey === 'cart' && layout !== 'webapp') {
+    return (
+      <div data-sf-builder-canvas="" className={styles.ground} data-layout={layout}>
+        <CartStage column={(c) => <div className={styles.column} data-sf-builder-column="">{c}</div>}>{children}</CartStage>
       </div>
     );
   }

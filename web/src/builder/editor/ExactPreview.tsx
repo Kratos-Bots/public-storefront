@@ -12,6 +12,8 @@ import { useEditorMode } from '@/builder/editor/preview-states.ts';
 import { useEditorText } from '@/builder/editor/text/hooks.ts';
 import { EyeIcon } from '@/builder/editor/icons.tsx';
 import type { ViewportWidth } from '@/builder/editor/protocol.ts';
+import { DRAWER_PREVIEW_WIDTH, exactPreviewPath, useCartSurface } from '@/builder/editor/cart-surface.ts';
+import { OpenCartDrawer } from '@/builder/editor/CartStage.tsx';
 import { CardDesignProvider } from '@/builder/card-design.tsx';
 import { PageSetContext } from '@/builder/page-set-context.ts';
 import { isCardKey, type DocKey, type LayoutKind, type RouteKey } from '@/builder/types.ts';
@@ -42,6 +44,10 @@ export const routeKeyFor = (docKey: DocKey, layout: LayoutKind): RouteKey =>
  * canvas carries on with its selection and undo history.
  */
 export function ExactPreview({ width }: { width: ViewportWidth }) {
+  // The cart drawer exists only at desktop width: its exact preview is forced there (cart-surface.ts).
+  const [cartSurface] = useCartSurface();
+  const drawerPreview = exactPreviewPath(useEditorStore((s) => s.docKey), cartSurface) !== null;
+  useEffect(() => { if (drawerPreview && width !== DRAWER_PREVIEW_WIDTH) useEditorStore.getState().setViewport(DRAWER_PREVIEW_WIDTH); }, [drawerPreview, width]);
   const back = useRef<HTMLButtonElement>(null);
   // Keyboard users land on the way back, not at the top of the document.
   useEffect(() => back.current?.focus({ preventScroll: true }), []);
@@ -95,6 +101,8 @@ export function ExactRuntime({ failTitle, failBody }: { failTitle: string; failB
   const text = useEditorText();
   const pageSet = useMemo(() => toPageSet(prepareDocs(docs), layout, pageText), [docs, layout, pageText]);
   const routeKey = routeKeyFor(docKey, layout);
+  const [cartSurface] = useCartSurface();
+  const drawerPath = exactPreviewPath(docKey, cartSurface);
   const page = resolveDoc(pageSet, routeKey, layout);
   const chromeless = page?.doc.root.props.chrome === 'none';
   // PuckShell mounts these itself; the chrome-less frame gets them here, as PuckShell would (spec §6.2).
@@ -124,7 +132,7 @@ export function ExactRuntime({ failTitle, failBody }: { failTitle: string; failB
                   </PageSetContext.Provider>
                 ) : <PuckShell />}
               >
-                <Route index element={<PuckPage key={routeKey} routeKey={routeKey} />} />
+                <Route index element={drawerPath ? <OpenCartDrawer /> : <PuckPage key={routeKey} routeKey={routeKey} />} />
               </Route>
             </Routes>
           ) : (
