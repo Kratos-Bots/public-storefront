@@ -138,7 +138,7 @@ export function OrdersPage({ slots }: { slots?: { content: SlotRender } }) {
       },
       views: ORDERS_VIEWS,
     }),
-    [rows, preview, state, orders],
+    [rows, preview, state, orders.data, orders.hasNextPage, orders.isFetchingNextPage, orders.fetchNextPage],
   );
 
   if (!preview) {

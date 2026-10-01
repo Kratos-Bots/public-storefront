@@ -98,14 +98,16 @@ export function VerifyPage({ slots }: { slots?: VerifySlots } = {}) {
   // The editor previews a verdict from a fixture (no network); shoppers never have one.
   const shownStatus = preview ? preview.status : status;
   const shownResult = preview ? (preview.result ?? null) : result;
-  const data: VerifyData = {
+  const data: VerifyData = useMemo(() => ({
     status: shownStatus, result: shownResult, values: { verificationCode, authCode }, errors, onChange,
     onSubmit: (e) => void submit(e), ids: { code: codeId, auth: authId, codeError: codeErrorId, authError: authErrorId },
-  };
+  }), [shownStatus, shownResult, verificationCode, authCode, errors, onChange, codeId, authId, codeErrorId, authErrorId]);
+
+  const value = useMemo(() => ({ data, views: VERIFY_VIEWS }), [data]);
 
   const s = slots ?? legacy!;
   return (
-    <VerifyFamily.Provider value={{ data, views: VERIFY_VIEWS }}>
+    <VerifyFamily.Provider value={value}>
       {s.content({ className: classes.page })}
     </VerifyFamily.Provider>
   );

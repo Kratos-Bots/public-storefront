@@ -58,9 +58,10 @@ describe('shared button fills', () => {
 
 describe('parts', () => {
   it.each([
-    ['../src/layouts/StorefrontShell.tsx', ['data-sf-part="header"', 'data-sf-part="main"', 'data-sf-part="badge"']],
-    ['../src/layouts/MenuShell.tsx', ['data-sf-part="header"', 'data-sf-part="main"', 'data-sf-part="badge"']],
+    ['../src/layouts/StorefrontShell.tsx', ['data-sf-part="main"']],
+    ['../src/layouts/MenuShell.tsx', ['data-sf-part="main"']],
     ['../src/layouts/Chromeless.tsx', ['data-sf-part="header"', 'data-sf-part="main"']],
+    ['../src/layouts/header-parts.tsx', ['data-sf-part="header"', 'data-sf-part="badge"']],
     ['../src/features/catalog/ProductCard.tsx', ['data-sf-part="product-card"', 'data-sf-part="price"']],
     ['../src/features/catalog/ProductRow.tsx', ['data-sf-part="product-row"', 'data-sf-part="price"']],
     ['../src/features/catalog/ProductDetailPage.tsx', ['data-sf-part="page-title"', 'data-sf-part="price"']],
@@ -87,8 +88,7 @@ describe('parts', () => {
     ['../src/features/order-status/PaymentSection.tsx', ['data-sf-part="button"', 'data-variant="filled"']],
     ['../src/features/tracking/LookupForm.tsx', ['data-sf-part="button"', 'data-variant="filled"']],
     ['../src/features/verify/VerifyPage.tsx', ['data-sf-part="button"', 'data-variant="filled"']],
-    ['../src/features/payment-redirect/OrderPlacedPage.tsx', ['data-sf-part="button"', 'data-variant="filled"']],
-    ['../src/features/payment-redirect/PaymentCancelPage.tsx', ['data-sf-part="button"', 'data-variant="filled"']],
+    ['../src/features/payment-redirect/payment-parts.tsx', ['data-sf-part="button"', 'data-variant="filled"']],
     ['../src/features/wholesale/WholesaleBar.tsx', ['data-sf-part="button"', 'data-variant="filled"']],
   ])('%s carries its parts', (file, parts) => {
     const src = read(file);
@@ -128,8 +128,7 @@ describe('parts', () => {
     ['../src/features/order-status/PaymentSection.tsx', 1],
     ['../src/features/tracking/LookupForm.tsx', 1],
     ['../src/features/verify/VerifyPage.tsx', 1],
-    ['../src/features/payment-redirect/OrderPlacedPage.tsx', 2],
-    ['../src/features/payment-redirect/PaymentCancelPage.tsx', 2],
+    ['../src/features/payment-redirect/payment-parts.tsx', 4],
     ['../src/features/wholesale/WholesaleBar.tsx', 1],
   ])('%s tags exactly its %i primary-CTA button(s) as shared filled buttons', (file, n) => {
     const src = read(file);
