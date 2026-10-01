@@ -12,6 +12,9 @@ import { DocBoundary, renderComponent } from '@/builder/render.tsx';
 import { isComponentLike, isRecord, type ComponentData } from '@/builder/types.ts';
 import type { BlockRenderContext } from '@/builder/define.ts';
 import { cartViews } from '@/builder/blocks/_shared/cart-views.ts';
+// Static imports for their side effect: each registers its container view in cartViews, so the blocks render it without suspending.
+import '@/features/cart/CartPage.tsx';
+import '@/features/cart/CartSummary.tsx';
 import { CartHostContext, type CartHost } from '@/features/cart/cart-host.ts';
 import { useServerCart } from '@/features/cart/useServerCart.ts';
 import classes from '@/features/cart/CartDrawer.module.css';
