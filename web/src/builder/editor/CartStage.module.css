@@ -30,7 +30,8 @@
 }
 
 .option {
-  min-block-size: 32px;
+  min-inline-size: 44px;
+  min-block-size: 44px;
   padding: 0 14px;
   border: 0;
   border-radius: 4px;
@@ -99,12 +100,12 @@
 }
 
 /* Blocks the drawer never draws: the root's own content and the cart's head slot are page-only. */
-.pageOnly :is([data-puck-dropzone='root:default-zone'], [data-puck-dropzone$=':head']) > *:not(:has([data-puck-dropzone$=':main'])) {
+.pageOnly :is([data-puck-dropzone='root:default-zone'], [data-puck-dropzone^='CartContents-'][data-puck-dropzone$=':head']) > *:not(:has([data-puck-dropzone$=':main'])) {
   position: relative;
   opacity: 0.55;
 }
 
-.pageOnly :is([data-puck-dropzone='root:default-zone'], [data-puck-dropzone$=':head']) > *:not(:has([data-puck-dropzone$=':main']))::after {
+.pageOnly :is([data-puck-dropzone='root:default-zone'], [data-puck-dropzone^='CartContents-'][data-puck-dropzone$=':head']) > *:not(:has([data-puck-dropzone$=':main']))::after {
   content: 'Cart page only';
   position: absolute;
   inset-block-start: 4px;

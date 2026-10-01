@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { useEditorStore } from '@/builder/editor/store.ts';
-import type { DocKey } from '@/builder/types.ts';
+import type { DocKey, LayoutKind } from '@/builder/types.ts';
 import type { ViewportWidth } from '@/builder/editor/protocol.ts';
 
 /** Which surface the cart document is drawn on while editing (stage 4 spec §11.3). */
@@ -36,9 +36,12 @@ export function useCartSurface(): [CartSurface, (s: CartSurface) => void] {
   return [useSyncExternalStore(subscribe, getCartSurface, getCartSurface), set];
 }
 
-/** The path the exact preview opens: the drawer is the shop's own, opened by `/cart` on a desktop. */
-export function exactPreviewPath(docKey: DocKey, s: CartSurface): string | null {
-  return docKey === 'cart' && s === 'drawer' ? '/cart' : null;
+/**
+ * The path the exact preview opens: the drawer is the shop's own, opened by `/cart` on a desktop.
+ * The web app has no drawer and the read-only view has no surface switch, so neither gets one.
+ */
+export function exactPreviewPath(docKey: DocKey, s: CartSurface, layout: LayoutKind = 'storefront', readOnly = false): string | null {
+  return docKey === 'cart' && s === 'drawer' && layout !== 'webapp' && !readOnly ? '/cart' : null;
 }
 
 /** The drawer exists only at desktop width, so its exact preview is forced there. */

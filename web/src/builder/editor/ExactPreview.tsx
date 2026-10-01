@@ -46,7 +46,7 @@ export const routeKeyFor = (docKey: DocKey, layout: LayoutKind): RouteKey =>
 export function ExactPreview({ width }: { width: ViewportWidth }) {
   // The cart drawer exists only at desktop width: its exact preview is forced there (cart-surface.ts).
   const [cartSurface] = useCartSurface();
-  const drawerPreview = exactPreviewPath(useEditorStore((s) => s.docKey), cartSurface) !== null;
+  const drawerPreview = exactPreviewPath(useEditorStore((s) => s.docKey), cartSurface, useEditorStore((s) => s.layout), useEditorStore((s) => s.readOnly)) !== null;
   useEffect(() => { if (drawerPreview && width !== DRAWER_PREVIEW_WIDTH) useEditorStore.getState().setViewport(DRAWER_PREVIEW_WIDTH); }, [drawerPreview, width]);
   const back = useRef<HTMLButtonElement>(null);
   // Keyboard users land on the way back, not at the top of the document.
@@ -102,7 +102,8 @@ export function ExactRuntime({ failTitle, failBody }: { failTitle: string; failB
   const pageSet = useMemo(() => toPageSet(prepareDocs(docs), layout, pageText), [docs, layout, pageText]);
   const routeKey = routeKeyFor(docKey, layout);
   const [cartSurface] = useCartSurface();
-  const drawerPath = exactPreviewPath(docKey, cartSurface);
+  const readOnly = useEditorStore((s) => s.readOnly);
+  const drawerPath = exactPreviewPath(docKey, cartSurface, layout, readOnly);
   const page = resolveDoc(pageSet, routeKey, layout);
   const chromeless = page?.doc.root.props.chrome === 'none';
   // PuckShell mounts these itself; the chrome-less frame gets them here, as PuckShell would (spec §6.2).

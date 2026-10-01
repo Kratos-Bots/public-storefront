@@ -6,6 +6,7 @@ import { CartHostContext, type CartHost } from '@/features/cart/cart-host.ts';
 import { PuckPage } from '@/builder/runtime.tsx';
 import { useCartSurface, type CartSurface } from '@/builder/editor/cart-surface.ts';
 import { useEditorStore } from '@/builder/editor/store.ts';
+import { onRadioGroupKeyDown, radioTabIndex } from '@/builder/editor/custom-fields/roving.ts';
 import { useText } from '@/text/runtime.tsx';
 import sheetChrome from '@/components/Sheet.module.css';
 import cartClasses from '@/features/cart/CartDrawer.module.css';
@@ -65,17 +66,21 @@ function DrawerStage({ children }: { children: ReactNode }) {
 export function CartStage({ children, column }: { children: ReactNode; column?: (children: ReactNode) => ReactNode }) {
   const [surface, setSurface] = useCartSurface();
   const readOnly = useEditorStore((s) => s.readOnly);
+  const checked = OPTIONS.findIndex((o) => o.value === surface);
   return (
     <div className={styles.root} data-sf-builder-cart="">
       {readOnly ? null : (
         <div className={styles.switch}>
-          <div className={styles.group} role="radiogroup" aria-label="Cart surface">
-            {OPTIONS.map((o) => (
+          <div className={styles.group} role="radiogroup" aria-label="Cart surface"
+            onKeyDown={(e) => onRadioGroupKeyDown(e, OPTIONS.length, checked, (i) => setSurface(OPTIONS[i]!.value))}
+          >
+            {OPTIONS.map((o, i) => (
               <button
                 key={o.value}
                 type="button"
                 role="radio"
                 aria-checked={surface === o.value}
+                tabIndex={radioTabIndex(i, checked)}
                 className={styles.option}
                 onClick={() => setSurface(o.value)}
               >

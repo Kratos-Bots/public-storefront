@@ -124,6 +124,18 @@ describe('hidden-required on a part itself', () => {
   it('a hidden Section around the required part is still one (holder) issue', () => {
     expect(only(doc([cart([section('s', [REQ], { blockStyle: { hide: 'mobile' } })])]), 'cart', ['hidden-required'])).toEqual(['hidden-required:Section']);
   });
+  it('never reports one rule twice for the same block (hidden required part inside a hidden Section)', () => {
+    const d = doc([cart([section('s', [c('FakeHead', 'h', { blockStyle: { hide: 'mobile' } })], { blockStyle: { hide: 'desktop' } })])]);
+    const found = checkRules(d, 'cart', 'storefront').filter((i) => i.rule.startsWith('hidden-required'));
+    const keys = found.map((i) => `${i.rule}|${i.blockId}`);
+    expect(new Set(keys).size).toBe(keys.length);
+    // The hidden Section already says so: the part's own hide adds nothing for the same block.
+    expect(keys).toEqual(['hidden-required:Section|s']);
+    for (const hide of ['mobile', 'desktop']) {
+      const one = checkRules(doc([cart([section('s', [REQ], { blockStyle: { hide } })])]), 'cart', 'storefront').filter((i) => i.rule === 'hidden-required:Section');
+      expect(one.map((i) => i.blockId)).toEqual(['s']);
+    }
+  });
   it('a hidden container holding all its parts is no issue', () => {
     const d = doc([c('FakeCart', 'cart', { head: [REQ], main: [], summary: [], blockStyle: { hide: 'mobile' } })]);
     expect(only(d, 'cart', ['hidden-required'])).toEqual([]);

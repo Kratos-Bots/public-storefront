@@ -214,13 +214,13 @@ function AddBlock() {
         <div ref={menu} id={`${id}-menu`} role="menu" aria-label="Blocks to add" aria-describedby={`${id}-hint`} onKeyDown={onMenuKey}>
           {groups.map((g) => (
             <div
-              key={g.category}
+              key={g.key}
               role="group"
-              aria-labelledby={`${id}-${g.category}`}
+              aria-labelledby={`${id}-${g.key}`}
               aria-describedby={g.category === 'part' && hints.part ? `${id}-part-hint` : undefined}
               className={styles.menuGroup}
             >
-              <div id={`${id}-${g.category}`} className={styles.menuGroupTitle}>{g.title}</div>
+              <div id={`${id}-${g.key}`} className={styles.menuGroupTitle}>{g.title}</div>
               {g.blocks.map((b) => (
                 <button key={b.name} type="button" role="menuitem" tabIndex={-1} className={styles.menuItem} data-block={b.name} onClick={() => insert(b.name)}>
                   {b.label}

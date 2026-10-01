@@ -73,7 +73,8 @@ describe('labels and fixtures', () => {
   });
 
   it('builds the declared shapes', () => {
-    const f = (c: string, id: string) => previewFixturesFor({ [c]: id })[c];
+    const NOW = new Date('2026-06-15T12:00:00Z');
+    const f = (c: string, id: string) => previewFixturesFor({ [c]: id }, NOW)[c];
     const orders = f('OrdersList', 'orders') as OrdersPreview;
     expect(orders.rows.length).toBeGreaterThan(0);
     expect(orders.hasNextPage).toBe(false);
@@ -116,8 +117,8 @@ describe('labels and fixtures', () => {
 
     const authentic = f('VerifyForm', 'authentic') as VerifyPreview;
     const expired = f('VerifyForm', 'expired') as VerifyPreview;
-    expect(Date.parse(authentic.result!.expiryDate)).toBeGreaterThan(Date.now());
-    expect(Date.parse(expired.result!.expiryDate)).toBeLessThan(Date.now());
+    expect(Date.parse(authentic.result!.expiryDate)).toBeGreaterThan(NOW.getTime());
+    expect(Date.parse(expired.result!.expiryDate)).toBeLessThan(NOW.getTime());
     expect(f('VerifyForm', 'not-verified')).toMatchObject({ status: 'not-verified' });
     expect(f('VerifyForm', 'error')).toMatchObject({ status: 'error' });
   });
@@ -182,6 +183,15 @@ describe('the mode the editor builds', () => {
     const first = result.current;
     rerender();
     expect(result.current).toBe(first);
+  });
+
+  it('outside any provider (a shopper page, a plain PuckPage render) both hooks read null', () => {
+    const hooks = renderHook(() => [usePreviewState('OrdersList'), usePreviewFixture('OrdersList'), usePreviewState('TrackingLookup'), usePreviewFixture('TrackingLookup')] as const);
+    expect(hooks.result.current).toEqual([null, null, null, null]);
+    // The same through a rendered component, as a block under a bare render sees them.
+    function Seen() { return <i data-testid="seen">{String(usePreviewState('OrdersList'))}|{String(usePreviewFixture('OrdersList'))}</i>; }
+    render(<Seen />);
+    expect(screen.getByTestId('seen').textContent).toBe('null|null');
   });
 
   it('is the shopper view when read-only: no states, no fixtures, hooks read null', () => {

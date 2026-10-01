@@ -271,8 +271,8 @@ function containerIssues(item: ComponentData, def: AnyBlock, docKey: DocKey, lay
       counts.set(c.type, (counts.get(c.type) ?? 0) + 1);
       if (hidden && required.has(c.type) && !hiddenHolders.has(hidden)) hiddenHolders.set(hidden, c.type);
       const d = blockDef(c.type);
-      // A required part that carries its own `hide` (header brand, payment reference...): once per type.
-      if (d && required.has(c.type) && hiddenAs(d, c.props) && !hiddenParts.has(c.type)) hiddenParts.set(c.type, c);
+      // A required part that carries its own `hide` (header brand, payment reference...): once per type, unless a hidden holder already says so.
+      if (d && !hidden && required.has(c.type) && hiddenAs(d, c.props) && !hiddenParts.has(c.type)) hiddenParts.set(c.type, c);
       if (!d || d.container) continue;
       const nextHidden = hidden ?? (hiddenAs(d, c.props) ? c : null);
       for (const s of shownSlots(d, c.props)) {
@@ -388,5 +388,12 @@ export function checkRules(doc: PuckDoc, docKey: DocKey, layout: LayoutKind): Is
       blockId: c.props.id,
     });
   });
-  return issues;
+  // The container pass and the doc walk can both reach one block: say each thing once.
+  const seen = new Set<string>();
+  return issues.filter((i) => {
+    const k = `${i.docKey}|${i.rule}|${i.blockId ?? ''}`;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
 }
