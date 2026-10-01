@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router';
 import { listSavedOrders } from '@/stores/saved-orders.ts';
 import { FADE } from '@/lib/motion.ts';
 import { textKey, useText } from '@/text/runtime.tsx';
+import type { StyleAttrs } from '@/builder/define.ts';
 import classes from '@/features/tracking/Tracking.module.css';
 
 /** Same shape the backend accepts, so a reference it would reject never costs a request. */
@@ -14,6 +15,8 @@ const RECENT_LIMIT = 4;
 
 export interface LookupFormProps {
   initial?: string;
+  /** The builder's style attributes for this part (spread on the root element). */
+  rootAttrs?: StyleAttrs;
 }
 
 /**
@@ -22,7 +25,7 @@ export interface LookupFormProps {
  * and navigates — which also means a lookup can be shared, bookmarked and
  * reloaded.
  */
-export function LookupForm({ initial = '' }: LookupFormProps) {
+export function LookupForm({ initial = '', rootAttrs }: LookupFormProps) {
   const { t, msg } = useText();
   const [value, setValue] = useState(initial);
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +47,7 @@ export function LookupForm({ initial = '' }: LookupFormProps) {
   };
 
   return (
-    <form className={`${classes.form} ${FADE}`} onSubmit={submit}>
+    <form className={`${classes.form} ${FADE}`} onSubmit={submit} {...rootAttrs}>
       {/* The error sits beside the label rather than inside it: in the label it
           would become part of the field's accessible name. */}
       <div className={classes.fieldHead}>

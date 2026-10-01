@@ -1,6 +1,7 @@
 import { VisuallyHidden } from '@mantine/core';
 import { STAGE_KEYS } from '@/features/tracking/status.ts';
 import { useText } from '@/text/runtime.tsx';
+import type { StyleAttrs } from '@/builder/define.ts';
 import classes from '@/features/tracking/Tracking.module.css';
 
 export interface ProgressStepperProps {
@@ -8,6 +9,7 @@ export interface ProgressStepperProps {
   stage: number;
   /** The parcel came back — the rail reads in the danger tone rather than the accent. */
   failed: boolean;
+  rootAttrs?: StyleAttrs;
 }
 
 /**
@@ -21,7 +23,7 @@ export interface ProgressStepperProps {
  * own segment. Narrower than that there is no room for seven, so the rail states
  * the current stage and its place in the sequence instead.
  */
-export function ProgressStepper({ stage, failed }: ProgressStepperProps) {
+export function ProgressStepper({ stage, failed, rootAttrs }: ProgressStepperProps) {
   const { t } = useText();
   const reached = Math.max(stage, -1);
   const tone = failed ? 'danger' : undefined;
@@ -31,7 +33,7 @@ export function ProgressStepper({ stage, failed }: ProgressStepperProps) {
       : t('tracking.status.stageSummary', { stage: reached + 1, total: STAGE_KEYS.length, name: t(STAGE_KEYS[reached]!) });
 
   return (
-    <div className={classes.stepper} data-sf-part="stepper">
+    <div className={classes.stepper} data-sf-part="stepper" {...rootAttrs}>
       {/* The rail is a picture of the summary; screen readers get the sentence. */}
       <VisuallyHidden>{summary}</VisuallyHidden>
 

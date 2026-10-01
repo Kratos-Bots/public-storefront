@@ -3,6 +3,7 @@ import { EmptyState } from '@/components/EmptyState.tsx';
 import { formatRelative } from '@/features/tracking/status.ts';
 import { useText } from '@/text/runtime.tsx';
 import type { TrackingLookup } from '@/types/tracking.ts';
+import type { StyleAttrs } from '@/builder/define.ts';
 import classes from '@/features/tracking/Tracking.module.css';
 
 /**
@@ -199,10 +200,10 @@ export function NothingShippedScreen({ data }: { data: TrackingLookup }) {
 }
 
 /** The courier network is unconfigured or unreachable — shipments still render. */
-export function DegradedNotice() {
+export function DegradedNotice({ rootAttrs }: { rootAttrs?: StyleAttrs } = {}) {
   const { t } = useText();
   return (
-    <div className={classes.degraded}>
+    <div className={classes.degraded} {...rootAttrs}>
       <p className={classes.screenHead}>{t('tracking.states.degradedHead')}</p>
       <p className={classes.degradedText}>{t('tracking.states.degradedBody')}</p>
     </div>

@@ -4,6 +4,7 @@ import { formatRelative, parcelLabelKey, parcelTone } from '@/features/tracking/
 import { FADE } from '@/lib/motion.ts';
 import { useText } from '@/text/runtime.tsx';
 import type { TrackingLookup } from '@/types/tracking.ts';
+import type { StyleAttrs } from '@/builder/define.ts';
 import classes from '@/features/tracking/Tracking.module.css';
 
 export interface Fact {
@@ -15,7 +16,7 @@ export interface Fact {
  * What the visitor came for, above the fold: one status headline, one line of
  * "and then what", and the handful of facts the payload actually knows.
  */
-export function OrderHero({ data }: { data: TrackingLookup }) {
+export function OrderHero({ data, rootAttrs }: { data: TrackingLookup; rootAttrs?: StyleAttrs }) {
   const { t, tn } = useText();
   const tracked = data.parcels.filter((p) => p.tracking?.outcome === 'ok');
   // Keyed on parcel count as well as resolved-tracking count. On resolved count
@@ -57,7 +58,7 @@ export function OrderHero({ data }: { data: TrackingLookup }) {
   ];
 
   return (
-    <section className={`${classes.hero} ${FADE}`} aria-label={t('tracking.hero.summaryAria')}>
+    <section className={`${classes.hero} ${FADE}`} aria-label={t('tracking.hero.summaryAria')} {...rootAttrs}>
       <div className={classes.heroTop}>
         <p className={classes.heroRef}>
           {tn('tracking.hero.orderRef', { reference: <span className={classes.heroRefValue}>{data.reference}</span> })}
