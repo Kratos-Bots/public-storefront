@@ -4,7 +4,10 @@ import { fileURLToPath } from 'node:url';
 import { expect, test, type FrameLocator, type Locator, type Page } from '@playwright/test';
 import { z } from 'zod';
 import { installMocks, ORIGIN, type MockHandle } from './mocks.ts';
-import { checkoutWithoutFlowSet, editorStyleSet, legacyProductSet, menuSheetSet, productPartsSet, storySet, tileDesignSet } from './page-sets.ts';
+import {
+  arrangedCart, arrangedEverythingSet, arrangedFlowsSet, arrangedShell, checkoutWithoutFlowSet, defaultShellSet, editorStyleSet,
+  legacyProductSet, menuSheetSet, productPartsSet, storySet, tileDesignSet, v070Shell,
+} from './page-sets.ts';
 
 /**
  * The page builder, framed exactly as the admin frames it (spec §6, §13 A6): a page on ANOTHER
@@ -1100,5 +1103,222 @@ test.describe('page builder editor · card designer at a phone width', () => {
     await page.waitForTimeout(800);
     expect(await rows.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
     await page.screenshot({ path: `${SCRATCH}/cards-row-360.png` });
+  });
+});
+
+// ---- shell, cart and account parts (spec 2026-09-30-shell-cart-account-parts §11, §13) ------------
+
+test.describe('page builder editor · shell, cart and account parts', () => {
+  type Item = { type: string; props: Record<string, unknown> };
+  type HeaderProps = Record<string, unknown> & { start: Item[]; nav: Item[]; middle: Item[]; end: Item[] };
+  const shellHeader = async (page: Page, loadId: string): Promise<HeaderProps | null> => {
+    const shell = (await changesFor(page, loadId)).at(-1)?.pageSet?.shell as { content: Item[] } | undefined;
+    return (shell?.content.find((c) => c.type === 'Header')?.props as HeaderProps | undefined) ?? null;
+  };
+  const types = (items: Item[] | undefined) => (items ?? []).map((i) => i.type);
+  const pageSelect = (frame: FrameLocator) => frame.getByLabel('Page', { exact: true });
+  /** Like `drag`, for parts laid out in a row: land on the near edge of `to`, vertically centred. */
+  async function dragAcross(page: Page, from: Locator, to: Locator, where: 'before' | 'after') {
+    const a = (await from.boundingBox())!;
+    const b = (await to.boundingBox())!;
+    await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(a.x + a.width / 2 + 8, a.y + a.height / 2 + 8, { steps: 4 });
+    const tx = where === 'before' ? b.x + 3 : b.x + b.width - 3;
+    await page.mouse.move(tx, b.y + b.height / 2, { steps: 14 });
+    await page.waitForTimeout(250);
+    await page.mouse.move(tx + (where === 'before' ? 1 : -1), b.y + b.height / 2, { steps: 2 });
+    await page.mouse.up();
+  }
+
+  const openShell = async (page: Page, set: ReturnType<typeof load>['pageSet'], containerId: string) => {
+    const framed = await openFramed(page);
+    const msg = load({ pageSet: set });
+    await loadAndWait(page, framed.frame, msg);
+    await pageSelect(framed.frame).selectOption('shell');
+    await expect(part(framed.frame, containerId)).toBeVisible();
+    return { ...framed, msg };
+  };
+
+  test('header parts are offered on the shell document only', async ({ page }) => {
+    const { frame } = await openShell(page, defaultShellSet('storefront'), 'hdr-default');
+    await expect(frame.getByRole('button', { name: 'Header parts' })).toBeVisible();
+    await pageSelect(frame).selectOption('catalog');
+    await expect(frame.getByRole('button', { name: 'Header parts' })).toHaveCount(0);
+  });
+
+  test('dragging HeaderCart into start changes the posted order; HeaderBrand has no delete', async ({ page }) => {
+    const { frame, msg } = await openShell(page, defaultShellSet('storefront'), 'hdr-default');
+    await dragAcross(page, part(frame, 'HeaderCart-e2e'), part(frame, 'HeaderBrand-e2e'), 'before');
+    await expect.poll(async () => types((await shellHeader(page, msg.loadId))?.start)).toEqual(['HeaderCart', 'HeaderBrand']);
+    expect(types((await shellHeader(page, msg.loadId))?.end)).toEqual(['HeaderAccount']);
+    await expectAdminAccepts(page);
+
+    // The brand is required: no delete. The cart is not: it has one.
+    // The dropped cart stays selected, and a cart can be deleted.
+    await expect(bar(frame, 'Delete')).toHaveCount(1);
+    await part(frame, 'HeaderBrand-e2e').click();
+    await expect(frame.getByTitle('Select parent').first()).toBeVisible();
+    await expect(bar(frame, 'Delete')).toHaveCount(0);
+  });
+
+  test('the Parts list Add restores HeaderSearch in middle', async ({ page }) => {
+    const { frame, msg } = await openShell(page, arrangedShell('storefront'), 'hdr-arranged');
+    await part(frame, 'hdr-arranged').click({ position: { x: 3, y: 3 } });
+    const row = rightPanel(frame).locator('[data-part-type="HeaderSearch"]');
+    await expect(row).toContainText('Removed');
+    await rightPanel(frame).getByRole('button', { name: /^Add / }).and(row.getByRole('button')).click();
+    await expect(row).toContainText('On the page');
+    await expect.poll(async () => types((await shellHeader(page, msg.loadId))?.middle)).toEqual(['HeaderSearch']);
+    await expectAdminAccepts(page);
+  });
+
+  test('switching the Header to the menu variant, then Reset arrangement, adds the filter button', async ({ page }) => {
+    const { frame, msg } = await openShell(page, defaultShellSet('storefront'), 'hdr-default');
+    expect(types((await shellHeader(page, msg.loadId))?.end)).not.toContain('HeaderFilter');
+    await part(frame, 'hdr-default').click({ position: { x: 3, y: 3 } });
+    await frame.getByLabel('Variant').locator('visible=true').selectOption({ value: '{"value":"menu"}' });
+    await expect.poll(async () => (await shellHeader(page, msg.loadId))?.variant).toBe('menu');
+    await rightPanel(frame).getByRole('button', { name: 'Reset arrangement' }).click();
+    await expect.poll(async () => types((await shellHeader(page, msg.loadId))?.end)).toEqual(['HeaderFilter', 'HeaderAccount', 'HeaderCart']);
+    // The owner's NavLinks in `nav` is never touched by a reset.
+    expect(types((await shellHeader(page, msg.loadId))?.nav)).toEqual(['NavLinks']);
+  });
+
+  test('opening a v0.7.0-shaped shell and editing posts full slots, never [], and nav unchanged', async ({ page }) => {
+    const { frame, msg } = await openShell(page, v070Shell('storefront', {}), 'Header-e2e');
+    await part(frame, 'Header-e2e').click({ position: { x: 3, y: 3 } });
+    const panel = frame.locator('[data-sf-style-panel]').locator('visible=true');
+    await panel.locator('summary').click();
+    await panel.getByRole('radiogroup', { name: 'Background' }).getByRole('radio', { name: 'Surface 2' }).click();
+    await expect.poll(async () => JSON.stringify((await shellHeader(page, msg.loadId)) ?? {})).toContain('"blockStyle"');
+    const h = (await shellHeader(page, msg.loadId))!;
+    expect(types(h.start)).toEqual(['HeaderBrand']);
+    expect(types(h.middle)).toEqual(['HeaderSearch']);
+    expect(types(h.end)).toEqual(['HeaderAccount', 'HeaderCart']);
+    expect(h.nav).toHaveLength(1);
+    expect(h.nav[0]!.type).toBe('NavLinks');
+    expect((h.nav[0]!.props as { items: unknown[] }).items).toEqual([{ label: 'Our story', href: '/pages/our-story' }]);
+    for (const k of ['search', 'accountIcon', 'cartIcon']) expect(k in h).toBe(false);
+  });
+
+  test('the cart surface switch draws the drawer stage; arrow keys move between Page and Drawer; page-only tags appear on the root zone and head only', async ({ page }) => {
+    const { frame } = await openFramed(page);
+    await loadAndWait(page, frame, load({ pageSet: arrangedCart('storefront') }));
+    await pageSelect(frame).selectOption('cart');
+    const group = frame.getByRole('radiogroup', { name: 'Cart surface' });
+    await expect(group).toBeVisible();
+    await expect(group.getByRole('radio', { name: 'Page' })).toHaveAttribute('aria-checked', 'true');
+    await expect(frame.locator('[data-sf-builder-cart-drawer]')).toHaveCount(0);
+
+    // Page mode: no page-only tags anywhere.
+    const tagged = () => canvas(frame).evaluate((root) => [...root.querySelectorAll('*')]
+      .filter((el) => getComputedStyle(el, '::after').content.includes('Cart page only'))
+      .map((el) => el.getAttribute('data-puck-component') ?? el.querySelector('[data-puck-component]')?.getAttribute('data-puck-component')));
+    expect(await tagged()).toEqual([]);
+    await expect(canvas(frame).locator('[data-puck-dropzone$=":head"]')).toHaveCount(1);
+
+    await group.getByRole('radio', { name: 'Drawer' }).click();
+    const stage = frame.locator('[data-sf-builder-cart-drawer]');
+    await expect(stage).toBeVisible();
+    await expect(group.getByRole('radio', { name: 'Drawer' })).toHaveAttribute('aria-checked', 'true');
+    // Only the root-zone block outside CartContents is tagged. The head slot is not drawn in the drawer at all
+    // (the Sheet's own header stands in for it), so there is no head block to tag; everything else is untagged.
+    await expect.poll(tagged).toEqual(['sum-above']);
+    await expect(canvas(frame).locator('[data-puck-dropzone$=":head"]')).toHaveCount(0);
+    await expect(canvas(frame).locator('[data-puck-dropzone$=":main"]')).toHaveCount(1);
+    await page.screenshot({ path: `${SCRATCH}/cart-drawer-stage.png` });
+
+    // Arrow keys: back to Page, forward to Drawer again, Home/End are not claimed.
+    await group.getByRole('radio', { name: 'Drawer' }).focus();
+    await page.keyboard.press('ArrowLeft');
+    await expect(group.getByRole('radio', { name: 'Page' })).toHaveAttribute('aria-checked', 'true');
+    await expect(stage).toHaveCount(0);
+    await page.keyboard.press('ArrowRight');
+    await expect(group.getByRole('radio', { name: 'Drawer' })).toHaveAttribute('aria-checked', 'true');
+    await expect(stage).toBeVisible();
+  });
+
+  test('the exact preview in Drawer mode opens the real drawer over the catalogue at 1280; not on the web app layout', async ({ page }) => {
+    const { frame } = await openFramed(page, 1440);
+    await loadAndWait(page, frame, load({ pageSet: arrangedCart('storefront') }));
+    await pageSelect(frame).selectOption('cart');
+    await frame.getByRole('radiogroup', { name: 'Cart surface' }).getByRole('radio', { name: 'Drawer' }).click();
+    await frame.getByRole('group', { name: 'Preview width' }).getByRole('button', { name: 'Phone' }).click();
+    await expect.poll(async () => (await messages(page, 'sf-builder-viewport')).at(-1)).toEqual({ type: 'sf-builder-viewport', width: 1280 });
+    const preview = frame.locator('[data-sf-builder-exact="1280"]');
+    await expect(preview).toBeVisible();
+    await expect(frame.getByRole('dialog', { name: 'Your cart' })).toBeVisible();
+    await expect(preview.getByRole('heading', { name: 'All products', level: 1 })).toBeVisible();
+    await page.screenshot({ path: `${SCRATCH}/cart-drawer-exact.png` });
+    await frame.getByRole('button', { name: 'Back to editing' }).click();
+    await expect(frame.getByRole('dialog', { name: 'Your cart' })).toHaveCount(0);
+  });
+
+  test('on the web app layout the cart has no drawer, so the exact preview shows the cart page', async ({ page }) => {
+    const { frame } = await openFramed(page, 1440);
+    await loadAndWait(page, frame, load({ layout: 'webapp', pageSet: arrangedCart('webapp') }));
+    await pageSelect(frame).selectOption('cart');
+    const drawerOption = frame.getByRole('radiogroup', { name: 'Cart surface' }).getByRole('radio', { name: 'Drawer' });
+    if (await drawerOption.count()) await drawerOption.click();
+    await frame.getByRole('group', { name: 'Preview width' }).getByRole('button', { name: 'Phone' }).click();
+    const preview = frame.locator('[data-sf-builder-exact="360"]');
+    await expect(preview).toBeVisible();
+    await expect(frame.getByRole('dialog', { name: 'Your cart' })).toHaveCount(0);
+    await expect(preview.getByRole('heading', { name: 'Your cart', level: 1 }).or(preview.getByText('Nothing on the order yet')).first()).toBeVisible();
+  });
+
+  /** Every state of a stateful page draws something different, and none of them asks the shop's API. */
+  const walkStates = async (page: Page, frame: FrameLocator, mocks: MockHandle, docKey: string, expectIn: Record<string, RegExp | null>) => {
+    await pageSelect(frame).selectOption(docKey);
+    const select = frame.getByLabel('Preview state');
+    await expect(select).toBeVisible();
+    const before = mocks.requests().length;
+    const seen = new Map<string, string>();
+    for (const value of await select.locator('option').evaluateAll((os) => os.map((o) => (o as HTMLOptionElement).value))) {
+      await select.selectOption(value);
+      await page.waitForTimeout(350);
+      const text = await canvas(frame).innerText();
+      expect(text.trim().length, `${docKey}/${value} draws nothing`).toBeGreaterThan(0);
+      const marker = expectIn[value];
+      if (marker) expect(text, `${docKey}/${value}`).toMatch(marker);
+      seen.set(value, text);
+    }
+    expect(new Set(seen.values()).size, `${docKey}: every state looks different`).toBe(seen.size);
+    const asked = mocks.requests().slice(before).filter((r) => /storefront\/(orders|profile|account)|tracking|verify|redeem|referral/.test(r));
+    expect(asked, `${docKey}: preview states touched the network`).toEqual([]);
+  };
+
+  test('Preview state draws each state of orders, loyalty, referrals, profile, payments, tracking and verify with no request', async ({ page }) => {
+    const { frame, mocks } = await openFramed(page);
+    await loadAndWait(page, frame, load({ pageSet: arrangedEverythingSet('storefront') }));
+    await frame.getByLabel('Preview as — session').selectOption('signed-in-orders');
+    await walkStates(page, frame, mocks, 'account.orders', { orders: /NB1042/, none: null, more: /NB1042/ });
+    await walkStates(page, frame, mocks, 'account.loyalty', { rewards: /redeem/i, 'no-points': /Points land on your orders/ });
+    await walkStates(page, frame, mocks, 'account.referrals', { new: null, referred: null });
+    await walkStates(page, frame, mocks, 'account.profile', { website: null, webapp: null });
+    await walkStates(page, frame, mocks, 'payment-success', { reference: /NB0977/, missing: /Order reference missing/ });
+    await walkStates(page, frame, mocks, 'payment-cancel', { saved: /No charge taken/, unsaved: /No charge taken/, 'no-reference': null });
+    await walkStates(page, frame, mocks, 'order-placed', { chat: /Order placed/, warning: null, 'no-chat': null, missing: /Order reference missing/ });
+    await walkStates(page, frame, mocks, 'tracking', {
+      form: /track your order/i, 'found-2': /NB000977GB[\s\S]*NB000978GB/, 'found-1': /NB000977GB/, 'nothing-shipped': null, 'not-found': null, error: null,
+    });
+    await walkStates(page, frame, mocks, 'verify', { form: /verify a product/i, authentic: /authentic product/i, expired: null, 'not-verified': null, error: null });
+    await expectAdminAccepts(page);
+  });
+
+  test('tracking preview "Found (2 parcels)" shows the result parts, two parcels and the RichText above them', async ({ page }) => {
+    const { frame } = await openFramed(page);
+    await loadAndWait(page, frame, load({ pageSet: arrangedFlowsSet('storefront') }));
+    await pageSelect(frame).selectOption('tracking');
+    await frame.getByLabel('Preview state').selectOption('found-2');
+    await expect(canvas(frame).getByText('NB000977GB').first()).toBeVisible();
+    await expect(canvas(frame).getByText('NB000978GB').first()).toBeVisible();
+    const note = canvas(frame).getByText('Parcels leave the Northbound Supply bench daily.');
+    await expect(note).toBeVisible();
+    expect(await before(note, canvas(frame).getByText('NB000977GB').first())).toBe(true);
+    await expect(part(frame, 'TrackingParcels-e2e')).toBeVisible();
+    await expect(part(frame, 'TrackingHero-e2e')).toBeVisible();
+    await page.screenshot({ path: `${SCRATCH}/tracking-found-2.png` });
   });
 });

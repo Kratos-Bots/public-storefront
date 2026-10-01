@@ -296,3 +296,123 @@ export function legacyProductSet(): PageSet {
 export function catalogDefaultSet(layout: Layout): PageSet {
   return { schemaVersion: 1, shell: shell(layout, c('Footer')), pages: { catalog: doc([listBlock(layout)]) } };
 }
+
+// ---- shell, cart and account parts (spec 2026-09-30-shell-cart-account-parts) -------------------
+
+const RT = (html: string, id: string) => c('RichText', { bodyHtml: html }, id);
+
+/** The shell's notice banners, cutoff bar and footer, around a given Header (stage-4 arrangements). */
+function shellWith(layout: Layout, header: ComponentData, footer: ComponentData | null = c('Footer')): PageSet {
+  return {
+    schemaVersion: 1,
+    shell: doc([
+      header,
+      c('NoticeBanners'),
+      c('CutoffBar'),
+      c('PageOutlet'),
+      ...(layout !== 'webapp' && footer ? [footer] : []),
+      ...(layout === 'menu' ? [c('ContactStrip')] : []),
+    ]),
+    pages: {},
+  };
+}
+const navLinks = () => c('NavLinks', { ariaLabel: 'Site', direction: 'row', items: [STORY_LINK] }, 'nav-1');
+
+/** Cart first, then the brand; no search; a NavLinks in `nav` between the brand and the account icon. */
+export function arrangedShell(layout: Layout, header: Record<string, unknown> = {}): PageSet {
+  const filter = layout === 'storefront' ? [] : [p('HeaderFilter')];
+  return shellWith(layout, c('Header', {
+    start: [...(layout === 'webapp' ? [p('HeaderBack')] : []), p('HeaderCart'), p('HeaderBrand')],
+    nav: [navLinks()], middle: [], end: [...filter, p('HeaderAccount')], ...header,
+  }, 'hdr-arranged'));
+}
+/** The default arrangement written out in full, as a published stage-4 document keeps it. */
+export function defaultShellSet(layout: Layout, header: Record<string, unknown> = {}): PageSet {
+  return shellWith(layout, c('Header', {
+    start: [...(layout === 'webapp' ? [p('HeaderBack')] : []), p('HeaderBrand')],
+    nav: [navLinks()], middle: [p('HeaderSearch')],
+    end: [...(layout === 'storefront' ? [] : [p('HeaderFilter')]), p('HeaderAccount'), p('HeaderCart')], ...header,
+  }, 'hdr-default'));
+}
+/** A Header whose slots lack the brand: the guard falls back to the default shell. */
+export function brandlessShellSet(layout: Layout): PageSet {
+  return shellWith(layout, c('Header', { start: [], nav: [], middle: [p('HeaderSearch')], end: [p('HeaderCart')] }, 'hdr-brandless'));
+}
+/** A v0.7.0 header: no slots, the three display options (`search`, `accountIcon`, `cartIcon`) as props. */
+export function v070Shell(layout: Layout, header: Record<string, unknown> = { search: false, cartIcon: 'hide' }): PageSet {
+  return { schemaVersion: 1, shell: shell(layout, c('Footer'), [STORY_LINK], [], header), pages: {} };
+}
+
+/**
+ * Summary above the lines (a CartSummary beside the container), a RichText after the lines. With
+ * `summaryAbove` off the summary stays in CartContents' own `summary` slot (the v0.7.0 place).
+ */
+export function arrangedCart(layout: Layout = 'storefront', summaryAbove = true): PageSet {
+  const summary = c('CartSummary', { items: [p('CartSummarySubtotal'), p('CartSummaryCheckout'), p('CartSummaryContinue')] }, 'sum-above');
+  const contents = c('CartContents', {
+    head: [p('CartHeading')], main: [p('CartEmpty'), p('CartLines'), RT('<p>Packed in recycled paper.</p>', 'cart-note')], summary: summaryAbove ? [] : [summary],
+  }, 'CartContents-e2e');
+  return { schemaVersion: 1, shell: shell(layout, c('Footer')), pages: { cart: doc(summaryAbove ? [summary, contents] : [contents]) } };
+}
+/** A cart document with no checkout part anywhere: the guard falls back to the default cart. */
+export function cartWithoutCheckoutSet(layout: Layout = 'storefront'): PageSet {
+  const summary = c('CartSummary', { items: [p('CartSummarySubtotal')] }, 'sum-nocheckout');
+  const contents = c('CartContents', { head: [p('CartHeading')], main: [p('CartEmpty'), p('CartLines')], summary: [summary] }, 'cart-nocheckout');
+  return { schemaVersion: 1, shell: shell(layout, c('Footer')), pages: { cart: doc([contents]) } };
+}
+/** A v0.7.0 cart document: no slots, and the CartSummary beside CartContents instead of inside it. */
+export function v070CartOutsideSummary(layout: Layout = 'storefront'): PageSet {
+  return { schemaVersion: 1, shell: shell(layout, c('Footer')), pages: { cart: doc([c('CartContents', {}, 'cart-v070'), c('CartSummary', {}, 'sum-v070')]) } };
+}
+
+/** Tabs above the greeting; the order detail with parcels before items; loyalty and profile as built. */
+export function arrangedAccountSet(layout: Layout = 'storefront'): PageSet {
+  const head = () => [p('AccountTabs'), p('AccountGreeting')];
+  const section = (type: string, props: Record<string, unknown>, id: string) => doc([c('AccountNav', { head: head(), body: [c(type, props, id)] }, 'acct')]);
+  return {
+    schemaVersion: 1,
+    shell: shell(layout, c('Footer')),
+    pages: {
+      'account.orders': section('OrdersList', { content: [p('OrdersHeading'), p('OrdersRows'), p('OrdersMore'), p('OrdersEmpty')] }, 'orders-arr'),
+      'account.order': section('OrderDetail', {
+        content: [p('OrderBackLink'), p('OrderHeading'), p('OrderBalance'), p('OrderParcels'), p('OrderItems'), p('OrderPayments'), p('OrderPageLink')],
+      }, 'order-arr'),
+      'account.loyalty': section('Loyalty', { content: [p('LoyaltyPoints'), p('LoyaltyCredit'), p('LoyaltyNoPoints'), p('LoyaltyRewards')] }, 'loyalty-arr'),
+      'account.profile': section('Profile', { content: [p('ProfileDetails'), p('ProfileContact'), p('ProfileBotSwitch'), p('ProfileSignOut')] }, 'profile-arr'),
+    },
+  };
+}
+
+/** The sign-in heading below the ways in; payment, tracking and verify pages rearranged one move each. */
+export function arrangedFlowsSet(layout: Layout = 'storefront'): PageSet {
+  return {
+    schemaVersion: 1,
+    shell: shell(layout, c('Footer')),
+    pages: {
+      login: doc([c('LoginOptions', { content: [p('LoginMethods'), p('LoginHeading')] }, 'login-arr')]),
+      'payment-success': doc([c('PaymentSuccess', {
+        content: [p('PaymentMark'), p('PaymentEyebrow'), p('PaymentHeadline'), p('PaymentMessage'), p('PaymentReference'), p('PaymentBack')],
+      }, 'ps-arr')]),
+      'payment-cancel': doc([c('PaymentCancel', {
+        content: [p('PaymentMark'), p('PaymentEyebrow'), p('PaymentHeadline'), p('PaymentMessage'), p('PaymentReference'), p('PaymentActions'), p('PaymentContact'), p('PaymentBack')],
+      }, 'pc-arr')]),
+      'order-placed': doc([c('OrderPlaced', {
+        content: [p('PaymentMark'), p('PaymentEyebrow'), p('PaymentReference'), p('PaymentHeadline'), p('PaymentMessage'), p('PaymentActions'), p('PaymentBack')],
+      }, 'op-arr')]),
+      tracking: doc([c('TrackingLookup', {
+        top: [p('TrackingIntro')], main: [p('TrackingState'), p('TrackingForm')],
+        result: [RT('<p>Parcels leave the Northbound Supply bench daily.</p>', 'trk-note'), p('TrackingHero'), p('TrackingProgress'), p('TrackingNotice'), p('TrackingParcels')],
+      }, 'trk-arr')]),
+      verify: doc([c('VerifyForm', { content: [p('VerifyBack'), p('VerifyIntro'), p('VerifyFields'), p('VerifyResult')] }, 'ver-arr')]),
+    },
+  };
+}
+
+/** Every page above arranged in one set, for the 360 px overflow sweep. */
+export function arrangedEverythingSet(layout: Layout = 'storefront'): PageSet {
+  return {
+    schemaVersion: 1,
+    shell: arrangedShell(layout).shell,
+    pages: { ...arrangedCart(layout).pages, ...arrangedAccountSet(layout).pages, ...arrangedFlowsSet(layout).pages },
+  };
+}
