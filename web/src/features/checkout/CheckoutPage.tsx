@@ -139,16 +139,15 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
 
   // The steps in the owner's order. The guard refuses an illegal document, so the fallback is defence in depth.
   const warnedOrder = useRef(false);
-  const order = useMemo<readonly StepKind[]>(() => {
-    const kinds = stepKindsOf(s.steps.items.map((i) => i.type));
-    if (isLegalStepOrder(kinds)) return kinds;
-    // Say so once per mounted page, never per render and never on the editor canvas.
-    if (!stack && !warnedOrder.current) {
-      warnedOrder.current = true;
-      console.warn('[checkout] the stored step order is not legal; using the default order');
-    }
-    return DEFAULT_STEP_ORDER;
-  }, [s.steps.items, stack]);
+  const storedKinds = useMemo(() => stepKindsOf(s.steps.items.map((i) => i.type)), [s.steps.items]);
+  const orderLegal = isLegalStepOrder(storedKinds);
+  const order: readonly StepKind[] = orderLegal ? storedKinds : DEFAULT_STEP_ORDER;
+  // Say so once per mounted page, never per render and never on the editor canvas.
+  useEffect(() => {
+    if (orderLegal || stack || warnedOrder.current) return;
+    warnedOrder.current = true;
+    console.warn('[checkout] the stored step order is not legal; using the default order');
+  }, [orderLegal, stack]);
 
   // A discount code or notes the owner took off the page must not travel with the order. The saved
   // value is kept (the persisted form is never rewritten) and comes back when the part does.

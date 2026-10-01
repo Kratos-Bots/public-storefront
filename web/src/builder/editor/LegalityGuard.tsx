@@ -24,18 +24,14 @@ export function PuckHandleBridge() {
 
 let message = '';
 const listeners = new Set<() => void>();
-let timer: ReturnType<typeof setTimeout> | undefined;
 const emit = () => { for (const l of listeners) l(); };
 
-/** Tell the owner why their drop was undone; it clears itself after a few seconds. */
+/** Tell the owner why their drop was undone; it stays until they dismiss it or the next change is accepted. */
 export function announceRevert(text: string): void {
   message = text;
-  clearTimeout(timer);
-  timer = setTimeout(clearRevert, 8000);
   emit();
 }
 export function clearRevert(): void {
-  clearTimeout(timer);
   if (message === '') return;
   message = '';
   emit();

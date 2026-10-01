@@ -599,6 +599,11 @@ function IssuesMenu() {
   const trigger = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const id = domId(useId());
+  // A quick fix removes its own row: the result is announced here, and focus lands on the panel heading.
+  const [fixStatus, setFixStatus] = useState('');
+  const issuesHeading = useRef<HTMLHeadingElement>(null);
+  const fixed = (text: string) => { setFixStatus(text); requestAnimationFrame(() => issuesHeading.current?.focus()); };
+  useEffect(() => { if (!open) setFixStatus(''); }, [open]);
 
   // Arriving from an issue on another page: select its block once this canvas is up.
   useEffect(() => {
@@ -654,7 +659,8 @@ function IssuesMenu() {
         aria-labelledby={`${id}-issues`}
       >
         <section>
-          <h2 id={`${id}-issues`} className={styles.panelTitle}>
+          <p className={styles.srOnly} role="status">{fixStatus}</p>
+          <h2 id={`${id}-issues`} ref={issuesHeading} tabIndex={-1} className={styles.panelTitle}>
             {count === 0 ? 'Nothing blocks publishing' : 'Fix these to publish'}
           </h2>
           {count === 0 && <p className={styles.panelEmpty}>Every page in this layout passes its checks.</p>}
@@ -674,7 +680,7 @@ function IssuesMenu() {
                         <span>{issue.message}</span>
                       </span>
                     </button>
-                    <IssueQuickFix issue={issue} />
+                    <IssueQuickFix issue={issue} onFixed={fixed} />
                   </li>
                 );
               })}

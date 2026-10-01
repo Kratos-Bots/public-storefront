@@ -1,6 +1,7 @@
 /* Quick fix under an issue row (the issues panel is a floating panel: neutral --sfb-* tokens). */
 .row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   padding: 0 12px 8px 40px;

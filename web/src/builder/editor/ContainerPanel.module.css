@@ -234,8 +234,8 @@
   cursor: pointer;
   transition: background-color 120ms ease, border-color 120ms ease;
 }
-.stepMove:hover:not(:disabled) { background: var(--sfb-wash); border-color: var(--sfb-muted); }
-.stepMove:disabled { color: var(--sfb-line-strong); border-color: var(--sfb-line); cursor: not-allowed; }
+.stepMove:hover:not([aria-disabled='true']) { background: var(--sfb-wash); border-color: var(--sfb-muted); }
+.stepMove[aria-disabled='true'] { color: var(--sfb-line-strong); border-color: var(--sfb-line); cursor: not-allowed; }
 .stepMove:focus-visible { outline: 2px solid var(--sfb-accent); outline-offset: 1px; }
 .stepNote {
   grid-column: 2 / -1;

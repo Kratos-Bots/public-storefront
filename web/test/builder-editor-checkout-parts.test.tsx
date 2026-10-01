@@ -32,15 +32,18 @@ describe('StepOrderControl', () => {
     const rows = screen.getAllByRole('listitem');
     expect(rows).toHaveLength(5);
     expect(rows.map((r) => within(r).getAllByRole('button').length)).toEqual([2, 2, 2, 2, 2]);
-    expect(screen.getByRole('button', { name: 'Move Your details up' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Move Your details down' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Move Your details up' })).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('button', { name: 'Move Your details down' })).toHaveAttribute('aria-disabled', 'false');
     const addressDown = screen.getByRole('button', { name: 'Move Delivery address down' });
-    expect(addressDown).toBeDisabled();
+    // A blocked arrow stays focusable and carries its reason by aria-describedby (and title).
+    expect(addressDown).toHaveAttribute('aria-disabled', 'true');
+    expect(addressDown).not.toBeDisabled();
+    expect(addressDown).toHaveAccessibleDescription('Delivery needs the address first');
     expect(addressDown).toHaveAttribute('title', 'Delivery needs the address first');
     expect(screen.getByRole('button', { name: 'Move Payment up' })).toHaveAttribute('title', 'Payment must come after Delivery');
-    expect(screen.getByRole('button', { name: 'Move Review up' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Move Review down' })).toBeDisabled();
-    expect(screen.getByText('Always last — it holds Place order')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Move Review up' })).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('button', { name: 'Move Review down' })).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getAllByText('Always last — it holds Place order').length).toBeGreaterThan(0);
   });
 
   it('an enabled arrow reports the step and direction', () => {
@@ -48,6 +51,9 @@ describe('StepOrderControl', () => {
     render(<StepOrderControl order={DEFAULT_STEP_ORDER} onMove={onMove} />);
     fireEvent.click(screen.getByRole('button', { name: 'Move Your details down' }));
     expect(onMove).toHaveBeenCalledWith('contact', 1);
+    onMove.mockClear();
+    fireEvent.click(screen.getByRole('button', { name: 'Move Delivery address down' }));
+    expect(onMove).not.toHaveBeenCalled();
   });
 });
 
@@ -60,6 +66,15 @@ describe('LegalityNotice', () => {
     expect(screen.getByRole('status')).toHaveTextContent("Discount code can't go in Your details.");
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
     expect(screen.getByRole('status')).toBeEmptyDOMElement();
+  });
+  it('stays until dismissed (no timer)', () => {
+    vi.useFakeTimers();
+    try {
+      render(<LegalityNotice />);
+      act(() => announceRevert('Nope.'));
+      act(() => { vi.advanceTimersByTime(60_000); });
+      expect(screen.getByRole('status')).toHaveTextContent('Nope.');
+    } finally { vi.useRealTimers(); }
   });
 });
 
@@ -181,8 +196,28 @@ describe('the checkout canvas', () => {
     await act(async () => fireEvent.click(screen.getByRole('button', { name: /Issues/ })));
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getAllByText('Checkout')).toHaveLength(2);
+    expect(within(dialog).getByText(/nothing inside them changes/)).toBeVisible();
     await act(async () => fireEvent.click(within(dialog).getByRole('button', { name: 'Reset step order' })));
+    // The row is gone with its issue: the result is announced and focus lands on the panel heading.
+    await vi.waitFor(() => expect(document.activeElement).toBe(within(dialog).getByRole('heading')));
+    expect(within(dialog).getByRole('status')).toHaveTextContent('Reset step order done on Checkout');
     expect(types(flowOf(puckStore().getState().state.data).props.steps)).toEqual(['CheckoutContact', 'CheckoutAddress', 'CheckoutShipping', 'CheckoutPayment', 'CheckoutReview']);
     expect(checkRules(puckStore().getState().state.data, 'checkout', L)).toEqual([]);
+  });
+
+  it('Reset arrangement says, beside the button, how many of the owner blocks it removes', async () => {
+    const bad = JSON.parse(JSON.stringify(defaultDoc('checkout', L))) as PuckDoc;
+    const f = flowOf(bad);
+    const steps = items(f.props.steps);
+    steps.find((x) => x.type === 'CheckoutShipping')!.props.after = [];
+    steps.find((x) => x.type === 'CheckoutContact')!.props.before = [{ type: 'CheckoutCoupon', props: { id: 'cp-bad' } }];
+    f.props.after = [{ type: 'RichText', props: { id: 'mine', html: '<p>x</p>' } }];
+    useEditorStore.getState().load({ layout: L, pageSet: { shell: defaultDoc('shell', L)!, pages: { checkout: bad } } as never, readOnly: false });
+    useEditorStore.getState().selectDoc('checkout');
+    renderCanvas();
+    await puckShown();
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: /Issues/ })));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(/removes 1 block you added/)).toBeVisible();
   });
 });

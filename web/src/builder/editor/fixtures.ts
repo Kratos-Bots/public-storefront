@@ -116,15 +116,19 @@ export const FIXTURE_PUBLIC_ORDER: PublicOrder = {
 
 // ── Stage 5 previews: the order-status page's states (spec section 11.3) ────────
 
-const FIXTURE_PAY_BY = '2026-09-09T10:15:00.000Z';
-const FIXTURE_AWAITING: PublicOrder = {
-  ...FIXTURE_PUBLIC_ORDER,
-  status: 'pending',
-  shipments: [],
-  payment: { canPay: true, payBy: FIXTURE_PAY_BY, activePayment: null },
-};
+type OrderStateId = 'shipped' | 'awaiting-payment' | 'hosted-open' | 'crypto-checking' | 'two-parcels' | 'cancelled';
+const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 
-export const FIXTURE_ORDER_STATES: Record<'shipped' | 'awaiting-payment' | 'hosted-open' | 'crypto-checking' | 'two-parcels' | 'cancelled', PublicOrder> = {
+/** The order page's preview states; an unpaid order's pay-by date is `now` + 3 days, so it never reads as past. */
+export function fixtureOrderStates(now: Date): Record<OrderStateId, PublicOrder> {
+  const FIXTURE_PAY_BY = new Date(now.getTime() + THREE_DAYS_MS).toISOString();
+  const FIXTURE_AWAITING: PublicOrder = {
+    ...FIXTURE_PUBLIC_ORDER,
+    status: 'pending',
+    shipments: [],
+    payment: { canPay: true, payBy: FIXTURE_PAY_BY, activePayment: null },
+  };
+  return {
   shipped: FIXTURE_PUBLIC_ORDER,
   'awaiting-payment': FIXTURE_AWAITING,
   'hosted-open': {
@@ -160,7 +164,10 @@ export const FIXTURE_ORDER_STATES: Record<'shipped' | 'awaiting-payment' | 'host
     ],
   },
   cancelled: { ...FIXTURE_PUBLIC_ORDER, status: 'cancelled', shipments: [], payment: { canPay: false, payBy: null, activePayment: null } },
-};
+  };
+}
+
+export const FIXTURE_ORDER_STATES = fixtureOrderStates(new Date());
 
 export const FIXTURE_REDEEM: RedeemOptions = {
   loyaltyPoints: 860,

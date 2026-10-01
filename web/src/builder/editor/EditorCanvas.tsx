@@ -13,7 +13,7 @@ import { CARD_KINDS, cardKey, type DocKey, type LayoutKind, type PageSet, type P
 import { CardDesignProvider } from '@/builder/card-design.tsx';
 import { prepareDoc } from '@/builder/editor/prepare.ts';
 import { introducesIllegal } from '@/builder/editor/legality.ts';
-import { announceRevert, LegalityNotice, PuckHandleContext, type GetPuckFn } from '@/builder/editor/LegalityGuard.tsx';
+import { announceRevert, clearRevert, LegalityNotice, PuckHandleContext, type GetPuckFn } from '@/builder/editor/LegalityGuard.tsx';
 import { isLockedOn } from '@/builder/editor/route-bound.ts';
 import { useEditorStore } from '@/builder/editor/store.ts';
 import { useCurrentDoc, useIssues, useLockedPresent } from '@/builder/editor/use-issues.ts';
@@ -194,6 +194,23 @@ function RestingMarks() {
   return css ? <style data-sf-builder-marks="">{css}</style> : null;
 }
 
+/** The block tree of a doc as one string: every block's type and id and where it nests (what the arrangement rules read). */
+const shapeCache = new WeakMap<object, string>();
+function shapeOf(doc: PuckDoc): string {
+  let out = shapeCache.get(doc);
+  if (out === undefined) {
+    const walk = (list: unknown[]): string => list.map((c) => {
+      const { type, props } = c as { type: string; props: Record<string, unknown> };
+      const kids = Object.entries(props ?? {}).filter(([, v]) => Array.isArray(v) && v.length > 0 && v.every((x) => x && typeof x === 'object' && 'type' in (x as object)))
+        .map(([k, v]) => `${k}[${walk(v as unknown[])}]`).join(',');
+      return `${type}#${String(props?.id)}{${kids}}`;
+    }).join(';');
+    out = walk(doc.content as unknown[]);
+    shapeCache.set(doc, out);
+  }
+  return out;
+}
+
 /** Actions that can put a part somewhere it can't go; the others (undo, remove, setUi...) are never undone. */
 const ARRANGING: ReadonlySet<string> = new Set(['insert', 'move', 'reorder', 'replace']);
 /** Actions that rewrite the data wholesale: a pending drop check no longer applies to what follows. */
@@ -232,6 +249,8 @@ export function EditorCanvas() {
   const lastLegal = useRef<{ for: unknown; doc: PuckDoc } | null>(null);
   if (lastLegal.current?.for !== data) lastLegal.current = { for: data, doc: data as unknown as PuckDoc };
   const armed = useRef(false);
+  // A reverted drop echoes one more onChange (Puck's own undo): it must not clear the notice about it.
+  const echo = useRef(false);
   const onAction = (action: PuckAction) => {
     if (ARRANGING.has(action.type)) armed.current = true;
     else if (REWRITING.has(action.type)) armed.current = false;
@@ -241,14 +260,21 @@ export function EditorCanvas() {
     armed.current = false;
     const doc = next as unknown as PuckDoc;
     const accepted = lastLegal.current!;
-    const message = wasArmed ? introducesIllegal(prepared(accepted.doc), prepared(doc), docKey, layout) : null;
-    const getPuck = handle.current;
-    if (message && getPuck) {
-      // Not for the store; Puck puts the last accepted document back, as one recorded step so history keeps no illegal state.
+    // Only a change to the block tree (types and nesting) can break an arrangement rule: a keystroke in a field skips the check.
+    const message = wasArmed && shapeOf(accepted.doc) !== shapeOf(doc) ? introducesIllegal(prepared(accepted.doc), prepared(doc), docKey, layout) : null;
+    if (message) {
+      // Never for the store, with or without Puck at hand to undo it: the store keeps the last accepted document.
       announceRevert(message);
-      getPuck().dispatch({ type: 'setData', data: () => accepted.doc as unknown as Partial<Data>, recordHistory: true });
+      const getPuck = handle.current;
+      if (getPuck) {
+        echo.current = true;
+        // Puck puts the last accepted document back, as one recorded step so history keeps no illegal state.
+        getPuck().dispatch({ type: 'setData', data: () => accepted.doc as unknown as Partial<Data>, recordHistory: true });
+      }
       return;
     }
+    if (echo.current) echo.current = false;
+    else clearRevert();
     accepted.doc = doc;
     // The mount epoch travels with every change, so a late onChange from a canvas that a load,
     // reset or new page replaced is ignored by the store.

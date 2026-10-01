@@ -11,7 +11,7 @@ import type { VerifyPreview } from '@/builder/family-verify.ts';
 import { useEditorStore } from '@/builder/editor/store.ts';
 import { effectivePreviewAs } from '@/builder/editor/fixture-mode.ts';
 import {
-  FIXTURE_CHAT_LINKS, FIXTURE_ORDERS, FIXTURE_ORDER_REF, FIXTURE_ORDER_STATES, FIXTURE_REDEEM, FIXTURE_TRACKING, fixtureProfile, fixtureVerification,
+  FIXTURE_CHAT_LINKS, FIXTURE_ORDERS, FIXTURE_ORDER_REF, fixtureOrderStates, FIXTURE_REDEEM, FIXTURE_TRACKING, fixtureProfile, fixtureVerification,
 } from '@/builder/editor/fixtures.ts';
 
 export type ContainerName = keyof typeof PREVIEW_STATE_IDS;
@@ -104,7 +104,10 @@ const BUILDERS: { [C in ContainerName]: (state: string, now: Date) => unknown } 
       default: return { status: 'idle' };
     }
   },
-  OrderStatus: (state) => FIXTURE_ORDER_STATES[state as keyof typeof FIXTURE_ORDER_STATES] ?? FIXTURE_ORDER_STATES.shipped,
+  OrderStatus: (state, now) => {
+    const states = fixtureOrderStates(now);
+    return states[state as keyof typeof states] ?? states.shipped;
+  },
 };
 
 /** A fixture for every stateful container, each in its picked state (default: its first). */
