@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Stepper } from '@mantine/core';
-import { CheckoutFamily, type StepKind } from '@/builder/family-checkout.ts';
+import { CheckoutFamily, type CheckoutData, type StepKind } from '@/builder/family-checkout.ts';
 import type { SlotRender } from '@/builder/define.ts';
 import type { FamilyValue, PartViewProps } from '@/builder/parts.ts';
 import { CouponField } from '@/features/checkout/CouponField.tsx';
@@ -19,6 +19,43 @@ import stepClasses from '@/features/checkout/steps/Steps.module.css';
 // Views hold no state and no effects: every checkout / order decision stays in CheckoutPage.
 
 const slotOf = (props: Record<string, unknown>, key: 'before' | 'after'): ReactNode => (props[key] as SlotRender | undefined)?.();
+
+/** The canvas shows every step stacked, each in its own card with its count and title; the shopper's stepper has one card around the active step. */
+function framed(d: CheckoutData, kind: StepKind, step: ReactNode): ReactNode {
+  if (!d.stack) return step;
+  return <StepFrame kind={kind} data={d}>{step}</StepFrame>;
+}
+
+function StepFrame({ kind, data, children }: { kind: StepKind; data: CheckoutData; children: ReactNode }) {
+  const { t } = useText();
+  return (
+    <div className={classes.card} data-sf-part="card">
+      <header className={classes.cardHead}>
+        <span className={classes.cardCount}>{t('checkout.steps.count', { current: data.order.indexOf(kind) + 1, total: data.order.length })}</span>
+        <h2 className={classes.cardTitle}>{t(STEP_META[kind].title)}</h2>
+      </header>
+      {children}
+    </div>
+  );
+}
+
+/** The canvas's one copy of the action band: where Back / Continue / Place order sit. No handlers; inert and hidden from assistive tech. */
+export function InertActionBand() {
+  const { t } = useText();
+  return (
+    <div className={classes.nav} inert aria-hidden>
+      <button type="button" className={classes.back} tabIndex={-1} data-sf-part="button" data-variant="default">
+        {t('checkout.actions.back')}
+      </button>
+      <button type="button" className={classes.next} tabIndex={-1} data-sf-part="button" data-variant="filled" data-sf-cta="main">
+        {t('checkout.actions.continue')}
+      </button>
+      <button type="button" className={classes.next} tabIndex={-1} data-sf-part="button" data-variant="filled" data-sf-cta="main">
+        {t('checkout.actions.placeOrder')}
+      </button>
+    </div>
+  );
+}
 
 function Heading({ styleAttrs }: PartViewProps) {
   const { t } = useText();
@@ -63,58 +100,58 @@ function Progress({ styleAttrs }: PartViewProps) {
 
 function Contact({ props, styleAttrs }: PartViewProps) {
   const d = CheckoutFamily.useData();
-  if (d.kind !== 'contact') return null;
-  return (
+  if (!d.stack && d.kind !== 'contact') return null;
+  return framed(d, 'contact', (
     <ContactStep
       form={d.form} patch={d.patch} errors={d.errors} contactModes={d.contactModes} guest={d.guest}
       before={slotOf(props, 'before')} after={slotOf(props, 'after')} rootAttrs={styleAttrs}
     />
-  );
+  ));
 }
 
 function Address({ props, styleAttrs }: PartViewProps) {
   const d = CheckoutFamily.useData();
-  if (d.kind !== 'address') return null;
-  return (
+  if (!d.stack && d.kind !== 'address') return null;
+  return framed(d, 'address', (
     <AddressStep
       form={d.form} patch={d.patch} errors={d.errors} notice={d.addressNotice}
       before={slotOf(props, 'before')} after={slotOf(props, 'after')} rootAttrs={styleAttrs}
     />
-  );
+  ));
 }
 
 function Shipping({ props, styleAttrs }: PartViewProps) {
   const d = CheckoutFamily.useData();
-  if (d.kind !== 'shipping') return null;
-  return (
+  if (!d.stack && d.kind !== 'shipping') return null;
+  return framed(d, 'shipping', (
     <ShippingStep
       quote={d.quote} form={d.form} patch={d.patch} errors={d.errors} notice={d.shippingNotice}
       before={slotOf(props, 'before')} after={slotOf(props, 'after')} rootAttrs={styleAttrs}
     />
-  );
+  ));
 }
 
 function Payment({ props, styleAttrs }: PartViewProps) {
   const d = CheckoutFamily.useData();
-  if (d.kind !== 'payment') return null;
-  return (
+  if (!d.stack && d.kind !== 'payment') return null;
+  return framed(d, 'payment', (
     <PaymentStep
       quote={d.quote} form={d.form} patch={d.patch} errors={d.errors} guest={d.guest} currency={d.currency}
       before={slotOf(props, 'before')} after={slotOf(props, 'after')} rootAttrs={styleAttrs}
     />
-  );
+  ));
 }
 
 function Review({ props, styleAttrs }: PartViewProps) {
   const d = CheckoutFamily.useData();
-  if (d.kind !== 'review') return null;
-  return (
+  if (!d.stack && d.kind !== 'review') return null;
+  return framed(d, 'review', (
     <ReviewStep
       form={d.form} quote={d.quote} method={d.method} combo={d.combo} order={d.order}
       onEdit={(kind: StepKind) => d.goTo(d.order.indexOf(kind))}
       before={slotOf(props, 'before')} after={slotOf(props, 'after')} rootAttrs={styleAttrs}
     />
-  );
+  ));
 }
 
 function Coupon({ styleAttrs }: PartViewProps) {

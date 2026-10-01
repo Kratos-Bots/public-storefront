@@ -66,6 +66,8 @@ export interface CheckoutData {
   step: number;
   kind: StepKind;
   onReview: boolean;
+  /** The editor canvas: every step is shown stacked in its own card (stage 5 spec section 10.3). Shoppers: false. */
+  stack: boolean;
   /** Clears errors, sets the step, scrolls the card into view. */
   goTo(index: number): void;
 }

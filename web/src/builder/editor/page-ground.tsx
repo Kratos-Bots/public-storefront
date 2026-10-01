@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { cardKind, isCardKey, type DocKey, type LayoutKind } from '@/builder/types.ts';
 import { SheetStage } from '@/builder/editor/SheetStage.tsx';
 import { CartStage } from '@/builder/editor/CartStage.tsx';
+import { CheckoutNote } from '@/builder/editor/CheckoutNote.tsx';
 import { CardStage } from '@/builder/editor/CardStage.tsx';
 import styles from '@/builder/editor/PageGround.module.css';
 
@@ -37,7 +38,7 @@ export function PageGround({ docKey, layout, children }: { docKey: DocKey; layou
   }
   return (
     <div data-sf-builder-canvas="" className={styles.ground} data-layout={layout}>
-      {docKey === 'shell' ? children : <div className={styles.column} data-sf-builder-column="">{children}</div>}
+      {docKey === 'shell' ? children : <div className={styles.column} data-sf-builder-column="">{docKey === 'checkout' ? <CheckoutNote /> : null}{children}</div>}
     </div>
   );
 }

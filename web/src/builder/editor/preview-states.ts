@@ -9,8 +9,9 @@ import type { ReferralsPreview } from '@/builder/family-referrals.ts';
 import type { TrackingPreview } from '@/builder/family-tracking.ts';
 import type { VerifyPreview } from '@/builder/family-verify.ts';
 import { useEditorStore } from '@/builder/editor/store.ts';
+import { effectivePreviewAs } from '@/builder/editor/fixture-mode.ts';
 import {
-  FIXTURE_CHAT_LINKS, FIXTURE_ORDERS, FIXTURE_ORDER_REF, FIXTURE_REDEEM, FIXTURE_TRACKING, fixtureProfile, fixtureVerification,
+  FIXTURE_CHAT_LINKS, FIXTURE_ORDERS, FIXTURE_ORDER_REF, FIXTURE_ORDER_STATES, FIXTURE_REDEEM, FIXTURE_TRACKING, fixtureProfile, fixtureVerification,
 } from '@/builder/editor/fixtures.ts';
 
 export type ContainerName = keyof typeof PREVIEW_STATE_IDS;
@@ -103,8 +104,7 @@ const BUILDERS: { [C in ContainerName]: (state: string, now: Date) => unknown } 
       default: return { status: 'idle' };
     }
   },
-  // Placeholder until the order-status fixtures land (stage 5 Task 7); nothing reads it yet.
-  OrderStatus: (state) => ({ state }),
+  OrderStatus: (state) => FIXTURE_ORDER_STATES[state as keyof typeof FIXTURE_ORDER_STATES] ?? FIXTURE_ORDER_STATES.shipped,
 };
 
 /** A fixture for every stateful container, each in its picked state (default: its first). */
@@ -129,6 +129,7 @@ const DOC_CONTAINER: Partial<Record<DocKey, ContainerName>> = {
   'order-placed': 'OrderPlaced',
   tracking: 'TrackingLookup',
   verify: 'VerifyForm',
+  'order-status': 'OrderStatus',
 };
 
 /** The stateful container a document holds (its Preview state applies), or null. */
@@ -141,7 +142,9 @@ export function containerOfDoc(docKey: DocKey, _layout: LayoutKind): ContainerNa
  * the shopper's view, so it carries no preview states or fixtures: the containers read live data.
  */
 export function useEditorMode(editing: boolean): BuilderMode {
-  const previewAs = useEditorStore((s) => s.previewAs);
+  const docKey = useEditorStore((s) => s.docKey);
+  const chosenAs = useEditorStore((s) => s.previewAs);
+  const previewAs = useMemo(() => effectivePreviewAs(docKey, chosenAs), [docKey, chosenAs]);
   const readOnly = useEditorStore((s) => s.readOnly);
   const picked = useEditorStore((s) => s.previewStates);
   return useMemo(() => {

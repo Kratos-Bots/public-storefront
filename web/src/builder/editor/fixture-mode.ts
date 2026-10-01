@@ -5,6 +5,7 @@ import { isBuilderMode } from '@/app/builder-gate.ts';
 import { useCartStore, type LocalLine } from '@/stores/cart.ts';
 import { useSessionStore, type SessionCustomer } from '@/stores/session.ts';
 import type { PreviewAs } from '@/builder/mode.ts';
+import type { DocKey } from '@/builder/types.ts';
 import { FIXTURE_CART_LINES, FIXTURE_CUSTOMER, FIXTURE_TOKEN } from '@/builder/editor/fixtures.ts';
 
 export const PREVIEW_ONLY_MESSAGE = 'Preview only — nothing was sent.';
@@ -101,6 +102,14 @@ export function enterFixtureMode(): void {
     replaceFromServer: () => undefined,
     setMode: () => undefined,
   });
+}
+
+/**
+ * The checkout page previews signed in with a sample cart whatever Preview as says (a guest
+ * checkout needs a Turnstile token, and an empty cart shows only the empty-cart screen).
+ */
+export function effectivePreviewAs(docKey: DocKey, p: PreviewAs): PreviewAs {
+  return docKey === 'checkout' ? { session: 'signed-in', cart: 'items' } : p;
 }
 
 /** Queries that hold live, shopper-independent data; everything else is fixture-backed. */

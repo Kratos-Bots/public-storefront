@@ -29,9 +29,10 @@ import {
 import { useQuote } from '@/features/checkout/useQuote.ts';
 import { publicOrderPath, resolveCheckoutOutcome } from '@/features/checkout/outcome.ts';
 import { GuestTurnstile, type GuestTurnstileHandle } from '@/features/checkout/GuestTurnstile.tsx';
-import { CHECKOUT_VIEWS } from '@/features/checkout/checkout-parts.tsx';
+import { CHECKOUT_VIEWS, InertActionBand } from '@/features/checkout/checkout-parts.tsx';
 import { STEP_META } from '@/features/checkout/step-meta.ts';
 import { defaultSlotRenders } from '@/builder/render.tsx';
+import { useBuilderMode } from '@/builder/mode.ts';
 import { containsVisibleType } from '@/builder/rules.ts';
 import {
   CheckoutFamily,
@@ -120,6 +121,8 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
   const { contactModes, currency, features } = settings;
   const loggedIn = useSessionStore(selectIsLoggedIn);
   const guest = !loggedIn && features.guestCheckout;
+  // The editor canvas stacks every step (spec section 10.3). The only thing here that reads builder mode.
+  const stack = useBuilderMode().editing;
   const navigate = useNavigate();
   // Inside Telegram the nav's primary button is Telegram's MainButton (Back stays in the page).
   const inTelegram = isTelegramWebApp();
@@ -135,10 +138,17 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
   const s = slots ?? legacy!;
 
   // The steps in the owner's order. The guard refuses an illegal document, so the fallback is defence in depth.
+  const warnedOrder = useRef(false);
   const order = useMemo<readonly StepKind[]>(() => {
     const kinds = stepKindsOf(s.steps.items.map((i) => i.type));
-    return isLegalStepOrder(kinds) ? kinds : DEFAULT_STEP_ORDER;
-  }, [s.steps.items]);
+    if (isLegalStepOrder(kinds)) return kinds;
+    // Say so once per mounted page, never per render and never on the editor canvas.
+    if (!stack && !warnedOrder.current) {
+      warnedOrder.current = true;
+      console.warn('[checkout] the stored step order is not legal; using the default order');
+    }
+    return DEFAULT_STEP_ORDER;
+  }, [s.steps.items, stack]);
 
   // A discount code or notes the owner took off the page must not travel with the order. The saved
   // value is kept (the persisted form is never rewritten) and comes back when the part does.
@@ -239,6 +249,7 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
   const quotedKey = useRef<string | null>(null);
 
   useEffect(() => {
+    if (stack) return; // the canvas never mints a token or quotes as a guest
     if (!guest || !form.country) return;
     if (!settings.turnstile) return;
     if (!needsToken) return;
@@ -297,7 +308,7 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
     };
     // `t` is left out on purpose: it only words an error set once per run, and a text edit
     // must not re-run the mint and quote.
-  }, [guest, settings.turnstile, form.country, needsToken, placed, debouncedGuestKey, retryTick]);
+  }, [stack, guest, settings.turnstile, form.country, needsToken, placed, debouncedGuestKey, retryTick]);
 
   const contactSchema = useMemo(
     () => buildContactSchema(contactModes, { guest }),
@@ -605,9 +616,10 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
       step,
       kind,
       onReview: step === order.length - 1,
+      stack,
       goTo,
     }),
-    [form, patch, errors, contactModes, guest, currency, shownQuote, method, combo, isFetching, verifying, quoteError, errorTarget, quoteMessage, order, step, kind, goTo],
+    [form, patch, errors, contactModes, guest, currency, shownQuote, method, combo, isFetching, verifying, quoteError, errorTarget, quoteMessage, order, step, kind, stack, goTo],
   );
   const value = useMemo(() => ({ data, views: CHECKOUT_VIEWS }), [data]);
 
@@ -615,7 +627,7 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
   const lastStep = step === order.length - 1;
   const showsForm = !(guest && !settings.turnstile) && !(lines.length === 0 && !placed);
   usePrimaryAction(
-    inTelegram && showsForm
+    inTelegram && showsForm && !stack
       ? {
           label: !lastStep
             ? t('checkout.actions.continue')
@@ -679,41 +691,47 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
         <div>
           {s.lead()}
 
-          <div key={step} className={`${classes.card} ${FADE}`} ref={cardRef} data-sf-part="card">
-            <header className={classes.cardHead}>
-              <span className={classes.cardCount}>
-                {t('checkout.steps.count', { current: step + 1, total: order.length })}
-              </span>
-              <h2 className={classes.cardTitle}>{t(meta.title)}</h2>
-            </header>
+          {stack ? (
+            <div>{s.steps()}</div>
+          ) : (
+            <div key={step} className={`${classes.card} ${FADE}`} ref={cardRef} data-sf-part="card">
+              <header className={classes.cardHead}>
+                <span className={classes.cardCount}>
+                  {t('checkout.steps.count', { current: step + 1, total: order.length })}
+                </span>
+                <h2 className={classes.cardTitle}>{t(meta.title)}</h2>
+              </header>
 
-            {pageQuoteError ? <p className={classes.alert}>{pageQuoteError}</p> : null}
-            {verifyError ? (
-              <p className={classes.alert}>
-                {verifyError}
-                <button
-                  type="button"
-                  className={classes.alertAction}
-                  onClick={() => setRetryTick((t) => t + 1)}
-                >
-                  {t('common.actions.tryAgain')}
-                </button>
-              </p>
-            ) : null}
-            {submitError ? <p className={classes.alert}>{submitError}</p> : null}
-            {guest && verifying ? (
-              <p className={classes.verifying}>
-                <span className={classes.pulse} aria-hidden />
-                {t('checkout.page.verifying')}
-              </p>
-            ) : null}
+              {pageQuoteError ? <p className={classes.alert}>{pageQuoteError}</p> : null}
+              {verifyError ? (
+                <p className={classes.alert}>
+                  {verifyError}
+                  <button
+                    type="button"
+                    className={classes.alertAction}
+                    onClick={() => setRetryTick((t) => t + 1)}
+                  >
+                    {t('common.actions.tryAgain')}
+                  </button>
+                </p>
+              ) : null}
+              {submitError ? <p className={classes.alert}>{submitError}</p> : null}
+              {guest && verifying ? (
+                <p className={classes.verifying}>
+                  <span className={classes.pulse} aria-hidden />
+                  {t('checkout.page.verifying')}
+                </p>
+              ) : null}
 
-            {s.steps()}
-          </div>
+              {s.steps()}
+            </div>
+          )}
 
-          {/* Inside Telegram the first step has nothing left in the nav — the MainButton
-              is Continue — so the sticky band would be an empty strip over the form. */}
-          {inTelegram && step === 0 ? null : (
+          {stack ? (
+            <InertActionBand />
+          ) : /* Inside Telegram the first step has nothing left in the nav — the MainButton
+              is Continue — so the sticky band would be an empty strip over the form. */
+          inTelegram && step === 0 ? null : (
             <div className={classes.nav}>
               {step > 0 ? (
                 <button
@@ -759,7 +777,7 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
             </div>
           )}
 
-          {onReview ? (
+          {stack || onReview ? (
             <p className={classes.terms}>
               {t('checkout.page.terms')}
             </p>
@@ -771,7 +789,7 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
         {s.aside({ className: classes.aside, as: 'aside' })}
       </div>
 
-      {guest && settings.turnstile ? (
+      {!stack && guest && settings.turnstile ? (
         <GuestTurnstile ref={turnstileRef} siteKey={settings.turnstile.siteKey} />
       ) : null}
     </div>

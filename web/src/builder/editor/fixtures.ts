@@ -114,6 +114,54 @@ export const FIXTURE_PUBLIC_ORDER: PublicOrder = {
   payment: { canPay: false, payBy: null, activePayment: null },
 };
 
+// ── Stage 5 previews: the order-status page's states (spec section 11.3) ────────
+
+const FIXTURE_PAY_BY = '2026-09-09T10:15:00.000Z';
+const FIXTURE_AWAITING: PublicOrder = {
+  ...FIXTURE_PUBLIC_ORDER,
+  status: 'pending',
+  shipments: [],
+  payment: { canPay: true, payBy: FIXTURE_PAY_BY, activePayment: null },
+};
+
+export const FIXTURE_ORDER_STATES: Record<'shipped' | 'awaiting-payment' | 'hosted-open' | 'crypto-checking' | 'two-parcels' | 'cancelled', PublicOrder> = {
+  shipped: FIXTURE_PUBLIC_ORDER,
+  'awaiting-payment': FIXTURE_AWAITING,
+  'hosted-open': {
+    ...FIXTURE_AWAITING,
+    payment: {
+      canPay: true, payBy: FIXTURE_PAY_BY,
+      activePayment: {
+        paymentId: 900301, method: 'card', kind: 'gateway', status: 'pending',
+        checkoutUrl: `https://shop.example/pay/${FIXTURE_ORDER_REF}`, canChange: true, settlementAmount: null, settlementCurrency: null,
+      },
+    },
+  },
+  'crypto-checking': {
+    ...FIXTURE_AWAITING,
+    cryptoPayments: [{
+      paymentId: 900302, paymentStatus: 'pending', coin: 'usdt', network: 'polygon', coinLabel: 'USDT', networkLabel: 'Polygon',
+      address: '0xNB0977000000000000000000000000000000EXAMPLE', coinAmount: '64.90', fiatAmount: 64.9,
+      verificationStatus: 'checking', needsAttention: false, txidMasked: '1a2b3c…d4e5f6',
+    }],
+    payment: {
+      canPay: true, payBy: FIXTURE_PAY_BY,
+      activePayment: { paymentId: 900302, method: 'crypto', kind: 'crypto', status: 'pending', checkoutUrl: null, canChange: false },
+    },
+  },
+  'two-parcels': {
+    ...FIXTURE_PUBLIC_ORDER,
+    shipments: [
+      ...FIXTURE_PUBLIC_ORDER.shipments,
+      {
+        status: 'delivered', carrier: 'Royal Mail', trackingNumber: 'NB000978GB', trackingUrl: 'https://shop.example/track/NB000978GB',
+        trackingStatusDescription: 'Delivered', shippedAt: '2026-09-03T08:00:00.000Z', deliveredAt: '2026-09-05T12:30:00.000Z',
+      },
+    ],
+  },
+  cancelled: { ...FIXTURE_PUBLIC_ORDER, status: 'cancelled', shipments: [], payment: { canPay: false, payBy: null, activePayment: null } },
+};
+
 export const FIXTURE_REDEEM: RedeemOptions = {
   loyaltyPoints: 860,
   options: [

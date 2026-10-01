@@ -3,7 +3,7 @@ import { setApiInterceptor } from '@/api/client.ts';
 import { builderOverrides } from '@/app/builder-gate.ts';
 import { createBridge, setActiveBridge, type Bridge } from '@/builder/editor/bridge.ts';
 import { createFixtureInterceptor } from '@/builder/editor/fixture-api.ts';
-import { applyPreviewAs, enterFixtureMode } from '@/builder/editor/fixture-mode.ts';
+import { applyPreviewAs, effectivePreviewAs, enterFixtureMode } from '@/builder/editor/fixture-mode.ts';
 import { configureCatalogSource } from '@/builder/editor/custom-fields/pickers.ts';
 import { collectIssues, stableStringify, toPageSet } from '@/builder/editor/page-set.ts';
 import { parseInbound, type ChangeText } from '@/builder/editor/protocol.ts';
@@ -50,7 +50,10 @@ export function startBuilderSession(win: Window, client: QueryClient): () => voi
   // Fixture mode and the interceptor come first: from here on no request reaches the live shop
   // with shopper state, and no store writes to the frame's real storage.
   enterFixtureMode();
-  const offApi = setApiInterceptor(createFixtureInterceptor(() => useEditorStore.getState().previewAs));
+  const offApi = setApiInterceptor(createFixtureInterceptor(() => {
+    const st = useEditorStore.getState();
+    return effectivePreviewAs(st.docKey, st.previewAs);
+  }));
   configureCatalogSource(client);
 
   // The store's load() replaces `docs`; the change it triggers is the baseline, posted explicitly below.
@@ -86,10 +89,17 @@ export function startBuilderSession(win: Window, client: QueryClient): () => voi
     },
   });
   setActiveBridge(bridge);
-  applyPreviewAs(useEditorStore.getState().previewAs, client);
+  {
+    const st = useEditorStore.getState();
+    applyPreviewAs(effectivePreviewAs(st.docKey, st.previewAs), client);
+  }
 
   const offStore = useEditorStore.subscribe((s, prev) => {
-    if (s.previewAs !== prev.previewAs) applyPreviewAs(s.previewAs, client);
+    if (s.previewAs !== prev.previewAs || s.docKey !== prev.docKey) {
+      const now = effectivePreviewAs(s.docKey, s.previewAs);
+      const was = effectivePreviewAs(prev.docKey, prev.previewAs);
+      if (now.session !== was.session || now.cart !== was.cart) applyPreviewAs(now, client);
+    }
     // Media queries only follow a real frame width, so the admin resizes the iframe itself.
     if (s.viewport !== prev.viewport) bridge.postViewport(s.viewport);
     if (loading || s.readOnly || s.status !== 'ready') return;
