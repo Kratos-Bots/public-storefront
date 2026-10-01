@@ -17,6 +17,7 @@ export const PREVIEW_STATE_IDS = {
   OrderPlaced: ['chat', 'warning', 'no-chat', 'missing'],
   TrackingLookup: ['form', 'found-2', 'found-1', 'nothing-shipped', 'not-found', 'error'],
   VerifyForm: ['form', 'authentic', 'expired', 'not-verified', 'error'],
+  OrderStatus: ['shipped', 'awaiting-payment', 'hosted-open', 'crypto-checking', 'two-parcels', 'cancelled'],
 } as const;
 
 const SHOPPER: BuilderMode = { editing: false, previewAs: null };

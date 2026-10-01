@@ -36,6 +36,10 @@ export const PREVIEW_STATE_LABELS: Record<ContainerName, Labelled> = {
     { id: 'form', label: 'Form' }, { id: 'authentic', label: 'Authentic' }, { id: 'expired', label: 'Expired' },
     { id: 'not-verified', label: 'Not verified' }, { id: 'error', label: 'Error' },
   ],
+  OrderStatus: [
+    { id: 'shipped', label: 'Shipped' }, { id: 'awaiting-payment', label: 'Awaiting payment' }, { id: 'hosted-open', label: 'Hosted checkout open' },
+    { id: 'crypto-checking', label: 'Crypto sent, checking' }, { id: 'two-parcels', label: 'Two parcels' }, { id: 'cancelled', label: 'Cancelled' },
+  ],
 };
 
 const CONTAINERS = Object.keys(PREVIEW_STATE_IDS) as ContainerName[];
@@ -99,6 +103,8 @@ const BUILDERS: { [C in ContainerName]: (state: string, now: Date) => unknown } 
       default: return { status: 'idle' };
     }
   },
+  // Placeholder until the order-status fixtures land (stage 5 Task 7); nothing reads it yet.
+  OrderStatus: (state) => ({ state }),
 };
 
 /** A fixture for every stateful container, each in its picked state (default: its first). */

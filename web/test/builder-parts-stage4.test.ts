@@ -154,6 +154,7 @@ describe('families', () => {
       orders: ['account.orders'], order: ['account.order'], loyalty: ['account.loyalty'], referrals: ['account.referrals'],
       profile: ['account.profile'], login: ['login'], payment: ['payment-success', 'payment-cancel', 'order-placed'],
       tracking: ['tracking'], verify: ['verify'],
+      checkout: ['checkout'], 'order-status': ['order-status'], // stage 5
     });
   });
   it('familyAllowedOn / allowedOn', () => {

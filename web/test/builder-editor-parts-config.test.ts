@@ -18,7 +18,7 @@ describe('route-bound family helpers', () => {
     expect(familyOfDoc('card:tile')).toBe('card-tile');
     expect(familyOfDoc('card:row')).toBe('card-row');
     expect(familyOfDoc('cart')).toBe('cart'); // stage 4: first family listed for the doc (cart-summary shares it)
-    expect(familyOfDoc('checkout')).toBeNull();
+    expect(familyOfDoc('checkout')).toBe('checkout'); // stage 5
     expect(familyOfDoc('page:about')).toBeNull();
   });
   it('requiredPartsOn collects the required parts of every container on the doc, per layout', () => {

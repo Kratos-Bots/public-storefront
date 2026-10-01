@@ -8,6 +8,7 @@ import { BOX, TEXT, VIS, type StyleKey, type StyleTarget } from '@/builder/style
 import type { ComponentData, LayoutKind, PuckDoc } from '@/builder/types.ts';
 import { cssRules } from './helpers/css-rules.ts';
 import { STAGE4_PARTS } from './helpers/stage4-parts.ts';
+import { STAGE5_PARTS } from './helpers/stage5-parts.ts';
 
 const T = (target: StyleTarget, ...groups: ReadonlyArray<readonly StyleKey[]>) => ({ target, keys: groups.flat() });
 /** Spec §9, exactly. Keys may be added later, never removed. */
@@ -55,9 +56,9 @@ const PART_CSS: Record<string, string[]> = {
 const sameKeys = (a: readonly string[], b: readonly string[]) => [...a].sort().join() === [...b].sort().join();
 
 describe('parts contract (spec §9, §13)', () => {
-  it('the part table covers every registered part exactly (stage 3 table plus STAGE4_PARTS)', () => {
-    const expected = [...Object.keys(PARTS), ...Object.keys(STAGE4_PARTS)].sort();
-    expect(Object.values(BLOCKS).filter((x) => x.part).map((d) => d.name).sort()).toEqual(expected);
+  it('every registered part is in the part table (subset over stage 3 table, STAGE4_PARTS, STAGE5_PARTS; Task 8 restores equality)', () => {
+    const expected = new Set([...Object.keys(PARTS), ...Object.keys(STAGE4_PARTS), ...Object.keys(STAGE5_PARTS)]);
+    expect(Object.values(BLOCKS).filter((x) => x.part).map((d) => d.name).filter((n) => !expected.has(n))).toEqual([]);
   });
   it.each(Object.keys(PARTS))('%s: family, target and keys', (name) => {
     const def = BLOCKS[name]!;

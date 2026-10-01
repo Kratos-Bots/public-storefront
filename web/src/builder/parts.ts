@@ -6,7 +6,10 @@ import { isComponentLike, isRecord, type ComponentData, type DocKey, type Layout
 
 export type PartFamily = 'product' | 'catalogue' | 'card-tile' | 'card-row'
   | 'header' | 'cart' | 'cart-summary' | 'account' | 'orders' | 'order' | 'loyalty'
-  | 'referrals' | 'profile' | 'login' | 'payment' | 'tracking' | 'verify';
+  | 'referrals' | 'profile' | 'login' | 'payment' | 'tracking' | 'verify' | 'checkout' | 'order-status';
+
+/** `"<Block>.<slot>"`: a slot of a container or of a part with its own slots. */
+export type SlotRef = `${string}.${string}`;
 
 /** Product-parts spec §3.2. */
 export interface ContainerSpec {
@@ -33,6 +36,16 @@ export interface ContainerSpec {
   slotRejects?: Readonly<Record<string, readonly string[]>>;
   /** Read only when slots are absent (§8); hidden in the editor, dropped on save. */
   legacyProps?: readonly string[];
+  /** Where each listed part of the family may live: the nearest family ancestor (container or slotted part) and its slot, through content blocks. */
+  homes?: Readonly<Record<string, readonly SlotRef[]>>;
+  /** Editor reason appended to a part-home message, e.g. "no prices exist there yet". */
+  homeWhy?: Readonly<Record<string, string>>;
+  /** Arrangement check over the stored slots; returns the problem, or null. */
+  order?: (slots: Readonly<Record<string, readonly ComponentData[]>>, props: Record<string, unknown>) => { message: string; blockId?: string } | null;
+  /** Parts that may never sit under a hidden block (required parts are always included). */
+  noHide?: readonly string[];
+  /** Every non-part block inside must have category 'content'. */
+  contentOnly?: boolean;
   /** Where "Add block" puts a part when nothing inside the container is selected. */
   insertSlot: string;
 }
@@ -88,6 +101,17 @@ export function containsType(items: readonly ComponentData[], type: string): boo
   return false;
 }
 
+/** Every block type in the subtree, depth-first pre-order, through every component-shaped prop array. */
+export function flattenTypes(items: readonly ComponentData[]): string[] {
+  const out: string[] = [];
+  for (const item of items) {
+    out.push(item.type);
+    if (!isRecord(item.props)) continue;
+    for (const value of Object.values(item.props)) if (isComponentArray(value)) out.push(...flattenTypes(value));
+  }
+  return out;
+}
+
 /** Depth-first: the first block of `type` in the subtree, or undefined (same walk as `containsType`). */
 export function findComponent(items: readonly ComponentData[], type: string): ComponentData | undefined {
   for (const item of items) {
@@ -133,7 +157,7 @@ export const FAMILY_DOCS: Readonly<Record<PartFamily, readonly DocKey[]>> = {
   account: ['account.orders', 'account.order', 'account.loyalty', 'account.referrals', 'account.profile'],
   orders: ['account.orders'], order: ['account.order'], loyalty: ['account.loyalty'], referrals: ['account.referrals'],
   profile: ['account.profile'], login: ['login'], payment: ['payment-success', 'payment-cancel', 'order-placed'],
-  tracking: ['tracking'], verify: ['verify'],
+  tracking: ['tracking'], verify: ['verify'], checkout: ['checkout'], 'order-status': ['order-status'],
 };
 
 /** May `family`'s container live on `docKey`? Own-key lookup: an unguarded family string never hits the prototype. */

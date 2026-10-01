@@ -100,7 +100,8 @@ describe('stage-4 parts contract (spec §9, §12, §13)', () => {
   });
 
   it('PREVIEW_STATE_IDS keys are real containers', () => {
-    for (const name of Object.keys(PREVIEW_STATE_IDS)) expect(BLOCKS[name] && BLOCKS[name]!.container, name).toBeDefined();
+    // OrderStatus (stage 5) gains its container in Task 5; Task 8 removes this exemption.
+    for (const name of Object.keys(PREVIEW_STATE_IDS).filter((n) => n !== 'OrderStatus')) expect(BLOCKS[name] && BLOCKS[name]!.container, name).toBeDefined();
   });
 
   it('the editor fixtures module is imported only from builder/editor', () => {

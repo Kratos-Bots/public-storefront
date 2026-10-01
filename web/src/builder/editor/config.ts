@@ -34,6 +34,7 @@ export const PART_TITLES: Record<PartFamily, string> = {
   header: 'Header parts', cart: 'Cart parts', 'cart-summary': 'Cart summary parts', account: 'Account header parts', orders: 'Order history parts',
   order: 'Order parts', loyalty: 'Loyalty parts', referrals: 'Referral parts', profile: 'Profile parts', login: 'Sign-in parts',
   payment: 'Payment page parts', tracking: 'Tracking parts', verify: 'Verify parts',
+  checkout: 'Checkout parts', 'order-status': 'Order status parts',
 };
 
 const FIELD_MODULES = import.meta.glob<{ fields: Fields }>('./fields/*.ts', { eager: true });

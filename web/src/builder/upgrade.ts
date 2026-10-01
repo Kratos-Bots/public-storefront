@@ -9,10 +9,12 @@ import { isComponentLike, type ComponentData, type DocKey, type LayoutKind, type
  */
 export function fillAbsentSlots(def: AnyBlock, props: Record<string, unknown>, layout: LayoutKind): Record<string, unknown> {
   const spec = def.container;
-  if (!spec) return props;
+  const own = def.part?.defaultSlots;
+  if (!spec && !own) return props;
   const absent = def.slots.filter((s) => props[s] === undefined);
   if (absent.length === 0) return props;
-  const defaults = spec.defaultSlots(parseBlockProps(def, props), { layout, id: String(props.id) });
+  const ctx = { layout, id: String(props.id) };
+  const defaults = spec ? spec.defaultSlots(parseBlockProps(def, props), ctx) : own!(parseBlockProps(def, props), ctx);
   const out: Record<string, unknown> = { ...props };
   for (const s of absent) out[s] = defaults[s] ?? [];
   return out;

@@ -64,7 +64,11 @@ export interface BlockDef<P extends Record<string, unknown>> {
   /** A container (product-parts §3.2): owns data, its slots hold its family's parts. Never with `part`. */
   container?: ContainerSpec;
   /** A part (§3.2): renders one thing from its family's context; lives only inside that family's container. */
-  part?: { family: PartFamily };
+  part?: {
+    family: PartFamily;
+    /** A part with slots of its own: default content for its absent slots (same contract as `container.defaultSlots`). */
+    defaultSlots?: (props: Record<string, unknown>, ctx: { layout: LayoutKind; id: string }) => Record<string, ComponentData[]>;
+  };
 }
 
 export function defineBlock<P extends Record<string, unknown>>(def: BlockDef<P>): BlockDef<P> {

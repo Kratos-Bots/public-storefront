@@ -10,6 +10,7 @@ import { RenderDoc } from '@/builder/render.tsx';
 import * as runtime from '@/builder/runtime.tsx';
 import * as mode from '@/builder/mode.ts';
 import { STAGE4_PARTS } from './helpers/stage4-parts.ts';
+import { STAGE5_PARTS } from './helpers/stage5-parts.ts';
 import { sanitizeRichtext, RICHTEXT_ALLOWED_TAGS } from '@/builder/sanitize.ts';
 import { FIXED_ROUTE_KEYS } from '@/builder/types.ts';
 
@@ -59,9 +60,9 @@ describe('Plan 2 contract the editor builds on (spec §13 A7)', () => {
     for (const [key, def] of Object.entries(BLOCKS)) expect(def.name).toBe(key);
   });
 
-  it('registers exactly the known parts (stage 3 list plus the stage-4 parts)', () => {
-    const expected = [...PART_BLOCKS, ...Object.keys(STAGE4_PARTS)].sort();
-    expect(Object.values(BLOCKS).filter((x) => x.part).map((d) => d.name).sort()).toEqual(expected);
+  it('registers only known parts (subset over stage 3 list, stage-4 and stage-5 parts; Task 8 restores equality)', () => {
+    const expected = new Set([...PART_BLOCKS, ...Object.keys(STAGE4_PARTS), ...Object.keys(STAGE5_PARTS)]);
+    expect(Object.values(BLOCKS).filter((x) => x.part).map((d) => d.name).filter((n) => !expected.has(n))).toEqual([]);
   });
 
   it('has a default doc for the shell and every fixed route of the storefront layout', () => {

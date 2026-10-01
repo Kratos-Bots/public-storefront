@@ -78,7 +78,7 @@ function cleanItems(items: unknown, w: Walk): ComponentData[] {
     w.budget.left -= 1;
     // Spec §8: an absent container slot takes its default content BEFORE cleaning, so the filled
     // parts get the same id de-duplication, budget and checks. Never `?? []` here (Review Focus 1).
-    const source = def.container ? fillAbsentSlots(def, raw.props, w.layout) : raw.props;
+    const source = def.container || def.part?.defaultSlots ? fillAbsentSlots(def, raw.props, w.layout) : raw.props;
     const props: Record<string, unknown> = { ...source };
     for (const s of def.slots) props[s] = cleanItems(source[s], { ...w, depth: w.depth + 1 });
     // Neutral fallbacks: a broken field renders empty, never the block's placeholder copy.
