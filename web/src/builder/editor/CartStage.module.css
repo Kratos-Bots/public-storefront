@@ -99,13 +99,13 @@
   color: var(--sfb-ink);
 }
 
-/* Blocks the drawer never draws: the root's own content and the cart's head slot are page-only. */
-.pageOnly :is([data-puck-dropzone='root:default-zone'], [data-puck-dropzone^='CartContents-'][data-puck-dropzone$=':head']) > *:not(:has([data-puck-dropzone$=':main'])) {
+/* Blocks the drawer never draws: the root's own content is page-only. CartHeading (the cart's head slot) is edited on the Page surface. */
+.pageOnly :is([data-puck-dropzone='root:default-zone']) > *:not(:has([data-puck-dropzone$=':main'])) {
   position: relative;
   opacity: 0.55;
 }
 
-.pageOnly :is([data-puck-dropzone='root:default-zone'], [data-puck-dropzone^='CartContents-'][data-puck-dropzone$=':head']) > *:not(:has([data-puck-dropzone$=':main']))::after {
+.pageOnly :is([data-puck-dropzone='root:default-zone']) > *:not(:has([data-puck-dropzone$=':main']))::after {
   content: 'Cart page only';
   position: absolute;
   inset-block-start: 4px;
@@ -118,4 +118,9 @@
   font-size: 11px;
   line-height: 1.4;
   pointer-events: none;
+}
+
+/* The drawer ignores the cart container's blockStyle, so its wrapper draws no box here either. */
+.stage .sheet [data-sf-style='CartContents'] {
+  display: contents !important;
 }

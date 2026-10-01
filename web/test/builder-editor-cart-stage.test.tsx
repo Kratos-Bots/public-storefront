@@ -160,8 +160,8 @@ describe('cart surface switch', () => {
     const option = /^\.option \{([^}]*)\}/m.exec(css)![1]!;
     expect(option).toMatch(/min-inline-size:\s*44px/);
     expect(option).toMatch(/min-block-size:\s*44px/);
-    // `:head` alone would also match any other container's head slot on the page.
-    expect(css).toMatch(/\[data-puck-dropzone\^='CartContents-'\]\[data-puck-dropzone\$=':head'\]/);
+    // The root zone's blocks are the page-only ones; the rule is not a bare `:head` match.
+    expect(css).toMatch(/\.pageOnly :is\(\[data-puck-dropzone='root:default-zone'\]\)/);
   });
 
   it('tags page-only blocks by CSS, scoped under the drawer stage', async () => {
@@ -249,5 +249,18 @@ describe('exact preview of the cart drawer', () => {
     expect(useUiStore.getState().cartOpen).toBe(false);
     expect(useEditorStore.getState().viewport).toBe(768);
     unmount();
+  });
+});
+
+describe('drawer stage block styling', () => {
+  it('draws no box for the cart container wrapper (the drawer ignores its blockStyle) and says so', async () => {
+    const { readFileSync } = await import('node:fs');
+    const css = readFileSync('src/builder/editor/CartStage.module.css', 'utf8');
+    expect(css).toMatch(/\.sheet \[data-sf-style='CartContents'\][^{]*\{[^}]*display:\s*contents\s*!important/);
+    // The drawer never draws the head slot, so only the root zone is tagged.
+    expect(css).not.toMatch(/:head'\]/);
+    render(ground('cart', 'storefront'));
+    fireEvent.click(screen.getByRole('radio', { name: 'Drawer' }));
+    expect(document.querySelector('[data-sf-builder-cart-drawer]')!.lastElementChild!.textContent).toMatch(/block styling on the cart block applies to the cart page only/i);
   });
 });

@@ -610,6 +610,8 @@ footer. The cart views register themselves through `cartViews` (`builder/blocks/
 instead of being imported by the registry, which keeps the shell, the registry and the cart from
 forming an import cycle.
 
+The drawer ignores the cart container's own block styling (`blockStyle`: spacing, background, border, width): that styling belongs to the `/cart` page, and the drawer's chrome is the shop's sheet. Parts inside the container keep their own styling in both places. The editor's Drawer stage shows the same, with a caption saying so.
+
 **Preview states.** A stateful container reads `usePreviewState('<Name>')` and, when the editor has
 set one, draws that state from fixture data instead of its live state machine; the fixtures arrive
 through `previewFixtures` in `BuilderMode`, never by import. Shoppers get the constant `SHOPPER`

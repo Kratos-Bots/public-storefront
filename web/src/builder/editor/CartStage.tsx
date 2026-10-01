@@ -52,7 +52,7 @@ function DrawerStage({ children }: { children: ReactNode }) {
         <DrawerHeader />
         <CartHostContext.Provider value={host}>{children}</CartHostContext.Provider>
       </div>
-      <p className={styles.caption}>The drawer’s header is fixed. Blocks tagged “Cart page only” don’t show in it.</p>
+      <p className={styles.caption}>The drawer’s header is fixed. Blocks tagged “Cart page only” don’t show in it. Block styling on the cart block applies to the cart page only.</p>
     </div>
   );
 }
