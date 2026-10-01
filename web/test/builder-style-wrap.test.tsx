@@ -6,7 +6,7 @@ import { BOX } from '@/builder/style/model.ts';
 import type { BlockRenderContext } from '@/builder/define.ts';
 
 const SHELL_WRAP = ['Upsells', 'TopBar', 'NoticeBanners', 'CutoffBar', 'Footer'];
-const FLOWS = ['ProductGrid', 'ProductList', 'ProductDetail', 'CartContents', 'CartSummary', 'CheckoutFlow',
+const FLOWS = ['ProductGrid', 'ProductList', 'ProductDetail', 'CartContents', 'CheckoutFlow',
   'LoginOptions', 'OrdersList', 'OrderDetail', 'Loyalty', 'Referrals', 'Profile', 'OrderStatus', 'PaymentSuccess',
   'PaymentCancel', 'OrderPlaced', 'VerifyForm', 'TrackingLookup', 'AccountNav'];
 const ctx: BlockRenderContext = { editing: false, docKey: 'catalog', layout: 'storefront' };

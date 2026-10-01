@@ -73,6 +73,8 @@ const FLOOR: Record<string, { target: StyleTarget; keys: readonly StyleKey[] } |
   ContactStrip: { target: 'pass', keys: [...BOX, 'hide'] }, Footer: { target: 'wrap', keys: [...BOX, 'hide'] },
   Header: { target: 'pass', keys: ['bg', 'shadow', 'hide'] },
   ...Object.fromEntries([...ROUTE, 'AccountNav'].map((n) => [n, { target: 'wrap' as const, keys: [...BOX] }])),
+  // Stage 4: the cart summary owns its root div (its parts sit inside it).
+  CartSummary: { target: 'root', keys: [...BOX] },
   WholesaleTable: { target: 'wrap', keys: ['bg', 'padTop', 'marginTop', 'marginBottom', 'shadow'] },
   PageOutlet: false,
   MobileCartBar: false,
@@ -171,6 +173,7 @@ describe('every stylable block carries the marker when styled (spec §5.1)', () 
     FeaturedProducts: c('FeaturedProducts', { ...BLOCKS.FeaturedProducts!.defaultProps, source: 'picked', items: [{ productId: 7 }] }),
     Header: c('Header', { ...BLOCKS.Header!.defaultProps, nav: [] }),
     ContactStrip: c('ContactStrip', { catalogOnly: false }),
+    CartSummary: c('CartSummary', {}),
   };
   it('the sample covers every root/pass block', () => {
     expect(Object.keys(SAMPLE).sort()).toEqual([...owned].sort());
