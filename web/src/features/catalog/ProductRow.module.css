@@ -29,14 +29,13 @@
   letter-spacing: -0.005em;
 }
 
-/* Plain text that happens to be the row's target — the pseudo stretches it over
+/* The name wraps (up to four lines) rather than truncating. `line-clamp` does not
+   apply to a <button> (its `-webkit-box` display computes to flow-root), so the
+   cap is a max-height of four of the name's 1.25 lines. Plain text that happens to be the row's target — the pseudo stretches it over
    the whole line, and the gutter is lifted above it so a tap on `+` never opens
    the sheet. */
 .open {
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  line-clamp: 3;
-  -webkit-box-orient: vertical;
+  display: block;
   width: 100%;
   margin: 0;
   padding: 0;
@@ -49,6 +48,7 @@
   cursor: pointer;
   overflow: hidden;
   overflow-wrap: anywhere;
+  max-height: calc(1.25em * 4);
 }
 
 .open::after {
