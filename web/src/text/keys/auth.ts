@@ -32,4 +32,12 @@ export default defineTextArea('auth', {
   'whatsapp.continue': { en: 'Continue with WhatsApp', max: 60 },
   'whatsapp.finishFailed': { en: "We couldn't finish signing you in", max: 120 },
   'whatsapp.startFailed': { en: "We couldn't start a WhatsApp sign-in", max: 120 },
+  'password.invalid': { en: 'Email/phone or password is incorrect', max: 100 },
+  'password.wrongCurrent': { en: 'Your current password is incorrect', max: 100 },
+  'password.taken': { en: 'That email or phone can’t be used to create an account. Try signing in or resetting your password.', max: 200 },
+  'password.banned': { en: 'This account can’t sign in right now. Contact the shop for help.', max: 160 },
+  'password.unavailable': { en: 'Password sign-in isn’t available right now.', max: 120 },
+  'password.tooShort': { en: 'Use at least 8 characters', max: 80 },
+  'password.tooLong': { en: 'That password is too long — shorten it a little', max: 100 },
+  'password.phoneInvalid': { en: 'Enter your phone number with its country code', max: 100 },
 });

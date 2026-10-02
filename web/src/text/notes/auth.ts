@@ -30,4 +30,12 @@ export default {
   'whatsapp.continue': 'WhatsApp card main button',
   'whatsapp.finishFailed': 'WhatsApp sign-in error when the last step fails',
   'whatsapp.startFailed': 'WhatsApp sign-in error when the code cannot be created',
+  'password.invalid': 'Error under the sign-in form when the email/phone or the password is wrong',
+  'password.wrongCurrent': 'Error under the current-password field in Account when the password typed there is wrong',
+  'password.taken': 'Error when creating an account or adding a sign-in with an email or phone another account already uses',
+  'password.banned': 'Error when a banned account tries to sign in or reset its password',
+  'password.unavailable': 'Error when the shop has switched email/phone sign-in off while the shopper was using it',
+  'password.tooShort': 'Error under a new-password field when it has fewer than 8 characters',
+  'password.tooLong': 'Error under a new-password field when it is longer than the 72-byte limit',
+  'password.phoneInvalid': 'Error under the phone field when the number cannot be turned into an international number',
 } as const satisfies Record<string, string>;
