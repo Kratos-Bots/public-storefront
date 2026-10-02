@@ -40,4 +40,6 @@ export default defineTextArea('auth', {
   'password.tooShort': { en: 'Use at least 8 characters', max: 80 },
   'password.tooLong': { en: 'That password is too long — shorten it a little', max: 100 },
   'password.phoneInvalid': { en: 'Enter your phone number with its country code', max: 100 },
+  'password.show': { en: 'Show password', max: 40 },
+  'password.hide': { en: 'Hide password', max: 40 },
 });

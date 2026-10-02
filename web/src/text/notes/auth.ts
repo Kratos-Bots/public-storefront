@@ -38,4 +38,6 @@ export default {
   'password.tooShort': 'Error under a new-password field when it has fewer than 8 characters',
   'password.tooLong': 'Error under a new-password field when it is longer than the 72-byte limit',
   'password.phoneInvalid': 'Error under the phone field when the number cannot be turned into an international number',
+  'password.show': 'Screen-reader name of the button that reveals what is typed in a password field',
+  'password.hide': 'Screen-reader name of the button that hides a revealed password again',
 } as const satisfies Record<string, string>;
