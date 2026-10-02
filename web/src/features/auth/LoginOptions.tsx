@@ -75,6 +75,8 @@ export function LoginOptions({ rootAttrs }: { rootAttrs?: StyleAttrs } = {}) {
 
   return (
     <div className={classes.options} {...rootAttrs}>
+      <AccessNotice placement="above" />
+
       {whatsapp ? (
         <AuthCard name={t('common.contact.whatsapp')} icon={<WhatsAppIcon size={15} />}>
           <WhatsappLogin number={login.whatsapp.number} />
@@ -95,7 +97,7 @@ export function LoginOptions({ rootAttrs }: { rootAttrs?: StyleAttrs } = {}) {
         </AuthCard>
       ) : null}
 
-      <AccessNotice />
+      <AccessNotice placement="below" />
     </div>
   );
 }

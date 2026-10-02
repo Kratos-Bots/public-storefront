@@ -48,20 +48,24 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 0.25rem 1.25rem;
+  gap: 0 0.5rem;
   margin-top: 0.5rem;
-  padding-top: 1.25rem;
+  padding-top: 0.5rem;
   border-top: 1px solid var(--sf-line);
   width: 100%;
 }
 
+/* Padding, not a bigger font, makes the 44px tap target; the actions stay secondary to the contact buttons. */
 .accountAction {
-  padding: 0.25rem 0;
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0 0.75rem;
   border: 0;
   background: none;
   font: inherit;
   font-size: 0.8125rem;
-  color: var(--sf-faint);
+  color: var(--sf-muted);
   text-decoration: none;
   cursor: pointer;
 }

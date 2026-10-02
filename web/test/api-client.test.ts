@@ -3,6 +3,8 @@ import { api, unwrap, ApiError } from '@/api/client.ts';
 import { useSessionStore } from '@/stores/session.ts';
 import { closedGate } from '@/app/closed-gate.ts';
 import { accessGate } from '@/app/access-gate.ts';
+import { queryClient } from '@/lib/query-client.ts';
+import { SETTINGS_KEY } from '@/app/settings.ts';
 
 function mockFetch(status: number, body: unknown) {
   return vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } }));
@@ -46,6 +48,21 @@ describe('api client', () => {
     await expect(unwrap(api.get('storefront/catalog'))).rejects.toMatchObject({ isAccessDenied: true });
     expect(accessGate.getState().denied).toBe(true);
     expect(useSessionStore.getState().token).toBe('tok');
+  });
+
+  it('invalidates the cached settings on a signed-out LOGIN_REQUIRED, so the boundary sees the new mode', async () => {
+    queryClient.setQueryData(SETTINGS_KEY, { enabled: true });
+    expect(queryClient.getQueryState(SETTINGS_KEY)?.isInvalidated).toBe(false);
+    mockFetch(401, { success: false, data: null, error: 'LOGIN_REQUIRED' });
+    await expect(unwrap(api.get('storefront/catalog'))).rejects.toMatchObject({ isLoginRequired: true });
+    expect(queryClient.getQueryState(SETTINGS_KEY)?.isInvalidated).toBe(true);
+  });
+
+  it('leaves the settings cache alone for an ordinary 401', async () => {
+    queryClient.setQueryData(SETTINGS_KEY, { enabled: true });
+    mockFetch(401, { success: false, data: null, error: 'Unauthorized' });
+    await expect(unwrap(api.get('storefront/cart'))).rejects.toMatchObject({ status: 401 });
+    expect(queryClient.getQueryState(SETTINGS_KEY)?.isInvalidated).toBe(false);
   });
 
   it('does not touch the access gate for any other 403', async () => {

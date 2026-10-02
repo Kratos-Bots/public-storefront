@@ -6,6 +6,11 @@ import { MantineProvider } from '@mantine/core';
 
 const signOut = vi.hoisted(() => ({ signOutAndReload: vi.fn(async () => undefined) }));
 vi.mock('@/features/auth/sign-out.ts', () => signOut);
+const tg = vi.hoisted(() => ({ inTelegram: false }));
+vi.mock('@/lib/telegram-webapp.ts', async (orig) => ({
+  ...(await orig<typeof import('@/lib/telegram-webapp.ts')>()),
+  isTelegramWebApp: () => tg.inTelegram,
+}));
 const profile = vi.hoisted(() => ({ fetchProfile: vi.fn() }));
 vi.mock('@/api/profile.ts', () => profile);
 
@@ -55,6 +60,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  tg.inTelegram = false;
   signOut.signOutAndReload.mockClear();
   profile.fetchProfile.mockReset();
   accessGate.getState().reset();
@@ -147,6 +153,24 @@ describe('LockedPage', () => {
       await act(async () => { resolve({ shopAccess: false }); });
       expect(button).not.toBeDisabled();
     });
+  });
+
+  it('hides "Sign out" inside the Telegram Mini App, which would only sign straight back in', () => {
+    tg.inTelegram = true;
+    renderLocked('denied');
+    expect(screen.queryByRole('button', { name: 'Sign out' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Check again' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'My orders' })).toBeInTheDocument();
+  });
+
+  it('"Check again" leaves the fresh profile in the cache the boundary reads', async () => {
+    profile.fetchProfile.mockResolvedValue({ shopAccess: true });
+    accessGate.getState().setDenied(true);
+    client.setQueryData(['profile'], { shopAccess: false });
+    renderLocked('denied');
+    fireEvent.click(screen.getByRole('button', { name: 'Check again' }));
+    await waitFor(() => expect(accessGate.getState().denied).toBe(false));
+    expect(client.getQueryData(['profile'])).toEqual({ shopAccess: true });
   });
 
   it('"Sign out" runs the shared sign-out and disables itself while it runs', () => {

@@ -4,7 +4,8 @@ import { closedGate } from '@/app/closed-gate.ts';
 import { recordSettingsFetch } from '@/lib/settings-anchor.ts';
 import type { StorefrontSettings } from '@/types/settings.ts';
 
-export const SETTINGS_KEY = ['settings'] as const;
+export { SETTINGS_KEY } from '@/lib/query-client.ts';
+import { SETTINGS_KEY } from '@/lib/query-client.ts';
 
 export function useSettingsQuery() {
   return useQuery({

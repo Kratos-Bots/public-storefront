@@ -219,6 +219,7 @@ describe('the real route table', () => {
     await act(async () => resolve(plain));
     await waitFor(() => expect(document.querySelectorAll('header')).toHaveLength(1));
     expect(calls).toEqual(['webapp']);
-    expect(client.getQueryCache().getAll().map((q) => q.queryKey)).toEqual([['pages', 'webapp']]);
+    // AccessBoundary's (disabled) profile observer registers an idle entry; only the page set is under test.
+    expect(client.getQueryCache().getAll().map((q) => q.queryKey).filter((k) => k[0] !== 'profile')).toEqual([['pages', 'webapp']]);
   });
 });

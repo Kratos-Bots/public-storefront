@@ -10,6 +10,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  min-height: 2.75rem;
   padding: 0.7rem 1.1rem;
   border: 1px solid var(--sf-line-strong);
   border-radius: var(--sf-card-radius);

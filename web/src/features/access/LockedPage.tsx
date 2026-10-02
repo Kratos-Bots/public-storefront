@@ -7,7 +7,9 @@ import { fetchProfile } from '@/api/profile.ts';
 import { accessGate } from '@/app/access-gate.ts';
 import { Brand } from '@/components/Brand.tsx';
 import { AccessButtons } from '@/features/access/AccessButtons.tsx';
+import { PROFILE_KEY } from '@/features/account/queries.ts';
 import { signOutAndReload } from '@/features/auth/sign-out.ts';
+import { isTelegramWebApp } from '@/lib/telegram-webapp.ts';
 import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/access/LockedPage.module.css';
 
@@ -30,8 +32,10 @@ export function LockedPage({ variant }: { variant: 'denied' | 'closed' }) {
   const checkAgain = async () => {
     setChecking(true);
     try {
-      const { shopAccess } = await fetchProfile();
-      if (shopAccess === false) return;
+      const profile = await fetchProfile();
+      // The boundary reads this entry too; a stale "not allowed" there would lock them again.
+      client.setQueryData(PROFILE_KEY, profile);
+      if (profile.shopAccess === false) return;
       accessGate.getState().setDenied(false);
       void client.invalidateQueries();
     } catch {
@@ -68,9 +72,12 @@ export function LockedPage({ variant }: { variant: 'denied' | 'closed' }) {
             >
               {t('auth.access.checkAgain')}
             </button>
-            <button type="button" className={classes.accountAction} onClick={() => void signOut()} disabled={signingOut}>
-              {t('auth.access.signOut')}
-            </button>
+            {/* The Mini App signs straight back in after a reload, so signing out there does nothing. */}
+            {isTelegramWebApp() ? null : (
+              <button type="button" className={classes.accountAction} onClick={() => void signOut()} disabled={signingOut}>
+                {t('auth.access.signOut')}
+              </button>
+            )}
           </div>
         ) : null}
       </div>

@@ -49,10 +49,13 @@ export function isAuthPath(pathname: string): boolean {
   return AUTH_PATHS.includes(stripTrailingSlash(pathname));
 }
 
-/** Account pages stay open to a customer who is not allowed: their orders must not be stranded. */
+/**
+ * Account pages stay open to a customer who is not allowed: their orders must not be
+ * stranded, and the backend leaves email verification open to them too.
+ */
 function isAccountPath(pathname: string): boolean {
   const p = stripTrailingSlash(pathname);
-  return p === '/account' || p.startsWith('/account/');
+  return p === '/account' || p.startsWith('/account/') || p === '/verify-email';
 }
 
 export type AccessDecision =
@@ -76,10 +79,23 @@ export interface AccessContext {
   builder: boolean;
 }
 
+/**
+ * Whether the boundary should read the profile's `shopAccess` before showing a shop
+ * page: a signed-in visitor of a restricted shop, not yet known to be refused, on a
+ * page the lockout would replace.
+ */
+export function checksProfile(ctx: AccessContext): boolean {
+  return ctx.loggedIn && ctx.access.storefront === 'restricted' && !ctx.denied && !ctx.builder
+    && !isClosedExemptPath(ctx.pathname) && !isAccountPath(ctx.pathname) && !isAuthPath(ctx.pathname);
+}
+
 export function accessDecision(ctx: AccessContext): AccessDecision {
   if (ctx.builder || isClosedExemptPath(ctx.pathname)) return { kind: 'allow' };
 
   if (ctx.loggedIn) {
+    // setSession flips loggedIn before useLoginSuccess navigates away; keep the bare frame
+    // meanwhile, so the shop frame never wraps the sign-in page. LoginPage redirects.
+    if (ctx.access.storefront !== 'public' && isAuthPath(ctx.pathname)) return { kind: 'authOnly' };
     if (ctx.denied && ctx.access.storefront === 'restricted' && !isAccountPath(ctx.pathname)) {
       return { kind: 'locked', variant: 'denied' };
     }

@@ -53,6 +53,22 @@ describe('LoginOptions with password sign-in', () => {
     expect(text).not.toContain('Coming soon');
   });
 
+  it('puts the owner’s lockout copy above the sign-in cards in a restricted shop, and the plain line below otherwise', () => {
+    configure({ whatsapp: true, password: true });
+    h.settings = { ...h.settings, access: { storefront: 'restricted', registration: true, deniedMessage: 'Ask us on chat.', deniedButtons: [] } };
+    shell(<LoginOptions />);
+    let text = document.body.textContent ?? '';
+    expect(text.indexOf('Ask us on chat.')).toBeGreaterThanOrEqual(0);
+    expect(text.indexOf('Ask us on chat.')).toBeLessThan(text.indexOf('WHATSAPP CARD'));
+    cleanup();
+
+    configure({ whatsapp: true, password: true });
+    h.settings = { ...h.settings, access: { storefront: 'login', registration: true, deniedMessage: '', deniedButtons: [] } };
+    shell(<LoginOptions />);
+    text = document.body.textContent ?? '';
+    expect(text.indexOf('Sign in to view the shop.')).toBeGreaterThan(text.indexOf('PASSWORD CARD'));
+  });
+
   it('password alone is a working page, not the "sign-in isn\'t available" state', () => {
     configure({ whatsapp: false, password: true });
     shell(<LoginOptions />);

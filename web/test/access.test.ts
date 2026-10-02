@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { OPEN_ACCESS, accessDecision, accessOf, isAuthPath, showsLockoutCopy, type AccessInfo } from '@/app/access.ts';
+import { OPEN_ACCESS, accessDecision, accessOf, checksProfile, isAuthPath, showsLockoutCopy, type AccessInfo } from '@/app/access.ts';
 
 const base = {
   access: OPEN_ACCESS, loggedIn: false, denied: false, registrationRefused: false,
@@ -43,6 +43,22 @@ describe('showsLockoutCopy', () => {
 describe('isAuthPath', () => {
   it.each(['/login', '/login/', '/reset-password'])('%s is an auth path', (p) => expect(isAuthPath(p)).toBe(true));
   it.each(['/', '/account', '/loginx', '/verify-email'])('%s is not', (p) => expect(isAuthPath(p)).toBe(false));
+});
+
+describe('checksProfile', () => {
+  const ctx = { ...base, access: mode('restricted'), loggedIn: true };
+  it('asks only for a signed-in visitor of a restricted shop on a shop page', () => {
+    expect(checksProfile(ctx)).toBe(true);
+    expect(checksProfile({ ...ctx, pathname: '/cart' })).toBe(true);
+  });
+  it.each([
+    ['public shop', { access: mode('public') }], ['login shop', { access: mode('login') }],
+    ['signed out', { loggedIn: false }], ['already denied', { denied: true }], ['builder', { builder: true }],
+    ['account path', { pathname: '/account/orders' }], ['verify-email', { pathname: '/verify-email' }],
+    ['auth path', { pathname: '/login' }], ['exempt path', { pathname: '/payment/success' }],
+  ])('does not ask: %s', (_n, extra) => {
+    expect(checksProfile({ ...ctx, ...extra })).toBe(false);
+  });
 });
 
 describe('accessDecision', () => {
@@ -92,6 +108,20 @@ describe('accessDecision', () => {
     'keeps %s reachable for a refused customer', (pathname) => {
       expect(accessDecision({ ...base, access: mode('restricted'), loggedIn: true, denied: true, pathname })).toEqual({ kind: 'allow' });
     });
+
+  it('keeps /verify-email reachable for a refused customer', () => {
+    expect(accessDecision({ ...base, access: mode('restricted'), loggedIn: true, denied: true, pathname: '/verify-email' }))
+      .toEqual({ kind: 'allow' });
+  });
+
+  it.each(['login', 'restricted'] as const)('keeps the bare frame on /login for a signed-in visitor (%s)', (m) => {
+    expect(accessDecision({ ...base, access: mode(m), loggedIn: true, pathname: '/login' })).toEqual({ kind: 'authOnly' });
+    expect(accessDecision({ ...base, access: mode(m), loggedIn: true, pathname: '/reset-password' })).toEqual({ kind: 'authOnly' });
+  });
+
+  it('does not touch /login for a signed-in visitor in a public shop', () => {
+    expect(accessDecision({ ...base, loggedIn: true, pathname: '/login' })).toEqual({ kind: 'allow' });
+  });
 
   it('ignores a stale refusal once the shop is no longer restricted', () => {
     expect(accessDecision({ ...base, access: mode('login'), loggedIn: true, denied: true })).toEqual({ kind: 'allow' });

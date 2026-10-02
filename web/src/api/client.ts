@@ -3,6 +3,7 @@ import { ApiError } from '@/lib/errors.ts';
 import { useSessionStore } from '@/stores/session.ts';
 import { closedGate } from '@/app/closed-gate.ts';
 import { accessGate } from '@/app/access-gate.ts';
+import { queryClient, SETTINGS_KEY } from '@/lib/query-client.ts';
 import { isBuilderMode } from '@/app/builder-gate.ts';
 import { textSnapshot } from '@/text/snapshot.ts';
 
@@ -68,6 +69,9 @@ async function toApiError(err: unknown): Promise<never> {
     if (apiErr.isUnauthorized) useSessionStore.getState().clear();
     if (apiErr.isStorefrontDisabled) closedGate.getState().setClosed(true);
     if (apiErr.isAccessDenied) accessGate.getState().setDenied(true);
+    // The owner turned the shop private under a visitor holding older settings: refetch them
+    // so the boundary sees the new mode and redirects to sign in.
+    if (apiErr.isLoginRequired) void queryClient.invalidateQueries({ queryKey: SETTINGS_KEY });
     throw apiErr;
   }
   if (err instanceof Error && err.name === 'TimeoutError') throw new ApiError(0, textSnapshot().t('errors.timeout'));

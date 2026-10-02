@@ -69,6 +69,22 @@ describe('AccessNotice', () => {
     expect(screen.queryByText(LEDE)).toBeNull();
   });
 
+  it('placement splits the notice: lockout copy above the cards, the plain sign-in line below', () => {
+    configure({ storefront: 'restricted', registration: true, deniedMessage: 'Ask us on chat.' });
+    const above = render(<AccessNotice placement="above" />);
+    expect(screen.getByText('Ask us on chat.')).toBeTruthy();
+    above.unmount();
+    const below = render(<AccessNotice placement="below" />);
+    expect(below.container.innerHTML).toBe('');
+    below.unmount();
+
+    configure({ storefront: 'login', registration: true });
+    expect(render(<AccessNotice placement="above" />).container.innerHTML).toBe('');
+    cleanup();
+    render(<AccessNotice placement="below" />);
+    expect(screen.getByText(LEDE)).toBeTruthy();
+  });
+
   it('restricted with closed registration shows lede, registration line, message and buttons in that order', () => {
     configure({
       storefront: 'restricted', registration: false, deniedMessage: 'Invite only for now.',

@@ -10,6 +10,16 @@
   text-align: center;
 }
 
+/* Leading the sign-in cards: the rule moves underneath, separating it from them. */
+.above {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  padding-top: 0;
+  padding-bottom: 1.25rem;
+  border-top: 0;
+  border-bottom: 1px solid var(--sf-line);
+}
+
 .lede {
   margin: 0;
   font-size: 0.9375rem;
