@@ -80,7 +80,8 @@ export function useAccountPassword(profile: Profile, options: { resetByEmail: bo
   const cancel = useCallback(() => {
     setOpen(false);
     setErrors({});
-    setValues((v) => ({ ...v, current: '', next: '' }));
+    setKindState('email');
+    setValues((v) => ({ ...v, email: '', phone: '', current: '', next: '' }));
   }, []);
   const setKind = useCallback((next: IdentifierKind) => { setKindState(next); setErrors({}); }, []);
   const setValue = useCallback((field: AccountPasswordField, value: string) => {
@@ -140,6 +141,7 @@ export function useAccountPassword(profile: Profile, options: { resetByEmail: bo
     if (sendBusy.current) return;
     sendBusy.current = true;
     setSending(true);
+    setSent(false);
     setVerifyError(null);
     try {
       await requestEmailVerification();

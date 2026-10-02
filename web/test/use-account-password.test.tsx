@@ -194,10 +194,12 @@ describe('changing a password', () => {
   it('cancel closes the form and forgets what was typed', () => {
     const r = setup(withPassword());
     act(() => r.result.current.openForm());
-    fill(r, { current: 'x', next: 'y' });
+    act(() => r.result.current.setKind('phone'));
+    fill(r, { current: 'x', next: 'y', email: 'a@b.co', phone: '07700 900123' });
     act(() => r.result.current.cancel());
     expect(r.result.current.open).toBe(false);
-    expect(r.result.current.values).toMatchObject({ current: '', next: '' });
+    expect(r.result.current.values).toMatchObject({ current: '', next: '', email: '', phone: '' });
+    expect(r.result.current.kind).toBe('email');
     expect(r.result.current.errors).toEqual({});
   });
 
@@ -241,5 +243,15 @@ describe('verification email', () => {
     expect(r.result.current.verification.sent).toBe(false);
     expect(r.result.current.verification.error).toBe('Too many attempts — please wait a moment and try again');
     expect(r.result.current.verification.sending).toBe(false);
+  });
+
+  it('a resend that fails after a success no longer reports sent', async () => {
+    const r = setup(unverified(), true);
+    await act(async () => { await r.result.current.verification.send(); });
+    expect(r.result.current.verification.sent).toBe(true);
+    respond(429, null, 'Too many requests');
+    await act(async () => { await r.result.current.verification.send(); });
+    expect(r.result.current.verification.sent).toBe(false);
+    expect(r.result.current.verification.error).toBe('Too many attempts — please wait a moment and try again');
   });
 });
