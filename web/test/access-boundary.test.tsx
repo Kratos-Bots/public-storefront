@@ -113,9 +113,15 @@ describe('AccessBoundary', () => {
     expect(screen.getByText('shop frame')).toBeInTheDocument();
   });
 
-  it('shows the closed screen after a refused Mini App registration', () => {
+  it('shows the closed screen after a refused Mini App registration in a non-public shop', () => {
     accessGate.getState().setRegistrationRefused(true);
-    mount('/', settings({ storefront: 'login' }));
+    mount('/', settings({ storefront: 'login', registration: false }));
     expect(screen.getByText('locked:closed')).toBeInTheDocument();
+  });
+
+  it('keeps a public shop browsable after a refused Mini App registration', () => {
+    accessGate.getState().setRegistrationRefused(true);
+    mount('/', settings({ storefront: 'public', registration: false }));
+    expect(screen.getByText('shop frame')).toBeInTheDocument();
   });
 });

@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSettings } from '@/app/settings.ts';
 import { accessOf } from '@/app/access.ts';
+import { fetchProfile } from '@/api/profile.ts';
 import { accessGate } from '@/app/access-gate.ts';
 import { Brand } from '@/components/Brand.tsx';
 import { AccessButtons } from '@/features/access/AccessButtons.tsx';
@@ -21,12 +22,23 @@ export function LockedPage({ variant }: { variant: 'denied' | 'closed' }) {
   const { t } = useText();
   const client = useQueryClient();
   const [signingOut, setSigningOut] = useState(false);
+  const [checking, setChecking] = useState(false);
   const access = accessOf(settings);
 
-  const checkAgain = () => {
-    // If the customer is still not allowed, the next API answer puts this screen back.
-    accessGate.getState().setDenied(false);
-    void client.invalidateQueries();
+  // Ask before opening the door: the profile's shopAccess says outright whether this
+  // customer may shop, so a still-refused customer never sees the shop flash up.
+  const checkAgain = async () => {
+    setChecking(true);
+    try {
+      const { shopAccess } = await fetchProfile();
+      if (shopAccess === false) return;
+      accessGate.getState().setDenied(false);
+      void client.invalidateQueries();
+    } catch {
+      // Stay where they are; a revoked session or a refusal is handled by the API client.
+    } finally {
+      setChecking(false);
+    }
   };
 
   const signOut = async () => {
@@ -47,7 +59,13 @@ export function LockedPage({ variant }: { variant: 'denied' | 'closed' }) {
             <Link className={classes.accountAction} to="/account/orders">
               {t('auth.access.myOrders')}
             </Link>
-            <button type="button" className={classes.accountAction} onClick={checkAgain}>
+            <button
+              type="button"
+              className={classes.accountAction}
+              onClick={() => void checkAgain()}
+              disabled={checking}
+              aria-busy={checking}
+            >
               {t('auth.access.checkAgain')}
             </button>
             <button type="button" className={classes.accountAction} onClick={() => void signOut()} disabled={signingOut}>

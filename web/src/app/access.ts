@@ -86,8 +86,10 @@ export function accessDecision(ctx: AccessContext): AccessDecision {
     return { kind: 'allow' };
   }
 
-  if (ctx.registrationRefused) return { kind: 'locked', variant: 'closed' };
+  // A public shop stays browsable whatever a Mini App sign-in was told; the refusal
+  // only locks a shop the visitor could not browse anyway.
   if (ctx.access.storefront === 'public') return { kind: 'allow' };
+  if (ctx.registrationRefused) return { kind: 'locked', variant: 'closed' };
   // Nobody can sign in when accounts are off, so a redirect to /login would be a dead end.
   if (!ctx.accounts) return { kind: 'locked', variant: 'closed' };
   if (isAuthPath(ctx.pathname)) return { kind: 'authOnly' };

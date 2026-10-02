@@ -98,8 +98,13 @@ describe('accessDecision', () => {
   });
 
   it('shows the lockout screen when a Mini App sign-in was refused because registration is closed', () => {
-    expect(accessDecision({ ...base, access: mode('public', { registration: false }), registrationRefused: true }))
+    expect(accessDecision({ ...base, access: mode('login', { registration: false }), registrationRefused: true }))
       .toEqual({ kind: 'locked', variant: 'closed' });
+  });
+
+  it('keeps a public shop browsable after a refused Mini App registration', () => {
+    expect(accessDecision({ ...base, access: mode('public', { registration: false }), registrationRefused: true }))
+      .toEqual({ kind: 'allow' });
   });
 
   it('shows the lockout screen, not a dead redirect, when accounts are switched off in a non-public shop', () => {

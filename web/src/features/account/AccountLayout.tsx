@@ -1,6 +1,6 @@
 import { useEffect, useMemo, type ReactNode } from 'react';
-import { accessGate } from '@/app/access-gate.ts';
 import { NavLink, Outlet, useLocation } from 'react-router';
+import { accessGate } from '@/app/access-gate.ts';
 import { useSessionStore } from '@/stores/session.ts';
 import { formatDate } from '@/lib/format.ts';
 import { useProfile } from '@/features/account/queries.ts';

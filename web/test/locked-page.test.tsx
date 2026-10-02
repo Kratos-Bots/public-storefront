@@ -1,11 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MantineProvider } from '@mantine/core';
 
 const signOut = vi.hoisted(() => ({ signOutAndReload: vi.fn(async () => undefined) }));
 vi.mock('@/features/auth/sign-out.ts', () => signOut);
+const profile = vi.hoisted(() => ({ fetchProfile: vi.fn() }));
+vi.mock('@/api/profile.ts', () => profile);
 
 import { LockedPage } from '@/features/access/LockedPage.tsx';
 import { SETTINGS_KEY } from '@/app/settings.ts';
@@ -54,6 +56,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   signOut.signOutAndReload.mockClear();
+  profile.fetchProfile.mockReset();
   accessGate.getState().reset();
 });
 
@@ -93,13 +96,57 @@ describe('LockedPage', () => {
     expect(screen.queryByRole('navigation', { name: 'Contact the shop' })).toBeNull();
   });
 
-  it('"Check again" clears the refusal and refetches', () => {
-    accessGate.getState().setDenied(true);
-    const invalidate = vi.spyOn(client, 'invalidateQueries');
-    renderLocked('denied');
-    fireEvent.click(screen.getByRole('button', { name: 'Check again' }));
-    expect(accessGate.getState().denied).toBe(false);
-    expect(invalidate).toHaveBeenCalled();
+  describe('"Check again" asks the profile before letting anyone in', () => {
+    async function checkAgain() {
+      accessGate.getState().setDenied(true);
+      const invalidate = vi.spyOn(client, 'invalidateQueries');
+      renderLocked('denied');
+      fireEvent.click(screen.getByRole('button', { name: 'Check again' }));
+      return invalidate;
+    }
+
+    it('stays locked, and invalidates nothing, while the customer is still not allowed', async () => {
+      profile.fetchProfile.mockResolvedValue({ shopAccess: false });
+      const invalidate = await checkAgain();
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Check again' })).not.toBeDisabled());
+      expect(profile.fetchProfile).toHaveBeenCalledOnce();
+      expect(accessGate.getState().denied).toBe(true);
+      expect(invalidate).not.toHaveBeenCalled();
+    });
+
+    it('lets the customer in and refetches once they are allowed', async () => {
+      profile.fetchProfile.mockResolvedValue({ shopAccess: true });
+      const invalidate = await checkAgain();
+      await waitFor(() => expect(accessGate.getState().denied).toBe(false));
+      expect(invalidate).toHaveBeenCalled();
+    });
+
+    it('lets the customer in when an older backend does not say', async () => {
+      profile.fetchProfile.mockResolvedValue({});
+      const invalidate = await checkAgain();
+      await waitFor(() => expect(accessGate.getState().denied).toBe(false));
+      expect(invalidate).toHaveBeenCalled();
+    });
+
+    it('stays locked when the probe fails', async () => {
+      profile.fetchProfile.mockRejectedValue(new Error('boom'));
+      const invalidate = await checkAgain();
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Check again' })).not.toBeDisabled());
+      expect(accessGate.getState().denied).toBe(true);
+      expect(invalidate).not.toHaveBeenCalled();
+      expect(screen.queryByText(/boom/)).toBeNull();
+    });
+
+    it('is disabled and busy while the probe is pending', async () => {
+      let resolve!: (v: unknown) => void;
+      profile.fetchProfile.mockReturnValue(new Promise((r) => { resolve = r; }));
+      await checkAgain();
+      const button = screen.getByRole('button', { name: 'Check again' });
+      expect(button).toBeDisabled();
+      expect(button).toHaveAttribute('aria-busy', 'true');
+      await act(async () => { resolve({ shopAccess: false }); });
+      expect(button).not.toBeDisabled();
+    });
   });
 
   it('"Sign out" runs the shared sign-out and disables itself while it runs', () => {

@@ -94,6 +94,14 @@ describe('bootTelegramSession', () => {
     accessGate.getState().reset();
   });
 
+  it('clears a stale refusal when a retry starts', async () => {
+    accessGate.getState().setRegistrationRefused(true);
+    await bootTelegramSession(deps());
+    expect(accessGate.getState().registrationRefused).toBe(false);
+    await bootTelegramSession(deps({ login: vi.fn(async () => { throw new ApiError(500, 'boom'); }) }));
+    expect(accessGate.getState().registrationRefused).toBe(false);
+  });
+
   it('does not mark registration refused for other failures', async () => {
     accessGate.getState().reset();
     await bootTelegramSession(deps({ login: vi.fn(async () => { throw new ApiError(500, 'boom'); }) }));

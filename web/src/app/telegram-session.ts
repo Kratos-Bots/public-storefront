@@ -73,6 +73,8 @@ export async function bootTelegramSession(overrides: Partial<TelegramSessionDeps
   }
 
   auth.setStatus('pending');
+  // A retry starts clean: a refusal from an earlier launch must not outlive it.
+  accessGate.getState().setRegistrationRefused(false);
   const hadSession = useSessionStore.getState().token !== null;
   try {
     const result = await d.login(initData);
