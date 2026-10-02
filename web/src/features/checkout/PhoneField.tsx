@@ -33,6 +33,8 @@ export interface PhoneFieldProps {
   phone: string;
   optional: boolean;
   error?: string;
+  /** Sign-in and profile forms: the delivery hint is checkout copy and is wrong there. */
+  hideHint?: boolean;
   onPrefixChange: (iso: string) => void;
   onPhoneChange: (value: string) => void;
 }
@@ -47,6 +49,7 @@ export function PhoneField({
   phone,
   optional,
   error,
+  hideHint,
   onPrefixChange,
   onPhoneChange,
 }: PhoneFieldProps) {
@@ -73,7 +76,7 @@ export function PhoneField({
           onChange={onPhoneChange}
           error={error}
           optional={optional}
-          hint={error ? undefined : t('checkout.phone.hint')}
+          hint={error || hideHint ? undefined : t('checkout.phone.hint')}
         />
       </div>
     </div>

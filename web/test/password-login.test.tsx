@@ -82,6 +82,19 @@ describe('sign in', () => {
     expect(screen.getByLabelText('Phone')).toBeTruthy();
   });
 
+  it('the phone field carries no checkout delivery hint, in sign in, create account or forgot', () => {
+    configure({ reset: { resetByWhatsapp: true } });
+    mount();
+    fireEvent.click(button('Phone'));
+    expect(screen.getByLabelText('Phone')).toBeTruthy();
+    expect(screen.queryByText('Couriers may use this for delivery.')).toBeNull();
+    fireEvent.click(button('Create an account'));
+    expect(screen.queryByText('Couriers may use this for delivery.')).toBeNull();
+    fireEvent.click(button('I already have an account'));
+    fireEvent.click(button('Forgot your password?'));
+    expect(screen.queryByText('Couriers may use this for delivery.')).toBeNull();
+  });
+
   it('submits a phone typed with spaces as +CC… with the country hint', async () => {
     mount();
     fireEvent.click(button('Phone'));

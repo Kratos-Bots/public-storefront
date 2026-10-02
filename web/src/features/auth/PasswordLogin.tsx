@@ -60,6 +60,7 @@ export function PasswordLogin() {
       prefix={values.prefix}
       phone={values.phone}
       optional={false}
+      hideHint
       error={errors.phone}
       onPrefixChange={(v) => form.setValue('prefix', v)}
       onPhoneChange={(v) => form.setValue('phone', v)}

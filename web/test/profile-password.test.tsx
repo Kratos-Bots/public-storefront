@@ -134,6 +134,14 @@ describe('the section', () => {
     expect(await lastBody()).toEqual({ newPassword: 'a new password', email: 'tg@example.com' });
   });
 
+  it('the phone field carries no checkout delivery hint', () => {
+    section(profile({ identities: TG_ONLY }));
+    fireEvent.click(button('Set a password'));
+    fireEvent.click(button('Phone'));
+    expect(screen.getByLabelText('Phone')).toBeTruthy();
+    expect(screen.queryByText('Couriers may use this for delivery.')).toBeNull();
+  });
+
   it.each([
     ['a WhatsApp number', { identities: { telegram: false, whatsapp: true, email: false } }],
     ['an email', { identities: { telegram: false, whatsapp: false, email: true } }],
