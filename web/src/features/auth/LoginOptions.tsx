@@ -5,23 +5,15 @@ import { errorMessage } from '@/lib/errors.ts';
 import { useText } from '@/text/runtime.tsx';
 import { ContactLinks } from '@/components/ContactLinks.tsx';
 import { EmptyState } from '@/components/EmptyState.tsx';
-import { TelegramIcon, WhatsAppIcon } from '@/components/icons.tsx';
+import { MailIcon, TelegramIcon, WhatsAppIcon } from '@/components/icons.tsx';
 import { AuthCard, AuthNote } from '@/features/auth/AuthCard.tsx';
+import { PasswordLogin } from '@/features/auth/PasswordLogin.tsx';
 import { TelegramLogin } from '@/features/auth/TelegramLogin.tsx';
 import { WhatsappLogin } from '@/features/auth/WhatsappLogin.tsx';
 import { useLoginSuccess } from '@/features/auth/useLoginSuccess.ts';
 import type { TelegramAuthPayload } from '@/types/auth.ts';
 import type { StyleAttrs } from '@/builder/define.ts';
 import classes from '@/features/auth/LoginOptions.module.css';
-
-/**
- * The password slot the spec reserves. No backend endpoint exists for it, so the
- * key is read off `login` as an optional one: the day the backend starts sending
- * it, the card appears; until then this reads as `undefined` and nothing renders.
- */
-interface PasswordSlot {
-  password?: { available?: boolean };
-}
 
 /**
  * Every way into an account, in one column. Shared by the page and the modal so
@@ -61,7 +53,7 @@ export function LoginOptions({ rootAttrs }: { rootAttrs?: StyleAttrs } = {}) {
   // A bot with no username can't be embedded, so an "available" Telegram with
   // one missing is the same as no Telegram at all.
   const telegramBot = login.telegram.available ? login.telegram.botUsername : null;
-  const password = (login as PasswordSlot).password?.available === true;
+  const password = login.password?.available === true;
 
   if (!whatsapp && !telegramBot && !password) {
     return (
@@ -92,8 +84,8 @@ export function LoginOptions({ rootAttrs }: { rootAttrs?: StyleAttrs } = {}) {
       ) : null}
 
       {password ? (
-        <AuthCard name={t('auth.options.emailOrPhone')} dim>
-          <p className={classes.soon}>{t('auth.options.soon')}</p>
+        <AuthCard name={t('auth.options.emailOrPhone')} icon={<MailIcon size={15} />}>
+          <PasswordLogin />
         </AuthCard>
       ) : null}
     </div>
