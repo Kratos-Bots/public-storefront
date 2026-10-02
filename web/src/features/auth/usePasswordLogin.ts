@@ -110,8 +110,10 @@ export function usePasswordLogin(turnstile: RefObject<GuestTurnstileHandle | nul
     try {
       // A token is spent by the call that carries it: mint one per submit, never reuse the last.
       let token: string | undefined;
-      if (needsTurnstile && turnstile.current) {
+      if (needsTurnstile) {
         try {
+          // A widget that is not mounted yet is the same as a failed mint: no request without a token.
+          if (!turnstile.current) throw new Error(textSnapshot().t('checkout.errors.verifyFailed'));
           token = await turnstile.current.mint();
         } catch (err) {
           if (mounted.current) setErrors({ form: err instanceof Error ? err.message : textSnapshot().t('checkout.errors.verifyFailed') });
@@ -119,9 +121,13 @@ export function usePasswordLogin(turnstile: RefObject<GuestTurnstileHandle | nul
         }
       }
       if (mode === 'signin') {
-        await onLogin(await passwordLogin(id.identifier, values.password));
+        const result = await passwordLogin(id.identifier, values.password);
+        if (mounted.current) setValues((v) => ({ ...v, password: '' }));
+        await onLogin(result);
       } else if (mode === 'signup') {
-        await onLogin(await passwordSignup(id.identifier, values.password, token));
+        const result = await passwordSignup(id.identifier, values.password, token);
+        if (mounted.current) setValues((v) => ({ ...v, password: '' }));
+        await onLogin(result);
       } else if ('email' in id.identifier) {
         await passwordForgot(id.identifier.email, token);
         if (mounted.current) setSent(true);

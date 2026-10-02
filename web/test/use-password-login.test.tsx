@@ -281,3 +281,41 @@ describe('mode and kind', () => {
     expect(r.result.current.needsTurnstile).toBe(false);
   });
 });
+
+describe('fix round 1', () => {
+  it('clears the password (and only the password) after a successful sign-in', async () => {
+    const r = setup();
+    fill(r, { email: 'a@b.co', password: 'pw-pw-pw-pw' });
+    await submit(r);
+    expect(h.onLogin).toHaveBeenCalledTimes(1);
+    expect(r.result.current.values).toMatchObject({ email: 'a@b.co', password: '' });
+  });
+
+  it('clears the password after a successful sign-up', async () => {
+    const r = setup();
+    act(() => r.result.current.setMode('signup'));
+    fill(r, { email: 'a@b.co', password: 'pw-pw-pw-pw' });
+    await submit(r);
+    expect(h.onLogin).toHaveBeenCalledTimes(1);
+    expect(r.result.current.values).toMatchObject({ email: 'a@b.co', password: '' });
+  });
+
+  it('keeps the password after a failed sign-in', async () => {
+    h.login.mockRejectedValue(new ApiError(401, 'x'));
+    const r = setup();
+    fill(r, { email: 'a@b.co', password: 'pw-pw-pw-pw' });
+    await submit(r);
+    expect(r.result.current.values.password).toBe('pw-pw-pw-pw');
+  });
+
+  it('a required Turnstile with no mounted handle is a form error and sends nothing', async () => {
+    const empty = { current: null } as RefObject<GuestTurnstileHandle | null>;
+    const r = renderHook(() => usePasswordLogin(empty));
+    act(() => r.result.current.setMode('signup'));
+    act(() => { r.result.current.setValue('email', 'a@b.co'); r.result.current.setValue('password', 'pw-pw-pw-pw'); });
+    await act(async () => { await r.result.current.submit(); });
+    expect(r.result.current.errors.form).toBe("We couldn't verify your browser — please try again");
+    expect(h.signup).not.toHaveBeenCalled();
+    expect(r.result.current.pending).toBe(false);
+  });
+});
