@@ -37,12 +37,13 @@ describe('Field type="password"', () => {
     expect(input.type).toBe('password');
   });
 
-  it('the toggle is a type="button" tagged as a template button and never submits the form', () => {
+  it('the toggle is a plain type="button" with no template part hook and never submits the form', () => {
     const submit = vi.fn((e: { preventDefault: () => void }) => e.preventDefault());
     render(<form onSubmit={submit}><Harness /></form>);
     const toggle = screen.getByRole('button', { name: 'Show password' });
     expect(toggle.getAttribute('type')).toBe('button');
-    expect(toggle.getAttribute('data-sf-part')).toBe('button');
+    expect(toggle.hasAttribute('data-sf-part')).toBe(false);
+    expect(toggle.hasAttribute('data-variant')).toBe(false);
     fireEvent.click(toggle);
     expect(submit).not.toHaveBeenCalled();
   });

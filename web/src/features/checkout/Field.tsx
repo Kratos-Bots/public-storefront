@@ -43,7 +43,7 @@ export interface FieldProps extends CommonProps {
 function EyeIcon({ revealed }: { revealed: boolean }) {
   return (
     <svg className={classes.eye} viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="square" aria-hidden focusable="false">
-      <path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 22 12z" />
+      <path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z" />
       <circle cx="12" cy="12" r="2.75" />
       {revealed ? <path d="M4 20 20 4" /> : null}
     </svg>
@@ -101,8 +101,6 @@ export function Field({
           <button
             type="button"
             className={classes.toggle}
-            data-sf-part="button"
-            data-variant="default"
             aria-pressed={revealed}
             aria-label={t(revealed ? 'auth.password.hide' : 'auth.password.show')}
             onClick={() => setRevealed((r) => !r)}

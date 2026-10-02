@@ -87,9 +87,9 @@
   min-width: 0;
 }
 
-.input.hasToggle {
-  padding-right: 2.75rem;
-}
+/* The gutter for the toggle. The box variant's padding-inline outranks the plain
+   selector, hence the second one. */
+.input.hasToggle,
 :global(:root[data-sf-input="box"]) .input.hasToggle {
   padding-right: 2.75rem;
 }
