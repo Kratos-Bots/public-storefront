@@ -27,7 +27,7 @@ export type LayoutKind = 'storefront' | 'menu' | 'webapp';
 
 export const FIXED_ROUTE_KEYS = ['catalog', 'product', 'cart', 'checkout', 'login', 'account.orders', 'account.order',
   'account.loyalty', 'account.referrals', 'account.profile', 'order-status', 'payment-success', 'payment-cancel',
-  'order-placed', 'verify', 'tracking'] as const;
+  'order-placed', 'verify', 'tracking', 'reset-password', 'verify-email'] as const;
 export type FixedRouteKey = typeof FIXED_ROUTE_KEYS[number];
 export type RouteKey = FixedRouteKey | `page:${string}`; // slug /^[a-z0-9-]{1,60}$/
 export type DocKey = RouteKey | 'shell';
@@ -199,6 +199,8 @@ The 45 blocks of this release. "All" layouts = storefront, menu and webapp. Slot
 | `OrderPlaced` | all | yes (`order-placed`) | `content` *(slot; `PaymentHeadline`, `PaymentReference`, `PaymentActions` required)* |
 | `VerifyForm` | all | yes (`verify`) | `content` *(slot; `VerifyIntro`, `VerifyFields`, `VerifyResult` required)* |
 | `TrackingLookup` | all | yes (`tracking`) | `top`, `main`, `result` *(slots; `TrackingIntro`, `TrackingState`, `TrackingForm`, `TrackingHero`, `TrackingParcels` required)* |
+| `ResetPassword` | all | yes (`reset-password`) | `content` *(slot; `ResetPasswordHeading`, `ResetPasswordForm` required)* |
+| `VerifyEmail` | all | yes (`verify-email`) | `content` *(slot; `VerifyEmailHeading`, `VerifyEmailStatus` required)* |
 
 ### Content
 
@@ -451,7 +453,7 @@ radius shadow maxWidth`; **TEXT** = `fg textSize align`; **VIS** = `hide`.
 | `Upsells`, `TopBar`, `NoticeBanners`, `CutoffBar`, `Footer` | wrap | BOX + VIS | no single root the block owns |
 | `ContactStrip` | pass → the strip element | BOX + VIS | the strip is `position: sticky; bottom: 0`; a wrapper sized to it would stop it sticking |
 | `Header` | pass → `<header data-sf-part="header">` | `bg shadow` + VIS | a wrapper would end `position: sticky`; padding or a border would change `--sf-bar-h` |
-| The 19 route-bound blocks (`ProductGrid` … `TrackingLookup`) and `AccountNav` | wrap | BOX | never `hide`, never TEXT |
+| The 20 route-bound blocks (`ProductGrid` … `TrackingLookup`) and `AccountNav` | wrap | BOX | never `hide`, never TEXT |
 | `WholesaleTable` (route-bound) | wrap | `bg padTop marginTop marginBottom shadow` | its `WholesaleBar` is a sticky full-bleed band: side padding, bottom padding, borders, corners and a max width would offset or clip it |
 | `PageOutlet` | — | `false` | it is the page: hiding it hides every route, padding doubles `<main>`'s, a wrapper breaks `flex: 1` |
 | `MobileCartBar` | — | `false` | fixed-position; hiding it would remove the phone checkout path |
@@ -574,11 +576,13 @@ shells. The families, their containers and the documents they live on:
 | `order` | `OrderDetail` | `account.order` | `OrderHeading`, `OrderItems` |
 | `loyalty` | `Loyalty` | `account.loyalty` | `LoyaltyPoints`, `LoyaltyRewards` |
 | `referrals` | `Referrals` | `account.referrals` | `ReferralCode` |
-| `profile` | `Profile` | `account.profile` | `ProfileSignOut` |
+| `profile` | `Profile` | `account.profile` | `ProfileSignOut` (`ProfilePassword` is an optional part: it draws nothing while the shop has password sign-in off) |
 | `login` | `LoginOptions` | `login` | `LoginHeading`, `LoginMethods` |
 | `payment` | `PaymentSuccess`, `PaymentCancel`, `OrderPlaced` | `payment-success`, `payment-cancel`, `order-placed` | per container (see the block table) |
 | `tracking` | `TrackingLookup` | `tracking` | `TrackingIntro`, `TrackingState`, `TrackingForm`, `TrackingHero`, `TrackingParcels` |
 | `verify` | `VerifyForm` | `verify` | `VerifyIntro`, `VerifyFields`, `VerifyResult` |
+| `reset-password` | `ResetPassword` | `reset-password` | `ResetPasswordHeading`, `ResetPasswordForm` |
+| `verify-email` | `VerifyEmail` | `verify-email` | `VerifyEmailHeading`, `VerifyEmailStatus` |
 
 `MobileCartBar`, `PrimaryActionBar`, the notice banners, the footer template and `LoginModal` stay
 whole blocks or system mounts. The header is a single container: `topBar` and `sticky` are
@@ -622,15 +626,46 @@ editor's default: `OrdersList` (orders, none, more), `Loyalty` (rewards, no-poin
 (new, referred), `Profile` (website, webapp), `PaymentSuccess` (reference, missing),
 `PaymentCancel` (saved, unsaved, no-reference), `OrderPlaced` (chat, warning, no-chat, missing),
 `TrackingLookup` (form, found-2, found-1, nothing-shipped, not-found, error), `VerifyForm` (form,
-authentic, expired, not-verified, error). The editor's Page / Drawer switch previews the two cart
+authentic, expired, not-verified, error), `ResetPassword` (form, set, expired, checking,
+unreachable), `VerifyEmail` (verifying, done, invalid, otherAccount, error). The editor's Page / Drawer switch previews the two cart
 surfaces.
 
 Stage-4 files: `builder/blocks/_shared/<family>-container.ts` (specs), `builder/blocks/<Part>.tsx`
 (shells), and the views in `layouts/header-parts.tsx`, `features/cart/` (`CartPage`,
 `CartSummary`, `CartDrawerPanel`), `features/account/`, `features/auth/LoginPage.tsx`,
-`features/payment-redirect/payment-parts.tsx`, `features/tracking/tracking-parts.tsx` and
-`features/verify/VerifyPage.tsx`. A part block file imports nothing from `@/features/` or
+`features/payment-redirect/payment-parts.tsx`, `features/tracking/tracking-parts.tsx`,
+`features/verify/VerifyPage.tsx`, `features/auth/ResetPasswordPage.tsx` and
+`features/auth/VerifyEmailPage.tsx`. A part block file imports nothing from `@/features/` or
 `@/layouts/` (the stage-4 contract test checks it).
+
+### Password sign-in pages
+
+Two documents belong to email/phone and password sign-in: `reset-password` (`ResetPassword`:
+`ResetPasswordHeading`, `ResetPasswordForm`) and `verify-email` (`VerifyEmail`: `VerifyEmailHeading`,
+`VerifyEmailStatus`). `useResetPassword` and `useVerifyEmail` own the token check and the submit; the
+families (`family-reset-password.ts`, `family-verify-email.ts`) only carry their state to the parts.
+
+- Both pages are reached from an emailed or chat link with a `?token=`. Neither is among the
+  closed-gate exemptions (`app/closed-gate.ts`): a closed shop cannot reset a password or verify an
+  email. Neither is in the link picker (`LINKABLE_ROUTES`).
+- `/reset-password` needs the `accounts` feature but no session. `/verify-email` needs a session: a
+  signed-out visitor goes to `/login?returnTo=…` (the return path keeps the query, so the token
+  survives) and comes back to the link after signing in.
+- The editor previews both from fixtures and never calls the backend: `ResetPassword` (form, set,
+  expired, checking, unreachable) and `VerifyEmail` (verifying, done, invalid, otherAccount, error).
+- A hand-arranged Profile page keeps its arrangement, so an owner who wants the Password section
+  adds `ProfilePassword` with "Add block". It is an optional part of the `profile` container, and it
+  renders nothing while password sign-in is off (it still shows in the editor preview).
+- Where the sign-in card and its reset routes come from (backend behaviour a store operator should
+  know): password sign-in is behind a backend setting, off by default, and the storefront shows the
+  email-or-phone card only when `login.password.available` is true. Reset by email is offered only
+  when `login.password.resetByEmail` is true (there is no mailer yet, so today it is not offered).
+  Reset by WhatsApp opens WhatsApp with the fixed message `RESET PASSWORD` and the shop's bot replies
+  with a link. A wrong current password in Account → Profile is reported on the field and never
+  signs the shopper out.
+- Deploy order: backend first, then the admin SPA, then this storefront. A store must not switch the
+  setting on until its storefront has been redeployed with this release: the previous release shows a
+  "coming soon" card when it sees the flag.
 
 ### Checkout and order status parts
 
@@ -1010,7 +1045,8 @@ fall back to the route's default document.
 `OrdersList`; `account.order` → `OrderDetail`; `account.loyalty` → `Loyalty`; `account.referrals`
 → `Referrals`; `account.profile` → `Profile`; `order-status` → `OrderStatus`; `payment-success` →
 `PaymentSuccess`; `payment-cancel` → `PaymentCancel`; `order-placed` → `OrderPlaced`; `verify` →
-`VerifyForm`; `tracking` → `TrackingLookup`. (`catalog` and custom pages have none.)
+`VerifyForm`; `tracking` → `TrackingLookup`; `reset-password` → `ResetPassword`; `verify-email` →
+`VerifyEmail`. (`catalog` and custom pages have none.)
 
 **AT_LEAST_ONE**: `catalog` → any of `ProductGrid`, `ProductList`, `WholesaleTable`.
 
@@ -1051,6 +1087,8 @@ From `defaults/groups/*.ts`, resolved by `defaultDoc(docKey, layout)`:
   `Referrals`, `Profile`) in its `body` slot.
 - **order-status** — `OrderStatus`, root `chrome: 'none'`. **payment-success**, **payment-cancel**,
   **order-placed**, **verify**, **tracking** — their one block.
+- **reset-password**, **verify-email** — their one container with its default arrangement
+  (heading, then form / status).
 - A custom page has no default: an unknown or unpublished `/pages/<slug>` redirects to `/`.
 
 ## Core options per block
@@ -1112,6 +1150,10 @@ images are **never garbage-collected**: removing an `Image` block leaves the fil
   (see *Containers and parts*).
 - An already-edited v0.7.0 product or catalogue document shows once as changed in the admin's
   publish diff after its first editor load (see *Old documents*).
+- The phone country select in the password forms (and in checkout) is clipped to its fixed width:
+  the shared `PhoneField` CSS predates password sign-in and is unchanged.
+- A Telegram-only customer who forgets their password has no self-service reset:
+  staff generate a link for them.
 
 ## The editor (`/__builder`)
 
