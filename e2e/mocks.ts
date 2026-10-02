@@ -127,6 +127,9 @@ export interface InstallMocksOptions {
   text?: MockText;
   /** Serve the text-era body with `text: null` (nothing published yet) instead of a text object. */
   textNull?: boolean;
+  /** Shop access. `denied` answers ACCESS_DENIED on catalogue, cart and checkout for the seeded session. */
+  access?: { storefront?: 'public' | 'login' | 'restricted'; registration?: boolean; deniedMessage?: string;
+    deniedButtons?: { label: string; url: string }[]; denied?: boolean };
 }
 
 /** The published site text the pages route serves (spec §4.6), active locale only. */
@@ -180,6 +183,10 @@ export interface MockState {
   text: MockText | null;
   /** The pages route answers `{ version, data, text: null }`. */
   textNull: boolean;
+  /** The signed-in customer is refused: the personalised routes answer 403 ACCESS_DENIED and the profile says `shopAccess: false`. Flip it mid-test to grant access. */
+  denied: boolean;
+  /** How many times the anonymous catalogue (`catalog`, `catalog/products/:id`) was asked for. */
+  anonymousCatalogHits: number;
 }
 
 export interface MockHandle {
@@ -354,10 +361,17 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     pagesFail: options.pagesFail ?? null,
     text: options.text ?? null,
     textNull: options.textNull ?? false,
+    denied: options.access?.denied ?? false,
+    anonymousCatalogHits: 0,
   };
 
   options.tweakSettings?.(state.settings);
   options.tweakProfile?.(state.profile);
+  if (options.access) {
+    const { denied: _denied, ...asked } = options.access;
+    state.settings.access = { ...state.settings.access!, ...asked };
+    if (asked.registration === false) state.settings.features.guestCheckout = false;
+  }
   const passwordOptions: { resetByEmail?: boolean; resetByWhatsapp?: boolean; throttled?: boolean } | null =
     options.passwordLogin === true ? {} : options.passwordLogin || null;
   if (passwordOptions) {
@@ -447,6 +461,20 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
         },
       });
       return;
+    }
+
+    // Shop access: a refused customer is turned away from every personalised route that
+    // shops or buys; the anonymous catalogue is closed to everyone unless the shop is public.
+    if (state.denied && (/^storefront\/(catalog|cart)(\/|$)/.test(path) || (method === 'POST' && /^storefront\/checkout(\/quote)?$/.test(path)))) {
+      await fail(route, 403, 'ACCESS_DENIED');
+      return;
+    }
+    if (/^catalog(\/products\/\d+)?$/.test(path) && method === 'GET') {
+      state.anonymousCatalogHits += 1;
+      if (state.settings.access?.storefront !== 'public') {
+        await fail(route, 401, 'LOGIN_REQUIRED');
+        return;
+      }
     }
 
     // The personalised routes (`fetchCatalog`/`fetchProduct` in `web/src/api/catalog.ts`
@@ -597,7 +625,7 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     }
 
     if (path === 'storefront/profile' && method === 'GET') {
-      await envelope(route, state.profile);
+      await envelope(route, { ...state.profile, shopAccess: !state.denied });
       return;
     }
 
@@ -675,7 +703,8 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
       const known = asked.email === PASSWORD_ACCOUNT.email || phone === PASSWORD_ACCOUNT.phone;
       switch (passwordRoute) {
         case 'POST storefront/auth/password/signup':
-          if (known) await fail(route, 409, "That email or phone can't be used to create an account. Try signing in or resetting your password.");
+          if (state.settings.access?.registration === false) await fail(route, 403, 'REGISTRATION_CLOSED');
+          else if (known) await fail(route, 409, "That email or phone can't be used to create an account. Try signing in or resetting your password.");
           else await envelope(route, session, undefined, 201);
           return;
         case 'POST storefront/auth/password/login':

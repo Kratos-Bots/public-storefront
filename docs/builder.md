@@ -667,6 +667,27 @@ families (`family-reset-password.ts`, `family-verify-email.ts`) only carry their
   setting on until its storefront has been redeployed with this release: the previous release shows a
   "coming soon" card when it sees the flag.
 
+### Shop access
+
+A shop can be public (the default), require a sign-in, or admit only allowed customers. The settings
+carry `access` (`storefront`, `registration`, `deniedMessage`, `deniedButtons`); every reader goes
+through `accessOf()` in `app/access.ts`, so a backend that predates it means a public shop.
+`AccessBoundary` applies `accessDecision()` to every navigation:
+
+- Builder mode and the closed-gate exempt paths are never gated.
+- A signed-out visitor in a non-public shop is redirected once to `/login?returnTo=…` (path and query
+  kept) and the anonymous catalogue is never requested. `/login` and `/reset-password` render in a
+  bare frame with no header, footer or cart. With accounts off, or after a Mini App sign-in refused
+  for closed registration, there is nothing to sign in to, so the lockout screen is shown instead.
+- A signed-in customer the backend refuses (`ACCESS_DENIED`, or `shopAccess: false` on the profile) in
+  a restricted shop sees the lockout screen everywhere except `/account/*`, so their orders stay
+  reachable. "Check again" asks for the profile and re-opens the shop only when `shopAccess` is not
+  false.
+- The sign-in notice shows the owner's message and buttons only when the shop is restricted or
+  registration is closed; in plain login-required mode it says only "Sign in to view the shop."
+- Button links are rendered only when they start with `https://`. Wording is Site text under
+  `auth.access.*` and `errors.*` (not fixed; the lockout message and button labels come from settings).
+
 ### Checkout and order status parts
 
 Stage 5 turns the checkout page and the order-status page into containers. **`CheckoutFlow`**
