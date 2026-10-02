@@ -26,7 +26,7 @@ export function CartPage({ foot, slots }: CartPageProps) {
   const host = useContext(CartHostContext);
   const lines = useCartStore((s) => s.lines);
   const count = useCartStore(selectCount);
-  const { setQuantity, remove, issues, isSyncing, refresh } = useServerCart();
+  const { setQuantity, remove, issues, isSyncing, refresh, server } = useServerCart();
 
   // The page pulls the customer's cart when it mounts; the drawer does so when it opens.
   useEffect(() => {
@@ -40,12 +40,13 @@ export function CartPage({ foot, slots }: CartPageProps) {
   const s = slots ?? legacy!;
 
   const issueByProduct = useMemo(() => new Map(issues.map((i) => [i.productId, i])), [issues]);
+  const serverByProduct = useMemo(() => new Map((server?.items ?? []).map((i) => [i.productId, i])), [server]);
   const blocked = issues.some((i) => i.inactive || i.belowMin || i.aboveMax);
   const surface = host ? 'drawer' : 'page';
   const dismiss = host?.dismiss;
   const data = useMemo<CartData>(
-    () => ({ surface, lines, count, isSyncing, issueByProduct, blocked, setQuantity, remove, ...(dismiss ? { dismiss } : {}) }),
-    [surface, lines, count, isSyncing, issueByProduct, blocked, setQuantity, remove, dismiss],
+    () => ({ surface, lines, count, isSyncing, issueByProduct, serverByProduct, blocked, setQuantity, remove, ...(dismiss ? { dismiss } : {}) }),
+    [surface, lines, count, isSyncing, issueByProduct, serverByProduct, blocked, setQuantity, remove, dismiss],
   );
   const value = useMemo(() => ({ data, views: host ? CART_DRAWER_VIEWS : CART_PAGE_VIEWS }), [data, host]);
 

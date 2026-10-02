@@ -9,6 +9,8 @@ export interface Product {
   minOrderQuantity: number | null; maxOrderQuantity: number | null;
   /** Up to 160 characters shown under the name in lists and cards. Absent on an older backend — treat like null. */
   shortDescription: string | null;
+  /** Live promotions whose products include this one. Absent on a backend that predates promotions — treat like []. */
+  promotions?: import('./cart.ts').PromotionTag[];
 }
 export interface Category { id: number; name: string; slug: string | null; parentId: number | null; sortOrder: number; emoji: string | null }
 export interface Catalog { products: Product[]; categories: Category[] }

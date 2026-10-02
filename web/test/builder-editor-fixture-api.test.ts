@@ -103,7 +103,7 @@ describe('fixture interceptor', () => {
 
   it('quotes from fixtures without a toast', async () => {
     const { result, notify } = await call(IN_ORDERS, 'storefront/checkout/quote', 'POST');
-    expect((await body(result)).data).toMatchObject({ grandTotal: 90.45 });
+    expect((await body(result)).data).toMatchObject({ grandTotal: 77.95 });
     expect(notify).not.toHaveBeenCalled();
   });
 

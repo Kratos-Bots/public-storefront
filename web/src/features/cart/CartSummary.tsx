@@ -11,6 +11,7 @@ import { CartHostContext } from '@/features/cart/cart-host.ts';
 import { CART_SUMMARY_VIEWS } from '@/features/cart/cart-summary-parts.tsx';
 import { cartViews } from '@/builder/blocks/_shared/cart-views.ts';
 import { useServerCart } from '@/features/cart/useServerCart.ts';
+import { basketPromotions } from '@/lib/promotions.ts';
 import classes from '@/features/cart/CartSummary.module.css';
 
 export interface CartSummaryProps {
@@ -32,6 +33,8 @@ export interface CartSummaryProps {
  *
  * Nothing here is a total: shipping and discounts are the quote's business, and
  * saying so plainly is cheaper than a shopper discovering it at the payment step.
+ * Promotions are the one exception the cart itself can price, and they are labelled for what they
+ * are — the basket after promotions, still short of shipping and any code.
  *
  * Inside a CartContents it takes `blocked` and `dismiss` from the cart family and draws nothing for
  * an empty cart; on its own (v0.7.0 allowed that) it reads them from the cart store and the host.
@@ -39,7 +42,7 @@ export interface CartSummaryProps {
 export function CartSummary({ blocked: blockedProp, onNavigate, slots, styleAttrs }: CartSummaryProps) {
   const cart = useCartFamilyOptional();
   const host = useContext(CartHostContext);
-  const { issues } = useServerCart();
+  const { issues, server } = useServerCart();
   const { currency, features } = useSettings();
   const loggedIn = useSessionStore(selectIsLoggedIn);
   const count = useCartStore(selectCount);
@@ -54,10 +57,11 @@ export function CartSummary({ blocked: blockedProp, onNavigate, slots, styleAttr
   const blocked = blockedProp ?? cart?.blocked ?? issues.some((i) => i.inactive || i.belowMin || i.aboveMax);
   const navigate = onNavigate ?? cart?.dismiss ?? host?.dismiss;
   const checkoutTo = checkoutTarget(loggedIn, features.guestCheckout);
+  const promotions = useMemo(() => basketPromotions(server), [server]);
   const value = useMemo(() => {
-    const data: CartSummaryData = { blocked, count, subtotal, currency, mixedPreorder, primaryElsewhere, checkoutTo, ...(navigate ? { onNavigate: navigate } : {}) };
+    const data: CartSummaryData = { blocked, count, subtotal, currency, mixedPreorder, primaryElsewhere, checkoutTo, promotions, ...(navigate ? { onNavigate: navigate } : {}) };
     return { data, views: CART_SUMMARY_VIEWS };
-  }, [blocked, count, subtotal, currency, mixedPreorder, primaryElsewhere, checkoutTo, navigate]);
+  }, [blocked, count, subtotal, currency, mixedPreorder, primaryElsewhere, checkoutTo, promotions, navigate]);
 
   // Today neither the page foot nor the drawer footer exists for an empty cart.
   if (cart && cart.lines.length === 0) return null;

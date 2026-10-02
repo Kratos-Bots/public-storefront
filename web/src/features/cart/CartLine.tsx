@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useSettings } from '@/app/settings.ts';
 import { formatMoney } from '@/lib/format.ts';
+import { lineFigures } from '@/lib/promotions.ts';
+import { PromoBadge } from '@/features/catalog/PromoBadge.tsx';
 import { ProductImage } from '@/features/catalog/ProductImage.tsx';
 import { MinusIcon, PlusIcon } from '@/components/icons.tsx';
 import { rowAnim } from '@/lib/motion.ts';
@@ -14,6 +16,8 @@ export interface CartLineProps {
   /** The server's word on this line — flags a repriced, sold-out, withdrawn, or
    *  quantity-limit-violating product. */
   issue?: ServerCartLine;
+  /** The server's line while it still matches this one: where the promotion discount and label come from. */
+  server?: ServerCartLine;
   onQuantity: (productId: number, quantity: number) => void;
   onRemove: (productId: number) => void;
   /** Position in the docket, for the entrance stagger. */
@@ -29,7 +33,7 @@ export interface CartLineProps {
  * The field never takes the line below one. Emptying it is how you retype a
  * quantity, not how you delete a line — Remove is the only thing that does that.
  */
-export function CartLine({ line, issue, onQuantity, onRemove, index = 0 }: CartLineProps) {
+export function CartLine({ line, issue, server, onQuantity, onRemove, index = 0 }: CartLineProps) {
   const { t } = useText();
   const { currency } = useSettings();
   const [draft, setDraft] = useState(String(line.quantity));
@@ -38,6 +42,9 @@ export function CartLine({ line, issue, onQuantity, onRemove, index = 0 }: CartL
   const withdrawn = issue?.inactive ?? false;
   const discounted = line.unitPrice < line.basePrice;
   const total = line.unitPrice * line.quantity;
+  // A promotion's discount is the server's figure, struck against the line total it was taken from —
+  // never re-derived here. Until the reconcile lands `server` is absent and the line reads as before.
+  const promo = lineFigures(total, server?.promotionDiscount);
 
   // The server's resolved limits ride along on `issue` whenever the line has
   // any flag at all (not only a quantity one), so a repriced or out-of-stock
@@ -81,7 +88,16 @@ export function CartLine({ line, issue, onQuantity, onRemove, index = 0 }: CartL
 
       <span className={classes.name}>{line.displayName}</span>
 
-      <span className={classes.total}>{formatMoney(total, currency)}</span>
+      {promo.discounted ? (
+        <span className={`${classes.total} ${classes.totalPromo}`}>
+          <s className={classes.totalWas}>{formatMoney(total, currency)}</s>
+          <span className={promo.free ? classes.free : undefined}>
+            {promo.free ? t('common.promo.free') : formatMoney(promo.net, currency)}
+          </span>
+        </span>
+      ) : (
+        <span className={classes.total}>{formatMoney(total, currency)}</span>
+      )}
 
       <span className={classes.meta}>
         {discounted ? (
@@ -89,6 +105,7 @@ export function CartLine({ line, issue, onQuantity, onRemove, index = 0 }: CartL
         ) : null}
         <span className={classes.unit}>{formatMoney(line.unitPrice, currency)}</span>
         <span className={classes.each}>{t('cart.line.perUnit')}</span>
+        {promo.discounted ? <PromoBadge promotions={server?.promotions} /> : null}
         {line.isPreorder ? <span className={classes.preorder}>{t('common.product.preorder')}</span> : null}
         {issue?.priceChanged ? <span className={classes.chip}>{t('cart.line.priceUpdated')}</span> : null}
       </span>

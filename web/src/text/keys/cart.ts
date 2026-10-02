@@ -4,6 +4,7 @@ import { defineTextArea } from '@/text/define.ts';
 export default defineTextArea('cart', {
   'summary.items': { en: { one: '{count} item', other: '{count} items' }, max: 40 },
   'summary.mixedNotice': { en: 'This order mixes in-stock and pre-order items — pre-orders dispatch when they land.', max: 200 },
+  'summary.afterPromotions': { en: 'Basket after promotions', max: 60 },
   'summary.terms': { en: 'Shipping and discounts are calculated at checkout.', max: 200 },
   'summary.held': { en: 'Resolve the flagged items to continue.', max: 120 },
   'summary.checkout': { en: 'Checkout', max: 40 },

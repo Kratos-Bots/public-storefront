@@ -28,7 +28,7 @@ function HeadingPageView({ styleAttrs }: PartViewProps) {
 
 function linesView(classes: Readonly<Record<string, string>>): ComponentType<PartViewProps> {
   return function LinesView({ styleAttrs }: PartViewProps) {
-    const { lines, issueByProduct, setQuantity, remove } = CartFamily.useData();
+    const { lines, issueByProduct, serverByProduct, setQuantity, remove } = CartFamily.useData();
     if (lines.length === 0) return null;
     return (
       <ul className={classes.lines} {...styleAttrs}>
@@ -37,6 +37,7 @@ function linesView(classes: Readonly<Record<string, string>>): ComponentType<Par
             key={line.productId}
             line={line}
             issue={issueByProduct.get(line.productId)}
+            server={serverByProduct.get(line.productId)}
             onQuantity={setQuantity}
             onRemove={remove}
             index={i}

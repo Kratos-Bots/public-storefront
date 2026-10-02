@@ -384,3 +384,59 @@ describe('useServerCart', () => {
     expect(useCartStore.getState().lines).toEqual([expect.objectContaining({ productId: 7, quantity: 4 })]);
   });
 });
+
+describe('useServerCart: the server cart behind the promotion figures', () => {
+  const promoCart = (qty7 = 1): ServerCart => ({
+    ...serverCart([
+      serverLine({ quantity: qty7, lineTotal: 29 * qty7, promotionDiscount: qty7 >= 3 ? 29 : 0, promotions: qty7 >= 3 ? [{ id: 1, label: '3 for 2' }] : [] }),
+      serverLine({ productId: 9, name: 'TB-500 5mg', unitPrice: 34, lineTotal: 34 }),
+    ]),
+    promotionDiscount: qty7 >= 3 ? 29 : 0,
+    total: 29 * qty7 + 34 - (qty7 >= 3 ? 29 : 0),
+  });
+
+  it('is null before the first reconcile', () => {
+    const { result } = renderHook(() => useServerCart());
+    expect(result.current.server).toBeNull();
+  });
+
+  it('carries the new fields through a reconcile, and the local lines stay gross', async () => {
+    fetchMock.mockResolvedValue(promoCart(3));
+    const { result } = renderHook(() => useServerCart());
+    await act(async () => {
+      await result.current.refresh();
+    });
+    expect(result.current.server?.promotionDiscount).toBe(29);
+    expect(result.current.server?.items[0]?.promotions).toEqual([{ id: 1, label: '3 for 2' }]);
+    // The store keeps the undiscounted unit price: the discount is the server's figure, never baked in.
+    expect(useCartStore.getState().lines[0]).toMatchObject({ quantity: 3, unitPrice: 29 });
+  });
+
+  it('is withdrawn the moment a line is edited, and returns with the reconcile', async () => {
+    fetchMock.mockResolvedValue(promoCart(3));
+    const { result } = renderHook(() => useServerCart());
+    await act(async () => {
+      await result.current.refresh();
+    });
+    expect(result.current.server).not.toBeNull();
+
+    putMock.mockResolvedValue(promoCart(4));
+    act(() => {
+      result.current.setQuantity(7, 4);
+    });
+    expect(result.current.server).toBeNull();
+
+    await settle();
+    expect(result.current.server?.items[0]?.quantity).toBe(4);
+  });
+
+  it('is never offered to a guest cart', async () => {
+    fetchMock.mockResolvedValue(promoCart(3));
+    const { result } = renderHook(() => useServerCart());
+    await act(async () => {
+      await result.current.refresh();
+    });
+    act(() => useCartStore.getState().setMode('local'));
+    expect(result.current.server).toBeNull();
+  });
+});

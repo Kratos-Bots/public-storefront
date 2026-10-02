@@ -184,6 +184,24 @@
   color: var(--sf-success);
 }
 
+/* The line a promotion discounted: what it came to, struck, above what is charged. */
+.itemWas {
+  display: block;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--sf-faint);
+}
+
+.itemFree {
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--sf-success);
+}
+
+.itemFigure:has(.itemWas) {
+  text-align: right;
+}
+
 .tagWarn {
   color: var(--sf-warn);
 }
@@ -206,6 +224,12 @@
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--sf-muted);
+}
+
+/* A promotion's label is the shop's own words and can be long: it wraps under the figure, never past it. */
+.rowLabelWrap {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .rowNote {
@@ -280,6 +304,20 @@
   text-transform: uppercase;
   line-height: 1.6;
   color: var(--sf-muted);
+}
+
+/* A nudge toward a promotion is an invitation, so it takes the accent. Body type, sentence case:
+   it is a sentence to read, not a status to scan. */
+.nudge {
+  margin: 0.65rem 0 0;
+  padding: 0.5rem 0.7rem;
+  border-left: 2px solid var(--sf-primary);
+  border-radius: 0 var(--sf-card-radius) var(--sf-card-radius) 0;
+  background: color-mix(in srgb, var(--sf-primary) 8%, transparent);
+  font-family: var(--sf-font-body);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--sf-text);
 }
 
 .note[data-tone='success'] {

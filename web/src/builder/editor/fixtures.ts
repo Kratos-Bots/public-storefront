@@ -29,6 +29,7 @@ export const FIXTURE_PRODUCT: Product = {
   excludedFromFreeShipping: false, imageProductId: null,
   provenance: 'Grown and milled by Northbound Supply partners; packed at shop.example.',
   minOrderQuantity: null, maxOrderQuantity: null,
+  promotions: [{ id: 900401, label: '3 for 2 on trail oats' }],
 };
 
 export const FIXTURE_CART_LINES: LocalLine[] = [
@@ -42,12 +43,22 @@ export const FIXTURE_CART_LINES: LocalLine[] = [
   },
 ];
 
+/** A sample automatic promotion for the editor's cart and checkout previews: one tin free in three. */
+const FIXTURE_PROMOTION = { id: 900402, label: '3 for 2 on trail tins' };
+const FIXTURE_NUDGE = { promotionId: 900403, label: '5% off orders over £100', kind: 'spend', missing: 27 } as const;
+
 export const FIXTURE_QUOTE: Quote = {
   items: [
     { productId: 900101, name: 'Northbound Field Kit', sku: 'NB-FK-01', quantity: 1, unitPrice: 48, lineTotal: 48, tierApplied: false, isPreorder: false },
-    { productId: 900102, name: 'Northbound Trail Tin', sku: 'NB-TT-02', quantity: 3, unitPrice: 12.5, lineTotal: 37.5, tierApplied: true, isPreorder: false },
+    {
+      productId: 900102, name: 'Northbound Trail Tin', sku: 'NB-TT-02', quantity: 3, unitPrice: 12.5, lineTotal: 37.5, tierApplied: true, isPreorder: false,
+      promotionDiscount: 12.5, promotions: [FIXTURE_PROMOTION],
+    },
   ],
   subtotal: 85.5,
+  promotionDiscount: 12.5,
+  promotions: [{ ...FIXTURE_PROMOTION, amount: 12.5, freeShipping: false }],
+  nudge: FIXTURE_NUDGE,
   coupon: null,
   shippingOptions: [
     { id: 1, name: 'Tracked 48', courier: 'Royal Mail', price: 4.95, freeShipping: false },
@@ -56,11 +67,11 @@ export const FIXTURE_QUOTE: Quote = {
   selectedShippingOptionId: 1,
   shippingAmount: 4.95,
   storeCredit: { balance: 0, applied: 0, remaining: 0 },
-  grandTotal: 90.45,
-  amountDue: 90.45,
+  grandTotal: 77.95,
+  amountDue: 77.95,
   paymentMethods: [
-    { slot: 'card', method: 'card', displayName: 'Card payment', type: 'gateway', details: null, feeType: null, feeValue: null, feeRateText: '', feeLabel: '', fee: 0, chargeTotal: 90.45 },
-    { slot: 'manual', method: 'bank_transfer', displayName: 'Bank transfer', type: 'offline', details: null, feeType: null, feeValue: null, feeRateText: '', feeLabel: '', fee: 0, chargeTotal: 90.45 },
+    { slot: 'card', method: 'card', displayName: 'Card payment', type: 'gateway', details: null, feeType: null, feeValue: null, feeRateText: '', feeLabel: '', fee: 0, chargeTotal: 77.95 },
+    { slot: 'manual', method: 'bank_transfer', displayName: 'Bank transfer', type: 'offline', details: null, feeType: null, feeValue: null, feeRateText: '', feeLabel: '', fee: 0, chargeTotal: 77.95 },
   ],
   contactModes: { phoneMode: 'optional', emailMode: 'required', defaultPhoneCountry: null },
 };
@@ -191,11 +202,19 @@ export function fixtureServerCart(p: PreviewAs): ServerCart {
     lineTotal: Math.round(l.unitPrice * l.quantity * 100) / 100, imageUrl: null, isPreorder: l.isPreorder,
     outOfStock: false, priceChanged: false, inactive: false, belowMin: false, aboveMax: false,
     minOrderQuantity: null, maxOrderQuantity: null,
+    // The trail tins carry the sample promotion: one of the three is free.
+    ...(l.productId === 900102 ? { promotionDiscount: 12.5, promotions: [FIXTURE_PROMOTION] } : { promotionDiscount: 0, promotions: [] }),
   }));
+  const subtotal = Math.round(items.reduce((sum, i) => sum + i.lineTotal, 0) * 100) / 100;
+  const promotionDiscount = Math.round(items.reduce((sum, i) => sum + (i.promotionDiscount ?? 0), 0) * 100) / 100;
   return {
     items,
-    subtotal: Math.round(items.reduce((sum, i) => sum + i.lineTotal, 0) * 100) / 100,
+    subtotal,
     itemCount: items.reduce((sum, i) => sum + i.quantity, 0),
+    promotionDiscount,
+    promotions: promotionDiscount > 0 ? [{ ...FIXTURE_PROMOTION, amount: promotionDiscount }] : [],
+    total: Math.round((subtotal - promotionDiscount) * 100) / 100,
+    nudge: items.length > 0 ? FIXTURE_NUDGE : null,
   };
 }
 

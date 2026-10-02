@@ -2,6 +2,7 @@
 export default {
   'summary.items': 'Item count in the cart drawer, cart page, cart summary, phone cart bar and checkout summary',
   'summary.mixedNotice': 'Notice above the cart total when the cart holds both in-stock and pre-order products',
+  'summary.afterPromotions': 'Row under the cart subtotal showing the basket after promotions, when any apply',
   'summary.terms': 'Small print under the cart subtotal',
   'summary.held': 'Shown under the disabled Checkout button while a line is unavailable or breaks an order limit',
   'summary.checkout': 'Checkout button in the cart summary and the phone cart bar',

@@ -3,6 +3,7 @@ import { useCartStore } from '@/stores/cart.ts';
 import { addToCart, setCartQuantity } from '@/features/cart/useServerCart.ts';
 import { deriveStockStatus, formatMoney } from '@/lib/format.ts';
 import { StockChip } from '@/features/catalog/StockChip.tsx';
+import { PromoBadge } from '@/features/catalog/PromoBadge.tsx';
 import { MinusIcon, PlusIcon } from '@/components/icons.tsx';
 import { rowAnim } from '@/lib/motion.ts';
 import type { Product } from '@/types/catalog.ts';
@@ -75,9 +76,11 @@ function RowMeta({ styleAttrs }: PartViewProps) {
   const status = outInPrice ? 'in' : deriveStockStatus(product.inStock, product.lowStockAlert);
   const best = bestTier(product);
   // With product codes hidden an ordinary line can have nothing to say under its name.
-  const hasMeta = showSku || product.minOrderQuantity != null || !!best || product.isPreorder || status !== 'in';
+  const promoted = (product.promotions?.length ?? 0) > 0;
+  const hasMeta = showSku || promoted || product.minOrderQuantity != null || !!best || product.isPreorder || status !== 'in';
   return hasMeta ? (
     <p className={classes.meta} {...styleAttrs}>
+      <PromoBadge promotions={product.promotions} />
       {showSku ? <span className={classes.sku}>{product.sku}</span> : null}
       {product.minOrderQuantity != null ? (
         <span className={classes.limit}>{t('product.limit.min', { min: product.minOrderQuantity })}</span>

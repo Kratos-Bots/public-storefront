@@ -8,7 +8,7 @@ export const block = defineBlock<{ id: string }>({
   name: 'ProductStock', label: 'Stock and limits', category: 'part', part: { family: 'product' },
   layouts: 'all', routeBound: false, slots: [],
   style: styleSupport('root', [...BOX, ...TEXT, ...VIS]),
-  text: ['product.stock.*', 'product.detail.preorderShips', 'product.sheet.ships', 'common.product.preorder', 'product.limit.min'],
+  text: ['product.stock.*', 'product.detail.preorderShips', 'product.sheet.ships', 'common.product.preorder', 'common.promo.more', 'product.limit.min'],
   schema: z.object({}), defaultProps: {},
   render: (p) => <ProductFamily.PartHost name="ProductStock" props={p as Record<string, unknown>} styleAttrs={p.puck.style} />,
 });

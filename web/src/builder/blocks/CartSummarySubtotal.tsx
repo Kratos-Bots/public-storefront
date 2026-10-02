@@ -8,7 +8,7 @@ export const block = defineBlock<{ id: string }>({
   name: 'CartSummarySubtotal', label: 'Subtotal', category: 'part', part: { family: 'cart-summary' },
   layouts: 'all', routeBound: false, slots: [],
   style: styleSupport('root', [...BOX, ...TEXT]),
-  text: ['common.totals.subtotal', 'cart.summary.items'],
+  text: ['common.totals.subtotal', 'cart.summary.items', 'cart.summary.afterPromotions', 'common.promo.*'],
   schema: z.object({}), defaultProps: {},
   render: (p) => <CartSummaryFamily.PartHost name="CartSummarySubtotal" props={p as Record<string, unknown>} styleAttrs={p.puck.style} />,
 });

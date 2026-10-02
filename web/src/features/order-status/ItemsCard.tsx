@@ -1,13 +1,16 @@
 import type { StyleAttrs } from '@/builder/define.ts';
 import { formatMoney } from '@/lib/format.ts';
 import { FADE } from '@/lib/motion.ts';
+import { lineFigures, otherDiscount } from '@/lib/promotions.ts';
 import { useText } from '@/text/runtime.tsx';
-import type { OrderItem, OrderTotals } from '@/types/public-order.ts';
+import type { OrderItem, OrderTotals, PublicOrderPromotion } from '@/types/public-order.ts';
 import classes from '@/features/order-status/OrderStatus.module.css';
 
 export interface ItemsCardProps {
   items: OrderItem[];
   totals: OrderTotals;
+  /** The promotion breakdown (`publicOrderPromotions`); `discount` is the part of `totals.discountAmount` they account for. */
+  promotions?: { discount: number; promotions: PublicOrderPromotion[] };
   /** The order's own currency, which can differ from the shop's current one. */
   currency: string;
   /** The OrderStatusItems part's style attributes (none outside a styled part). */
@@ -15,7 +18,7 @@ export interface ItemsCardProps {
 }
 
 /** What was ordered, and what it came to. */
-export function ItemsCard({ items, totals, currency, rootAttrs }: ItemsCardProps) {
+export function ItemsCard({ items, totals, promotions, currency, rootAttrs }: ItemsCardProps) {
   const { t } = useText();
   const money = (amount: number) => formatMoney(amount, currency);
   const fee = totals.paymentFeeAmount ?? 0;
@@ -25,16 +28,28 @@ export function ItemsCard({ items, totals, currency, rootAttrs }: ItemsCardProps
       <p className={classes.cardEyebrow}>{t('order.items.title')}</p>
 
       <ul className={classes.items}>
-        {items.map((item, i) => (
+        {items.map((item, i) => {
+          const promo = lineFigures(item.totalPrice, item.promotionDiscount);
+          return (
           <li key={`${item.productName}-${i}`} className={classes.item}>
             <span className={classes.itemName}>{item.productName}</span>
             <span className={classes.itemQty}>
               {item.quantity} × {money(item.unitPrice)}
               {item.isPreorder ? <span className={classes.itemFlag}>{t('common.product.preorder')}</span> : null}
             </span>
-            <span className={classes.itemTotal}>{money(item.totalPrice)}</span>
+            <span className={classes.itemTotal}>
+              {promo.discounted ? (
+                <>
+                  <s className={classes.itemWas}>{money(item.totalPrice)}</s>
+                  {promo.free ? <span className={classes.rowGood}>{t('common.promo.free')}</span> : money(promo.net)}
+                </>
+              ) : (
+                money(item.totalPrice)
+              )}
+            </span>
           </li>
-        ))}
+          );
+        })}
       </ul>
 
       <dl className={classes.totals}>
@@ -44,8 +59,12 @@ export function ItemsCard({ items, totals, currency, rootAttrs }: ItemsCardProps
           figure={totals.shippingAmount === 0 ? t('order.items.free') : money(totals.shippingAmount)}
           good={totals.shippingAmount === 0}
         />
-        {totals.discountAmount > 0 ? (
-          <TotalRow label={t('common.totals.discount')} figure={`− ${money(totals.discountAmount)}`} good />
+        {/* `discountAmount` includes the promotions: each has its own row, and the discount row is the rest. */}
+        {(promotions?.promotions ?? []).map((p, i) => (
+          <TotalRow key={`${p.label}-${i}`} label={p.label} figure={`− ${money(p.amount)}`} good />
+        ))}
+        {otherDiscount(totals.discountAmount, promotions?.discount) > 0 ? (
+          <TotalRow label={t('common.totals.discount')} figure={`− ${money(otherDiscount(totals.discountAmount, promotions?.discount))}`} good />
         ) : null}
         {/* Deliberately NOT `totals.paymentFeeLabel`: the backend builds that from
             the gateway's display name ('OxaPay discount'), and this page never
