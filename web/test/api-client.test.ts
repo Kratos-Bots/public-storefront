@@ -2,13 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { api, unwrap, ApiError } from '@/api/client.ts';
 import { useSessionStore } from '@/stores/session.ts';
 import { closedGate } from '@/app/closed-gate.ts';
+import { accessGate } from '@/app/access-gate.ts';
 
 function mockFetch(status: number, body: unknown) {
   return vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } }));
 }
 
 describe('api client', () => {
-  beforeEach(() => { useSessionStore.getState().clear(); closedGate.getState().setClosed(false); });
+  beforeEach(() => { useSessionStore.getState().clear(); closedGate.getState().setClosed(false); accessGate.getState().reset(); });
   afterEach(() => vi.restoreAllMocks());
 
   it('unwraps the envelope', async () => {
@@ -37,6 +38,20 @@ describe('api client', () => {
     expect(err).toBeInstanceOf(ApiError);
     expect((err as ApiError).isStorefrontDisabled).toBe(true);
     expect(closedGate.getState().closed).toBe(true);
+  });
+
+  it('records an ACCESS_DENIED answer on the access gate and keeps the session', async () => {
+    useSessionStore.getState().setSession('tok', { id: 1, nickname: 'A' });
+    mockFetch(403, { success: false, data: null, error: 'ACCESS_DENIED' });
+    await expect(unwrap(api.get('storefront/catalog'))).rejects.toMatchObject({ isAccessDenied: true });
+    expect(accessGate.getState().denied).toBe(true);
+    expect(useSessionStore.getState().token).toBe('tok');
+  });
+
+  it('does not touch the access gate for any other 403', async () => {
+    mockFetch(403, { success: false, data: null, error: 'ACCOUNT_BANNED' });
+    await expect(unwrap(api.get('storefront/profile'))).rejects.toBeInstanceOf(ApiError);
+    expect(accessGate.getState().denied).toBe(false);
   });
 
   it('surfaces the backend message on 422', async () => {

@@ -80,4 +80,12 @@ export default {
   'verifyEmail.status.otherBody': 'Line under the different-account heading',
   'verifyEmail.status.errorTitle': 'Heading when the confirmation could not be completed (connection or server problem)',
   'verifyEmail.status.toProfile': 'Link from the confirm-your-email page to the shopper’s profile',
+  'access.eyebrow': 'Small heading on the screen shown to a signed-in customer who is not allowed into a private shop',
+  'access.defaultMessage': 'Message on that screen when the shop owner has not written one of their own',
+  'access.signInLede': 'Line under the heading of the sign-in page when the shop can only be viewed after signing in',
+  'access.registrationClosed': 'Line on the sign-in page when the shop is not opening new accounts',
+  'access.myOrders': 'Link on the private-shop screen to the customer’s own orders',
+  'access.checkAgain': 'Button on the private-shop screen that checks whether the customer has been given access since',
+  'access.signOut': 'Button on the private-shop screen that signs the customer out',
+  'access.contactAriaLabel': 'Screen-reader name of the group of contact buttons on the private-shop screen',
 } as const satisfies Record<string, string>;

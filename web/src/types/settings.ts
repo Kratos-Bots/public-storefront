@@ -43,6 +43,16 @@ export interface PasswordLoginSettings {
   /** The shopper can message the shop's WhatsApp number to get a reset link. */
   resetByWhatsapp: boolean;
 }
+export interface AccessButton { label: string; url: string }
+
+/** Who may use the shop. Identical for every visitor. */
+export interface AccessSettings {
+  storefront: 'public' | 'login' | 'restricted';
+  /** False when no new customer may sign up. */
+  registration: boolean;
+  deniedMessage: string;
+  deniedButtons: AccessButton[];
+}
 export interface StorefrontSettings {
   enabled: boolean; closedMessage: string; welcomeMessage: string | null;
   notices: Notice[]; cutoffs: Cutoffs; serverTime: string; contactModes: ContactModes;
@@ -56,4 +66,6 @@ export interface StorefrontSettings {
   brand: Brand; features: Features; theme: Theme; turnstile: { siteKey: string } | null;
   /** The bot's effective web app mode. Absent on backends older than the Mini App. */
   telegramWebApp?: { mode: 'off' | 'beta' | 'forced' };
+  /** Absent on backends older than shop access. */
+  access?: AccessSettings;
 }

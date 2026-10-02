@@ -5,6 +5,9 @@ export interface Profile {
   nickname: string | null; identities: { telegram: boolean; whatsapp: boolean; email: boolean };
   /** Absent on backends older than password sign-in. */
   password?: ProfilePassword;
+  /** False when this customer is signed in but not allowed into a restricted shop.
+   *  Absent on backends older than shop access. */
+  shopAccess?: boolean;
 }
 export interface RedeemOption { id: number; label: string; pointsCost: number; creditValue: number; affordable: boolean }
 export interface RedeemOptions { loyaltyPoints: number; options: RedeemOption[] }

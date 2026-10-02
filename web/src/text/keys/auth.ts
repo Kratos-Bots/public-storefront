@@ -82,4 +82,12 @@ export default defineTextArea('auth', {
   'verifyEmail.status.otherBody': { en: 'Sign in with the account the email was sent for, then open the link again.', max: 200 },
   'verifyEmail.status.errorTitle': { en: 'We couldn’t confirm your email', max: 80 },
   'verifyEmail.status.toProfile': { en: 'Go to your profile', max: 50 },
+  'access.eyebrow': { en: 'Private shop', max: 40 },
+  'access.defaultMessage': { en: 'This shop is private. Get in touch if you’d like access.', max: 200 },
+  'access.signInLede': { en: 'Sign in to view the shop.', max: 120 },
+  'access.registrationClosed': { en: 'New accounts aren’t being opened right now.', max: 160 },
+  'access.myOrders': { en: 'My orders', max: 40 },
+  'access.checkAgain': { en: 'Check again', max: 40 },
+  'access.signOut': { en: 'Sign out', max: 40 },
+  'access.contactAriaLabel': { en: 'Contact the shop', max: 60 },
 });
