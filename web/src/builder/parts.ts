@@ -6,7 +6,7 @@ import { isComponentLike, isRecord, type ComponentData, type DocKey, type Layout
 
 export type PartFamily = 'product' | 'catalogue' | 'card-tile' | 'card-row'
   | 'header' | 'cart' | 'cart-summary' | 'account' | 'orders' | 'order' | 'loyalty'
-  | 'referrals' | 'profile' | 'login' | 'payment' | 'tracking' | 'verify' | 'checkout' | 'order-status' | 'reset-password';
+  | 'referrals' | 'profile' | 'login' | 'payment' | 'tracking' | 'verify' | 'checkout' | 'order-status' | 'reset-password' | 'verify-email';
 
 /** `"<Block>.<slot>"`: a slot of a container or of a part with its own slots. */
 export type SlotRef = `${string}.${string}`;
@@ -157,7 +157,7 @@ export const FAMILY_DOCS: Readonly<Record<PartFamily, readonly DocKey[]>> = {
   account: ['account.orders', 'account.order', 'account.loyalty', 'account.referrals', 'account.profile'],
   orders: ['account.orders'], order: ['account.order'], loyalty: ['account.loyalty'], referrals: ['account.referrals'],
   profile: ['account.profile'], login: ['login'], payment: ['payment-success', 'payment-cancel', 'order-placed'],
-  tracking: ['tracking'], verify: ['verify'], checkout: ['checkout'], 'order-status': ['order-status'], 'reset-password': ['reset-password'],
+  tracking: ['tracking'], verify: ['verify'], checkout: ['checkout'], 'order-status': ['order-status'], 'reset-password': ['reset-password'], 'verify-email': ['verify-email'],
 };
 
 /** May `family`'s container live on `docKey`? Own-key lookup: an unguarded family string never hits the prototype. */

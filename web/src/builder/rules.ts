@@ -33,6 +33,7 @@ export const PLACEMENT: Record<string, readonly DocKey[]> = {
   VerifyForm: ['verify'],
   TrackingLookup: ['tracking'],
   ResetPassword: ['reset-password'],
+  VerifyEmail: ['verify-email'],
   CardTile: ['card:tile'],
   CardRow: ['card:row'],
 };
@@ -58,6 +59,7 @@ const EXACTLY_ONE: Partial<Record<DocKey, readonly string[]>> = {
   verify: ['VerifyForm'],
   tracking: ['TrackingLookup'],
   'reset-password': ['ResetPassword'],
+  'verify-email': ['VerifyEmail'],
   'card:tile': ['CardTile'],
   'card:row': ['CardRow'],
 };
@@ -144,14 +146,14 @@ export const FAMILY_NOUN: Record<PartFamily, string> = {
   header: 'header', cart: 'cart', 'cart-summary': 'order summary', account: 'account page', orders: 'order history', order: 'order page',
   loyalty: 'loyalty page', referrals: 'referrals page', profile: 'profile page', login: 'sign-in page', payment: 'payment page',
   tracking: 'tracking page', verify: 'verification page', checkout: 'checkout', 'order-status': 'order page',
-  'reset-password': 'password reset page',
+  'reset-password': 'password reset page', 'verify-email': 'email verification page',
 };
 const FAMILY_HOME: Record<PartFamily, string> = {
   product: 'Product detail', catalogue: 'product grid or product list', 'card-tile': 'product card', 'card-row': 'product row',
   header: 'Header', cart: 'Cart contents', 'cart-summary': 'Cart summary', account: 'account navigation', orders: 'Orders list',
   order: 'Order detail', loyalty: 'Loyalty block', referrals: 'Referrals block', profile: 'Profile block', login: 'Login options',
   payment: 'payment page block', tracking: 'Tracking lookup', verify: 'Verify form', checkout: 'Checkout flow', 'order-status': 'Order status',
-  'reset-password': 'Reset password',
+  'reset-password': 'Reset password', 'verify-email': 'Verify email',
 };
 const REQUIRES_MESSAGE: Record<string, string> = {
   'CardTileAdd.CardTilePrice': 'A product card with an add button must also show the price.',

@@ -158,7 +158,7 @@ describe('route table', () => {
   });
   it('keeps every v0.6.0 path and param name', () => {
     const paths = flatten(routes).map((f) => f.path);
-    for (const p of ['/', '/c/:categorySlug', '/p/:id', '/cart', '/checkout', '/login', '/reset-password', '/account', '/account/orders', '/account/orders/:ref',
+    for (const p of ['/', '/c/:categorySlug', '/p/:id', '/cart', '/checkout', '/login', '/reset-password', '/verify-email', '/account', '/account/orders', '/account/orders/:ref',
       '/account/loyalty', '/account/referrals', '/account/profile', '/order/:ref/:accessKey', '/payment/success', '/payment/cancel',
       '/order-placed', '/verify', '/tracking', '/tracking/:reference', '/pages/:slug', '/*']) {
       expect(paths, p).toContain(p);
@@ -171,6 +171,7 @@ describe('route table', () => {
       '/checkout': { feature: 'ordering', sessionOrGuest: true },
       '/login': { feature: 'accounts' },
       '/reset-password': { feature: 'accounts' },
+      '/verify-email': { session: true },
       '/account': { session: true },
       '/verify': { feature: 'verify' },
       '/tracking': { feature: 'tracking' },

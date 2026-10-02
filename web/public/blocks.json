@@ -5006,6 +5006,114 @@
       }
     },
     {
+      "name": "VerifyEmail",
+      "category": "commerce",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "container": {
+        "family": "verify-email",
+        "slots": [
+          "content"
+        ],
+        "required": [
+          "VerifyEmailHeading",
+          "VerifyEmailStatus"
+        ],
+        "unique": [
+          "VerifyEmailHeading",
+          "VerifyEmailStatus"
+        ],
+        "insertSlot": "content"
+      }
+    },
+    {
+      "name": "VerifyEmailHeading",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "verify-email"
+      }
+    },
+    {
+      "name": "VerifyEmailStatus",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "verify-email"
+      }
+    },
+    {
       "name": "VerifyFields",
       "category": "part",
       "layouts": [

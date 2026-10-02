@@ -18,6 +18,7 @@ export const PREVIEW_STATE_IDS = {
   TrackingLookup: ['form', 'found-2', 'found-1', 'nothing-shipped', 'not-found', 'error'],
   VerifyForm: ['form', 'authentic', 'expired', 'not-verified', 'error'],
   ResetPassword: ['form', 'set', 'expired', 'checking', 'unreachable'],
+  VerifyEmail: ['verifying', 'done', 'invalid', 'otherAccount', 'error'],
   OrderStatus: ['shipped', 'awaiting-payment', 'hosted-open', 'crypto-checking', 'two-parcels', 'cancelled'],
 } as const;
 

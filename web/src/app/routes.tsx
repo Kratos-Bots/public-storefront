@@ -99,6 +99,15 @@ export const routes: RouteObject[] = [
         ),
       },
       {
+        path: 'verify-email',
+        handle: { routeKey: 'verify-email' },
+        element: (
+          <Guard spec={{ session: true }}>
+            <PuckPage routeKey="verify-email" />
+          </Guard>
+        ),
+      },
+      {
         path: 'account',
         element: (
           <Guard spec={{ session: true }}>

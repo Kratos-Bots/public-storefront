@@ -5,4 +5,5 @@ export const DEFAULTS: DefaultEntry[] = [
   { docKey: 'checkout', layouts: 'all', doc: doc([block('CheckoutFlow')]) },
   { docKey: 'login', layouts: 'all', doc: doc([block('LoginOptions')]) },
   { docKey: 'reset-password', layouts: 'all', doc: doc([block('ResetPassword')]) },
+  { docKey: 'verify-email', layouts: 'all', doc: doc([block('VerifyEmail')]) },
 ];

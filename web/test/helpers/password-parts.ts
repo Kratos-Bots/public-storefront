@@ -7,6 +7,8 @@ const T = (target: StyleTarget, ...groups: ReadonlyArray<readonly StyleKey[]>) =
 export const PASSWORD_PARTS: Record<string, { family: PartFamily; style: { target: StyleTarget; keys: readonly StyleKey[] } }> = {
   ResetPasswordHeading: { family: 'reset-password', style: T('root', BOX, TEXT) },
   ResetPasswordForm: { family: 'reset-password', style: T('root', BOX) },
+  VerifyEmailHeading: { family: 'verify-email', style: T('root', BOX, TEXT) },
+  VerifyEmailStatus: { family: 'verify-email', style: T('root', BOX, TEXT) },
 };
 
-export const PASSWORD_CONTAINERS: Record<string, PartFamily> = { ResetPassword: 'reset-password' };
+export const PASSWORD_CONTAINERS: Record<string, PartFamily> = { ResetPassword: 'reset-password', VerifyEmail: 'verify-email' };

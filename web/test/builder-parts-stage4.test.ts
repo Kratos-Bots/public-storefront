@@ -156,6 +156,7 @@ describe('families', () => {
       tracking: ['tracking'], verify: ['verify'],
       checkout: ['checkout'], 'order-status': ['order-status'], // stage 5
       'reset-password': ['reset-password'],
+      'verify-email': ['verify-email'],
     });
   });
   it('familyAllowedOn / allowedOn', () => {

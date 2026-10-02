@@ -25,7 +25,7 @@ export const SPEC_BLOCKS = [
   'CatalogHero', 'CategoryNav', 'SearchField', 'ProductGrid', 'ProductList', 'WholesaleTable', 'FeaturedProducts', 'Upsells',
   'ProductDetail', 'CardTile', 'CardRow',
   'CartContents', 'CartSummary', 'CheckoutFlow', 'LoginOptions', 'AccountNav', 'OrdersList', 'OrderDetail', 'Loyalty', 'Referrals', 'Profile',
-  'OrderStatus', 'PaymentSuccess', 'PaymentCancel', 'OrderPlaced', 'VerifyForm', 'TrackingLookup', 'ResetPassword',
+  'OrderStatus', 'PaymentSuccess', 'PaymentCancel', 'OrderPlaced', 'VerifyForm', 'TrackingLookup', 'ResetPassword', 'VerifyEmail',
   'Heading', 'RichText', 'Image', 'Button', 'Columns', 'Section', 'Spacer', 'Divider', 'FAQ', 'Testimonial', 'Video',
 ] as const;
 
@@ -53,7 +53,7 @@ describe('Plan 2 contract the editor builds on (spec §13 A7)', () => {
     expect(typeof mode.BuilderModeProvider).toBe('function');
     expect(typeof sanitizeRichtext).toBe('function');
     expect(RICHTEXT_ALLOWED_TAGS.length).toBeGreaterThan(0);
-    expect(FIXED_ROUTE_KEYS).toHaveLength(17);
+    expect(FIXED_ROUTE_KEYS).toHaveLength(18);
   });
 
   it('registers exactly the §7 blocks, each under its own name', () => {

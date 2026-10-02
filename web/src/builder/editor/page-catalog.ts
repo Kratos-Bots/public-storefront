@@ -22,13 +22,14 @@ export const DOC_LABELS: Record<'shell' | FixedRouteKey, string> = {
   verify: 'Verify a product',
   tracking: 'Track an order',
   'reset-password': 'Reset password',
+  'verify-email': 'Verify your email',
 };
 
 const GROUPS: Array<{ label: string; keys: Array<'shell' | FixedRouteKey> }> = [
   { label: 'Every page', keys: ['shell'] },
   { label: 'Browse', keys: ['catalog', 'product'] },
   { label: 'Buy', keys: ['cart', 'checkout', 'login', 'reset-password'] },
-  { label: 'Account', keys: ['account.orders', 'account.order', 'account.loyalty', 'account.referrals', 'account.profile'] },
+  { label: 'Account', keys: ['account.orders', 'account.order', 'account.loyalty', 'account.referrals', 'account.profile', 'verify-email'] },
   { label: 'After the order', keys: ['order-status', 'payment-success', 'payment-cancel', 'order-placed'] },
   { label: 'Tools', keys: ['verify', 'tracking'] },
 ];

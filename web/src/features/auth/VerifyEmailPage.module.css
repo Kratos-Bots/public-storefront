@@ -1,0 +1,138 @@
+/* One narrow column, the width of the sign-in and reset pages: a heading, then the outcome in the shop's
+   one verdict silhouette (a 2 px rule in the tone, as on the verify page). One class per selector. */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-width: 26rem;
+  margin: 0 auto;
+  padding: 1.75rem 0 3rem;
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.title {
+  margin: 0.15rem 0 0;
+  font-family: var(--sf-font-heading);
+  font-size: calc(1.5rem * var(--sf-text-scale, 1));
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--sf-block-fg, var(--sf-text));
+  text-wrap: balance;
+}
+
+.status {
+  min-width: 0;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.75rem;
+  padding: 0.95rem 1rem 1.05rem;
+  border-left: 2px solid var(--sf-line-strong);
+  border-radius: 0 var(--sf-card-radius) var(--sf-card-radius) 0;
+  background: var(--sf-bg-deep);
+}
+
+.panel[data-tone='success'] {
+  border-left-color: var(--sf-success);
+}
+
+.panel[data-tone='warn'] {
+  border-left-color: var(--sf-warn);
+}
+
+.panel[data-tone='danger'] {
+  border-left-color: var(--sf-danger);
+}
+
+.panelTitle {
+  margin: 0;
+  font-family: var(--sf-font-heading);
+  font-size: calc(1.0625rem * var(--sf-text-scale, 1));
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--sf-block-fg, var(--sf-text));
+}
+
+.body {
+  margin: 0;
+  font-size: calc(0.875rem * var(--sf-text-scale, 1));
+  line-height: 1.6;
+  color: var(--sf-block-fg, var(--sf-muted));
+}
+
+.cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 1rem;
+  border: 0;
+  border-radius: var(--sf-btn-radius);
+  background: var(--sf-primary);
+  color: var(--sf-bg);
+  font-family: var(--sf-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 120ms ease;
+}
+
+.cta:hover {
+  opacity: 0.88;
+}
+
+.cta:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+.link {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--sf-muted);
+  font: inherit;
+  font-size: 0.8125rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--sf-line-strong);
+  cursor: pointer;
+}
+
+.link:hover {
+  color: var(--sf-text);
+}
+
+.link:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+@media (min-width: 48em) {
+  .page {
+    padding-top: 3rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cta {
+    transition: none;
+  }
+}
