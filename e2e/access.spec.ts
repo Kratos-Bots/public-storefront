@@ -57,6 +57,8 @@ test.describe('shop access', () => {
     await page.getByRole('link', { name: 'My orders' }).click();
     await expect(page).toHaveURL(/\/account\/orders$/);
     await expect(page.getByText(MESSAGE)).toHaveCount(0);
+    // The orders page itself rendered (a fixture order), not just an absent lockout.
+    await expect(page.getByText(/K4M2QP/).first()).toBeVisible();
 
     await page.goBack();
     await expect(page).toHaveURL(/localhost:5199\/$/);
@@ -87,7 +89,6 @@ test.describe('shop access', () => {
       // The shop asks for guest checkout; closed registration must switch it off.
       tweakSettings: (s) => { s.features.guestCheckout = true; },
     });
-    expect(mocks.state.settings.features.guestCheckout).toBe(false);
     await page.goto('/login');
     await expect(page.getByRole('heading', { name: 'Email or phone' })).toBeVisible();
     await expect(page.getByText(REGISTRATION_CLOSED)).toBeVisible();
@@ -100,6 +101,8 @@ test.describe('shop access', () => {
       window.localStorage.setItem('sf-cart-v1', JSON.stringify({ state: { lines: [{ productId: 101, quantity: 1 }] }, version: 0 }));
     });
     await page.goto('/checkout');
+    // Sent to sign in, not offered a guest checkout: the redirect must have happened before the negatives mean anything.
+    await expect(page).toHaveURL(/\/login\?returnTo=%2Fcheckout$/);
     await expect(page.getByRole('heading', { name: 'Guest checkout', level: 1 })).toHaveCount(0);
     expect(mocks.state.guestQuotes).toHaveLength(0);
   });
@@ -109,6 +112,10 @@ test.describe('shop access', () => {
     await page.goto('/');
     await expect(page.getByText(PRODUCT)).toBeVisible();
     await expect(page).toHaveURL(/localhost:5199\/$/);
+    // Positive control for the bare-frame test: here the header, footer and cart are present.
+    await expect(page.getByRole('banner')).toBeVisible();
+    await expect(page.getByRole('contentinfo')).toBeVisible();
+    await expect(page.getByRole('link', { name: /^Cart/ }).first()).toBeVisible();
     await page.goto('/login');
     await expect(page.getByRole('heading', { name: 'Email or phone' })).toBeVisible();
     await expect(page.getByText('Sign in to view the shop.')).toHaveCount(0);
@@ -126,8 +133,7 @@ test.describe('shop access', () => {
       const button = page.getByRole('link', { name: 'Message us' });
       await expect(button).toBeVisible();
       const box = (await button.boundingBox())!;
-      // 44px by its padding and line height; layout snaps to 1/64px, so allow that rounding.
-      expect(box.height).toBeGreaterThanOrEqual(44 - 1 / 32);
+      expect(box.height).toBeGreaterThanOrEqual(44);
       expect(box.x).toBeGreaterThanOrEqual(0);
       expect(box.x + box.width).toBeLessThanOrEqual(390);
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
