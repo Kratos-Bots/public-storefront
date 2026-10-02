@@ -173,6 +173,7 @@ test.describe('the profile Password section', () => {
   test('sets a first password, then a wrong current password is a field error and the shopper stays signed in', async ({ page }) => {
     const mocks = await installMocks(page, { passwordLogin: true, session: true });
     await page.goto('/account/profile');
+    await expect(page.getByRole('region', { name: 'Password' })).toBeVisible();
     await expect(page.getByText('No password yet. Set one to sign in with your email or phone.')).toBeVisible();
     await page.getByRole('button', { name: 'Set a password' }).click();
     await expect(page.getByRole('textbox', { name: 'Email address' })).toHaveCount(0); // the account has a WhatsApp number

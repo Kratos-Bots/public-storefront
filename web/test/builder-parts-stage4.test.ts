@@ -146,7 +146,7 @@ describe('hidden-required on a part itself', () => {
 });
 
 describe('families', () => {
-  it('FAMILY_DOCS has the four stage-3 and thirteen new families', () => {
+  it('FAMILY_DOCS has the four stage-3 and seventeen new families', () => {
     expect(FAMILY_DOCS).toEqual({
       product: ['product'], catalogue: ['catalog'], 'card-tile': ['card:tile'], 'card-row': ['card:row'],
       header: ['shell'], cart: ['cart'], 'cart-summary': ['cart'],

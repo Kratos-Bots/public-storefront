@@ -138,7 +138,7 @@ globs the directory; add a unit test; regenerate `blocks.json`
 
 ## Block library
 
-The 45 blocks of this release. "All" layouts = storefront, menu and webapp. Slots are marked
+The 47 blocks of this release. "All" layouts = storefront, menu and webapp. Slots are marked
 *(slot)*.
 
 ### Shell
@@ -453,7 +453,7 @@ radius shadow maxWidth`; **TEXT** = `fg textSize align`; **VIS** = `hide`.
 | `Upsells`, `TopBar`, `NoticeBanners`, `CutoffBar`, `Footer` | wrap | BOX + VIS | no single root the block owns |
 | `ContactStrip` | pass → the strip element | BOX + VIS | the strip is `position: sticky; bottom: 0`; a wrapper sized to it would stop it sticking |
 | `Header` | pass → `<header data-sf-part="header">` | `bg shadow` + VIS | a wrapper would end `position: sticky`; padding or a border would change `--sf-bar-h` |
-| The 20 route-bound blocks (`ProductGrid` … `TrackingLookup`) and `AccountNav` | wrap | BOX | never `hide`, never TEXT |
+| The 20 route-bound blocks (`ProductGrid` … `VerifyEmail`) and `AccountNav` | wrap | BOX | never `hide`, never TEXT |
 | `WholesaleTable` (route-bound) | wrap | `bg padTop marginTop marginBottom shadow` | its `WholesaleBar` is a sticky full-bleed band: side padding, bottom padding, borders, corners and a max width would offset or clip it |
 | `PageOutlet` | — | `false` | it is the page: hiding it hides every route, padding doubles `<main>`'s, a wrapper breaks `flex: 1` |
 | `MobileCartBar` | — | `false` | fixed-position; hiding it would remove the phone checkout path |

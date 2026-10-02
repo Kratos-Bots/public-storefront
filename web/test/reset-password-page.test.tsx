@@ -114,6 +114,18 @@ describe('the form', () => {
     fireEvent.click(save());
     expect(await screen.findByText('This account can’t sign in right now. Contact the shop for help.')).toBeTruthy();
   });
+
+  it('a banned reset ends in a terminal panel: the banned sentence, no form, no submit button', async () => {
+    h.reset.mockRejectedValue(new ApiError(403, 'ACCOUNT_BANNED'));
+    mount();
+    fireEvent.change(await field(), { target: { value: 'long enough pw' } });
+    fireEvent.click(save());
+    expect((await screen.findByRole('alert')).textContent).toBe('This account can’t sign in right now. Contact the shop for help.');
+    expect(screen.queryByLabelText('New password')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Save password' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Saving…' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'Back to sign in' }).getAttribute('href')).toBe('/login');
+  });
 });
 
 describe('expired links', () => {

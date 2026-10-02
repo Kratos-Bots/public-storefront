@@ -24,7 +24,7 @@ export function useResetPassword(): ResetPasswordData {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const [spent, setSpent] = useState(false);
+  const [spent, setSpent] = useState<'invalid' | 'banned' | null>(null);
   const busy = useRef(false);
   const done = useRef(false);
   const mounted = useRef(true);
@@ -53,6 +53,8 @@ export function useResetPassword(): ResetPasswordData {
   if (preview) {
     phase = preview.phase;
     mode = preview.mode;
+  } else if (spent === 'banned') {
+    phase = 'banned';
   } else if (token === '' || spent) {
     phase = 'expired';
   } else if (check.isPending) {
@@ -80,9 +82,18 @@ export function useResetPassword(): ResetPasswordData {
     try {
       result = await passwordReset(token, password);
     } catch (err) {
+      // Either answer means the link is dead (a banned account's password HAS been changed and the link
+      // consumed): leave the cache saying so, so a Back navigation does not draw the form again.
+      if (err instanceof ApiError && (err.isBanned || err.isResetLinkInvalid)) {
+        client.setQueryData(['reset-check', token], { valid: false, mode: null });
+      }
       if (mounted.current) {
-        if (err instanceof ApiError && err.isResetLinkInvalid) {
-          setSpent(true);
+        if (err instanceof ApiError && err.isBanned) {
+          setSpent('banned');
+          setPassword('');
+          setError(passwordErrorMessage(err, 'reset'));
+        } else if (err instanceof ApiError && err.isResetLinkInvalid) {
+          setSpent('invalid');
           setPassword('');
         } else {
           setError(passwordErrorMessage(err, 'reset'));

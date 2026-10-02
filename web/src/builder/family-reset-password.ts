@@ -3,7 +3,8 @@ import { createFamily } from '@/builder/parts.ts';
 
 // Type-only feature imports: this module is in the shopper's entry bundle.
 
-export type ResetPasswordPhase = 'checking' | 'form' | 'expired' | 'unreachable';
+/** `banned`: the reset went through (the link is spent) but the account may not sign in; `error` carries the sentence. */
+export type ResetPasswordPhase = 'checking' | 'form' | 'expired' | 'unreachable' | 'banned';
 
 export interface ResetPasswordData {
   phase: ResetPasswordPhase;

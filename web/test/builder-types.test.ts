@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { customPageKey, FIXED_ROUTE_KEYS, isComponentLike, isFixedRouteKey } from '@/builder/types.ts';
 
 describe('builder types', () => {
-  it('lists the 16 fixed route keys from the spec', () => {
+  it('lists the 18 fixed route keys from the spec', () => {
     expect(FIXED_ROUTE_KEYS).toHaveLength(18);
     expect(isFixedRouteKey('account.order')).toBe(true);
     expect(isFixedRouteKey('page:about')).toBe(false);

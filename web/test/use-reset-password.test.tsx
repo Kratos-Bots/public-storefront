@@ -178,6 +178,31 @@ describe('saving the new password', () => {
     expect(r.result.current.error).toBe('This account can’t sign in right now. Contact the shop for help.');
   });
 
+  it('a banned reset is terminal: the password is cleared, the phase is banned, a second submit sends nothing', async () => {
+    h.reset.mockRejectedValue(new ApiError(403, 'ACCOUNT_BANNED'));
+    const r = setup();
+    await ready(r);
+    act(() => r.result.current.onPasswordChange('long enough pw'));
+    await submit(r);
+    expect(r.result.current.password).toBe('');
+    expect(r.result.current.phase).toBe('banned');
+    expect(r.result.current.error).toBe('This account can’t sign in right now. Contact the shop for help.');
+    await submit(r);
+    expect(h.reset).toHaveBeenCalledTimes(1);
+  });
+
+  it('a banned reset and a RESET_LINK_INVALID both mark the cached check as spent, for a Back-button return', async () => {
+    for (const err of [new ApiError(403, 'ACCOUNT_BANNED'), new ApiError(400, 'RESET_LINK_INVALID')]) {
+      h.reset.mockReset().mockRejectedValue(err);
+      const r = setup();
+      await ready(r);
+      act(() => r.result.current.onPasswordChange('long enough pw'));
+      await submit(r);
+      expect(r.client.getQueryData(['reset-check', 'abc'])).toEqual({ valid: false, mode: null });
+      r.unmount();
+    }
+  });
+
   it('editing the field clears the error', async () => {
     const r = setup();
     await ready(r);

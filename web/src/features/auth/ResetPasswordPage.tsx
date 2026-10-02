@@ -18,7 +18,7 @@ function ResetPasswordHeadingView({ styleAttrs }: PartViewProps) {
   return (
     <div className={classes.head} {...styleAttrs}>
       <h1 className={classes.title}>{title}</h1>
-      {phase === 'expired' ? null : <p className={classes.lede}>{t('auth.reset.heading.lede')}</p>}
+      {phase === 'expired' || phase === 'banned' ? null : <p className={classes.lede}>{t('auth.reset.heading.lede')}</p>}
     </div>
   );
 }
@@ -51,6 +51,14 @@ function ResetPasswordFormView({ styleAttrs }: PartViewProps) {
       {phase === 'expired' ? (
         <div className={`${classes.stack} ${FADE}`}>
           <p className={classes.body}>{t('auth.reset.expired.body')}</p>
+          <Link to="/login" className={classes.cta} data-sf-part="button" data-variant="filled">
+            {t('auth.password.backToSignIn')}
+          </Link>
+        </div>
+      ) : null}
+      {phase === 'banned' ? (
+        <div className={`${classes.stack} ${FADE}`}>
+          <p className={classes.body} role="alert">{data.error}</p>
           <Link to="/login" className={classes.cta} data-sf-part="button" data-variant="filled">
             {t('auth.password.backToSignIn')}
           </Link>
