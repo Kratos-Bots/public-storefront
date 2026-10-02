@@ -90,6 +90,15 @@ export const routes: RouteObject[] = [
         ),
       },
       {
+        path: 'reset-password',
+        handle: { routeKey: 'reset-password' },
+        element: (
+          <Guard spec={{ feature: 'accounts' }}>
+            <PuckPage routeKey="reset-password" />
+          </Guard>
+        ),
+      },
+      {
         path: 'account',
         element: (
           <Guard spec={{ session: true }}>

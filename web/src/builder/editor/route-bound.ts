@@ -29,6 +29,7 @@ export const ROUTE_BOUND: Record<'shell' | FixedRouteKey | CardKey, Entry> = {
   'order-placed': { blocks: ['OrderPlaced'], exactlyOne: true },
   verify: { blocks: ['VerifyForm'], exactlyOne: true },
   tracking: { blocks: ['TrackingLookup'], exactlyOne: true },
+  'reset-password': { blocks: ['ResetPassword'], exactlyOne: true },
   // A card design's frame (product-parts §5.3): the root of its document, locked.
   'card:tile': { blocks: ['CardTile'], exactlyOne: true },
   'card:row': { blocks: ['CardRow'], exactlyOne: true },

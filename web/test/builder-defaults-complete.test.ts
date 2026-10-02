@@ -9,7 +9,7 @@ const LAYOUTS: LayoutKind[] = ['storefront', 'menu', 'webapp'];
 const KEYS: DocKey[] = ['shell', ...FIXED_ROUTE_KEYS];
 // Controller ruling F1 (Task 9): the catalogue list blocks are route-bound too — a broken grid takes the page to its default.
 const ROUTE_BLOCKS = ['PageOutlet', 'ProductGrid', 'ProductList', 'WholesaleTable', 'ProductDetail', 'CartContents', 'CartSummary', 'CheckoutFlow', 'LoginOptions', 'OrdersList', 'OrderDetail',
-  'Loyalty', 'Referrals', 'Profile', 'OrderStatus', 'PaymentSuccess', 'PaymentCancel', 'OrderPlaced', 'VerifyForm', 'TrackingLookup', 'CardTile', 'CardRow'];
+  'Loyalty', 'Referrals', 'Profile', 'OrderStatus', 'PaymentSuccess', 'PaymentCancel', 'OrderPlaced', 'VerifyForm', 'TrackingLookup', 'ResetPassword', 'CardTile', 'CardRow'];
 
 function ids(items: ComponentData[], out: string[] = []): string[] {
   for (const c of items) {

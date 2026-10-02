@@ -3,7 +3,7 @@ import { customPageKey, FIXED_ROUTE_KEYS, isComponentLike, isFixedRouteKey } fro
 
 describe('builder types', () => {
   it('lists the 16 fixed route keys from the spec', () => {
-    expect(FIXED_ROUTE_KEYS).toHaveLength(16);
+    expect(FIXED_ROUTE_KEYS).toHaveLength(17);
     expect(isFixedRouteKey('account.order')).toBe(true);
     expect(isFixedRouteKey('page:about')).toBe(false);
   });

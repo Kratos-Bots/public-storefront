@@ -9,6 +9,7 @@ import type { ComponentData, LayoutKind, PuckDoc } from '@/builder/types.ts';
 import { cssRules } from './helpers/css-rules.ts';
 import { STAGE4_PARTS } from './helpers/stage4-parts.ts';
 import { STAGE5_PARTS } from './helpers/stage5-parts.ts';
+import { PASSWORD_PARTS } from './helpers/password-parts.ts';
 
 const T = (target: StyleTarget, ...groups: ReadonlyArray<readonly StyleKey[]>) => ({ target, keys: groups.flat() });
 /** Spec §9, exactly. Keys may be added later, never removed. */
@@ -57,7 +58,7 @@ const sameKeys = (a: readonly string[], b: readonly string[]) => [...a].sort().j
 
 describe('parts contract (spec §9, §13)', () => {
   it('the registered parts are exactly the stage 3 table, STAGE4_PARTS and STAGE5_PARTS', () => {
-    const expected = new Set([...Object.keys(PARTS), ...Object.keys(STAGE4_PARTS), ...Object.keys(STAGE5_PARTS)]);
+    const expected = new Set([...Object.keys(PARTS), ...Object.keys(STAGE4_PARTS), ...Object.keys(STAGE5_PARTS), ...Object.keys(PASSWORD_PARTS)]);
     expect(Object.values(BLOCKS).filter((x) => x.part).map((d) => d.name).sort()).toEqual([...expected].sort());
   });
   it.each(Object.keys(PARTS))('%s: family, target and keys', (name) => {

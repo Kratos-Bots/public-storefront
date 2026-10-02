@@ -155,6 +155,7 @@ describe('families', () => {
       profile: ['account.profile'], login: ['login'], payment: ['payment-success', 'payment-cancel', 'order-placed'],
       tracking: ['tracking'], verify: ['verify'],
       checkout: ['checkout'], 'order-status': ['order-status'], // stage 5
+      'reset-password': ['reset-password'],
     });
   });
   it('familyAllowedOn / allowedOn', () => {
