@@ -133,6 +133,22 @@ describe('CartSummary promotions', () => {
     expect(screen.queryByText('−£12.50')).toBeNull();
     expect(screen.getByText('£50.00')).toBeInTheDocument();
   });
+  it('reads a free-shipping promotion beside a money one as "Free shipping: label", with no £0.00 row', () => {
+    act(() => setPreviewServerCart({ ...CART, promotions: [...(CART.promotions ?? []), { id: 2, label: 'Free delivery over £20', amount: 0, freeShipping: true }] }));
+    mountSummary();
+    expect(screen.getByText('−£12.50')).toBeInTheDocument();
+    expect(screen.getByText('Free shipping: Free delivery over £20')).toBeInTheDocument();
+    expect(screen.queryByText('−£0.00')).toBeNull();
+    expect(screen.getByText('Basket after promotions')).toBeInTheDocument();
+  });
+  it('still shows free shipping earned when it is the only promotion, without an after-promotions total', () => {
+    act(() => setPreviewServerCart({ ...CART, nudge: null, promotionDiscount: 0, total: 37.5, promotions: [{ id: 2, label: 'Free delivery over £20', amount: 0, freeShipping: true }] }));
+    mountSummary();
+    expect(screen.getByText('Free shipping: Free delivery over £20')).toBeInTheDocument();
+    expect(screen.queryByText('−£0.00')).toBeNull();
+    expect(screen.queryByText('Basket after promotions')).toBeNull();
+    expect(screen.getByText('£37.50')).toBeInTheDocument();
+  });
   it('shows only the nudge when nothing applies yet', () => {
     act(() => setPreviewServerCart({ ...CART, promotionDiscount: 0, promotions: [], total: 37.5 }));
     mountSummary();

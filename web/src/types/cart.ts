@@ -15,7 +15,8 @@ export interface ServerCart {
 }
 /** A live promotion's customer-facing label. */
 export interface PromotionTag { id: number; label: string }
-export interface CartPromotion extends PromotionTag { amount: number }
+/** A free-shipping promotion arrives with `amount: 0` and `freeShipping: true`. */
+export interface CartPromotion extends PromotionTag { amount: number; freeShipping?: boolean }
 /** The one promotion a basket is closest to earning. */
 export type Nudge =
   | { promotionId: number; label: string; kind: 'quantity'; missing: number; target: 'buy' | 'get' }

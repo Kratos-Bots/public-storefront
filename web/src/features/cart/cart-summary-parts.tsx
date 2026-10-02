@@ -32,26 +32,38 @@ function SubtotalView({ styleAttrs }: PartViewProps) {
       <span className={classes.figure}>{formatMoney(subtotal, currency)}</span>
     </div>
   );
-  const applied = promotions !== null && promotions.discount > 0;
+  // A free-shipping promotion takes nothing off the basket, so it can apply with a discount of 0:
+  // the shopper still sees it earned, but there is no "after promotions" total to show.
+  const hasDiscount = promotions !== null && promotions.discount > 0;
+  const earnsFreeShipping = promotions !== null && promotions.promotions.some((p) => p.freeShipping && p.amount === 0);
+  const applied = hasDiscount || earnsFreeShipping;
   const nudge = promotions?.nudge ?? null;
   if (!applied && !nudge) return subtotalRow(false, styleAttrs);
   return (
     <div className={classes.promoBlock} {...styleAttrs}>
       {nudge ? <p className={classes.nudge}>{nudgeSentence(nudge, text, (n) => formatMoney(n, currency))}</p> : null}
-      {subtotalRow(applied)}
+      {subtotalRow(hasDiscount)}
       {applied
         ? (
           <>
             {promotions.promotions.map((p) => (
               <div key={p.id} className={classes.promoRow}>
-                <span className={classes.promoLabel}>{p.label}</span>
-                <span className={classes.promoFigure}>−{formatMoney(p.amount, currency)}</span>
+                {p.freeShipping && p.amount === 0
+                  ? <span className={classes.promoLabel}>{t('common.promo.freeShipping', { label: p.label })}</span>
+                  : (
+                    <>
+                      <span className={classes.promoLabel}>{p.label}</span>
+                      <span className={classes.promoFigure}>−{formatMoney(p.amount, currency)}</span>
+                    </>
+                  )}
               </div>
             ))}
-            <div className={`${classes.ledger} ${classes.net}`}>
-              <span className={classes.label}>{t('cart.summary.afterPromotions')}</span>
-              <span className={classes.figure}>{formatMoney(promotions.total, currency)}</span>
-            </div>
+            {hasDiscount ? (
+              <div className={`${classes.ledger} ${classes.net}`}>
+                <span className={classes.label}>{t('cart.summary.afterPromotions')}</span>
+                <span className={classes.figure}>{formatMoney(promotions.total, currency)}</span>
+              </div>
+            ) : null}
           </>
         )
         : null}
