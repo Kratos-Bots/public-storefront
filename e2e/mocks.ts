@@ -8,7 +8,8 @@ import type { Profile, RedeemOptions } from '../web/src/types/profile.ts';
 import type { PublicOrder, SelectPaymentResult } from '../web/src/types/public-order.ts';
 import type { StorefrontSettings } from '../web/src/types/settings.ts';
 import type { TrackingLookup } from '../web/src/types/tracking.ts';
-import type { LoginResult, WhatsappStart } from '../web/src/types/auth.ts';
+import type { LoginResult, ResetCheck, WhatsappStart } from '../web/src/types/auth.ts';
+import type { ProfilePassword } from '../web/src/types/profile.ts';
 import type { PageSet } from '../web/src/builder/types.ts';
 
 /** The dev server the suite starts (see playwright.config.ts). Route globs are
@@ -107,6 +108,10 @@ export interface InstallMocksOptions {
   session?: boolean;
   /** Mutate the settings fixture before it is served (flags, theme, kill switch). */
   tweakSettings?: (settings: StorefrontSettings) => void;
+  /** Switch email/phone + password sign-in on (`login.password.available`); an object also sets the reset routes. */
+  passwordLogin?: boolean | { resetByEmail?: boolean; resetByWhatsapp?: boolean; /** Sign-in answers 429, as for a throttled identifier. */ throttled?: boolean };
+  /** Mutate the profile fixture before it is served (identities, password block). */
+  tweakProfile?: (profile: Profile) => void;
   /** What the checkout routes answer with as `payment` (default: a crypto address). */
   checkoutPayment?: CheckoutPayment;
   /** The reference the checkout routes answer with (default `E2E1`). */
@@ -165,6 +170,8 @@ export interface MockState {
   webappLogins: Array<Record<string, unknown>>;
   /** Bodies posted to the classic-bot switch. */
   botModes: Array<Record<string, unknown>>;
+  /** Every password / account-password / email-verification request, with its body and Authorization header. */
+  passwordCalls: Array<{ route: string; body: Record<string, unknown>; authorization: string | null }>;
   /** What `GET storefront/pages/:layout` serves. */
   pages: Partial<Record<Layout, PageSet | null>>;
   /** When set, the pages route answers this error status instead of the fixture. */
@@ -186,6 +193,15 @@ export interface MockHandle {
 
 export const SESSION_TOKEN = 'e2e-session-token';
 export const SESSION_CUSTOMER = { id: 4242, nickname: 'Ada' };
+
+/** The one password account the mock knows: sign-in, and the "current password" when changing it. */
+export const PASSWORD_ACCOUNT = { email: 'ada@example.invalid', phone: '+447700900123', password: 'correct horse battery' } as const;
+/** Reset links the mock understands. Anything else is an unknown token (valid: false). */
+export const RESET_TOKENS = { reset: 'RESET-OK', set: 'SET-OK', used: 'RESET-USED' } as const;
+/** Verification links the mock understands. Anything else is a 400 VERIFY_LINK_INVALID. */
+export const VERIFY_TOKENS = { ok: 'VERIFY-OK', other: 'VERIFY-OTHER' } as const;
+
+const NO_PASSWORD: ProfilePassword = { set: false, loginEmail: null, loginPhone: null, emailVerified: false, phoneVerified: false };
 
 const PENDING_POLLS = 2;
 
@@ -272,9 +288,9 @@ export function externalRequestPolicy(url: string, env: Record<string, string | 
   return env.E2E_REAL_FONTS === '1' && GOOGLE_FONTS.test(url) ? 'continue' : 'abort';
 }
 
-async function envelope(route: Route, data: unknown, meta?: unknown): Promise<void> {
+async function envelope(route: Route, data: unknown, meta?: unknown, status = 200): Promise<void> {
   await route.fulfill({
-    status: 200,
+    status,
     contentType: 'application/json',
     body: JSON.stringify(meta === undefined ? { success: true, data, error: null } : { success: true, data, error: null, meta }),
   });
@@ -333,6 +349,7 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     txids: [],
     webappLogins: [],
     botModes: [],
+    passwordCalls: [],
     pages: options.pages ?? {},
     pagesFail: options.pagesFail ?? null,
     text: options.text ?? null,
@@ -340,6 +357,17 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
   };
 
   options.tweakSettings?.(state.settings);
+  options.tweakProfile?.(state.profile);
+  const passwordOptions: { resetByEmail?: boolean; resetByWhatsapp?: boolean; throttled?: boolean } | null =
+    options.passwordLogin === true ? {} : options.passwordLogin || null;
+  if (passwordOptions) {
+    state.settings.login.password = {
+      available: true,
+      resetByEmail: passwordOptions.resetByEmail ?? false,
+      resetByWhatsapp: passwordOptions.resetByWhatsapp ?? false,
+    };
+    state.profile.password ??= { ...NO_PASSWORD };
+  }
   state.disabled = !state.settings.enabled;
 
   if (options.session) {
@@ -635,6 +663,75 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
       const result: LoginResult = { token: SESSION_TOKEN, customer: SESSION_CUSTOMER };
       await envelope(route, result);
       return;
+    }
+
+    const passwordRoute = `${method} ${path}`;
+    if (/^(POST storefront\/auth\/(password\/(signup|login|forgot|reset\/check|reset)|email\/(verification|verify))|PUT storefront\/account\/password)$/.test(passwordRoute)) {
+      const asked = body(route);
+      state.passwordCalls.push({ route: passwordRoute, body: asked, authorization: route.request().headers()['authorization'] ?? null });
+      const session: LoginResult = { token: SESSION_TOKEN, customer: SESSION_CUSTOMER };
+      // libphonenumber drops the trunk zero after +44; the mock does the same so "07700 900123" under GB matches the account.
+      const phone = String(asked.phone ?? '').replace(/^\+440/, '+44');
+      const known = asked.email === PASSWORD_ACCOUNT.email || phone === PASSWORD_ACCOUNT.phone;
+      switch (passwordRoute) {
+        case 'POST storefront/auth/password/signup':
+          if (known) await fail(route, 409, "That email or phone can't be used to create an account. Try signing in or resetting your password.");
+          else await envelope(route, session, undefined, 201);
+          return;
+        case 'POST storefront/auth/password/login':
+          if (passwordOptions?.throttled) await fail(route, 429, 'Too many requests');
+          else if (known && asked.password === PASSWORD_ACCOUNT.password) await envelope(route, session);
+          else await fail(route, 401, 'Invalid credentials');
+          return;
+        case 'POST storefront/auth/password/forgot':
+          await envelope(route, { ok: true });
+          return;
+        case 'POST storefront/auth/password/reset/check': {
+          const check: ResetCheck = asked.token === RESET_TOKENS.reset ? { valid: true, mode: 'reset' }
+            : asked.token === RESET_TOKENS.set ? { valid: true, mode: 'set' } : { valid: false, mode: null };
+          await envelope(route, check);
+          return;
+        }
+        case 'POST storefront/auth/password/reset':
+          if (asked.token === RESET_TOKENS.used || (asked.token !== RESET_TOKENS.reset && asked.token !== RESET_TOKENS.set)) await fail(route, 400, 'RESET_LINK_INVALID');
+          else if (String(asked.password ?? '').length < 8) await fail(route, 422, 'Password must be at least 8 characters');
+          else await envelope(route, session);
+          return;
+        case 'PUT storefront/account/password': {
+          if (!route.request().headers()['authorization']) {
+            await fail(route, 401, 'Unauthorized');
+            return;
+          }
+          const hasIdentity = state.profile.identities.email || state.profile.identities.whatsapp;
+          if (hasIdentity && (asked.email || asked.phone)) {
+            await fail(route, 422, 'Email and phone cannot be changed here');
+            return;
+          }
+          if (state.profile.password?.set && asked.currentPassword !== PASSWORD_ACCOUNT.password) {
+            await fail(route, 422, 'CURRENT_PASSWORD_INCORRECT');
+            return;
+          }
+          state.profile.password = {
+            ...(state.profile.password ?? NO_PASSWORD), set: true,
+            loginEmail: state.profile.password?.loginEmail ?? (asked.email ? String(asked.email) : null),
+          };
+          await envelope(route, { ok: true });
+          return;
+        }
+        case 'POST storefront/auth/email/verification':
+          await envelope(route, { ok: true });
+          return;
+        case 'POST storefront/auth/email/verify':
+          if (asked.token === VERIFY_TOKENS.ok) {
+            state.profile.password = { ...(state.profile.password ?? NO_PASSWORD), emailVerified: true };
+            await envelope(route, { ok: true });
+          } else if (asked.token === VERIFY_TOKENS.other) {
+            await fail(route, 403, 'Forbidden');
+          } else {
+            await fail(route, 400, 'VERIFY_LINK_INVALID');
+          }
+          return;
+      }
     }
 
     if (path === 'storefront/auth/logout' && method === 'POST') {

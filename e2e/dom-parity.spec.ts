@@ -41,6 +41,9 @@ const CASES: RouteCase[] = [
   { name: 'tracking', path: '/tracking', layouts: ALL, session: false },
   { name: 'tracking-ref', path: '/tracking/E2E1', layouts: ALL, session: false },
   { name: 'verify', path: '/verify', layouts: ALL, session: false },
+  { name: 'login-password', path: '/login', layouts: ALL, session: false, tweak: (s) => { s.login.password = { available: true, resetByEmail: false, resetByWhatsapp: true }; } },
+  { name: 'reset-password', path: '/reset-password?token=RESET-OK', layouts: ALL, session: false },
+  { name: 'verify-email', path: '/verify-email?token=VERIFY-OK', layouts: ALL, session: true },
 ];
 
 const WIDTHS = [390, 1280] as const;
