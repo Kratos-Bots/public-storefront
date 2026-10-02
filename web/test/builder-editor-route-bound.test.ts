@@ -82,7 +82,7 @@ describe('editor placement rules', () => {
   });
 
   it('covers the shell and every fixed route', () => {
-    const keys: Array<'shell' | FixedRouteKey | CardKey> = ['shell', 'catalog', 'product', 'cart', 'checkout', 'login', 'account.orders', 'account.order', 'account.loyalty', 'account.referrals', 'account.profile', 'order-status', 'payment-success', 'payment-cancel', 'order-placed', 'verify', 'tracking', 'card:tile', 'card:row'];
+    const keys: Array<'shell' | FixedRouteKey | CardKey> = ['shell', 'catalog', 'product', 'cart', 'checkout', 'login', 'account.orders', 'account.order', 'account.loyalty', 'account.referrals', 'account.profile', 'order-status', 'payment-success', 'payment-cancel', 'order-placed', 'verify', 'tracking', 'reset-password', 'verify-email', 'card:tile', 'card:row'];
     expect(Object.keys(ROUTE_BOUND).sort()).toEqual(keys.sort());
   });
 });

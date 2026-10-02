@@ -4036,6 +4036,7 @@
         "unique": [
           "ProfileDetails",
           "ProfileChannels",
+          "ProfilePassword",
           "ProfileContact",
           "ProfileBotSwitch",
           "ProfileSignOut"
@@ -4156,6 +4157,40 @@
       "routeBound": false,
       "style": {
         "target": "wrap",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "profile"
+      }
+    },
+    {
+      "name": "ProfilePassword",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
         "keys": [
           "bg",
           "fg",
@@ -4382,6 +4417,111 @@
       },
       "part": {
         "family": "referrals"
+      }
+    },
+    {
+      "name": "ResetPassword",
+      "category": "commerce",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "container": {
+        "family": "reset-password",
+        "slots": [
+          "content"
+        ],
+        "required": [
+          "ResetPasswordHeading",
+          "ResetPasswordForm"
+        ],
+        "unique": [
+          "ResetPasswordHeading",
+          "ResetPasswordForm"
+        ],
+        "insertSlot": "content"
+      }
+    },
+    {
+      "name": "ResetPasswordForm",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "reset-password"
+      }
+    },
+    {
+      "name": "ResetPasswordHeading",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "reset-password"
       }
     },
     {
@@ -4898,6 +5038,114 @@
       },
       "part": {
         "family": "verify"
+      }
+    },
+    {
+      "name": "VerifyEmail",
+      "category": "commerce",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": true,
+      "style": {
+        "target": "wrap",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth"
+        ]
+      },
+      "container": {
+        "family": "verify-email",
+        "slots": [
+          "content"
+        ],
+        "required": [
+          "VerifyEmailHeading",
+          "VerifyEmailStatus"
+        ],
+        "unique": [
+          "VerifyEmailHeading",
+          "VerifyEmailStatus"
+        ],
+        "insertSlot": "content"
+      }
+    },
+    {
+      "name": "VerifyEmailHeading",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "verify-email"
+      }
+    },
+    {
+      "name": "VerifyEmailStatus",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth"
+        ]
+      },
+      "part": {
+        "family": "verify-email"
       }
     },
     {

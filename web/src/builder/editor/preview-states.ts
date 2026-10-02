@@ -8,6 +8,8 @@ import type { ProfilePreview } from '@/builder/family-profile.ts';
 import type { ReferralsPreview } from '@/builder/family-referrals.ts';
 import type { TrackingPreview } from '@/builder/family-tracking.ts';
 import type { VerifyPreview } from '@/builder/family-verify.ts';
+import type { ResetPasswordPreview } from '@/builder/family-reset-password.ts';
+import type { VerifyEmailPreview } from '@/builder/family-verify-email.ts';
 import { useEditorStore } from '@/builder/editor/store.ts';
 import { effectivePreviewAs } from '@/builder/editor/fixture-mode.ts';
 import {
@@ -36,6 +38,14 @@ export const PREVIEW_STATE_LABELS: Record<ContainerName, Labelled> = {
   VerifyForm: [
     { id: 'form', label: 'Form' }, { id: 'authentic', label: 'Authentic' }, { id: 'expired', label: 'Expired' },
     { id: 'not-verified', label: 'Not verified' }, { id: 'error', label: 'Error' },
+  ],
+  ResetPassword: [
+    { id: 'form', label: 'Choose a new password' }, { id: 'set', label: 'Choose a password (no password yet)' },
+    { id: 'expired', label: 'Expired link' }, { id: 'checking', label: 'Checking the link' }, { id: 'unreachable', label: 'Could not check' },
+  ],
+  VerifyEmail: [
+    { id: 'verifying', label: 'Confirming' }, { id: 'done', label: 'Confirmed' }, { id: 'invalid', label: 'Expired link' },
+    { id: 'otherAccount', label: 'Different account' }, { id: 'error', label: 'Could not confirm' },
   ],
   OrderStatus: [
     { id: 'shipped', label: 'Shipped' }, { id: 'awaiting-payment', label: 'Awaiting payment' }, { id: 'hosted-open', label: 'Hosted checkout open' },
@@ -94,6 +104,16 @@ const BUILDERS: { [C in ContainerName]: (state: string, now: Date) => unknown } 
       default: return { phase: 'idle', compact: false };
     }
   },
+  ResetPassword: (state): ResetPasswordPreview => {
+    switch (state) {
+      case 'set': return { phase: 'form', mode: 'set' };
+      case 'expired': return { phase: 'expired', mode: null };
+      case 'checking': return { phase: 'checking', mode: null };
+      case 'unreachable': return { phase: 'unreachable', mode: null };
+      default: return { phase: 'form', mode: 'reset' };
+    }
+  },
+  VerifyEmail: (state): VerifyEmailPreview => ({ phase: (['done', 'invalid', 'otherAccount', 'error'] as const).find((p) => p === state) ?? 'verifying' }),
   VerifyForm: (state, now): VerifyPreview => {
     const v = fixtureVerification(now);
     switch (state) {
@@ -132,6 +152,8 @@ const DOC_CONTAINER: Partial<Record<DocKey, ContainerName>> = {
   'order-placed': 'OrderPlaced',
   tracking: 'TrackingLookup',
   verify: 'VerifyForm',
+  'reset-password': 'ResetPassword',
+  'verify-email': 'VerifyEmail',
   'order-status': 'OrderStatus',
 };
 

@@ -35,11 +35,24 @@ export interface Theme {
   density: 'comfortable' | 'compact';
   customCss: string;
 }
+export interface PasswordLoginSettings {
+  /** The store switched email/phone + password on. */
+  available: boolean;
+  /** An emailed reset link works (the backend has a delivery implementation). */
+  resetByEmail: boolean;
+  /** The shopper can message the shop's WhatsApp number to get a reset link. */
+  resetByWhatsapp: boolean;
+}
 export interface StorefrontSettings {
   enabled: boolean; closedMessage: string; welcomeMessage: string | null;
   notices: Notice[]; cutoffs: Cutoffs; serverTime: string; contactModes: ContactModes;
   currency: string; supportLinks: SupportLink[];
-  login: { whatsapp: { available: boolean; number: string | null }; telegram: { available: boolean; botUsername: string | null } };
+  login: {
+    whatsapp: { available: boolean; number: string | null };
+    telegram: { available: boolean; botUsername: string | null };
+    /** Absent on backends older than password sign-in. */
+    password?: PasswordLoginSettings;
+  };
   brand: Brand; features: Features; theme: Theme; turnstile: { siteKey: string } | null;
   /** The bot's effective web app mode. Absent on backends older than the Mini App. */
   telegramWebApp?: { mode: 'off' | 'beta' | 'forced' };

@@ -78,6 +78,62 @@
   border-color: var(--sf-danger);
 }
 
+/* Password: the reveal toggle sits in the field's frame at the trailing edge.
+   The input keeps its own box; the toggle is absolutely placed over a gutter
+   the input reserves, so typed text never runs under it. */
+.control {
+  position: relative;
+  display: flex;
+  min-width: 0;
+}
+
+/* The gutter for the toggle. The box variant's padding-inline outranks the plain
+   selector, hence the second one. */
+.input.hasToggle,
+:global(:root[data-sf-input="box"]) .input.hasToggle {
+  padding-right: 2.75rem;
+}
+
+.toggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--sf-faint);
+  cursor: pointer;
+  transition: color 120ms ease;
+}
+
+.toggle[aria-pressed='true'] {
+  color: var(--sf-primary);
+}
+
+@media (hover: hover) {
+  .toggle:hover {
+    color: var(--sf-text);
+  }
+}
+
+.toggle:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: -2px;
+}
+
+.eye {
+  display: block;
+  pointer-events: none;
+}
+
 .textarea {
   min-height: 5.5rem;
   padding: 0.6rem 0.75rem;
@@ -278,6 +334,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .input,
+  .toggle,
   .choice,
   .marker,
   .marker::after {

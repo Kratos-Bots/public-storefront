@@ -4,7 +4,7 @@ export type LayoutKind = 'storefront' | 'menu' | 'webapp';
 
 export const FIXED_ROUTE_KEYS = ['catalog', 'product', 'cart', 'checkout', 'login', 'account.orders', 'account.order',
   'account.loyalty', 'account.referrals', 'account.profile', 'order-status', 'payment-success', 'payment-cancel',
-  'order-placed', 'verify', 'tracking'] as const;
+  'order-placed', 'verify', 'tracking', 'reset-password', 'verify-email'] as const;
 export type FixedRouteKey = typeof FIXED_ROUTE_KEYS[number];
 export type RouteKey = FixedRouteKey | `page:${string}`; // slug /^[a-z0-9-]{1,60}$/
 export const CARD_KINDS = ['tile', 'row'] as const;

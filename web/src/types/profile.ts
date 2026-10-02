@@ -1,7 +1,10 @@
+export interface ProfilePassword { set: boolean; loginEmail: string | null; loginPhone: string | null; emailVerified: boolean; phoneVerified: boolean }
 export interface Profile {
   loyaltyPoints: number; storeCreditBalance: number; referralCode: string; referralsCount: number; referredPeopleCount: number;
   hasReferrer: boolean; referrerNickname: string | null; totalOrders: number; totalSpend: number; memberSince: string;
   nickname: string | null; identities: { telegram: boolean; whatsapp: boolean; email: boolean };
+  /** Absent on backends older than password sign-in. */
+  password?: ProfilePassword;
 }
 export interface RedeemOption { id: number; label: string; pointsCost: number; creditValue: number; affordable: boolean }
 export interface RedeemOptions { loyaltyPoints: number; options: RedeemOption[] }

@@ -47,7 +47,7 @@ const minus = (keys: readonly StyleKey[], drop: readonly StyleKey[]) => keys.fil
 const ALLTEXT = [...BOX, ...TEXT, ...VIS];
 const ROUTE = ['ProductGrid', 'ProductList', 'WholesaleTable', 'ProductDetail', 'CartContents', 'CartSummary', 'CheckoutFlow',
   'LoginOptions', 'OrdersList', 'OrderDetail', 'Loyalty', 'Referrals', 'Profile', 'OrderStatus', 'PaymentSuccess',
-  'PaymentCancel', 'OrderPlaced', 'VerifyForm', 'TrackingLookup'];
+  'PaymentCancel', 'OrderPlaced', 'VerifyForm', 'TrackingLookup', 'ResetPassword', 'VerifyEmail'];
 
 /**
  * Spec §4 as a FLOOR. Allowlists only grow: a later release may add keys (update this table by

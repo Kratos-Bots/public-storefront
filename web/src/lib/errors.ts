@@ -5,6 +5,14 @@ export class ApiError extends Error {
   constructor(status: number, message: string) { super(message); this.name = 'ApiError'; this.status = status; }
   get isStorefrontDisabled(): boolean { return this.status === 503 && this.message === 'STOREFRONT_DISABLED'; }
   get isUnauthorized(): boolean { return this.status === 401; }
+  /** `403 ACCOUNT_BANNED`, the backend's sentinel for a banned customer (session creation, sign-in, reset). */
+  get isBanned(): boolean { return this.status === 403 && this.message === 'ACCOUNT_BANNED'; }
+  /** `400 RESET_LINK_INVALID`: the reset token is unknown, expired or already used. */
+  get isResetLinkInvalid(): boolean { return this.status === 400 && this.message === 'RESET_LINK_INVALID'; }
+  /** `400 VERIFY_LINK_INVALID`: the verification token is unknown, expired or already used. */
+  get isVerifyLinkInvalid(): boolean { return this.status === 400 && this.message === 'VERIFY_LINK_INVALID'; }
+  /** `422 CURRENT_PASSWORD_INCORRECT`: the current password typed in Account was wrong. A 422 on purpose: this client clears the session on every 401. */
+  get isCurrentPasswordIncorrect(): boolean { return this.status === 422 && this.message === 'CURRENT_PASSWORD_INCORRECT'; }
 }
 /** Resolved at call time (playbook rule 8), so the mounted provider's wording applies and nothing freezes at import. */
 export function errorMessage(err: unknown, fallback?: string): string {

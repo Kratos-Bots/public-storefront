@@ -70,7 +70,7 @@ title: Northbound Supply
 <div class="_page_H">
 <div class="_head_H">
 <h1 class="_title_H">Sign in to Northbound Supply</h1>
-<p class="_lede_H">There’s no password. Sign in from a chat app you already use, and your orders, points and referrals are waiting.</p>
+<p class="_lede_H">Sign in and your orders, points and referrals are waiting.</p>
 </div>
 <div class="_options_H">
 <section class="_card_H anim-fade" data-sf-part="card">
