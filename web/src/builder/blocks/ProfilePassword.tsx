@@ -11,7 +11,7 @@ export const block = defineBlock<{ id: string }>({
   text: [
     'account.password.*', 'auth.password.show', 'auth.password.hide', 'auth.password.kindAria', 'auth.password.byEmail', 'auth.password.byPhone',
     'auth.password.emailLabel', 'auth.password.rule', 'auth.password.tooShort', 'auth.password.tooLong', 'auth.password.taken',
-    'auth.password.wrongCurrent', 'auth.password.phoneInvalid', 'auth.password.unavailable', 'checkout.errors.required',
+    'auth.password.wrongCurrent', 'auth.password.banned', 'auth.password.phoneInvalid', 'auth.password.unavailable', 'checkout.errors.required',
     'checkout.errors.emailInvalid', 'checkout.phone.*', 'errors.rateLimited', 'common.actions.cancel',
   ],
   schema: z.object({}), defaultProps: {},

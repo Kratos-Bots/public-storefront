@@ -21,6 +21,10 @@ import { BuilderModeProvider } from '@/builder/mode.ts';
 import { PasswordSection } from '@/features/account/PasswordSection.tsx';
 import { ProfilePage } from '@/features/account/ProfilePage.tsx';
 import { useSessionStore } from '@/stores/session.ts';
+import { BLOCKS } from '@/builder/registry.ts';
+import { matchesTextPattern } from '@/text/registry.ts';
+import { ApiError } from '@/lib/errors.ts';
+import { passwordErrorMessage } from '@/features/auth/password-errors.ts';
 
 let fetchSpy: MockInstance;
 // ky/undici consume the request body, so it is read inside the fetch mock (keyed by request) rather than afterwards.
@@ -201,5 +205,24 @@ describe('as a part of the profile page', () => {
     (h.settings.login as Record<string, unknown>).password = undefined;
     shell(<ProfilePage />, { surface: 'website', profile: profile() });
     expect(screen.getByRole('region', { name: 'Password' })).toBeTruthy();
+  });
+});
+
+describe('the block claims every sentence the section can show', () => {
+  it('covers each key passwordErrorMessage can return when saving or requesting a verification email', () => {
+    const patterns = BLOCKS.ProfilePassword!.text ?? [];
+    const claimed = (key: string) => patterns.some((p) => matchesTextPattern(key, p));
+    for (const key of ['auth.password.banned', 'auth.password.wrongCurrent', 'auth.password.taken', 'auth.password.unavailable', 'errors.rateLimited']) {
+      expect(claimed(key), key).toBe(true);
+    }
+  });
+
+  it('those keys are what the function returns for each failure (so the list above is the whole set)', () => {
+    const err = (status: number, message = 'x') => new ApiError(status, message);
+    const sentences = new Set<string>();
+    for (const ctx of ['set', 'forgot'] as const) {
+      for (const e of [err(403, 'ACCOUNT_BANNED'), err(422, 'CURRENT_PASSWORD_INCORRECT'), err(409), err(404)]) sentences.add(passwordErrorMessage(e, ctx));
+    }
+    expect(sentences.size).toBe(4);
   });
 });
