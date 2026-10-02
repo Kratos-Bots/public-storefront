@@ -7,6 +7,8 @@ import { useSessionStore } from '@/stores/session.ts';
 import { useCartStore } from '@/stores/cart.ts';
 import { useTelegramAuthStore } from '@/stores/telegram.ts';
 import { ApiError } from '@/lib/errors.ts';
+import { accessGate } from '@/app/access-gate.ts';
+import { textSnapshot } from '@/text/snapshot.ts';
 import type { LoginResult } from '@/types/auth.ts';
 
 const RESULT: LoginResult = { token: 'tg-token', customer: { id: 7, nickname: 'Ada' } };
@@ -78,6 +80,24 @@ describe('bootTelegramSession', () => {
     expect(useSessionStore.getState().token).toBeNull();
     expect(useTelegramAuthStore.getState()).toMatchObject({ status: 'failed', error: 'Telegram web app session expired' });
     expect(d.adoptCart).not.toHaveBeenCalled();
+  });
+
+  it('records a refused registration and shows the mapped sentence', async () => {
+    accessGate.getState().reset();
+    const d = deps({ login: vi.fn(async () => { throw new ApiError(403, 'REGISTRATION_CLOSED'); }) });
+    await bootTelegramSession(d);
+    expect(accessGate.getState().registrationRefused).toBe(true);
+    expect(useTelegramAuthStore.getState()).toMatchObject({
+      status: 'failed',
+      error: textSnapshot().t('errors.registrationClosed'),
+    });
+    accessGate.getState().reset();
+  });
+
+  it('does not mark registration refused for other failures', async () => {
+    accessGate.getState().reset();
+    await bootTelegramSession(deps({ login: vi.fn(async () => { throw new ApiError(500, 'boom'); }) }));
+    expect(accessGate.getState().registrationRefused).toBe(false);
   });
 
   it('fails cleanly if Telegram handed over no initData', async () => {

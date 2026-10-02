@@ -2,7 +2,8 @@ import { loginTelegramWebApp } from '@/api/auth.ts';
 import { fetchCart } from '@/api/cart.ts';
 import { adoptAccountCart } from '@/features/auth/useLoginSuccess.ts';
 import { resetCartSync } from '@/features/cart/useServerCart.ts';
-import { errorMessage } from '@/lib/errors.ts';
+import { ApiError, errorMessage } from '@/lib/errors.ts';
+import { accessGate } from '@/app/access-gate.ts';
 import { textSnapshot } from '@/text/snapshot.ts';
 import { isTelegramWebApp, telegramInitData } from '@/lib/telegram-webapp.ts';
 import { useCartStore } from '@/stores/cart.ts';
@@ -81,6 +82,7 @@ export async function bootTelegramSession(overrides: Partial<TelegramSessionDeps
     await d.adoptCart(!hadSession);
     useTelegramAuthStore.getState().setStatus('ready');
   } catch (err) {
+    if (err instanceof ApiError && err.isRegistrationClosed) accessGate.getState().setRegistrationRefused(true);
     d.forgetAccount();
     useTelegramAuthStore.getState().setStatus('failed', errorMessage(err, textSnapshot().t('auth.telegram.signInFailed')));
   }

@@ -3,6 +3,7 @@ import { Navigate, Outlet, useParams, type RouteObject } from 'react-router';
 import { useMediaQuery } from '@mantine/hooks';
 import { useEffectiveLayout } from '@/app/layout.ts';
 import { Guard } from '@/app/guards.tsx';
+import { AccessBoundary } from '@/app/AccessBoundary.tsx';
 import { BuilderRoute } from '@/app/builder-route.tsx';
 import { PuckPage, PuckShell } from '@/builder/runtime.tsx';
 import { customPageKey, type FixedRouteKey } from '@/builder/types.ts';
@@ -57,7 +58,11 @@ export const routes: RouteObject[] = [
   { path: '/__builder/*', element: <BuilderRoute /> },
   {
     path: '/',
-    element: <PuckShell />,
+    element: (
+      <AccessBoundary>
+        <PuckShell />
+      </AccessBoundary>
+    ),
     children: [
       { index: true, ...page('catalog') },
       { path: 'c/:categorySlug', ...page('catalog') },

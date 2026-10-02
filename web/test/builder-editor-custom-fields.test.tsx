@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { SETTINGS_KEY } from '@/app/settings.ts';
 import { isAllowedExternal, LINKABLE_ROUTES, linkModeOf, normalizeExternal } from '@/builder/editor/custom-fields/route-link-model.ts';
 import { routeLinkField } from '@/builder/editor/custom-fields/route-link.tsx';
 import { checkImageFile, imageField } from '@/builder/editor/custom-fields/image.tsx';
@@ -297,6 +298,7 @@ describe('catalogue pickers', () => {
     fetchMock.mockResolvedValue(catalog);
     useSessionStore.getState().setSession('fixture-token', { id: 900001, nickname: 'Morgan' } as never);
     const client = new QueryClient();
+    client.setQueryData(SETTINGS_KEY, {});
     configureCatalogSource(client);
     function Canvas() {
       const { data } = useCatalog();

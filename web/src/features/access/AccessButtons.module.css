@@ -1,0 +1,46 @@
+/* Stacked and full width on a phone, a wrapping row from 30rem. */
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.7rem 1.1rem;
+  border: 1px solid var(--sf-line-strong);
+  border-radius: var(--sf-card-radius);
+  color: var(--sf-text);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: center;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  transition: color 120ms ease, border-color 120ms ease, background-color 120ms ease;
+}
+
+.button:hover {
+  border-color: var(--sf-primary);
+  background: var(--sf-surface);
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+@media (min-width: 30rem) {
+  .root {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .button {
+    flex: 0 1 auto;
+  }
+}
