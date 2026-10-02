@@ -18,6 +18,7 @@ import { resetCartSync } from '@/features/cart/useServerCart.ts';
 import { textKey, useText } from '@/text/runtime.tsx';
 import { useProfile } from '@/features/account/queries.ts';
 import type { Profile } from '@/types/profile.ts';
+import { PasswordSection } from '@/features/account/PasswordSection.tsx';
 import { ProfileFamily, type ProfileData, type ProfilePreview } from '@/builder/family-profile.ts';
 import { usePreviewFixture } from '@/builder/mode.ts';
 import type { FamilyValue, PartViewProps } from '@/builder/parts.ts';
@@ -157,6 +158,12 @@ function ContactView({ styleAttrs }: PartViewProps) {
   );
 }
 
+function PasswordView({ styleAttrs }: PartViewProps) {
+  const { profile, passwordAvailable, resetByEmail } = ProfileFamily.useData();
+  if (!passwordAvailable) return null;
+  return <PasswordSection profile={profile} resetByEmail={resetByEmail} rootAttrs={styleAttrs} />;
+}
+
 function BotSwitchView({ styleAttrs }: PartViewProps) {
   const { showBotSwitch } = ProfileFamily.useData();
   return showBotSwitch ? <ClassicBotSwitch rootAttrs={styleAttrs} /> : null;
@@ -183,7 +190,7 @@ function SignOutView({ styleAttrs }: PartViewProps) {
 
 /** The profile tab's views (spec §5.4): the v0.7.0 JSX of each piece. */
 export const PROFILE_VIEWS: FamilyValue<ProfileData>['views'] = {
-  ProfileDetails: DetailsView, ProfileChannels: ChannelsView, ProfileContact: ContactView,
+  ProfileDetails: DetailsView, ProfileChannels: ChannelsView, ProfilePassword: PasswordView, ProfileContact: ContactView,
   ProfileBotSwitch: BotSwitchView, ProfileSignOut: SignOutView,
 };
 
@@ -246,11 +253,13 @@ export function ProfilePage({ slots }: { slots?: { content: SlotRender } } = {})
   const surface: ProfileData['surface'] = preview ? fixture.surface : inTelegram ? 'telegram' : webapp ? 'webapp' : 'website';
   const showContact = preview ? fixture.surface === 'webapp' : webapp && hasChatLinks;
   const showBotSwitch = !preview && inTelegram && settings.telegramWebApp?.mode === 'beta';
+  const passwordAvailable = preview ? true : settings.login?.password?.available === true;
+  const resetByEmail = preview ? true : settings.login?.password?.resetByEmail === true;
   const value: FamilyValue<ProfileData> | null = useMemo(
-    () => (data ? { data: { profile: data, signOut: () => void signOut(), signingOut, surface, showContact, showBotSwitch }, views: PROFILE_VIEWS } : null),
+    () => (data ? { data: { profile: data, signOut: () => void signOut(), signingOut, surface, showContact, showBotSwitch, passwordAvailable, resetByEmail }, views: PROFILE_VIEWS } : null),
     // `signOut` only closes over `setSigningOut` and module state, so it is safe to leave out.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [data, signingOut, surface, showContact, showBotSwitch],
+    [data, signingOut, surface, showContact, showBotSwitch, passwordAvailable, resetByEmail],
   );
 
   if (!usingFixture && profile.isPending) return <PageSkeleton inline />;

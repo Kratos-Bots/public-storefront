@@ -192,6 +192,7 @@ export function fixtureProfile(p: PreviewAs): Profile {
     loyaltyPoints: 860, storeCreditBalance: 5, referralCode: 'NB-MORGAN-2041', referralsCount: 2, referredPeopleCount: 1,
     hasReferrer: false, referrerNickname: null, totalOrders: orders ? 2 : 0, totalSpend: orders ? 155.35 : 0,
     memberSince: '2026-03-02T09:00:00.000Z', nickname: 'Morgan', identities: { telegram: false, whatsapp: true, email: true },
+    password: { set: false, loginEmail: 'morgan@example.invalid', loginPhone: null, emailVerified: false, phoneVerified: false },
   };
 }
 

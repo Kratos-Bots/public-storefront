@@ -89,7 +89,7 @@ const REQUIRED: Record<string, string[]> = { Loyalty: ['LoyaltyPoints', 'Loyalty
 const DEFAULTS: Record<string, string[]> = {
   Loyalty: ['LoyaltyPoints', 'LoyaltyCredit', 'LoyaltyNoPoints', 'LoyaltyRewards'],
   Referrals: ['ReferralCode', 'ReferralShare', 'ReferralStats', 'ReferralReferrer'],
-  Profile: ['ProfileDetails', 'ProfileChannels', 'ProfileContact', 'ProfileBotSwitch', 'ProfileSignOut'],
+  Profile: ['ProfileDetails', 'ProfileChannels', 'ProfilePassword', 'ProfileContact', 'ProfileBotSwitch', 'ProfileSignOut'],
 };
 const LAYOUTS: LayoutKind[] = ['storefront', 'menu', 'webapp'];
 
@@ -330,11 +330,11 @@ describe('profile', () => {
     const mode = (surface: 'website' | 'webapp'): Partial<BuilderMode> => ({ previewStates: { Profile: surface }, previewFixtures: { Profile: { ...fixture, surface } } });
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
     const r = await ready(view(defaultOf('Profile'), 'account.profile', mode('website')));
-    expect(r.container.querySelectorAll('section')).toHaveLength(1);
+    expect(r.container.querySelectorAll('section')).toHaveLength(2);
     cleanup();
     s.links = { whatsapp: 'https://wa.me/447700900123', telegram: null };
     const r2 = await ready(view(defaultOf('Profile'), 'account.profile', mode('webapp')));
-    expect(r2.container.querySelectorAll('section')).toHaveLength(2);
+    expect(r2.container.querySelectorAll('section')).toHaveLength(3);
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();
   });

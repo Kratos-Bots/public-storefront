@@ -13,6 +13,10 @@ export interface ProfileData {
   showContact: boolean;
   /** The classic-bot switch applies (Telegram beta Mini App). */
   showBotSwitch: boolean;
+  /** Password sign-in is on for this shop (or the editor is previewing): the Password section shows. */
+  passwordAvailable: boolean;
+  /** An emailed link works (`login.password.resetByEmail`): the section may offer "Send verification email". */
+  resetByEmail: boolean;
 }
 export const ProfileFamily = createFamily<ProfileData>('profile');
 

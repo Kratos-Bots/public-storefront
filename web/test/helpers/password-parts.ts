@@ -1,5 +1,5 @@
 import type { PartFamily } from '@/builder/parts.ts';
-import { BOX, TEXT, type StyleKey, type StyleTarget } from '@/builder/style/model.ts';
+import { BOX, TEXT, VIS, type StyleKey, type StyleTarget } from '@/builder/style/model.ts';
 
 const T = (target: StyleTarget, ...groups: ReadonlyArray<readonly StyleKey[]>) => ({ target, keys: groups.flat() });
 
@@ -9,6 +9,7 @@ export const PASSWORD_PARTS: Record<string, { family: PartFamily; style: { targe
   ResetPasswordForm: { family: 'reset-password', style: T('root', BOX) },
   VerifyEmailHeading: { family: 'verify-email', style: T('root', BOX, TEXT) },
   VerifyEmailStatus: { family: 'verify-email', style: T('root', BOX, TEXT) },
+  ProfilePassword: { family: 'profile', style: T('root', BOX, TEXT, VIS) },
 };
 
 export const PASSWORD_CONTAINERS: Record<string, PartFamily> = { ResetPassword: 'reset-password', VerifyEmail: 'verify-email' };

@@ -4036,6 +4036,7 @@
         "unique": [
           "ProfileDetails",
           "ProfileChannels",
+          "ProfilePassword",
           "ProfileContact",
           "ProfileBotSwitch",
           "ProfileSignOut"
@@ -4156,6 +4157,40 @@
       "routeBound": false,
       "style": {
         "target": "wrap",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "profile"
+      }
+    },
+    {
+      "name": "ProfilePassword",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
         "keys": [
           "bg",
           "fg",
