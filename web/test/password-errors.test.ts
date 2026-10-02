@@ -23,6 +23,15 @@ describe('passwordErrorMessage', () => {
       expect(passwordErrorMessage(new ApiError(403, 'ACCOUNT_BANNED'), c)).toBe('This account can’t sign in right now. Contact the shop for help.');
     }
   });
+  it('REGISTRATION_CLOSED is the closed-registration sentence, never the code', () => {
+    const msg = 'This shop isn’t taking new customers right now.';
+    expect(passwordErrorMessage(new ApiError(403, 'REGISTRATION_CLOSED'), 'signup')).toBe(msg);
+    expect(passwordErrorMessage(new ApiError(403, 'REGISTRATION_CLOSED'), 'signin')).toBe(msg);
+  });
+  it('ACCESS_DENIED and LOGIN_REQUIRED map through errorMessage, never showing the code', () => {
+    expect(passwordErrorMessage(new ApiError(403, 'ACCESS_DENIED'), 'signin')).toBe('Your account doesn’t have access to this shop.');
+    expect(passwordErrorMessage(new ApiError(401, 'LOGIN_REQUIRED'), 'forgot')).toBe('Please sign in to continue.');
+  });
   it('a 404 means the shop has switched password sign-in off', () => {
     expect(passwordErrorMessage(new ApiError(404, 'Not found'), 'signin')).toBe('Password sign-in isn’t available right now.');
   });

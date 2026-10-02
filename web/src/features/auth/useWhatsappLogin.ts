@@ -134,6 +134,12 @@ export function useWhatsappLogin(): WhatsappLoginController {
               setState('expired');
               return;
             }
+            if (status === 'rejected') {
+              // The shop is not taking new customers and this number is not one of them.
+              setError(t('errors.registrationClosed'));
+              setState('error');
+              return;
+            }
           } catch {
             // A dropped poll is not a failed login — the attempt is still open on
             // the server. Keep watching until the deadline says otherwise.

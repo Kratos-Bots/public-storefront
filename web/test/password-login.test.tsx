@@ -60,6 +60,21 @@ const secret = (label = 'Password') => screen.getByLabelText(label) as HTMLInput
 const button = (name: string) => screen.getByRole('button', { name });
 const type = (el: HTMLElement, value: string) => fireEvent.change(el, { target: { value } });
 
+describe('sign-up link and closed registration', () => {
+  it('shows "Create an account" and "Forgot" when the backend sends no access settings', () => {
+    mount();
+    expect(button('Create an account')).toBeTruthy();
+    expect(button('Forgot your password?')).toBeTruthy();
+  });
+
+  it('hides "Create an account" but keeps "Forgot" while registration is closed', () => {
+    h.settings = { ...h.settings, access: { storefront: 'public', registration: false, deniedMessage: '', deniedButtons: [] } };
+    mount();
+    expect(screen.queryByRole('button', { name: 'Create an account' })).toBeNull();
+    expect(button('Forgot your password?')).toBeTruthy();
+  });
+});
+
 describe('sign in', () => {
   it('opens in sign-in mode with the email fields and no Turnstile', () => {
     mount();

@@ -6,6 +6,7 @@ import { useText } from '@/text/runtime.tsx';
 import { ContactLinks } from '@/components/ContactLinks.tsx';
 import { EmptyState } from '@/components/EmptyState.tsx';
 import { MailIcon, TelegramIcon, WhatsAppIcon } from '@/components/icons.tsx';
+import { AccessNotice } from '@/features/auth/AccessNotice.tsx';
 import { AuthCard, AuthNote } from '@/features/auth/AuthCard.tsx';
 import { PasswordLogin } from '@/features/auth/PasswordLogin.tsx';
 import { TelegramLogin } from '@/features/auth/TelegramLogin.tsx';
@@ -61,7 +62,12 @@ export function LoginOptions({ rootAttrs }: { rootAttrs?: StyleAttrs } = {}) {
         eyebrow={t('common.actions.signIn')}
         title={t('auth.options.unavailableTitle')}
         description={t('auth.options.unavailableBody', { name: brand.shortName || brand.name })}
-        action={<ContactLinks />}
+        action={
+          <>
+            <ContactLinks />
+            <AccessNotice />
+          </>
+        }
         rootAttrs={rootAttrs}
       />
     );
@@ -88,6 +94,8 @@ export function LoginOptions({ rootAttrs }: { rootAttrs?: StyleAttrs } = {}) {
           <PasswordLogin />
         </AuthCard>
       ) : null}
+
+      <AccessNotice />
     </div>
   );
 }

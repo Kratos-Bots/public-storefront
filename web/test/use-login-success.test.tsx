@@ -22,6 +22,7 @@ import { fetchCart, putCart } from '@/api/cart.ts';
 import { notifications } from '@mantine/notifications';
 import { ApiError } from '@/lib/errors.ts';
 import { useCartStore, type LocalLine } from '@/stores/cart.ts';
+import { accessGate } from '@/app/access-gate.ts';
 import { useSessionStore } from '@/stores/session.ts';
 import { resetCartSync } from '@/features/cart/useServerCart.ts';
 import { safeReturnTo, unionCartLines, useLoginSuccess } from '@/features/auth/useLoginSuccess.ts';
@@ -246,5 +247,31 @@ describe('useLoginSuccess', () => {
     expect(useSessionStore.getState().token).toBe('sess-token');
     expect(navigate).toHaveBeenCalledWith('/account', { replace: true });
     expect(showMock).toHaveBeenCalled();
+  });
+});
+
+describe('useLoginSuccess and shop access', () => {
+  it('clears a refusal recorded for a previous customer before signing in', async () => {
+    accessGate.setState({ denied: true, registrationRefused: true });
+    await signIn();
+    expect(accessGate.getState().denied).toBe(false);
+    expect(accessGate.getState().registrationRefused).toBe(false);
+  });
+
+  it('lands on returnTo as before when the cart adopt succeeds', async () => {
+    useSessionStore.setState({ returnTo: '/checkout' });
+    await signIn();
+    expect(navigate).toHaveBeenCalledWith('/checkout', { replace: true });
+  });
+
+  it('a customer the cart call refuses with ACCESS_DENIED lands on / with no notification', async () => {
+    useSessionStore.setState({ returnTo: '/checkout' });
+    fetchMock.mockImplementation(async () => {
+      accessGate.getState().setDenied(true); // what the api client does on a refusal
+      throw new ApiError(403, 'ACCESS_DENIED');
+    });
+    await signIn();
+    expect(showMock).not.toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledWith('/', { replace: true });
   });
 });

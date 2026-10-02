@@ -1,0 +1,34 @@
+/* A quiet block under the sign-in cards, set off by the same rule the closed page uses. */
+.root {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--sf-line);
+  text-align: center;
+}
+
+.lede {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--sf-text);
+}
+
+.registration {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--sf-warn);
+}
+
+.message {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.65;
+  color: var(--sf-muted);
+  white-space: pre-line;
+}

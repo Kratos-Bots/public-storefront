@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { useSettings } from '@/app/settings.ts';
+import { accessOf } from '@/app/access.ts';
 import { useText } from '@/text/runtime.tsx';
 import { ContactLinks } from '@/components/ContactLinks.tsx';
 import { Field } from '@/features/checkout/Field.tsx';
@@ -17,6 +18,9 @@ import classes from '@/features/auth/PasswordLogin.module.css';
  */
 export function PasswordLogin() {
   const settings = useSettings();
+  // A refetch that closes registration while the form is in sign-up mode leaves it
+  // there: the submit gets the mapped error instead of the form vanishing.
+  const registration = accessOf(settings).registration;
   const { t } = useText();
   const turnstileRef = useRef<GuestTurnstileHandle | null>(null);
   const form = usePasswordLogin(turnstileRef);
@@ -160,7 +164,7 @@ export function PasswordLogin() {
         {signup ? link(t('auth.password.toSignIn'), 'signin') : (
           <>
             {link(t('auth.password.toForgot'), 'forgot')}
-            {link(t('auth.password.toSignUp'), 'signup')}
+            {registration ? link(t('auth.password.toSignUp'), 'signup') : null}
           </>
         )}
       </div>

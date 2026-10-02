@@ -6,7 +6,8 @@ import { fetchCart, putCart } from '@/api/cart.ts';
 import { useCartStore } from '@/stores/cart.ts';
 import { useSessionStore } from '@/stores/session.ts';
 import { resetCartSync } from '@/features/cart/useServerCart.ts';
-import { errorMessage } from '@/lib/errors.ts';
+import { accessGate } from '@/app/access-gate.ts';
+import { ApiError, errorMessage } from '@/lib/errors.ts';
 import { textSnapshot } from '@/text/snapshot.ts';
 import type { LoginResult } from '@/types/auth.ts';
 import type { CartLineInput, ServerCartLine } from '@/types/cart.ts';
@@ -61,6 +62,8 @@ export async function adoptAccountCart(client?: QueryClient): Promise<void> {
     useCartStore.getState().replaceFromServer(merged);
     await client?.invalidateQueries({ queryKey: ['cart'] });
   } catch (err) {
+    // The lockout screen says it better than a red notification would.
+    if (err instanceof ApiError && err.isAccessDenied) return;
     notifications.show({
       message: errorMessage(err, textSnapshot().t('auth.login.basketFailed')),
       color: 'red',
@@ -89,6 +92,8 @@ export function useLoginSuccess(): (result: LoginResult) => Promise<void> {
       const destination = safeReturnTo(useSessionStore.getState().returnTo) ?? DEFAULT_LANDING;
       // The api client reads the token from the store to sign the cart calls below,
       // so the session has to be in place before the first of them goes out.
+      // A refusal recorded for a previous customer must not follow this one.
+      accessGate.getState().reset();
       useSessionStore.getState().setSession(result.token, result.customer);
 
       // A previous session in this tab can have left a debounce timer armed and a
@@ -98,7 +103,9 @@ export function useLoginSuccess(): (result: LoginResult) => Promise<void> {
       await adoptAccountCart(client);
 
       useSessionStore.getState().setReturnTo(null);
-      navigate(destination, { replace: true });
+      // A customer the shop refused cannot shop: the boundary shows the lockout
+      // screen at `/`, which is the honest landing rather than a page that errors.
+      navigate(accessGate.getState().denied ? '/' : destination, { replace: true });
     },
     [navigate, client],
   );

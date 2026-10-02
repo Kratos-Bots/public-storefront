@@ -5,7 +5,7 @@ export const startWhatsapp = () =>
   unwrap<WhatsappStart>(api.post('storefront/auth/whatsapp/start', { json: {} }));
 
 export const pollAttempt = (id: string) =>
-  unwrap<{ status: AttemptStatus }>(api.get(`storefront/auth/attempts/${id}`));
+  unwrap<{ status: AttemptStatus; reason?: string }>(api.get(`storefront/auth/attempts/${id}`));
 
 export const completeWhatsapp = (attemptId: string, attemptSecret: string) =>
   unwrap<LoginResult>(api.post('storefront/auth/whatsapp/complete', { json: { attemptId, attemptSecret } }));

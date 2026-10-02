@@ -182,6 +182,21 @@ describe('useWhatsappLogin', () => {
     expect(result.current.state).toBe('expired');
   });
 
+  it('a rejected poll ends in the error state with the closed-registration sentence and stops polling', async () => {
+    pollMock.mockResolvedValue({ status: 'rejected' });
+    const { result } = renderHook(() => useWhatsappLogin());
+    await begin(result.current.start);
+
+    await ticks(1);
+    expect(result.current.state).toBe('error');
+    expect(result.current.error).toBe('This shop isn’t taking new customers right now.');
+    expect(completeMock).not.toHaveBeenCalled();
+
+    const calls = pollMock.mock.calls.length;
+    await ticks(3);
+    expect(pollMock.mock.calls.length).toBe(calls);
+  });
+
   it('keeps waiting through a transient poll failure', async () => {
     pollMock
       .mockRejectedValueOnce(new ApiError(0, 'Network error'))

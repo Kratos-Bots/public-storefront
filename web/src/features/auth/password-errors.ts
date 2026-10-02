@@ -13,6 +13,7 @@ export type PasswordContext = 'signin' | 'signup' | 'forgot' | 'reset' | 'set' |
 export function passwordErrorMessage(err: unknown, context: PasswordContext): string {
   const { t } = textSnapshot();
   if (err instanceof ApiError) {
+    if (err.isRegistrationClosed) return t('errors.registrationClosed');
     if (err.isBanned) return t('auth.password.banned');
     if (err.status === 401 && context === 'signin') return t('auth.password.invalid');
     if (err.isCurrentPasswordIncorrect) return t('auth.password.wrongCurrent');
