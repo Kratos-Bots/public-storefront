@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { useReportChoice } from '@/features/auth/LoginStep.ts';
 import { FADE } from '@/lib/motion.ts';
 import { useSettings } from '@/app/settings.ts';
 import { loginTelegram } from '@/api/auth.ts';
@@ -34,6 +35,8 @@ export function LoginOptions({ rootAttrs }: { rootAttrs?: StyleAttrs } = {}) {
   const [telegramBusy, setTelegramBusy] = useState(false);
   const [telegramError, setTelegramError] = useState<string | undefined>();
   const [waiting, setWaiting] = useState(false);
+  const [signInStep, setSignInStep] = useState(true);
+  useReportChoice(!waiting && signInStep);
 
   const onTelegram = useCallback(
     (user: TelegramAuthPayload) => {
@@ -103,7 +106,7 @@ export function LoginOptions({ rootAttrs }: { rootAttrs?: StyleAttrs } = {}) {
               <span>{t('auth.options.or')}</span>
             </div>
           ) : null}
-          <PasswordLogin />
+          <PasswordLogin onSignInStep={setSignInStep} />
         </div>
       ) : null}
 

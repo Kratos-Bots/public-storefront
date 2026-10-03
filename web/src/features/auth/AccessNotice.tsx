@@ -29,7 +29,7 @@ export function AccessNotice({ placement }: { placement?: 'above' | 'below' } = 
       {lockout ? (
         <>
           <p className={classes.message}>{access.deniedMessage || t('auth.access.defaultMessage')}</p>
-          <AccessButtons buttons={access.deniedButtons} ariaLabel={t('auth.access.contactAriaLabel')} />
+          <AccessButtons buttons={access.deniedButtons} ariaLabel={t('auth.access.contactAriaLabel')} inline />
         </>
       ) : null}
     </div>

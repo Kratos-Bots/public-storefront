@@ -18,7 +18,7 @@ import classes from '@/features/auth/PasswordLogin.module.css';
  * While a request is in the air the mode links and the Email | Phone switch are disabled, so a late
  * response can never land under a different mode.
  */
-export function PasswordLogin() {
+export function PasswordLogin({ onSignInStep }: { onSignInStep?: (onSignIn: boolean) => void } = {}) {
   const settings = useSettings();
   // A refetch that closes registration while the form is in sign-up mode leaves it
   // there: the submit gets the mapped error instead of the form vanishing.
@@ -39,6 +39,9 @@ export function PasswordLogin() {
   }, [form.mode, form.kind]);
 
   const { mode, kind, values, errors, pending } = form;
+  useEffect(() => {
+    onSignInStep?.(mode === 'signin');
+  }, [mode, onSignInStep]);
 
   const kindSwitch = (
     <div className={classes.kinds} role="group" aria-label={t('auth.password.kindAria')}>
@@ -162,6 +165,7 @@ export function PasswordLogin() {
       {kindSwitch}
       <form className={classes.form} noValidate onSubmit={onSubmit}>
         {identifier}
+        <div className={classes.passwordGroup}>
         <Field
           label={t(signup ? 'auth.password.createLabel' : 'auth.password.passwordLabel')}
           type="password"
@@ -171,12 +175,13 @@ export function PasswordLogin() {
           error={errors.password}
           hint={signup ? t('auth.password.rule') : undefined}
         />
-        {signup ? null : <div className={classes.forgot}>{link(t('auth.password.toForgot'), 'forgot')}</div>}
+        {signup ? null : link(t('auth.password.toForgot'), 'forgot')}
+        </div>
         {turnstile}
         {failure}
         {submitButton(t(signup ? 'auth.password.submitSignUp' : 'auth.password.submitSignIn'))}
       </form>
-      {!signup && registration ? <div className={classes.alt}>{link(t('auth.password.toSignUp'), 'signup')}</div> : null}
+      {!signup && registration ? link(t('auth.password.toSignUp'), 'signup') : null}
     </div>
   );
 }

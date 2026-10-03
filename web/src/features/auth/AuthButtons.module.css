@@ -70,20 +70,22 @@
   align-items: center;
   gap: 0.4rem;
   min-height: 44px;
-  margin-left: -0.25rem;
-  padding: 0 0.5rem 0 0.25rem;
+  padding: 0;
   border: 0;
   border-radius: var(--sf-btn-radius);
   background: transparent;
-  color: var(--sf-muted);
+  color: var(--sf-text);
   font: inherit;
   font-size: 0.9375rem;
   font-weight: 500;
+  text-decoration: underline;
+  text-decoration-color: var(--sf-line-strong);
+  text-underline-offset: 3px;
   cursor: pointer;
 }
 
 .back:hover {
-  color: var(--sf-text);
+  text-decoration-color: currentColor;
 }
 
 .back:focus-visible {

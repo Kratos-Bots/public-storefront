@@ -62,7 +62,9 @@ export function WhatsappLogin({ number, onWaiting }: { number: string | null; on
   const remaining = useRemaining(state === 'started' ? deadline : undefined);
   const clipboard = useClipboard({ timeout: 1600 });
   const to = dialable(number);
-  const waiting = state === 'started' && Boolean(data);
+  // The other ways stay out of the way for the whole round trip, including the moment the
+  // message has arrived and the session is being made.
+  const waiting = (state === 'started' && Boolean(data)) || state === 'completed' || state === 'done';
   useEffect(() => {
     onWaiting?.(waiting);
   }, [waiting, onWaiting]);
@@ -118,10 +120,6 @@ export function WhatsappLogin({ number, onWaiting }: { number: string | null; on
   if (state === 'started' && data) {
     return (
       <>
-        <button type="button" className={buttons.back} onClick={cancel}>
-          <ArrowLeftIcon size={18} />
-          {t('auth.whatsapp.back')}
-        </button>
         <a
           className={buttons.primary}
           href={data.waLink}
@@ -160,6 +158,11 @@ export function WhatsappLogin({ number, onWaiting }: { number: string | null; on
             {clock(remaining)}
           </span>
         </p>
+
+        <button type="button" className={buttons.back} onClick={cancel}>
+          <ArrowLeftIcon size={18} />
+          {t('auth.whatsapp.back')}
+        </button>
       </>
     );
   }

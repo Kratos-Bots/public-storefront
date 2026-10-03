@@ -29,7 +29,7 @@
   display: flex;
   align-items: center;
   gap: 0.85rem;
-  color: var(--sf-faint);
+  color: var(--sf-muted);
   font-size: 0.875rem;
 }
 
@@ -38,5 +38,5 @@
   content: '';
   flex: 1;
   height: 1px;
-  background: var(--sf-line-strong);
+  background: color-mix(in srgb, var(--sf-muted) 45%, transparent);
 }

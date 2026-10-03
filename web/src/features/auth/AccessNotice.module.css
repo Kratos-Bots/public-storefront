@@ -1,28 +1,22 @@
-/* What the shop asks of a visitor. Lighter than the sign-in methods on purpose:
-   no box, just the note rule the other messages on this screen use, and contact
-   buttons that read as links beside the filled and outlined sign-in buttons. */
+/* What the shop asks of a visitor, as part of the same left-aligned column as
+   the heading and the methods: plain text at normal contrast, then the owner's
+   contact options as inline links. No rule, no box. */
 .root {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  text-align: center;
+  gap: 0.35rem;
+  text-align: left;
 }
 
-/* Leading the methods (the owner's own words): left-aligned under the heading, set off by a rule. */
 .above {
-  align-items: flex-start;
-  gap: 0.6rem;
-  padding: 0.15rem 0 0.15rem 0.9rem;
-  border-left: 3px solid var(--sf-line-strong);
-  text-align: left;
+  gap: 0.15rem;
 }
 
 .lede {
   margin: 0;
   font-size: 0.9375rem;
   line-height: 1.5;
-  color: var(--sf-muted);
+  color: var(--sf-text);
 }
 
 .registration {
@@ -35,31 +29,7 @@
 .message {
   margin: 0;
   font-size: 0.9375rem;
-  line-height: 1.55;
+  line-height: 1.5;
   color: var(--sf-text);
   white-space: pre-line;
-}
-
-/* The owner's contact buttons, shrunk to a row of quiet links. */
-.root nav {
-  flex-direction: row;
-  flex-wrap: wrap;
-  justify-content: flex-start;
-  gap: 0.5rem;
-}
-
-.root nav a {
-  flex: 0 1 auto;
-  min-height: 44px;
-  padding: 0.4rem 0.9rem;
-  border-color: var(--sf-line);
-  background: transparent;
-  color: var(--sf-muted);
-  font-size: 0.9375rem;
-}
-
-.root nav a:hover {
-  border-color: var(--sf-line-strong);
-  background: transparent;
-  color: var(--sf-text);
 }

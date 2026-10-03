@@ -93,6 +93,15 @@ describe('the compact sign-in surface', () => {
     expect(h.cancel).toHaveBeenCalledTimes(1);
   });
 
+  it.each(['completed', 'done'])('keeps the other ways hidden while the sign-in is being finished (%s)', (state) => {
+    configure({ whatsapp: true, telegram: true, password: true });
+    h.whatsapp = { state };
+    shell();
+    expect(screen.getByText('PASSWORD FORM').closest('[hidden]')).not.toBeNull();
+    expect(screen.getByText('TELEGRAM BUTTON').closest('[hidden]')).not.toBeNull();
+    expect(screen.getByRole('status').textContent).toContain('Message received');
+  });
+
   it('shows the other ways again once the attempt has expired, with the explanation next to the button that fixes it', () => {
     configure({ whatsapp: true, password: true });
     h.whatsapp = { state: 'expired' };
