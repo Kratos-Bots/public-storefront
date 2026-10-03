@@ -13,6 +13,14 @@ export const completeWhatsapp = (attemptId: string, attemptSecret: string) =>
 export const loginTelegram = (payload: TelegramAuthPayload) =>
   unwrap<LoginResult>(api.post('storefront/auth/telegram', { json: payload }));
 
+/** Begin Telegram's OpenID Connect sign-in. `binding` is kept by the caller and must come back with `complete`. */
+export const startTelegramOidc = (binding: string, returnTo: string | null) =>
+  unwrap<{ url: string }>(api.post('storefront/auth/telegram/oidc/start', { json: { binding, ...(returnTo ? { returnTo } : {}) } }));
+
+/** Single-use: the backend consumes the attempt whatever it answers. `returnTo` is the path `start` was given, if any. */
+export const completeTelegramOidc = (code: string, state: string, binding: string) =>
+  unwrap<LoginResult & { returnTo: string | null }>(api.post('storefront/auth/telegram/oidc/complete', { json: { code, state, binding } }));
+
 export const logout = () => unwrap<null>(api.post('storefront/auth/logout'));
 
 /** Mini App sign-in: `initData` is posted exactly as Telegram handed it over. */

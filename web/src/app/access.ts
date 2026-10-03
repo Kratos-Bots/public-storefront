@@ -42,7 +42,7 @@ function stripTrailingSlash(pathname: string): string {
   return pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
 }
 
-const AUTH_PATHS = ['/login', '/reset-password'];
+const AUTH_PATHS = ['/login', '/reset-password', '/auth/telegram/callback'];
 
 /** Pages a signed-out visitor needs in order to sign in. */
 export function isAuthPath(pathname: string): boolean {

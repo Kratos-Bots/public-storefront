@@ -59,7 +59,8 @@ export interface StorefrontSettings {
   currency: string; supportLinks: SupportLink[];
   login: {
     whatsapp: { available: boolean; number: string | null };
-    telegram: { available: boolean; botUsername: string | null };
+    /** `oidc`: Telegram's OpenID Connect sign-in is fully set up (absent on older backends: use the widget). */
+    telegram: { available: boolean; botUsername: string | null; oidc?: boolean };
     /** Absent on backends older than password sign-in. */
     password?: PasswordLoginSettings;
   };

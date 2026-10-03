@@ -91,7 +91,7 @@ export function LoginOptions({ rootAttrs }: { rootAttrs?: StyleAttrs } = {}) {
           {whatsapp ? <WhatsappLogin number={login.whatsapp.number} onWaiting={setWaiting} /> : null}
           {telegramBot ? (
             <div className={classes.telegram} hidden={waiting}>
-              <TelegramLogin botUsername={telegramBot} onAuth={onTelegram} />
+              <TelegramLogin botUsername={telegramBot} onAuth={onTelegram} oidc={login.telegram.oidc === true} />
               {telegramBusy ? <AuthNote>{t('auth.options.signingIn')}</AuthNote> : null}
               {telegramError ? <div role="alert"><AuthNote tone="danger">{telegramError}</AuthNote></div> : null}
             </div>

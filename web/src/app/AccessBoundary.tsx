@@ -12,7 +12,7 @@ import { useSessionStore, selectIsLoggedIn } from '@/stores/session.ts';
 import classes from '@/app/AccessBoundary.module.css';
 
 /** A bare page: in a non-public shop nothing around the sign-in form may ask for the catalogue. */
-function AuthOnlyFrame({ children }: { children: ReactNode }) {
+export function AuthOnlyFrame({ children }: { children: ReactNode }) {
   return (
     <main className={classes.authOnly}>
       <div className={classes.column}>

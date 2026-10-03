@@ -3,7 +3,8 @@ import { Navigate, Outlet, useParams, type RouteObject } from 'react-router';
 import { useMediaQuery } from '@mantine/hooks';
 import { useEffectiveLayout } from '@/app/layout.ts';
 import { Guard } from '@/app/guards.tsx';
-import { AccessBoundary } from '@/app/AccessBoundary.tsx';
+import { AccessBoundary, AuthOnlyFrame } from '@/app/AccessBoundary.tsx';
+import { TelegramCallbackPage } from '@/features/auth/TelegramCallbackPage.tsx';
 import { BuilderRoute } from '@/app/builder-route.tsx';
 import { PuckPage, PuckShell } from '@/builder/runtime.tsx';
 import { customPageKey, type FixedRouteKey } from '@/builder/types.ts';
@@ -56,6 +57,18 @@ const page = (routeKey: FixedRouteKey) => ({ handle: { routeKey }, element: <Puc
 export const routes: RouteObject[] = [
   // The page builder (spec §6): outside the shell — it renders its own canvas.
   { path: '/__builder/*', element: <BuilderRoute /> },
+  // Telegram sign-in's return page: a bare frame, never a builder page, and an auth path so a private shop shows it.
+  {
+    path: '/auth/telegram/callback',
+    element: (
+      <AccessBoundary>
+        <AuthOnlyFrame>
+          <Outlet />
+        </AuthOnlyFrame>
+      </AccessBoundary>
+    ),
+    children: [{ index: true, element: <TelegramCallbackPage /> }],
+  },
   {
     path: '/',
     element: (

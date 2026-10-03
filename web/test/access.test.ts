@@ -41,8 +41,8 @@ describe('showsLockoutCopy', () => {
 });
 
 describe('isAuthPath', () => {
-  it.each(['/login', '/login/', '/reset-password'])('%s is an auth path', (p) => expect(isAuthPath(p)).toBe(true));
-  it.each(['/', '/account', '/loginx', '/verify-email'])('%s is not', (p) => expect(isAuthPath(p)).toBe(false));
+  it.each(['/login', '/login/', '/reset-password', '/auth/telegram/callback', '/auth/telegram/callback/'])('%s is an auth path', (p) => expect(isAuthPath(p)).toBe(true));
+  it.each(['/', '/account', '/loginx', '/verify-email', '/auth', '/auth/telegram'])('%s is not', (p) => expect(isAuthPath(p)).toBe(false));
 });
 
 describe('checksProfile', () => {
@@ -75,6 +75,7 @@ describe('accessDecision', () => {
   it('shows the auth pages bare to a signed-out visitor in a non-public shop', () => {
     expect(accessDecision({ ...base, access: mode('login'), pathname: '/login' })).toEqual({ kind: 'authOnly' });
     expect(accessDecision({ ...base, access: mode('restricted'), pathname: '/reset-password' })).toEqual({ kind: 'authOnly' });
+    expect(accessDecision({ ...base, access: mode('restricted'), pathname: '/auth/telegram/callback', search: '?code=c&state=s' })).toEqual({ kind: 'authOnly' });
   });
 
   it('leaves the auth pages alone in a public shop', () => {
