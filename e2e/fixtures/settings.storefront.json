@@ -61,6 +61,7 @@
     "wholesale": false,
     "upsell": true
   },
+  "access": { "storefront": "public", "registration": true, "deniedMessage": "This shop is private. Get in touch if you'd like access.", "deniedButtons": [] },
   "theme": {
     "scheme": "dark",
     "colors": {

@@ -20,7 +20,7 @@ test.describe('sign in', () => {
   test(`sign in with email and password · ${layout}`, async ({ page }) => {
     const mocks = await installMocks(page, { layout, passwordLogin: true });
     await page.goto('/login');
-    await expect(page.getByRole('heading', { name: 'Email or phone' })).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Email address' })).toBeVisible();
     // A pasted address with stray spaces and capitals; the password is sent exactly as typed.
     await fillSignIn(page, ` ${PASSWORD_ACCOUNT.email.toUpperCase()} `, PASSWORD_ACCOUNT.password);
     await expect(page).toHaveURL(/\/account\/orders$/);

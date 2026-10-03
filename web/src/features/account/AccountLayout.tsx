@@ -1,5 +1,6 @@
-import { useMemo, type ReactNode } from 'react';
+import { useEffect, useMemo, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router';
+import { accessGate } from '@/app/access-gate.ts';
 import { useSessionStore } from '@/stores/session.ts';
 import { formatDate } from '@/lib/format.ts';
 import { useProfile } from '@/features/account/queries.ts';
@@ -76,6 +77,12 @@ export const ACCOUNT_VIEWS: FamilyValue<AccountData>['views'] = { AccountGreetin
  */
 export function AccountLayout({ children, slots, docKey = 'account.orders' }: { children?: ReactNode; slots?: { head: SlotRender }; docKey?: DocKey }) {
   const profile = useProfile();
+  // The profile is the one answer that says outright whether this customer may
+  // shop; keep the gate in step with it in both directions.
+  useEffect(() => {
+    if (profile.data?.shopAccess === false) accessGate.getState().setDenied(true);
+    else if (profile.data?.shopAccess === true) accessGate.getState().setDenied(false);
+  }, [profile.data?.shopAccess]);
   const sessionNickname = useSessionStore((s) => s.customer?.nickname);
   const location = useLocation();
   const legacy = useMemo(() => (slots ? null : defaultSlotRenders('AccountNav', 'storefront', {}, docKey)), [slots, docKey]);

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import { Navigate, useSearchParams } from 'react-router';
 import { useSettings } from '@/app/settings.ts';
 import { useSessionStore } from '@/stores/session.ts';
@@ -6,6 +6,7 @@ import { useTelegramAuthStore } from '@/stores/telegram.ts';
 import { TelegramSignInError } from '@/features/auth/TelegramSignInError.tsx';
 import { LoginOptions } from '@/features/auth/LoginOptions.tsx';
 import { useText } from '@/text/runtime.tsx';
+import { LoginChoiceContext, LoginStepContext } from '@/features/auth/LoginStep.ts';
 import { DEFAULT_LANDING, safeReturnTo } from '@/features/auth/useLoginSuccess.ts';
 import { LoginFamily, type LoginData } from '@/builder/family-login.ts';
 import type { PartViewProps, FamilyValue } from '@/builder/parts.ts';
@@ -16,6 +17,7 @@ import classes from '@/features/auth/LoginPage.module.css';
 function LoginHeadingView({ styleAttrs }: PartViewProps) {
   const { brand } = useSettings();
   const { t } = useText();
+  const onChoice = useContext(LoginChoiceContext);
   return (
     <div className={classes.head} {...styleAttrs}>
       {/* No mark here on purpose: the shell's header already carries it, and a
@@ -23,9 +25,7 @@ function LoginHeadingView({ styleAttrs }: PartViewProps) {
           print the shop's name twice in a row, immediately above the heading
           that names it a third time. */}
       <h1 className={classes.title}>{t('auth.page.title', { name: brand.name })}</h1>
-      <p className={classes.lede}>
-        {t('auth.page.lede')}
-      </p>
+      {onChoice ? <p className={classes.lede}>{t('auth.page.lede')}</p> : null}
     </div>
   );
 }
@@ -46,6 +46,7 @@ const LOGIN_VALUE: FamilyValue<LoginData> = { data: {}, views: LOGIN_VIEWS };
 export function LoginPage({ slots }: { slots?: { content: SlotRender } } = {}) {
   const legacy = useMemo(() => (slots ? null : (defaultSlotRenders('LoginOptions', 'storefront', {}, 'login') as unknown as { content: SlotRender })), [slots]);
   const [params] = useSearchParams();
+  const [onChoice, setOnChoice] = useState(true);
   const setReturnTo = useSessionStore((s) => s.setReturnTo);
   const telegramStatus = useTelegramAuthStore((s) => s.status);
 
@@ -80,6 +81,10 @@ export function LoginPage({ slots }: { slots?: { content: SlotRender } } = {}) {
   }
 
   return (
-    <LoginFamily.Provider value={LOGIN_VALUE}>{(slots ?? legacy!).content({ className: classes.page })}</LoginFamily.Provider>
+    <LoginStepContext.Provider value={setOnChoice}>
+      <LoginChoiceContext.Provider value={onChoice}>
+        <LoginFamily.Provider value={LOGIN_VALUE}>{(slots ?? legacy!).content({ className: classes.page })}</LoginFamily.Provider>
+      </LoginChoiceContext.Provider>
+    </LoginStepContext.Provider>
   );
 }

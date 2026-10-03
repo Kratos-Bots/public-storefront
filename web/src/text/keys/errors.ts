@@ -8,4 +8,7 @@ export default defineTextArea('errors', {
   'requestFailed': { en: 'Request failed', max: 120 },
   'timeout': { en: 'The request timed out', max: 120 },
   'network': { en: 'Network error', max: 120 },
+  'loginRequired': { en: 'Please sign in to continue.', max: 120 },
+  'accessDenied': { en: 'Your account doesn’t have access to this shop.', max: 160 },
+  'registrationClosed': { en: 'This shop isn’t taking new customers right now.', max: 160 },
 });

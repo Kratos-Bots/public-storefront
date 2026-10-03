@@ -62,6 +62,7 @@ const LINKS: Links = { whatsapp: 'https://wa.me/447700900000', telegram: 'https:
 interface SettingsOpts {
   links?: Links; siteKey?: string | null;
   whatsapp?: boolean; telegramBot?: string | null; password?: boolean;
+  phone?: 'verify' | 'whatsapp' | 'off'; email?: 'verify' | 'email' | 'off';
 }
 function useSettingsState(o: SettingsOpts = {}) {
   state.settings = {
@@ -72,6 +73,11 @@ function useSettingsState(o: SettingsOpts = {}) {
       whatsapp: { available: o.whatsapp ?? true, number: '447700900000' },
       telegram: { available: !!o.telegramBot, botUsername: o.telegramBot ?? null },
       ...(o.password ? { password: { available: true } } : {}),
+      ...(o.phone === 'verify' ? { phone: { available: true, mode: 'verify', channels: ['whatsapp', 'sms'] } } : {}),
+      ...(o.phone === 'whatsapp' ? { phone: { available: true, mode: 'whatsapp', channels: [] } } : {}),
+      ...(o.phone === 'off' ? { phone: { available: false, mode: null, channels: [] } } : {}),
+      ...(o.email === 'verify' || o.email === 'email' ? { email: { available: true, mode: o.email } } : {}),
+      ...(o.email === 'off' ? { email: { available: false, mode: null } } : {}),
     },
   };
 }
@@ -202,6 +208,21 @@ describe('stage 4 login goldens (v0.7.0)', () => {
     // The block is lazy, so the redirect lands a tick later.
     await act(async () => { await new Promise((r) => setTimeout(r, 60)); });
     expect(screen.getByText(target)).toBeInTheDocument();
+  });
+});
+
+describe('stage 4 login goldens (sign in by code)', () => {
+  // The goldens above pin the older-backend sign-in and are never regenerated; these pin the new layout.
+  const CASES: { name: string; opts: SettingsOpts }[] = [
+    { name: 'code-all', opts: { whatsapp: false, telegramBot: 'northbound_bot', password: true, phone: 'verify', email: 'verify' } },
+    { name: 'code-phone-and-email', opts: { whatsapp: false, phone: 'verify', email: 'verify' } },
+    { name: 'code-phone-fallback', opts: { whatsapp: true, phone: 'whatsapp', email: 'off' } },
+    { name: 'code-email-only', opts: { whatsapp: false, phone: 'off', email: 'email' } },
+    { name: 'code-no-methods', opts: { whatsapp: false, phone: 'off', email: 'off' } },
+  ];
+  it.each(CASES)('login-$name', async (c) => {
+    useSettingsState(c.opts);
+    await threeWays(LOGIN, `login-${c.name}`, '/login');
   });
 });
 

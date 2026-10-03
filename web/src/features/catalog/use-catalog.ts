@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchCatalog, fetchProduct } from '@/api/catalog.ts';
 import { useSessionStore } from '@/stores/session.ts';
+import { useSettings } from '@/app/settings.ts';
+import { accessOf } from '@/app/access.ts';
 
 export const CATALOG_KEY = ['catalog'] as const;
 
@@ -25,10 +27,13 @@ function useCatalogAudience(): number | null {
 
 export function useCatalog() {
   const audience = useCatalogAudience();
+  // A non-public shop refuses the anonymous catalogue (401 LOGIN_REQUIRED); do not ask.
+  const open = accessOf(useSettings()).storefront === 'public';
   return useQuery({
     queryKey: catalogKey(audience),
     queryFn: () => fetchCatalog(audience !== null),
     staleTime: 60_000,
+    enabled: audience !== null || open,
   });
 }
 
@@ -39,9 +44,11 @@ export function useCatalog() {
  */
 export function useProduct(id: number | null) {
   const audience = useCatalogAudience();
+  // A non-public shop refuses the anonymous catalogue (401 LOGIN_REQUIRED); do not ask.
+  const open = accessOf(useSettings()).storefront === 'public';
   return useQuery({
     queryKey: ['product', id, audience] as const,
     queryFn: () => fetchProduct(id as number, audience !== null),
-    enabled: id !== null && Number.isFinite(id),
+    enabled: id !== null && Number.isFinite(id) && (audience !== null || open),
   });
 }

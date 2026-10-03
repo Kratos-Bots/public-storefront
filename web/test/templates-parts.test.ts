@@ -99,7 +99,6 @@ describe('parts', () => {
   const count = (src: string, needle: string) => src.split(needle).length - 1;
 
   it.each<[string, number]>([
-    ['../src/features/auth/AuthCard.tsx', 1],
     ['../src/features/order-status/AddressCard.tsx', 1],
     ['../src/features/order-status/CryptoPaymentCard.tsx', 1],
     ['../src/features/order-status/ItemsCard.tsx', 1],
@@ -107,7 +106,7 @@ describe('parts', () => {
     ['../src/features/order-status/ShipmentCard.tsx', 1],
     ['../src/features/tracking/ParcelCard.tsx', 1],
     ['../src/features/checkout/CheckoutPage.tsx', 1],
-  ])('%s tags exactly its %i card root(s) — eleven in all', (file, n) => {
+  ])('%s tags exactly its %i card root(s) — ten in all', (file, n) => {
     expect(count(read(file), 'data-sf-part="card"')).toBe(n);
   });
 
@@ -124,7 +123,7 @@ describe('parts', () => {
   it.each<[string, number]>([
     ['../src/features/account/LoyaltyPage.tsx', 1],
     ['../src/features/account/OrderDetailPage.tsx', 1],
-    ['../src/features/auth/WhatsappLogin.tsx', 4],
+    ['../src/features/auth/WhatsappLogin.tsx', 3],
     ['../src/features/order-status/MethodPicker.tsx', 1],
     ['../src/features/order-status/PaymentSection.tsx', 1],
     ['../src/features/tracking/LookupForm.tsx', 1],
@@ -147,7 +146,7 @@ describe('custom button radius', () => {
     ['../src/features/checkout/CheckoutPage.module.css', '.next'],
     ['../src/features/checkout/CheckoutPage.module.css', '.back'],
     ['../src/features/account/Account.module.css', '.cta'],
-    ['../src/features/auth/WhatsappLogin.module.css', '.cta'],
+    ['../src/features/auth/AuthButtons.module.css', '.primary'],
     ['../src/features/order-status/OrderStatus.module.css', '.cta'],
     ['../src/features/tracking/Tracking.module.css', '.submit'],
     ['../src/features/verify/VerifyPage.module.css', '.submit'],

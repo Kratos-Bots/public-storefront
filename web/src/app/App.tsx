@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { Button, MantineProvider } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
-import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
+import { QueryClientProvider, useQueryClient } from '@tanstack/react-query';
+import { queryClient } from '@/lib/query-client.ts';
 import { RouterProvider } from 'react-router';
 import { SETTINGS_KEY, useSettings, useSettingsQuery } from '@/app/settings.ts';
 import { closedGate, isClosedExemptPath } from '@/app/closed-gate.ts';
@@ -23,10 +24,6 @@ import { useSessionStore } from '@/stores/session.ts';
 import { useTelegramAuthStore } from '@/stores/telegram.ts';
 import type { StorefrontSettings } from '@/types/settings.ts';
 import classes from '@/app/App.module.css';
-
-const queryClient = new QueryClient({
-  defaultOptions: { queries: { retry: 1, staleTime: 10_000 } },
-});
 
 /** How often a closed shop re-checks whether it has reopened (spec §6). */
 export const CLOSED_POLL_MS = 60_000;

@@ -12,9 +12,7 @@ import { isBuilderMode } from '@/app/builder-gate.ts';
 import { useEffectiveLayout } from '@/app/layout.ts';
 import { errorMessage } from '@/lib/errors.ts';
 import { isTelegramWebApp, tgClose } from '@/lib/telegram-webapp.ts';
-import { useSessionStore } from '@/stores/session.ts';
-import { useCartStore } from '@/stores/cart.ts';
-import { resetCartSync } from '@/features/cart/useServerCart.ts';
+import { signOutAndReload } from '@/features/auth/sign-out.ts';
 import { textKey, useText } from '@/text/runtime.tsx';
 import { useProfile } from '@/features/account/queries.ts';
 import type { Profile } from '@/types/profile.ts';
@@ -222,30 +220,16 @@ export function ProfilePage({ slots }: { slots?: { content: SlotRender } } = {})
 
   const signOut = async () => {
     setSigningOut(true);
-    // A revoke that fails still ends the session here: the token is useless to a
-    // customer who has left, and refusing to sign them out would be the worse answer.
-    await logout().catch(() => undefined);
 
     // The page builder's fixture session: the editor refused the call (and said so). Clearing or
     // reloading here would drop the editor frame out of builder mode.
     if (isBuilderMode()) {
+      await logout().catch(() => undefined);
       setSigningOut(false);
       return;
     }
 
-    useSessionStore.getState().clear();
-    useCartStore.getState().clear();
-    useCartStore.getState().setMode('local');
-    resetCartSync();
-
-    // A real navigation, not a router one. Clearing the session re-renders the
-    // route guard that is still mounted over this page, and its `<Navigate>` to
-    // `/login?returnTo=/account/profile` lands *after* any `navigate('/')` this
-    // handler makes — measured three ways (before the clear, after it, and
-    // inside `flushSync`), because the guard re-renders from the external store
-    // while React still holds the account tree. Reloading also drops every
-    // cached query and in-memory store, so nothing personal survives the sign-out.
-    window.location.assign('/');
+    await signOutAndReload();
   };
 
   const usingFixture = preview && fixture.profile !== undefined;

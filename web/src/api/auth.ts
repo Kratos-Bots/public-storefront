@@ -1,17 +1,25 @@
 import { api, unwrap } from '@/api/client.ts';
-import type { WhatsappStart, AttemptStatus, LoginResult, TelegramAuthPayload, PasswordIdentifier, ResetCheck, SetPasswordInput } from '@/types/auth.ts';
+import type { WhatsappStart, AttemptStatus, LoginResult, TelegramAuthPayload, PasswordIdentifier, ResetCheck, SetPasswordInput, CodeChannel, CodeEmailResult, CodeSent, CodeVerifyResult } from '@/types/auth.ts';
 
 export const startWhatsapp = () =>
   unwrap<WhatsappStart>(api.post('storefront/auth/whatsapp/start', { json: {} }));
 
 export const pollAttempt = (id: string) =>
-  unwrap<{ status: AttemptStatus }>(api.get(`storefront/auth/attempts/${id}`));
+  unwrap<{ status: AttemptStatus; reason?: string }>(api.get(`storefront/auth/attempts/${id}`));
 
 export const completeWhatsapp = (attemptId: string, attemptSecret: string) =>
   unwrap<LoginResult>(api.post('storefront/auth/whatsapp/complete', { json: { attemptId, attemptSecret } }));
 
 export const loginTelegram = (payload: TelegramAuthPayload) =>
   unwrap<LoginResult>(api.post('storefront/auth/telegram', { json: payload }));
+
+/** Begin Telegram's OpenID Connect sign-in. `binding` is kept by the caller and must come back with `complete`. */
+export const startTelegramOidc = (binding: string, returnTo: string | null) =>
+  unwrap<{ url: string }>(api.post('storefront/auth/telegram/oidc/start', { json: { binding, ...(returnTo ? { returnTo } : {}) } }));
+
+/** Single-use: the backend consumes the attempt whatever it answers. `returnTo` is the path `start` was given, if any. */
+export const completeTelegramOidc = (code: string, state: string, binding: string) =>
+  unwrap<LoginResult & { returnTo: string | null }>(api.post('storefront/auth/telegram/oidc/complete', { json: { code, state, binding } }));
 
 export const logout = () => unwrap<null>(api.post('storefront/auth/logout'));
 
@@ -52,3 +60,28 @@ export const requestEmailVerification = () =>
 /** Session required, and the token must belong to the session's customer (`403` otherwise). */
 export const verifyEmail = (token: string) =>
   unwrap<{ ok: true }>(api.post('storefront/auth/email/verify', { json: { token } }));
+
+const withToken = (turnstileToken?: string) => (turnstileToken ? { turnstileToken } : {});
+/** The active site-text locale (BCP 47), so the backend words the code message in it. Left out when unknown, empty or not a tag the backend accepts (it rejects the whole request otherwise). */
+const LANGUAGE_TAG = /^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8}){0,3}$/;
+const withLanguage = (language?: string) => (language && LANGUAGE_TAG.test(language) ? { language } : {});
+
+/** A live password login answers `{ next: 'password' }` and sends nothing; otherwise a code is sent. */
+export const codeEmail = (email: string, turnstileToken?: string, opts: { language?: string } = {}) =>
+  unwrap<CodeEmailResult>(api.post('storefront/auth/code/email', { json: { email, ...withToken(turnstileToken), ...withLanguage(opts.language) } }));
+
+/** Always sends ("Email me a code instead"). */
+export const codeEmailSend = (email: string, turnstileToken?: string, opts: { language?: string } = {}) =>
+  unwrap<CodeSent>(api.post('storefront/auth/code/email/send', { json: { email, ...withToken(turnstileToken), ...withLanguage(opts.language) } }));
+
+/** `phoneCountry` is the ISO country the shopper picked, which helps the backend read a national number. */
+export const codePhone = (phone: string, channel: 'whatsapp' | 'sms', turnstileToken?: string, opts: { language?: string; phoneCountry?: string } = {}) =>
+  unwrap<CodeSent>(api.post('storefront/auth/code/phone', { json: { phone, channel, ...withToken(turnstileToken), ...withLanguage(opts.language), ...(opts.phoneCountry ? { phoneCountry: opts.phoneCountry } : {}) } }));
+
+/** Same channel: a resend after the cooldown. A different phone `channel`: a switch. */
+export const codeResend = (attemptId: string, opts: { channel?: Exclude<CodeChannel, 'email'>; turnstileToken?: string; language?: string } = {}) =>
+  unwrap<CodeSent>(api.post('storefront/auth/code/resend', { json: { attemptId, ...(opts.channel ? { channel: opts.channel } : {}), ...withToken(opts.turnstileToken), ...withLanguage(opts.language) } }));
+
+/** A correct code signs the customer in, or creates the account when it is new and registration is open. A wrong one answers `{ status: 'incorrect', attemptsRemaining }`. */
+export const codeVerify = (attemptId: string, code: string) =>
+  unwrap<CodeVerifyResult>(api.post('storefront/auth/code/verify', { json: { attemptId, code } }));

@@ -141,6 +141,15 @@ export function ArrowUpRightIcon({ size = 13, ...rest }: GlyphProps) {
   );
 }
 
+export function ArrowLeftIcon({ size = 16 }: GlyphProps) {
+  return (
+    <svg {...stroke(size)}>
+      <path d="M19 12H5" />
+      <path d="m11 6-6 6 6 6" />
+    </svg>
+  );
+}
+
 export function WhatsAppIcon({ size = 16 }: GlyphProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -162,6 +171,22 @@ export function TelegramIcon({ size = 16 }: GlyphProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
       <path d="M21.43 3.36 2.3 11.13c-.86.35-.85 1.58.02 1.91l4.78 1.85 1.85 5.93c.21.66.99.85 1.45.36l2.74-2.91 4.66 3.42c.69.5 1.66.13 1.83-.7l3.07-15.18c.19-.92-.71-1.69-1.59-1.34zm-3.9 5.7-7.34 6.86c-.32.3-.45.71-.4 1.11l.32 2.8-1.83-5.45 8.78-5.71c.49-.32.95.14.47.39z" />
+    </svg>
+  );
+}
+
+export function PhoneIcon({ size = 16 }: GlyphProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+    </svg>
+  );
+}
+
+export function SmsIcon({ size = 16 }: GlyphProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
     </svg>
   );
 }

@@ -110,6 +110,25 @@ export interface InstallMocksOptions {
   tweakSettings?: (settings: StorefrontSettings) => void;
   /** Switch email/phone + password sign-in on (`login.password.available`); an object also sets the reset routes. */
   passwordLogin?: boolean | { resetByEmail?: boolean; resetByWhatsapp?: boolean; /** Sign-in answers 429, as for a throttled identifier. */ throttled?: boolean };
+  /**
+   * Sign in by code. Setting this adds `login.phone` and `login.email` (omit it for an older backend). The mock
+   * accepts the code 123456 as `{ status: 'signed_in', ... }` and answers any other with a 200 `{ status: 'incorrect', attemptsRemaining }` (3, then 2, 1, 0). The
+   * password account (PASSWORD_ACCOUNT.email) answers `{ next: 'password' }`; every other identity is new.
+   */
+  codeLogin?: {
+    phone?: 'verify' | 'whatsapp' | 'off';
+    email?: 'verify' | 'email' | 'off';
+    /** Channels the number's country plan lacks: sending on one answers 400 CODE_CHANNEL_UNAVAILABLE. */
+    unavailableChannels?: Array<'whatsapp' | 'sms'>;
+    /** Every send answers 503 CODE_SERVICE_UNAVAILABLE. */
+    down?: boolean;
+    /** Verifying answers 400 CODE_EXPIRED. */
+    expired?: boolean;
+    /** Verifying answers 400 CODE_TOO_MANY_TRIES (the attempt is gone) or 429 CODE_RATE_LIMITED (wait). */
+    verifyError?: 'tooManyTries' | 'rateLimited';
+    /** The shop's serviceable countries, served as `login.phone.countries` (default: none). */
+    countries?: string[];
+  };
   /** Mutate the profile fixture before it is served (identities, password block). */
   tweakProfile?: (profile: Profile) => void;
   /** What the checkout routes answer with as `payment` (default: a crypto address). */
@@ -118,6 +137,12 @@ export interface InstallMocksOptions {
   checkoutReference?: string;
   /** The Mini App sign-in answers 401, as it does for stale or forged initData. */
   telegramAuthFails?: boolean;
+  /**
+   * Telegram sign-in over OpenID Connect (`login.telegram.oidc: true`). `start` answers Telegram's https URL, which the
+   * mock redirects straight back to the callback with a code and state, standing in for the trip to Telegram;
+   * `completeFails` makes `complete` answer that status and error code instead of a session.
+   */
+  telegramOidc?: boolean | { completeFails?: { status: number; error: string } };
   /** Published page set per layout (`GET storefront/pages/:layout`). Omitted = `null` = no published set. */
   pages?: Partial<Record<Layout, PageSet | null>>;
   /** Make the pages route fail (503 or 404) so specs can exercise the built-in fallback. */
@@ -127,6 +152,9 @@ export interface InstallMocksOptions {
   text?: MockText;
   /** Serve the text-era body with `text: null` (nothing published yet) instead of a text object. */
   textNull?: boolean;
+  /** Shop access. `denied` answers ACCESS_DENIED on catalogue, cart and checkout for the seeded session. */
+  access?: { storefront?: 'public' | 'login' | 'restricted'; registration?: boolean; deniedMessage?: string;
+    deniedButtons?: { label: string; url: string }[]; denied?: boolean };
 }
 
 /** The published site text the pages route serves (spec §4.6), active locale only. */
@@ -168,10 +196,14 @@ export interface MockState {
   txids: Array<Record<string, unknown>>;
   /** Bodies posted to the Mini App sign-in route. */
   webappLogins: Array<Record<string, unknown>>;
+  /** Bodies posted to Telegram OpenID Connect `start` / `complete`, in order. */
+  oidcCalls: Array<{ route: 'start' | 'complete'; body: Record<string, unknown> }>;
   /** Bodies posted to the classic-bot switch. */
   botModes: Array<Record<string, unknown>>;
   /** Every password / account-password / email-verification request, with its body and Authorization header. */
   passwordCalls: Array<{ route: string; body: Record<string, unknown>; authorization: string | null }>;
+  /** Bodies posted to the sign-in-by-code routes, keyed by the route after auth/code/. */
+  codeCalls: Array<{ route: string; body: Record<string, unknown> }>;
   /** What `GET storefront/pages/:layout` serves. */
   pages: Partial<Record<Layout, PageSet | null>>;
   /** When set, the pages route answers this error status instead of the fixture. */
@@ -180,6 +212,10 @@ export interface MockState {
   text: MockText | null;
   /** The pages route answers `{ version, data, text: null }`. */
   textNull: boolean;
+  /** The signed-in customer is refused: the personalised routes answer 403 ACCESS_DENIED and the profile says `shopAccess: false`. Flip it mid-test to grant access. */
+  denied: boolean;
+  /** How many times the anonymous catalogue (`catalog`, `catalog/products/:id`) was asked for. */
+  anonymousCatalogHits: number;
 }
 
 export interface MockHandle {
@@ -348,16 +384,29 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     methods: [],
     txids: [],
     webappLogins: [],
+    oidcCalls: [],
     botModes: [],
     passwordCalls: [],
+    codeCalls: [],
     pages: options.pages ?? {},
     pagesFail: options.pagesFail ?? null,
     text: options.text ?? null,
     textNull: options.textNull ?? false,
+    denied: options.access?.denied ?? false,
+    anonymousCatalogHits: 0,
   };
 
   options.tweakSettings?.(state.settings);
   options.tweakProfile?.(state.profile);
+  if (options.access) {
+    const { denied: _denied, ...asked } = options.access;
+    state.settings.access = { ...state.settings.access!, ...asked };
+    if (asked.registration === false) state.settings.features.guestCheckout = false;
+  }
+  const oidcOptions = options.telegramOidc === true ? {} : options.telegramOidc || null;
+  if (oidcOptions) {
+    state.settings.login.telegram = { available: true, botUsername: state.settings.login.telegram.botUsername ?? 'northbound_bot', oidc: true };
+  }
   const passwordOptions: { resetByEmail?: boolean; resetByWhatsapp?: boolean; throttled?: boolean } | null =
     options.passwordLogin === true ? {} : options.passwordLogin || null;
   if (passwordOptions) {
@@ -368,6 +417,16 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     };
     state.profile.password ??= { ...NO_PASSWORD };
   }
+  const codeOptions = options.codeLogin ?? null;
+  if (codeOptions) {
+    const phone = codeOptions.phone ?? 'verify';
+    const email = codeOptions.email ?? 'verify';
+    state.settings.login.phone = phone === 'off' ? { available: false, mode: null, channels: [], countries: codeOptions.countries ?? [] }
+      : phone === 'whatsapp' ? { available: true, mode: 'whatsapp', channels: [], countries: codeOptions.countries ?? [] }
+        : { available: true, mode: 'verify', channels: ['whatsapp', 'sms'], countries: codeOptions.countries ?? [] };
+    state.settings.login.email = email === 'off' ? { available: false, mode: null } : { available: true, mode: email };
+  }
+  const code = { channel: 'whatsapp' as string, masked: '', isNew: true, wrong: 0 };
   state.disabled = !state.settings.enabled;
 
   if (options.session) {
@@ -388,6 +447,13 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
   await page.route(/^https?:\/\/(?!localhost:5199|challenges\.cloudflare\.com)/, (route) =>
     externalRequestPolicy(route.request().url()) === 'continue' ? route.continue() : route.abort(),
   );
+
+  if (oidcOptions) {
+    // Telegram itself: it approves at once and sends the browser straight back with a code and state.
+    await page.route('https://oauth.telegram.org/**', (route) =>
+      route.fulfill({ status: 302, headers: { location: `${ORIGIN}/auth/telegram/callback?code=e2e-code&state=e2e-state` }, body: '' }),
+    );
+  }
 
   await page.route('https://challenges.cloudflare.com/**', (route) =>
     route.fulfill({ status: 200, contentType: 'application/javascript', body: TURNSTILE_SHIM }),
@@ -447,6 +513,20 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
         },
       });
       return;
+    }
+
+    // Shop access: a refused customer is turned away from every personalised route that
+    // shops or buys; the anonymous catalogue is closed to everyone unless the shop is public.
+    if (state.denied && (/^storefront\/(catalog|cart)(\/|$)/.test(path) || (method === 'POST' && /^storefront\/checkout(\/quote)?$/.test(path)))) {
+      await fail(route, 403, 'ACCESS_DENIED');
+      return;
+    }
+    if (/^catalog(\/products\/\d+)?$/.test(path) && method === 'GET') {
+      state.anonymousCatalogHits += 1;
+      if (state.settings.access?.storefront !== 'public') {
+        await fail(route, 401, 'LOGIN_REQUIRED');
+        return;
+      }
     }
 
     // The personalised routes (`fetchCatalog`/`fetchProduct` in `web/src/api/catalog.ts`
@@ -597,7 +677,7 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     }
 
     if (path === 'storefront/profile' && method === 'GET') {
-      await envelope(route, state.profile);
+      await envelope(route, { ...state.profile, shopAccess: !state.denied });
       return;
     }
 
@@ -638,6 +718,79 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
       return;
     }
 
+    if (path === 'storefront/auth/telegram/oidc/start' && method === 'POST') {
+      state.oidcCalls.push({ route: 'start', body: body(route) });
+      await envelope(route, { url: 'https://oauth.telegram.org/auth?state=e2e-state' });
+      return;
+    }
+
+    if (path === 'storefront/auth/telegram/oidc/complete' && method === 'POST') {
+      state.oidcCalls.push({ route: 'complete', body: body(route) });
+      if (oidcOptions?.completeFails) {
+        await fail(route, oidcOptions.completeFails.status, oidcOptions.completeFails.error);
+        return;
+      }
+      const returnTo = state.oidcCalls.find((c) => c.route === 'start')?.body.returnTo ?? null;
+      await envelope(route, { token: SESSION_TOKEN, customer: SESSION_CUSTOMER, returnTo });
+      return;
+    }
+
+    const codeRoute = /^storefront\/auth\/code\/(email\/send|email|phone|resend|verify)$/.exec(path);
+    if (codeRoute && method === 'POST' && codeOptions) {
+      const asked = body(route);
+      const which = codeRoute[1]!;
+      state.codeCalls.push({ route: which, body: asked });
+      const sends = which !== 'verify';
+      if (sends && codeOptions.down) { await fail(route, 503, 'CODE_SERVICE_UNAVAILABLE'); return; }
+      const sent = (channel: string, masked: string) => {
+        code.channel = channel;
+        code.masked = masked;
+        code.wrong = 0;
+        return { next: 'code', attemptId: 'code-attempt-1', channel, maskedTo: masked, resendAfter: 60 };
+      };
+      switch (which) {
+        case 'email':
+        case 'email/send': {
+          const address = String(asked.email ?? '');
+          code.isNew = address !== PASSWORD_ACCOUNT.email;
+          if (which === 'email' && address === PASSWORD_ACCOUNT.email) { await envelope(route, { next: 'password' }); return; }
+          await envelope(route, sent('email', `${address.slice(0, 1)}•••@${address.split('@')[1] ?? ''}`));
+          return;
+        }
+        case 'phone': {
+          const channel = String(asked.channel ?? '');
+          if ((codeOptions.unavailableChannels ?? []).includes(channel as 'whatsapp' | 'sms')) { await fail(route, 400, 'CODE_CHANNEL_UNAVAILABLE'); return; }
+          // The backend's normalisePhone (libphonenumber, GB) turns +4407700900123 into +447700900123; mirror it.
+          code.isNew = String(asked.phone ?? '').replace(/^\+440/, '+44') !== PASSWORD_ACCOUNT.phone;
+          await envelope(route, sent(channel, '+44 ••• ••• 123'));
+          return;
+        }
+        case 'resend': {
+          const channel = asked.channel ? String(asked.channel) : code.channel;
+          if ((codeOptions.unavailableChannels ?? []).includes(channel as 'whatsapp' | 'sms')) { await fail(route, 400, 'CODE_CHANNEL_UNAVAILABLE'); return; }
+          const keep = code.wrong;
+          const answer = sent(channel, code.masked);
+          code.wrong = keep;
+          await envelope(route, answer);
+          return;
+        }
+        default: {
+          if (codeOptions.expired) { await fail(route, 400, 'CODE_EXPIRED'); return; }
+          if (codeOptions.verifyError === 'tooManyTries') { await fail(route, 400, 'CODE_TOO_MANY_TRIES'); return; }
+          if (codeOptions.verifyError === 'rateLimited') { await fail(route, 429, 'CODE_RATE_LIMITED'); return; }
+          if (String(asked.code) === '123456') {
+            if (code.isNew && state.settings.access?.registration === false) { await fail(route, 403, 'REGISTRATION_CLOSED'); return; }
+            await envelope(route, { status: 'signed_in', token: SESSION_TOKEN, customer: SESSION_CUSTOMER, isNew: code.isNew });
+            return;
+          }
+          const remaining = Math.max(0, 3 - code.wrong);
+          code.wrong += 1;
+          await envelope(route, { status: 'incorrect', attemptsRemaining: remaining });
+          return;
+        }
+      }
+    }
+
     if (path === 'storefront/auth/whatsapp/start' && method === 'POST') {
       state.attemptPolls = 0;
       const start: WhatsappStart = {
@@ -675,7 +828,8 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
       const known = asked.email === PASSWORD_ACCOUNT.email || phone === PASSWORD_ACCOUNT.phone;
       switch (passwordRoute) {
         case 'POST storefront/auth/password/signup':
-          if (known) await fail(route, 409, "That email or phone can't be used to create an account. Try signing in or resetting your password.");
+          if (state.settings.access?.registration === false) await fail(route, 403, 'REGISTRATION_CLOSED');
+          else if (known) await fail(route, 409, "That email or phone can't be used to create an account. Try signing in or resetting your password.");
           else await envelope(route, session, undefined, 201);
           return;
         case 'POST storefront/auth/password/login':

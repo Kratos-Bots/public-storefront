@@ -44,13 +44,30 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('LoginOptions with password sign-in', () => {
-  it('shows the email-or-phone card after the chat cards, and never the old "coming soon" card', () => {
+  it('shows the email-or-phone form after the chat buttons behind a quiet "or", and never the old "coming soon" card', () => {
     configure({ whatsapp: true, password: true });
     shell(<LoginOptions />);
-    expect(screen.getByRole('heading', { name: 'Email or phone' })).toBeTruthy();
+    const divider = screen.getByText('or').parentElement!;
+    expect(divider.getAttribute('aria-hidden')).toBe('true');
     const text = document.body.textContent ?? '';
     expect(text.indexOf('WHATSAPP CARD')).toBeLessThan(text.indexOf('PASSWORD CARD'));
     expect(text).not.toContain('Coming soon');
+  });
+
+  it('puts the owner’s lockout copy above the sign-in cards in a restricted shop, and the plain line below otherwise', () => {
+    configure({ whatsapp: true, password: true });
+    h.settings = { ...h.settings, access: { storefront: 'restricted', registration: true, deniedMessage: 'Ask us on chat.', deniedButtons: [] } };
+    shell(<LoginOptions />);
+    let text = document.body.textContent ?? '';
+    expect(text.indexOf('Ask us on chat.')).toBeGreaterThanOrEqual(0);
+    expect(text.indexOf('Ask us on chat.')).toBeLessThan(text.indexOf('WHATSAPP CARD'));
+    cleanup();
+
+    configure({ whatsapp: true, password: true });
+    h.settings = { ...h.settings, access: { storefront: 'login', registration: true, deniedMessage: '', deniedButtons: [] } };
+    shell(<LoginOptions />);
+    text = document.body.textContent ?? '';
+    expect(text.indexOf('Sign in to view the shop.')).toBeGreaterThan(text.indexOf('PASSWORD CARD'));
   });
 
   it('password alone is a working page, not the "sign-in isn\'t available" state', () => {
@@ -88,7 +105,7 @@ describe('where else the card appears', () => {
   it('the page heading no longer claims there is no password', () => {
     configure({ whatsapp: true, password: true });
     shell(<LoginPage />);
-    expect(screen.getByText('Sign in and your orders, points and referrals are waiting.')).toBeTruthy();
+    expect(screen.getByText('Choose how you’d like to sign in.')).toBeTruthy();
   });
 
   it('inside Telegram the page shows the Telegram state and never the card', () => {

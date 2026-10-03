@@ -1,0 +1,35 @@
+/* What the shop asks of a visitor, as part of the same left-aligned column as
+   the heading and the methods: plain text at normal contrast, then the owner's
+   contact options as inline links. No rule, no box. */
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  text-align: left;
+}
+
+.above {
+  gap: 0.15rem;
+}
+
+.lede {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--sf-text);
+}
+
+.registration {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--sf-warn);
+}
+
+.message {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--sf-text);
+  white-space: pre-line;
+}

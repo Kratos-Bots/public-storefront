@@ -43,17 +43,42 @@ export interface PasswordLoginSettings {
   /** The shopper can message the shop's WhatsApp number to get a reset link. */
   resetByWhatsapp: boolean;
 }
+export interface PhoneLoginSettings {
+  available: boolean;
+  /** `verify`: a code by WhatsApp or text message; `whatsapp`: the shopper messages the shop; null: neither. */
+  mode: 'verify' | 'whatsapp' | null;
+  channels: Array<'whatsapp' | 'sms'>;
+  /** The store's serviceable countries (ISO alpha-2, possibly empty). They lead the country picker. */
+  countries: string[];
+}
+export interface EmailLoginSettings { available: boolean; mode: 'verify' | 'email' | null }
+export interface AccessButton { label: string; url: string }
+
+/** Who may use the shop. Identical for every visitor. */
+export interface AccessSettings {
+  storefront: 'public' | 'login' | 'restricted';
+  /** False when no new customer may sign up. */
+  registration: boolean;
+  deniedMessage: string;
+  deniedButtons: AccessButton[];
+}
 export interface StorefrontSettings {
   enabled: boolean; closedMessage: string; welcomeMessage: string | null;
   notices: Notice[]; cutoffs: Cutoffs; serverTime: string; contactModes: ContactModes;
   currency: string; supportLinks: SupportLink[];
   login: {
     whatsapp: { available: boolean; number: string | null };
-    telegram: { available: boolean; botUsername: string | null };
+    /** `oidc`: Telegram's OpenID Connect sign-in is fully set up (absent on older backends: use the widget). */
+    telegram: { available: boolean; botUsername: string | null; oidc?: boolean };
     /** Absent on backends older than password sign-in. */
     password?: PasswordLoginSettings;
+    /** Absent on backends older than sign-in by code: the storefront then keeps today's sign-in. */
+    phone?: PhoneLoginSettings;
+    email?: EmailLoginSettings;
   };
   brand: Brand; features: Features; theme: Theme; turnstile: { siteKey: string } | null;
   /** The bot's effective web app mode. Absent on backends older than the Mini App. */
   telegramWebApp?: { mode: 'off' | 'beta' | 'forced' };
+  /** Absent on backends older than shop access. */
+  access?: AccessSettings;
 }
