@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useClipboard } from '@mantine/hooks';
-import { AuthNote } from '@/features/auth/AuthCard.tsx';
+import { ArrowLeftIcon, WhatsAppIcon } from '@/components/icons.tsx';
+import { AuthNote } from '@/features/auth/AuthNote.tsx';
 import { useWhatsappLogin } from '@/features/auth/useWhatsappLogin.ts';
 import { useText } from '@/text/runtime.tsx';
+import buttons from '@/features/auth/AuthButtons.module.css';
 import classes from '@/features/auth/WhatsappLogin.module.css';
 
 /** A bare international number reads as a number once it has its plus. */
@@ -41,21 +43,29 @@ function useRemaining(deadline: number | undefined): number {
 }
 
 /**
- * Sign in by sending a message. The customer's credential here is a string they
- * carry into another app, so once an attempt is open the code is the largest
- * thing on the page — bigger than the heading — set on its own slip with the
- * number it goes to underneath.
+ * Sign in by sending a message. Before anything happens it is one labelled
+ * button; the explanation arrives only once the shopper has tapped it. The
+ * customer's credential then is a string they carry into another app, so once an
+ * attempt is open the code is the largest thing on the page, set on its own slip
+ * with the number it goes to underneath.
  *
- * The button above it is the fast path (it opens WhatsApp with the message
- * already written); the slip is what makes the card work on a desktop with no
+ * The button above the slip is the fast path (it opens WhatsApp with the message
+ * already written); the slip is what makes this work on a desktop with no
  * WhatsApp installed, or on a phone that opened the link in the wrong app.
+ *
+ * `onWaiting` tells the page when an attempt is open, so it can step the other
+ * ways in out of the way for the length of the wait.
  */
-export function WhatsappLogin({ number }: { number: string | null }) {
-  const { state, start, pending, data, deadline, error } = useWhatsappLogin();
+export function WhatsappLogin({ number, onWaiting }: { number: string | null; onWaiting?: (waiting: boolean) => void }) {
+  const { state, start, cancel, pending, data, deadline, error } = useWhatsappLogin();
   const { t } = useText();
   const remaining = useRemaining(state === 'started' ? deadline : undefined);
   const clipboard = useClipboard({ timeout: 1600 });
   const to = dialable(number);
+  const waiting = state === 'started' && Boolean(data);
+  useEffect(() => {
+    onWaiting?.(waiting);
+  }, [waiting, onWaiting]);
 
   if (state === 'completed' || state === 'done') {
     return (
@@ -75,7 +85,7 @@ export function WhatsappLogin({ number }: { number: string | null }) {
         </p>
         <button
           type="button"
-          className={classes.cta}
+          className={buttons.primary}
           onClick={start}
           disabled={pending}
           data-sf-part="button"
@@ -93,7 +103,7 @@ export function WhatsappLogin({ number }: { number: string | null }) {
         <AuthNote tone="danger">{error ?? t('errors.generic')}</AuthNote>
         <button
           type="button"
-          className={classes.cta}
+          className={buttons.primary}
           onClick={start}
           disabled={pending}
           data-sf-part="button"
@@ -108,14 +118,19 @@ export function WhatsappLogin({ number }: { number: string | null }) {
   if (state === 'started' && data) {
     return (
       <>
+        <button type="button" className={buttons.back} onClick={cancel}>
+          <ArrowLeftIcon size={18} />
+          {t('auth.whatsapp.back')}
+        </button>
         <a
-          className={classes.cta}
+          className={buttons.primary}
           href={data.waLink}
           target="_blank"
           rel="noopener noreferrer"
           data-sf-part="button"
           data-variant="filled"
         >
+          <span className={buttons.icon}><WhatsAppIcon size={20} /></span>
           {t('auth.whatsapp.open')}
         </a>
 
@@ -151,17 +166,13 @@ export function WhatsappLogin({ number }: { number: string | null }) {
 
   return (
     <>
-      <p className={classes.lede}>
-        {t('auth.whatsapp.intro')}
-      </p>
       <button
         type="button"
-        className={classes.cta}
+        className={buttons.quick}
         onClick={start}
         disabled={pending}
-        data-sf-part="button"
-        data-variant="filled"
       >
+        <span className={buttons.icon}><WhatsAppIcon size={20} /></span>
         {pending ? t('auth.whatsapp.starting') : t('auth.whatsapp.continue')}
       </button>
     </>

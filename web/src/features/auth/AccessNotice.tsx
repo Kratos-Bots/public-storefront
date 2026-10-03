@@ -5,7 +5,7 @@ import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/auth/AccessNotice.module.css';
 
 /**
- * Says, under the sign-in options, what the shop asks of a visitor: that they
+ * Says, around the sign-in options, what the shop asks of a visitor: that they
  * sign in, that new accounts are closed, and where to ask the owner for access.
  * Renders nothing for an open shop, so a backend that predates shop access
  * looks exactly as before.
@@ -17,8 +17,8 @@ export function AccessNotice({ placement }: { placement?: 'above' | 'below' } = 
   const needsSignIn = access.storefront !== 'public';
   const lockout = showsLockoutCopy(access);
   if (!needsSignIn && access.registration) return null;
-  // Beside the sign-in cards the owner's words lead (on a phone the cards are a long scroll);
-  // otherwise the short sign-in line stays where it always was, below them.
+  // The owner's own words lead the sign-in options; otherwise the short sign-in line stays
+  // where it always was, below them.
   if (placement === 'above' && !lockout) return null;
   if (placement === 'below' && lockout) return null;
 

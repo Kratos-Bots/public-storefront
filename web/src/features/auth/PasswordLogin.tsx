@@ -6,13 +6,15 @@ import { ContactLinks } from '@/components/ContactLinks.tsx';
 import { Field } from '@/features/checkout/Field.tsx';
 import { PhoneField } from '@/features/checkout/PhoneField.tsx';
 import { GuestTurnstile, type GuestTurnstileHandle } from '@/features/checkout/GuestTurnstile.tsx';
-import { AuthNote } from '@/features/auth/AuthCard.tsx';
+import { ArrowLeftIcon } from '@/components/icons.tsx';
+import { AuthNote } from '@/features/auth/AuthNote.tsx';
 import { usePasswordLogin, type PasswordLogin as PasswordForm } from '@/features/auth/usePasswordLogin.ts';
+import buttons from '@/features/auth/AuthButtons.module.css';
 import classes from '@/features/auth/PasswordLogin.module.css';
 
 /**
- * The email-or-phone card's body: sign in, create an account, or reset a password, all in one place so
- * the card never changes height class or position. Behaviour lives in `usePasswordLogin`; this is markup.
+ * The email-or-phone form: sign in, create an account, or reset a password, all in one place so
+ * the form never changes position. A step past sign-in opens with a way back and its own title. Behaviour lives in `usePasswordLogin`; this is markup.
  * While a request is in the air the mode links and the Email | Phone switch are disabled, so a late
  * response can never land under a different mode.
  */
@@ -77,6 +79,13 @@ export function PasswordLogin() {
     </button>
   );
 
+  const back = (
+    <button type="button" className={buttons.back} disabled={pending} onClick={() => form.setMode('signin')}>
+      <ArrowLeftIcon size={18} />
+      {t('auth.password.backToSignIn')}
+    </button>
+  );
+
   const failure = errors.form ? (
     <div role="alert">
       <AuthNote tone="danger">{errors.form}</AuthNote>
@@ -84,7 +93,7 @@ export function PasswordLogin() {
   ) : null;
 
   const submitButton = (label: string) => (
-    <button type="submit" className={classes.cta} disabled={pending} data-sf-part="button" data-variant="filled">
+    <button type="submit" className={buttons.primary} disabled={pending} data-sf-part="button" data-variant="filled">
       {pending ? t('auth.password.working') : label}
     </button>
   );
@@ -101,12 +110,13 @@ export function PasswordLogin() {
   if (mode === 'forgot') {
     return (
       <div className={classes.root} ref={root}>
-        <h3 className={classes.title}>{t('auth.password.forgot.title')}</h3>
+        {back}
+        <h2 className={classes.title}>{t('auth.password.forgot.title')}</h2>
         {kindSwitch}
         {form.forgotRoute === 'whatsapp' ? (
           <>
             <p className={classes.body}>{t('auth.password.forgot.whatsappBody')}</p>
-            <a className={classes.cta} href={form.whatsappHref ?? undefined} target="_blank" rel="noopener noreferrer" data-sf-part="button" data-variant="filled">
+            <a className={buttons.primary} href={form.whatsappHref ?? undefined} target="_blank" rel="noopener noreferrer" data-sf-part="button" data-variant="filled">
               {t('auth.password.forgot.whatsappCta')}
             </a>
           </>
@@ -136,7 +146,6 @@ export function PasswordLogin() {
             ) : null}
           </>
         ) : null}
-        <div className={classes.links}>{link(t('auth.password.backToSignIn'), 'signin')}</div>
       </div>
     );
   }
@@ -144,6 +153,12 @@ export function PasswordLogin() {
   const signup = mode === 'signup';
   return (
     <div className={classes.root} ref={root}>
+      {signup ? (
+        <>
+          {back}
+          <h2 className={classes.title}>{t('auth.password.signUpTitle')}</h2>
+        </>
+      ) : null}
       {kindSwitch}
       <form className={classes.form} noValidate onSubmit={onSubmit}>
         {identifier}
@@ -156,18 +171,12 @@ export function PasswordLogin() {
           error={errors.password}
           hint={signup ? t('auth.password.rule') : undefined}
         />
+        {signup ? null : <div className={classes.forgot}>{link(t('auth.password.toForgot'), 'forgot')}</div>}
         {turnstile}
         {failure}
         {submitButton(t(signup ? 'auth.password.submitSignUp' : 'auth.password.submitSignIn'))}
       </form>
-      <div className={classes.links}>
-        {signup ? link(t('auth.password.toSignIn'), 'signin') : (
-          <>
-            {link(t('auth.password.toForgot'), 'forgot')}
-            {registration ? link(t('auth.password.toSignUp'), 'signup') : null}
-          </>
-        )}
-      </div>
+      {!signup && registration ? <div className={classes.alt}>{link(t('auth.password.toSignUp'), 'signup')}</div> : null}
     </div>
   );
 }

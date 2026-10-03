@@ -141,6 +141,15 @@ export function ArrowUpRightIcon({ size = 13, ...rest }: GlyphProps) {
   );
 }
 
+export function ArrowLeftIcon({ size = 16 }: GlyphProps) {
+  return (
+    <svg {...stroke(size)}>
+      <path d="M19 12H5" />
+      <path d="m11 6-6 6 6 6" />
+    </svg>
+  );
+}
+
 export function WhatsAppIcon({ size = 16 }: GlyphProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden>

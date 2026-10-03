@@ -16,6 +16,8 @@ export interface WhatsappLoginController {
   state: WhatsappLoginState;
   /** Open an attempt. Safe to call again from `expired` or `error` — it starts a fresh one. */
   start: () => void;
+  /** Drop the open attempt and go back to the first screen. Nothing is sent: the attempt just lapses unused. */
+  cancel: () => void;
   /** True while the start request is in the air, so one tap can't open two attempts. */
   pending: boolean;
   /** The open attempt: its code, its `wa.me` link, its expiry. */
@@ -177,5 +179,18 @@ export function useWhatsappLogin(): WhatsappLoginController {
     })();
   }, [t]);
 
-  return { state, start, pending, data, deadline, error };
+  const cancel = useCallback(() => {
+    // A new generation orphans the watch chain and any in-flight poll, exactly as a restart does.
+    generation.current += 1;
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+    starting.current = false;
+    setPending(false);
+    setError(undefined);
+    setData(undefined);
+    setDeadline(undefined);
+    setState('idle');
+  }, []);
+
+  return { state, start, cancel, pending, data, deadline, error };
 }

@@ -1,13 +1,13 @@
 import { useCallback, useState } from 'react';
+import { FADE } from '@/lib/motion.ts';
 import { useSettings } from '@/app/settings.ts';
 import { loginTelegram } from '@/api/auth.ts';
 import { errorMessage } from '@/lib/errors.ts';
 import { useText } from '@/text/runtime.tsx';
 import { ContactLinks } from '@/components/ContactLinks.tsx';
 import { EmptyState } from '@/components/EmptyState.tsx';
-import { MailIcon, TelegramIcon, WhatsAppIcon } from '@/components/icons.tsx';
 import { AccessNotice } from '@/features/auth/AccessNotice.tsx';
-import { AuthCard, AuthNote } from '@/features/auth/AuthCard.tsx';
+import { AuthNote } from '@/features/auth/AuthNote.tsx';
 import { PasswordLogin } from '@/features/auth/PasswordLogin.tsx';
 import { TelegramLogin } from '@/features/auth/TelegramLogin.tsx';
 import { WhatsappLogin } from '@/features/auth/WhatsappLogin.tsx';
@@ -17,9 +17,14 @@ import type { StyleAttrs } from '@/builder/define.ts';
 import classes from '@/features/auth/LoginOptions.module.css';
 
 /**
- * Every way into an account, in one column. Shared by the page and the modal so
- * a prompt raised from the cart is the same instrument as the page it would
- * otherwise have navigated to.
+ * Every way into an account, on one calm surface: the quick ways (WhatsApp,
+ * Telegram) as big labelled buttons, a quiet "or", then the email-or-phone form.
+ * Shared by the page and the modal so a prompt raised from the cart is the same
+ * instrument as the page it would otherwise have navigated to.
+ *
+ * While a WhatsApp code is waiting, the other ways step aside (hidden, not
+ * unmounted, so a half-typed email survives the trip) and the code step has the
+ * screen to itself.
  */
 export function LoginOptions({ rootAttrs }: { rootAttrs?: StyleAttrs } = {}) {
   const settings = useSettings();
@@ -28,6 +33,7 @@ export function LoginOptions({ rootAttrs }: { rootAttrs?: StyleAttrs } = {}) {
   const onLogin = useLoginSuccess();
   const [telegramBusy, setTelegramBusy] = useState(false);
   const [telegramError, setTelegramError] = useState<string | undefined>();
+  const [waiting, setWaiting] = useState(false);
 
   const onTelegram = useCallback(
     (user: TelegramAuthPayload) => {
@@ -74,27 +80,31 @@ export function LoginOptions({ rootAttrs }: { rootAttrs?: StyleAttrs } = {}) {
   }
 
   return (
-    <div className={classes.options} {...rootAttrs}>
+    <div className={`${classes.options} ${FADE}`} {...rootAttrs}>
       <AccessNotice placement="above" />
 
-      {whatsapp ? (
-        <AuthCard name={t('common.contact.whatsapp')} icon={<WhatsAppIcon size={15} />}>
-          <WhatsappLogin number={login.whatsapp.number} />
-        </AuthCard>
-      ) : null}
-
-      {telegramBot ? (
-        <AuthCard name={t('common.contact.telegram')} icon={<TelegramIcon size={15} />}>
-          <TelegramLogin botUsername={telegramBot} onAuth={onTelegram} />
-          {telegramBusy ? <AuthNote>{t('auth.options.signingIn')}</AuthNote> : null}
-          {telegramError ? <AuthNote tone="danger">{telegramError}</AuthNote> : null}
-        </AuthCard>
+      {whatsapp || telegramBot ? (
+        <div className={classes.quick}>
+          {whatsapp ? <WhatsappLogin number={login.whatsapp.number} onWaiting={setWaiting} /> : null}
+          {telegramBot ? (
+            <div className={classes.telegram} hidden={waiting}>
+              <TelegramLogin botUsername={telegramBot} onAuth={onTelegram} />
+              {telegramBusy ? <AuthNote>{t('auth.options.signingIn')}</AuthNote> : null}
+              {telegramError ? <div role="alert"><AuthNote tone="danger">{telegramError}</AuthNote></div> : null}
+            </div>
+          ) : null}
+        </div>
       ) : null}
 
       {password ? (
-        <AuthCard name={t('auth.options.emailOrPhone')} icon={<MailIcon size={15} />}>
+        <div className={classes.password} hidden={waiting}>
+          {whatsapp || telegramBot ? (
+            <div className={classes.or} aria-hidden>
+              <span>{t('auth.options.or')}</span>
+            </div>
+          ) : null}
           <PasswordLogin />
-        </AuthCard>
+        </div>
       ) : null}
 
       <AccessNotice placement="below" />

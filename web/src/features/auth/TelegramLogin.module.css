@@ -1,14 +1,39 @@
-/* Telegram draws its own button in an iframe and owns every pixel of it, so the
-   only thing to design here is the space around it: centred, with the height it
-   asks for reserved so the card doesn't jump when the widget arrives. */
+/* The drawn button (shape and colour come from AuthButtons' .quick) and, over it,
+   Telegram's own iframe: invisible, absolutely placed, and scaled in script to
+   cover the whole button, so a tap anywhere on the button is a tap on Telegram's
+   control. Until the iframe exists the button reads as busy rather than dead. */
+.slot {
+  position: relative;
+  cursor: pointer;
+}
+
+.slot[data-ready='false'] {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.slot:has(:focus-visible) {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+.slot:hover {
+  border-color: var(--sf-primary);
+}
+
 .mount {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 48px;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
 }
 
 .mount iframe {
-  max-width: 100%;
-  color-scheme: light;
+  position: absolute;
+  top: 0;
+  left: 0;
+  max-width: none !important;
+  transform-origin: 0 0;
+  opacity: 0;
+  border: 0;
 }

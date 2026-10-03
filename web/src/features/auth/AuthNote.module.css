@@ -1,0 +1,20 @@
+.note {
+  margin: 0;
+  padding: 0.6rem 0.8rem;
+  border-left: 3px solid var(--sf-line-strong);
+  border-radius: 0 var(--sf-card-radius) var(--sf-card-radius) 0;
+  background: var(--sf-surface-2);
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: var(--sf-muted);
+}
+
+.note[data-tone='warn'] {
+  border-left-color: var(--sf-warn);
+  color: var(--sf-text);
+}
+
+.note[data-tone='danger'] {
+  border-left-color: var(--sf-danger);
+  color: var(--sf-text);
+}
