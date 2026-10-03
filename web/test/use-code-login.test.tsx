@@ -307,14 +307,89 @@ describe('language and wrong answers', () => {
     expect(h.codeEmail).toHaveBeenCalledWith('new@example.com', 'ts-3', { language: 'fr' });
   });
 
-  it('each wrong answer bumps incorrectCount so the screen can clear the box', async () => {
-    h.codeVerify.mockResolvedValue({ status: 'incorrect', attemptsRemaining: 2 });
+  it('every verify that does not sign in bumps verifyAttempts so the screen can clear the box', async () => {
+    h.codeVerify.mockResolvedValueOnce({ status: 'incorrect', attemptsRemaining: 2 });
     const { result } = setup();
     await act(async () => { await result.current.sendPhone('+447700900123', 'whatsapp'); });
-    expect(result.current.incorrectCount).toBe(0);
+    expect(result.current.verifyAttempts).toBe(0);
     await act(async () => { await result.current.verify('000000'); });
-    expect(result.current.incorrectCount).toBe(1);
+    expect(result.current.verifyAttempts).toBe(1);
+    h.codeVerify.mockRejectedValueOnce(new ApiError(503, 'down'));
     await act(async () => { await result.current.verify('000000'); });
-    expect(result.current.incorrectCount).toBe(2);
+    expect(result.current.verifyAttempts).toBe(2);
+    h.codeVerify.mockRejectedValueOnce(new ApiError(429, 'CODE_RATE_LIMITED'));
+    await act(async () => { await result.current.verify('000000'); });
+    expect(result.current.verifyAttempts).toBe(3);
+    h.codeVerify.mockResolvedValueOnce({ status: 'signed_in', ...LOGIN, isNew: false });
+    await act(async () => { await result.current.verify('123456'); });
+    expect(result.current.verifyAttempts).toBe(3);
+  });
+
+  it('a verify dropped by the busy guard also bumps verifyAttempts', async () => {
+    const { result } = setup();
+    await act(async () => { await result.current.sendPhone('+447700900123', 'whatsapp'); });
+    let release!: (v: unknown) => void;
+    h.codeResend.mockReturnValue(new Promise((r) => { release = r; }));
+    let pendingResend!: Promise<void>;
+    await act(async () => {
+      pendingResend = result.current.resend();
+      void result.current.verify('123456');
+    });
+    expect(result.current.verifyAttempts).toBe(1);
+    release(SENT());
+    await act(async () => { await pendingResend; });
+  });
+});
+
+describe('stale requests and the channel', () => {
+  it('going back while a send is in the air: the late answer changes nothing and the new screen can submit', async () => {
+    let release!: (v: unknown) => void;
+    h.codePhone.mockReturnValueOnce(new Promise((r) => { release = r; }));
+    const { result } = setup();
+    let first!: Promise<void>;
+    await act(async () => { first = result.current.sendPhone('+447700900123', 'whatsapp'); });
+    expect(result.current.pending).toBe(true);
+    await act(async () => { result.current.go('phone'); });
+    expect(result.current.pending).toBe(false);
+    release(SENT());
+    await act(async () => { await first; });
+    expect(result.current.view).toBe('phone');
+    expect(result.current.attempt).toBeNull();
+    await act(async () => { await result.current.sendPhone('+447700900124', 'sms'); });
+    expect(h.codePhone).toHaveBeenCalledTimes(2);
+    expect(result.current.view).toBe('code');
+  });
+
+  it('a late failure after going back is not shown on the new screen, and does not free the new request', async () => {
+    let fail!: (e: unknown) => void;
+    h.codePhone.mockReturnValueOnce(new Promise((_, r) => { fail = r; }));
+    const { result } = setup();
+    let first!: Promise<void>;
+    await act(async () => { first = result.current.sendPhone('+447700900123', 'whatsapp'); });
+    await act(async () => { result.current.go('phone'); });
+    let release!: (v: unknown) => void;
+    h.codePhone.mockReturnValueOnce(new Promise((r) => { release = r; }));
+    let second!: Promise<void>;
+    await act(async () => { second = result.current.sendPhone('+447700900124', 'sms'); });
+    fail(new ApiError(429, 'CODE_RATE_LIMITED'));
+    await act(async () => { await first; });
+    expect(result.current.failure).toBeNull();
+    expect(result.current.pending).toBe(true);
+    release(SENT());
+    await act(async () => { await second; });
+    expect(result.current.view).toBe('code');
+  });
+
+  it('after a channel switch, a new code after an expiry goes the new way', async () => {
+    const { result } = setup();
+    await act(async () => { await result.current.sendPhone('+447700900123', 'whatsapp'); });
+    h.codeResend.mockResolvedValue(SENT({ channel: 'sms' }));
+    await act(async () => { await result.current.switchChannel(); });
+    h.codeVerify.mockRejectedValue(new ApiError(400, 'CODE_EXPIRED'));
+    await act(async () => { await result.current.verify('123456'); });
+    h.codePhone.mockResolvedValue(SENT({ channel: 'sms', attemptId: 'att-3' }));
+    await act(async () => { await result.current.sendNewCode(); });
+    expect(h.codePhone).toHaveBeenLastCalledWith('+447700900123', 'sms', expect.any(String), { language: 'en' });
+    expect(result.current.attempt?.attemptId).toBe('att-3');
   });
 });
