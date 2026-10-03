@@ -8,8 +8,8 @@ export const block = defineBlock<{ id: string }>({
   name: 'LoginMethods', label: 'Ways to sign in', category: 'part', part: { family: 'login' },
   layouts: 'all', routeBound: false, slots: [],
   style: styleSupport('root', [...BOX]),
-  text: ['auth.options.*', 'auth.password.*', 'auth.telegram.*', 'auth.whatsapp.*', 'auth.login.*', 'common.contact.*', 'common.actions.signIn',
-    'checkout.errors.required', 'checkout.errors.emailInvalid', 'checkout.errors.verifyFailed', 'checkout.phone.*', 'errors.rateLimited'],
+  text: ['auth.options.*', 'auth.password.*', 'auth.telegram.*', 'auth.whatsapp.*', 'auth.code.*', 'auth.login.*', 'common.contact.*', 'common.actions.signIn',
+    'checkout.errors.required', 'checkout.errors.emailInvalid', 'checkout.errors.verifyFailed', 'checkout.phone.*', 'errors.rateLimited', 'errors.registrationClosed'],
   schema: z.object({}), defaultProps: {},
   render: (p) => <LoginFamily.PartHost name="LoginMethods" props={p as Record<string, unknown>} styleAttrs={p.puck.style} />,
 });

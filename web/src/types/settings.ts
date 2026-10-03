@@ -43,6 +43,15 @@ export interface PasswordLoginSettings {
   /** The shopper can message the shop's WhatsApp number to get a reset link. */
   resetByWhatsapp: boolean;
 }
+export interface PhoneLoginSettings {
+  available: boolean;
+  /** `verify`: a code by WhatsApp or text message; `whatsapp`: the shopper messages the shop; null: neither. */
+  mode: 'verify' | 'whatsapp' | null;
+  channels: Array<'whatsapp' | 'sms'>;
+  /** The store's serviceable countries (ISO alpha-2, possibly empty). They lead the country picker. */
+  countries: string[];
+}
+export interface EmailLoginSettings { available: boolean; mode: 'verify' | 'email' | null }
 export interface AccessButton { label: string; url: string }
 
 /** Who may use the shop. Identical for every visitor. */
@@ -63,6 +72,9 @@ export interface StorefrontSettings {
     telegram: { available: boolean; botUsername: string | null; oidc?: boolean };
     /** Absent on backends older than password sign-in. */
     password?: PasswordLoginSettings;
+    /** Absent on backends older than sign-in by code: the storefront then keeps today's sign-in. */
+    phone?: PhoneLoginSettings;
+    email?: EmailLoginSettings;
   };
   brand: Brand; features: Features; theme: Theme; turnstile: { siteKey: string } | null;
   /** The bot's effective web app mode. Absent on backends older than the Mini App. */

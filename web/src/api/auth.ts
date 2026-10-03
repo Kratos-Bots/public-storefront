@@ -1,5 +1,5 @@
 import { api, unwrap } from '@/api/client.ts';
-import type { WhatsappStart, AttemptStatus, LoginResult, TelegramAuthPayload, PasswordIdentifier, ResetCheck, SetPasswordInput } from '@/types/auth.ts';
+import type { WhatsappStart, AttemptStatus, LoginResult, TelegramAuthPayload, PasswordIdentifier, ResetCheck, SetPasswordInput, CodeChannel, CodeEmailResult, CodeSent, CodeVerifyResult } from '@/types/auth.ts';
 
 export const startWhatsapp = () =>
   unwrap<WhatsappStart>(api.post('storefront/auth/whatsapp/start', { json: {} }));
@@ -60,3 +60,26 @@ export const requestEmailVerification = () =>
 /** Session required, and the token must belong to the session's customer (`403` otherwise). */
 export const verifyEmail = (token: string) =>
   unwrap<{ ok: true }>(api.post('storefront/auth/email/verify', { json: { token } }));
+
+const withToken = (turnstileToken?: string) => (turnstileToken ? { turnstileToken } : {});
+/** The active site-text locale (BCP 47), so the backend words the code message in it. Left out when unknown or empty. */
+const withLanguage = (language?: string) => (language ? { language } : {});
+
+/** A live password login answers `{ next: 'password' }` and sends nothing; otherwise a code is sent. */
+export const codeEmail = (email: string, turnstileToken?: string, opts: { language?: string } = {}) =>
+  unwrap<CodeEmailResult>(api.post('storefront/auth/code/email', { json: { email, ...withToken(turnstileToken), ...withLanguage(opts.language) } }));
+
+/** Always sends ("Email me a code instead"). */
+export const codeEmailSend = (email: string, turnstileToken?: string, opts: { language?: string } = {}) =>
+  unwrap<CodeSent>(api.post('storefront/auth/code/email/send', { json: { email, ...withToken(turnstileToken), ...withLanguage(opts.language) } }));
+
+export const codePhone = (phone: string, channel: 'whatsapp' | 'sms', turnstileToken?: string, opts: { language?: string } = {}) =>
+  unwrap<CodeSent>(api.post('storefront/auth/code/phone', { json: { phone, channel, ...withToken(turnstileToken), ...withLanguage(opts.language) } }));
+
+/** Same channel: a resend after the cooldown. A different phone `channel`: a switch. */
+export const codeResend = (attemptId: string, opts: { channel?: Exclude<CodeChannel, 'email'>; turnstileToken?: string; language?: string } = {}) =>
+  unwrap<CodeSent>(api.post('storefront/auth/code/resend', { json: { attemptId, ...(opts.channel ? { channel: opts.channel } : {}), ...withToken(opts.turnstileToken), ...withLanguage(opts.language) } }));
+
+/** A correct code signs the customer in, or creates the account when it is new and registration is open. A wrong one answers `{ status: 'incorrect', attemptsRemaining }`. */
+export const codeVerify = (attemptId: string, code: string) =>
+  unwrap<CodeVerifyResult>(api.post('storefront/auth/code/verify', { json: { attemptId, code } }));

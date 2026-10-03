@@ -99,4 +99,12 @@ export default {
   'access.checkAgain': 'Button on the private-shop screen that checks whether the customer has been given access since',
   'access.signOut': 'Button on the private-shop screen that signs the customer out',
   'access.contactAriaLabel': 'Screen-reader name of the group of contact buttons on the private-shop screen',
+  'code.error.tooMany': 'Sign-in by code: shown when too many codes were asked for or tried (shop limits or the sending service’s)',
+  'code.error.channelWhatsapp': 'Sign-in by code: shown when the code could not be sent to that number on WhatsApp',
+  'code.error.channelSms': 'Sign-in by code: shown when the code could not be sent to that number as a text message',
+  'code.error.cannotSwitch': 'Sign-in by code: shown when a waiting code cannot be sent another way to this number',
+  'code.error.expired': 'Sign-in by code: shown when the code ran out of time; a button to send a new one follows',
+  'code.error.incorrect': 'Sign-in by code: shown after a wrong code; {count} is how many tries are left',
+  'code.error.incorrectNoCount': 'Sign-in by code: shown after a wrong code when the number of tries left is not known',
+  'code.error.unavailable': 'Sign-in by code: shown when the shop’s code sending is switched off or down',
 } as const satisfies Record<string, string>;

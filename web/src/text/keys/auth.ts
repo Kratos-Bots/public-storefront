@@ -101,4 +101,12 @@ export default defineTextArea('auth', {
   'access.checkAgain': { en: 'Check again', max: 40 },
   'access.signOut': { en: 'Sign out', max: 40 },
   'access.contactAriaLabel': { en: 'Contact the shop', max: 60 },
+  'code.error.tooMany': { en: 'Too many tries. Please wait a few minutes', max: 120 },
+  'code.error.channelWhatsapp': { en: 'We couldn’t send a WhatsApp message to that number. Try a text message instead', max: 200 },
+  'code.error.channelSms': { en: 'We couldn’t send a text message to that number. Try WhatsApp instead', max: 200 },
+  'code.error.cannotSwitch': { en: 'We can’t send the code that way to this number', max: 160 },
+  'code.error.expired': { en: 'That code has expired. We can send a new one', max: 160 },
+  'code.error.incorrect': { en: { one: 'That code isn’t right. {count} try left.', other: 'That code isn’t right. {count} tries left.' }, max: 120 },
+  'code.error.incorrectNoCount': { en: 'That code isn’t right.', max: 100 },
+  'code.error.unavailable': { en: 'Sign-in by code isn’t working right now. Please try another way', max: 200 },
 });
