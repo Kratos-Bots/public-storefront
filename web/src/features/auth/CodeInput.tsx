@@ -16,6 +16,8 @@ export interface CodeInputProps {
   onComplete: (code: string) => void;
   disabled?: boolean;
   invalid?: boolean;
+  /** The id of the message that explains what is wrong with the code (an error), read out with the box. */
+  describedBy?: string;
 }
 
 /**
@@ -24,7 +26,7 @@ export interface CodeInputProps {
  * is cleaned here instead. A paste replaces what was typed.
  */
 export const CodeInput = forwardRef<HTMLInputElement, CodeInputProps>(function CodeInput(
-  { value, onChange, onComplete, disabled, invalid },
+  { value, onChange, onComplete, disabled, invalid, describedBy },
   ref,
 ) {
   const { t } = useText();
@@ -49,6 +51,7 @@ export const CodeInput = forwardRef<HTMLInputElement, CodeInputProps>(function C
       spellCheck={false}
       aria-label={t('auth.code.enter.label')}
       aria-invalid={invalid ? true : undefined}
+      aria-describedby={describedBy}
       disabled={disabled}
       value={value}
       onChange={(e: ChangeEvent<HTMLInputElement>) => accept(e.currentTarget.value)}

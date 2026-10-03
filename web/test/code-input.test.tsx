@@ -105,6 +105,13 @@ describe('the one-time-code input', () => {
     expect(event.defaultPrevented).toBe(true);
   });
 
+  it('points at the message that explains it, when there is one', () => {
+    const { rerender } = render(<CodeInput value="" onChange={vi.fn()} onComplete={vi.fn()} describedBy="why" />);
+    expect(box()).toHaveAttribute('aria-describedby', 'why');
+    rerender(<CodeInput value="" onChange={vi.fn()} onComplete={vi.fn()} />);
+    expect(box()).not.toHaveAttribute('aria-describedby');
+  });
+
   it('can be disabled', () => {
     render(<Harness onComplete={vi.fn()} disabled />);
     expect(box()).toBeDisabled();
