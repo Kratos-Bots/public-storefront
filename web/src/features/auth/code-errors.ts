@@ -3,7 +3,7 @@ import { textSnapshot } from '@/text/snapshot.ts';
 import type { CodeChannel } from '@/types/auth.ts';
 
 export type CodeFailureKind =
-  | 'registrationClosed' | 'banned' | 'tooMany' | 'channelUnavailable' | 'expired' | 'incorrect' | 'unavailable' | 'phoneInvalid' | 'other';
+  | 'registrationClosed' | 'banned' | 'tooMany' | 'triesUsed' | 'channelUnavailable' | 'expired' | 'incorrect' | 'unavailable' | 'phoneInvalid' | 'other';
 
 export interface CodeFailure { kind: CodeFailureKind; message: string; attemptsRemaining?: number }
 
@@ -20,7 +20,8 @@ const SENTINEL: Record<string, CodeFailureKind> = {
   CODE_SERVICE_UNAVAILABLE: 'unavailable',
   CODE_CHANNEL_UNAVAILABLE: 'channelUnavailable',
   CODE_EXPIRED: 'expired',
-  CODE_TOO_MANY_TRIES: 'tooMany',
+  // The backend deletes the attempt on this one: the code is dead, unlike a rate limit, which is only "wait".
+  CODE_TOO_MANY_TRIES: 'triesUsed',
   CODE_RATE_LIMITED: 'tooMany',
   PHONE_INVALID: 'phoneInvalid',
   REGISTRATION_CLOSED: 'registrationClosed',
@@ -58,6 +59,7 @@ export function codeFailure(err: unknown, ctx: CodeFailureContext = {}): CodeFai
     case 'registrationClosed': return { kind, message: t('errors.registrationClosed') };
     case 'banned': return { kind, message: t('auth.password.banned') };
     case 'tooMany': return { kind, message: t('auth.code.error.tooMany') };
+    case 'triesUsed': return { kind, message: t('auth.code.error.triesUsed') };
     case 'phoneInvalid': return { kind, message: t('auth.password.phoneInvalid') };
     case 'expired': return { kind, message: t('auth.code.error.expired') };
     case 'unavailable': return { kind, message: t('auth.code.error.unavailable') };

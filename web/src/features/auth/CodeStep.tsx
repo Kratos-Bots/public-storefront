@@ -14,9 +14,11 @@ import classes from '@/features/auth/CodeSignIn.module.css';
 /**
  * "Enter the 6-digit code we sent to …". One box that submits itself at six digits; quiet links for resend (greyed
  * with a countdown for the first minute) and, for a phone, the other channel. A verify that did not sign in clears
- * the box and puts the cursor back in it once the request is over. A code that expired locks the box, drops the
- * resend links and offers one button for a fresh code. "Too many tries" (which a rate-limited resend also causes)
- * leaves the box usable, because the code the shopper holds may still be good, and offers the same button.
+ * the box and puts the cursor back in it once the request is over. A code that expired, or that was tried too many
+ * times (the backend has deleted that attempt), locks the box, drops the resend links and offers one button for a
+ * fresh code. A rate limit ("wait a few minutes") leaves the box usable, because the code the shopper holds may
+ * still be good, and offers the same button. A failed resend, switch or new-code request puts the cursor back on
+ * the control that was just used.
  */
 export function CodeStep({ form }: { form: CodeLogin }) {
   const { t } = useText();
@@ -24,6 +26,11 @@ export function CodeStep({ form }: { form: CodeLogin }) {
   const [value, setValue] = useState('');
   const box = useRef<HTMLInputElement>(null);
   const sendNew = useRef<HTMLButtonElement>(null);
+  const resendLink = useRef<HTMLButtonElement>(null);
+  const switchLink = useRef<HTMLButtonElement>(null);
+  /** The control whose request is in the air, so a failure can hand focus back to it. */
+  const used = useRef<'resend' | 'switch' | 'sendNew' | null>(null);
+  const wasPending = useRef(false);
   const refocused = useRef(verifyAttempts);
   const errorId = useId();
   const seconds = useSecondsLeft(attempt ? attempt.resendAt : null);
@@ -46,17 +53,27 @@ export function CodeStep({ form }: { form: CodeLogin }) {
     box.current?.focus();
   }, [pending, verifyAttempts]);
 
-  const expired = failure?.kind === 'expired';
+  const dead = failure?.kind === 'expired' || failure?.kind === 'triesUsed';
   // The box is locked and the old code is useless, so the one thing left to do is the one thing to land on.
   useEffect(() => {
-    if (expired) sendNew.current?.focus();
-  }, [expired]);
+    if (dead) sendNew.current?.focus();
+  }, [dead]);
+
+  // The control just used was disabled while its request was in the air, so focus fell to the page.
+  useEffect(() => {
+    if (wasPending.current && !pending && failure && used.current) {
+      const target = used.current === 'resend' ? resendLink.current : used.current === 'switch' ? switchLink.current : sendNew.current;
+      (target ?? sendNew.current ?? box.current)?.focus();
+    }
+    if (!pending) used.current = null;
+    wasPending.current = pending;
+  }, [pending, failure]);
 
   if (!attempt) return null;
 
   const word = (channel: CodeChannel) => (channel === 'whatsapp' ? t('auth.code.channel.whatsapp') : channel === 'sms' ? t('auth.code.channel.sms') : t('auth.code.channel.email'));
   const isPhone = attempt.kind === 'phone';
-  const offerNew = expired || failure?.kind === 'tooMany';
+  const offerNew = dead || failure?.kind === 'tooMany';
 
   return (
     <div className={password.root}>
@@ -71,7 +88,7 @@ export function CodeStep({ form }: { form: CodeLogin }) {
         value={value}
         onChange={setValue}
         onComplete={(code) => { void form.verify(code); }}
-        disabled={pending || expired}
+        disabled={pending || dead}
         invalid={failure?.kind === 'incorrect'}
         describedBy={failure ? errorId : undefined}
       />
@@ -79,16 +96,16 @@ export function CodeStep({ form }: { form: CodeLogin }) {
       {failure ? <div id={errorId} role="alert"><AuthNote tone="danger">{failure.message}</AuthNote></div> : null}
       {sent && !failure ? <p className={password.sent} role="status">{t('auth.code.sentAgain')}</p> : null}
       {offerNew ? (
-        <button ref={sendNew} type="button" className={buttons.primary} disabled={pending} onClick={() => { void form.sendNewCode(); }} data-sf-part="button" data-variant="filled">
+        <button ref={sendNew} type="button" className={buttons.primary} disabled={pending} onClick={() => { used.current = 'sendNew'; void form.sendNewCode(); }} data-sf-part="button" data-variant="filled">
           {t('auth.code.error.sendNew')}
         </button>
       ) : null}
-      {expired ? null : <div className={classes.help}>
-        <button type="button" className={password.link} disabled={pending || seconds > 0} onClick={() => { void form.resend(); }}>
+      {dead ? null : <div className={classes.help}>
+        <button ref={resendLink} type="button" className={password.link} disabled={pending || seconds > 0} onClick={() => { used.current = 'resend'; void form.resend(); }}>
           {seconds > 0 ? t('auth.code.resendIn', { time: formatClock(seconds) }) : t('auth.code.resend')}
         </button>
         {isPhone ? (
-          <button type="button" className={password.link} disabled={pending} onClick={() => { void form.switchChannel(); }}>
+          <button ref={switchLink} type="button" className={password.link} disabled={pending} onClick={() => { used.current = 'switch'; void form.switchChannel(); }}>
             {attempt.channel === 'sms' ? t('auth.code.switchWhatsapp') : t('auth.code.switchSms')}
           </button>
         ) : null}

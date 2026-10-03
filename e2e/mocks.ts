@@ -124,6 +124,8 @@ export interface InstallMocksOptions {
     down?: boolean;
     /** Verifying answers 400 CODE_EXPIRED. */
     expired?: boolean;
+    /** Verifying answers 400 CODE_TOO_MANY_TRIES (the attempt is gone) or 429 CODE_RATE_LIMITED (wait). */
+    verifyError?: 'tooManyTries' | 'rateLimited';
     /** The shop's serviceable countries, served as `login.phone.countries` (default: none). */
     countries?: string[];
   };
@@ -774,6 +776,8 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
         }
         default: {
           if (codeOptions.expired) { await fail(route, 400, 'CODE_EXPIRED'); return; }
+          if (codeOptions.verifyError === 'tooManyTries') { await fail(route, 400, 'CODE_TOO_MANY_TRIES'); return; }
+          if (codeOptions.verifyError === 'rateLimited') { await fail(route, 429, 'CODE_RATE_LIMITED'); return; }
           if (String(asked.code) === '123456') {
             if (code.isNew && state.settings.access?.registration === false) { await fail(route, 403, 'REGISTRATION_CLOSED'); return; }
             await envelope(route, { status: 'signed_in', token: SESSION_TOKEN, customer: SESSION_CUSTOMER, isNew: code.isNew });

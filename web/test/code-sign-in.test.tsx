@@ -150,7 +150,7 @@ describe('phone', () => {
     type('Phone number', '07700 900123');
     fireEvent.click(button('Send code by WhatsApp'));
     await settle();
-    expect(h.codePhone).toHaveBeenCalledWith('+4407700900123', 'whatsapp', undefined, LANG);
+    expect(h.codePhone).toHaveBeenCalledWith('+4407700900123', 'whatsapp', undefined, { ...LANG, phoneCountry: "GB" });
     expect(screen.getByRole('heading', { name: 'Enter your code' })).toBeTruthy();
   });
 
@@ -160,7 +160,7 @@ describe('phone', () => {
     type('Phone number', typed);
     fireEvent.click(button('Send code by text message'));
     await settle();
-    expect(h.codePhone).toHaveBeenCalledWith('+447700900123', 'sms', undefined, LANG);
+    expect(h.codePhone).toHaveBeenCalledWith('+447700900123', 'sms', undefined, { ...LANG, phoneCountry: "FR" });
   });
 
   it('a national number with no country chosen asks for the country and sends nothing', async () => {
@@ -370,7 +370,7 @@ describe('phone step ease of use', () => {
     expect((button('Send code by WhatsApp') as HTMLButtonElement).type).toBe('submit');
     fireEvent.submit(screen.getByLabelText('Phone number').closest('form')!);
     await settle();
-    expect(h.codePhone).toHaveBeenCalledWith('+4407700900123', 'whatsapp', undefined, LANG);
+    expect(h.codePhone).toHaveBeenCalledWith('+4407700900123', 'whatsapp', undefined, { ...LANG, phoneCountry: "GB" });
   });
 
   it('with only text message listed, Enter sends a text message', async () => {
@@ -379,7 +379,7 @@ describe('phone step ease of use', () => {
     type('Phone number', '07700 900123');
     fireEvent.submit(screen.getByLabelText('Phone number').closest('form')!);
     await settle();
-    expect(h.codePhone).toHaveBeenCalledWith('+4407700900123', 'sms', undefined, LANG);
+    expect(h.codePhone).toHaveBeenCalledWith('+4407700900123', 'sms', undefined, { ...LANG, phoneCountry: "GB" });
   });
 
   it('says a code is coming', () => {
@@ -421,7 +421,7 @@ describe('phone step ease of use', () => {
     type('Phone number', '07700 900123');
     fireEvent.click(button('Send code by text message'));
     await settle();
-    expect(h.codePhone).toHaveBeenCalledWith('+4407700900123', 'sms', undefined, LANG);
+    expect(h.codePhone).toHaveBeenCalledWith('+4407700900123', 'sms', undefined, { ...LANG, phoneCountry: "GB" });
   });
 
   it('the email step says a code is coming only when the shop emails codes', () => {
@@ -471,7 +471,7 @@ describe('phone autofill and the email button', () => {
     type('Phone number', '+44 7700 900123');
     fireEvent.click(button('Send code by WhatsApp'));
     await settle();
-    expect(h.codePhone).toHaveBeenCalledWith('+447700900123', 'whatsapp', undefined, LANG);
+    expect(h.codePhone).toHaveBeenCalledWith('+447700900123', 'whatsapp', undefined, { ...LANG, phoneCountry: "GB" });
   });
 
   it('a 0044 number with the matching country picked does not double the country code', async () => {
@@ -479,7 +479,7 @@ describe('phone autofill and the email button', () => {
     type('Phone number', '0044 7700 900123');
     fireEvent.click(button('Send code by WhatsApp'));
     await settle();
-    expect(h.codePhone).toHaveBeenCalledWith('+447700900123', 'whatsapp', undefined, LANG);
+    expect(h.codePhone).toHaveBeenCalledWith('+447700900123', 'whatsapp', undefined, { ...LANG, phoneCountry: "GB" });
   });
 
   it('an international number needs no country picked at all', async () => {

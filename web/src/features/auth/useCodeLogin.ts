@@ -29,7 +29,8 @@ export interface CodeLogin {
    * only fires `onComplete` when the value changes, so a full code left in the box could never be re-submitted.
    */
   verifyAttempts: number;
-  sendPhone: (phone: string, channel: 'whatsapp' | 'sms') => Promise<void>;
+  /** `phoneCountry` is the ISO country picked beside the number, when there was one. */
+  sendPhone: (phone: string, channel: 'whatsapp' | 'sms', phoneCountry?: string) => Promise<void>;
   submitEmail: (email: string) => Promise<void>;
   emailMeCode: () => Promise<void>;
   passwordSignIn: (password: string) => Promise<void>;
@@ -41,7 +42,7 @@ export interface CodeLogin {
 }
 
 /** The request that opened the current attempt, so an expired code can be replaced by repeating it. */
-interface Opener { kind: CodeKind; start: () => Promise<CodeSent>; /** The typed number, for a phone attempt, so a channel switch can rebuild `start`. */ phone?: string }
+interface Opener { kind: CodeKind; start: () => Promise<CodeSent>; /** The typed number and its country, for a phone attempt, so a channel switch can rebuild `start`. */ phone?: string; phoneCountry?: string }
 
 /**
  * Sign in with a code, end to end. One request at a time: a second call while one is in the air is dropped,
@@ -119,10 +120,11 @@ export function useCodeLogin(turnstile: RefObject<GuestTurnstileHandle | null>):
     open(next.kind, result);
   }, [open]);
 
-  const phoneOpener = useCallback((phone: string, channel: 'whatsapp' | 'sms'): Opener => ({
+  const phoneOpener = useCallback((phone: string, channel: 'whatsapp' | 'sms', phoneCountry?: string): Opener => ({
     kind: 'phone',
     phone,
-    start: async () => codePhone(phone, channel, await mint(), { language: textSnapshot().locale }),
+    phoneCountry,
+    start: async () => codePhone(phone, channel, await mint(), { language: textSnapshot().locale, phoneCountry }),
   }), [mint]);
 
   const go = useCallback((next: 'choose' | 'phone' | 'email' | 'password' | 'forgot') => {
@@ -135,8 +137,8 @@ export function useCodeLogin(turnstile: RefObject<GuestTurnstileHandle | null>):
     setView(next);
   }, []);
 
-  const sendPhone = useCallback((phone: string, channel: 'whatsapp' | 'sms') => run(
-    (live) => begin(phoneOpener(phone, channel), live),
+  const sendPhone = useCallback((phone: string, channel: 'whatsapp' | 'sms', phoneCountry?: string) => run(
+    (live) => begin(phoneOpener(phone, channel, phoneCountry), live),
     (err) => codeFailure(err, { channel }),
   ), [run, begin, phoneOpener]);
 
@@ -198,7 +200,7 @@ export function useCodeLogin(turnstile: RefObject<GuestTurnstileHandle | null>):
         if (!live()) return;
         // "Send a new code" after an expiry must go the way this one just went, not back to the first channel.
         const phone = opener.current?.phone;
-        if (phone !== undefined) opener.current = phoneOpener(phone, to);
+        if (phone !== undefined) opener.current = phoneOpener(phone, to, opener.current?.phoneCountry);
         open('phone', result);
         setSent(true);
       },

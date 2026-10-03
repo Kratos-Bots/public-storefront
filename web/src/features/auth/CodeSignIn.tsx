@@ -1,13 +1,14 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSettings } from '@/app/settings.ts';
 import { accessOf } from '@/app/access.ts';
 import { MailIcon, PhoneIcon } from '@/components/icons.tsx';
 import { FADE } from '@/lib/motion.ts';
 import { GuestTurnstile, type GuestTurnstileHandle } from '@/features/checkout/GuestTurnstile.tsx';
 import { AccessNotice } from '@/features/auth/AccessNotice.tsx';
+import { AuthNote } from '@/features/auth/AuthNote.tsx';
 import { CodeStep } from '@/features/auth/CodeStep.tsx';
 import { EmailStep, ForgotStep, PasswordStep } from '@/features/auth/EmailSteps.tsx';
-import { PhoneStep } from '@/features/auth/PhoneStep.tsx';
+import { PhoneStep, type PhoneDraft } from '@/features/auth/PhoneStep.tsx';
 import { SignInUnavailable } from '@/features/auth/SignInUnavailable.tsx';
 import { TelegramSignInBlock, telegramAvailability } from '@/features/auth/TelegramSignInBlock.tsx';
 import { useReportChoice } from '@/features/auth/LoginStep.ts';
@@ -21,7 +22,9 @@ import classes from '@/features/auth/CodeSignIn.module.css';
 /**
  * Sign in with a code: three big buttons (phone number, Telegram, email), and behind the first and last a short
  * step each. The customer never chooses between "sign in" and "create an account": a correct code does whichever
- * applies. Each button is shown only when the shop has it working.
+ * applies. Each button is shown only when the shop has it working. The settings can change under the shopper (a
+ * "sign-in by code is off" answer refetches them): a step whose way is no longer offered gives way to the list,
+ * with the sentence it was showing, so the screen is never blank.
  */
 export function CodeSignIn({ rootAttrs }: { rootAttrs?: StyleAttrs } = {}) {
   const settings = useSettings();
@@ -30,14 +33,11 @@ export function CodeSignIn({ rootAttrs }: { rootAttrs?: StyleAttrs } = {}) {
   const registration = accessOf(settings).registration;
   const turnstile = useRef<GuestTurnstileHandle | null>(null);
   const form = useCodeLogin(turnstile);
-  useReportChoice(form.view === 'choose');
   const root = useRef<HTMLDivElement>(null);
-  const lastView = useRef(form.view);
-  // Coming back to the list of ways: the button that was clicked is gone, so put focus on the first one.
-  useEffect(() => {
-    if (form.view === 'choose' && lastView.current !== 'choose') root.current?.querySelector<HTMLElement>('button')?.focus();
-    lastView.current = form.view;
-  }, [form.view]);
+  // Kept so "Use a different number" comes back to what was typed, as `EmailStep` does with `form.email`.
+  const [phoneDraft, setPhoneDraft] = useState<PhoneDraft | undefined>();
+  // The sentence a step was showing when it was replaced by the list.
+  const [notice, setNotice] = useState<string | null>(null);
 
   const phone = login.phone?.available === true && login.phone.mode !== null ? login.phone : null;
   const emailCodes = login.email?.available === true && login.email.mode !== null;
@@ -46,11 +46,38 @@ export function CodeSignIn({ rootAttrs }: { rootAttrs?: StyleAttrs } = {}) {
   const email = emailCodes || passwords;
   const telegramOn = telegramAvailability(login).on;
 
+  const { view, attempt } = form;
+  const stale =
+    (view === 'phone' && !phone)
+    || ((view === 'email' || view === 'password' || view === 'forgot') && !email)
+    || (view === 'code' && (attempt?.kind === 'phone' ? !phone : !emailCodes));
+  // While the effect below moves the hook back to the list, the list is what shows.
+  const shown = stale ? 'choose' : view;
+  useReportChoice(shown === 'choose');
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- runs on the flip only; `go` is stable
+  useEffect(() => {
+    if (!stale) return;
+    setNotice(form.failure?.message ?? null);
+    form.go('choose');
+  }, [stale]);
+  useEffect(() => {
+    if (view !== 'choose' && !stale) setNotice(null);
+  }, [view, stale]);
+
+  const lastView = useRef(shown);
+  // Coming back to the list of ways: the button that was clicked is gone, so put focus on the first one.
+  useEffect(() => {
+    if (shown === 'choose' && lastView.current !== 'choose') root.current?.querySelector<HTMLElement>('button')?.focus();
+    lastView.current = shown;
+  }, [shown]);
+
   if (!phone && !email && !telegramOn) return <SignInUnavailable rootAttrs={rootAttrs} />;
 
   const choose = (
     <>
       <AccessNotice placement="above" />
+      {notice ? <div role="alert"><AuthNote tone="danger">{notice}</AuthNote></div> : null}
       <div className={options.quick}>
         {phone ? (
           <button type="button" className={buttons.quick} onClick={() => form.go('phone')}>
@@ -73,14 +100,14 @@ export function CodeSignIn({ rootAttrs }: { rootAttrs?: StyleAttrs } = {}) {
 
   return (
     <div className={`${options.options} ${FADE}`} ref={root} {...rootAttrs}>
-      {form.view === 'choose' ? choose : null}
-      {form.view === 'phone' && phone ? <PhoneStep form={form} phone={phone} /> : null}
-      {form.view === 'email' ? <EmailStep form={form} codes={emailCodes} /> : null}
-      {form.view === 'password' ? <PasswordStep form={form} offerCode={emailCodes} /> : null}
-      {form.view === 'forgot' ? <ForgotStep form={form} /> : null}
-      {form.view === 'code' ? <CodeStep form={form} /> : null}
+      {shown === 'choose' ? choose : null}
+      {shown === 'phone' && phone ? <PhoneStep form={form} phone={phone} draft={phoneDraft} onDraft={setPhoneDraft} /> : null}
+      {shown === 'email' ? <EmailStep form={form} codes={emailCodes} /> : null}
+      {shown === 'password' ? <PasswordStep form={form} offerCode={emailCodes} /> : null}
+      {shown === 'forgot' ? <ForgotStep form={form} /> : null}
+      {shown === 'code' ? <CodeStep form={form} /> : null}
       {/* Loaded only once the shopper is on a step that sends, and kept for all of them. */}
-      {form.view !== 'choose' && settings.turnstile ? <GuestTurnstile ref={turnstile} siteKey={settings.turnstile.siteKey} /> : null}
+      {shown !== 'choose' && settings.turnstile ? <GuestTurnstile ref={turnstile} siteKey={settings.turnstile.siteKey} /> : null}
     </div>
   );
 }

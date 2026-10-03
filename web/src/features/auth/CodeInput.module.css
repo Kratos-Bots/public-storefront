@@ -19,9 +19,11 @@
 }
 
 .code:focus {
-  outline: none;
   border-color: var(--sf-primary);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--sf-primary) 28%, transparent);
+  /* Forced-colors mode drops box-shadow; a transparent outline turns into a visible one there. */
+  outline: 2px solid transparent;
+  outline-offset: 2px;
 }
 
 .code[aria-invalid='true'] {

@@ -9,7 +9,7 @@ describe('every spec error becomes one plain sentence', () => {
     ['REGISTRATION_CLOSED', 403, 'registrationClosed', 'This shop isn’t taking new customers right now.'],
     ['ACCOUNT_BANNED', 403, 'banned', 'This account can’t sign in right now. Contact the shop for help.'],
     ['CODE_RATE_LIMITED', 429, 'tooMany', 'Too many tries. Please wait a few minutes'],
-    ['CODE_TOO_MANY_TRIES', 400, 'tooMany', 'Too many tries. Please wait a few minutes'],
+    ['CODE_TOO_MANY_TRIES', 400, 'triesUsed', 'That code has been tried too many times. We can send you a new one.'],
     ['CODE_EXPIRED', 400, 'expired', 'That code has expired. We can send a new one'],
     ['CODE_SERVICE_UNAVAILABLE', 503, 'unavailable', 'Sign-in by code isn’t working right now. Please try another way'],
     ['CODE_LOGIN_UNAVAILABLE', 404, 'unavailable', 'Sign-in by code isn’t working right now. Please try another way'],

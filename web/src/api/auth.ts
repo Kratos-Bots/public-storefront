@@ -62,8 +62,9 @@ export const verifyEmail = (token: string) =>
   unwrap<{ ok: true }>(api.post('storefront/auth/email/verify', { json: { token } }));
 
 const withToken = (turnstileToken?: string) => (turnstileToken ? { turnstileToken } : {});
-/** The active site-text locale (BCP 47), so the backend words the code message in it. Left out when unknown or empty. */
-const withLanguage = (language?: string) => (language ? { language } : {});
+/** The active site-text locale (BCP 47), so the backend words the code message in it. Left out when unknown, empty or not a tag the backend accepts (it rejects the whole request otherwise). */
+const LANGUAGE_TAG = /^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8}){0,3}$/;
+const withLanguage = (language?: string) => (language && LANGUAGE_TAG.test(language) ? { language } : {});
 
 /** A live password login answers `{ next: 'password' }` and sends nothing; otherwise a code is sent. */
 export const codeEmail = (email: string, turnstileToken?: string, opts: { language?: string } = {}) =>
@@ -73,8 +74,9 @@ export const codeEmail = (email: string, turnstileToken?: string, opts: { langua
 export const codeEmailSend = (email: string, turnstileToken?: string, opts: { language?: string } = {}) =>
   unwrap<CodeSent>(api.post('storefront/auth/code/email/send', { json: { email, ...withToken(turnstileToken), ...withLanguage(opts.language) } }));
 
-export const codePhone = (phone: string, channel: 'whatsapp' | 'sms', turnstileToken?: string, opts: { language?: string } = {}) =>
-  unwrap<CodeSent>(api.post('storefront/auth/code/phone', { json: { phone, channel, ...withToken(turnstileToken), ...withLanguage(opts.language) } }));
+/** `phoneCountry` is the ISO country the shopper picked, which helps the backend read a national number. */
+export const codePhone = (phone: string, channel: 'whatsapp' | 'sms', turnstileToken?: string, opts: { language?: string; phoneCountry?: string } = {}) =>
+  unwrap<CodeSent>(api.post('storefront/auth/code/phone', { json: { phone, channel, ...withToken(turnstileToken), ...withLanguage(opts.language), ...(opts.phoneCountry ? { phoneCountry: opts.phoneCountry } : {}) } }));
 
 /** Same channel: a resend after the cooldown. A different phone `channel`: a switch. */
 export const codeResend = (attemptId: string, opts: { channel?: Exclude<CodeChannel, 'email'>; turnstileToken?: string; language?: string } = {}) =>

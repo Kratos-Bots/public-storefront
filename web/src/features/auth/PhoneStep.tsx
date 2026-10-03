@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSettings } from '@/app/settings.ts';
 import { ArrowLeftIcon, SmsIcon, WhatsAppIcon } from '@/components/icons.tsx';
 import { AuthNote } from '@/features/auth/AuthNote.tsx';
@@ -17,21 +17,33 @@ import classes from '@/features/auth/CodeSignIn.module.css';
 /** International spellings that make the picker irrelevant: `+44…` and the `00` dialling prefix. */
 const INTERNATIONAL = /^(\+|00)/;
 
+/** What was typed on the phone step, kept by the parent so "Use a different number" comes back to it. */
+export interface PhoneDraft { prefix: string; number: string }
+
 /**
  * Phone sign-in. With Bird (`mode: 'verify'`) the shopper picks WhatsApp or text message; without it
  * (`mode: 'whatsapp'`) this is today's "message us" flow, which needs no number from them.
  */
-export function PhoneStep({ form, phone }: { form: CodeLogin; phone: PhoneLoginSettings }) {
+export function PhoneStep({ form, phone, draft, onDraft }: { form: CodeLogin; phone: PhoneLoginSettings; draft?: PhoneDraft; onDraft?: (draft: PhoneDraft) => void }) {
   const settings = useSettings();
   const { t } = useText();
-  const [prefix, setPrefix] = useState(settings.contactModes?.defaultPhoneCountry ?? '');
-  const [number, setNumber] = useState('');
+  const [prefix, setPrefix] = useState(draft?.prefix ?? settings.contactModes?.defaultPhoneCountry ?? '');
+  const [number, setNumber] = useState(draft?.number ?? '');
   const [errors, setErrors] = useState<{ country?: string; phone?: string }>({});
   const [waiting, setWaiting] = useState(false);
   // The failure belongs to the number as it was sent: editing the number or the country retires it.
   const [failureStale, setFailureStale] = useState(false);
   const [sending, setSending] = useState<'whatsapp' | 'sms' | null>(null);
   const root = useStepFocus(phone.mode === 'whatsapp' ? 'h2' : 'input');
+  const buttonRefs = useRef<Partial<Record<'whatsapp' | 'sms', HTMLButtonElement | null>>>({});
+  const wasPending = useRef(false);
+
+  // The button that was just pressed is disabled while the request is in the air, which drops focus to the page.
+  // When the send fails, put it back on that button.
+  useEffect(() => {
+    if (wasPending.current && !form.pending && form.failure && sending) buttonRefs.current[sending]?.focus();
+    wasPending.current = form.pending;
+  }, [form.pending, form.failure, sending]);
 
   const back = (
     <button type="button" className={buttons.back} disabled={form.pending} onClick={() => form.go('choose')}>
@@ -69,7 +81,7 @@ export function PhoneStep({ form, phone }: { form: CodeLogin; phone: PhoneLoginS
     setErrors({});
     setFailureStale(false);
     setSending(channel);
-    void form.sendPhone(id.identifier.phone, channel);
+    void form.sendPhone(id.identifier.phone, channel, 'phoneCountry' in id.identifier ? id.identifier.phoneCountry : undefined);
   };
 
   const channelButton = (channel: 'whatsapp' | 'sms', first: boolean) => {
@@ -79,6 +91,7 @@ export function PhoneStep({ form, phone }: { form: CodeLogin; phone: PhoneLoginS
     return (
       <button
         key={channel}
+        ref={(el) => { buttonRefs.current[channel] = el; }}
         // The first channel is what Enter sends, so it is the form's submit button and the filled one.
         type={first ? 'submit' : 'button'}
         className={first ? buttons.primary : buttons.quick}
@@ -104,8 +117,8 @@ export function PhoneStep({ form, phone }: { form: CodeLogin; phone: PhoneLoginS
           preferred={preferredPhoneCountries(settings)}
           countryError={errors.country}
           phoneError={errors.phone}
-          onPrefixChange={(v) => { setPrefix(v); setFailureStale(true); setErrors((e) => ({ ...e, country: undefined })); }}
-          onPhoneChange={(v) => { setNumber(v); setFailureStale(true); setErrors({}); }}
+          onPrefixChange={(v) => { setPrefix(v); onDraft?.({ prefix: v, number }); setFailureStale(true); setErrors((e) => ({ ...e, country: undefined })); }}
+          onPhoneChange={(v) => { setNumber(v); onDraft?.({ prefix, number: v }); setFailureStale(true); setErrors({}); }}
         />
         {form.failure && !failureStale ? <div role="alert"><AuthNote tone="danger">{form.failure.message}</AuthNote></div> : null}
         <div className={classes.channels}>{channels.map((c, i) => channelButton(c, i === 0))}</div>

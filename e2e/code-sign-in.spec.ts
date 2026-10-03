@@ -326,6 +326,34 @@ test.describe('errors', () => {
     expect(calls(mocks, 'resend')).toHaveLength(0);
   });
 
+  test('a code tried too many times is dead: the box locks and "Send a new code" is the only way on', async ({ page }) => {
+    const mocks = await installMocks(page, { codeLogin: { verifyError: 'tooManyTries' } });
+    await page.goto('/login');
+    await page.getByRole('button', { name: 'Continue with phone number' }).click();
+    await page.getByRole('textbox', { name: 'Phone number' }).fill('07700 900123');
+    await page.getByRole('button', { name: 'Send code by WhatsApp' }).click();
+    await codeBox(page).fill('123456');
+    await expect(page.getByRole('alert')).toHaveText('That code has been tried too many times. We can send you a new one.');
+    await expect(codeBox(page)).toBeDisabled();
+    await expect(page.getByRole('button', { name: /^Resend code/ })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /Send by/ })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Send a new code' })).toBeFocused();
+    await page.getByRole('button', { name: 'Send a new code' }).click();
+    await callCount(mocks, 'phone').toBe(2);
+  });
+
+  test('a rate limit says wait and leaves the box and the resend link alone', async ({ page }) => {
+    await installMocks(page, { codeLogin: { verifyError: 'rateLimited' } });
+    await page.goto('/login');
+    await page.getByRole('button', { name: 'Continue with phone number' }).click();
+    await page.getByRole('textbox', { name: 'Phone number' }).fill('07700 900123');
+    await page.getByRole('button', { name: 'Send code by WhatsApp' }).click();
+    await codeBox(page).fill('123456');
+    await expect(page.getByRole('alert')).toHaveText('Too many tries. Please wait a few minutes');
+    await expect(codeBox(page)).toBeEnabled();
+    await expect(page.getByRole('button', { name: /^Resend code/ })).toBeVisible();
+  });
+
   test('a new customer at a shop that has closed registration is refused with the shop’s sentence', async ({ page }) => {
     await installMocks(page, { codeLogin: {}, access: { registration: false } });
     await page.goto('/login');

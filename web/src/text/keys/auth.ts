@@ -102,6 +102,7 @@ export default defineTextArea('auth', {
   'access.signOut': { en: 'Sign out', max: 40 },
   'access.contactAriaLabel': { en: 'Contact the shop', max: 60 },
   'code.error.tooMany': { en: 'Too many tries. Please wait a few minutes', max: 120 },
+  'code.error.triesUsed': { en: 'That code has been tried too many times. We can send you a new one.', max: 160 },
   'code.error.channelWhatsapp': { en: 'We couldn’t send a WhatsApp message to that number. Try a text message instead', max: 200 },
   'code.error.channelSms': { en: 'We couldn’t send a text message to that number. Try WhatsApp instead', max: 200 },
   'code.error.cannotSwitch': { en: 'We can’t send the code that way to this number', max: 160 },
