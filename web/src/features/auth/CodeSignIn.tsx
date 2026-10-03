@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useSettings } from '@/app/settings.ts';
 import { accessOf } from '@/app/access.ts';
 import { MailIcon, PhoneIcon } from '@/components/icons.tsx';
@@ -31,6 +31,13 @@ export function CodeSignIn({ rootAttrs }: { rootAttrs?: StyleAttrs } = {}) {
   const turnstile = useRef<GuestTurnstileHandle | null>(null);
   const form = useCodeLogin(turnstile);
   useReportChoice(form.view === 'choose');
+  const root = useRef<HTMLDivElement>(null);
+  const lastView = useRef(form.view);
+  // Coming back to the list of ways: the button that was clicked is gone, so put focus on the first one.
+  useEffect(() => {
+    if (form.view === 'choose' && lastView.current !== 'choose') root.current?.querySelector<HTMLElement>('button')?.focus();
+    lastView.current = form.view;
+  }, [form.view]);
 
   const phone = login.phone?.available === true && login.phone.mode !== null ? login.phone : null;
   const emailCodes = login.email?.available === true && login.email.mode !== null;
@@ -65,10 +72,10 @@ export function CodeSignIn({ rootAttrs }: { rootAttrs?: StyleAttrs } = {}) {
   );
 
   return (
-    <div className={`${options.options} ${FADE}`} {...rootAttrs}>
+    <div className={`${options.options} ${FADE}`} ref={root} {...rootAttrs}>
       {form.view === 'choose' ? choose : null}
       {form.view === 'phone' && phone ? <PhoneStep form={form} phone={phone} /> : null}
-      {form.view === 'email' ? <EmailStep form={form} /> : null}
+      {form.view === 'email' ? <EmailStep form={form} codes={emailCodes} /> : null}
       {form.view === 'password' ? <PasswordStep form={form} offerCode={emailCodes} /> : null}
       {form.view === 'forgot' ? <ForgotStep form={form} /> : null}
       {form.view === 'code' ? <CodeStep form={form} /> : null}

@@ -6,6 +6,7 @@ import { Field } from '@/features/checkout/Field.tsx';
 import { AuthNote } from '@/features/auth/AuthNote.tsx';
 import { buildIdentifier, checkCurrentPassword } from '@/features/auth/password-identifier.ts';
 import type { CodeLogin } from '@/features/auth/useCodeLogin.ts';
+import { useStepFocus } from '@/features/auth/useStepFocus.ts';
 import { useText } from '@/text/runtime.tsx';
 import buttons from '@/features/auth/AuthButtons.module.css';
 import classes from '@/features/auth/PasswordLogin.module.css';
@@ -15,8 +16,9 @@ function Failure({ form }: { form: CodeLogin }) {
 }
 
 /** One email field and Continue. A password account is sent on to `PasswordStep`; anyone else gets a code. */
-export function EmailStep({ form }: { form: CodeLogin }) {
+export function EmailStep({ form, codes }: { form: CodeLogin; /** The shop emails codes, so say so under the heading. */ codes: boolean }) {
   const { t } = useText();
+  const root = useStepFocus('input');
   const [value, setValue] = useState(form.email);
   const [error, setError] = useState<string | undefined>();
 
@@ -32,12 +34,13 @@ export function EmailStep({ form }: { form: CodeLogin }) {
   };
 
   return (
-    <div className={classes.root}>
+    <div className={classes.root} ref={root}>
       <button type="button" className={buttons.back} disabled={form.pending} onClick={() => form.go('choose')}>
         <ArrowLeftIcon size={18} />
         {t('auth.code.back')}
       </button>
       <h2 className={classes.title}>{t('auth.code.email.title')}</h2>
+      {codes ? <p className={classes.body}>{t('auth.code.email.intro')}</p> : null}
       <form className={classes.form} noValidate onSubmit={onSubmit}>
         <Field
           label={t('auth.password.emailLabel')}
@@ -60,6 +63,7 @@ export function EmailStep({ form }: { form: CodeLogin }) {
 /** The password account's first screen: password, Sign in, Forgot, and a way to skip it ("Email me a code instead"). */
 export function PasswordStep({ form, offerCode }: { form: CodeLogin; offerCode: boolean }) {
   const { t } = useText();
+  const root = useStepFocus('input');
   const [value, setValue] = useState('');
   const [error, setError] = useState<string | undefined>();
 
@@ -75,7 +79,7 @@ export function PasswordStep({ form, offerCode }: { form: CodeLogin; offerCode: 
   };
 
   return (
-    <div className={classes.root}>
+    <div className={classes.root} ref={root}>
       <button type="button" className={buttons.back} disabled={form.pending} onClick={() => form.go('email')}>
         <ArrowLeftIcon size={18} />
         {t('auth.code.differentEmail')}
@@ -116,14 +120,15 @@ export function ForgotStep({ form }: { form: CodeLogin }) {
   const settings = useSettings();
   const { t } = useText();
   const byEmail = settings.login.password?.resetByEmail === true;
+  const root = useStepFocus('h2');
 
   return (
-    <div className={classes.root}>
+    <div className={classes.root} ref={root}>
       <button type="button" className={buttons.back} disabled={form.pending} onClick={() => form.go('password')}>
         <ArrowLeftIcon size={18} />
         {t('auth.password.backToSignIn')}
       </button>
-      <h2 className={classes.title}>{t('auth.password.forgot.title')}</h2>
+      <h2 className={classes.title} tabIndex={-1}>{t('auth.password.forgot.title')}</h2>
       {byEmail ? (
         <>
           <p className={classes.body}>{t('auth.code.forgot.body', { email: form.email })}</p>

@@ -323,6 +323,119 @@ describe('email', () => {
   });
 });
 
+describe('focus follows the shopper', () => {
+  const toPassword = async () => {
+    configure({ password: true, resetByEmail: true });
+    h.codeEmail.mockResolvedValue({ next: 'password' });
+    shell();
+    fireEvent.click(button('Continue with email'));
+    type('Email address', 'ada@example.com');
+    fireEvent.click(button('Continue'));
+    await settle();
+  };
+
+  it('choose to phone focuses the number, and back focuses the first button', () => {
+    shell();
+    fireEvent.click(button('Continue with phone number'));
+    expect(document.activeElement).toBe(screen.getByLabelText('Phone number'));
+    fireEvent.click(button('Choose another way'));
+    expect(document.activeElement).toBe(button('Continue with phone number'));
+  });
+
+  it('choose to email focuses the address', () => {
+    shell();
+    fireEvent.click(button('Continue with email'));
+    expect(document.activeElement).toBe(screen.getByLabelText('Email address'));
+  });
+
+  it('email to password focuses the password; to forgot focuses its heading; back returns to the password', async () => {
+    await toPassword();
+    expect(document.activeElement).toBe(screen.getByLabelText('Password'));
+    fireEvent.click(button('Forgot your password?'));
+    expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Reset your password' }));
+    fireEvent.click(button('Back to sign in'));
+    expect(document.activeElement).toBe(screen.getByLabelText('Password'));
+    fireEvent.click(button('Use a different email'));
+    expect(document.activeElement).toBe(screen.getByLabelText('Email address'));
+  });
+});
+
+describe('phone step ease of use', () => {
+  const open = () => { shell(); fireEvent.click(button('Continue with phone number')); };
+
+  it('Enter in the number sends by the first channel, which is the filled button', async () => {
+    open();
+    type('Phone number', '07700 900123');
+    expect(button('Send code by WhatsApp').className).not.toBe(button('Send code by text message').className);
+    expect((button('Send code by WhatsApp') as HTMLButtonElement).type).toBe('submit');
+    fireEvent.submit(screen.getByLabelText('Phone number').closest('form')!);
+    await settle();
+    expect(h.codePhone).toHaveBeenCalledWith('+4407700900123', 'whatsapp', undefined, LANG);
+  });
+
+  it('with only text message listed, Enter sends a text message', async () => {
+    configure({ channels: ['sms'] });
+    open();
+    type('Phone number', '07700 900123');
+    fireEvent.submit(screen.getByLabelText('Phone number').closest('form')!);
+    await settle();
+    expect(h.codePhone).toHaveBeenCalledWith('+4407700900123', 'sms', undefined, LANG);
+  });
+
+  it('says a code is coming', () => {
+    open();
+    expect(screen.getByText('We’ll send you a 6-digit code.')).toBeTruthy();
+  });
+
+  it('editing the number or the country clears a failure', async () => {
+    h.codePhone.mockRejectedValue(new ApiError(400, 'CODE_CHANNEL_UNAVAILABLE'));
+    open();
+    type('Phone number', '07700 900123');
+    fireEvent.click(button('Send code by WhatsApp'));
+    await settle();
+    expect(screen.getByRole('alert')).toBeTruthy();
+    type('Phone number', '07700 900124');
+    expect(screen.queryByRole('alert')).toBeNull();
+    fireEvent.click(button('Send code by WhatsApp'));
+    await settle();
+    expect(screen.getByRole('alert')).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Country'), { target: { value: 'FR' } });
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('only the clicked button says One moment while both are disabled', async () => {
+    h.codePhone.mockReturnValue(new Promise(() => {}));
+    open();
+    type('Phone number', '07700 900123');
+    fireEvent.click(button('Send code by text message'));
+    await settle();
+    expect(button('One moment…')).toBeDisabled();
+    expect(screen.getAllByText('One moment…')).toHaveLength(1);
+    expect(button('Send code by WhatsApp')).toBeDisabled();
+  });
+
+  it('a verify shop that lists no usable channel still offers a text message', async () => {
+    configure({ channels: [] });
+    open();
+    expect(queryButton('Send code by WhatsApp')).toBeNull();
+    type('Phone number', '07700 900123');
+    fireEvent.click(button('Send code by text message'));
+    await settle();
+    expect(h.codePhone).toHaveBeenCalledWith('+4407700900123', 'sms', undefined, LANG);
+  });
+
+  it('the email step says a code is coming only when the shop emails codes', () => {
+    shell();
+    fireEvent.click(button('Continue with email'));
+    expect(screen.getByText('We’ll email you a 6-digit code.')).toBeTruthy();
+    cleanup();
+    configure({ email: 'off', password: true });
+    shell();
+    fireEvent.click(button('Continue with email'));
+    expect(screen.queryByText('We’ll email you a 6-digit code.')).toBeNull();
+  });
+});
+
 describe('the whole round trip', () => {
   it('phone: send, type six digits, signed in through the shared success path', async () => {
     shell();

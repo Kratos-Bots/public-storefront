@@ -7,6 +7,7 @@ import { WhatsappLogin } from '@/features/auth/WhatsappLogin.tsx';
 import { preferredPhoneCountries } from '@/features/auth/phone-countries.ts';
 import { buildIdentifier } from '@/features/auth/password-identifier.ts';
 import type { CodeLogin } from '@/features/auth/useCodeLogin.ts';
+import { useStepFocus } from '@/features/auth/useStepFocus.ts';
 import { useText } from '@/text/runtime.tsx';
 import type { PhoneLoginSettings } from '@/types/settings.ts';
 import buttons from '@/features/auth/AuthButtons.module.css';
@@ -27,6 +28,10 @@ export function PhoneStep({ form, phone }: { form: CodeLogin; phone: PhoneLoginS
   const [number, setNumber] = useState('');
   const [errors, setErrors] = useState<{ country?: string; phone?: string }>({});
   const [waiting, setWaiting] = useState(false);
+  // The failure belongs to the number as it was sent: editing the number or the country retires it.
+  const [failureStale, setFailureStale] = useState(false);
+  const [sending, setSending] = useState<'whatsapp' | 'sms' | null>(null);
+  const root = useStepFocus(phone.mode === 'whatsapp' ? 'h2' : 'input');
 
   const back = (
     <button type="button" className={buttons.back} disabled={form.pending} onClick={() => form.go('choose')}>
@@ -37,16 +42,18 @@ export function PhoneStep({ form, phone }: { form: CodeLogin; phone: PhoneLoginS
 
   if (phone.mode === 'whatsapp') {
     return (
-      <div className={password.root}>
+      <div className={password.root} ref={root}>
         {waiting ? null : back}
-        {waiting ? null : <h2 className={password.title}>{t('auth.code.phone.title')}</h2>}
+        {waiting ? null : <h2 className={password.title} tabIndex={-1}>{t('auth.code.phone.title')}</h2>}
         {waiting ? null : <p className={password.body}>{t('auth.code.phone.whatsappBody')}</p>}
         <WhatsappLogin number={settings.login.whatsapp.number} onWaiting={setWaiting} />
       </div>
     );
   }
 
-  const channels = phone.channels.filter((c) => c === 'whatsapp' || c === 'sms');
+  // Never a dead end: a shop that reports no usable channel still gets a text message button.
+  const listed = phone.channels.filter((c): c is 'whatsapp' | 'sms' => c === 'whatsapp' || c === 'sms');
+  const channels: Array<'whatsapp' | 'sms'> = listed.length > 0 ? listed : ['sms'];
 
   const send = (channel: 'whatsapp' | 'sms') => {
     // A number typed as +44… or 0044… carries its own country, so the picker may be empty. Autofill does this.
@@ -60,39 +67,48 @@ export function PhoneStep({ form, phone }: { form: CodeLogin; phone: PhoneLoginS
       return;
     }
     setErrors({});
+    setFailureStale(false);
+    setSending(channel);
     void form.sendPhone(id.identifier.phone, channel);
   };
 
+  const channelButton = (channel: 'whatsapp' | 'sms', first: boolean) => {
+    const whatsapp = channel === 'whatsapp';
+    const Icon = whatsapp ? WhatsAppIcon : SmsIcon;
+    const label = whatsapp ? t('auth.code.phone.sendWhatsapp') : t('auth.code.phone.sendSms');
+    return (
+      <button
+        key={channel}
+        // The first channel is what Enter sends, so it is the form's submit button and the filled one.
+        type={first ? 'submit' : 'button'}
+        className={first ? buttons.primary : buttons.quick}
+        disabled={form.pending}
+        onClick={first ? undefined : () => send(channel)}
+      >
+        <span className={buttons.icon}><Icon size={20} /></span>
+        {form.pending && sending === channel ? t('auth.password.working') : label}
+      </button>
+    );
+  };
+
   return (
-    <div className={password.root}>
+    <div className={password.root} ref={root}>
       {back}
       <h2 className={password.title}>{t('auth.code.phone.title')}</h2>
-      <div className={password.form}>
+      <p className={password.body}>{t('auth.code.phone.intro')}</p>
+      <form className={password.form} noValidate onSubmit={(e) => { e.preventDefault(); send(channels[0]!); }}>
         <PhoneEntry
           prefix={prefix}
           phone={number}
           preferred={preferredPhoneCountries(settings)}
           countryError={errors.country}
           phoneError={errors.phone}
-          onPrefixChange={(v) => { setPrefix(v); setErrors((e) => ({ ...e, country: undefined })); }}
-          onPhoneChange={(v) => { setNumber(v); setErrors({}); }}
+          onPrefixChange={(v) => { setPrefix(v); setFailureStale(true); setErrors((e) => ({ ...e, country: undefined })); }}
+          onPhoneChange={(v) => { setNumber(v); setFailureStale(true); setErrors({}); }}
         />
-        {form.failure ? <div role="alert"><AuthNote tone="danger">{form.failure.message}</AuthNote></div> : null}
-        <div className={classes.channels}>
-          {channels.includes('whatsapp') ? (
-            <button type="button" className={buttons.quick} disabled={form.pending} onClick={() => send('whatsapp')}>
-              <span className={buttons.icon}><WhatsAppIcon size={20} /></span>
-              {form.pending ? t('auth.password.working') : t('auth.code.phone.sendWhatsapp')}
-            </button>
-          ) : null}
-          {channels.includes('sms') ? (
-            <button type="button" className={buttons.quick} disabled={form.pending} onClick={() => send('sms')}>
-              <span className={buttons.icon}><SmsIcon size={20} /></span>
-              {form.pending ? t('auth.password.working') : t('auth.code.phone.sendSms')}
-            </button>
-          ) : null}
-        </div>
-      </div>
+        {form.failure && !failureStale ? <div role="alert"><AuthNote tone="danger">{form.failure.message}</AuthNote></div> : null}
+        <div className={classes.channels}>{channels.map((c, i) => channelButton(c, i === 0))}</div>
+      </form>
     </div>
   );
 }

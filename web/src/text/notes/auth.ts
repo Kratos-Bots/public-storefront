@@ -127,6 +127,8 @@ export default {
   'code.sentAgain': 'Shown after the code was sent again or sent another way',
   'code.error.sendNew': 'Button shown when the code ran out of time or too many tries were used; asks for a new one',
   'code.phone.countryRequired': 'Shown under the country picker when a phone number was typed without choosing a country',
+  'code.phone.intro': 'Short line under the heading of the phone step of the sign-in page',
+  'code.email.intro': 'Short line under the heading of the email step of the sign-in page; shown only when the shop emails sign-in codes',
   'code.choose.phone': 'Label of the first big button on the sign-in page: signing in with a phone number',
   'code.choose.email': 'Label of the last big button on the sign-in page: signing in with an email',
   'code.choose.newHere': 'Small line under the sign-in buttons; hidden while the shop is not taking new customers',

@@ -129,6 +129,8 @@ export default defineTextArea('auth', {
   'code.sentAgain': { en: 'We sent a new code.', max: 80 },
   'code.error.sendNew': { en: 'Send a new code', max: 40 },
   'code.phone.countryRequired': { en: 'Choose your country', max: 60 },
+  'code.phone.intro': { en: 'We’ll send you a 6-digit code.', max: 80 },
+  'code.email.intro': { en: 'We’ll email you a 6-digit code.', max: 80 },
   'code.choose.phone': { en: 'Continue with phone number', max: 60 },
   'code.choose.email': { en: 'Continue with email', max: 60 },
   'code.choose.newHere': { en: 'New here? You’ll create your account as you sign in.', max: 120 },
