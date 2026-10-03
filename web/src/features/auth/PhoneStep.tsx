@@ -84,6 +84,7 @@ export function PhoneStep({ form, phone }: { form: CodeLogin; phone: PhoneLoginS
         className={first ? buttons.primary : buttons.quick}
         disabled={form.pending}
         onClick={first ? undefined : () => send(channel)}
+        {...(first ? { 'data-sf-part': 'button', 'data-variant': 'filled' } : {})}
       >
         <span className={buttons.icon}><Icon size={20} /></span>
         {form.pending && sending === channel ? t('auth.password.working') : label}

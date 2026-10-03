@@ -110,6 +110,21 @@ export interface InstallMocksOptions {
   tweakSettings?: (settings: StorefrontSettings) => void;
   /** Switch email/phone + password sign-in on (`login.password.available`); an object also sets the reset routes. */
   passwordLogin?: boolean | { resetByEmail?: boolean; resetByWhatsapp?: boolean; /** Sign-in answers 429, as for a throttled identifier. */ throttled?: boolean };
+  /**
+   * Sign in by code. Setting this adds `login.phone` and `login.email` (omit it for an older backend). The mock
+   * accepts the code 123456 as `{ status: 'signed_in', ... }` and answers any other with a 200 `{ status: 'incorrect', attemptsRemaining }` (3, then 2, 1, 0). The
+   * password account (PASSWORD_ACCOUNT.email) answers `{ next: 'password' }`; every other identity is new.
+   */
+  codeLogin?: {
+    phone?: 'verify' | 'whatsapp' | 'off';
+    email?: 'verify' | 'email' | 'off';
+    /** Channels the number's country plan lacks: sending on one answers 400 CODE_CHANNEL_UNAVAILABLE. */
+    unavailableChannels?: Array<'whatsapp' | 'sms'>;
+    /** Every send answers 503 CODE_SERVICE_UNAVAILABLE. */
+    down?: boolean;
+    /** Verifying answers 400 CODE_EXPIRED. */
+    expired?: boolean;
+  };
   /** Mutate the profile fixture before it is served (identities, password block). */
   tweakProfile?: (profile: Profile) => void;
   /** What the checkout routes answer with as `payment` (default: a crypto address). */
@@ -183,6 +198,8 @@ export interface MockState {
   botModes: Array<Record<string, unknown>>;
   /** Every password / account-password / email-verification request, with its body and Authorization header. */
   passwordCalls: Array<{ route: string; body: Record<string, unknown>; authorization: string | null }>;
+  /** Bodies posted to the sign-in-by-code routes, keyed by the route after auth/code/. */
+  codeCalls: Array<{ route: string; body: Record<string, unknown> }>;
   /** What `GET storefront/pages/:layout` serves. */
   pages: Partial<Record<Layout, PageSet | null>>;
   /** When set, the pages route answers this error status instead of the fixture. */
@@ -366,6 +383,7 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     oidcCalls: [],
     botModes: [],
     passwordCalls: [],
+    codeCalls: [],
     pages: options.pages ?? {},
     pagesFail: options.pagesFail ?? null,
     text: options.text ?? null,
@@ -395,6 +413,16 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     };
     state.profile.password ??= { ...NO_PASSWORD };
   }
+  const codeOptions = options.codeLogin ?? null;
+  if (codeOptions) {
+    const phone = codeOptions.phone ?? 'verify';
+    const email = codeOptions.email ?? 'verify';
+    state.settings.login.phone = phone === 'off' ? { available: false, mode: null, channels: [] }
+      : phone === 'whatsapp' ? { available: true, mode: 'whatsapp', channels: [] }
+        : { available: true, mode: 'verify', channels: ['whatsapp', 'sms'] };
+    state.settings.login.email = email === 'off' ? { available: false, mode: null } : { available: true, mode: email };
+  }
+  const code = { channel: 'whatsapp' as string, masked: '', isNew: true, wrong: 0 };
   state.disabled = !state.settings.enabled;
 
   if (options.session) {
@@ -701,6 +729,59 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
       const returnTo = state.oidcCalls.find((c) => c.route === 'start')?.body.returnTo ?? null;
       await envelope(route, { token: SESSION_TOKEN, customer: SESSION_CUSTOMER, returnTo });
       return;
+    }
+
+    const codeRoute = /^storefront\/auth\/code\/(email\/send|email|phone|resend|verify)$/.exec(path);
+    if (codeRoute && method === 'POST' && codeOptions) {
+      const asked = body(route);
+      const which = codeRoute[1]!;
+      state.codeCalls.push({ route: which, body: asked });
+      const sends = which !== 'verify';
+      if (sends && codeOptions.down) { await fail(route, 503, 'CODE_SERVICE_UNAVAILABLE'); return; }
+      const sent = (channel: string, masked: string) => {
+        code.channel = channel;
+        code.masked = masked;
+        code.wrong = 0;
+        return { next: 'code', attemptId: 'code-attempt-1', channel, maskedTo: masked, resendAfter: 60 };
+      };
+      switch (which) {
+        case 'email':
+        case 'email/send': {
+          const address = String(asked.email ?? '');
+          code.isNew = address !== PASSWORD_ACCOUNT.email;
+          if (which === 'email' && address === PASSWORD_ACCOUNT.email) { await envelope(route, { next: 'password' }); return; }
+          await envelope(route, sent('email', `${address.slice(0, 1)}•••@${address.split('@')[1] ?? ''}`));
+          return;
+        }
+        case 'phone': {
+          const channel = String(asked.channel ?? '');
+          if ((codeOptions.unavailableChannels ?? []).includes(channel as 'whatsapp' | 'sms')) { await fail(route, 400, 'CODE_CHANNEL_UNAVAILABLE'); return; }
+          code.isNew = String(asked.phone ?? '').replace(/^\+440/, '+44') !== PASSWORD_ACCOUNT.phone;
+          await envelope(route, sent(channel, '+44 ••• ••• 123'));
+          return;
+        }
+        case 'resend': {
+          const channel = asked.channel ? String(asked.channel) : code.channel;
+          if ((codeOptions.unavailableChannels ?? []).includes(channel as 'whatsapp' | 'sms')) { await fail(route, 400, 'CODE_CHANNEL_UNAVAILABLE'); return; }
+          const keep = code.wrong;
+          const answer = sent(channel, code.masked);
+          code.wrong = keep;
+          await envelope(route, answer);
+          return;
+        }
+        default: {
+          if (codeOptions.expired) { await fail(route, 400, 'CODE_EXPIRED'); return; }
+          if (String(asked.code) === '123456') {
+            if (code.isNew && state.settings.access?.registration === false) { await fail(route, 403, 'REGISTRATION_CLOSED'); return; }
+            await envelope(route, { status: 'signed_in', token: SESSION_TOKEN, customer: SESSION_CUSTOMER, isNew: code.isNew });
+            return;
+          }
+          const remaining = Math.max(0, 3 - code.wrong);
+          code.wrong += 1;
+          await envelope(route, { status: 'incorrect', attemptsRemaining: remaining });
+          return;
+        }
+      }
     }
 
     if (path === 'storefront/auth/whatsapp/start' && method === 'POST') {
