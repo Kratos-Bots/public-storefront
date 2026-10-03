@@ -155,12 +155,28 @@ describe('going back and expiry', () => {
     expect(sendNewCode).toHaveBeenCalledTimes(1);
   });
 
-  it('too many tries says so, locks the box and still offers a new code', () => {
+  it('an expired code drops the resend links, so only "Send a new code" is left, and lands the cursor on it', () => {
+    const view = render(<CodeStep form={form()} />);
+    expect(screen.getByRole('button', { name: /Resend code/ })).toBeTruthy();
+    view.rerender(<CodeStep form={form({ failure: { kind: 'expired', message: 'That code has expired. We can send a new one' } })} />);
+    expect(screen.queryByRole('button', { name: /Resend code/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Send by/ })).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Send a new code' }));
+  });
+
+  it('too many tries says so and offers a new code, but leaves the box usable', () => {
     const sendNewCode = vi.fn();
     render(<CodeStep form={form({ sendNewCode, failure: { kind: 'tooMany', message: 'Too many tries. Please wait a few minutes' } })} />);
     expect(screen.getByRole('alert')).toHaveTextContent('Too many tries. Please wait a few minutes');
-    expect(box()).toBeDisabled();
+    expect(box()).toBeEnabled();
     fireEvent.click(screen.getByRole('button', { name: 'Send a new code' }));
     expect(sendNewCode).toHaveBeenCalledTimes(1);
+  });
+
+  it('after a rate-limited resend the code the shopper holds can still be typed and is verified', () => {
+    const verify = vi.fn();
+    render(<CodeStep form={form({ verify, failure: { kind: 'tooMany', message: 'Too many tries. Please wait a few minutes' } })} />);
+    fireEvent.change(box(), { target: { value: '123456' } });
+    expect(verify).toHaveBeenCalledWith('123456');
   });
 });
