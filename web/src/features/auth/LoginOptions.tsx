@@ -1,88 +1,48 @@
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import { useReportChoice } from '@/features/auth/LoginStep.ts';
 import { FADE } from '@/lib/motion.ts';
 import { useSettings } from '@/app/settings.ts';
-import { loginTelegram } from '@/api/auth.ts';
-import { errorMessage } from '@/lib/errors.ts';
 import { useText } from '@/text/runtime.tsx';
-import { ContactLinks } from '@/components/ContactLinks.tsx';
-import { EmptyState } from '@/components/EmptyState.tsx';
 import { AccessNotice } from '@/features/auth/AccessNotice.tsx';
-import { AuthNote } from '@/features/auth/AuthNote.tsx';
+import { CodeSignIn } from '@/features/auth/CodeSignIn.tsx';
 import { PasswordLogin } from '@/features/auth/PasswordLogin.tsx';
-import { TelegramLogin } from '@/features/auth/TelegramLogin.tsx';
+import { SignInUnavailable } from '@/features/auth/SignInUnavailable.tsx';
+import { TelegramSignInBlock, telegramAvailability } from '@/features/auth/TelegramSignInBlock.tsx';
 import { WhatsappLogin } from '@/features/auth/WhatsappLogin.tsx';
-import { useLoginSuccess } from '@/features/auth/useLoginSuccess.ts';
-import type { TelegramAuthPayload } from '@/types/auth.ts';
 import type { StyleAttrs } from '@/builder/define.ts';
 import classes from '@/features/auth/LoginOptions.module.css';
 
 /**
- * Every way into an account, on one calm surface: the quick ways (WhatsApp,
- * Telegram) as big labelled buttons, a quiet "or", then the email-or-phone form.
- * Shared by the page and the modal so a prompt raised from the cart is the same
- * instrument as the page it would otherwise have navigated to.
- *
- * While a WhatsApp code is waiting, the other ways step aside (hidden, not
- * unmounted, so a half-typed email survives the trip) and the code step has the
- * screen to itself.
+ * Every way into an account. A backend that reports `login.phone` or `login.email` signs customers in with a
+ * code (`CodeSignIn`); one that reports neither is older than that, and keeps exactly today's sign-in.
+ * Shared by the page and the modal so a prompt raised from the cart is the same instrument as the page.
  */
 export function LoginOptions({ rootAttrs }: { rootAttrs?: StyleAttrs } = {}) {
+  const { login } = useSettings();
+  if (login.phone === undefined && login.email === undefined) return <LegacyLoginOptions rootAttrs={rootAttrs} />;
+  return <CodeSignIn rootAttrs={rootAttrs} />;
+}
+
+/**
+ * Today's sign-in, for a backend that predates sign-in by code: the quick ways (WhatsApp, Telegram) as big
+ * labelled buttons, a quiet "or", then the email-or-phone form. Its markup is pinned by the stage 4 goldens.
+ *
+ * While a WhatsApp code is waiting, the other ways step aside (hidden, not unmounted, so a half-typed email
+ * survives the trip) and the code step has the screen to itself.
+ */
+function LegacyLoginOptions({ rootAttrs }: { rootAttrs?: StyleAttrs } = {}) {
   const settings = useSettings();
   const { t } = useText();
-  const { login, brand } = settings;
-  const onLogin = useLoginSuccess();
-  const [telegramBusy, setTelegramBusy] = useState(false);
-  const [telegramError, setTelegramError] = useState<string | undefined>();
+  const { login } = settings;
   const [waiting, setWaiting] = useState(false);
   const [signInStep, setSignInStep] = useState(true);
   useReportChoice(!waiting && signInStep);
 
-  const onTelegram = useCallback(
-    (user: TelegramAuthPayload) => {
-      setTelegramBusy(true);
-      setTelegramError(undefined);
-      void (async () => {
-        try {
-          // Posted exactly as the widget handed it over — the backend rejects a
-          // payload with a field added or removed, because either would desync
-          // the signature it checks.
-          const result = await loginTelegram(user);
-          await onLogin(result);
-        } catch (err) {
-          setTelegramError(errorMessage(err, t('auth.telegram.widgetFailed')));
-        } finally {
-          setTelegramBusy(false);
-        }
-      })();
-    },
-    [onLogin, t],
-  );
-
   const whatsapp = login.whatsapp.available;
-  // OpenID Connect needs no bot username (the redirect flow never embeds the bot), so it stands on its own.
-  // The widget can't be embedded without one, so an "available" widget with no username is no Telegram at all.
-  const oidc = login.telegram.oidc === true;
-  const telegramBot = login.telegram.available ? login.telegram.botUsername : null;
-  const telegramOn = oidc || Boolean(telegramBot);
+  const telegramOn = telegramAvailability(login).on;
   const password = login.password?.available === true;
 
-  if (!whatsapp && !telegramOn && !password) {
-    return (
-      <EmptyState
-        eyebrow={t('common.actions.signIn')}
-        title={t('auth.options.unavailableTitle')}
-        description={t('auth.options.unavailableBody', { name: brand.shortName || brand.name })}
-        action={
-          <>
-            <ContactLinks />
-            <AccessNotice />
-          </>
-        }
-        rootAttrs={rootAttrs}
-      />
-    );
-  }
+  if (!whatsapp && !telegramOn && !password) return <SignInUnavailable rootAttrs={rootAttrs} />;
 
   return (
     <div className={`${classes.options} ${FADE}`} {...rootAttrs}>
@@ -91,13 +51,7 @@ export function LoginOptions({ rootAttrs }: { rootAttrs?: StyleAttrs } = {}) {
       {whatsapp || telegramOn ? (
         <div className={classes.quick}>
           {whatsapp ? <WhatsappLogin number={login.whatsapp.number} onWaiting={setWaiting} /> : null}
-          {telegramOn ? (
-            <div className={classes.telegram} hidden={waiting}>
-              <TelegramLogin botUsername={telegramBot} onAuth={onTelegram} oidc={oidc} />
-              {telegramBusy ? <AuthNote>{t('auth.options.signingIn')}</AuthNote> : null}
-              {telegramError ? <div role="alert"><AuthNote tone="danger">{telegramError}</AuthNote></div> : null}
-            </div>
-          ) : null}
+          {telegramOn ? <TelegramSignInBlock login={login} hidden={waiting} /> : null}
         </div>
       ) : null}
 
