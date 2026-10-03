@@ -1,6 +1,6 @@
 // e2e/dom-parity.spec.ts
 import { expect, test, type Page } from '@playwright/test';
-import { installMocks, ORDER_PATH, type Layout } from './mocks.ts';
+import { installMocks, ORDER_PATH, PASSWORD_ACCOUNT, type InstallMocksOptions, type Layout } from './mocks.ts';
 import { FIXED_NOW } from './flows.ts';
 import type { StorefrontSettings } from '../web/src/types/settings.ts';
 
@@ -16,6 +16,10 @@ interface RouteCase {
   layouts: Layout[];
   session: boolean;
   tweak?: (s: StorefrontSettings) => void;
+  /** Mock options for sign in by code (see `InstallMocksOptions`). */
+  mocks?: InstallMocksOptions;
+  /** Click through to the state being captured. */
+  drive?: (page: Page) => Promise<void>;
 }
 
 const ALL: Layout[] = ['storefront', 'menu', 'webapp'];
@@ -42,6 +46,37 @@ const CASES: RouteCase[] = [
   { name: 'tracking-ref', path: '/tracking/E2E1', layouts: ALL, session: false },
   { name: 'verify', path: '/verify', layouts: ALL, session: false },
   { name: 'login-password', path: '/login', layouts: ALL, session: false, tweak: (s) => { s.login.password = { available: true, resetByEmail: false, resetByWhatsapp: true }; } },
+  { name: 'login-code', path: '/login', layouts: ALL, session: false, tweak: (s) => {
+    s.login.phone = { available: true, mode: 'verify', channels: ['whatsapp', 'sms'] };
+    s.login.email = { available: true, mode: 'verify' };
+  } },
+  { name: 'login-code-phone', path: '/login', layouts: ALL, session: false, mocks: { codeLogin: {} }, drive: async (page) => {
+    await page.getByRole('button', { name: 'Continue with phone number' }).click();
+    await page.getByRole('textbox', { name: 'Phone number' }).waitFor();
+  } },
+  { name: 'login-code-email', path: '/login', layouts: ALL, session: false, mocks: { codeLogin: {} }, drive: async (page) => {
+    await page.getByRole('button', { name: 'Continue with email' }).click();
+    await page.getByRole('textbox', { name: 'Email address' }).waitFor();
+  } },
+  { name: 'login-code-password', path: '/login', layouts: ALL, session: false, mocks: { codeLogin: {}, passwordLogin: true }, drive: async (page) => {
+    await page.getByRole('button', { name: 'Continue with email' }).click();
+    await page.getByRole('textbox', { name: 'Email address' }).fill(PASSWORD_ACCOUNT.email);
+    await page.getByRole('button', { name: 'Continue', exact: true }).click();
+    await page.getByText(`Enter the password for ${PASSWORD_ACCOUNT.email}.`).waitFor();
+  } },
+  { name: 'login-code-code', path: '/login', layouts: ALL, session: false, mocks: { codeLogin: {} }, drive: async (page) => {
+    await page.getByRole('button', { name: 'Continue with phone number' }).click();
+    await page.getByRole('textbox', { name: 'Phone number' }).fill('07700 900123');
+    await page.getByRole('button', { name: 'Send code by WhatsApp' }).click();
+    await page.getByRole('heading', { name: 'Enter your code' }).waitFor();
+  } },
+  { name: 'login-code-error', path: '/login', layouts: ALL, session: false, mocks: { codeLogin: {} }, drive: async (page) => {
+    await page.getByRole('button', { name: 'Continue with phone number' }).click();
+    await page.getByRole('textbox', { name: 'Phone number' }).fill('07700 900123');
+    await page.getByRole('button', { name: 'Send code by WhatsApp' }).click();
+    await page.getByRole('textbox', { name: '6-digit code' }).fill('000000');
+    await page.getByRole('alert').waitFor();
+  } },
   { name: 'reset-password', path: '/reset-password?token=RESET-OK', layouts: ALL, session: false },
   { name: 'verify-email', path: '/verify-email?token=VERIFY-OK', layouts: ALL, session: true },
 ];
@@ -92,8 +127,9 @@ for (const c of CASES) {
       test(`dom · ${c.name} · ${layout} · ${width}`, async ({ page }) => {
         await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
         await page.clock.setFixedTime(FIXED_NOW);
-        await installMocks(page, { layout, session: c.session, tweakSettings: c.tweak });
+        await installMocks(page, { ...c.mocks, layout, session: c.session, tweakSettings: c.tweak });
         await page.goto(c.path);
+        await c.drive?.(page);
         expect(await capture(page)).toMatchSnapshot(`dom-${c.name}-${layout}-${width}.txt`);
       });
     }
