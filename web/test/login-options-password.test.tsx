@@ -44,10 +44,11 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('LoginOptions with password sign-in', () => {
-  it('shows the email-or-phone card after the chat cards, and never the old "coming soon" card', () => {
+  it('shows the email-or-phone form after the chat buttons behind a quiet "or", and never the old "coming soon" card', () => {
     configure({ whatsapp: true, password: true });
     shell(<LoginOptions />);
-    expect(screen.getByRole('heading', { name: 'Email or phone' })).toBeTruthy();
+    const divider = screen.getByText('or').parentElement!;
+    expect(divider.getAttribute('aria-hidden')).toBe('true');
     const text = document.body.textContent ?? '';
     expect(text.indexOf('WHATSAPP CARD')).toBeLessThan(text.indexOf('PASSWORD CARD'));
     expect(text).not.toContain('Coming soon');
@@ -104,7 +105,7 @@ describe('where else the card appears', () => {
   it('the page heading no longer claims there is no password', () => {
     configure({ whatsapp: true, password: true });
     shell(<LoginPage />);
-    expect(screen.getByText('Sign in and your orders, points and referrals are waiting.')).toBeTruthy();
+    expect(screen.getByText('Choose how you’d like to sign in.')).toBeTruthy();
   });
 
   it('inside Telegram the page shows the Telegram state and never the card', () => {

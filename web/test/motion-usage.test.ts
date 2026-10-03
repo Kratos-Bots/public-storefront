@@ -28,7 +28,7 @@ describe('motion is applied', () => {
     'features/catalog/ProductDetailSheet.tsx', 'features/checkout/CheckoutPage.tsx', 'features/tracking/OrderHero.tsx',
     'features/tracking/LookupForm.tsx', 'features/verify/VerifyPage.tsx', 'features/payment-redirect/PaymentSuccessPage.tsx',
     'features/payment-redirect/PaymentCancelPage.tsx', 'features/payment-redirect/OrderPlacedPage.tsx',
-    'features/account/AccountLayout.tsx', 'features/auth/AuthCard.tsx', 'components/EmptyState.tsx',
+    'features/account/AccountLayout.tsx', 'features/auth/LoginOptions.tsx', 'components/EmptyState.tsx',
   ])('%s fades in', (file) => expect(src(file)).toMatch(/\bFADE\b/));
 
   it('the current route node pings', () => {

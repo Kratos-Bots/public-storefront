@@ -82,6 +82,38 @@ describe('useWhatsappLogin', () => {
     expect(startMock).not.toHaveBeenCalled();
   });
 
+  it('cancel() drops the open attempt, stops the watch and returns to idle', async () => {
+    const { result } = renderHook(() => useWhatsappLogin());
+    await begin(result.current.start);
+    expect(result.current.state).toBe('started');
+
+    act(() => result.current.cancel());
+    expect(result.current.state).toBe('idle');
+    expect(result.current.data).toBeUndefined();
+
+    pollMock.mockClear();
+    await ticks(3);
+    expect(pollMock).not.toHaveBeenCalled();
+    expect(completeMock).not.toHaveBeenCalled();
+    expect(result.current.state).toBe('idle');
+  });
+
+  it('a poll already in the air when cancel() is called cannot sign the shopper in', async () => {
+    let resolvePoll: (v: { status: 'completed' }) => void = () => {};
+    pollMock.mockImplementationOnce(() => new Promise((r) => { resolvePoll = r; }));
+    const { result } = renderHook(() => useWhatsappLogin());
+    await begin(result.current.start);
+    await ticks(1);
+
+    act(() => result.current.cancel());
+    await act(async () => {
+      resolvePoll({ status: 'completed' });
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(completeMock).not.toHaveBeenCalled();
+    expect(result.current.state).toBe('idle');
+  });
+
   it('start() opens an attempt and exposes it', async () => {
     const { result } = renderHook(() => useWhatsappLogin());
     await begin(result.current.start);

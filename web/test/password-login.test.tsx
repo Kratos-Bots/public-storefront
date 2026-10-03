@@ -105,7 +105,7 @@ describe('sign in', () => {
     expect(screen.queryByText('Couriers may use this for delivery.')).toBeNull();
     fireEvent.click(button('Create an account'));
     expect(screen.queryByText('Couriers may use this for delivery.')).toBeNull();
-    fireEvent.click(button('I already have an account'));
+    fireEvent.click(button('Back to sign in'));
     fireEvent.click(button('Forgot your password?'));
     expect(screen.queryByText('Couriers may use this for delivery.')).toBeNull();
   });
@@ -226,12 +226,12 @@ describe('create account', () => {
     expect(screen.queryByTestId('turnstile')).toBeNull();
   });
 
-  it('"I already have an account" returns to sign-in keeping the email and clearing the password', () => {
+  it('"Back to sign in" returns to sign-in keeping the email and clearing the password', () => {
     mount();
     type(email(), 'a@b.co');
     fireEvent.click(button('Create an account'));
     type(secret('Create a password'), 'pw-pw-pw-pw');
-    fireEvent.click(button('I already have an account'));
+    fireEvent.click(button('Back to sign in'));
     expect(email().value).toBe('a@b.co');
     expect(secret().value).toBe('');
   });

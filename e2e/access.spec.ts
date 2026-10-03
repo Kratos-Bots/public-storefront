@@ -26,7 +26,7 @@ test.describe('shop access', () => {
     const mocks = await installMocks(page, { access: { storefront: 'login' }, passwordLogin: true });
     await page.goto('/');
     await expect(page).toHaveURL(/\/login\?returnTo=%2F$/);
-    await expect(page.getByRole('heading', { name: 'Email or phone' })).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Email address' })).toBeVisible();
     await expect(page.getByText('Sign in to view the shop.')).toBeVisible();
     // Plain login-required mode shows no owner message and no buttons.
     await expect(page.getByText('This shop is private.')).toHaveCount(0);
@@ -90,7 +90,7 @@ test.describe('shop access', () => {
       tweakSettings: (s) => { s.features.guestCheckout = true; },
     });
     await page.goto('/login');
-    await expect(page.getByRole('heading', { name: 'Email or phone' })).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Email address' })).toBeVisible();
     await expect(page.getByText(REGISTRATION_CLOSED)).toBeVisible();
     await expect(page.getByText('By invitation only.')).toBeVisible();
     await expect(page.getByRole('button', { name: /create (an )?account|sign up/i })).toHaveCount(0);
@@ -117,7 +117,7 @@ test.describe('shop access', () => {
     await expect(page.getByRole('contentinfo')).toBeVisible();
     await expect(page.getByRole('link', { name: /^Cart/ }).first()).toBeVisible();
     await page.goto('/login');
-    await expect(page.getByRole('heading', { name: 'Email or phone' })).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Email address' })).toBeVisible();
     await expect(page.getByText('Sign in to view the shop.')).toHaveCount(0);
     await expect(page.getByText(REGISTRATION_CLOSED)).toHaveCount(0);
     await expect(page.getByText('This shop is private.')).toHaveCount(0);
