@@ -4,9 +4,10 @@ Date: 2026-10-04
 Repos: `ecommerce-backend` (small, no migration), `ecommerce-storefront` (release v0.14.0)
 Status: design approved in chat, awaiting spec review
 
-This is piece 1 of 4 from the checkout feedback of 2026-10-04. The other three
-get their own specs, in this order: unpaid order recovery, payment method
-presentation, delivery estimates and dispatch.
+This is piece 1 of 5 from the checkout feedback of 2026-10-04. The other four
+get their own specs, in this order: collection points on the web checkout,
+unpaid order recovery, payment method presentation, delivery estimates and
+dispatch.
 
 ## Goal
 
@@ -99,6 +100,11 @@ A country is included when both hold:
 `getPublicStorefrontSettings` adds `shipping: { countries }` to its response and
 `PublicStorefrontSettings` gains the field. `login.phone.countries` is left as
 it is.
+
+The collection-point exclusion is temporary. The web checkout cannot offer
+collection options yet, so a country served only by them would dead-end at the
+Delivery step. Piece 2 (collection points on the web checkout) removes the
+exclusion in the same release that adds the point picker.
 
 Customer-group shipping rules are not applied: the settings response is
 anonymous and cached, so it cannot vary by customer.
@@ -196,6 +202,7 @@ control through the shared component.
 
 - A customer whose group is denied every shipping option for a country can
   still pick it and will see the existing "no delivery options" message.
+- Collection points on the web checkout are piece 2, not this piece.
 - Not included: billing address, postcode validation, hiding the county field
   per country, address lookup, the code sign-in phone screen, and any admin SPA
   change.
