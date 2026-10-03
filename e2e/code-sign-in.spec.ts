@@ -34,6 +34,18 @@ test.describe('the opening choice', () => {
     await expect(page.getByText(/New here\?/)).toHaveCount(0);
   });
 
+  test('a private shop shows the access notice above the sign-in buttons', async ({ page }) => {
+    await installMocks(page, {
+      codeLogin: {},
+      access: { storefront: 'restricted', deniedMessage: 'By invitation only.', deniedButtons: [{ label: 'Message the owner', url: 'https://example.invalid/owner' }] },
+    });
+    await page.goto('/login');
+    await expect(page.getByText('By invitation only.')).toBeVisible();
+    await expect(page.getByText('Message the owner')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Continue with phone number' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Continue with email' })).toBeVisible();
+  });
+
   test('an older backend (no login.phone or login.email) keeps today’s sign-in', async ({ page }) => {
     await installMocks(page, {});
     await page.goto('/login');
@@ -82,7 +94,7 @@ test.describe('phone', () => {
     await page.getByRole('textbox', { name: 'Phone number' }).fill('07700 900123');
     await page.getByRole('button', { name: 'Send code by WhatsApp' }).click();
     await callCount(mocks, 'phone').toBe(1);
-    expect(calls(mocks, 'phone')[0]!.body.language).toEqual(expect.any(String));
+    expect(calls(mocks, 'phone')[0]!.body.language).toBe('en');
   });
 
   test('Enter sends by the first channel, which is the filled button', async ({ page }) => {
@@ -182,10 +194,21 @@ test.describe('phone', () => {
     await expect(page.getByRole('textbox', { name: 'Phone number' })).toBeVisible();
   });
 
+  test('the shop’s countries lead the country picker', async ({ page }) => {
+    await installMocks(page, { codeLogin: { countries: ['FR', 'DE'] }, tweakSettings: (s) => { s.contactModes.defaultPhoneCountry = null; } });
+    await page.goto('/login');
+    await page.getByRole('button', { name: 'Continue with phone number' }).click();
+    const picker = page.getByLabel('Country');
+    const suggested = await picker.locator('optgroup').first().locator('option').evaluateAll((o) => o.map((x) => (x as HTMLOptionElement).value));
+    // Alphabetical by country name: France, Germany.
+    expect(suggested).toEqual(['FR', 'DE']);
+    await expect(picker.locator('optgroup').nth(1).locator('option[value="FR"]')).toHaveCount(0);
+  });
+
   test('verify mode with no channels listed still offers a text message button', async ({ page }) => {
     // Set through the settings fixture: `codeLogin` always lists both channels. Nothing is sent, so no code route is needed.
     await installMocks(page, { tweakSettings: (s) => {
-      s.login.phone = { available: true, mode: 'verify', channels: [] };
+      s.login.phone = { available: true, mode: 'verify', channels: [], countries: [] };
       s.login.email = { available: true, mode: 'verify' };
     } });
     await page.goto('/login');

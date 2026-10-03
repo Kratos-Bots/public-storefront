@@ -124,6 +124,8 @@ export interface InstallMocksOptions {
     down?: boolean;
     /** Verifying answers 400 CODE_EXPIRED. */
     expired?: boolean;
+    /** The shop's serviceable countries, served as `login.phone.countries` (default: none). */
+    countries?: string[];
   };
   /** Mutate the profile fixture before it is served (identities, password block). */
   tweakProfile?: (profile: Profile) => void;
@@ -417,9 +419,9 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
   if (codeOptions) {
     const phone = codeOptions.phone ?? 'verify';
     const email = codeOptions.email ?? 'verify';
-    state.settings.login.phone = phone === 'off' ? { available: false, mode: null, channels: [] }
-      : phone === 'whatsapp' ? { available: true, mode: 'whatsapp', channels: [] }
-        : { available: true, mode: 'verify', channels: ['whatsapp', 'sms'] };
+    state.settings.login.phone = phone === 'off' ? { available: false, mode: null, channels: [], countries: codeOptions.countries ?? [] }
+      : phone === 'whatsapp' ? { available: true, mode: 'whatsapp', channels: [], countries: codeOptions.countries ?? [] }
+        : { available: true, mode: 'verify', channels: ['whatsapp', 'sms'], countries: codeOptions.countries ?? [] };
     state.settings.login.email = email === 'off' ? { available: false, mode: null } : { available: true, mode: email };
   }
   const code = { channel: 'whatsapp' as string, masked: '', isNew: true, wrong: 0 };
@@ -756,6 +758,7 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
         case 'phone': {
           const channel = String(asked.channel ?? '');
           if ((codeOptions.unavailableChannels ?? []).includes(channel as 'whatsapp' | 'sms')) { await fail(route, 400, 'CODE_CHANNEL_UNAVAILABLE'); return; }
+          // The backend's normalisePhone (libphonenumber, GB) turns +4407700900123 into +447700900123; mirror it.
           code.isNew = String(asked.phone ?? '').replace(/^\+440/, '+44') !== PASSWORD_ACCOUNT.phone;
           await envelope(route, sent(channel, '+44 ••• ••• 123'));
           return;
