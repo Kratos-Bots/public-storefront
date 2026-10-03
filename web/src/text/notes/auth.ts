@@ -107,4 +107,10 @@ export default {
   'code.error.incorrect': 'Sign-in by code: shown after a wrong code; {count} is how many tries are left',
   'code.error.incorrectNoCount': 'Sign-in by code: shown after a wrong code when the number of tries left is not known',
   'code.error.unavailable': 'Sign-in by code: shown when the shop’s code sending is switched off or down',
+  'code.enter.label': 'Screen-reader name of the box where the 6-digit sign-in code is typed',
+  'code.phone.country': 'Label of the country picker above the phone number when signing in with a phone',
+  'code.phone.chooseCountry': 'First line of the country picker before a country is chosen',
+  'code.phone.suggested': 'Heading over the shop’s own countries at the top of the country picker',
+  'code.phone.allCountries': 'Heading over the rest of the countries in the country picker',
+  'code.phone.number': 'Label of the phone number field when signing in with a phone',
 } as const satisfies Record<string, string>;

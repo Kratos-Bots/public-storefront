@@ -1,0 +1,35 @@
+/* The code is the one loud thing on its screen: a single wide box, big monospaced digits, spread out.
+   Deliberately not `data-sf-part="input"`, so no template re-skins it and it reads the same everywhere. */
+.code {
+  display: block;
+  width: 100%;
+  min-height: 64px;
+  padding: 0 1rem;
+  border: 1px solid var(--sf-line-strong);
+  border-radius: var(--sf-btn-radius);
+  background: var(--sf-surface);
+  color: var(--sf-text);
+  font-family: var(--sf-font-mono);
+  font-size: 2rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.5em;
+  text-indent: 0.5em; /* balances the trailing letter-space so the digits sit centred */
+  text-align: center;
+}
+
+.code:focus {
+  outline: none;
+  border-color: var(--sf-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sf-primary) 28%, transparent);
+}
+
+.code[aria-invalid='true'] {
+  border-color: var(--sf-danger);
+}
+
+.code:disabled {
+  background: var(--sf-surface-2);
+  color: var(--sf-faint);
+  cursor: not-allowed;
+}

@@ -109,4 +109,10 @@ export default defineTextArea('auth', {
   'code.error.incorrect': { en: { one: 'That code isn’t right. {count} try left.', other: 'That code isn’t right. {count} tries left.' }, max: 120 },
   'code.error.incorrectNoCount': { en: 'That code isn’t right.', max: 100 },
   'code.error.unavailable': { en: 'Sign-in by code isn’t working right now. Please try another way', max: 200 },
+  'code.enter.label': { en: '6-digit code', max: 40 },
+  'code.phone.country': { en: 'Country', max: 40 },
+  'code.phone.chooseCountry': { en: 'Choose a country', max: 60 },
+  'code.phone.suggested': { en: 'Suggested', max: 40 },
+  'code.phone.allCountries': { en: 'All countries', max: 40 },
+  'code.phone.number': { en: 'Phone number', max: 40 },
 });
