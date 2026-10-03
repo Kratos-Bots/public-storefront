@@ -38,6 +38,15 @@ export function takeBinding(): string | null {
   }
 }
 
+/** Drop the binding of an attempt that never left this page. */
+export function clearBinding(): void {
+  try {
+    sessionStorage.removeItem(BINDING_KEY);
+  } catch {
+    /* nothing to clear */
+  }
+}
+
 export type TelegramOidcFailure =
   | 'expired'
   | 'failed'

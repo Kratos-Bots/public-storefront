@@ -11,6 +11,9 @@ test.use({ viewport: MOBILE });
 test.describe('Telegram sign-in over OpenID Connect', () => {
   test('the button starts the sign-in, follows the assigned URL, and the callback signs the shopper in', async ({ page }) => {
     const mocks = await installMocks(page, { telegramOidc: true });
+    // The address the page is on when `complete` goes out: the one-time code must already be gone from it.
+    let addressAtComplete = '';
+    page.on('request', (r) => { if (r.url().endsWith('/auth/telegram/oidc/complete')) addressAtComplete = page.url(); });
     await page.goto('/login');
     // A real button, not Telegram's widget.
     await expect(page.locator('script[src*="telegram-widget"]')).toHaveCount(0);
@@ -24,6 +27,7 @@ test.describe('Telegram sign-in over OpenID Connect', () => {
     expect(complete.body).toEqual({ code: 'e2e-code', state: 'e2e-state', binding: start.body.binding });
     // One attempt, one completion, and the binding does not outlive it.
     expect(mocks.state.oidcCalls).toHaveLength(2);
+    expect(addressAtComplete).toMatch(/\/auth\/telegram\/callback$/);
     expect(await page.evaluate(() => sessionStorage.getItem('sf-tg-oidc-binding'))).toBeNull();
     const session = await page.evaluate(() => JSON.parse(localStorage.getItem('sf-session-v1') ?? '{}'));
     expect(session.state.token).toBeTruthy();
@@ -50,6 +54,7 @@ test.describe('Telegram sign-in over OpenID Connect', () => {
     await page.goto('/login');
     await page.getByRole('button', { name: 'Continue with Telegram' }).click();
     await expect(page.getByRole('alert')).toContainText('started in another browser or tab');
+    expect(new URL(page.url()).search).toBe('');
     await page.getByRole('link', { name: 'Back to sign in' }).click();
     await expect(page).toHaveURL(/\/login$/);
     await expect(page.getByRole('button', { name: 'Continue with Telegram' })).toBeVisible();
@@ -59,6 +64,20 @@ test.describe('Telegram sign-in over OpenID Connect', () => {
     const mocks = await installMocks(page, { telegramOidc: true });
     await page.goto('/auth/telegram/callback?code=c&state=s');
     await expect(page.getByRole('alert')).toContainText('started in another browser or tab');
+    expect(mocks.state.oidcCalls).toEqual([]);
+    expect(new URL(page.url()).search).toBe('');
+  });
+
+  test('a restricted shop shows the bare callback frame to a signed-out visitor, with no redirect to sign in', async ({ page }) => {
+    const mocks = await installMocks(page, { telegramOidc: true, access: { storefront: 'restricted' } });
+    await page.goto('/auth/telegram/callback?code=c&state=s');
+    await expect(page.getByRole('alert')).toContainText('started in another browser or tab');
+    await expect(page).toHaveURL(/\/auth\/telegram\/callback$/);
+    await expect(page.getByRole('link', { name: 'Back to sign in' })).toBeVisible();
+    // A bare frame: no shop header, footer or cart, and nothing asked for the catalogue.
+    await expect(page.getByRole('banner')).toHaveCount(0);
+    await expect(page.getByRole('contentinfo')).toHaveCount(0);
+    expect(mocks.state.anonymousCatalogHits).toBe(0);
     expect(mocks.state.oidcCalls).toEqual([]);
   });
 

@@ -5,6 +5,7 @@ import { TelegramIcon } from '@/components/icons.tsx';
 import { AuthNote } from '@/features/auth/AuthNote.tsx';
 import {
   classifyTelegramOidcError,
+  clearBinding,
   generateBinding,
   storeBinding,
 } from '@/features/auth/telegram-oidc.ts';
@@ -28,8 +29,8 @@ declare global {
 }
 
 export interface TelegramLoginProps {
-  /** The bot's username, no `@`. Only the widget needs it. */
-  botUsername: string;
+  /** The bot's username, no `@`. Only the widget needs it; without one the widget renders nothing. */
+  botUsername: string | null;
   /** The widget's payload, to be posted verbatim — the backend rejects an edited one. */
   onAuth: (user: TelegramAuthPayload) => void;
   /** `login.telegram.oidc`: the shop has Telegram's OpenID Connect sign-in set up. Absent or false means the widget. */
@@ -58,17 +59,28 @@ export function TelegramLogin(props: TelegramLoginProps) {
       </>
     );
   }
-  return props.oidc === true ? <OidcButton /> : <TelegramWidget {...props} />;
+  if (props.oidc === true) return <OidcButton />;
+  return props.botUsername ? <TelegramWidget {...props} botUsername={props.botUsername} /> : null;
 }
 
-function TelegramFace() {
+function TelegramFace({ label }: { label?: string }) {
   const { t } = useText();
   return (
     <>
       <span className={buttons.icon}><TelegramIcon size={20} /></span>
-      {t('auth.telegram.continue')}
+      {label ?? t('auth.telegram.continue')}
     </>
   );
+}
+
+/** Telegram's authorization URL, or null for anything that is not a well-formed https address. */
+function httpsUrl(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  try {
+    return new URL(value).protocol === 'https:' ? value : null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -93,9 +105,12 @@ function OidcButton() {
         if (!storeBinding(binding)) throw new Error('storage unavailable');
         const returnTo = safeReturnTo(useSessionStore.getState().returnTo);
         const { url } = await startTelegramOidc(binding, returnTo);
-        window.location.assign(url);
+        const target = httpsUrl(url);
+        if (!target) throw new Error('unexpected sign-in address');
+        window.location.assign(target);
         // The page is leaving: stay busy rather than invite a second tap.
       } catch (err) {
+        clearBinding();
         starting.current = false;
         setBusy(false);
         const reason = classifyTelegramOidcError(err);
@@ -111,7 +126,7 @@ function OidcButton() {
   return (
     <>
       <button type="button" className={buttons.quick} onClick={start} disabled={busy} aria-busy={busy}>
-        {busy ? t('auth.telegram.starting') : <TelegramFace />}
+        <TelegramFace label={busy ? t('auth.telegram.starting') : undefined} />
       </button>
       {error ? <div role="alert"><AuthNote tone="danger">{error}</AuthNote></div> : null}
     </>

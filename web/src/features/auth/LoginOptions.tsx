@@ -60,12 +60,14 @@ export function LoginOptions({ rootAttrs }: { rootAttrs?: StyleAttrs } = {}) {
   );
 
   const whatsapp = login.whatsapp.available;
-  // A bot with no username can't be embedded, so an "available" Telegram with
-  // one missing is the same as no Telegram at all.
+  // OpenID Connect needs no bot username (the redirect flow never embeds the bot), so it stands on its own.
+  // The widget can't be embedded without one, so an "available" widget with no username is no Telegram at all.
+  const oidc = login.telegram.oidc === true;
   const telegramBot = login.telegram.available ? login.telegram.botUsername : null;
+  const telegramOn = oidc || Boolean(telegramBot);
   const password = login.password?.available === true;
 
-  if (!whatsapp && !telegramBot && !password) {
+  if (!whatsapp && !telegramOn && !password) {
     return (
       <EmptyState
         eyebrow={t('common.actions.signIn')}
@@ -86,12 +88,12 @@ export function LoginOptions({ rootAttrs }: { rootAttrs?: StyleAttrs } = {}) {
     <div className={`${classes.options} ${FADE}`} {...rootAttrs}>
       <AccessNotice placement="above" />
 
-      {whatsapp || telegramBot ? (
+      {whatsapp || telegramOn ? (
         <div className={classes.quick}>
           {whatsapp ? <WhatsappLogin number={login.whatsapp.number} onWaiting={setWaiting} /> : null}
-          {telegramBot ? (
+          {telegramOn ? (
             <div className={classes.telegram} hidden={waiting}>
-              <TelegramLogin botUsername={telegramBot} onAuth={onTelegram} oidc={login.telegram.oidc === true} />
+              <TelegramLogin botUsername={telegramBot} onAuth={onTelegram} oidc={oidc} />
               {telegramBusy ? <AuthNote>{t('auth.options.signingIn')}</AuthNote> : null}
               {telegramError ? <div role="alert"><AuthNote tone="danger">{telegramError}</AuthNote></div> : null}
             </div>
@@ -101,7 +103,7 @@ export function LoginOptions({ rootAttrs }: { rootAttrs?: StyleAttrs } = {}) {
 
       {password ? (
         <div className={classes.password} hidden={waiting}>
-          {whatsapp || telegramBot ? (
+          {whatsapp || telegramOn ? (
             <div className={classes.or} aria-hidden>
               <span>{t('auth.options.or')}</span>
             </div>

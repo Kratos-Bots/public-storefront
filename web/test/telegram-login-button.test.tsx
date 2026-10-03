@@ -14,9 +14,9 @@ import { useSessionStore } from '@/stores/session.ts';
 const assign = vi.fn();
 const widgetScript = () => [...document.querySelectorAll('script')].find((s) => s.src === TELEGRAM_WIDGET_SRC);
 
-function mount(props: { oidc?: boolean } = {}) {
+function mount(props: { oidc?: boolean; botUsername?: string | null } = {}) {
   return render(
-    <MantineProvider env="test"><TelegramLogin botUsername="northbound_bot" onAuth={vi.fn()} {...props} /></MantineProvider>,
+    <MantineProvider env="test"><TelegramLogin botUsername={'botUsername' in props ? props.botUsername! : 'northbound_bot'} onAuth={vi.fn()} oidc={props.oidc} /></MantineProvider>,
   );
 }
 
@@ -86,6 +86,36 @@ describe('OpenID Connect mode', () => {
     await waitFor(() => expect(assign).toHaveBeenCalledTimes(1));
   });
 
+  it('removes the stored binding when start fails', async () => {
+    h.start.mockRejectedValueOnce(new ApiError(500, 'boom'));
+    mount({ oidc: true });
+    fireEvent.click(screen.getByRole('button'));
+    await screen.findByRole('alert');
+    expect(sessionStorage.getItem(BINDING_KEY)).toBeNull();
+  });
+
+  it.each([['http://oauth.telegram.org/auth'], ['javascript:alert(1)'], ['not a url'], ['/relative']])(
+    'refuses to go to %s: generic sentence, binding removed',
+    async (url) => {
+      h.start.mockResolvedValueOnce({ url });
+      mount({ oidc: true });
+      fireEvent.click(screen.getByRole('button'));
+      expect((await screen.findByRole('alert')).textContent).toBe("We couldn't open Telegram. Please try again.");
+      expect(assign).not.toHaveBeenCalled();
+      expect(sessionStorage.getItem(BINDING_KEY)).toBeNull();
+    },
+  );
+
+  it('keeps the Telegram icon while busy so the button does not change shape', async () => {
+    h.start.mockReturnValue(new Promise(() => {}));
+    mount({ oidc: true });
+    expect(screen.getByRole('button').querySelector('svg')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button'));
+    await waitFor(() => expect((screen.getByRole('button') as HTMLButtonElement).disabled).toBe(true));
+    expect(screen.getByRole('button').querySelector('svg')).toBeTruthy();
+    expect(screen.getByRole('button').textContent).toBe('Opening Telegram…');
+  });
+
   it('says Telegram sign-in is unavailable on 404 TELEGRAM_LOGIN_UNAVAILABLE', async () => {
     h.start.mockRejectedValueOnce(new ApiError(404, 'TELEGRAM_LOGIN_UNAVAILABLE'));
     mount({ oidc: true });
@@ -123,6 +153,12 @@ describe('widget fallback', () => {
     expect(container.textContent).not.toContain('Continue with Telegram');
     expect(container.querySelector('svg')).toBeNull();
     expect(h.start).not.toHaveBeenCalled();
+  });
+
+  it('renders nothing at all in widget mode without a bot username', () => {
+    const { container } = mount({ oidc: false, botUsername: null });
+    expect(container.querySelector('div')).toBeNull();
+    expect(widgetScript()).toBeUndefined();
   });
 
   it('forwards the widget payload untouched', () => {

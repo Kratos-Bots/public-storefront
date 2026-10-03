@@ -119,8 +119,8 @@ export interface InstallMocksOptions {
   /** The Mini App sign-in answers 401, as it does for stale or forged initData. */
   telegramAuthFails?: boolean;
   /**
-   * Telegram sign-in over OpenID Connect (`login.telegram.oidc: true`). `start` answers a same-origin URL that
-   * bounces straight back to the callback with a code and state, standing in for the trip to Telegram;
+   * Telegram sign-in over OpenID Connect (`login.telegram.oidc: true`). `start` answers Telegram's https URL, which the
+   * mock redirects straight back to the callback with a code and state, standing in for the trip to Telegram;
    * `completeFails` makes `complete` answer that status and error code instead of a session.
    */
   telegramOidc?: boolean | { completeFails?: { status: number; error: string } };
@@ -416,6 +416,13 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     externalRequestPolicy(route.request().url()) === 'continue' ? route.continue() : route.abort(),
   );
 
+  if (oidcOptions) {
+    // Telegram itself: it approves at once and sends the browser straight back with a code and state.
+    await page.route('https://oauth.telegram.org/**', (route) =>
+      route.fulfill({ status: 302, headers: { location: `${ORIGIN}/auth/telegram/callback?code=e2e-code&state=e2e-state` }, body: '' }),
+    );
+  }
+
   await page.route('https://challenges.cloudflare.com/**', (route) =>
     route.fulfill({ status: 200, contentType: 'application/javascript', body: TURNSTILE_SHIM }),
   );
@@ -681,7 +688,7 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
 
     if (path === 'storefront/auth/telegram/oidc/start' && method === 'POST') {
       state.oidcCalls.push({ route: 'start', body: body(route) });
-      await envelope(route, { url: `${ORIGIN}/auth/telegram/callback?code=e2e-code&state=e2e-state` });
+      await envelope(route, { url: 'https://oauth.telegram.org/auth?state=e2e-state' });
       return;
     }
 

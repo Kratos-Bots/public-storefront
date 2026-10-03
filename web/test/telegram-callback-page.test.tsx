@@ -13,6 +13,7 @@ vi.mock('@/features/auth/useLoginSuccess.ts', async (importOriginal) => ({
 }));
 
 import { BINDING_KEY } from '@/features/auth/telegram-oidc.ts';
+import { resetTelegramCallbackAttempts } from '@/features/auth/useTelegramCallback.ts';
 import { TelegramCallbackPage } from '@/features/auth/TelegramCallbackPage.tsx';
 import { useSessionStore } from '@/stores/session.ts';
 
@@ -20,6 +21,8 @@ const BINDING = 'b'.repeat(43);
 const RESULT = { token: 'sess', customer: { id: 7, nickname: 'Ada' }, returnTo: '/checkout' as string | null };
 
 function mount(search = '?code=c1&state=s1', opts: { strict?: boolean } = {}) {
+  // The address bar as Telegram left it: the page scrubs it, so a test can see that it did.
+  window.history.replaceState(null, '', `/auth/telegram/callback${search}`);
   const tree = (
     <MantineProvider env="test">
       <MemoryRouter initialEntries={[`/auth/telegram/callback${search}`]}><TelegramCallbackPage /></MemoryRouter>
@@ -29,6 +32,7 @@ function mount(search = '?code=c1&state=s1', opts: { strict?: boolean } = {}) {
 }
 
 beforeEach(() => {
+  resetTelegramCallbackAttempts();
   sessionStorage.clear();
   sessionStorage.setItem(BINDING_KEY, BINDING);
   useSessionStore.setState({ returnTo: null });
@@ -44,6 +48,42 @@ describe('success', () => {
     await waitFor(() => expect(h.onLogin).toHaveBeenCalledTimes(1));
     expect(h.complete).toHaveBeenCalledWith('c1', 's1', BINDING);
     expect(h.onLogin).toHaveBeenCalledWith({ token: 'sess', customer: RESULT.customer });
+  });
+
+  it('scrubs the one-time code from the address bar before anything else, and leaves the path', async () => {
+    let atCall = 'unset';
+    h.complete.mockImplementation(async () => { atCall = window.location.search; return RESULT; });
+    mount();
+    await waitFor(() => expect(h.onLogin).toHaveBeenCalled());
+    expect(atCall).toBe('');
+    expect(window.location.search).toBe('');
+    expect(window.location.pathname).toBe('/auth/telegram/callback');
+  });
+
+  it('a sign-in that throws after the session is stored is still a sign-in, not an error page', async () => {
+    h.onLogin.mockImplementation(async () => {
+      useSessionStore.setState({ token: 'sess' });
+      throw new Error('landing blew up');
+    });
+    mount();
+    await waitFor(() => expect(h.onLogin).toHaveBeenCalled());
+    await new Promise((r) => setTimeout(r, 20));
+    expect(screen.queryByRole('alert')).toBeNull();
+    useSessionStore.setState({ token: null });
+  });
+
+  it('a remount joins the attempt in flight instead of flashing "expired"', async () => {
+    let finish!: (v: typeof RESULT) => void;
+    h.complete.mockReturnValue(new Promise((r) => { finish = r; }));
+    const first = mount();
+    await waitFor(() => expect(h.complete).toHaveBeenCalledTimes(1));
+    first.unmount();
+    mount();
+    expect(screen.queryByRole('alert')).toBeNull();
+    finish(RESULT);
+    await waitFor(() => expect(h.onLogin).toHaveBeenCalledTimes(1));
+    expect(h.complete).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('removes the binding as it is used', async () => {
@@ -95,6 +135,7 @@ describe('failures', () => {
     expect((await screen.findByRole('alert')).textContent).toBe(sentence);
     expect(backLink().getAttribute('href')).toBe('/login');
     expect(h.onLogin).not.toHaveBeenCalled();
+    expect(window.location.search).toBe('');
   });
 
   it('a missing binding is treated as expired and nothing is sent', async () => {
@@ -103,6 +144,7 @@ describe('failures', () => {
     expect((await screen.findByRole('alert')).textContent).toContain('started in another browser or tab');
     expect(h.complete).not.toHaveBeenCalled();
     expect(backLink()).toBeTruthy();
+    expect(window.location.search).toBe('');
   });
 
   it('the shopper cancelling at Telegram (error param) says so and sends nothing', async () => {
@@ -111,6 +153,7 @@ describe('failures', () => {
     expect(h.complete).not.toHaveBeenCalled();
     expect(sessionStorage.getItem(BINDING_KEY)).toBeNull();
     expect(backLink()).toBeTruthy();
+    expect(window.location.search).toBe('');
   });
 
   it.each([['?state=s1'], ['?code=c1'], ['']])('a return with code or state missing (%s) is expired', async (search) => {

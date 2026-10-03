@@ -28,12 +28,12 @@ vi.mock('@/features/auth/useWhatsappLogin.ts', () => ({
 
 import { LoginOptions } from '@/features/auth/LoginOptions.tsx';
 
-function configure(o: { whatsapp?: boolean; telegram?: boolean; password?: boolean }) {
+function configure(o: { whatsapp?: boolean; telegram?: boolean; password?: boolean; telegramLogin?: Record<string, unknown> }) {
   h.settings = {
     brand: { name: 'Northbound Supply', shortName: 'Northbound', links: { whatsapp: null, telegram: null } }, supportLinks: [],
     login: {
       whatsapp: { available: o.whatsapp ?? false, number: '447700900123' },
-      telegram: { available: o.telegram ?? false, botUsername: o.telegram ? 'northbound_bot' : null },
+      telegram: o.telegramLogin ?? { available: o.telegram ?? false, botUsername: o.telegram ? 'northbound_bot' : null },
       password: { available: o.password ?? false, resetByEmail: false, resetByWhatsapp: false },
     },
   };
@@ -68,6 +68,32 @@ describe('the compact sign-in surface', () => {
     configure({ whatsapp: true });
     shell();
     expect(screen.queryByText('or')).toBeNull();
+  });
+
+  it('OpenID Connect stands on its own: the Telegram button shows with no bot username and "available" off', () => {
+    configure({ password: true, telegramLogin: { available: false, botUsername: null, oidc: true } });
+    shell();
+    expect(screen.getByText('TELEGRAM BUTTON')).toBeTruthy();
+    expect(screen.getByText('or')).toBeTruthy();
+    expect(screen.getByText('PASSWORD FORM')).toBeTruthy();
+  });
+
+  it('OpenID Connect alone is a way in, not the "sign-in isn’t available" screen', () => {
+    configure({ telegramLogin: { available: false, botUsername: null, oidc: true } });
+    shell();
+    expect(screen.getByText('TELEGRAM BUTTON')).toBeTruthy();
+    expect(screen.queryByText(/isn’t available/)).toBeNull();
+  });
+
+  it('without OpenID Connect and without a bot username there is no Telegram row', () => {
+    configure({ password: true, telegramLogin: { available: true, botUsername: null, oidc: false } });
+    shell();
+    expect(screen.queryByText('TELEGRAM BUTTON')).toBeNull();
+    expect(screen.queryByText('or')).toBeNull();
+    cleanup();
+    configure({ whatsapp: true, telegramLogin: { available: false, botUsername: null } });
+    shell();
+    expect(screen.queryByText('TELEGRAM BUTTON')).toBeNull();
   });
 
   it('tapping Continue with WhatsApp starts the attempt', () => {
