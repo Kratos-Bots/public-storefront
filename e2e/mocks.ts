@@ -118,6 +118,12 @@ export interface InstallMocksOptions {
   checkoutReference?: string;
   /** The Mini App sign-in answers 401, as it does for stale or forged initData. */
   telegramAuthFails?: boolean;
+  /**
+   * Telegram sign-in over OpenID Connect (`login.telegram.oidc: true`). `start` answers a same-origin URL that
+   * bounces straight back to the callback with a code and state, standing in for the trip to Telegram;
+   * `completeFails` makes `complete` answer that status and error code instead of a session.
+   */
+  telegramOidc?: boolean | { completeFails?: { status: number; error: string } };
   /** Published page set per layout (`GET storefront/pages/:layout`). Omitted = `null` = no published set. */
   pages?: Partial<Record<Layout, PageSet | null>>;
   /** Make the pages route fail (503 or 404) so specs can exercise the built-in fallback. */
@@ -171,6 +177,8 @@ export interface MockState {
   txids: Array<Record<string, unknown>>;
   /** Bodies posted to the Mini App sign-in route. */
   webappLogins: Array<Record<string, unknown>>;
+  /** Bodies posted to Telegram OpenID Connect `start` / `complete`, in order. */
+  oidcCalls: Array<{ route: 'start' | 'complete'; body: Record<string, unknown> }>;
   /** Bodies posted to the classic-bot switch. */
   botModes: Array<Record<string, unknown>>;
   /** Every password / account-password / email-verification request, with its body and Authorization header. */
@@ -355,6 +363,7 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     methods: [],
     txids: [],
     webappLogins: [],
+    oidcCalls: [],
     botModes: [],
     passwordCalls: [],
     pages: options.pages ?? {},
@@ -371,6 +380,10 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     const { denied: _denied, ...asked } = options.access;
     state.settings.access = { ...state.settings.access!, ...asked };
     if (asked.registration === false) state.settings.features.guestCheckout = false;
+  }
+  const oidcOptions = options.telegramOidc === true ? {} : options.telegramOidc || null;
+  if (oidcOptions) {
+    state.settings.login.telegram = { available: true, botUsername: state.settings.login.telegram.botUsername ?? 'northbound_bot', oidc: true };
   }
   const passwordOptions: { resetByEmail?: boolean; resetByWhatsapp?: boolean; throttled?: boolean } | null =
     options.passwordLogin === true ? {} : options.passwordLogin || null;
@@ -663,6 +676,23 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     if (path === 'storefront/account/bot-mode' && method === 'POST') {
       state.botModes.push(body(route));
       await envelope(route, { classic: body(route).classic === true });
+      return;
+    }
+
+    if (path === 'storefront/auth/telegram/oidc/start' && method === 'POST') {
+      state.oidcCalls.push({ route: 'start', body: body(route) });
+      await envelope(route, { url: `${ORIGIN}/auth/telegram/callback?code=e2e-code&state=e2e-state` });
+      return;
+    }
+
+    if (path === 'storefront/auth/telegram/oidc/complete' && method === 'POST') {
+      state.oidcCalls.push({ route: 'complete', body: body(route) });
+      if (oidcOptions?.completeFails) {
+        await fail(route, oidcOptions.completeFails.status, oidcOptions.completeFails.error);
+        return;
+      }
+      const returnTo = state.oidcCalls.find((c) => c.route === 'start')?.body.returnTo ?? null;
+      await envelope(route, { token: SESSION_TOKEN, customer: SESSION_CUSTOMER, returnTo });
       return;
     }
 
