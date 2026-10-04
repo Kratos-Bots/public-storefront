@@ -1,4 +1,5 @@
-import { Field, SelectField } from '@/features/checkout/Field.tsx';
+import { useId } from 'react';
+import { ErrorNote, OptionalTag } from '@/features/checkout/Field.tsx';
 import { DIAL_CODES } from '@/lib/dial-codes.ts';
 import { compareNames, getFormatProfile, regionName } from '@/lib/format.ts';
 import classes from '@/features/checkout/Fields.module.css';
@@ -35,14 +36,31 @@ export interface PhoneFieldProps {
   error?: string;
   /** Sign-in and profile forms: the delivery hint is checkout copy and is wrong there. */
   hideHint?: boolean;
+  /** Countries to lead the picker (the shop's delivery countries). Empty or missing = one flat list. */
+  suggested?: readonly string[];
   onPrefixChange: (iso: string) => void;
   onPhoneChange: (value: string) => void;
 }
 
+function PrefixOptions({ options }: { options: PrefixOption[] }) {
+  return (
+    <>
+      {options.map((o) => (
+        <option key={o.iso} value={o.iso}>
+          {`+${o.dial}\u00a0\u00a0${o.name}`}
+        </option>
+      ))}
+    </>
+  );
+}
+
 /**
- * Dial code + national number. The two are one field to the shopper and two
- * controls to the DOM; `composePhoneNumber` puts them back together at submit,
- * so nothing here has to know a country's trunk-prefix rules.
+ * Dial code + national number in one frame. To the shopper it is a single field
+ * that shows "+44" beside what they type; to the DOM it is a native select laid
+ * invisibly over that prefix (a phone's own picker beats any listbox we could
+ * draw) and a `tel` input. `composePhoneNumber` joins the two at submit, so
+ * nothing here has to know a country's trunk-prefix rules: "07801…" and
+ * "7801…" are both fine to type.
  */
 export function PhoneField({
   prefix,
@@ -50,35 +68,73 @@ export function PhoneField({
   optional,
   error,
   hideHint,
+  suggested,
   onPrefixChange,
   onPhoneChange,
 }: PhoneFieldProps) {
   const { t } = useText();
+  const id = useId();
+  const noteId = `${id}-note`;
+  const hint = error || hideHint ? undefined : t('checkout.phone.hint');
+
+  const all = prefixOptions();
+  const wanted = new Set((suggested ?? []).map((c) => c.trim().toUpperCase()));
+  const top = (suggested ?? [])
+    .map((c) => all.find((o) => o.iso === c.trim().toUpperCase()))
+    .filter((o): o is PrefixOption => Boolean(o))
+    .filter((o, i, list) => list.indexOf(o) === i);
+  const rest = all.filter((o) => !wanted.has(o.iso));
+  const dial = DIAL_CODES[prefix];
+
   return (
-    <div className={classes.phone}>
-      <div className={classes.phoneCode}>
-        <SelectField label={t('checkout.phone.codeAriaLabel')} labelText={t('checkout.phone.code')} value={prefix} onChange={onPrefixChange}>
-          <option value="">{t('checkout.phone.code')}</option>
-          {prefixOptions().map((o) => (
-            <option key={o.iso} value={o.iso}>
-              {o.name} +{o.dial}
-            </option>
-          ))}
-        </SelectField>
-      </div>
-      <div className={classes.phoneNumber}>
-        <Field
-          label={t('checkout.phone.label')}
+    <div className={classes.field}>
+      <label className={classes.label} htmlFor={id}>
+        {t('checkout.phone.label')}
+        {optional ? <OptionalTag /> : null}
+      </label>
+      <div className={classes.phoneBox} data-sf-part="input" data-invalid={error ? 'true' : undefined}>
+        <span className={classes.phoneCode}>
+          <select
+            className={classes.phoneSelect}
+            value={prefix}
+            onChange={(e) => onPrefixChange(e.currentTarget.value)}
+            aria-label={t('checkout.phone.codeAriaLabel')}
+          >
+            <option value="">{t('checkout.phone.code')}</option>
+            {top.length > 0 ? (
+              <>
+                <optgroup label={t('auth.code.phone.suggested')}><PrefixOptions options={top} /></optgroup>
+                {rest.length > 0 ? <optgroup label={t('auth.code.phone.allCountries')}><PrefixOptions options={rest} /></optgroup> : null}
+              </>
+            ) : (
+              <PrefixOptions options={all} />
+            )}
+          </select>
+          <span className={classes.phoneCodeText} data-phone-code aria-hidden>
+            {dial ? `+${dial}` : t('checkout.phone.code')}
+          </span>
+          <span className={classes.phoneCaret} aria-hidden />
+        </span>
+        <input
+          id={id}
+          className={classes.phoneInput}
           type="tel"
           inputMode="tel"
           autoComplete="tel"
           value={phone}
-          onChange={onPhoneChange}
-          error={error}
-          optional={optional}
-          hint={error || hideHint ? undefined : t('checkout.phone.hint')}
+          onChange={(e) => onPhoneChange(e.currentTarget.value)}
+          aria-label={t('checkout.phone.label')}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error || hint ? noteId : undefined}
         />
       </div>
+      {error ? (
+        <ErrorNote id={noteId} error={error} />
+      ) : hint ? (
+        <p id={noteId} className={classes.hint}>
+          {hint}
+        </p>
+      ) : null}
     </div>
   );
 }

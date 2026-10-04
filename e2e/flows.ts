@@ -50,8 +50,8 @@ export async function fillCheckout(
 
   await expect(page.getByRole('heading', { name: 'Delivery address' })).toBeVisible();
   await page.getByRole('textbox', { name: 'Address line 1' }).fill('14 Kirkgate');
-  await page.getByRole('textbox', { name: 'City' }).fill('Leeds');
-  await page.getByRole('textbox', { name: 'ZIP / Postcode' }).fill('LS1 6BY');
+  await page.getByRole('textbox', { name: 'Town / City' }).fill('Leeds');
+  await page.getByRole('textbox', { name: 'Postcode' }).fill('LS1 6BY');
   // Pre-seeded from the shop's `defaultPhoneCountry`; the quote is keyed on it.
   await expect(page.getByRole('combobox', { name: 'Country' })).toHaveValue('GB');
   await advance();

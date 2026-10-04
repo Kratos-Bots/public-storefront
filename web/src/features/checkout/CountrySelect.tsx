@@ -6,14 +6,13 @@ import { useText } from '@/text/runtime.tsx';
 export { regionName } from '@/lib/format.ts';
 
 /**
- * Every ISO-3166-1 alpha-2 the app knows, sorted by name. There is no
- * serviceable-countries endpoint on the storefront API, and pre-filtering the
- * list to a guess would hide a country the shop actually ships to; the quote
- * answers the question honestly instead — an unserviceable country comes back
- * as a `422` and lands inline on this step (STOREFRONT.md §3.5).
- *
- * `DIAL_CODES` is the app's canonical ISO list — it is deliberately unscoped
- * for exactly this reason, so it doubles as the country roster here.
+ * The country roster. With no list from the shop (an older backend, or a shop
+ * whose shipping is not set up) this is every ISO-3166-1 alpha-2 the app knows,
+ * sorted by name; `DIAL_CODES` is the app's canonical ISO list and doubles as
+ * that roster. With `settings.shipping.countries` the picker offers only those
+ * (`allowedCountryOptions`). Either way the quote stays the authority: a
+ * country that cannot be served still answers `422` and lands inline on this
+ * step (STOREFRONT.md §3.5).
  */
 const optionsByLocale = new Map<string, Array<{ iso: string; name: string }>>();
 export function countryOptions(): Array<{ iso: string; name: string }> {
@@ -31,14 +30,22 @@ export function countryOptions(): Array<{ iso: string; name: string }> {
 /** v0.7.0 export, still read by dial-codes.test.ts; render paths call countryOptions(). */
 export const COUNTRY_OPTIONS = countryOptions();
 
+/** The shop's countries by name; an empty or missing list falls back to the full roster. */
+export function allowedCountryOptions(allowed: readonly string[] | undefined): Array<{ iso: string; name: string }> {
+  if (!allowed || allowed.length === 0) return countryOptions();
+  return allowed.map((iso) => ({ iso, name: regionName(iso) })).sort((a, b) => compareNames(a.name, b.name));
+}
+
 export interface CountrySelectProps {
   value: string;
   onChange: (iso: string) => void;
   error?: string;
   label?: string;
+  /** The shop's deliverable countries; empty or missing = every country. */
+  allowed?: readonly string[];
 }
 
-export function CountrySelect({ value, onChange, error, label }: CountrySelectProps) {
+export function CountrySelect({ value, onChange, error, label, allowed }: CountrySelectProps) {
   const { t } = useText();
   return (
     <SelectField
@@ -51,7 +58,7 @@ export function CountrySelect({ value, onChange, error, label }: CountrySelectPr
       <option value="" disabled>
         {t('checkout.address.chooseCountry')}
       </option>
-      {countryOptions().map((c) => (
+      {allowedCountryOptions(allowed).map((c) => (
         <option key={c.iso} value={c.iso}>
           {c.name}
         </option>

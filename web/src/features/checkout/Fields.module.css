@@ -198,20 +198,114 @@
   }
 }
 
-/* Dial code + national number: the code is as narrow as its longest option. */
-.phone {
+/* Dial code + national number in one frame. The frame carries the field's line
+   (underline or box), the two controls inside it are bare. */
+.phoneBox {
   display: flex;
-  gap: 0.6rem;
+  align-items: stretch;
+  min-height: 44px;
+  min-width: 0;
+  border-bottom: 1px solid var(--sf-line-strong);
+  transition: border-color 150ms ease;
 }
 
+.phoneBox:focus-within {
+  border-bottom-color: var(--sf-primary);
+}
+
+.phoneBox[data-invalid='true'] {
+  border-color: var(--sf-danger);
+}
+
+:global(:root[data-sf-input="box"]) .phoneBox {
+  border: 1px solid var(--sf-line-strong);
+  border-radius: var(--sf-card-radius);
+  background: color-mix(in srgb, var(--sf-surface) 40%, transparent);
+}
+
+:global(:root[data-sf-input="box"]) .phoneBox:focus-within {
+  border-color: var(--sf-primary);
+}
+
+:global(:root[data-sf-input="box"]) .phoneBox[data-invalid='true'] {
+  border-color: var(--sf-danger);
+}
+
+/* The prefix: what the shopper sees is the text and caret; the select sits over
+   them, invisible, so a tap opens the platform's own picker. */
 .phoneCode {
+  position: relative;
   flex: none;
-  width: 6.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-right: 0.7rem;
+  padding-right: 0.7rem;
+  border-right: 1px solid var(--sf-line);
+  color: var(--sf-text);
+  font-family: var(--sf-font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 16px;
+  line-height: 1.4;
+  white-space: nowrap;
 }
 
-.phoneNumber {
+:global(:root[data-sf-input="box"]) .phoneCode {
+  padding-left: 0.75rem;
+}
+
+.phoneSelect {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  border: 0;
+  opacity: 0;
+  appearance: none;
+  font-size: 16px; /* iOS zoom guard */
+  cursor: pointer;
+}
+
+.phoneCode:has(.phoneSelect:focus-visible) {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+/* Inside a box the ring would run over the frame's own line, so it sits just within it. */
+:global(:root[data-sf-input="box"]) .phoneCode:has(.phoneSelect:focus-visible) {
+  outline-offset: -2px;
+}
+
+.phoneCaret {
+  flex: none;
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid var(--sf-faint);
+}
+
+.phoneInput {
   flex: 1;
   min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--sf-text);
+  font-family: var(--sf-font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 16px; /* iOS zoom guard */
+  line-height: 1.4;
+}
+
+.phoneInput:focus {
+  outline: none;
+}
+
+:global(:root[data-sf-input="box"]) .phoneInput {
+  padding-right: 0.75rem;
 }
 
 /* The choice list — shipping options, payment methods, coin/network combos.
@@ -334,6 +428,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .input,
+  .phoneBox,
   .toggle,
   .choice,
   .marker,

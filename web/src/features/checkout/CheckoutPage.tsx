@@ -26,6 +26,7 @@ import {
   buildPaymentSchema,
   shippingSchema,
 } from '@/features/checkout/schemas.ts';
+import { applyShipCountries, normaliseShipCountries } from '@/features/checkout/ship-countries.ts';
 import { useQuote } from '@/features/checkout/useQuote.ts';
 import { publicOrderPath, resolveCheckoutOutcome } from '@/features/checkout/outcome.ts';
 import { GuestTurnstile, type GuestTurnstileHandle } from '@/features/checkout/GuestTurnstile.tsx';
@@ -119,6 +120,8 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
   const { t, tn } = useText();
   const settings = useSettings();
   const { contactModes, currency, features } = settings;
+  const rawShipCountries = settings.shipping?.countries;
+  const shipCountries = useMemo(() => normaliseShipCountries(rawShipCountries), [rawShipCountries]);
   const loggedIn = useSessionStore(selectIsLoggedIn);
   const guest = !loggedIn && features.guestCheckout;
   // The editor canvas stacks every step (spec section 10.3). The only thing here that reads builder mode.
@@ -156,7 +159,7 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
   const notesShown = containsVisibleType(allItems, 'CheckoutNotes');
 
   const [form, setForm] = useState<CheckoutForm>(() =>
-    seedForm(loadPersistedForm() ?? DEFAULT_FORM, contactModes.defaultPhoneCountry),
+    applyShipCountries(seedForm(loadPersistedForm() ?? DEFAULT_FORM, contactModes.defaultPhoneCountry), shipCountries),
   );
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -179,6 +182,11 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
    * one itself.
    */
   const submitLatch = useRef(false);
+
+  // Settings refetch on window focus, so the shop's countries can change under an open checkout.
+  useEffect(() => {
+    setForm((f) => applyShipCountries(f, shipCountries));
+  }, [shipCountries]);
 
   useEffect(() => {
     persistForm(form);
@@ -379,6 +387,7 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
       const parsed = addressSchema.safeParse({
         addressLine1: form.addressLine1,
         addressLine2: form.addressLine2,
+        addressLine3: form.addressLine3,
         city: form.city,
         county: form.county,
         zip: form.zip,
@@ -483,7 +492,7 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
         surname: form.surname.trim(),
         addressLine1: form.addressLine1.trim(),
         addressLine2: form.addressLine2.trim() || null,
-        addressLine3: null,
+        addressLine3: form.addressLine3.trim() || null,
         city: form.city.trim(),
         county: form.county.trim() || null,
         zip: form.zip.trim(),
@@ -601,6 +610,7 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
       patch,
       errors,
       contactModes,
+      shipCountries,
       guest,
       currency,
       quote: shownQuote,
@@ -618,7 +628,7 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
       stack,
       goTo,
     }),
-    [form, patch, errors, contactModes, guest, currency, shownQuote, method, combo, isFetching, verifying, quoteError, errorTarget, quoteMessage, order, step, kind, stack, goTo],
+    [form, patch, errors, contactModes, shipCountries, guest, currency, shownQuote, method, combo, isFetching, verifying, quoteError, errorTarget, quoteMessage, order, step, kind, stack, goTo],
   );
   const value = useMemo(() => ({ data, views: CHECKOUT_VIEWS }), [data]);
 

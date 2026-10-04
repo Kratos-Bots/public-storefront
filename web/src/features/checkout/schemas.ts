@@ -68,6 +68,7 @@ function optionalTrimmed(rule: z.ZodString) {
 export const addressSchema = z.object({
   addressLine1: z.string().trim().min(1, required).max(255),
   addressLine2: optionalTrimmed(z.string().trim().max(255)),
+  addressLine3: optionalTrimmed(z.string().trim().max(255)),
   city: z.string().trim().min(1, required).max(100),
   county: optionalTrimmed(z.string().trim().max(100)),
   zip: z.string().trim().min(1, required).max(20),

@@ -14,6 +14,7 @@ export interface CheckoutForm {
   phonePrefixTouched: boolean;
   addressLine1: string;
   addressLine2: string;
+  addressLine3: string;
   city: string;
   county: string;
   zip: string;
@@ -36,6 +37,7 @@ export const DEFAULT_FORM: CheckoutForm = {
   phonePrefixTouched: false,
   addressLine1: '',
   addressLine2: '',
+  addressLine3: '',
   city: '',
   county: '',
   zip: '',

@@ -50,6 +50,8 @@ export interface CheckoutData {
   patch: (next: Partial<CheckoutForm>) => void;
   errors: Record<string, string>;
   contactModes: ContactModes;
+  /** Where the shop delivers (clean ISO codes). Empty = unknown: the pickers list every country. */
+  shipCountries: readonly string[];
   guest: boolean;
   currency: string;
   /** The shown quote (the last good one while a refetch fails). */

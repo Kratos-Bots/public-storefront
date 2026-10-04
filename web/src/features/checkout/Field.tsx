@@ -4,13 +4,13 @@ import classes from '@/features/checkout/Fields.module.css';
 import { useText } from '@/text/runtime.tsx';
 
 /** The "Optional" chip beside a field label. */
-function OptionalTag() {
+export function OptionalTag() {
   const { t } = useText();
   return <span className={classes.optional}>{t('checkout.field.optional')}</span>;
 }
 
 /** A field's error: a registered key (set by the checkout page) resolves; anything else (zod's resolved text, a backend message) shows as is. */
-function ErrorNote({ id, error }: { id: string; error: string }) {
+export function ErrorNote({ id, error }: { id: string; error: string }) {
   const { msg } = useText();
   return (
     <span id={id} className={classes.error}>

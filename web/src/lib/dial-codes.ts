@@ -140,3 +140,27 @@ export function composePhoneNumber(iso: string | null | undefined, national: str
 
   return digitsOnly ? `+${dial}${digitsOnly}` : undefined;
 }
+
+/** Countries whose national numbers keep their leading zero after the calling code. */
+const KEEPS_LEADING_ZERO = new Set(['IT', 'SM', 'VA']);
+
+/**
+ * The number as the shopper should read it back. `composePhoneNumber` deliberately
+ * leaves a national trunk zero in ("+4407801…") because the backend's parser strips
+ * it per country; shown to the shopper that looks like a mistake, so for display one
+ * leading zero is dropped, except where it is part of the number. Display only:
+ * never send this value, the backend stays the authority on what is stored.
+ */
+export function displayPhoneNumber(iso: string | null | undefined, national: string | null | undefined): string | undefined {
+  const composed = composePhoneNumber(iso, national);
+  if (!composed) return undefined;
+
+  const trimmed = (national ?? '').trim();
+  const digits = trimmed.replace(/\D/g, '');
+  // Already international ("+…" or the "00…" spelling): show exactly what is sent.
+  if (trimmed.startsWith('+') || digits.startsWith('00')) return composed;
+
+  const dial = dialCodeFor(iso);
+  if (!dial || KEEPS_LEADING_ZERO.has((iso ?? '').toUpperCase())) return composed;
+  return digits.length > 1 && digits.startsWith('0') ? `+${dial}${digits.slice(1)}` : composed;
+}

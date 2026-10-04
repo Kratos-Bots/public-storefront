@@ -104,7 +104,7 @@ function Contact({ props, styleAttrs }: PartViewProps) {
   return framed(d, 'contact', (
     <ContactStep
       form={d.form} patch={d.patch} errors={d.errors} contactModes={d.contactModes} guest={d.guest}
-      before={slotOf(props, 'before')} after={slotOf(props, 'after')} rootAttrs={styleAttrs}
+      before={slotOf(props, 'before')} after={slotOf(props, 'after')} rootAttrs={styleAttrs} countries={d.shipCountries}
     />
   ));
 }
@@ -114,7 +114,7 @@ function Address({ props, styleAttrs }: PartViewProps) {
   if (!d.stack && d.kind !== 'address') return null;
   return framed(d, 'address', (
     <AddressStep
-      form={d.form} patch={d.patch} errors={d.errors} notice={d.addressNotice}
+      form={d.form} patch={d.patch} errors={d.errors} notice={d.addressNotice} countries={d.shipCountries}
       before={slotOf(props, 'before')} after={slotOf(props, 'after')} rootAttrs={styleAttrs}
     />
   ));

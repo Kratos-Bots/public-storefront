@@ -88,6 +88,7 @@ import { useCartStore } from '@/stores/cart.ts';
 import { usePrimaryActionStore } from '@/stores/primary-action.ts';
 import { useSessionStore } from '@/stores/session.ts';
 import { CheckoutPage } from '@/features/checkout/CheckoutPage.tsx';
+import { DEFAULT_FORM } from '@/features/checkout/form-state.ts';
 
 const quoteMock = vi.mocked(quote);
 const guestQuoteMock = vi.mocked(guestQuote);
@@ -260,7 +261,7 @@ async function walkToReview() {
   pressContinue();
 
   type('Address line 1', '1 Main St');
-  type('City', 'London');
+  type('Town / City', 'London');
   type(/postcode/i, 'SW1A 1AA');
   fireEvent.change(screen.getByLabelText('Country'), { target: { value: 'GB' } });
   pressContinue();
@@ -347,6 +348,55 @@ describe('CheckoutPage — signed in', () => {
     );
     expect(useCartStore.getState().lines).toEqual([]);
     expect(localStorage.getItem('sf-checkout-v1')).toBeNull();
+  });
+
+  describe('shippable countries', () => {
+    const noDefault = { emailMode: 'required', phoneMode: 'optional', defaultPhoneCountry: null } as const;
+    const country = () => screen.getByLabelText('Country') as HTMLSelectElement;
+    /** Mounts and moves from Contact to Address. */
+    async function toAddress() {
+      mount();
+      await settle();
+      type('First name', 'Ada');
+      type('Surname', 'Lovelace');
+      type('Email', 'ada@example.com');
+      pressContinue();
+    }
+
+    it('drops a remembered country the shop no longer delivers to', async () => {
+      localStorage.setItem('sf-checkout-v1', JSON.stringify({ ...DEFAULT_FORM, country: 'NO' }));
+      state.settings = { ...settings(false), contactModes: noDefault, shipping: { countries: ['GB', 'IE'] } };
+      await toAddress();
+      expect(country().value).toBe('');
+      expect(Array.from(country().options).map((o) => o.value).filter(Boolean).sort()).toEqual(['GB', 'IE']);
+    });
+
+    it('a single-country shop has the country chosen', async () => {
+      state.settings = { ...settings(false), contactModes: noDefault, shipping: { countries: ['IE'] } };
+      await toAddress();
+      expect(country().value).toBe('IE');
+    });
+
+    it('a list that shrinks under an open checkout clears the country', async () => {
+      state.settings = { ...settings(false), shipping: { countries: ['GB', 'IE'] } };
+      const view = mount();
+      await settle();
+      type('First name', 'Ada');
+      type('Surname', 'Lovelace');
+      type('Email', 'ada@example.com');
+      pressContinue();
+      fireEvent.change(country(), { target: { value: 'GB' } });
+      expect(country().value).toBe('GB');
+      state.settings = { ...state.settings, shipping: { countries: ['IE', 'FR'] } };
+      view.rerender(<Wrapper><CheckoutPage /></Wrapper>);
+      await settle();
+      expect(country().value).toBe('');
+    });
+
+    it('with no list from the backend every country is offered', async () => {
+      await toAddress();
+      expect(country().options.length).toBeGreaterThan(100);
+    });
   });
 
   describe('external payment inside Telegram', () => {
