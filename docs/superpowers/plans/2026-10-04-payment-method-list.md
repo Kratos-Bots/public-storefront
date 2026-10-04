@@ -545,7 +545,7 @@ Expected: PASS.
   }
 ```
 
-If `getPublicStorefrontSettings` (the anonymous settings the storefront reads) is built from `getStorefrontSettings`, make sure `paymentMethods` and `paymentMethodChoices` are NOT included in the public response: check its projection and add a test asserting the public settings have neither key.
+If `getPublicStorefrontSettings` (the anonymous settings the storefront reads) is built from `getStorefrontSettings`, do NOT build the admin payment view inside `getStorefrontSettings`: build it only in the admin GET path (the controller/service function behind `GET /storefront-settings`), so an anonymous settings fetch pays no extra gateway query. Either way make sure `paymentMethods` and `paymentMethodChoices` are NOT included in the public response: check its projection and add a test asserting the public settings have neither key.
 
 - [ ] **Step 6: Add an integration test of save then read**
 
@@ -771,6 +771,18 @@ In `selectPublicPaymentMethod`, after the existing refusals of `store_credit`, t
     throw new ValidationError('That payment method is not available for this order');
   }
 ```
+
+The check must not strand a live order: when the order already has a pending payment whose method equals `input.method` (the customer is retrying or re-opening the method they already chose), skip the offered-list check, so a method hidden or removed from the list after the order was placed can still be paid. Add the test:
+
+```ts
+it('a pending payment on a method since hidden from the list can still be re-selected and paid', async () => {
+  // order has a pending 'paypal' payment; the list now offers only stripe
+  const result = await selectPublicPaymentMethod(reference, accessKey, { method: 'paypal' });
+  expect(result.method).toBe('paypal');
+});
+```
+
+Also trace how the order page completes an existing pending payment (the active payment's stored `checkoutUrl`, crypto txid submission): confirm in the report that neither path goes through this check.
 
 Match the error class and wording style the function already uses for an unavailable method (if it throws a `ConflictError` or a coded message elsewhere in this function, use the same class; the storefront shows the message as given).
 
@@ -1048,6 +1060,8 @@ keeping the fee computation where it is, and the comment about preferring the cu
 
 In `addPayment` (around 2307-2332) make the same replacement with `order.reference`. The `storeFrontUrl must be configured` throw now lives only in the resolver: delete both inline copies. Import `resolveReturnUrls` from `../payment-gateways/return-urls`.
 
+Then run `grep -rn "createSession(" src --include=*.ts | grep -v test` and `grep -rn "successUrl\|cancelUrl\|payment/success\|payment/cancel" src --include=*.ts | grep -v test`: every place that builds a customer return URL for a processor (check `switchPaymentMethod`, admin-created payments, any resend-link or reconcile path) must get its URLs from `resolveReturnUrls`. List each caller and what you did in the report.
+
 Add to the orders tests that cover `createGatewayCheckoutSession` (find with `grep -rn "createGatewayCheckoutSession" src --include=*.test.ts`), using their processor mock:
 
 ```ts
@@ -1084,7 +1098,7 @@ it('accepts it with an https return address, and for Revolut with none', async (
 });
 ```
 
-following that test file's fixtures and helper names. Confirm how the update treats config keys: if it rejects keys not in `configFields`, the two new keys are now in `configFields` for the seven; if booleans are coerced to strings somewhere, keep storing `'true'` / `'false'`.
+following that test file's fixtures and helper names. Check every existing per-gateway `normalizeConfig` in `registry.ts` (Paygate, Whop, Peer Pay and any other): none may drop `hideShopAddress` or `neutralReturnUrl` from the config it returns; add a test that saving the two keys on Whop and on Peer Pay stores them. Confirm how the update treats config keys: if it rejects keys not in `configFields`, the two new keys are now in `configFields` for the seven; if booleans are coerced to strings somewhere, keep storing `'true'` / `'false'`.
 
 - [ ] **Step 9: Docs**
 
@@ -1365,7 +1379,7 @@ built with that file's render helper and fixtures.
 
 - [ ] **Step 6: Fixtures**
 
-In `web/src/builder/editor/fixtures.ts` and `fixture-api.ts`, leave fixture data as it is unless the compiler requires a change (the `slot` field is now optional, so existing fixture objects still type-check). Do NOT change fixture content that goldens render: `cd web && npx vitest run` must show every golden test still passing without regenerating anything. If a golden differs, the cause is a rendered name that changed: the order page fixtures' methods carry `displayName`s of gateways ("Stripe") where the page used to print "Card". In that case set the fixture method's `displayName` to the text the golden shows (`'Card'`, `'Crypto'`) so the rendered page is unchanged, and say so in the report.
+In `web/src/builder/editor/fixtures.ts` and `fixture-api.ts`, leave fixture data as it is unless the compiler requires a change (the `slot` field is now optional, so existing fixture objects still type-check). Do NOT change fixture content that goldens render: `cd web && npx vitest run` must show every golden test still passing without regenerating anything. If a golden differs, the cause is a rendered name that changed: the order page fixtures' methods carry `displayName`s of gateways ("Stripe") where the page used to print "Card". The builder fixture's methods (`fixtures.ts:73-74`, `displayName: 'Card payment'`) feed BOTH the checkout quote and the order page's `payment-options` (`fixture-api.ts:93`), so a fixture name cannot keep both pages unchanged. If a golden or baseline of an order page differs only because the method row now prints the fixture's `displayName` where it printed the site text "Card", that is an intended change of this plan, but regenerating is the owner's call: STOP, report the exact files and the one-line diff of each, and wait.
 
 - [ ] **Step 7: Run everything**
 
