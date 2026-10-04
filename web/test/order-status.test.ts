@@ -274,6 +274,12 @@ describe('slotLabel', () => {
     expect(slotLabel(method({ displayName: 'Card', feeRateText: '+2%' }))).toBe('Card (2% fee)');
   });
 
+  it('falls back to the method id as words when the name is empty', () => {
+    expect(slotLabel(method({ method: 'uk_bank_transfer', displayName: '  ' }))).toBe('uk bank transfer');
+    expect(slotLabel(method({ method: 'paypal', displayName: '', feeRateText: '+2%' }))).toBe('paypal (2% fee)');
+    expect(slotLabel(method({ method: 'crypto_static', displayName: '', feeRateText: '−3%' }))).toBe('crypto static (3% discount)');
+  });
+
   it('keeps a bank transfer’s own name', () => {
     expect(slotLabel(method({ type: 'offline', displayName: 'UK Bank Transfer' }))).toBe('UK Bank Transfer');
   });

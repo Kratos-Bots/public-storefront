@@ -4,6 +4,7 @@ import type {
   PublicOrder,
 } from '@/types/public-order.ts';
 import type { PaymentMethod } from '@/types/checkout.ts';
+import { methodName } from '@/lib/method-name.ts';
 import { textSnapshot } from '@/text/snapshot.ts';
 
 // The order page's payment logic, kept out of the components that render it.
@@ -101,7 +102,7 @@ export function paymentSignature(order: PublicOrder): string {
  */
 export function slotLabel(method: PaymentMethod): string {
   const { t } = textSnapshot();
-  const base = method.displayName;
+  const base = methodName(method);
   const rate = method.feeRateText?.trim();
   if (!rate) return base;
   if (rate.startsWith('−') || rate.startsWith('-')) return t('order.method.withDiscount', { method: base, rate: rate.slice(1) });

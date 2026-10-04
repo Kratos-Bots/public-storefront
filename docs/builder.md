@@ -757,8 +757,10 @@ submitted crypto transaction id). Its wording is `order.cancel.*`.
 **Payment method names.** The names on the order page's method picker, the checkout's Payment and Review
 steps, and the account order's payment list are the shop's own, set in the admin app (Storefront settings
 -> Payments) and sent by the backend with each method; they are not Site text, and the two Site text
-entries "Card" and "Crypto" no longer exist. Only the fee wording around a name is still Site text
-(`order.method.withDiscount`, `order.method.withFee`).
+entries "Card" and "Crypto" no longer exist. On the order page the fee wording around a name is still Site text
+(`order.method.withDiscount`, `order.method.withFee`); on the checkout's Payment step the fee note under a name
+comes from the backend (its `feeLabel` and rate), not from Site text. A method sent with an empty name is shown by
+its id read as words.
 
 **Account order parts.** The `OrderBalance` part (the account order page's "Balance due") shows the
 balance and, when the order can still be paid, the same payment section as the order page, fed

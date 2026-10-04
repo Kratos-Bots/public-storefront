@@ -16,11 +16,12 @@ interface OpenOptions extends InstallMocksOptions {
   path: string;
   /** A server cart with one line, so /checkout stays on the checkout. */
   cart?: boolean;
+  width?: number;
 }
 
 async function open(page: Page, o: OpenOptions): Promise<MockHandle> {
-  const { path, cart, ...rest } = o;
-  await page.setViewportSize({ width: 1280, height: 900 });
+  const { path, cart, width = 1280, ...rest } = o;
+  await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
   await page.clock.setFixedTime(FIXED_NOW);
   const mocks = await installMocks(page, { layout: 'storefront', session: true, ...rest });
   if (cart) {
@@ -120,12 +121,13 @@ test.describe('payment methods · checkout', () => {
     const mocks = await open(page, { path: '/checkout', cart: true, paymentMethods: FOUR_METHODS });
     await toPayment(page, mocks);
     await chooseMethod(page, 'Pay with crypto');
+    await expect(page.getByText('Stablecoins', { exact: true })).toBeVisible();
     await chooseMethod(page, 'USDT');
     await page.getByRole('button', { name: 'Continue' }).click();
     // The shop's name for the method, then the combo, in the one line the Review step gives the payment.
     await expect(page.getByText(/^Pay with crypto\s*USDT · Polygon$/)).toBeVisible();
     await placeOrder(page, mocks);
-    expect(mocks.state.checkouts[0]).toMatchObject({ paymentMethod: 'crypto', coin: 'USDT', network: 'polygon' });
+    expect(mocks.state.checkouts[0]).toMatchObject({ paymentMethod: 'crypto', coin: 'usdt', network: 'polygon' });
   });
 
   test('4 · Bank transfer (UK) shows the offline note, and the order page shows the transfer details', async ({ page }) => {
@@ -175,6 +177,7 @@ test.describe('payment methods · the order page', () => {
     for (const row of await pickerRows(page).all()) await expect(row).toBeEnabled();
     // Another method can be tried straight away.
     await pickerRows(page).filter({ hasText: 'PayPal balance' }).click();
+    // The second attempt reached the backend first; only then can the message on screen be its answer.
     await expect.poll(() => mocks.state.methods).toEqual([{ method: 'stripe' }, { method: 'paypal' }]);
     await expect(page.getByText('That payment method is not available for this order')).toBeVisible();
   });
@@ -223,5 +226,35 @@ test.describe('payment methods · an older backend', () => {
     await expect(pickerRows(page).first()).toContainText('Card payment');
     await pickerRows(page).first().click();
     await expect.poll(() => mocks.state.methods).toEqual([{ method: 'sushipp' }]);
+  });
+});
+
+test.describe('payment methods · a long name', () => {
+  const LONG = 'Pay-by-card-or-contactless-wallet-instant'.slice(0, 40);
+  const long = FOUR_METHODS.map((m) => (m.method === 'stripe' ? { ...m, displayName: LONG } : m));
+
+  /** The element's right edge sits inside the viewport, and the page does not scroll sideways. */
+  async function expectContained(page: Page, figure: Locator): Promise<void> {
+    const box = (await figure.boundingBox())!;
+    const width = page.viewportSize()!.width;
+    expect(box.x + box.width).toBeLessThanOrEqual(width);
+    const scrolls = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+    expect(scrolls).toBe(false);
+  }
+
+  test('10 · an unbroken 40-character name wraps at 390 px on the Payment step: the total stays on screen', async ({ page }) => {
+    expect(LONG).toHaveLength(40);
+    const mocks = await open(page, { path: '/checkout', cart: true, width: 390, paymentMethods: long });
+    await toPayment(page, mocks);
+    const row = methodLabels(page).filter({ hasText: LONG });
+    await expect(row).toBeVisible();
+    await expectContained(page, row.getByText(/47\.45/).last());
+  });
+
+  test('10b · the same name wraps in the order page picker', async ({ page }) => {
+    await open(page, { path: ORDER_PATH, session: false, width: 390, paymentMethods: long, order: choosing() });
+    const pick = page.getByRole('button', { name: new RegExp(`^${LONG}`) });
+    await expect(pick).toBeVisible();
+    await expectContained(page, pick.getByText(/47\.45/).last());
   });
 });

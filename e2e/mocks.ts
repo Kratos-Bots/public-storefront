@@ -103,10 +103,13 @@ export async function installTelegramStub(page: Page): Promise<void> {
 /** Four methods under the shop's own names, in the admin's list order, as the backend answers them: crypto first, a card gateway, a fee-bearing wallet, an offline bank transfer. Totals match the default quote's amount due. */
 export const FOUR_METHODS: PaymentMethod[] = [
   { method: 'crypto', displayName: 'Pay with crypto', type: 'crypto', details: null, feeType: 'percent', feeValue: -3, feeRateText: '\u22123%', feeLabel: 'Pay with crypto discount', fee: -1.42, chargeTotal: 46.03,
-    cryptoOptions: [{ coin: 'USDT', network: 'polygon', coinLabel: 'USDT', networkLabel: 'Polygon', feeType: 'percent', feeValue: -3, feeRateText: '\u22123%', feeLabel: 'Pay with crypto discount', fee: -1.42, chargeTotal: 46.03 }] },
+    cryptoOptions: [
+      { coin: 'btc', network: 'bitcoin', coinLabel: 'BTC', networkLabel: 'Bitcoin', feeType: 'percent', feeValue: -3, feeRateText: '\u22123%', feeLabel: 'Pay with crypto discount', fee: -1.42, chargeTotal: 46.03 },
+      { coin: 'usdt', network: 'polygon', coinLabel: 'USDT', networkLabel: 'Polygon', feeType: 'percent', feeValue: -3, feeRateText: '\u22123%', feeLabel: 'Pay with crypto discount', fee: -1.42, chargeTotal: 46.03 },
+    ] },
   { method: 'stripe', displayName: 'Pay by card', type: 'gateway', details: null, feeType: null, feeValue: null, feeRateText: '', feeLabel: '', fee: 0, chargeTotal: 47.45 },
   { method: 'paypal', displayName: 'PayPal balance', type: 'gateway', details: null, feeType: 'percent', feeValue: 2, feeRateText: '+2%', feeLabel: 'PayPal balance fee', fee: 0.95, chargeTotal: 48.4 },
-  { method: 'uk_bank_transfer', displayName: 'Bank transfer (UK)', type: 'offline', details: { 'Account name': 'Example Shop Ltd', 'Sort code': '00-00-00', 'Account number': '00000000' }, feeType: null, feeValue: null, feeRateText: '', feeLabel: '', fee: 0, chargeTotal: 47.45 },
+  { method: 'uk_bank_transfer', displayName: 'Bank transfer (UK)', type: 'offline', details: { 'Account Name': 'Example Shop Ltd', 'Sort Code': '00-00-00', 'Account Number': '00000000' }, feeType: null, feeValue: null, feeRateText: '', feeLabel: '', fee: 0, chargeTotal: 47.45 },
 ];
 
 export interface InstallMocksOptions {

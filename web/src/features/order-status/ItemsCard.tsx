@@ -67,8 +67,8 @@ export function ItemsCard({ items, totals, promotions, currency, rootAttrs }: It
           <TotalRow label={t('common.totals.discount')} figure={`− ${money(otherDiscount(totals.discountAmount, promotions?.discount))}`} good />
         ) : null}
         {/* Deliberately NOT `totals.paymentFeeLabel`: the backend builds that from
-            the gateway's display name ('OxaPay discount'), and this page never
-            names the processor to the customer. */}
+            the shop's own name for the method ('Pay with crypto discount'); this
+            page words the row from its own text instead. */}
         {fee !== 0 ? (
           <TotalRow
             label={fee < 0 ? t('order.items.paymentDiscount') : t('common.totals.paymentFee')}
