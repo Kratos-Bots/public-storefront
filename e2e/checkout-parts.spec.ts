@@ -358,7 +358,7 @@ test.describe('checkout · collection points', () => {
 
     await placeOrder(page);
     expect(mocks.state.servicePointSearches).toEqual([{ country: 'GB', postalCode: 'LS1 6BY' }]);
-    expect(mocks.state.quotes.at(-1)).toMatchObject({ country: 'GB', deliveryMethod: 'collection', servicePointCarrier: 'evri' });
+    await expect.poll(() => mocks.state.quotes.at(-1)).toMatchObject({ country: 'GB', deliveryMethod: 'collection', servicePointCarrier: 'evri' });
     expect(mocks.state.checkouts[0]!.shippingAddress).toEqual({
       firstName: 'Ada', surname: 'Sterling', addressLine1: 'Vicar Lane 2', addressLine2: null, addressLine3: null,
       city: 'Leeds', county: null, zip: 'LS1 7JH', country: 'GB',
@@ -403,7 +403,7 @@ test.describe('checkout · collection points', () => {
     expect(mocks.state.checkouts[0]!.shippingAddress).toMatchObject({
       addressLine1: 'Kirkgate 14', servicePointId: '9001', servicePointCarrier: 'inpost', servicePointName: 'Northbound Locker A',
     });
-    expect(mocks.state.quotes.at(-1)).toMatchObject({ deliveryMethod: 'collection', servicePointCarrier: 'inpost' });
+    await expect.poll(() => mocks.state.quotes.at(-1)).toMatchObject({ deliveryMethod: 'collection', servicePointCarrier: 'inpost' });
   });
 
   test('switching back to home restores the address and sends no point', async ({ page }) => {
