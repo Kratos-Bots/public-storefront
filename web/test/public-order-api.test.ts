@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   InvalidLinkError,
+  OrderNotCancellableError,
+  cancelPublicOrder,
   PaymentConflictError,
   fetchPaymentOptions,
   fetchPublicOrder,
@@ -177,5 +179,34 @@ describe('submitCryptoTxid', () => {
     mockFetch(422, { success: false, data: null, error: 'That transaction has already been used' });
     const err = await submitCryptoTxid('AB12CD', 'k3y', 11, '0xabc').catch((e: unknown) => e);
     expect(errorMessage(err)).toBe('That transaction has already been used');
+  });
+});
+
+describe('cancelPublicOrder', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('POSTs to the order link cancel route', async () => {
+    const seen = captureFetch(200, { success: true, data: { reference: 'AB12CD', status: 'cancelled' }, error: null });
+    await expect(cancelPublicOrder('AB12CD', 'key9')).resolves.toEqual({ reference: 'AB12CD', status: 'cancelled' });
+    expect(seen[0]!.method).toBe('POST');
+    expect(seen[0]!.url).toContain('orders/AB12CD/key9/cancel');
+  });
+
+  it('maps 409 ORDER_NOT_CANCELLABLE:<reason> to OrderNotCancellableError', async () => {
+    mockFetch(409, { success: false, data: null, error: 'ORDER_NOT_CANCELLABLE:bank_transfer' });
+    const err = await cancelPublicOrder('AB12CD', 'key9').catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(OrderNotCancellableError);
+    expect((err as OrderNotCancellableError).reason).toBe('bank_transfer');
+  });
+
+  it('treats an unknown reason as not_pending', async () => {
+    mockFetch(409, { success: false, data: null, error: 'ORDER_NOT_CANCELLABLE:whatever' });
+    const err = await cancelPublicOrder('AB12CD', 'key9').catch((e: unknown) => e);
+    expect((err as OrderNotCancellableError).reason).toBe('not_pending');
+  });
+
+  it('maps 404 to InvalidLinkError', async () => {
+    mockFetch(404, { success: false, data: null, error: 'nope' });
+    await expect(cancelPublicOrder('AB12CD', 'bad')).rejects.toBeInstanceOf(InvalidLinkError);
   });
 });

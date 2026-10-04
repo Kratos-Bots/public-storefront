@@ -73,6 +73,20 @@ export default defineTextArea('order', {
   'address.title': { en: 'Delivery address', max: 40 },
   'address.collectFrom': { en: 'Collect from', max: 40 },
 
+  // Cancelling an unpaid order.
+  'cancel.action': { en: 'Cancel order', max: 40 },
+  'cancel.confirmTitle': { en: 'Cancel order {reference}?', max: 80 },
+  'cancel.confirmBody': { en: 'The order will be cancelled and nothing will be charged. This cannot be undone.', max: 200 },
+  'cancel.confirm': { en: 'Yes, cancel it', max: 40 },
+  'cancel.keep': { en: 'Keep the order', max: 40 },
+  'cancel.working': { en: 'Cancelling…', max: 40 },
+  'cancel.done': { en: 'Order {reference} was cancelled.', max: 120 },
+  'cancel.contact': { en: 'To cancel this order, contact us: a payment may already be on its way.', max: 200 },
+  'cancel.refusedPaid': { en: 'This order has already been paid, so it can no longer be cancelled here.', max: 200 },
+  'cancel.refusedInFlight': { en: 'A payment may already be on its way, so this order cannot be cancelled here. Contact us and we will help.', max: 220 },
+  'cancel.refusedGone': { en: 'This order is no longer waiting for payment.', max: 160 },
+  'cancel.failed': { en: "We couldn't cancel the order. Please try again.", max: 160 },
+
   // Parcels.
   'shipment.parcel': { en: 'Parcel', max: 40 },
   'shipment.untitled': { en: 'On its way', max: 60 },

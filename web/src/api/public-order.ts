@@ -130,3 +130,32 @@ export async function submitCryptoTxid(
     ? data.verificationStatus
     : 'checking';
 }
+
+/** 409 `ORDER_NOT_CANCELLABLE:<reason>` — the order cannot be cancelled by the customer (any more). */
+export class OrderNotCancellableError extends Error {
+  readonly reason: 'not_pending' | 'paid' | 'bank_transfer' | 'crypto_submitted';
+  constructor(reason: OrderNotCancellableError['reason']) {
+    super('Order cannot be cancelled');
+    this.name = 'OrderNotCancellableError';
+    this.reason = reason;
+  }
+}
+
+const CANCEL_REASONS = ['not_pending', 'paid', 'bank_transfer', 'crypto_submitted'] as const;
+
+/** Maps the backend's `409 ORDER_NOT_CANCELLABLE:<reason>`; anything else is rethrown. */
+export function asCancelError(err: unknown): never {
+  if (err instanceof ApiError && err.status === 409) {
+    const reason = err.message.split(':')[1];
+    throw new OrderNotCancellableError(CANCEL_REASONS.find((r) => r === reason) ?? 'not_pending');
+  }
+  throw err;
+}
+
+/** Cancel through the order's own link (a guest, or anyone holding the link). */
+export function cancelPublicOrder(reference: string, accessKey: string): Promise<{ reference: string; status: string }> {
+  return unwrap<{ reference: string; status: string }>(api.post(`${base(reference, accessKey)}/cancel`)).catch((err: unknown) => {
+    if (err instanceof ApiError && err.status === 404) throw new InvalidLinkError();
+    return asCancelError(err);
+  });
+}
