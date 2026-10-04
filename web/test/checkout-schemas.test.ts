@@ -240,3 +240,20 @@ describe('buildPaymentSchema', () => {
     expect(result.success).toBe(true);
   });
 });
+
+describe('addressSchema address line 3', () => {
+  const base = { addressLine1: '1 High St', city: 'Leeds', zip: 'LS1 6BY', country: 'GB' };
+  it('accepts and trims a third line', () => {
+    const r = addressSchema.safeParse({ ...base, addressLine3: '  Flat 2  ' });
+    expect(r.success && r.data.addressLine3).toBe('Flat 2');
+  });
+  it('treats a blank or missing third line as absent', () => {
+    for (const addressLine3 of ['', '   ', undefined]) {
+      const r = addressSchema.safeParse({ ...base, addressLine3 });
+      expect(r.success && r.data.addressLine3).toBeUndefined();
+    }
+  });
+  it('rejects a third line over 255 characters', () => {
+    expect(addressSchema.safeParse({ ...base, addressLine3: 'x'.repeat(256) }).success).toBe(false);
+  });
+});

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DIAL_CODES, composePhoneNumber, dialCodeFor } from '@/lib/dial-codes.ts';
+import { DIAL_CODES, composePhoneNumber, dialCodeFor, displayPhoneNumber } from '@/lib/dial-codes.ts';
 import { COUNTRY_OPTIONS } from '@/features/checkout/CountrySelect.tsx';
 
 /**
@@ -48,5 +48,32 @@ describe('dial codes — French territories', () => {
   it('an already-international territory number wins over a France prefix', () => {
     expect(composePhoneNumber('FR', '+590 690 12 34 56')).toBe('+590690123456');
     expect(composePhoneNumber('FR', '00590690123456')).toBe('+590690123456');
+  });
+});
+
+describe('displayPhoneNumber', () => {
+  it('drops one leading zero where the country drops it', () => {
+    expect(displayPhoneNumber('GB', '07801 123456')).toBe('+447801123456');
+    expect(displayPhoneNumber('FR', '06 12 34 56 78')).toBe('+33612345678');
+    expect(displayPhoneNumber('IE', '087 123 4567')).toBe('+353871234567');
+  });
+  it('keeps the zero for Italy, San Marino and the Vatican', () => {
+    expect(displayPhoneNumber('IT', '06 1234567')).toBe('+39061234567');
+    expect(displayPhoneNumber('SM', '0549 123456')).toBe('+3780549123456');
+    expect(displayPhoneNumber('VA', '06 69812345')).toBe(composePhoneNumber('VA', '06 69812345'));
+  });
+  it('leaves a number with no leading zero alone', () => {
+    expect(displayPhoneNumber('GB', '7801 123456')).toBe('+447801123456');
+  });
+  it('shows already-international input exactly as it will be sent', () => {
+    expect(displayPhoneNumber('FR', '+44 7801 123456')).toBe('+447801123456');
+    expect(displayPhoneNumber('FR', '0044 7801 123456')).toBe('+447801123456');
+  });
+  it('matches composePhoneNumber when there is no prefix, and is undefined for a blank', () => {
+    expect(displayPhoneNumber('', '07801 123456')).toBe(composePhoneNumber('', '07801 123456'));
+    expect(displayPhoneNumber('GB', '   ')).toBeUndefined();
+  });
+  it('a lone zero is not stripped to nothing', () => {
+    expect(displayPhoneNumber('GB', '0')).toBe('+440');
   });
 });

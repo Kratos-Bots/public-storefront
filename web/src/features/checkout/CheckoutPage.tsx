@@ -379,6 +379,7 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
       const parsed = addressSchema.safeParse({
         addressLine1: form.addressLine1,
         addressLine2: form.addressLine2,
+        addressLine3: form.addressLine3,
         city: form.city,
         county: form.county,
         zip: form.zip,
@@ -483,7 +484,7 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
         surname: form.surname.trim(),
         addressLine1: form.addressLine1.trim(),
         addressLine2: form.addressLine2.trim() || null,
-        addressLine3: null,
+        addressLine3: form.addressLine3.trim() || null,
         city: form.city.trim(),
         county: form.county.trim() || null,
         zip: form.zip.trim(),

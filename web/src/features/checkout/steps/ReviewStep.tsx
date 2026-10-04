@@ -4,7 +4,7 @@ import type { StepKind } from '@/builder/family-checkout.ts';
 import type { CryptoOption, PaymentMethod, Quote } from '@/types/checkout.ts';
 import type { CheckoutForm } from '@/features/checkout/form-state.ts';
 import { countryName } from '@/features/checkout/CountrySelect.tsx';
-import { composePhoneNumber } from '@/lib/dial-codes.ts';
+import { displayPhoneNumber } from '@/lib/dial-codes.ts';
 import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/checkout/steps/Steps.module.css';
 
@@ -33,7 +33,7 @@ export interface ReviewStepProps {
 export function ReviewStep({ form, quote, method, combo, order, onEdit, before, after, rootAttrs }: ReviewStepProps) {
   const { t } = useText();
   const shipping = quote?.shippingOptions.find((o) => o.id === form.shippingOptionId);
-  const phone = composePhoneNumber(form.phonePrefix, form.phone);
+  const phone = displayPhoneNumber(form.phonePrefix, form.phone);
 
   const slips: Record<Exclude<StepKind, 'review'>, { head: 'checkout.steps.contact' | 'checkout.steps.addressTitle' | 'checkout.steps.shipping' | 'checkout.steps.payment'; body: ReactNode }> = {
     contact: {
@@ -52,6 +52,7 @@ export function ReviewStep({ form, quote, method, combo, order, onEdit, before, 
         <>
           {form.addressLine1}
           {form.addressLine2 ? <span>{form.addressLine2}</span> : null}
+          {form.addressLine3 ? <span>{form.addressLine3}</span> : null}
           <span>
             {form.city}
             {form.county ? `, ${form.county}` : ''} {form.zip}
