@@ -47,7 +47,7 @@ function PrefixOptions({ options }: { options: PrefixOption[] }) {
     <>
       {options.map((o) => (
         <option key={o.iso} value={o.iso}>
-          {`+${o.dial}  ${o.name}`}
+          {`+${o.dial}\u00a0\u00a0${o.name}`}
         </option>
       ))}
     </>

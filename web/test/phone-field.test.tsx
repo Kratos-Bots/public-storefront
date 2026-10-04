@@ -27,7 +27,7 @@ describe('PhoneField', () => {
   it('options read prefix then country', () => {
     mount();
     const gb = Array.from(picker().options).find((o) => o.value === 'GB');
-    expect(gb?.textContent).toBe('+44  United Kingdom');
+    expect(gb?.textContent).toBe('+44\u00a0\u00a0United Kingdom');
   });
 
   it('is one field: one visible label, and the number input is named Phone', () => {
