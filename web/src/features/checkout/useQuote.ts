@@ -148,7 +148,10 @@ export function useQuote(form: CheckoutForm, { guest, turnstileToken }: UseQuote
   // key); placeholder data is the previous key's, so the remembered key stays put.
   const dataOptionsKey = useRef<string | null>(null);
   if (query.data !== undefined && !query.isPlaceholderData) dataOptionsKey.current = optionsKey(debounced);
-  const optionsCurrent = query.data !== undefined && dataOptionsKey.current === optionsKey(hashInput);
+  // Judged by the key of the last SUCCESSFUL quote, not by this query having data: a failed
+  // re-quote (a rejected coupon) has no data, but the page still shows the last good quote,
+  // which was priced for this same key. Null until a quote has ever succeeded.
+  const optionsCurrent = dataOptionsKey.current !== null && dataOptionsKey.current === optionsKey(hashInput);
 
   async function refetchWithToken(token: string): Promise<void> {
     // `retry: false` is not optional here. `fetchQuery` takes the client's default

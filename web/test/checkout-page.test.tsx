@@ -642,6 +642,38 @@ describe('CheckoutPage — delivery options pending', () => {
     expect(screen.getByRole('heading', { name: 'How you’ll pay' })).toBeInTheDocument();
   });
 
+  it('keeps the options and lets Continue through when only the coupon re-quote fails', async () => {
+    await toDelivery();
+    fireEvent.click(radios()[0]!);
+    await settle();
+    await settle();
+    quoteMock.mockImplementation(async () => { throw new ApiError(404, 'Coupon not found'); });
+
+    type('Coupon code', 'nope');
+    fireEvent.click(screen.getByRole('button', { name: /apply/i }));
+    await settle();
+    await settle();
+
+    expect(screen.getByText('Unknown code')).toBeInTheDocument();
+    expect(radios()).toHaveLength(1);
+    pressContinue();
+    expect(screen.queryByText(STILL_PRICING)).toBeNull();
+    expect(screen.getByRole('heading', { name: 'How you’ll pay' })).toBeInTheDocument();
+  });
+
+  it('offers no option and refuses Continue when the new country quote fails', async () => {
+    await toDelivery();
+    quoteMock.mockImplementation(async () => { throw new ApiError(422, 'We do not deliver there'); });
+    changeCountryToIreland();
+    await settle();
+    await settle();
+
+    expect(radios()).toHaveLength(0);
+    pressContinue();
+    expect(screen.getByText(STILL_PRICING)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Delivery and discounts' })).toBeInTheDocument();
+  });
+
   it('refuses to place an order whose options went pending, and returns to Delivery', async () => {
     state.settings = { ...settings(false), shipping: { countries: ['GB', 'IE'] } };
     const view = mount();

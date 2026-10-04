@@ -275,6 +275,71 @@ describe('useQuote optionsCurrent', () => {
     expect(result.current.optionsCurrent).toBe(true);
   });
 
+  it('stays true when a re-quote for the same country, method and point fails (an unknown coupon)', async () => {
+    const { result, rerender } = run(form({ country: 'GB' }));
+    await settle();
+    quoteMock.mockRejectedValueOnce(new ApiError(404, 'Coupon not found'));
+    rerender({ f: form({ country: 'GB', couponCode: 'nope' }) });
+    await settle();
+    await settle();
+    expect(result.current.error?.status).toBe(404);
+    expect(result.current.quote).toBeUndefined();
+    expect(result.current.optionsCurrent).toBe(true);
+  });
+
+  it('stays false when the re-quote for a different country fails', async () => {
+    const { result, rerender } = run(form({ country: 'GB' }));
+    await settle();
+    quoteMock.mockRejectedValueOnce(new ApiError(422, 'We do not deliver to that country'));
+    rerender({ f: form({ country: 'FR' }) });
+    await settle();
+    await settle();
+    expect(result.current.error?.status).toBe(422);
+    expect(result.current.optionsCurrent).toBe(false);
+  });
+
+  it('is false when the very first quote fails', async () => {
+    quoteMock.mockRejectedValueOnce(new ApiError(422, 'We do not deliver to that country'));
+    const { result } = run(form({ country: 'GB' }));
+    await settle();
+    await settle();
+    expect(result.current.error).not.toBeNull();
+    expect(result.current.optionsCurrent).toBe(false);
+  });
+
+  it('guest: a failed refetchWithToken for a coupon-only change stays current, for a country change stays pending', async () => {
+    useCartStore.setState({ lines: [line(1, 1)] });
+    const { result, rerender } = renderHook(({ f }: { f: CheckoutForm }) => useQuote(f, { guest: true }), {
+      wrapper,
+      initialProps: { f: form({ country: 'GB' }) },
+    });
+    await act(async () => {
+      await result.current.refetchWithToken('tok-1');
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(result.current.optionsCurrent).toBe(true);
+
+    guestQuoteMock.mockRejectedValueOnce(new ApiError(404, 'Coupon not found'));
+    rerender({ f: form({ country: 'GB', couponCode: 'nope' }) });
+    await settle();
+    await act(async () => {
+      await result.current.refetchWithToken('tok-2').catch(() => undefined);
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(result.current.error?.status).toBe(404);
+    expect(result.current.optionsCurrent).toBe(true);
+
+    guestQuoteMock.mockRejectedValueOnce(new ApiError(422, 'Not serviceable'));
+    rerender({ f: form({ country: 'FR', couponCode: 'nope' }) });
+    await settle();
+    await act(async () => {
+      await result.current.refetchWithToken('tok-3').catch(() => undefined);
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(result.current.error?.status).toBe(422);
+    expect(result.current.optionsCurrent).toBe(false);
+  });
+
   it('guest: a quote delivered by refetchWithToken counts as current, and a country change makes it pending', async () => {
     useCartStore.setState({ lines: [line(1, 1)] });
     const { result, rerender } = renderHook(({ f }: { f: CheckoutForm }) => useQuote(f, { guest: true }), {
