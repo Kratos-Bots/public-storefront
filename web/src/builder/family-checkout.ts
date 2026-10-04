@@ -58,6 +58,8 @@ export interface CheckoutData {
   currency: string;
   /** The shown quote (the last good one while a refetch fails). */
   quote: Quote | undefined;
+  /** The shown quote's shipping options were priced for another country, method or point carrier: the Delivery step must not offer them. Absent = false. */
+  optionsPending?: boolean;
   method: PaymentMethod | undefined;
   combo: CryptoOption | null;
   /** A quote is in the air or a guest token is being minted. */

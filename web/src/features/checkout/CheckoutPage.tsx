@@ -232,7 +232,7 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
   // sent (STOREFRONT.md §3.5a). With no token the hook's automatic query stays
   // disabled and every guest quote goes out through `refetchWithToken` below,
   // each with a token minted for that one request.
-  const { quote, isFetching, error: quoteError, needsToken, refetchWithToken } = useQuote(effective, {
+  const { quote, isFetching, error: quoteError, needsToken, refetchWithToken, optionsCurrent } = useQuote(effective, {
     guest,
   });
 
@@ -243,6 +243,10 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
   const lastGoodQuote = useRef<Quote | undefined>(undefined);
   if (quote) lastGoodQuote.current = quote;
   const shownQuote = quote ?? lastGoodQuote.current;
+  // The shown quote is priced for another country, delivery method or point carrier than
+  // the form holds now (or none has arrived): its shipping options must not be offered
+  // or accepted. Totals and the other steps keep the shown quote.
+  const optionsPending = !stack && Boolean(form.country) && !optionsCurrent;
 
   // Latest-value ref: `refetchWithToken` is a fresh closure every render, so it
   // can't be an effect dependency without re-running the effect on every render.
@@ -423,6 +427,10 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
       return false;
     }
     if (kind === 'shipping') {
+      if (optionsPending) {
+        setErrors({ shippingOptionId: textKey('checkout.errors.stillPricing') });
+        return false;
+      }
       const parsed = shippingSchema.safeParse({
         shippingOptionId: form.shippingOptionId ?? undefined,
       });
@@ -640,6 +648,7 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
       guest,
       currency,
       quote: shownQuote,
+      optionsPending,
       method,
       combo,
       busy: isFetching || verifying,
@@ -654,7 +663,7 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
       stack,
       goTo,
     }),
-    [form, patch, errors, effectiveContactModes, shipCountries, shipLists, phoneMode, guest, currency, shownQuote, method, combo, isFetching, verifying, quoteError, errorTarget, quoteMessage, order, step, kind, stack, goTo],
+    [form, patch, errors, effectiveContactModes, shipCountries, shipLists, phoneMode, guest, currency, shownQuote, optionsPending, method, combo, isFetching, verifying, quoteError, errorTarget, quoteMessage, order, step, kind, stack, goTo],
   );
   const value = useMemo(() => ({ data, views: CHECKOUT_VIEWS }), [data]);
 

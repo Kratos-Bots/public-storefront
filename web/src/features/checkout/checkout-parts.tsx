@@ -125,7 +125,7 @@ function Shipping({ props, styleAttrs }: PartViewProps) {
   if (!d.stack && d.kind !== 'shipping') return null;
   return framed(d, 'shipping', (
     <ShippingStep
-      quote={d.quote} form={d.form} patch={d.patch} errors={d.errors} notice={d.shippingNotice}
+      quote={d.optionsPending ? undefined : d.quote} form={d.form} patch={d.patch} errors={d.errors} notice={d.shippingNotice}
       before={slotOf(props, 'before')} after={slotOf(props, 'after')} rootAttrs={styleAttrs}
     />
   ));

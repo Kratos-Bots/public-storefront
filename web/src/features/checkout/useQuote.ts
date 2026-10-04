@@ -30,6 +30,19 @@ export interface UseQuoteResult {
   /** Re-run the current (guest) quote with a fresh token, without waiting for the
    *  debounced key to change. No-op key-wise for a logged-in quote. */
   refetchWithToken: (token: string) => Promise<void>;
+  /** True only when the quote data on hand was fetched for the delivery options key
+   *  (country, delivery method, point carrier) the form holds right now. False while
+   *  a quote for a different one is in flight, and when there is no quote at all. */
+  optionsCurrent: boolean;
+}
+
+/**
+ * What the list of shipping options depends on: the delivery country, the method (home
+ * or collection point) and, for a collection, the chosen point's carrier. A coupon, store
+ * credit, the chosen option or the cart lines re-quote but never change the list.
+ */
+export function optionsKey(input: Pick<HashInput, 'country' | 'deliveryMethod' | 'servicePointCarrier'>): string {
+  return JSON.stringify([input.country, input.deliveryMethod ?? null, input.servicePointCarrier ?? null]);
 }
 
 interface HashInput {
@@ -130,6 +143,13 @@ export function useQuote(form: CheckoutForm, { guest, turnstileToken }: UseQuote
     ...(guest ? { staleTime: Infinity, refetchOnWindowFocus: false } : {}),
   });
 
+  // The options key of the data the observer holds. Data that is not placeholder was
+  // fetched for the debounced key (the guest's `refetchWithToken` lands on that same
+  // key); placeholder data is the previous key's, so the remembered key stays put.
+  const dataOptionsKey = useRef<string | null>(null);
+  if (query.data !== undefined && !query.isPlaceholderData) dataOptionsKey.current = optionsKey(debounced);
+  const optionsCurrent = query.data !== undefined && dataOptionsKey.current === optionsKey(hashInput);
+
   async function refetchWithToken(token: string): Promise<void> {
     // `retry: false` is not optional here. `fetchQuery` takes the client's default
     // retry (1) unless told otherwise, and a retry re-runs whatever `queryFn` the
@@ -152,5 +172,6 @@ export function useQuote(form: CheckoutForm, { guest, turnstileToken }: UseQuote
     error: query.error ?? null,
     needsToken,
     refetchWithToken,
+    optionsCurrent,
   };
 }

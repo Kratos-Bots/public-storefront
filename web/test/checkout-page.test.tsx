@@ -572,6 +572,94 @@ describe('CheckoutPage — signed in', () => {
   });
 });
 
+// The delivery options belong to a (country, method, point carrier). While the quote for
+// the form's current one has not arrived, the previous quote's list must not be offered
+// or accepted, and nothing else on screen blanks.
+describe('CheckoutPage — delivery options pending', () => {
+  const IRISH = { id: 7, name: 'An Post Tracked', courier: 'An Post', price: 6, freeShipping: false };
+  const STILL_PRICING = /still pricing your order/i;
+  const radios = () => screen.queryAllByRole('radio', { name: /Royal Mail Tracked 24|An Post Tracked/ });
+
+  beforeEach(() => {
+    state.settings = settings(false);
+    useSessionStore.setState({ token: 'sess-1', customer: { id: 5, nickname: 'ada' } });
+    quoteMock.mockImplementation(async (input) =>
+      makeQuote(input.country === 'IE' ? { shippingOptions: [IRISH] } : {}),
+    );
+  });
+
+  /** On the Delivery step for GB, its options on screen. */
+  async function toDelivery() {
+    localStorage.setItem('sf-checkout-v1', persistedForm());
+    const view = mount();
+    pressContinue(); // contact -> address
+    pressContinue(); // address -> shipping
+    await settle();
+    expect(radios()).toHaveLength(1);
+    return view;
+  }
+
+  /** Back to Address, a new country, forward to Delivery — all before any timer runs. */
+  function changeCountryToIreland() {
+    fireEvent.click(screen.getByRole('button', { name: /^back$/i }));
+    fireEvent.change(screen.getByLabelText('Country'), { target: { value: 'IE' } });
+    pressContinue();
+  }
+
+  it('offers no option and refuses Continue until the new country has been priced', async () => {
+    await toDelivery();
+    changeCountryToIreland();
+
+    expect(screen.getByRole('heading', { name: 'Delivery and discounts' })).toBeInTheDocument();
+    expect(radios()).toHaveLength(0);
+    expect(screen.getByText(/pricing/i)).toBeInTheDocument();
+    pressContinue();
+    expect(screen.getByText(STILL_PRICING)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Delivery and discounts' })).toBeInTheDocument();
+
+    await settle(); // the debounce fires and the request goes out
+    await settle(); // and the answer lands
+    expect(radios().map((r) => r.closest('label')?.textContent)).toEqual([expect.stringContaining('An Post Tracked')]);
+    fireEvent.click(radios()[0]!);
+    await settle();
+    pressContinue();
+    expect(screen.getByRole('heading', { name: 'How you’ll pay' })).toBeInTheDocument();
+  });
+
+  it('keeps the options on screen while only the coupon or the chosen option re-quotes', async () => {
+    await toDelivery();
+    quoteMock.mockImplementation(() => new Promise<Quote>(() => undefined)); // every re-quote hangs
+
+    fireEvent.click(radios()[0]!); // the chosen option itself
+    type('Coupon code', 'save10');
+    fireEvent.click(screen.getByRole('button', { name: /apply/i }));
+    expect(radios()).toHaveLength(1);
+    await settle();
+    expect(quoteMock.mock.calls.at(-1)![0]).toMatchObject({ couponCode: 'SAVE10', shippingOptionId: 3 });
+    expect(radios()).toHaveLength(1);
+    pressContinue();
+    expect(screen.queryByText(STILL_PRICING)).toBeNull();
+    expect(screen.getByRole('heading', { name: 'How you’ll pay' })).toBeInTheDocument();
+  });
+
+  it('refuses to place an order whose options went pending, and returns to Delivery', async () => {
+    state.settings = { ...settings(false), shipping: { countries: ['GB', 'IE'] } };
+    const view = mount();
+    await walkToReview();
+    expect(screen.getByRole('heading', { name: 'Review your order' })).toBeInTheDocument();
+
+    // The shop's list shrinks to Ireland under the open review: the country follows, un-priced.
+    state.settings = { ...state.settings, shipping: { countries: ['IE'] } };
+    view.rerender(<Wrapper><CheckoutPage /></Wrapper>);
+    fireEvent.click(placeButton());
+    await settle(0);
+
+    expect(placeOrderMock).not.toHaveBeenCalled();
+    expect(screen.getByRole('heading', { name: 'Delivery and discounts' })).toBeInTheDocument();
+    expect(screen.getByText(STILL_PRICING)).toBeInTheDocument();
+  });
+});
+
 describe('CheckoutPage — guest', () => {
   beforeEach(() => {
     state.settings = settings(true);
