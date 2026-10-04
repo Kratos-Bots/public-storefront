@@ -20,7 +20,6 @@ export const ORIGIN = 'http://localhost:5199';
 
 export const ORDER_REF = 'E2E1';
 export const ORDER_KEY = 'KEY1';
-export const ORDER_PATH = `/order/${ORDER_REF}/${ORDER_KEY}`;
 
 const read = <T>(name: string): T =>
   JSON.parse(readFileSync(fileUrl(`./fixtures/${name}`), 'utf8')) as T;
@@ -571,8 +570,8 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     const method = route.request().method();
     state.requests.push(`${method} ${path}`);
 
-    // The kill switch: the order link's own routes stay up, everything else 503s.
-    if (state.disabled && path !== 'storefront/settings' && !path.startsWith('orders/')) {
+    // The kill switch: everything but the settings 503s.
+    if (state.disabled && path !== 'storefront/settings') {
       await fail(route, 503, 'STOREFRONT_DISABLED');
       return;
     }
@@ -690,7 +689,7 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
       state.checkouts.push(body(route));
       const result: CheckoutResult = {
         reference: options.checkoutReference ?? ORDER_REF,
-        publicUrl: `${ORIGIN}${ORDER_PATH}`,
+        publicUrl: `${ORIGIN}/order/${ORDER_REF}/${ORDER_KEY}`,
         status: 'pending',
         total: 46.03,
         payment: options.checkoutPayment ?? {
@@ -710,77 +709,6 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
       };
       await envelope(route, result);
       return;
-    }
-
-    const publicOrder = /^orders\/([^/]+)\/([^/]+)(?:\/(.+))?$/.exec(path);
-    if (publicOrder) {
-      const [, reference, key, tail] = publicOrder;
-      if (reference !== link.reference || key !== link.accessKey) {
-        await fail(route, 404, 'Order not found');
-        return;
-      }
-      if (!tail && method === 'GET') {
-        await envelope(route, state.order);
-        return;
-      }
-      if (tail === 'payment-options' && method === 'GET') {
-        const methods: PaymentMethod[] = state.quote.paymentMethods;
-        await envelope(route, methods);
-        return;
-      }
-      if (tail === 'payment-method' && method === 'POST') {
-        const selection = body(route);
-        state.methods.push(selection);
-        if (options.refuseMethodSelection) {
-          await fail(route, 422, 'That payment method is not available for this order');
-          return;
-        }
-        const chosen = state.quote.paymentMethods.find((m) => m.method === selection.method);
-        if (chosen?.type === 'gateway') {
-          // A hosted checkout: the order now has an open gateway payment, as the backend's would.
-          const checkoutUrl = `https://pay.example.invalid/checkout/${state.order.reference}`;
-          if (state.order.payment) {
-            state.order.payment.activePayment = { paymentId: 9003, method: chosen.method, kind: 'gateway', status: 'pending', checkoutUrl, canChange: true };
-          }
-          await envelope(route, { paymentId: 9003, method: chosen.method, kind: 'gateway', status: 'pending', checkoutUrl } satisfies SelectPaymentResult);
-          return;
-        }
-        const result: SelectPaymentResult = {
-          paymentId: 9002,
-          method: String(selection.method ?? 'crypto_static'),
-          kind: 'crypto',
-          status: 'pending',
-          checkoutUrl: null,
-          crypto: {
-            coin: String(selection.coin ?? 'usdt'),
-            network: String(selection.network ?? 'polygon'),
-            coinLabel: 'USDT',
-            networkLabel: 'Polygon',
-            address: '0xE2E1a2b3c4d5e6f7089aabbccddeeff0011223344',
-            coinAmount: '46.030000',
-            fiatAmount: 46.03,
-            verificationStatus: 'pending',
-          },
-        };
-        await envelope(route, result);
-        return;
-      }
-      if (tail === 'cancel' && method === 'POST') {
-        await answerCancel(route, reference!);
-        return;
-      }
-      if (tail === 'crypto-txid' && method === 'POST') {
-        const submitted = body(route);
-        state.txids.push(submitted);
-        const txid = String(submitted.txid ?? '');
-        const payment = state.order.cryptoPayments?.[0];
-        if (payment) {
-          payment.verificationStatus = 'checking';
-          payment.txidMasked = maskTxid(txid);
-        }
-        await envelope(route, { verificationStatus: 'checking' });
-        return;
-      }
     }
 
     // Declared before `storefront/orders/:ref`, which would read "unpaid" as a reference.

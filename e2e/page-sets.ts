@@ -417,7 +417,7 @@ export function arrangedEverythingSet(layout: Layout = 'storefront'): PageSet {
   };
 }
 
-// ---- checkout and order-status parts (spec 2026-09-30-checkout-parts) ----------------------------
+// ---- checkout parts (spec 2026-09-30-checkout-parts) ----------------------------
 
 export type StepKind = 'contact' | 'address' | 'shipping' | 'payment' | 'review';
 export const STEP_TYPES: Record<StepKind, string> = {
@@ -516,53 +516,4 @@ export function illegalCheckoutSet(layout: Layout, kind: IllegalCheckout): PageS
 /** The default arrangement with the coupon and the notes parts removed (`keep` puts either back). */
 export function noCouponCheckoutSet(layout: Layout, keep: { coupon?: boolean; notes?: boolean } = {}): PageSet {
   return checkoutPages(layout, checkoutDoc({ coupon: keep.coupon ? 'shipping.after' : 'none', notes: keep.notes ? 'review.after' : 'none' }));
-}
-
-const osPart = (type: string) => c(type, {}, type + '-e2e');
-
-function orderDoc(action: ComponentData[], summary: ComponentData[]): PuckDoc {
-  return doc([c('OrderStatus', {
-    top: [osPart('OrderStatusHero')], action, summary, bottom: [osPart('OrderStatusFooter')],
-  }, 'OrderStatus-e2e')]);
-}
-const orderPages = (layout: Layout, d: PuckDoc): PageSet => ({ schemaVersion: 1, shell: shell(layout, c('Footer')), pages: { 'order-status': d } });
-
-export const ORDER_NOTE = 'Parcels are packed by hand at Northbound Supply.';
-
-/** The order page as v0.7.0 drew it, written out as parts. */
-export function defaultOrderSet(layout: Layout): PageSet {
-  return orderPages(layout, orderDoc(
-    [osPart('OrderStatusPayment'), osPart('OrderStatusShipments')],
-    [osPart('OrderStatusItems'), osPart('OrderStatusAddress')],
-  ));
-}
-
-/** Items moved into the action column after Payment, a RichText between them, Address removed. */
-export function arrangedOrderSet(layout: Layout): PageSet {
-  return orderPages(layout, orderDoc(
-    [osPart('OrderStatusPayment'), RT('<p>' + ORDER_NOTE + '</p>', 'order-rt'), osPart('OrderStatusItems'), osPart('OrderStatusShipments')],
-    [],
-  ));
-}
-
-/** Payment inside a Section, the only thing in the action column besides tracking; the summary holds Items and Address. */
-export function sectionedPaymentOrderSet(layout: Layout): PageSet {
-  return orderPages(layout, orderDoc(
-    [c('Section', { padding: 'md', backgroundToken: 'surface', content: [osPart('OrderStatusPayment')] }, 'pay-section'), osPart('OrderStatusShipments')],
-    [osPart('OrderStatusItems'), osPart('OrderStatusAddress')],
-  ));
-}
-
-/** An order document the guard refuses: the default order page renders instead. */
-export type IllegalOrder = 'shipments-first' | 'hidden-payment';
-export function illegalOrderSet(layout: Layout, kind: IllegalOrder): PageSet {
-  switch (kind) {
-    case 'shipments-first':
-      return orderPages(layout, orderDoc([osPart('OrderStatusShipments'), osPart('OrderStatusPayment')], [osPart('OrderStatusItems'), osPart('OrderStatusAddress')]));
-    case 'hidden-payment':
-      return orderPages(layout, orderDoc(
-        [c('Section', { blockStyle: { hide: 'mobile' }, content: [osPart('OrderStatusPayment')] }, 'hidden-pay'), osPart('OrderStatusShipments')],
-        [osPart('OrderStatusItems'), osPart('OrderStatusAddress')],
-      ));
-  }
 }

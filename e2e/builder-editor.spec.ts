@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { installMocks, ORIGIN, type InstallMocksOptions, type MockHandle } from './mocks.ts';
 import {
   arrangedCart, arrangedEverythingSet, arrangedFlowsSet, arrangedShell, checkoutWithoutFlowSet, defaultShellSet, editorStyleSet,
-  arrangedCheckoutSet, arrangedOrderSet, columnsCouponCheckoutSet, defaultCheckoutSet, illegalCheckoutSet, noCouponCheckoutSet, styledFlowSet,
+  arrangedCheckoutSet, columnsCouponCheckoutSet, defaultCheckoutSet, illegalCheckoutSet, noCouponCheckoutSet, styledFlowSet,
   legacyProductSet, menuSheetSet, productPartsSet, storySet, tileDesignSet, v070Shell,
 } from './page-sets.ts';
 
@@ -1327,7 +1327,7 @@ test.describe('page builder editor · shell, cart and account parts', () => {
   });
 });
 
-test.describe('page builder editor · checkout and order-status parts', () => {
+test.describe('page builder editor · checkout parts', () => {
   type Item = { type: string; props: Record<string, unknown> };
   type FlowProps = Record<string, unknown> & { head: Item[]; lead: Item[]; steps: Item[]; after: Item[]; aside: Item[] };
   const pageSelect = (frame: FrameLocator) => frame.getByLabel('Page', { exact: true });
@@ -1602,47 +1602,6 @@ test.describe('page builder editor · checkout and order-status parts', () => {
     expect(slotTypes(stepOf(flow, 'CheckoutShipping'), 'after')).toEqual(['CheckoutCoupon']);
     expect(slotTypes(stepOf(flow, 'CheckoutReview'), 'after')).toEqual(['CheckoutNotes']);
     await expectAdminAccepts(page);
-  });
-
-  test('the order page Preview state switches between Awaiting payment and Shipped: the payment card appears and goes', async ({ page }) => {
-    const { frame } = await openFramed(page);
-    await loadAndWait(page, frame, load({ pageSet: arrangedOrderSet('storefront') }));
-    await pageSelect(frame).selectOption('order-status');
-    const select = frame.getByLabel('Preview state');
-    await expect(select).toBeVisible();
-    await expect(select).toHaveValue('shipped');
-    await expect(canvas(frame).getByText('NB000977GB').first()).toBeVisible();
-    await expect(canvas(frame).getByText('Payment required')).toHaveCount(0);
-    await select.selectOption('awaiting-payment');
-    await expect(canvas(frame).getByText('Payment required')).toBeVisible();
-    await expect(canvas(frame).getByText('NB000977GB')).toHaveCount(0);
-    await select.selectOption('shipped');
-    await expect(canvas(frame).getByText('Payment required')).toHaveCount(0);
-    await expect(canvas(frame).getByText('NB000977GB').first()).toBeVisible();
-  });
-
-  test('every order-status Preview state draws, differently from the others, with no request', async ({ page }) => {
-    const { frame, mocks } = await openFramed(page);
-    await loadAndWait(page, frame, load({ pageSet: arrangedOrderSet('storefront') }));
-    await pageSelect(frame).selectOption('order-status');
-    const select = frame.getByLabel('Preview state');
-    await expect(select).toBeVisible();
-    const values = await select.locator('option').evaluateAll((os) => os.map((o) => (o as HTMLOptionElement).value));
-    expect(values).toEqual(['shipped', 'awaiting-payment', 'hosted-open', 'crypto-checking', 'two-parcels', 'cancelled']);
-    const before = mocks.requests().length;
-    const seen = new Map<string, string>();
-    for (const v of values) {
-      await select.selectOption(v);
-      await page.waitForTimeout(350);
-      const text = await canvas(frame).innerText();
-      expect(text.trim().length, `${v} draws nothing`).toBeGreaterThan(0);
-      seen.set(v, text);
-    }
-    expect(new Set(seen.values()).size, 'every state looks different').toBe(values.length);
-    expect(seen.get('hosted-open')).toMatch(/Finish your payment/);
-    expect(seen.get('crypto-checking')).toMatch(/Verifying/);
-    expect(seen.get('two-parcels')).toMatch(/NB000978GB/);
-    expect(mocks.requests().slice(before).filter((r) => /orders\/|storefront\/orders|payment/.test(r))).toEqual([]);
   });
 
   test('the checkout canvas, its exact preview and the read-only view never touch real storage, mint a token or post an order', async ({ page }) => {

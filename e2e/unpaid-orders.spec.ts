@@ -8,8 +8,8 @@ import type { OrderDetail, UnpaidOrder } from '../web/src/types/orders.ts';
 import type { PublicOrder } from '../web/src/types/public-order.ts';
 
 /**
- * Unpaid order recovery, as a shopper meets it: paying and cancelling from the account order page, from the
- * order link, and from the "you have an unpaid order" pop-up. Everything runs against the mocked backend,
+ * Unpaid order recovery, as a shopper meets it: paying and cancelling from the account order page and from
+ * the "you have an unpaid order" pop-up. Everything runs against the mocked backend,
  * whose cancel and unpaid routes mirror the real ones (`ORDER_NOT_CANCELLABLE:<reason>` on 409, the
  * `{ reference, status: 'cancelled' }` answer). Synthetic data only.
  */
@@ -19,7 +19,6 @@ const KEY = 'KEY2';
 const LINK = { reference: REF, accessKey: KEY };
 const TOTAL = 46.03;
 const PROMPT_TITLE = 'You have an unpaid order';
-const SAVED = 'sf-orders-v1';
 
 /** The account order, unpaid and with no way of paying chosen yet. */
 function unpaidDetail(d: OrderDetail): void {
@@ -52,8 +51,6 @@ const unpaidRow = (over: Partial<UnpaidOrder> = {}): UnpaidOrder => ({
 interface OpenOptions extends InstallMocksOptions {
   width?: number;
   path?: string;
-  /** Saved order links (`sf-orders-v1`), seeded once per tab so a reload does not bring them back. */
-  saved?: Array<{ reference: string; accessKey: string; savedAt: string }>;
   /** Boot signed in (once per tab: a sign-out and reload stays signed out). */
   signedIn?: boolean;
   /** Skip the navigation, so the test can arrange routes first. */
@@ -62,7 +59,7 @@ interface OpenOptions extends InstallMocksOptions {
 
 /** An account order K4M2QP that is unpaid, plus the same order through its link, unless a test says otherwise. */
 async function open(page: Page, o: OpenOptions = {}): Promise<MockHandle> {
-  const { width = 1280, path = '/', saved, signedIn = true, noGoto, ...rest } = o;
+  const { width = 1280, path = '/', signedIn = true, noGoto, ...rest } = o;
   await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
   await page.clock.setFixedTime(FIXED_NOW);
   const mocks = await installMocks(page, {
@@ -76,12 +73,11 @@ async function open(page: Page, o: OpenOptions = {}): Promise<MockHandle> {
     (seed) => {
       if (window.sessionStorage.getItem('e2e-seeded')) return;
       window.sessionStorage.setItem('e2e-seeded', '1');
-      if (seed.saved) window.localStorage.setItem('sf-orders-v1', JSON.stringify(seed.saved));
       if (seed.session) {
         window.localStorage.setItem('sf-session-v1', JSON.stringify({ state: { token: seed.session.token, customer: seed.session.customer }, version: 0 }));
       }
     },
-    { saved, session: signedIn ? { token: SESSION_TOKEN, customer: SESSION_CUSTOMER } : null },
+    { session: signedIn ? { token: SESSION_TOKEN, customer: SESSION_CUSTOMER } : null },
   );
   if (!noGoto) await page.goto(path);
   return mocks;
@@ -164,19 +160,6 @@ test.describe('unpaid orders · the account order page', () => {
   });
 });
 
-test.describe('unpaid orders · the order link', () => {
-  test('5 · cancelling from the public order page', async ({ page }) => {
-    const mocks = await open(page, { path: `/order/${REF}/${KEY}`, signedIn: false });
-    await page.getByRole('button', { name: 'Cancel order' }).click();
-    await expect(page.getByText(`Cancel order ${REF}?`)).toBeVisible();
-    await page.getByRole('button', { name: 'Yes, cancel it' }).click();
-    await expect.poll(() => mocks.state.cancels).toEqual([REF]);
-    await expect(page.getByRole('button', { name: 'Cancel order' })).toHaveCount(0);
-    await expect(page.getByRole('heading', { name: /^Choose how to pay/ })).toHaveCount(0);
-    expect(mocks.requests()).toContain(`POST orders/${REF}/${KEY}/cancel`);
-  });
-});
-
 test.describe('unpaid orders · the pop-up', () => {
   test('6 · a signed-in customer is asked on the home page, and Review or cancel order opens the order', async ({ page }) => {
     await open(page, { unpaidOrders: [unpaidRow()] });
@@ -212,22 +195,6 @@ test.describe('unpaid orders · the pop-up', () => {
     await page.waitForLoadState('networkidle');
     await expect(prompt(page)).toHaveCount(0);
     expect(unpaidAsks(mocks)).toBe(1);
-  });
-
-  test('8 · a guest with a saved order link is asked, and Complete payment opens the order link', async ({ page }) => {
-    await open(page, {
-      signedIn: false,
-      orderLink: { reference: 'E2E1', accessKey: 'KEY1' },
-      order: (() => { const o = publicOrderVariant('choose'); o.payment!.canCancel = true; o.payment!.cancelBlockedBy = null; return o; })(),
-      saved: [{ reference: 'E2E1', accessKey: 'KEY1', savedAt: '2026-08-24T08:30:00.000Z' }],
-    });
-    const dialog = prompt(page);
-    await expect(dialog).toBeVisible();
-    await expect(dialog.getByText('Order E2E1 is waiting for payment.')).toBeVisible();
-    await expect(dialog.getByText('46.03')).toBeVisible();
-    await dialog.getByRole('button', { name: 'Complete payment' }).click();
-    await expect(page).toHaveURL(/\/order\/E2E1\/KEY1$/);
-    await expect(dialog).toHaveCount(0);
   });
 
   test('9 · it never appears on the checkout, and is not even asked for there', async ({ page }) => {
@@ -273,22 +240,6 @@ test.describe('unpaid orders · the pop-up', () => {
     await dialog.getByRole('button', { name: 'Review or cancel order' }).click();
     await expect(page).toHaveURL(new RegExp(`/account/orders/${REF}$`));
     await expect(page.getByRole('heading', { name: REF })).toBeVisible();
-  });
-
-  test('12 · signing out forgets the saved order link: nothing is offered after the reload', async ({ page }) => {
-    const mocks = await open(page, {
-      path: '/account/profile',
-      orderLink: { reference: 'E2E1', accessKey: 'KEY1' },
-      order: choosing(),
-      saved: [{ reference: 'E2E1', accessKey: 'KEY1', savedAt: '2026-08-24T08:30:00.000Z' }],
-    });
-    await page.getByRole('button', { name: 'Sign out' }).click();
-    await expect(page).toHaveURL(/\/$/);
-    // Signed out and loaded: the catalogue is up, and the saved link that would have raised the pop-up is gone.
-    await expect(page.locator('[data-sf-part="product-card"]').first()).toBeVisible();
-    await expect(prompt(page)).toHaveCount(0);
-    expect(await page.evaluate((k) => window.localStorage.getItem(k), SAVED)).toBeNull();
-    expect(mocks.requests().filter((r) => r.startsWith('GET orders/E2E1/'))).toEqual([]);
   });
 
   test('13 · with the cart drawer open the pop-up waits, and appears once it is closed', async ({ page }) => {
@@ -338,22 +289,6 @@ test.describe('unpaid orders · the pop-up', () => {
     await expect(dialog.getByRole('button', { name: 'Complete payment' })).toBeVisible();
     await expect(dialog.getByText('To cancel this order, contact us: a payment may already be on its way.')).toBeVisible();
     await expect(dialog.getByRole('button', { name: 'Cancel order' })).toHaveCount(0);
-  });
-
-  test('16 · a guest cancels from the pop-up through the order link', async ({ page }) => {
-    const mocks = await open(page, {
-      signedIn: false,
-      orderLink: { reference: 'E2E1', accessKey: 'KEY1' },
-      order: (() => { const o = publicOrderVariant('choose'); o.payment!.canCancel = true; o.payment!.cancelBlockedBy = null; return o; })(),
-      saved: [{ reference: 'E2E1', accessKey: 'KEY1', savedAt: '2026-08-24T08:30:00.000Z' }],
-    });
-    const dialog = prompt(page);
-    await expect(dialog).toBeVisible();
-    await dialog.getByRole('button', { name: 'Cancel order' }).click();
-    await dialog.getByRole('button', { name: 'Yes, cancel it' }).click();
-    await expect(dialog).toHaveCount(0);
-    expect(mocks.requests().filter((r) => r === 'POST orders/E2E1/KEY1/cancel')).toHaveLength(1);
-    expect(mocks.state.cancels).toEqual(['E2E1']);
   });
 
   test('17 · a customer the restricted shop has refused sees no pop-up on their account pages', async ({ page }) => {

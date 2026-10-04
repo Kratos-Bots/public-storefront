@@ -12,7 +12,7 @@ exists yet). The backend contract this repo consumes is documented in `ecommerce
 `STOREFRONT.md`.
 
 Ships in this spec: catalog / cart / checkout, WhatsApp + Telegram passwordless login and account
-(orders, loyalty, referrals, profile), order status + payment redirect pages, and product
+(orders, loyalty, referrals, profile), payment redirect pages (the old `/order/:ref/:key` link redirects to the account order page), and product
 verification + parcel tracking pages.
 
 ## Prerequisites — settings to configure in the admin first
@@ -116,7 +116,7 @@ The build emits `web/dist/blocks.json`, the list of blocks this release can rend
 - **`GET /healthz`** — `200 ok`, `text/plain`, `Cache-Control: no-store`. No backend round-trip;
   it only proves the Worker itself is up. Used as the post-deploy check by Spec 3's deploy pipeline.
 - **`/api/*`** — reverse-proxies to `${BACKEND_URL}api/v1/public/<rest>`, allowlisted to the
-  `storefront/`, `catalog`, `orders/` and `verify/` prefixes (everything else 404s as
+  `storefront/`, `catalog` and `verify/` prefixes (everything else 404s as
   `{ success:false, error:"Not found" }`). Forwards method, body, `Content-Type`, `Authorization`,
   `Accept`; strips `Cookie`/`Host`/`X-Real-Ip` and any inbound `X-Forwarded-*`/`Cf-*`, then sets its
   own `X-Forwarded-For` (from `Cf-Connecting-Ip`) and `X-Forwarded-Proto: https`. GET responses are

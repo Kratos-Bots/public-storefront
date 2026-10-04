@@ -293,7 +293,7 @@ template that wants one consistent heading look across every page styles the par
 | `section-label` | default `SectionLabel` output |
 | `button` | every Mantine `Button` (theme default prop) **plus** every custom `<button>`/`<a>`/`<span>`/`<Link>` explicitly tagged `data-sf-part="button"` — `AddToCart`; `CartSummary` checkout (disabled `<button>` and `<Link>`); `MobileCartBar` checkout (disabled `<button>` and `<Link>`); `CheckoutPage` `.next` (Place order / Continue) and `.back` (Back); plus the primary CTA on `LoyaltyPage` (Redeem), `OrderDetailPage`, `WhatsappLogin` (three retry/continue states and the "Open WhatsApp" link), `PaymentSection`, `MethodPicker`, `OrderPlacedPage` (two), `PaymentCancelPage` (two), `LookupForm` (tracking submit), `VerifyPage` (submit) and `WholesaleBar` ("View basket") — added in review so every primary CTA gets the template's button treatment, not just the four original checkout-path buttons. Variant is Mantine's own `data-variant` (`filled` \| `default` \| `subtle`) on Mantine `Button`s; every custom element above carries an explicit `data-variant="filled"`, except `CheckoutPage` `.back`, which carries `data-variant="default"`; the password sign-in surfaces — `PasswordLogin`'s three submits and its WhatsApp reset link, `ResetPasswordPage` (save and back to sign-in), `VerifyEmailPage` (profile link) and `PasswordSection` (save) — carry `data-variant="filled"`. The show/hide toggle inside `Field`'s password type is a plain `<button>` with no `data-sf-part`, so it is not a template hook (an `input` or `button` rule does not reach it). The `input` and `card` rows do not change (`Field` keeps its three `data-sf-part="input"` literals; `PasswordLogin` lives inside the existing `AuthCard`) |
 | `input` | every Mantine `Input` element (theme default prop); the three `classes.input` elements in `features/checkout/Field.tsx` (text input, select, textarea) |
-| `card` | exactly these eleven roots: `features/auth/AuthCard.tsx` `<section>`; `features/order-status/AddressCard.tsx` `<section>`; `features/order-status/CryptoPaymentCard.tsx` root; `features/order-status/ItemsCard.tsx` `<section>`; `features/order-status/PaymentSection.tsx` (four `classes.card` elements); `features/order-status/ShipmentCard.tsx` `<section>`; `features/tracking/ParcelCard.tsx` root; `features/checkout/CheckoutPage.tsx` step card `<div>` |
+| `card` | exactly these eight roots: `features/auth/AuthCard.tsx` `<section>`; `features/order-status/CryptoPaymentCard.tsx` root; `features/order-status/PaymentSection.tsx` (four `classes.card` elements); `features/tracking/ParcelCard.tsx` root; `features/checkout/CheckoutPage.tsx` step card `<div>` |
 | `product-card` | `ProductCard` `<article>` |
 | `product-row` | `ProductRow` root element |
 | `product-grid` | the storefront catalogue's card grid `<div>` in `ProductGrid` (not the upsell row) — its direct children are the `product-card`s, so a template can promote `:first-child` |
@@ -390,7 +390,7 @@ export interface SlotBaseProps {
   layout: LayoutKind;      // 'storefront' | 'menu' | 'webapp' (always 'webapp' inside Telegram)
   tokens: TemplateTokens;
 }
-/** Above the header, first child of both shells (not on the chromeless order page). */
+/** Above the header, first child of both shells (not on a chromeless page). */
 export type TopBarProps = SlotBaseProps;
 /** StorefrontShell: replaces the footer. MenuShell: rendered after <main>, before the contact strip. */
 export interface FooterProps extends SlotBaseProps { supportLinks: SupportLink[]; hasChat: boolean }
