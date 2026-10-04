@@ -1,9 +1,11 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@mantine/core';
 import { Link, useParams } from 'react-router';
 import { EmptyState } from '@/components/EmptyState.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { Money } from '@/components/Money.tsx';
+import { fetchPublicOrder } from '@/api/public-order.ts';
 import { ApiError } from '@/lib/errors.ts';
 import { formatDate, formatDateTime } from '@/lib/format.ts';
 import { lineFigures, otherDiscount } from '@/lib/promotions.ts';
@@ -14,6 +16,10 @@ import {
   orderStatusTone,
   type Tone,
 } from '@/features/order-status/status.ts';
+import { CancelOrder } from '@/features/order-status/CancelOrder.tsx';
+import { PaymentSection } from '@/features/order-status/PaymentSection.tsx';
+import { pollInterval } from '@/features/order-status/payment-state.ts';
+import { publicOrderKey } from '@/features/order-status/queries.ts';
 import { StatusPill } from '@/features/account/StatusPill.tsx';
 import { useOrder } from '@/features/account/queries.ts';
 import { useText, type TextApi } from '@/text/runtime.tsx';
@@ -69,17 +75,77 @@ function HeadingView({ styleAttrs }: PartViewProps) {
   );
 }
 
+/**
+ * What is owed, and the means to settle it. The payment section is the public
+ * order page's own component, fed the same public order through the order's
+ * access key, so paying, changing method and submitting a crypto transaction id
+ * exist once in the shop. Without an access key (order links not configured, or
+ * an older backend) only the figure shows, as before.
+ */
 function BalanceView({ styleAttrs }: PartViewProps) {
   const { t } = useText();
   const { order: data } = OrderFamily.useData();
-  if (!(data.outstandingBalance > 0)) return null;
-  return (
-    <p className={classes.band} {...styleAttrs}>
+  const queryClient = useQueryClient();
+  const owed = data.outstandingBalance > 0;
+  const accessKey = data.accessKey ?? null;
+
+  // The same key and polling as the order page itself, so the two share one cache entry.
+  const publicOrder = useQuery({
+    queryKey: publicOrderKey(data.reference, accessKey ?? ''),
+    queryFn: () => fetchPublicOrder(data.reference, accessKey!),
+    enabled: owed && !!accessKey,
+    retry: false,
+    staleTime: 30_000,
+    refetchInterval: (query) => (query.state.data ? pollInterval(query.state.data) : false),
+    refetchIntervalInBackground: true,
+  });
+
+  // The payment section refreshes the public order itself; the account order (its payments list,
+  // balance and cancel flags) has to follow it. Invalidating ['order', ref] refetches only that
+  // query and never touches the public one, so this cannot feed itself. The first value seen is
+  // the initial load, which the account order already agrees with: skip it.
+  const updatedAt = publicOrder.dataUpdatedAt;
+  const seen = useRef(0);
+  useEffect(() => {
+    if (!updatedAt) return;
+    if (!seen.current) {
+      seen.current = updatedAt;
+      return;
+    }
+    void queryClient.invalidateQueries({ queryKey: ['order', data.reference] });
+  }, [updatedAt, queryClient, data.reference]);
+
+  if (!owed) return null;
+
+  const figures = (
+    <>
       <span>{t('account.order.balanceDue')}</span>
       <span>
         <Money amount={data.outstandingBalance} />
       </span>
-    </p>
+    </>
+  );
+  const payable = accessKey && publicOrder.data ? publicOrder.data : null;
+  const cancelable = data.canCancel !== undefined || !!data.cancelBlockedBy;
+  // The old bare band for an order with nothing to add under it (no key, or an older backend).
+  if (!payable && !cancelable) return <p className={classes.band} {...styleAttrs}>{figures}</p>;
+
+  return (
+    <div className={classes.balance} {...styleAttrs}>
+      <p className={classes.band}>{figures}</p>
+      {payable ? <PaymentSection order={payable} reference={data.reference} accessKey={accessKey!} /> : null}
+      <CancelOrder
+        key={data.reference}
+        reference={data.reference}
+        canCancel={data.canCancel}
+        blockedBy={data.cancelBlockedBy}
+        onCancelled={() => {
+          void queryClient.invalidateQueries({ queryKey: ['order', data.reference] });
+          void queryClient.invalidateQueries({ queryKey: ['orders'] });
+          if (accessKey) void queryClient.invalidateQueries({ queryKey: publicOrderKey(data.reference, accessKey) });
+        }}
+      />
+    </div>
   );
 }
 
@@ -261,10 +327,10 @@ export const ORDER_VIEWS: FamilyValue<OrderData>['views'] = {
 
 /**
  * One order, in full: what was bought, what it came to, every payment against
- * it, and every parcel out of it. Payment actions deliberately live on the
- * order's own public page — that page already owns paying, switching method and
- * submitting a crypto txid, and duplicating them here would be a second
- * implementation of the most consequential screen in the shop.
+ * it, and every parcel out of it. While money is owed the balance part also
+ * carries the order's payment actions, by rendering the public order page's own
+ * PaymentSection through the order's access key: paying, switching method and
+ * submitting a crypto txid still exist once in the shop.
  *
  * The OrderDetail container: the query and its pending / error / not-found screens stay
  * here; the content slot holds the parts. Without slots the default arrangement is drawn.

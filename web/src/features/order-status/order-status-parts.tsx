@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { ContactLinks } from '@/components/ContactLinks.tsx';
 import { OrderStatusFamily } from '@/builder/family-order-status.ts';
 import type { FamilyValue, PartViewProps } from '@/builder/parts.ts';
@@ -6,7 +7,9 @@ import { publicOrderPromotions } from '@/lib/promotions.ts';
 import { useText } from '@/text/runtime.tsx';
 import { AddressCard } from '@/features/order-status/AddressCard.tsx';
 import { ItemsCard } from '@/features/order-status/ItemsCard.tsx';
+import { CancelOrder } from '@/features/order-status/CancelOrder.tsx';
 import { PaymentSection } from '@/features/order-status/PaymentSection.tsx';
+import { publicOrderKey } from '@/features/order-status/queries.ts';
 import { ShipmentCard } from '@/features/order-status/ShipmentCard.tsx';
 import { StatusHero } from '@/features/order-status/StatusHero.tsx';
 import classes from '@/features/order-status/OrderStatus.module.css';
@@ -21,7 +24,21 @@ function HeroView({ styleAttrs }: PartViewProps) {
 /** `wrap` target: the block wrapper carries the style, so nothing is spread here. */
 function PaymentView() {
   const { order, reference, accessKey } = OrderStatusFamily.useData();
-  return <PaymentSection order={order} reference={reference} accessKey={accessKey} />;
+  const queryClient = useQueryClient();
+  return (
+    <>
+      <PaymentSection order={order} reference={reference} accessKey={accessKey} />
+      <CancelOrder
+        key={reference}
+        reference={reference}
+        accessKey={accessKey}
+        viaLink
+        canCancel={order.payment?.canCancel}
+        blockedBy={order.payment?.cancelBlockedBy}
+        onCancelled={() => void queryClient.invalidateQueries({ queryKey: publicOrderKey(reference, accessKey) })}
+      />
+    </>
+  );
 }
 
 /** `wrap` target, like Payment. */

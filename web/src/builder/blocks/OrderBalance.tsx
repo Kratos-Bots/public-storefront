@@ -3,12 +3,12 @@ import { defineBlock } from '@/builder/define.ts';
 import { OrderFamily } from '@/builder/family-order.ts';
 import { BOX, TEXT, VIS, styleSupport } from '@/builder/style/model.ts';
 
-/** The amount still owed; absent when the order is settled. */
+/** The amount still owed and, when the order link is known, the way to pay it; absent when the order is settled. */
 export const block = defineBlock<{ id: string }>({
   name: 'OrderBalance', label: 'Balance due', category: 'part', part: { family: 'order' },
   layouts: 'all', routeBound: false, slots: [],
   style: styleSupport('root', [...BOX, ...TEXT, ...VIS]),
-  text: ['account.order.balanceDue', 'order.cancel.*'],
+  text: ['account.order.balanceDue', 'order.payment.*', 'order.method.*', 'order.crypto.*', 'order.errors.*', 'order.copy.*', 'order.chat.*', 'common.actions.*', 'common.contact.*', 'order.cancel.*'],
   schema: z.object({}), defaultProps: {},
   render: (p) => <OrderFamily.PartHost name="OrderBalance" props={p as Record<string, unknown>} styleAttrs={p.puck.style} />,
 });

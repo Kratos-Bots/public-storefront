@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
 import { MemoryRouter, Route, Routes } from 'react-router';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { Suspense, type ReactNode } from 'react';
@@ -83,9 +84,9 @@ const p = (container: string, type: string, extra: Record<string, unknown> = {})
 function shell(ui: ReactNode, path: string, route: string, mode?: Partial<BuilderMode>) {
   const inner = mode ? <BuilderModeProvider value={{ editing: false, previewAs: null, ...mode }}>{ui}</BuilderModeProvider> : ui;
   return render(
-    <MantineProvider env="test"><MemoryRouter initialEntries={[path]}><Routes>
+    <QueryClientProvider client={new QueryClient()}><MantineProvider env="test"><MemoryRouter initialEntries={[path]}><Routes>
       <Route path={route} element={<Suspense fallback={null}>{inner}</Suspense>} />
-    </Routes></MemoryRouter></MantineProvider>,
+    </Routes></MemoryRouter></MantineProvider></QueryClientProvider>,
   );
 }
 const renderOrders = (d: PuckDoc, mode?: Partial<BuilderMode>) => shell(<RenderDoc doc={d} docKey="account.orders" layout="storefront" />, '/account/orders', '/account/*', mode);
