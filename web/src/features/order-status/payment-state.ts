@@ -78,6 +78,23 @@ export function pollInterval(order: PublicOrder): number | false {
   return checking ? 30_000 : false;
 }
 
+/**
+ * Everything on the public order that the account order page also shows or acts on: its status,
+ * whether it can still be paid or cancelled, the active payment, and each crypto payment's
+ * progress. Two reads with the same signature need no account-order refetch.
+ */
+export function paymentSignature(order: PublicOrder): string {
+  const p = order.payment;
+  return JSON.stringify([
+    order.status,
+    p?.canPay ?? null,
+    p?.canCancel ?? null,
+    p?.cancelBlockedBy ?? null,
+    p?.activePayment ? [p.activePayment.paymentId, p.activePayment.status] : null,
+    (order.cryptoPayments ?? []).map((c) => [c.paymentId, c.paymentStatus, c.verificationStatus]),
+  ]);
+}
+
 /** What the customer is offered, named by what it is rather than by who settles it. */
 const SLOT_BASE: Record<PaymentMethod['slot'], Extract<StringKey, `order.method.${'card' | 'crypto'}`> | null> = {
   card: textKey('order.method.card'),

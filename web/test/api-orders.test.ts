@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fetchOrder, fetchOrders } from '@/api/orders.ts';
+import { cancelOrder, fetchOrder, fetchOrders, fetchUnpaidOrders } from '@/api/orders.ts';
+import { OrderNotCancellableError } from '@/api/public-order.ts';
 import { fetchRedeemOptions } from '@/api/profile.ts';
 import { useSessionStore } from '@/stores/session.ts';
 
@@ -80,5 +81,44 @@ describe('fetchRedeemOptions', () => {
   it('lets any other failure through', async () => {
     mockFetch(500, { success: false, data: null, error: 'Boom' });
     await expect(fetchRedeemOptions()).rejects.toMatchObject({ status: 500 });
+  });
+});
+
+describe('cancelOrder', () => {
+  beforeEach(() => useSessionStore.getState().clear());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('POSTs to the session cancel route', async () => {
+    const spy = mockFetch(200, { success: true, data: { reference: 'AB12CD', status: 'cancelled' }, error: null });
+    await expect(cancelOrder('AB12CD')).resolves.toEqual({ reference: 'AB12CD', status: 'cancelled' });
+    const req = spy.mock.calls[0]![0] as Request;
+    expect(req.method).toBe('POST');
+    expect(req.url).toContain('storefront/orders/AB12CD/cancel');
+  });
+
+  it('maps 409 ORDER_NOT_CANCELLABLE:<reason> to OrderNotCancellableError', async () => {
+    mockFetch(409, { success: false, data: null, error: 'ORDER_NOT_CANCELLABLE:bank_transfer' });
+    const err = await cancelOrder('AB12CD').catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(OrderNotCancellableError);
+    expect((err as OrderNotCancellableError).reason).toBe('bank_transfer');
+  });
+
+  it('treats an unknown reason as not_pending', async () => {
+    mockFetch(409, { success: false, data: null, error: 'ORDER_NOT_CANCELLABLE:zzz' });
+    const err = await cancelOrder('AB12CD').catch((e: unknown) => e);
+    expect((err as OrderNotCancellableError).reason).toBe('not_pending');
+  });
+});
+
+describe('fetchUnpaidOrders', () => {
+  beforeEach(() => useSessionStore.getState().clear());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('GETs storefront/orders/unpaid', async () => {
+    const spy = mockFetch(200, { success: true, data: [], error: null });
+    await expect(fetchUnpaidOrders()).resolves.toEqual([]);
+    const req = spy.mock.calls[0]![0] as Request;
+    expect(req.method).toBe('GET');
+    expect(req.url).toContain('storefront/orders/unpaid');
   });
 });

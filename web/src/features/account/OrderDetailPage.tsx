@@ -1,9 +1,11 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@mantine/core';
 import { Link, useParams } from 'react-router';
 import { EmptyState } from '@/components/EmptyState.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { Money } from '@/components/Money.tsx';
+import { fetchPublicOrder } from '@/api/public-order.ts';
 import { ApiError } from '@/lib/errors.ts';
 import { formatDate, formatDateTime } from '@/lib/format.ts';
 import { lineFigures, otherDiscount } from '@/lib/promotions.ts';
@@ -14,6 +16,13 @@ import {
   orderStatusTone,
   type Tone,
 } from '@/features/order-status/status.ts';
+import { CancelOrder } from '@/features/order-status/CancelOrder.tsx';
+import { invalidateAfterCancel } from '@/features/order-status/invalidate-after-cancel.ts';
+import { PaymentSection } from '@/features/order-status/PaymentSection.tsx';
+import { cancelView } from '@/features/order-status/cancel-state.ts';
+import { paymentSignature, pollInterval, visibleCryptoPayments } from '@/features/order-status/payment-state.ts';
+import { SupportLinks } from '@/features/order-status/SupportLinks.tsx';
+import { publicOrderKey } from '@/features/order-status/queries.ts';
 import { StatusPill } from '@/features/account/StatusPill.tsx';
 import { useOrder } from '@/features/account/queries.ts';
 import { useText, type TextApi } from '@/text/runtime.tsx';
@@ -69,17 +78,86 @@ function HeadingView({ styleAttrs }: PartViewProps) {
   );
 }
 
+/**
+ * What is owed, and the means to settle it. The payment section is the public
+ * order page's own component, fed the same public order through the order's
+ * access key, so paying, changing method and submitting a crypto transaction id
+ * exist once in the shop. Without an access key (order links not configured, or
+ * an older backend) only the figure shows, as before.
+ */
 function BalanceView({ styleAttrs }: PartViewProps) {
   const { t } = useText();
   const { order: data } = OrderFamily.useData();
-  if (!(data.outstandingBalance > 0)) return null;
-  return (
-    <p className={classes.band} {...styleAttrs}>
+  const queryClient = useQueryClient();
+  const owed = data.outstandingBalance > 0;
+  const accessKey = data.accessKey ?? null;
+
+  // The same key and polling as the order page itself, so the two share one cache entry.
+  const publicOrder = useQuery({
+    queryKey: publicOrderKey(data.reference, accessKey ?? ''),
+    queryFn: () => fetchPublicOrder(data.reference, accessKey!),
+    enabled: owed && !!accessKey,
+    retry: false,
+    staleTime: 30_000,
+    refetchInterval: (query) => (query.state.data ? pollInterval(query.state.data) : false),
+    refetchIntervalInBackground: true,
+  });
+
+  // The payment section refreshes the public order itself; the account order (its payments list,
+  // balance and cancel flags) has to follow when something it shows changed. Polling re-reads the
+  // same order every few seconds, so only a changed signature counts, and the first one seen for a
+  // reference is the initial load, which the account order already agrees with. Invalidating
+  // ['order', ref] never touches the public query, so this cannot feed itself.
+  const signature = publicOrder.data ? paymentSignature(publicOrder.data) : null;
+  // Per reference, so going A, B, A still notices a change to A made while B was showing.
+  const seen = useRef(new Map<string, string>());
+  useEffect(() => {
+    if (!signature) return;
+    const last = seen.current.get(data.reference);
+    seen.current.set(data.reference, signature);
+    if (last === undefined || last === signature) return;
+    void queryClient.invalidateQueries({ queryKey: ['order', data.reference] });
+  }, [signature, queryClient, data.reference]);
+
+  if (!owed) return null;
+
+  const figures = (
+    <>
       <span>{t('account.order.balanceDue')}</span>
       <span>
         <Money amount={data.outstandingBalance} />
       </span>
-    </p>
+    </>
+  );
+  const loaded = accessKey ? publicOrder.data : undefined;
+  // What PaymentSection would draw: a way to pay, or crypto payments to show.
+  const payable = loaded && (loaded.payment?.canPay || visibleCryptoPayments(loaded).length > 0) ? loaded : null;
+  const cancelShows = cancelView(data.canCancel, data.cancelBlockedBy);
+  // A balance with no way to pay it online and nothing else saying why (so never beside a payment section).
+  const payHelp =
+    !payable && !!loaded && loaded.payment?.canPay === false && cancelShows !== 'contact' &&
+    data.status !== 'cancelled' && data.status !== 'refunded' && loaded.status !== 'cancelled' && loaded.status !== 'refunded';
+  // The old bare band when there is nothing under it to show.
+  if (!payable && !payHelp && cancelShows === 'none') return <p className={classes.band} {...styleAttrs}>{figures}</p>;
+
+  return (
+    <div className={classes.balance} {...styleAttrs}>
+      <p className={classes.band}>{figures}</p>
+      {payable ? <PaymentSection order={payable} reference={data.reference} accessKey={accessKey!} /> : null}
+      {payHelp ? (
+        <div>
+          <p className={classes.payHelp}>{t('account.order.payHelp')}</p>
+          <SupportLinks />
+        </div>
+      ) : null}
+      <CancelOrder
+        key={data.reference}
+        reference={data.reference}
+        canCancel={data.canCancel}
+        blockedBy={data.cancelBlockedBy}
+        onCancelled={() => invalidateAfterCancel(queryClient, data.reference, accessKey)}
+      />
+    </div>
   );
 }
 
@@ -261,10 +339,10 @@ export const ORDER_VIEWS: FamilyValue<OrderData>['views'] = {
 
 /**
  * One order, in full: what was bought, what it came to, every payment against
- * it, and every parcel out of it. Payment actions deliberately live on the
- * order's own public page — that page already owns paying, switching method and
- * submitting a crypto txid, and duplicating them here would be a second
- * implementation of the most consequential screen in the shop.
+ * it, and every parcel out of it. While money is owed the balance part also
+ * carries the order's payment actions, by rendering the public order page's own
+ * PaymentSection through the order's access key: paying, switching method and
+ * submitting a crypto txid still exist once in the shop.
  *
  * The OrderDetail container: the query and its pending / error / not-found screens stay
  * here; the content slot holds the parts. Without slots the default arrangement is drawn.

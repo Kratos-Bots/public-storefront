@@ -30,7 +30,11 @@ async function adoptServerCart(): Promise<void> {
   }
 }
 
-/** The same reset as signing out (ProfilePage), so nothing of the previous account survives. */
+/**
+ * The same reset as signing out (ProfilePage) except the saved order links: this runs when initData is missing
+ * or the login failed, which can be a passing failure rather than a deliberate sign-out, and a dropped
+ * connection must not wipe a guest's links. Signing out (`signOutAndReload`) clears them.
+ */
 export function forgetAccount(): void {
   useSessionStore.getState().clear();
   useCartStore.getState().clear();

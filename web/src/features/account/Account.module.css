@@ -342,6 +342,25 @@
 }
 
 /* A note the shop owes the customer — same rule-in-the-tone the cart flies. */
+/* The balance band with the payment section and the cancel control under it. */
+.balance {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.payHelp {
+  margin: 0;
+  font-size: calc(0.8125rem * var(--sf-text-scale, 1));
+  line-height: 1.6;
+  color: var(--sf-muted);
+}
+
+.balance > .band {
+  margin-top: 0;
+}
+
 .band {
   display: flex;
   align-items: baseline;

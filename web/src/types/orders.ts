@@ -9,6 +9,13 @@ export interface OrderDetail {
   promotionDiscount?: number; promotions?: OrderPromotion[];
   payments: Array<{ method: string; amount: number; status: string; createdAt: string }>;
   outstandingBalance: number; shipments: OrderShipment[]; publicUrl: string | null;
+  accessKey?: string | null; canCancel?: boolean; cancelBlockedBy?: import('./public-order.ts').CancelBlockedBy | null;
+}
+
+/** An order the customer can still pay, as `GET storefront/orders/unpaid` returns it. */
+export interface UnpaidOrder {
+  reference: string; accessKey: string | null; createdAt: string; totalAmount: number; outstandingBalance: number;
+  payBy: string | null; canCancel: boolean; cancelBlockedBy: import('./public-order.ts').CancelBlockedBy | null;
 }
 export interface PageMeta { page: number; limit: number; totalItems: number; totalPages: number; hasNextPage: boolean; hasPrevPage: boolean }
 export interface OrderPromotion { label: string; amount: number }

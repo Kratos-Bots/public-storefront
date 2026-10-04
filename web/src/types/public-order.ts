@@ -97,8 +97,13 @@ export interface ActivePayment {
   settlementCurrency?: string | null;
 }
 
+export type CancelBlockedBy = 'paid' | 'bank_transfer' | 'crypto_submitted';
+
 export interface OrderPaymentState {
   canPay: boolean;
+  /** Absent on a backend that predates customer cancel. */
+  canCancel?: boolean;
+  cancelBlockedBy?: CancelBlockedBy | null;
   payBy: string | null; // ISO 8601 auto-cancel deadline
   activePayment: ActivePayment | null;
 }

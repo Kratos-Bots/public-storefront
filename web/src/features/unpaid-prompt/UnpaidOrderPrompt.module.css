@@ -1,0 +1,79 @@
+/* The page's own surface, as the sign-in dialog wears it: nothing here introduces a new look. */
+.content {
+  background: var(--sf-bg-deep);
+  border: 1px solid var(--sf-line-strong);
+}
+
+.header {
+  background: transparent;
+  padding-bottom: 0.5rem;
+}
+
+.title {
+  font-family: var(--sf-font-heading);
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--sf-text);
+}
+
+.lede {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--sf-muted);
+}
+
+.amount {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 1rem 0 0;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--sf-line);
+  border-radius: var(--sf-card-radius);
+  background: var(--sf-bg);
+}
+
+.amountLabel {
+  font-size: 0.875rem;
+  color: var(--sf-muted);
+}
+
+.amountValue {
+  font-family: var(--sf-font-heading);
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: var(--sf-text);
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+/* The primary button comes from the order page's own .cta; this only spaces the group. */
+.later {
+  align-self: stretch;
+  margin-top: 0.25rem;
+}
+
+.more {
+  display: inline-block;
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--sf-muted);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.more:hover {
+  color: var(--sf-text);
+}
+
+.more:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
