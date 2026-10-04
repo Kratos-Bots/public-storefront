@@ -18,6 +18,8 @@ export interface AddressStepProps {
   before?: ReactNode;
   after?: ReactNode;
   rootAttrs?: StyleAttrs;
+  /** Where the shop delivers; empty = every country. */
+  countries?: readonly string[];
 }
 
 /**
@@ -28,7 +30,7 @@ export interface AddressStepProps {
  * quote to `deliveryMethod: 'home'` and strips service-point fields from the
  * submitted address, so a collection-point picker here would be inert.
  */
-export function AddressStep({ form, patch, errors, notice, before, after, rootAttrs }: AddressStepProps) {
+export function AddressStep({ form, patch, errors, notice, before, after, rootAttrs, countries }: AddressStepProps) {
   const { t } = useText();
   return (
     <div className={classes.step} {...rootAttrs}>
@@ -81,6 +83,7 @@ export function AddressStep({ form, patch, errors, notice, before, after, rootAt
       />
 
       <CountrySelect
+        allowed={countries}
         value={form.country}
         error={errors.country}
         onChange={(iso) =>
