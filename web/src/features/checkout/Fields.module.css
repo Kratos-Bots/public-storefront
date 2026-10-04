@@ -435,30 +435,12 @@
   overflow: hidden;
 }
 
+/* The visible segment is the span after the radio, so the chosen and focus looks
+   hang off sibling selectors and do not need :has(). */
 .segment {
   position: relative;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
-  padding: 0.5rem 0.75rem;
-  font-family: var(--sf-font-mono);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  text-align: center;
-  color: var(--sf-muted);
   cursor: pointer;
-  transition: background-color 120ms ease, color 120ms ease;
-}
-
-/* On a 360 px phone each half is ~160 px: tighter tracking keeps "Collection point" on one line. */
-@media (max-width: 26em) {
-  .segment {
-    padding: 0.5rem;
-    letter-spacing: 0.1em;
-  }
 }
 
 .segment + .segment {
@@ -473,15 +455,40 @@
   pointer-events: none;
 }
 
+.segmentLabel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
+  font-family: var(--sf-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--sf-muted);
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+/* On a 360 px phone each half is ~160 px: tighter tracking keeps "Collection point" on one line. */
+@media (max-width: 26em) {
+  .segmentLabel {
+    padding: 0.5rem;
+    letter-spacing: 0.1em;
+  }
+}
+
 /* The chosen segment is filled and carries a primary rule: on templates where the
    surface barely differs from the ground, the fill alone did not tell the two apart. */
-.segment:has(input:checked) {
+.segment input:checked + .segmentLabel {
   background: var(--sf-surface-2, var(--sf-surface));
   color: var(--sf-text);
   box-shadow: inset 0 -2px 0 var(--sf-primary);
 }
 
-.segment:has(input:focus-visible) {
+.segment input:focus-visible + .segmentLabel {
   outline: 2px solid var(--sf-primary);
   outline-offset: -2px;
 }
@@ -521,7 +528,7 @@
   cursor: pointer;
 }
 
-.pointSearchButton:disabled {
+.pointSearchButton[aria-disabled='true'] {
   opacity: 0.5;
   cursor: default;
 }
@@ -561,6 +568,23 @@
   cursor: pointer;
 }
 
+/* "Keep <point>" above the search while changing: a text button like Change. */
+.pointKeep {
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 0 0.25rem;
+  border: 0;
+  background: transparent;
+  color: var(--sf-primary);
+  font-family: var(--sf-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-align: left;
+  cursor: pointer;
+}
+
 .choiceFigure + .pointChange {
   margin-left: 0.5rem;
 }
@@ -569,7 +593,7 @@
   .input,
   .phoneBox,
   .toggle,
-  .segment,
+  .segmentLabel,
   .choice,
   .marker,
   .marker::after {

@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
 import { AddressStep } from '@/features/checkout/steps/AddressStep.tsx';
 import type { CountryMode } from '@/features/checkout/collection-mode.ts';
@@ -81,9 +82,44 @@ describe('AddressStep delivery method', () => {
   it('seeds the point search with the home postcode the first time', () => {
     const patch = mount({ country: 'GB', zip: 'LS1 6BY' }, vi.fn(), 'choice');
     fireEvent.click(screen.getByRole('radio', { name: 'Collection point' }));
-    expect(patch).toHaveBeenCalledWith({ deliveryMethod: 'collection', pointPostcode: 'LS1 6BY' });
+    expect(patch).toHaveBeenCalledWith({ deliveryMethod: 'collection' });
     cleanup();
-    mount({ country: 'GB', zip: 'LS1 6BY', deliveryMethod: 'collection' }, vi.fn(), 'choice');
-    expect((screen.getByLabelText('Postcode') as HTMLInputElement).value).toBe('LS1 6BY');
+    const seeded = mount({ country: 'GB', zip: 'LS1 6BY', deliveryMethod: 'collection' }, vi.fn(), 'choice');
+    expect(seeded).toHaveBeenCalledWith({ pointPostcode: 'LS1 6BY' });
+  });
+
+  it('seeds a collection-only country too', () => {
+    const patch = mount({ country: 'GB', zip: 'LS1 6BY', deliveryMethod: 'collection' }, vi.fn(), 'collection');
+    expect(patch).toHaveBeenCalledWith({ pointPostcode: 'LS1 6BY' });
+  });
+
+  it('lets the shopper clear the postcode box and it stays empty', () => {
+    function Harness() {
+      const [form, setForm] = useState<CheckoutForm>({ ...DEFAULT_FORM, country: 'GB', zip: 'LS1 6BY', deliveryMethod: 'collection' });
+      return (
+        <MantineProvider env="test">
+          <AddressStep form={form} patch={(p) => setForm((f) => ({ ...f, ...p }))} errors={{}} countries={['GB']} mode="choice" />
+        </MantineProvider>
+      );
+    }
+    render(<Harness />);
+    const box = screen.getByLabelText('Postcode') as HTMLInputElement;
+    expect(box.value).toBe('LS1 6BY');
+    fireEvent.change(box, { target: { value: '' } });
+    expect((screen.getByLabelText('Postcode') as HTMLInputElement).value).toBe('');
+  });
+
+  it('keeps two steps on one page in separate radio groups', () => {
+    const noop = vi.fn();
+    render(
+      <MantineProvider env="test">
+        <div data-testid="a"><AddressStep form={{ ...DEFAULT_FORM, country: 'GB' }} patch={noop} errors={{}} mode="choice" /></div>
+        <div data-testid="b"><AddressStep form={{ ...DEFAULT_FORM, country: 'GB' }} patch={noop} errors={{}} mode="choice" /></div>
+      </MantineProvider>,
+    );
+    const a = within(screen.getByTestId('a')); const b = within(screen.getByTestId('b'));
+    // Uncontrolled click changes the DOM-level checked state; a shared name would uncheck the other step's radio.
+    fireEvent.click(a.getByRole('radio', { name: 'Collection point' }));
+    expect((b.getByRole('radio', { name: 'Home address' }) as HTMLInputElement).checked).toBe(true);
   });
 });

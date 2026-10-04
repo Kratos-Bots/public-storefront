@@ -73,6 +73,8 @@ export default {
   'address.pointList': 'Screen reader name of the list of collection points found',
   'address.pointChosen': 'Heading over the collection point the shopper has chosen',
   'address.pointChange': 'Button that reopens the collection point search',
+  'address.pointKeep': 'Point picker: button that cancels a change and keeps the current collection point; {name} is the point name',
+  'address.pointFound': 'Point picker: announced to screen readers and shown above the list when a search returns results; {count} is a number',
   'address.pointDistance': 'Distance to a collection point; {km} is a number with one decimal',
   'contact.blurbEmail': 'Line at the top of the contact step when the shop asks for an email',
   'contact.blurbNoEmail': 'Line at the top of the contact step when the shop does not ask for an email',

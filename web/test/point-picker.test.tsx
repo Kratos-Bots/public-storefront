@@ -80,6 +80,70 @@ describe('PointPicker', () => {
     expect(screen.getByText('Too many searches. Please wait a minute and try again.')).toBeTruthy();
   });
 
+  it('announces how many points a search found', async () => {
+    searchMock.mockResolvedValueOnce({ available: true, carriers: [], points: [point(), point({ id: '2' })] });
+    mount({ postcode: 'LS1' });
+    await search();
+    expect(screen.getByText('2 collection points found')).toBeTruthy();
+  });
+
+  it('Keep returns to the summary without choosing anything', () => {
+    const props = mount({ value: point(), postcode: 'LS1 6BY' });
+    fireEvent.click(screen.getByRole('button', { name: 'Change' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Keep Tesco Express' }));
+    expect(screen.getByText('Your collection point')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Search' })).toBeNull();
+    expect(props.onChoose).not.toHaveBeenCalled();
+  });
+
+  it('activating the point already chosen closes the search, choosing another reports it once', async () => {
+    searchMock.mockResolvedValue({ available: true, carriers: [], points: [point(), point({ id: '2', name: 'News Plus' })] });
+    const props = mount({ value: point(), postcode: 'LS1' });
+    fireEvent.click(screen.getByRole('button', { name: 'Change' }));
+    await search();
+    fireEvent.click(screen.getByRole('radio', { name: /News Plus/ }));
+    expect(props.onChoose).toHaveBeenCalledTimes(1);
+    expect(props.onChoose).toHaveBeenCalledWith(point({ id: '2', name: 'News Plus' }));
+  });
+
+  it('activating the point already chosen brings the summary back without reporting it', async () => {
+    searchMock.mockResolvedValue({ available: true, carriers: [], points: [point(), point({ id: '2', name: 'News Plus' })] });
+    const props = mount({ value: point(), postcode: 'LS1' });
+    fireEvent.click(screen.getByRole('button', { name: 'Change' }));
+    await search();
+    expect(screen.queryByText('Your collection point')).toBeNull();
+    fireEvent.click(screen.getByRole('radio', { name: /Tesco Express/ }));
+    expect(screen.getByText('Your collection point')).toBeTruthy();
+    expect(props.onChoose).not.toHaveBeenCalled();
+  });
+
+  it('seeds an empty postcode once, and only when given a seed', () => {
+    const seeded = mount({ postcode: '', seedPostcode: 'LS1 6BY' });
+    expect(seeded.onPostcodeChange).toHaveBeenCalledTimes(1);
+    expect(seeded.onPostcodeChange).toHaveBeenCalledWith('LS1 6BY');
+    cleanup();
+    expect(mount({ postcode: '' }).onPostcodeChange).not.toHaveBeenCalled();
+    cleanup();
+    expect(mount({ postcode: 'AB1', seedPostcode: 'LS1 6BY' }).onPostcodeChange).not.toHaveBeenCalled();
+    cleanup();
+    expect(mount({ postcode: '', seedPostcode: 'LS1 6BY', value: point() }).onPostcodeChange).not.toHaveBeenCalled();
+  });
+
+  it('keeps Search focusable while searching and sends no duplicate request', async () => {
+    let resolve!: (v: Awaited<ReturnType<typeof searchServicePoints>>) => void;
+    searchMock.mockReturnValueOnce(new Promise((r) => { resolve = r; }));
+    mount({ postcode: 'LS1 6BY' });
+    const button = screen.getByRole('button', { name: 'Search' }) as HTMLButtonElement;
+    fireEvent.click(button);
+    expect(button.disabled).toBe(false);
+    expect(button.getAttribute('aria-disabled')).toBe('true');
+    button.focus();
+    expect(document.activeElement).toBe(button);
+    fireEvent.click(button);
+    expect(searchMock).toHaveBeenCalledTimes(1);
+    await act(async () => { resolve({ available: true, carriers: [], points: [point()] }); });
+  });
+
   it('shows the step’s error', () => {
     mount({ error: 'Choose a collection point' });
     expect(screen.getByText('Choose a collection point')).toBeTruthy();

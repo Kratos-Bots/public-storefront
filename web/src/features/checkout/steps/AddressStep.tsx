@@ -37,6 +37,7 @@ export interface AddressStepProps {
 export function AddressStep({ form, patch, errors, notice, before, after, rootAttrs, countries, mode }: AddressStepProps) {
   const { t } = useText();
   const deliverToId = useId();
+  const methodName = useId();
   // The wording of the last three fields follows the delivery country, which is why the country leads the step.
   const labels = addressLabels(form.country);
   const collecting = form.deliveryMethod === 'collection' && (mode === 'choice' || mode === 'collection');
@@ -67,17 +68,11 @@ export function AddressStep({ form, patch, errors, notice, before, after, rootAt
               <label className={fields.segment} key={method}>
                 <input
                   type="radio"
-                  name="delivery-method"
+                  name={methodName}
                   checked={form.deliveryMethod === method}
-                  onChange={() =>
-                    patch({
-                      deliveryMethod: method,
-                      // First time into collection: start the point search from the postcode already typed.
-                      ...(method === 'collection' && !form.pointPostcode && form.zip ? { pointPostcode: form.zip } : {}),
-                    })
-                  }
+                  onChange={() => patch({ deliveryMethod: method })}
                 />
-                <span>{t(method === 'home' ? 'checkout.address.methodHome' : 'checkout.address.methodCollection')}</span>
+                <span className={fields.segmentLabel}>{t(method === 'home' ? 'checkout.address.methodHome' : 'checkout.address.methodCollection')}</span>
               </label>
             ))}
           </div>
@@ -92,7 +87,8 @@ export function AddressStep({ form, patch, errors, notice, before, after, rootAt
         <PointPicker
           country={form.country}
           value={form.servicePoint}
-          postcode={form.pointPostcode || form.zip}
+          postcode={form.pointPostcode}
+          seedPostcode={form.zip}
           error={errors.servicePoint}
           onPostcodeChange={(v) => patch({ pointPostcode: v })}
           onChoose={(point) => patch({ servicePoint: point })}
