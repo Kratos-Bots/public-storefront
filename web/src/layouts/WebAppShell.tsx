@@ -5,6 +5,7 @@ import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { NoticeBanners } from '@/features/notices/NoticeBanners.tsx';
 import { CutoffBar } from '@/features/notices/CutoffBar.tsx';
 import { LoginModal } from '@/features/auth/LoginModal.tsx';
+import { UnpaidOrderPrompt } from '@/features/unpaid-prompt/UnpaidOrderPrompt.tsx';
 import { PrimaryActionBar, usePrimaryBarShowing } from '@/features/webapp/PrimaryActionBar.tsx';
 import { useTelegramChrome } from '@/features/webapp/useTelegramChrome.ts';
 import { HeaderBar, legacyHeaderSlots } from '@/layouts/header-parts.tsx';
@@ -55,6 +56,7 @@ export function WebAppFrame({ children }: { children: ReactNode; cartBar?: boole
       <PrimaryActionBar />
 
       {features.accounts && !native ? <LoginModal /> : null}
+      <UnpaidOrderPrompt />
 
       <Slot name="Overlay" />
     </div>

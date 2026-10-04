@@ -125,13 +125,14 @@ export function CancelOrder({ reference, accessKey, viaLink, canCancel, blockedB
           <div className={classes.cancelButtons}>
             <button
               type="button"
+              data-mantine-stop-propagation
               className={classes.cancelConfirm}
               aria-disabled={working}
               onClick={() => void confirm()}
             >
               {working ? t('order.cancel.working') : t('order.cancel.confirm')}
             </button>
-            <button ref={keep} type="button" className={classes.ghost} disabled={working} onClick={close}>
+            <button ref={keep} type="button" data-mantine-stop-propagation className={classes.ghost} disabled={working} onClick={close}>
               {t('order.cancel.keep')}
             </button>
           </div>

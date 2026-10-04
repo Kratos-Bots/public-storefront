@@ -86,6 +86,12 @@ export default defineTextArea('order', {
   'cancel.refusedInFlight': { en: 'A payment may already be on its way, so this order cannot be cancelled here. Contact us and we will help.', max: 220 },
   'cancel.refusedGone': { en: 'This order is no longer waiting for payment.', max: 160 },
   'cancel.failed': { en: "We couldn't cancel the order. Please try again.", max: 160 },
+  'prompt.title': { en: 'You have an unpaid order', max: 80 },
+  'prompt.body': { en: 'Order {reference} is waiting for payment.', max: 160 },
+  'prompt.amount': { en: 'Amount due', max: 40 },
+  'prompt.pay': { en: 'Complete payment', max: 40 },
+  'prompt.later': { en: 'Not now', max: 40 },
+  'prompt.more': { en: 'You have other unpaid orders too. See all orders', max: 120 },
 
   // Parcels.
   'shipment.parcel': { en: 'Parcel', max: 40 },

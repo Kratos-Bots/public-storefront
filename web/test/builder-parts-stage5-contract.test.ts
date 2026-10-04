@@ -7,6 +7,7 @@ import { allowedOn, checkRules } from '@/builder/rules.ts';
 import { FAMILY_DOCS } from '@/builder/parts.ts';
 import { PREVIEW_STATE_IDS } from '@/builder/mode.ts';
 import { TEXT_ENTRIES, isTextKey, matchesTextPattern } from '@/text/registry.ts';
+import { SITE_WIDE_TEXT } from '@/text/site-wide.ts';
 import type { ComponentData, LayoutKind, PuckDoc } from '@/builder/types.ts';
 import { STAGE5_CONTAINERS, STAGE5_PARTS } from './helpers/stage5-parts.ts';
 
@@ -129,7 +130,8 @@ describe('stage-5 parts contract (checkout parts spec §9, §12, §13)', () => {
       }
     });
     it('every checkout and order key in the registry is covered by some block\'s text', () => {
-      const patterns = Object.values(BLOCKS).flatMap((b) => b.text ?? []);
+      // A frame-level mount (the unpaid-order pop-up) has no block: its keys are the site-wide group's.
+      const patterns = [...Object.values(BLOCKS).flatMap((b) => b.text ?? []), ...SITE_WIDE_TEXT];
       const uncovered = Object.keys(TEXT_ENTRIES).filter((k) => /^(checkout|order)\./.test(k) && !TEXT_ENTRIES[k]!.fixed && !patterns.some((p) => matchesTextPattern(k, p)));
       expect(uncovered).toEqual([]);
     });
