@@ -403,8 +403,8 @@ test.describe('page builder editor · fixture checkout', () => {
     await frame.getByRole('textbox', { name: 'Email' }).fill('ada@example.invalid');
     await next();
     await frame.getByRole('textbox', { name: 'Address line 1' }).fill('14 Kirkgate');
-    await frame.getByRole('textbox', { name: 'City' }).fill('Leeds');
-    await frame.getByRole('textbox', { name: 'ZIP / Postcode' }).fill('LS1 6BY');
+    await frame.getByRole('textbox', { name: 'Town / City' }).fill('Leeds');
+    await frame.getByRole('textbox', { name: 'Postcode' }).fill('LS1 6BY');
     await next();
     await frame.getByText('Tracked 24').click();
     await next();

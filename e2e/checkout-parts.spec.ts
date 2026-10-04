@@ -140,10 +140,10 @@ async function walk(page: Page, w: Walk): Promise<void> {
       await page.getByRole('textbox', { name: 'Surname' }).fill('Sterling');
       await page.getByRole('textbox', { name: 'Email' }).fill('ada@example.invalid');
     } else if (kind === 'address') {
-      await page.getByRole('textbox', { name: 'Address line 1' }).fill('14 Kirkgate');
-      await page.getByRole('textbox', { name: 'City' }).fill('Leeds');
-      await page.getByRole('textbox', { name: 'ZIP / Postcode' }).fill('LS1 6BY');
       await expect(page.getByRole('combobox', { name: 'Country' })).toHaveValue('GB');
+      await page.getByRole('textbox', { name: 'Address line 1' }).fill('14 Kirkgate');
+      await page.getByRole('textbox', { name: 'Town / City' }).fill('Leeds');
+      await page.getByRole('textbox', { name: 'Postcode' }).fill('LS1 6BY');
     } else if (kind === 'shipping') {
       await expect(page.getByText('Tracked 24')).toBeVisible();
       if (w.content) {
@@ -236,6 +236,55 @@ test.describe('checkout · the default arrangement sends what v0.7.0 sent', () =
       for (const q of mocks.state.guestQuotes) expect(q.couponCode).toBeUndefined();
     });
   }
+});
+
+test.describe('checkout · the contact and address form', () => {
+  test('prefix-only phone, the shop\'s countries, country-aware labels, line 3 on the order', async ({ page }) => {
+    const { mocks } = await open(page, 'storefront', null, '/checkout', {
+      tweakSettings: (s) => { s.shipping = { countries: ['GB', 'IE', 'US'] }; },
+    });
+    const next = () => page.getByRole('button', { name: 'Continue' }).click();
+
+    // Contact: the closed picker shows the prefix alone.
+    await expect(page.getByRole('heading', { name: 'Your details' })).toBeVisible();
+    await expect(page.locator('[data-phone-code]')).toHaveText('+44');
+    await page.getByRole('textbox', { name: 'First name' }).fill('Ada');
+    await page.getByRole('textbox', { name: 'Surname' }).fill('Sterling');
+    await page.getByRole('textbox', { name: 'Email' }).fill('ada@example.invalid');
+    await page.getByRole('textbox', { name: 'Phone' }).fill('07801 123456');
+    await next();
+
+    // Address: three countries, and the wording follows the one chosen.
+    await expect(page.getByRole('heading', { name: 'Delivery address' })).toBeVisible();
+    const country = page.getByRole('combobox', { name: 'Country' });
+    await expect(country.locator('option:not([value=""])')).toHaveCount(3);
+    await country.selectOption('US');
+    await expect(page.getByRole('textbox', { name: 'ZIP code' })).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'State' })).toBeVisible();
+    await country.selectOption('GB');
+    await page.getByRole('textbox', { name: 'Address line 1' }).fill('14 Kirkgate');
+    await page.getByRole('textbox', { name: 'Address line 3' }).fill('Flat 2');
+    await page.getByRole('textbox', { name: 'Town / City' }).fill('Leeds');
+    await page.getByRole('textbox', { name: 'Postcode' }).fill('LS1 6BY');
+    await next();
+
+    await page.getByText('Tracked 24').click();
+    await next();
+    await page.locator('label').filter({ hasText: 'Crypto' }).first().click();
+    await page.locator('label').filter({ hasText: 'USDT' }).first().click();
+    await next();
+
+    // Review reads the phone back without the trunk zero and shows the third line.
+    await expect(page.getByRole('heading', { name: 'Review your order' })).toBeVisible();
+    await expect(page.getByText('+447801123456')).toBeVisible();
+    await expect(page.getByText('Flat 2')).toBeVisible();
+
+    await placeOrder(page);
+    const body = mocks.state.checkouts[0]!;
+    expect(body.shippingAddress).toMatchObject({ addressLine1: '14 Kirkgate', addressLine3: 'Flat 2', city: 'Leeds', zip: 'LS1 6BY', country: 'GB' });
+    // What is sent is unchanged: the backend strips the zero.
+    expect(body.phone).toBe('+4407801123456');
+  });
 });
 
 // 1 — rearranged: storefront, menu and web app, at a phone and a desktop width -------------------------
@@ -616,8 +665,8 @@ for (const t of TEMPLATES) {
           await page.getByRole('textbox', { name: 'Email' }).fill('ada@example.invalid');
         } else if (kind === 'address') {
           await page.getByRole('textbox', { name: 'Address line 1' }).fill('14 Kirkgate');
-          await page.getByRole('textbox', { name: 'City' }).fill('Leeds');
-          await page.getByRole('textbox', { name: 'ZIP / Postcode' }).fill('LS1 6BY');
+          await page.getByRole('textbox', { name: 'Town / City' }).fill('Leeds');
+          await page.getByRole('textbox', { name: 'Postcode' }).fill('LS1 6BY');
         } else if (kind === 'shipping') {
           await page.getByText('Tracked 24').click();
         } else if (kind === 'payment') {
