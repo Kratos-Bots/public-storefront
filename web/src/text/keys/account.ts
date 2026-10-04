@@ -28,6 +28,7 @@ export default defineTextArea('account', {
   'order.placed': { en: 'Placed {date}', max: 60 },
   'order.collectFrom': { en: 'Collect from {name}', max: 80 },
   'order.balanceDue': { en: 'Balance due', max: 40 },
+  'order.payHelp': { en: "This balance can't be paid online. Contact us and we'll help.", max: 160 },
   'order.items': { en: 'Items', max: 40 },
   'order.lines': { en: { one: '{count} line', other: '{count} lines' }, max: 40 },
   'order.payments': { en: 'Payments', max: 40 },

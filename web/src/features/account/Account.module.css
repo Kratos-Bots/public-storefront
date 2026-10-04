@@ -350,6 +350,13 @@
   margin-top: 1rem;
 }
 
+.payHelp {
+  margin: 0;
+  font-size: calc(0.8125rem * var(--sf-text-scale, 1));
+  line-height: 1.6;
+  color: var(--sf-muted);
+}
+
 .balance > .band {
   margin-top: 0;
 }

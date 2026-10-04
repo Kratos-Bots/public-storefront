@@ -4,9 +4,9 @@ import { MantineProvider } from '@mantine/core';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-const h = vi.hoisted(() => ({ order: {} as Record<string, unknown> }));
+const h = vi.hoisted(() => ({ order: {} as Record<string, unknown>, links: [] as Array<{ label: string; url: string }> }));
 vi.mock('@/app/settings.ts', () => ({
-  useSettings: () => ({ currency: 'GBP', brand: { name: 'Northbound Supply', links: {} }, supportLinks: [] }),
+  useSettings: () => ({ currency: 'GBP', brand: { name: 'Northbound Supply', links: {} }, supportLinks: h.links }),
 }));
 vi.mock('@/features/account/queries.ts', () => ({
   useOrder: () => ({ data: h.order, isPending: false, isError: false }),
@@ -21,6 +21,7 @@ vi.mock('@/api/public-order.ts', async (orig) => ({
 
 import { cancelOrder } from '@/api/orders.ts';
 import { fetchPaymentOptions, fetchPublicOrder, selectPaymentMethod } from '@/api/public-order.ts';
+import { paymentSignature } from '@/features/order-status/payment-state.ts';
 import { OrderDetailPage } from '@/features/account/OrderDetailPage.tsx';
 import type { PublicOrder } from '@/types/public-order.ts';
 
@@ -59,6 +60,7 @@ const mount = () =>
 
 beforeEach(() => {
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  h.links = [];
   fetchMock.mockReset();
   optionsMock.mockReset().mockResolvedValue([method]);
   selectMock.mockReset();
@@ -119,9 +121,16 @@ describe('account order: pay and cancel', () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect(screen.queryByText(/Choose how to pay/)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Cancel order' })).toBeNull();
-    // The old bare band: the paragraph is the part's own root, with no wrapper around it.
     const band = [...container.querySelectorAll('p')].find((p) => p.textContent?.startsWith('Balance due'))!;
+    expect(band.parentElement?.className).not.toContain('balance');
     expect(band.parentElement?.querySelector('[data-sf-part="cancel"]')).toBeNull();
+    // Cancel flags that show nothing (no reason, or already paid) leave the markup untouched.
+    const before = container.innerHTML;
+    for (const flags of [{ canCancel: false, cancelBlockedBy: null }, { canCancel: false, cancelBlockedBy: 'paid' }]) {
+      cleanup();
+      h.order = { ...base, accessKey, ...flags };
+      expect(mount().container.innerHTML).toBe(before);
+    }
   });
 
   it('a settled order shows neither', async () => {
@@ -143,7 +152,15 @@ describe('account order: pay and cancel', () => {
     expect(screen.queryByText(/Choose how to pay/)).toBeNull();
   });
 
-  it('choosing a method refetches the account order; the first load does not', async () => {
+  const orderKeys = (invalidate: { mock: { calls: unknown[][] } }) =>
+    invalidate.mock.calls.filter((c) => JSON.stringify((c[0] as { queryKey?: unknown })?.queryKey) === JSON.stringify(['order', 'K4M2QP']));
+  const hostedOrder = publicOrder({
+    canPay: true, payBy: null,
+    activePayment: { paymentId: 9, method: 'stripe', kind: 'gateway', status: 'pending', checkoutUrl: 'https://pay.example/abc', canChange: true },
+  });
+  const poll = async () => { await act(async () => { await client.refetchQueries({ queryKey: ['public-order', 'K4M2QP', 'abc123'] }); }); };
+
+  it('choosing a method refetches the account order exactly once; the first load does not', async () => {
     h.order = { ...base, accessKey: 'abc123', canCancel: true, cancelBlockedBy: null };
     fetchMock.mockResolvedValueOnce(publicOrder({ canPay: true, payBy: null, activePayment: null }));
     selectMock.mockResolvedValueOnce({
@@ -153,15 +170,11 @@ describe('account order: pay and cancel', () => {
     mount();
     const invalidate = vi.spyOn(client, 'invalidateQueries');
     fireEvent.click(await screen.findByRole('button', { name: /Card/ }));
-    // The picker refreshes the public order; its new state then refreshes the account order.
-    fetchMock.mockResolvedValue(publicOrder({
-      canPay: true, payBy: null,
-      activePayment: { paymentId: 9, method: 'stripe', kind: 'gateway', status: 'pending', checkoutUrl: 'https://pay.example/abc', canChange: true },
-    }));
-    await waitFor(() => {
-      const keys = invalidate.mock.calls.map((c) => JSON.stringify(c[0]?.queryKey));
-      expect(keys).toContain(JSON.stringify(['order', 'K4M2QP']));
-    });
+    expect(orderKeys(invalidate)).toHaveLength(0);
+    fetchMock.mockResolvedValue(hostedOrder);
+    await waitFor(() => expect(orderKeys(invalidate)).toHaveLength(1));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(orderKeys(invalidate)).toHaveLength(1);
     expect(selectMock).toHaveBeenCalled();
   });
 
@@ -171,6 +184,115 @@ describe('account order: pay and cancel', () => {
     const invalidate = vi.spyOn(client, 'invalidateQueries');
     mount();
     await screen.findByText(/Choose how to pay/);
-    expect(invalidate.mock.calls.filter((c) => JSON.stringify(c[0]?.queryKey) === JSON.stringify(['order', 'K4M2QP']))).toHaveLength(0);
+    expect(orderKeys(invalidate)).toHaveLength(0);
+  });
+
+  it('polls that return the same data never refetch the account order; a changed payment state does, once', async () => {
+    h.order = { ...base, accessKey: 'abc123', canCancel: true, cancelBlockedBy: null };
+    fetchMock.mockResolvedValue(publicOrder({ canPay: true, payBy: null, activePayment: null }));
+    const invalidate = vi.spyOn(client, 'invalidateQueries');
+    mount();
+    await screen.findByText(/Choose how to pay/);
+    await poll(); await poll(); await poll();
+    expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(4);
+    expect(orderKeys(invalidate)).toHaveLength(0);
+    fetchMock.mockResolvedValue(hostedOrder);
+    await poll();
+    await waitFor(() => expect(orderKeys(invalidate)).toHaveLength(1));
+    await poll();
+    expect(orderKeys(invalidate)).toHaveLength(1);
+  });
+
+  it("showing another order does not refetch on that order's first load", async () => {
+    h.order = { ...base, accessKey: 'abc123', canCancel: true, cancelBlockedBy: null };
+    fetchMock.mockResolvedValue(publicOrder({ canPay: true, payBy: null, activePayment: null }));
+    const invalidate = vi.spyOn(client, 'invalidateQueries');
+    const view = mount();
+    await screen.findByText(/Choose how to pay/);
+    h.order = { ...base, reference: 'Z9Z9Z9', accessKey: 'other', canCancel: true, cancelBlockedBy: null };
+    fetchMock.mockResolvedValue({ ...hostedOrder, reference: 'Z9Z9Z9' });
+    view.rerender(
+      <QueryClientProvider client={client}>
+        <MantineProvider env="test">
+          <MemoryRouter initialEntries={['/account/orders/Z9Z9Z9']}>
+            <Routes><Route path="/account/orders/:ref" element={<OrderDetailPage />} /></Routes>
+          </MemoryRouter>
+        </MantineProvider>
+      </QueryClientProvider>,
+    );
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('Z9Z9Z9', 'other'));
+    await screen.findByRole('link', { name: /Open secure checkout/ });
+    const refetched = invalidate.mock.calls.filter((c) => JSON.stringify((c[0] as { queryKey?: unknown })?.queryKey)?.startsWith('["order"'));
+    expect(refetched).toHaveLength(0);
+  });
+
+  describe('a balance that cannot be paid online', () => {
+    const help = /This balance can't be paid online/;
+    const stuck = () => publicOrder({ canPay: false, payBy: null, activePayment: null });
+    it('says so, with the shop support links', async () => {
+      h.links = [{ label: 'Chat', url: 'https://t.me/example_shop' }];
+      h.order = { ...base, accessKey: 'abc123', canCancel: false, cancelBlockedBy: null };
+      fetchMock.mockResolvedValue(stuck());
+      mount();
+      expect(await screen.findByText(help)).toBeTruthy();
+      expect(screen.getByRole('link', { name: 'Chat' }).getAttribute('href')).toBe('https://t.me/example_shop');
+    });
+    it('is not shown when the order can be paid', async () => {
+      h.order = { ...base, accessKey: 'abc123', canCancel: true, cancelBlockedBy: null };
+      fetchMock.mockResolvedValue(publicOrder({ canPay: true, payBy: null, activePayment: null }));
+      mount();
+      await screen.findByText(/Choose how to pay/);
+      expect(screen.queryByText(help)).toBeNull();
+    });
+    it('is not shown before the public order has loaded', async () => {
+      h.order = { ...base, accessKey: 'abc123', canCancel: false, cancelBlockedBy: null };
+      fetchMock.mockReturnValue(new Promise(() => {}));
+      mount();
+      await new Promise((r) => setTimeout(r, 20));
+      expect(screen.queryByText(help)).toBeNull();
+    });
+    it('is not shown for a cancelled order', async () => {
+      h.order = { ...base, status: 'cancelled', accessKey: 'abc123', canCancel: false, cancelBlockedBy: null };
+      fetchMock.mockResolvedValue({ ...stuck(), status: 'cancelled' });
+      mount();
+      await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+      await new Promise((r) => setTimeout(r, 20));
+      expect(screen.queryByText(help)).toBeNull();
+    });
+    it('is not shown beside the cancel control\'s own contact line', async () => {
+      h.order = { ...base, accessKey: 'abc123', canCancel: false, cancelBlockedBy: 'bank_transfer' };
+      fetchMock.mockResolvedValue(stuck());
+      mount();
+      await screen.findByText(/To cancel this order, contact us/);
+      expect(screen.queryByText(help)).toBeNull();
+    });
+  });
+});
+
+describe('paymentSignature', () => {
+  type Pay = NonNullable<PublicOrder['payment']>;
+  const pay = (over: Partial<Pay> = {}): Pay => ({
+    canPay: true, canCancel: true, cancelBlockedBy: null, payBy: null,
+    activePayment: { paymentId: 1, method: 'stripe', kind: 'gateway', status: 'pending', checkoutUrl: null, canChange: true }, ...over,
+  });
+  const crypto = { paymentId: 5, paymentStatus: 'pending', coin: 'usdt', network: 'polygon', coinLabel: 'USDT', networkLabel: 'Polygon', address: '0x', coinAmount: '1', fiatAmount: 1, verificationStatus: 'pending', needsAttention: false, txidMasked: null };
+  const o = (over: Partial<PublicOrder> = {}): PublicOrder => ({ ...publicOrder(pay()), cryptoPayments: [crypto], ...over });
+  it('is the same for identical data, whatever else moves', () => {
+    expect(paymentSignature(o())).toBe(paymentSignature(o({ createdAt: '2027-01-01T00:00:00Z', payment: pay({ payBy: '2027-01-01T00:00:00Z' }) })));
+  });
+  it.each([
+    ['status', () => o({ status: 'confirmed' })],
+    ['canPay', () => o({ payment: pay({ canPay: false }) })],
+    ['canCancel', () => o({ payment: pay({ canCancel: false }) })],
+    ['cancelBlockedBy', () => o({ payment: pay({ cancelBlockedBy: 'paid' }) })],
+    ['active payment id', () => o({ payment: pay({ activePayment: { ...pay().activePayment!, paymentId: 2 } }) })],
+    ['active payment status', () => o({ payment: pay({ activePayment: { ...pay().activePayment!, status: 'failed' } }) })],
+    ['no active payment', () => o({ payment: pay({ activePayment: null }) })],
+    ['crypto payment id', () => o({ cryptoPayments: [{ ...crypto, paymentId: 6 }] })],
+    ['crypto payment status', () => o({ cryptoPayments: [{ ...crypto, paymentStatus: 'completed' }] })],
+    ['crypto verification', () => o({ cryptoPayments: [{ ...crypto, verificationStatus: 'checking' }] })],
+    ['no crypto payments', () => o({ cryptoPayments: [] })],
+  ])('differs when the %s changes', (_n, change) => {
+    expect(paymentSignature(change())).not.toBe(paymentSignature(o()));
   });
 });

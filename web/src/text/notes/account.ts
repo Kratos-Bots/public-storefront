@@ -26,6 +26,7 @@ export default {
   'order.placed': 'Order date at the top of an order; {date} is the date',
   'order.collectFrom': 'Line under the order date when the order goes to a collection point; {name} is the point',
   'order.balanceDue': 'Banner on an order that still has money owed',
+  'order.payHelp': 'Account order page: shown under the balance when the order cannot be paid online',
   'order.items': 'Heading of the items section of an order',
   'order.lines': 'Number of item lines, beside the Items heading',
   'order.payments': 'Heading of the payments section of an order',

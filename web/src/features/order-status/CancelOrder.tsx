@@ -2,9 +2,9 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { notifications } from '@mantine/notifications';
 import { cancelOrder } from '@/api/orders.ts';
 import { cancelPublicOrder, OrderNotCancellableError } from '@/api/public-order.ts';
-import { useSettings } from '@/app/settings.ts';
 import type { StyleAttrs } from '@/builder/define.ts';
 import { cancelView } from '@/features/order-status/cancel-state.ts';
+import { SupportLinks } from '@/features/order-status/SupportLinks.tsx';
 import { useText } from '@/text/runtime.tsx';
 import type { CancelBlockedBy } from '@/types/public-order.ts';
 import classes from '@/features/order-status/OrderStatus.module.css';
@@ -37,7 +37,6 @@ const REFUSAL: Record<OrderNotCancellableError['reason'], Refusal> = {
  */
 export function CancelOrder({ reference, accessKey, viaLink, canCancel, blockedBy, onCancelled, rootAttrs }: CancelOrderProps) {
   const { t } = useText();
-  const { supportLinks } = useSettings();
   const [open, setOpen] = useState(false);
   const [working, setWorking] = useState(false);
   const [done, setDone] = useState(false);
@@ -100,15 +99,7 @@ export function CancelOrder({ reference, accessKey, viaLink, canCancel, blockedB
       {view === 'contact' ? (
         <>
           <p className={classes.cancelText}>{t('order.cancel.contact')}</p>
-          {supportLinks.length > 0 ? (
-            <ul className={classes.cancelLinks}>
-              {supportLinks.map((link) => (
-                <li key={link.url}>
-                  <a className={classes.cancelLink} href={link.url} target="_blank" rel="noopener noreferrer">{link.label}</a>
-                </li>
-              ))}
-            </ul>
-          ) : null}
+          <SupportLinks />
         </>
       ) : null}
       {view === 'button' && !done ? (

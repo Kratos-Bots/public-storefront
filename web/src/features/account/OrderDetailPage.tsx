@@ -18,7 +18,9 @@ import {
 } from '@/features/order-status/status.ts';
 import { CancelOrder } from '@/features/order-status/CancelOrder.tsx';
 import { PaymentSection } from '@/features/order-status/PaymentSection.tsx';
-import { pollInterval } from '@/features/order-status/payment-state.ts';
+import { cancelView } from '@/features/order-status/cancel-state.ts';
+import { paymentSignature, pollInterval, visibleCryptoPayments } from '@/features/order-status/payment-state.ts';
+import { SupportLinks } from '@/features/order-status/SupportLinks.tsx';
 import { publicOrderKey } from '@/features/order-status/queries.ts';
 import { StatusPill } from '@/features/account/StatusPill.tsx';
 import { useOrder } from '@/features/account/queries.ts';
@@ -101,19 +103,19 @@ function BalanceView({ styleAttrs }: PartViewProps) {
   });
 
   // The payment section refreshes the public order itself; the account order (its payments list,
-  // balance and cancel flags) has to follow it. Invalidating ['order', ref] refetches only that
-  // query and never touches the public one, so this cannot feed itself. The first value seen is
-  // the initial load, which the account order already agrees with: skip it.
-  const updatedAt = publicOrder.dataUpdatedAt;
-  const seen = useRef(0);
+  // balance and cancel flags) has to follow when something it shows changed. Polling re-reads the
+  // same order every few seconds, so only a changed signature counts, and the first one seen for a
+  // reference is the initial load, which the account order already agrees with. Invalidating
+  // ['order', ref] never touches the public query, so this cannot feed itself.
+  const signature = publicOrder.data ? paymentSignature(publicOrder.data) : null;
+  const seen = useRef<{ reference: string; signature: string } | null>(null);
   useEffect(() => {
-    if (!updatedAt) return;
-    if (!seen.current) {
-      seen.current = updatedAt;
-      return;
-    }
+    if (!signature) return;
+    const last = seen.current;
+    seen.current = { reference: data.reference, signature };
+    if (!last || last.reference !== data.reference || last.signature === signature) return;
     void queryClient.invalidateQueries({ queryKey: ['order', data.reference] });
-  }, [updatedAt, queryClient, data.reference]);
+  }, [signature, queryClient, data.reference]);
 
   if (!owed) return null;
 
@@ -125,15 +127,27 @@ function BalanceView({ styleAttrs }: PartViewProps) {
       </span>
     </>
   );
-  const payable = accessKey && publicOrder.data ? publicOrder.data : null;
-  const cancelable = data.canCancel !== undefined || !!data.cancelBlockedBy;
-  // The old bare band for an order with nothing to add under it (no key, or an older backend).
-  if (!payable && !cancelable) return <p className={classes.band} {...styleAttrs}>{figures}</p>;
+  const loaded = accessKey ? publicOrder.data : undefined;
+  // What PaymentSection would draw: a way to pay, or crypto payments to show.
+  const payable = loaded && (loaded.payment?.canPay || visibleCryptoPayments(loaded).length > 0) ? loaded : null;
+  const cancelShows = cancelView(data.canCancel, data.cancelBlockedBy);
+  // A balance with no way to pay it online and nothing else saying why.
+  const payHelp =
+    !!loaded && loaded.payment?.canPay === false && cancelShows !== 'contact' &&
+    data.status !== 'cancelled' && data.status !== 'refunded' && loaded.status !== 'cancelled' && loaded.status !== 'refunded';
+  // The old bare band when there is nothing under it to show.
+  if (!payable && !payHelp && cancelShows === 'none') return <p className={classes.band} {...styleAttrs}>{figures}</p>;
 
   return (
     <div className={classes.balance} {...styleAttrs}>
       <p className={classes.band}>{figures}</p>
       {payable ? <PaymentSection order={payable} reference={data.reference} accessKey={accessKey!} /> : null}
+      {payHelp ? (
+        <div>
+          <p className={classes.payHelp}>{t('account.order.payHelp')}</p>
+          <SupportLinks />
+        </div>
+      ) : null}
       <CancelOrder
         key={data.reference}
         reference={data.reference}

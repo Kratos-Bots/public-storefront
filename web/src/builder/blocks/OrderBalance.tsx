@@ -8,7 +8,7 @@ export const block = defineBlock<{ id: string }>({
   name: 'OrderBalance', label: 'Balance due', category: 'part', part: { family: 'order' },
   layouts: 'all', routeBound: false, slots: [],
   style: styleSupport('root', [...BOX, ...TEXT, ...VIS]),
-  text: ['account.order.balanceDue', 'order.payment.*', 'order.method.*', 'order.crypto.*', 'order.errors.*', 'order.copy.*', 'order.chat.*', 'common.actions.*', 'common.contact.*', 'order.cancel.*'],
+  text: ['account.order.balanceDue', 'account.order.payHelp', 'order.payment.*', 'order.method.*', 'order.crypto.*', 'order.errors.*', 'order.copy.*', 'order.chat.*', 'common.actions.*', 'common.contact.*', 'order.cancel.*'],
   schema: z.object({}), defaultProps: {},
   render: (p) => <OrderFamily.PartHost name="OrderBalance" props={p as Record<string, unknown>} styleAttrs={p.puck.style} />,
 });
