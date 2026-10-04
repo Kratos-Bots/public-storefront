@@ -114,7 +114,7 @@ function Address({ props, styleAttrs }: PartViewProps) {
   if (!d.stack && d.kind !== 'address') return null;
   return framed(d, 'address', (
     <AddressStep
-      form={d.form} patch={d.patch} errors={d.errors} notice={d.addressNotice} countries={d.shipCountries}
+      form={d.form} patch={d.patch} errors={d.errors} notice={d.addressNotice} countries={d.shipCountries} mode={d.countryMode}
       before={slotOf(props, 'before')} after={slotOf(props, 'after')} rootAttrs={styleAttrs}
     />
   ));
@@ -125,7 +125,7 @@ function Shipping({ props, styleAttrs }: PartViewProps) {
   if (!d.stack && d.kind !== 'shipping') return null;
   return framed(d, 'shipping', (
     <ShippingStep
-      quote={d.quote} form={d.form} patch={d.patch} errors={d.errors} notice={d.shippingNotice}
+      quote={d.optionsPending ? undefined : d.quote} form={d.form} patch={d.patch} errors={d.errors} notice={d.shippingNotice}
       before={slotOf(props, 'before')} after={slotOf(props, 'after')} rootAttrs={styleAttrs}
     />
   ));

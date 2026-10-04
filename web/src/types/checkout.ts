@@ -22,10 +22,11 @@ export interface Quote {
   promotionDiscount?: number; promotions?: QuotePromotion[]; nudge?: import('./cart.ts').Nudge | null;
   contactModes: import('./settings.ts').ContactModes;
 }
-export interface QuoteInput { country?: string; couponCode?: string; shippingOptionId?: number; useStoreCredit?: boolean }
+export interface QuoteInput { country?: string; couponCode?: string; shippingOptionId?: number; useStoreCredit?: boolean; deliveryMethod?: 'home' | 'collection'; servicePointCarrier?: string }
 export interface ShippingAddressInput {
   firstName: string; surname: string; addressLine1: string; addressLine2?: string | null; addressLine3?: string | null;
   city: string; county?: string | null; zip: string; country: string;
+  servicePointId?: string | null; servicePointCarrier?: string | null; servicePointName?: string | null;
 }
 export interface CheckoutInput {
   shippingAddress: ShippingAddressInput; email?: string; phone?: string; shippingOptionId: number; couponCode?: string;

@@ -5,7 +5,8 @@ import { guestQuote, quote as fetchQuote } from '@/api/checkout.ts';
 import type { ApiError } from '@/api/client.ts';
 import { useCartStore } from '@/stores/cart.ts';
 import type { CheckoutForm } from '@/features/checkout/form-state.ts';
-import type { Quote } from '@/types/checkout.ts';
+import type { Quote, QuoteInput } from '@/types/checkout.ts';
+import { quoteDeliveryFields } from '@/features/checkout/collection-mode.ts';
 
 const DEBOUNCE_MS = 300;
 
@@ -29,6 +30,19 @@ export interface UseQuoteResult {
   /** Re-run the current (guest) quote with a fresh token, without waiting for the
    *  debounced key to change. No-op key-wise for a logged-in quote. */
   refetchWithToken: (token: string) => Promise<void>;
+  /** True only when the quote data on hand was fetched for the delivery options key
+   *  (country, delivery method, point carrier) the form holds right now. False while
+   *  a quote for a different one is in flight, and when there is no quote at all. */
+  optionsCurrent: boolean;
+}
+
+/**
+ * What the list of shipping options depends on: the delivery country, the method (home
+ * or collection point) and, for a collection, the chosen point's carrier. A coupon, store
+ * credit, the chosen option or the cart lines re-quote but never change the list.
+ */
+export function optionsKey(input: Pick<HashInput, 'country' | 'deliveryMethod' | 'servicePointCarrier'>): string {
+  return JSON.stringify([input.country, input.deliveryMethod ?? null, input.servicePointCarrier ?? null]);
 }
 
 interface HashInput {
@@ -36,6 +50,8 @@ interface HashInput {
   couponCode: string;
   shippingOptionId: number | null;
   useStoreCredit: boolean;
+  deliveryMethod?: QuoteInput['deliveryMethod'];
+  servicePointCarrier?: string;
   lines?: { productId: number; quantity: number }[];
 }
 
@@ -71,11 +87,12 @@ export function useQuote(form: CheckoutForm, { guest, turnstileToken }: UseQuote
       couponCode: form.couponCode.trim().toUpperCase(),
       shippingOptionId: form.shippingOptionId,
       useStoreCredit: form.useStoreCredit,
+      ...quoteDeliveryFields(form),
     };
     return guest
       ? { ...base, lines: lines.map((l) => ({ productId: l.productId, quantity: l.quantity })) }
       : base;
-  }, [form.country, form.couponCode, form.shippingOptionId, form.useStoreCredit, guest, lines]);
+  }, [form.country, form.couponCode, form.shippingOptionId, form.useStoreCredit, form.deliveryMethod, form.servicePoint, guest, lines]);
 
   const [debounced] = useDebouncedValue(hashInput, DEBOUNCE_MS);
   const hash = useMemo(() => JSON.stringify(debounced), [debounced]);
@@ -89,6 +106,8 @@ export function useQuote(form: CheckoutForm, { guest, turnstileToken }: UseQuote
         country: debounced.country || undefined,
         couponCode: debounced.couponCode || undefined,
         shippingOptionId: debounced.shippingOptionId ?? undefined,
+        ...(debounced.deliveryMethod ? { deliveryMethod: debounced.deliveryMethod } : {}),
+        ...(debounced.servicePointCarrier ? { servicePointCarrier: debounced.servicePointCarrier } : {}),
       });
       // Mark this exact token spent the moment the request settles, win or lose — Turnstile
       // consumes it on verification regardless of what the rest of the request did with it,
@@ -106,6 +125,8 @@ export function useQuote(form: CheckoutForm, { guest, turnstileToken }: UseQuote
       couponCode: debounced.couponCode || undefined,
       shippingOptionId: debounced.shippingOptionId ?? undefined,
       useStoreCredit: debounced.useStoreCredit,
+      ...(debounced.deliveryMethod ? { deliveryMethod: debounced.deliveryMethod } : {}),
+      ...(debounced.servicePointCarrier ? { servicePointCarrier: debounced.servicePointCarrier } : {}),
     });
   };
 
@@ -121,6 +142,16 @@ export function useQuote(form: CheckoutForm, { guest, turnstileToken }: UseQuote
     retry: false,
     ...(guest ? { staleTime: Infinity, refetchOnWindowFocus: false } : {}),
   });
+
+  // The options key of the data the observer holds. Data that is not placeholder was
+  // fetched for the debounced key (the guest's `refetchWithToken` lands on that same
+  // key); placeholder data is the previous key's, so the remembered key stays put.
+  const dataOptionsKey = useRef<string | null>(null);
+  if (query.data !== undefined && !query.isPlaceholderData) dataOptionsKey.current = optionsKey(debounced);
+  // Judged by the key of the last SUCCESSFUL quote, not by this query having data: a failed
+  // re-quote (a rejected coupon) has no data, but the page still shows the last good quote,
+  // which was priced for this same key. Null until a quote has ever succeeded.
+  const optionsCurrent = dataOptionsKey.current !== null && dataOptionsKey.current === optionsKey(hashInput);
 
   async function refetchWithToken(token: string): Promise<void> {
     // `retry: false` is not optional here. `fetchQuery` takes the client's default
@@ -144,5 +175,6 @@ export function useQuote(form: CheckoutForm, { guest, turnstileToken }: UseQuote
     error: query.error ?? null,
     needsToken,
     refetchWithToken,
+    optionsCurrent,
   };
 }

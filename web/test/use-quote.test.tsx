@@ -15,7 +15,7 @@ import { guestQuote, quote } from '@/api/checkout.ts';
 import { ApiError } from '@/lib/errors.ts';
 import { useCartStore, type LocalLine } from '@/stores/cart.ts';
 import { DEFAULT_FORM, type CheckoutForm } from '@/features/checkout/form-state.ts';
-import { useQuote } from '@/features/checkout/useQuote.ts';
+import { optionsKey, useQuote } from '@/features/checkout/useQuote.ts';
 
 const quoteMock = vi.mocked(quote);
 const guestQuoteMock = vi.mocked(guestQuote);
@@ -172,6 +172,198 @@ describe('useQuote (logged-in)', () => {
     await settle();
     const call = quoteMock.mock.calls[0]?.[0] as unknown as Record<string, unknown>;
     expect(call.items).toBeUndefined();
+  });
+
+  describe('collection points', () => {
+    const point = (carrier: string, id = '1') => ({
+      id, carrier, name: 'Shop', street: 'Kirkgate', houseNumber: '14', postalCode: 'LS1 6BY',
+      city: 'Leeds', country: 'GB', latitude: null, longitude: null, distance: null,
+    });
+
+    it('asks for a collection quote and re-asks when the point moves to another carrier', async () => {
+      const { rerender } = renderHook(({ f }: { f: CheckoutForm }) => useQuote(f, { guest: false }), {
+        wrapper,
+        initialProps: { f: form({ country: 'GB', deliveryMethod: 'collection', servicePoint: point('inpost') }) },
+      });
+      await settle();
+      expect(quoteMock).toHaveBeenCalledTimes(1);
+      expect(quoteMock).toHaveBeenLastCalledWith(expect.objectContaining({ deliveryMethod: 'collection', servicePointCarrier: 'inpost' }));
+
+      rerender({ f: form({ country: 'GB', deliveryMethod: 'collection', servicePoint: point('evri', '2') }) });
+      await settle();
+      expect(quoteMock).toHaveBeenCalledTimes(2);
+      expect(quoteMock).toHaveBeenLastCalledWith(expect.objectContaining({ deliveryMethod: 'collection', servicePointCarrier: 'evri' }));
+    });
+
+    it('a home quote carries neither delivery key', async () => {
+      renderHook(() => useQuote(form({ country: 'GB' }), { guest: false }), { wrapper });
+      await settle();
+      const call = quoteMock.mock.calls[0]![0] as unknown as Record<string, unknown>;
+      expect(Object.keys(call)).not.toEqual(expect.arrayContaining(['deliveryMethod', 'servicePointCarrier']));
+      expect('deliveryMethod' in call).toBe(false);
+      expect('servicePointCarrier' in call).toBe(false);
+    });
+  });
+});
+
+describe('optionsKey', () => {
+  const base = { country: 'GB' };
+
+  it('ignores everything that re-quotes without changing the option list', () => {
+    const a = optionsKey({ ...base, couponCode: 'A', shippingOptionId: 1, useStoreCredit: false, lines: [{ productId: 1, quantity: 1 }] } as never);
+    const b = optionsKey({ ...base, couponCode: 'B', shippingOptionId: 2, useStoreCredit: true, lines: [{ productId: 9, quantity: 4 }] } as never);
+    expect(a).toBe(b);
+  });
+
+  it('differs by country, delivery method and point carrier', () => {
+    const home = optionsKey({ country: 'GB' });
+    expect(optionsKey({ country: 'IE' })).not.toBe(home);
+    expect(optionsKey({ country: 'GB', deliveryMethod: 'collection' })).not.toBe(home);
+    const inpost = optionsKey({ country: 'GB', deliveryMethod: 'collection', servicePointCarrier: 'inpost' });
+    expect(inpost).not.toBe(home);
+    expect(optionsKey({ country: 'GB', deliveryMethod: 'collection', servicePointCarrier: 'evri' })).not.toBe(inpost);
+    expect(optionsKey({ country: 'GB', deliveryMethod: 'collection' })).not.toBe(inpost);
+  });
+});
+
+describe('useQuote optionsCurrent', () => {
+  const point = (carrier: string) => ({
+    id: '1', carrier, name: 'Shop', street: 'Kirkgate', houseNumber: '14', postalCode: 'LS1 6BY',
+    city: 'Leeds', country: 'GB', latitude: null, longitude: null, distance: null,
+  });
+  const run = (f: CheckoutForm) =>
+    renderHook(({ f: ff }: { f: CheckoutForm }) => useQuote(ff, { guest: false }), { wrapper, initialProps: { f } });
+
+  it('is false with no quote, true once the quote for this form has arrived', async () => {
+    const { result } = run(form({ country: 'GB' }));
+    expect(result.current.optionsCurrent).toBe(false);
+    await settle();
+    expect(result.current.optionsCurrent).toBe(true);
+  });
+
+  it('drops at once when the delivery method changes, keeps the old quote, and returns with the new quote', async () => {
+    const { result, rerender } = run(form({ country: 'GB' }));
+    await settle();
+    expect(result.current.optionsCurrent).toBe(true);
+
+    let resolveSecond!: (q: Quote) => void;
+    quoteMock.mockImplementationOnce(() => new Promise<Quote>((res) => { resolveSecond = res; }));
+    rerender({ f: form({ country: 'GB', deliveryMethod: 'collection', servicePoint: point('inpost') }) });
+    expect(result.current.optionsCurrent).toBe(false); // before the debounce fires
+    expect(result.current.quote).toBeDefined();
+
+    await settle(); // debounce fired, request in flight
+    expect(result.current.optionsCurrent).toBe(false);
+    expect(result.current.quote).toBeDefined();
+
+    await act(async () => {
+      resolveSecond(baseQuote({ grandTotal: 95 }));
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(result.current.quote?.grandTotal).toBe(95);
+    expect(result.current.optionsCurrent).toBe(true);
+  });
+
+  it('stays true throughout when only the coupon, store credit or chosen option changes', async () => {
+    const { result, rerender } = run(form({ country: 'GB' }));
+    await settle();
+    quoteMock.mockImplementationOnce(() => new Promise<Quote>(() => undefined));
+    rerender({ f: form({ country: 'GB', couponCode: 'save10', useStoreCredit: true, shippingOptionId: 3 }) });
+    expect(result.current.optionsCurrent).toBe(true);
+    await settle();
+    expect(result.current.isFetching).toBe(true);
+    expect(result.current.optionsCurrent).toBe(true);
+  });
+
+  it('stays true when a re-quote for the same country, method and point fails (an unknown coupon)', async () => {
+    const { result, rerender } = run(form({ country: 'GB' }));
+    await settle();
+    quoteMock.mockRejectedValueOnce(new ApiError(404, 'Coupon not found'));
+    rerender({ f: form({ country: 'GB', couponCode: 'nope' }) });
+    await settle();
+    await settle();
+    expect(result.current.error?.status).toBe(404);
+    expect(result.current.quote).toBeUndefined();
+    expect(result.current.optionsCurrent).toBe(true);
+  });
+
+  it('stays false when the re-quote for a different country fails', async () => {
+    const { result, rerender } = run(form({ country: 'GB' }));
+    await settle();
+    quoteMock.mockRejectedValueOnce(new ApiError(422, 'We do not deliver to that country'));
+    rerender({ f: form({ country: 'FR' }) });
+    await settle();
+    await settle();
+    expect(result.current.error?.status).toBe(422);
+    expect(result.current.optionsCurrent).toBe(false);
+  });
+
+  it('is false when the very first quote fails', async () => {
+    quoteMock.mockRejectedValueOnce(new ApiError(422, 'We do not deliver to that country'));
+    const { result } = run(form({ country: 'GB' }));
+    await settle();
+    await settle();
+    expect(result.current.error).not.toBeNull();
+    expect(result.current.optionsCurrent).toBe(false);
+  });
+
+  it('guest: a failed refetchWithToken for a coupon-only change stays current, for a country change stays pending', async () => {
+    useCartStore.setState({ lines: [line(1, 1)] });
+    const { result, rerender } = renderHook(({ f }: { f: CheckoutForm }) => useQuote(f, { guest: true }), {
+      wrapper,
+      initialProps: { f: form({ country: 'GB' }) },
+    });
+    await act(async () => {
+      await result.current.refetchWithToken('tok-1');
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(result.current.optionsCurrent).toBe(true);
+
+    guestQuoteMock.mockRejectedValueOnce(new ApiError(404, 'Coupon not found'));
+    rerender({ f: form({ country: 'GB', couponCode: 'nope' }) });
+    await settle();
+    await act(async () => {
+      await result.current.refetchWithToken('tok-2').catch(() => undefined);
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(result.current.error?.status).toBe(404);
+    expect(result.current.optionsCurrent).toBe(true);
+
+    guestQuoteMock.mockRejectedValueOnce(new ApiError(422, 'Not serviceable'));
+    rerender({ f: form({ country: 'FR', couponCode: 'nope' }) });
+    await settle();
+    await act(async () => {
+      await result.current.refetchWithToken('tok-3').catch(() => undefined);
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(result.current.error?.status).toBe(422);
+    expect(result.current.optionsCurrent).toBe(false);
+  });
+
+  it('guest: a quote delivered by refetchWithToken counts as current, and a country change makes it pending', async () => {
+    useCartStore.setState({ lines: [line(1, 1)] });
+    const { result, rerender } = renderHook(({ f }: { f: CheckoutForm }) => useQuote(f, { guest: true }), {
+      wrapper,
+      initialProps: { f: form({ country: 'GB' }) },
+    });
+    await settle();
+    expect(result.current.optionsCurrent).toBe(false);
+    await act(async () => {
+      await result.current.refetchWithToken('tok-1');
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(result.current.optionsCurrent).toBe(true);
+
+    rerender({ f: form({ country: 'FR' }) });
+    expect(result.current.optionsCurrent).toBe(false);
+    await settle();
+    expect(result.current.quote).toBeDefined(); // placeholder still on screen
+    expect(result.current.optionsCurrent).toBe(false); // no token, so no FR quote yet
+    await act(async () => {
+      await result.current.refetchWithToken('tok-2');
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(result.current.optionsCurrent).toBe(true);
   });
 });
 

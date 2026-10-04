@@ -52,10 +52,14 @@ export interface CheckoutData {
   contactModes: ContactModes;
   /** Where the shop delivers (clean ISO codes). Empty = unknown: the pickers list every country. */
   shipCountries: readonly string[];
+  /** What the chosen country offers: home delivery, a collection point, or the shopper's choice. */
+  countryMode: import('@/features/checkout/collection-mode.ts').CountryMode;
   guest: boolean;
   currency: string;
   /** The shown quote (the last good one while a refetch fails). */
   quote: Quote | undefined;
+  /** The shown quote's shipping options were priced for another country, method or point carrier: the Delivery step must not offer them. Absent = false. */
+  optionsPending?: boolean;
   method: PaymentMethod | undefined;
   combo: CryptoOption | null;
   /** A quote is in the air or a guest token is being minted. */

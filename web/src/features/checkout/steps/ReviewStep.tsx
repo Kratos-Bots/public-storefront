@@ -3,6 +3,7 @@ import type { StyleAttrs } from '@/builder/define.ts';
 import type { StepKind } from '@/builder/family-checkout.ts';
 import type { CryptoOption, PaymentMethod, Quote } from '@/types/checkout.ts';
 import type { CheckoutForm } from '@/features/checkout/form-state.ts';
+import { collectionAddress } from '@/features/checkout/collection-mode.ts';
 import { countryName } from '@/features/checkout/CountrySelect.tsx';
 import { displayPhoneNumber } from '@/lib/dial-codes.ts';
 import { useText } from '@/text/runtime.tsx';
@@ -34,6 +35,7 @@ export function ReviewStep({ form, quote, method, combo, order, onEdit, before, 
   const { t } = useText();
   const shipping = quote?.shippingOptions.find((o) => o.id === form.shippingOptionId);
   const phone = displayPhoneNumber(form.phonePrefix, form.phone);
+  const collect = collectionAddress(form);
 
   const slips: Record<Exclude<StepKind, 'review'>, { head: 'checkout.steps.contact' | 'checkout.steps.addressTitle' | 'checkout.steps.shipping' | 'checkout.steps.payment'; body: ReactNode }> = {
     contact: {
@@ -48,7 +50,17 @@ export function ReviewStep({ form, quote, method, combo, order, onEdit, before, 
     },
     address: {
       head: 'checkout.steps.addressTitle',
-      body: (
+      body: collect ? (
+        <>
+          <span>{t('checkout.review.collectFrom')}</span>
+          {collect.servicePointName}
+          {collect.addressLine1 !== collect.servicePointName ? <span>{collect.addressLine1}</span> : null}
+          <span>
+            {collect.city} {collect.zip}
+          </span>
+          <span>{countryName(collect.country)}</span>
+        </>
+      ) : (
         <>
           {form.addressLine1}
           {form.addressLine2 ? <span>{form.addressLine2}</span> : null}

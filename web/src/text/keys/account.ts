@@ -26,6 +26,7 @@ export default defineTextArea('account', {
   'order.allOrders': { en: 'All orders', max: 40 },
   'order.backToOrders': { en: '← All orders', max: 40 },
   'order.placed': { en: 'Placed {date}', max: 60 },
+  'order.collectFrom': { en: 'Collect from {name}', max: 80 },
   'order.balanceDue': { en: 'Balance due', max: 40 },
   'order.items': { en: 'Items', max: 40 },
   'order.lines': { en: { one: '{count} line', other: '{count} lines' }, max: 40 },

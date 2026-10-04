@@ -264,6 +264,12 @@ async function walkToReview() {
   type('Town / City', 'London');
   type(/postcode/i, 'SW1A 1AA');
   fireEvent.change(screen.getByLabelText('Country'), { target: { value: 'GB' } });
+  await walkToReviewFrom('address');
+}
+
+/** From a step that is already filled in: Continue through it, then Shipping → Payment → Review. */
+async function walkToReviewFrom(step: 'contact' | 'address') {
+  if (step === 'contact') pressContinue();
   pressContinue();
   await settle();
 
@@ -399,6 +405,69 @@ describe('CheckoutPage — signed in', () => {
     });
   });
 
+  describe('collection points', () => {
+    const POINT = {
+      id: '12345', carrier: 'inpost', name: 'Tesco Express', street: 'Kirkgate', houseNumber: '14', postalCode: 'LS1 6BY',
+      city: 'Leeds', country: 'GB', latitude: null, longitude: null, distance: 300,
+    };
+    const seedCollection = () => localStorage.setItem('sf-checkout-v1', JSON.stringify({
+      ...DEFAULT_FORM, firstName: 'Ada', surname: 'Lovelace', email: 'ada@example.com', country: 'GB',
+      deliveryMethod: 'collection', servicePoint: POINT,
+    }));
+    const withCollection = () => {
+      state.settings = { ...settings(false), shipping: { countries: ['GB'], collectionCountries: ['GB'] } };
+    };
+
+    it('a collection order sends the point, the point’s address and the shopper’s name', async () => {
+      withCollection();
+      seedCollection();
+      mount();
+      await settle();
+      type(/^phone$/i, '07801 123456');
+      await walkToReviewFrom('contact');
+      pressPlace();
+      await settle();
+      expect(placeOrderMock).toHaveBeenCalledTimes(1);
+      expect(placeOrderMock.mock.calls[0]![0].shippingAddress).toEqual({
+        firstName: 'Ada', surname: 'Lovelace', addressLine1: 'Kirkgate 14', addressLine2: null, addressLine3: null,
+        city: 'Leeds', county: null, zip: 'LS1 6BY', country: 'GB',
+        servicePointId: '12345', servicePointCarrier: 'inpost', servicePointName: 'Tesco Express',
+      });
+      expect(quoteMock.mock.calls.at(-1)![0]).toMatchObject({ deliveryMethod: 'collection', servicePointCarrier: 'inpost' });
+    });
+
+    it('collection without a chosen point cannot leave the address step', async () => {
+      withCollection();
+      localStorage.setItem('sf-checkout-v1', JSON.stringify({ ...DEFAULT_FORM, firstName: 'Ada', surname: 'Lovelace', email: 'ada@example.com', phone: '07801 123456', country: 'GB', deliveryMethod: 'collection' }));
+      mount();
+      await settle();
+      pressContinue(); // Contact → Address
+      pressContinue(); // refused
+      expect(screen.getByText('Choose a collection point')).toBeTruthy();
+    });
+
+    it('collection makes the phone required even when the shop has it optional', async () => {
+      withCollection();
+      seedCollection();
+      mount();
+      await settle();
+      pressContinue(); // Contact, with no phone
+      expect(screen.getByText('Required')).toBeTruthy();
+    });
+
+    it('a home order is unchanged: no point fields and no delivery fields on the quote', async () => {
+      withCollection();
+      mount();
+      await settle();
+      await walkToReview();
+      pressPlace();
+      await settle();
+      const address = placeOrderMock.mock.calls[0]![0].shippingAddress;
+      expect(Object.keys(address)).not.toEqual(expect.arrayContaining(['servicePointId']));
+      expect(Object.keys(quoteMock.mock.calls.at(-1)![0])).not.toEqual(expect.arrayContaining(['deliveryMethod', 'servicePointCarrier']));
+    });
+  });
+
   describe('external payment inside Telegram', () => {
     const external = (reference: string, publicUrl: string | null) => ({
       reference,
@@ -500,6 +569,126 @@ describe('CheckoutPage — signed in', () => {
 
     await settle(3000);
     expect(placeButton()).toBeEnabled();
+  });
+});
+
+// The delivery options belong to a (country, method, point carrier). While the quote for
+// the form's current one has not arrived, the previous quote's list must not be offered
+// or accepted, and nothing else on screen blanks.
+describe('CheckoutPage — delivery options pending', () => {
+  const IRISH = { id: 7, name: 'An Post Tracked', courier: 'An Post', price: 6, freeShipping: false };
+  const STILL_PRICING = /still pricing your order/i;
+  const radios = () => screen.queryAllByRole('radio', { name: /Royal Mail Tracked 24|An Post Tracked/ });
+
+  beforeEach(() => {
+    state.settings = settings(false);
+    useSessionStore.setState({ token: 'sess-1', customer: { id: 5, nickname: 'ada' } });
+    quoteMock.mockImplementation(async (input) =>
+      makeQuote(input.country === 'IE' ? { shippingOptions: [IRISH] } : {}),
+    );
+  });
+
+  /** On the Delivery step for GB, its options on screen. */
+  async function toDelivery() {
+    localStorage.setItem('sf-checkout-v1', persistedForm());
+    const view = mount();
+    pressContinue(); // contact -> address
+    pressContinue(); // address -> shipping
+    await settle();
+    expect(radios()).toHaveLength(1);
+    return view;
+  }
+
+  /** Back to Address, a new country, forward to Delivery — all before any timer runs. */
+  function changeCountryToIreland() {
+    fireEvent.click(screen.getByRole('button', { name: /^back$/i }));
+    fireEvent.change(screen.getByLabelText('Country'), { target: { value: 'IE' } });
+    pressContinue();
+  }
+
+  it('offers no option and refuses Continue until the new country has been priced', async () => {
+    await toDelivery();
+    changeCountryToIreland();
+
+    expect(screen.getByRole('heading', { name: 'Delivery and discounts' })).toBeInTheDocument();
+    expect(radios()).toHaveLength(0);
+    expect(screen.getByText(/pricing/i)).toBeInTheDocument();
+    pressContinue();
+    expect(screen.getByText(STILL_PRICING)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Delivery and discounts' })).toBeInTheDocument();
+
+    await settle(); // the debounce fires and the request goes out
+    await settle(); // and the answer lands
+    expect(radios().map((r) => r.closest('label')?.textContent)).toEqual([expect.stringContaining('An Post Tracked')]);
+    fireEvent.click(radios()[0]!);
+    await settle();
+    pressContinue();
+    expect(screen.getByRole('heading', { name: 'How you’ll pay' })).toBeInTheDocument();
+  });
+
+  it('keeps the options on screen while only the coupon or the chosen option re-quotes', async () => {
+    await toDelivery();
+    quoteMock.mockImplementation(() => new Promise<Quote>(() => undefined)); // every re-quote hangs
+
+    fireEvent.click(radios()[0]!); // the chosen option itself
+    type('Coupon code', 'save10');
+    fireEvent.click(screen.getByRole('button', { name: /apply/i }));
+    expect(radios()).toHaveLength(1);
+    await settle();
+    expect(quoteMock.mock.calls.at(-1)![0]).toMatchObject({ couponCode: 'SAVE10', shippingOptionId: 3 });
+    expect(radios()).toHaveLength(1);
+    pressContinue();
+    expect(screen.queryByText(STILL_PRICING)).toBeNull();
+    expect(screen.getByRole('heading', { name: 'How you’ll pay' })).toBeInTheDocument();
+  });
+
+  it('keeps the options and lets Continue through when only the coupon re-quote fails', async () => {
+    await toDelivery();
+    fireEvent.click(radios()[0]!);
+    await settle();
+    await settle();
+    quoteMock.mockImplementation(async () => { throw new ApiError(404, 'Coupon not found'); });
+
+    type('Coupon code', 'nope');
+    fireEvent.click(screen.getByRole('button', { name: /apply/i }));
+    await settle();
+    await settle();
+
+    expect(screen.getByText('Unknown code')).toBeInTheDocument();
+    expect(radios()).toHaveLength(1);
+    pressContinue();
+    expect(screen.queryByText(STILL_PRICING)).toBeNull();
+    expect(screen.getByRole('heading', { name: 'How you’ll pay' })).toBeInTheDocument();
+  });
+
+  it('offers no option and refuses Continue when the new country quote fails', async () => {
+    await toDelivery();
+    quoteMock.mockImplementation(async () => { throw new ApiError(422, 'We do not deliver there'); });
+    changeCountryToIreland();
+    await settle();
+    await settle();
+
+    expect(radios()).toHaveLength(0);
+    pressContinue();
+    expect(screen.getByText(STILL_PRICING)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Delivery and discounts' })).toBeInTheDocument();
+  });
+
+  it('refuses to place an order whose options went pending, and returns to Delivery', async () => {
+    state.settings = { ...settings(false), shipping: { countries: ['GB', 'IE'] } };
+    const view = mount();
+    await walkToReview();
+    expect(screen.getByRole('heading', { name: 'Review your order' })).toBeInTheDocument();
+
+    // The shop's list shrinks to Ireland under the open review: the country follows, un-priced.
+    state.settings = { ...state.settings, shipping: { countries: ['IE'] } };
+    view.rerender(<Wrapper><CheckoutPage /></Wrapper>);
+    fireEvent.click(placeButton());
+    await settle(0);
+
+    expect(placeOrderMock).not.toHaveBeenCalled();
+    expect(screen.getByRole('heading', { name: 'Delivery and discounts' })).toBeInTheDocument();
+    expect(screen.getByText(STILL_PRICING)).toBeInTheDocument();
   });
 });
 

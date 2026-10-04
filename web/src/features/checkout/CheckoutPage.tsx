@@ -26,7 +26,8 @@ import {
   buildPaymentSchema,
   shippingSchema,
 } from '@/features/checkout/schemas.ts';
-import { applyShipCountries, normaliseShipCountries } from '@/features/checkout/ship-countries.ts';
+import { applyShipCountries } from '@/features/checkout/ship-countries.ts';
+import { collectionAddress, modeForCountry, pickerCountries, quoteDeliveryFields, reconcileDelivery, shipListsOf } from '@/features/checkout/collection-mode.ts';
 import { useQuote } from '@/features/checkout/useQuote.ts';
 import { publicOrderPath, resolveCheckoutOutcome } from '@/features/checkout/outcome.ts';
 import { GuestTurnstile, type GuestTurnstileHandle } from '@/features/checkout/GuestTurnstile.tsx';
@@ -120,8 +121,10 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
   const { t, tn } = useText();
   const settings = useSettings();
   const { contactModes, currency, features } = settings;
-  const rawShipCountries = settings.shipping?.countries;
-  const shipCountries = useMemo(() => normaliseShipCountries(rawShipCountries), [rawShipCountries]);
+  const rawShipping = settings.shipping;
+  const shipLists = useMemo(() => shipListsOf({ shipping: rawShipping }), [rawShipping]);
+  const shipCountries = useMemo(() => pickerCountries(shipLists), [shipLists]);
+  const phoneMode = contactModes.phoneMode;
   const loggedIn = useSessionStore(selectIsLoggedIn);
   const guest = !loggedIn && features.guestCheckout;
   // The editor canvas stacks every step (spec section 10.3). The only thing here that reads builder mode.
@@ -158,9 +161,10 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
   const couponShown = containsVisibleType(allItems, 'CheckoutCoupon');
   const notesShown = containsVisibleType(allItems, 'CheckoutNotes');
 
-  const [form, setForm] = useState<CheckoutForm>(() =>
-    applyShipCountries(seedForm(loadPersistedForm() ?? DEFAULT_FORM, contactModes.defaultPhoneCountry), shipCountries),
-  );
+  const [form, setForm] = useState<CheckoutForm>(() => {
+    const seeded = applyShipCountries(seedForm(loadPersistedForm() ?? DEFAULT_FORM, contactModes.defaultPhoneCountry), shipCountries);
+    return reconcileDelivery(seeded, seeded, shipLists, phoneMode);
+  });
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -185,8 +189,11 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
 
   // Settings refetch on window focus, so the shop's countries can change under an open checkout.
   useEffect(() => {
-    setForm((f) => applyShipCountries(f, shipCountries));
-  }, [shipCountries]);
+    setForm((f) => {
+      const next = applyShipCountries(f, shipCountries);
+      return reconcileDelivery(f, next, shipLists, phoneMode);
+    });
+  }, [shipCountries, shipLists, phoneMode]);
 
   useEffect(() => {
     persistForm(form);
@@ -200,7 +207,7 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
   );
 
   const patch = useCallback((next: Partial<CheckoutForm>) => {
-    setForm((f) => ({ ...f, ...next }));
+    setForm((f) => reconcileDelivery(f, { ...f, ...next }, shipLists, phoneMode));
     setErrors((prev) => {
       let changed = false;
       const out = { ...prev };
@@ -213,7 +220,7 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
       }
       return changed ? out : prev;
     });
-  }, []);
+  }, [shipLists, phoneMode]);
 
   const effective = useMemo<CheckoutForm>(
     () => ({ ...form, couponCode: couponShown ? form.couponCode : '', notes: notesShown ? form.notes : '' }),
@@ -225,7 +232,7 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
   // sent (STOREFRONT.md §3.5a). With no token the hook's automatic query stays
   // disabled and every guest quote goes out through `refetchWithToken` below,
   // each with a token minted for that one request.
-  const { quote, isFetching, error: quoteError, needsToken, refetchWithToken } = useQuote(effective, {
+  const { quote, isFetching, error: quoteError, needsToken, refetchWithToken, optionsCurrent } = useQuote(effective, {
     guest,
   });
 
@@ -236,6 +243,10 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
   const lastGoodQuote = useRef<Quote | undefined>(undefined);
   if (quote) lastGoodQuote.current = quote;
   const shownQuote = quote ?? lastGoodQuote.current;
+  // The shown quote is priced for another country, delivery method or point carrier than
+  // the form holds now (or none has arrived): its shipping options must not be offered
+  // or accepted. Totals and the other steps keep the shown quote.
+  const optionsPending = !stack && Boolean(form.country) && !optionsCurrent;
 
   // Latest-value ref: `refetchWithToken` is a fresh closure every render, so it
   // can't be an effect dependency without re-running the effect on every render.
@@ -248,9 +259,10 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
         country: form.country,
         couponCode: effective.couponCode.trim().toUpperCase(),
         shippingOptionId: form.shippingOptionId,
+        ...quoteDeliveryFields(form),
         lines: lines.map((l) => ({ productId: l.productId, quantity: l.quantity })),
       }),
-    [form.country, effective.couponCode, form.shippingOptionId, lines],
+    [form.country, effective.couponCode, form.shippingOptionId, form.deliveryMethod, form.servicePoint, lines],
   );
   const [debouncedGuestKey] = useDebouncedValue(guestQuoteKey, GUEST_QUOTE_DEBOUNCE_MS);
   const quotedKey = useRef<string | null>(null);
@@ -317,9 +329,15 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
     // must not re-run the mint and quote.
   }, [stack, guest, settings.turnstile, form.country, needsToken, placed, debouncedGuestKey, retryTick]);
 
+  // A carrier texts the pick-up code: while the order is a collection, the phone is required.
+  const collecting = form.deliveryMethod === 'collection';
+  const effectiveContactModes = useMemo(
+    () => (collecting ? { ...contactModes, phoneMode: 'required' as const } : contactModes),
+    [contactModes, collecting],
+  );
   const contactSchema = useMemo(
-    () => buildContactSchema(contactModes, { guest }),
-    [contactModes, guest],
+    () => buildContactSchema(effectiveContactModes, { guest }),
+    [effectiveContactModes, guest],
   );
   const paymentMethods = shownQuote?.paymentMethods;
   const paymentSchema = useMemo(() => buildPaymentSchema(paymentMethods ?? []), [paymentMethods]);
@@ -384,6 +402,17 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
       return false;
     }
     if (kind === 'address') {
+      if (form.deliveryMethod === 'collection') {
+        if (form.country.length !== 2) {
+          setErrors({ country: textKey('checkout.errors.countryMissing') });
+          return false;
+        }
+        if (!form.servicePoint) {
+          setErrors({ servicePoint: textKey('checkout.errors.pointMissing') });
+          return false;
+        }
+        return true;
+      }
       const parsed = addressSchema.safeParse({
         addressLine1: form.addressLine1,
         addressLine2: form.addressLine2,
@@ -398,6 +427,10 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
       return false;
     }
     if (kind === 'shipping') {
+      if (optionsPending) {
+        setErrors({ shippingOptionId: textKey('checkout.errors.stillPricing') });
+        return false;
+      }
       const parsed = shippingSchema.safeParse({
         shippingOptionId: form.shippingOptionId ?? undefined,
       });
@@ -487,7 +520,7 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
   function buildBody(): Omit<CheckoutInput, 'useStoreCredit'> {
     const { email, phone } = contactValues();
     return {
-      shippingAddress: {
+      shippingAddress: collectionAddress(form) ?? {
         firstName: form.firstName.trim(),
         surname: form.surname.trim(),
         addressLine1: form.addressLine1.trim(),
@@ -609,11 +642,13 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
       form,
       patch,
       errors,
-      contactModes,
+      contactModes: effectiveContactModes,
       shipCountries,
+      countryMode: modeForCountry(form.country, shipLists, phoneMode),
       guest,
       currency,
       quote: shownQuote,
+      optionsPending,
       method,
       combo,
       busy: isFetching || verifying,
@@ -628,7 +663,7 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
       stack,
       goTo,
     }),
-    [form, patch, errors, contactModes, shipCountries, guest, currency, shownQuote, method, combo, isFetching, verifying, quoteError, errorTarget, quoteMessage, order, step, kind, stack, goTo],
+    [form, patch, errors, effectiveContactModes, shipCountries, shipLists, phoneMode, guest, currency, shownQuote, optionsPending, method, combo, isFetching, verifying, quoteError, errorTarget, quoteMessage, order, step, kind, stack, goTo],
   );
   const value = useMemo(() => ({ data, views: CHECKOUT_VIEWS }), [data]);
 

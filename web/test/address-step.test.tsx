@@ -1,15 +1,17 @@
+import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
 import { AddressStep } from '@/features/checkout/steps/AddressStep.tsx';
+import type { CountryMode } from '@/features/checkout/collection-mode.ts';
 import { DEFAULT_FORM, type CheckoutForm } from '@/features/checkout/form-state.ts';
 
 afterEach(cleanup);
 
-const mount = (form: Partial<CheckoutForm> = {}, patch = vi.fn()) => {
+const mount = (form: Partial<CheckoutForm> = {}, patch = vi.fn(), mode?: CountryMode) => {
   render(
     <MantineProvider env="test">
-      <AddressStep form={{ ...DEFAULT_FORM, ...form }} patch={patch} errors={{}} countries={['GB', 'IE', 'US', 'FR']} />
+      <AddressStep form={{ ...DEFAULT_FORM, ...form }} patch={patch} errors={{}} countries={['GB', 'IE', 'US', 'FR']} mode={mode} />
     </MantineProvider>,
   );
   return patch;
@@ -48,5 +50,83 @@ describe('AddressStep', () => {
     const patch = mount({ country: '' });
     fireEvent.change(screen.getByLabelText('Country'), { target: { value: 'IE' } });
     expect(patch).toHaveBeenCalledWith({ country: 'IE', phonePrefix: 'IE' });
+  });
+});
+
+describe('AddressStep delivery method', () => {
+  it('offers no switch for a home-only country', () => {
+    mount({ country: 'GB' }, vi.fn(), 'home');
+    expect(screen.queryByRole('radiogroup', { name: 'Deliver to' })).toBeNull();
+    expect(screen.getByLabelText('Address line 1')).toBeTruthy();
+  });
+
+  it('offers the switch when the country allows both, and reports the choice', () => {
+    const patch = mount({ country: 'GB' }, vi.fn(), 'choice');
+    fireEvent.click(screen.getByRole('radio', { name: 'Collection point' }));
+    expect(patch).toHaveBeenCalledWith({ deliveryMethod: 'collection' });
+  });
+
+  it('collection replaces the address fields with the point picker, keeping the country', () => {
+    mount({ country: 'GB', deliveryMethod: 'collection' }, vi.fn(), 'choice');
+    expect(screen.getByLabelText('Country')).toBeTruthy();
+    expect(screen.queryByLabelText('Address line 1')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Search' })).toBeTruthy();
+  });
+
+  it('a collection-only country shows the picker with an explanation and no switch', () => {
+    mount({ country: 'GB', deliveryMethod: 'collection' }, vi.fn(), 'collection');
+    expect(screen.queryByRole('radiogroup', { name: 'Deliver to' })).toBeNull();
+    expect(screen.getByText('Orders to United Kingdom are delivered to a collection point.')).toBeTruthy();
+  });
+
+  it('seeds the point search with the home postcode the first time', () => {
+    const patch = mount({ country: 'GB', zip: 'LS1 6BY' }, vi.fn(), 'choice');
+    fireEvent.click(screen.getByRole('radio', { name: 'Collection point' }));
+    expect(patch).toHaveBeenCalledWith({ deliveryMethod: 'collection' });
+    cleanup();
+    const seeded = mount({ country: 'GB', zip: 'LS1 6BY', deliveryMethod: 'collection' }, vi.fn(), 'choice');
+    expect(seeded).toHaveBeenCalledWith({ pointPostcode: 'LS1 6BY' });
+  });
+
+  it('seeds a collection-only country too', () => {
+    const patch = mount({ country: 'GB', zip: 'LS1 6BY', deliveryMethod: 'collection' }, vi.fn(), 'collection');
+    expect(patch).toHaveBeenCalledWith({ pointPostcode: 'LS1 6BY' });
+  });
+
+  it('lets the shopper clear the postcode box and it stays empty', () => {
+    function Harness() {
+      const [form, setForm] = useState<CheckoutForm>({ ...DEFAULT_FORM, country: 'GB', zip: 'LS1 6BY', deliveryMethod: 'collection' });
+      return (
+        <MantineProvider env="test">
+          <AddressStep form={form} patch={(p) => setForm((f) => ({ ...f, ...p }))} errors={{}} countries={['GB']} mode="choice" />
+        </MantineProvider>
+      );
+    }
+    render(<Harness />);
+    const box = screen.getByLabelText('Postcode') as HTMLInputElement;
+    expect(box.value).toBe('LS1 6BY');
+    fireEvent.change(box, { target: { value: '' } });
+    expect((screen.getByLabelText('Postcode') as HTMLInputElement).value).toBe('');
+  });
+
+  it('keeps two steps on one page in separate radio groups', () => {
+    const noop = vi.fn();
+    render(
+      <MantineProvider env="test">
+        <div data-testid="a"><AddressStep form={{ ...DEFAULT_FORM, country: 'GB' }} patch={noop} errors={{}} mode="choice" /></div>
+        <div data-testid="b"><AddressStep form={{ ...DEFAULT_FORM, country: 'GB' }} patch={noop} errors={{}} mode="choice" /></div>
+      </MantineProvider>,
+    );
+    const a = within(screen.getByTestId('a')); const b = within(screen.getByTestId('b'));
+    // React restores controlled radios, so the click alone can pass with a shared name: compare the names themselves.
+    const groupOf = (s: typeof a) => [s.getByRole('radio', { name: 'Home address' }), s.getByRole('radio', { name: 'Collection point' })].map((r) => (r as HTMLInputElement).name);
+    const [aHome, aColl] = groupOf(a); const [bHome, bColl] = groupOf(b);
+    expect(aHome).not.toBe('');
+    expect(bHome).not.toBe('');
+    expect(aColl).toBe(aHome);
+    expect(bColl).toBe(bHome);
+    expect(aHome).not.toBe(bHome);
+    fireEvent.click(a.getByRole('radio', { name: 'Collection point' }));
+    expect((b.getByRole('radio', { name: 'Home address' }) as HTMLInputElement).checked).toBe(true);
   });
 });

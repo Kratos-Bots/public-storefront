@@ -24,6 +24,7 @@ export default {
   'order.allOrders': 'Button back to the order list from the order-not-found screen',
   'order.backToOrders': 'Link at the top of an order that goes back to the order list',
   'order.placed': 'Order date at the top of an order; {date} is the date',
+  'order.collectFrom': 'Line under the order date when the order goes to a collection point; {name} is the point',
   'order.balanceDue': 'Banner on an order that still has money owed',
   'order.items': 'Heading of the items section of an order',
   'order.lines': 'Number of item lines, beside the Items heading',
