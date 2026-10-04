@@ -3,6 +3,7 @@ import type { StyleAttrs } from '@/builder/define.ts';
 import type { Quote } from '@/types/checkout.ts';
 import type { CheckoutForm } from '@/features/checkout/form-state.ts';
 import { Money } from '@/components/Money.tsx';
+import { methodName } from '@/lib/method-name.ts';
 import { CryptoComboPicker } from '@/features/checkout/CryptoComboPicker.tsx';
 import { useText } from '@/text/runtime.tsx';
 import fields from '@/features/checkout/Fields.module.css';
@@ -90,7 +91,7 @@ export function PaymentStep({ quote, form, patch, errors, guest, currency, befor
                   />
                   <span className={fields.marker} aria-hidden />
                   <span className={fields.choiceBody}>
-                    <span className={fields.choiceName}>{m.displayName}</span>
+                    <span className={fields.choiceName}>{methodName(m)}</span>
                     {m.feeRateText ? (
                       <span className={fields.choiceNote}>
                         {m.feeLabel || t('checkout.payment.fee')} {m.feeRateText}

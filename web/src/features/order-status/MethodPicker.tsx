@@ -10,6 +10,7 @@ import { isBuilderMode } from '@/app/builder-gate.ts';
 import { ArrowUpRightIcon } from '@/components/icons.tsx';
 import { ContactLinks } from '@/components/ContactLinks.tsx';
 import { errorMessage } from '@/lib/errors.ts';
+import { methodName } from '@/lib/method-name.ts';
 import { orderChatMessage } from '@/lib/chat-links.ts';
 import { formatAmountPlain, formatMoney } from '@/lib/format.ts';
 import { CryptoComboPicker, type CryptoCombo } from '@/features/checkout/CryptoComboPicker.tsx';
@@ -282,7 +283,7 @@ function TransferDetails({
   return (
     <>
       <p className={classes.pickerHead}>
-        {t('order.method.transferHead', { method: method.displayName })}
+        {t('order.method.transferHead', { method: methodName(method) })}
         <span className={classes.pickerHeadRule} aria-hidden />
       </p>
       {details.length > 0 ? (

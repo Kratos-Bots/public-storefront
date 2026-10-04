@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ROUTE_STEPS, statusView } from '@/features/order-status/status.ts';
 import {
   cardState,
+  isManual,
   maskTxid,
   pollInterval,
   slotLabel,
@@ -47,7 +48,6 @@ function crypto(patch: Partial<PublicCryptoPayment> = {}): PublicCryptoPayment {
 
 function method(patch: Partial<PaymentMethod> = {}): PaymentMethod {
   return {
-    slot: 'card',
     method: 'sushipp',
     displayName: 'Sushipp',
     type: 'gateway',
@@ -257,27 +257,38 @@ describe('pollInterval', () => {
 // ----------------------------------------------------------------- slotLabel
 
 describe('slotLabel', () => {
-  it('names the card slot by what it is, never by who settles it', () => {
-    expect(slotLabel(method({ slot: 'card', displayName: 'Sushipp' }))).toBe('Card');
+  it('is the name the shop gave the method, whatever slot an older backend sent', () => {
+    expect(slotLabel(method({ slot: 'crypto', displayName: 'Pay by card' }))).toBe('Pay by card');
+    expect(slotLabel(method({ method: 'crypto', type: 'crypto', displayName: 'Pay with crypto' }))).toBe('Pay with crypto');
   });
 
   it('spells a discount out rather than showing a bare minus', () => {
-    expect(slotLabel(method({ slot: 'crypto', displayName: 'OxaPay', feeRateText: '−3%' }))).toBe(
-      'Crypto (3% discount)',
-    );
+    expect(slotLabel(method({ displayName: 'Pay with crypto', feeRateText: '−3%' }))).toBe('Pay with crypto (3% discount)');
   });
 
   it('handles an ASCII hyphen the same way', () => {
-    expect(slotLabel(method({ slot: 'crypto', feeRateText: '-5%' }))).toBe('Crypto (5% discount)');
+    expect(slotLabel(method({ displayName: 'Pay with crypto', feeRateText: '-5%' }))).toBe('Pay with crypto (5% discount)');
   });
 
   it('calls a surcharge a fee', () => {
-    expect(slotLabel(method({ slot: 'card', feeRateText: '+2%' }))).toBe('Card (2% fee)');
+    expect(slotLabel(method({ displayName: 'Card', feeRateText: '+2%' }))).toBe('Card (2% fee)');
   });
 
-  it('keeps a bank transfer’s own name — it describes the method, not a processor', () => {
-    expect(slotLabel(method({ slot: 'manual', displayName: 'UK Bank Transfer' }))).toBe(
-      'UK Bank Transfer',
-    );
+  it('falls back to the method id as words when the name is empty', () => {
+    expect(slotLabel(method({ method: 'uk_bank_transfer', displayName: '  ' }))).toBe('uk bank transfer');
+    expect(slotLabel(method({ method: 'paypal', displayName: '', feeRateText: '+2%' }))).toBe('paypal (2% fee)');
+    expect(slotLabel(method({ method: 'crypto_static', displayName: '', feeRateText: '−3%' }))).toBe('crypto static (3% discount)');
+  });
+
+  it('keeps a bank transfer’s own name', () => {
+    expect(slotLabel(method({ type: 'offline', displayName: 'UK Bank Transfer' }))).toBe('UK Bank Transfer');
+  });
+});
+
+describe('isManual', () => {
+  it('is decided by the method type, not the slot', () => {
+    expect(isManual(method({ type: 'offline', method: 'uk_bank_transfer' }))).toBe(true);
+    expect(isManual(method({ type: 'gateway', slot: 'manual' }))).toBe(false);
+    expect(isManual(method({ type: 'crypto' }))).toBe(false);
   });
 });

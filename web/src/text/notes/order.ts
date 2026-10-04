@@ -98,8 +98,6 @@ export default {
   'method.loading': 'While the payment methods load',
   'method.none': 'When no payment method can be used on the order page',
   'method.opening': 'Payment method row while its hosted checkout opens',
-  'method.card': 'Name of the card payment option',
-  'method.crypto': 'Name of the crypto payment option',
   'method.withDiscount': 'Payment option with a discount; {method} is its name, {rate} the percentage',
   'method.withFee': 'Payment option with a fee; {method} is its name, {rate} the percentage',
   'method.preparing': 'Crypto pay button while the payment is created',
