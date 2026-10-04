@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render } from '@testing-library/react';
-import { TextLayerProvider } from '@/text/runtime.tsx';
+import { TextLayerProvider, type TextApi } from '@/text/runtime.tsx';
 import { orderStatusLabel, SHIPMENT_LABEL, shipmentLabelKey } from '@/features/order-status/status.ts';
 import { orderChatMessage } from '@/lib/chat-links.ts';
 
@@ -14,6 +14,7 @@ describe('order wording follows published text', () => {
     expect(SHIPMENT_LABEL.in_transit).toBe('In transit');
     render(<TextLayerProvider text={{ locale: 'en', formatLocale: '', shared: { 'order.status.confirmed': 'Accepted', 'common.shipment.inTransit': 'Moving' }, layout: {} }}><span /></TextLayerProvider>);
     expect(orderStatusLabel('confirmed')).toBe('Accepted');
+    expect(orderStatusLabel('confirmed', ((k: string) => `t:${k}`) as TextApi['t'])).toBe('t:order.status.confirmed');
     expect(SHIPMENT_LABEL.in_transit).toBe('Moving');
   });
   it('a shipment status the release does not know has no label, as v0.7.0 had none (no throw)', () => {
