@@ -44,6 +44,7 @@ export default {
   'address.blurb': 'Line at the top of the address step',
   'address.line1': 'Address step field label',
   'address.line2': 'Address step field label (optional field)',
+  'address.line3': 'Address step field label (optional field)',
   'address.city': 'City field label for countries without their own wording',
   'address.zip': 'Postal code field label for countries without their own wording',
   'address.county': 'State or region field label for countries without their own wording (optional field)',

@@ -261,8 +261,8 @@ async function walkToReview() {
   pressContinue();
 
   type('Address line 1', '1 Main St');
-  type('City', 'London');
-  type(/postal code/i, 'SW1A 1AA');
+  type('Town / City', 'London');
+  type(/postcode/i, 'SW1A 1AA');
   fireEvent.change(screen.getByLabelText('Country'), { target: { value: 'GB' } });
   pressContinue();
   await settle();

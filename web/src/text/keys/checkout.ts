@@ -50,6 +50,7 @@ export default defineTextArea('checkout', {
   'address.blurb': { en: 'Where should we send it?', max: 100 },
   'address.line1': { en: 'Address line 1', max: 40 },
   'address.line2': { en: 'Address line 2', max: 40 },
+  'address.line3': { en: 'Address line 3', max: 40 },
   'address.city': { en: 'City', max: 40 },
   'address.zip': { en: 'Postal code', max: 40 },
   'address.county': { en: 'State / Region', max: 40 },
