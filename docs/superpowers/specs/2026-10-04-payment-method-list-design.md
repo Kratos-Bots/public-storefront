@@ -14,7 +14,7 @@ Decisions taken with the owner:
 | Which methods are offered | The admin picks from enabled gateways: each entry can be shown or hidden. |
 | Redirect switch | Per gateway, with an optional neutral return address per gateway. |
 | Names (my ruling, accepted) | One name per method, set in the list, used everywhere on the storefront. Blank falls back to the gateway's own name. |
-| Deploy (my ruling, accepted) | Nothing changes on deploy: the starting list is what each shop offers today. |
+| Deploy | The starting list is what each shop offers today. Its card and crypto methods start named "Card" and "Crypto" (owner's decision): the order page is unchanged, the checkout step changes from the processor's brand to "Card". |
 
 ## 2. Today
 
@@ -52,7 +52,7 @@ While the key is absent, the list is derived on every read and nothing is writte
 2. the storefront crypto slot (falling back to the bot's), if set;
 3. each manual bank gateway (`uk_bank_transfer`, `sepa_transfer`, `ach_wire`) that is enabled, in gateway id order.
 
-All entries are `enabled: true`, `label: null`. This reproduces today's offer and order, with one stated difference: manual gateways now have a defined order (id order) where today it is unspecified.
+All entries are `enabled: true`. The card entry's `label` is `"Card"` and the crypto entry's is `"Crypto"`, the names customers already see for them on the order page and in the bot; bank gateways have `label: null`. This reproduces today's offer and order, with two stated differences: the checkout step now says "Card" where it printed the processor's brand, and manual gateways have a defined order (id order) where today it is unspecified. A shop that had reworded the "Card" or "Crypto" site text gets the default wording until it renames the method in the list.
 
 The first save writes the key. From then on the old slot keys are not read by the storefront. They are not deleted, and the bot's slot keys are untouched.
 
@@ -71,7 +71,7 @@ Each method keeps the existing fields. Changes:
 
 - `displayName` is the entry's `label` when set, otherwise the gateway's `displayName`.
 - `feeLabel` is built from that same name ("Card fee", "Card discount").
-- `slot` stays in the response for storefronts deployed before this change: `manual` for a manual gateway, `crypto` for a gateway with `cryptoOptions`, otherwise `card`. New storefront code does not read it.
+- `slot` stays in the response for storefronts deployed before this change: `manual` for a manual gateway, `crypto` for a gateway with `cryptoOptions` or the gateway mapped to the shop's crypto slot, otherwise `card`. New storefront code does not read it.
 
 The same list, names and order serve the checkout quote (signed-in and guest) and the order page's `payment-options`.
 

@@ -28,7 +28,7 @@
 ## Review Focus
 
 1. **A saved list naming a gateway that was later disabled, or that fails the country or minimum-order check.** The customer is simply not offered it; no error, and the rest of the list keeps its order. Tested in Task 1.
-2. **A shop that never opens the new admin card.** It offers exactly what it offered before deploy (card slot, crypto slot, bank gateways), including the bot-slot fallback. Tested in Task 1.
+2. **A shop that never opens the new admin card.** It offers exactly the methods it offered before deploy (card slot, crypto slot, bank gateways), including the bot-slot fallback, named "Card" and "Crypto" as its order page and bot name them today; the checkout step changes from the processor's brand to "Card" (owner's decision). Tested in Task 1.
 3. **An order paid with a method that is hidden or removed from the list afterwards.** Its order page and account page still name the payment (list label if an entry exists, otherwise the gateway's own name) and never show a blank or a raw id. Tested in Task 3.
 4. **Stripe or PayPal with the switch on and no neutral address.** The save is refused in the admin API; if such a config exists anyway (hand-edited), session creation sends the shop's address rather than failing the customer's checkout. Tested in Task 4.
 5. **A label that is only spaces, 41 characters, or contains emoji.** Spaces become `null`, 41 is refused, emoji count as written characters and are accepted. Tested in Task 2.
@@ -54,7 +54,7 @@
   export const paymentMethodEntrySchema: z.ZodType<PaymentMethodEntry>;
   export function parseStoredList(raw: string | null): PaymentMethodEntry[] | null;
   export function deriveStartingList(slots: { card: string | null; crypto: string | null }, enabledManual: string[]): PaymentMethodEntry[];
-  export function legacySlot(m: { type: 'offline' | 'gateway' | 'crypto'; cryptoOptions?: unknown[] }): 'card' | 'crypto' | 'manual';
+  export function legacySlot(m: { method: string; type: 'offline' | 'gateway' | 'crypto'; cryptoOptions?: unknown[] }, cryptoSlotMethod: string | null): 'card' | 'crypto' | 'manual';
   export function applyList<M extends { method: string; displayName: string }>(list: PaymentMethodEntry[], available: M[]): (M & { displayName: string })[];
   ```
 - Produces, in `service.ts`: `export async function getStorefrontPaymentMethodList(): Promise<PaymentMethodEntry[]>` (the saved list, or the derived starting list when the key is absent).
@@ -96,17 +96,17 @@ describe('parseStoredList', () => {
 });
 
 describe('deriveStartingList', () => {
-  it('is card, crypto, then the enabled bank gateways, all shown and unnamed', () => {
+  it('is card, crypto, then the enabled bank gateways, all shown; the two slots keep the names customers know', () => {
     expect(deriveStartingList({ card: 'stripe', crypto: 'crypto' }, ['uk_bank_transfer', 'sepa_transfer'])).toEqual([
-      { method: 'stripe', enabled: true, label: null },
-      { method: 'crypto', enabled: true, label: null },
+      { method: 'stripe', enabled: true, label: 'Card' },
+      { method: 'crypto', enabled: true, label: 'Crypto' },
       { method: 'uk_bank_transfer', enabled: true, label: null },
       { method: 'sepa_transfer', enabled: true, label: null },
     ]);
   });
   it('skips an unset slot and never lists one gateway twice', () => {
-    expect(deriveStartingList({ card: null, crypto: 'oxapay' }, [])).toEqual([{ method: 'oxapay', enabled: true, label: null }]);
-    expect(deriveStartingList({ card: 'oxapay', crypto: 'oxapay' }, [])).toHaveLength(1);
+    expect(deriveStartingList({ card: null, crypto: 'oxapay' }, [])).toEqual([{ method: 'oxapay', enabled: true, label: 'Crypto' }]);
+    expect(deriveStartingList({ card: 'oxapay', crypto: 'oxapay' }, [])).toEqual([{ method: 'oxapay', enabled: true, label: 'Card' }]);
   });
 });
 
@@ -132,9 +132,13 @@ describe('applyList', () => {
 
 describe('legacySlot', () => {
   it('maps kinds onto the three slots older storefronts know', () => {
-    expect(legacySlot({ type: 'offline' })).toBe('manual');
-    expect(legacySlot({ type: 'crypto', cryptoOptions: [{}] })).toBe('crypto');
-    expect(legacySlot({ type: 'gateway' })).toBe('card');
+    expect(legacySlot({ method: 'uk_bank_transfer', type: 'offline' }, null)).toBe('manual');
+    expect(legacySlot({ method: 'crypto', type: 'crypto', cryptoOptions: [{}] }, null)).toBe('crypto');
+    expect(legacySlot({ method: 'stripe', type: 'gateway' }, null)).toBe('card');
+  });
+  it('a processor that is the shop crypto slot (OxaPay, Paygate) stays "crypto" for older storefronts', () => {
+    expect(legacySlot({ method: 'oxapay', type: 'gateway' }, 'oxapay')).toBe('crypto');
+    expect(legacySlot({ method: 'stripe', type: 'gateway' }, 'oxapay')).toBe('card');
   });
 });
 ```
@@ -197,14 +201,24 @@ export function deriveStartingList(
   slots: { card: string | null; crypto: string | null },
   enabledManual: string[],
 ): PaymentMethodEntry[] {
-  const names = [slots.card, slots.crypto, ...enabledManual].filter((n): n is string => Boolean(n));
-  return [...new Set(names)].map((method) => ({ method, enabled: true, label: null }));
+  // The two slots were shown to customers as "Card" and "Crypto" (bot buttons, order page), never by
+  // the processor's brand, so the starting list keeps those names. Bank gateways keep their own.
+  const seeded: PaymentMethodEntry[] = [];
+  if (slots.card) seeded.push({ method: slots.card, enabled: true, label: 'Card' });
+  if (slots.crypto) seeded.push({ method: slots.crypto, enabled: true, label: 'Crypto' });
+  for (const method of enabledManual) seeded.push({ method, enabled: true, label: null });
+  const seen = new Set<string>();
+  return seeded.filter((e) => (seen.has(e.method) ? false : (seen.add(e.method), true)));
 }
 
 /** The `slot` older storefront builds read: they name 'card' and 'crypto' themselves and treat 'manual' as a bank transfer. */
-export function legacySlot(m: { type: 'offline' | 'gateway' | 'crypto'; cryptoOptions?: unknown[] }): 'card' | 'crypto' | 'manual' {
+export function legacySlot(
+  m: { method: string; type: 'offline' | 'gateway' | 'crypto'; cryptoOptions?: unknown[] },
+  /** The shop's crypto slot (storefront override, else the bot's): a processor mapped there is "crypto" to an older build. */
+  cryptoSlotMethod: string | null,
+): 'card' | 'crypto' | 'manual' {
   if (m.type === 'offline') return 'manual';
-  if (m.cryptoOptions && m.cryptoOptions.length > 0) return 'crypto';
+  if ((m.cryptoOptions && m.cryptoOptions.length > 0) || m.method === cryptoSlotMethod) return 'crypto';
   return 'card';
 }
 
@@ -291,13 +305,15 @@ it('a method with no fee keeps an empty fee label under a custom name', async ()
 
 it('a shop that never saved a list offers its two slots then its bank gateways', async () => {
   mockList([
-    { method: 'stripe', enabled: true, label: null },
-    { method: 'crypto', enabled: true, label: null },
+    { method: 'stripe', enabled: true, label: 'Card' },
+    { method: 'crypto', enabled: true, label: 'Crypto' },
     { method: 'uk_bank_transfer', enabled: true, label: null },
   ]);
   mockAvailable([offline('uk_bank_transfer', 'UK Bank Transfer'), cryptoGateway('crypto', 'Crypto'), gateway('stripe', 'Stripe')]);
   const out = await listStorefrontPaymentMethods('GB', 100, null);
-  expect(out.map((m) => [m.method, m.slot])).toEqual([['stripe', 'card'], ['crypto', 'crypto'], ['uk_bank_transfer', 'manual']]);
+  expect(out.map((m) => [m.method, m.displayName, m.slot])).toEqual([
+    ['stripe', 'Card', 'card'], ['crypto', 'Crypto', 'crypto'], ['uk_bank_transfer', 'UK Bank Transfer', 'manual'],
+  ]);
 });
 ```
 
@@ -318,8 +334,9 @@ export async function listStorefrontPaymentMethods(
   orderTotal: number,
   groupId: number | null = null,
 ): Promise<StorefrontPaymentMethod[]> {
-  const [list, all] = await Promise.all([
+  const [list, slots, all] = await Promise.all([
     getStorefrontPaymentMethodList(),
+    getStorefrontPaymentSlots(), // only for the `slot` older storefront builds read
     getAvailablePaymentMethods({ country, orderTotal, excludeOffline: true, groupId }),
   ]);
 
@@ -331,12 +348,12 @@ export async function listStorefrontPaymentMethods(
       feeLabel: describeFee(o, m.displayName),
       ...quoteFee(o, orderTotal),
     }));
-    return { ...m, feeLabel, slot: legacySlot(m), ...quoteFee(m, orderTotal), cryptoOptions } as StorefrontPaymentMethod;
+    return { ...m, feeLabel, slot: legacySlot(m, slots.crypto), ...quoteFee(m, orderTotal), cryptoOptions } as StorefrontPaymentMethod;
   });
 }
 ```
 
-Replace the function's doc comment's first paragraph with: `The payment methods the storefront offers: the admin's list (storefront_payment_methods), in its order and under its names, limited to what is available for this country, total and customer group.` Import `describeFee` from `../payment-gateways/fees`, `applyList` and `legacySlot` from `../storefront-settings/payment-method-list`, `getStorefrontPaymentMethodList` from `../storefront-settings/service`. Remove the now-unused `getStorefrontPaymentSlots` import from this file if nothing else uses it.
+Replace the function's doc comment's first paragraph with: `The payment methods the storefront offers: the admin's list (storefront_payment_methods), in its order and under its names, limited to what is available for this country, total and customer group.` Import `describeFee` from `../payment-gateways/fees`, `applyList` and `legacySlot` from `../storefront-settings/payment-method-list`, `getStorefrontPaymentMethodList` from `../storefront-settings/service`. Keep the `getStorefrontPaymentSlots` import: it is still read for `slot`.
 
 - [ ] **Step 9: Run the module's tests, then everything**
 
