@@ -740,8 +740,7 @@
     "Order number",
     "A7K2QM",
     "Six characters, on your order confirmation.",
-    "Track order",
-    "Recent"
+    "Track order"
   ],
   "features/tracking/OrderHero.tsx": [
     "Heading to ${}",

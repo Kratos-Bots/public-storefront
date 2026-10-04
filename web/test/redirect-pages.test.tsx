@@ -2,31 +2,39 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import { cleanup, render, screen } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
-import { MemoryRouter, Route, Routes } from 'react-router';
+import { MemoryRouter, Route, Routes, useParams } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { StorefrontSettings } from '@/types/settings.ts';
 
 const state = vi.hoisted(() => ({
-  settings: { brand: { links: { whatsapp: null, telegram: null } } } as unknown as StorefrontSettings,
+  settings: { brand: { links: { whatsapp: null, telegram: null } }, features: { accounts: true } } as unknown as StorefrontSettings,
 }));
 vi.mock('@/app/settings.ts', () => ({ useSettings: () => state.settings }));
 
-import { saveOrder } from '@/stores/saved-orders.ts';
+import { useSessionStore } from '@/stores/session.ts';
 import { useCartStore } from '@/stores/cart.ts';
 import { persistForm, DEFAULT_FORM } from '@/features/checkout/form-state.ts';
 import { PaymentSuccessPage } from '@/features/payment-redirect/PaymentSuccessPage.tsx';
 import { PaymentCancelPage } from '@/features/payment-redirect/PaymentCancelPage.tsx';
 import { OrderPlacedPage } from '@/features/payment-redirect/OrderPlacedPage.tsx';
 
-function settings(links: { whatsapp: string | null; telegram: string | null }): StorefrontSettings {
-  return { brand: { links } } as unknown as StorefrontSettings;
+function settings(links: { whatsapp: string | null; telegram: string | null }, accounts = true): StorefrontSettings {
+  return { brand: { links }, features: { accounts } } as unknown as StorefrontSettings;
 }
+
+const signIn = () => useSessionStore.setState({ token: 't', customer: { id: 1, nickname: null } });
+const signOut = () => useSessionStore.setState({ token: null, customer: null });
+const features = ({ accounts }: { accounts: boolean }) => { state.settings = settings({ whatsapp: null, telegram: null }, accounts); };
+
+const SIGN_IN = '/login?returnTo=%2Faccount%2Forders%2FREF3';
+const signInLink = () => screen.queryByRole('link', { name: 'Sign in to view your order' });
 
 let client: QueryClient;
 
 beforeEach(() => {
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   localStorage.clear();
+  signOut();
   state.settings = settings({ whatsapp: null, telegram: null });
 });
 
@@ -44,12 +52,16 @@ function Wrapper({ children, entry }: { children: ReactNode; entry: string }) {
   );
 }
 
+function OrderStub() {
+  return <p>order page {useParams().ref}</p>;
+}
+
 function mountSuccess(entry: string) {
   return render(
     <Wrapper entry={entry}>
       <Routes>
         <Route path="/payment/success" element={<PaymentSuccessPage />} />
-        <Route path="/order/:ref/:accessKey" element={<p>ORDER PAGE STUB</p>} />
+        <Route path="/account/orders/:ref" element={<OrderStub />} />
       </Routes>
     </Wrapper>,
   );
@@ -91,13 +103,26 @@ describe('PaymentSuccessPage', () => {
     expect(localStorage.getItem('sf-checkout-v1')).toBeNull();
   });
 
-  it('redirects to the saved order page when a saved order exists for the reference', () => {
-    saveOrder('REF1', 'key1');
+  it('redirects a signed-in customer to their order page', () => {
+    signIn();
     mountSuccess('/payment/success?order=REF1');
-    expect(screen.getByText('ORDER PAGE STUB')).toBeInTheDocument();
+    expect(screen.getByText('order page REF1')).toBeInTheDocument();
   });
 
-  it('renders a "thanks, being confirmed" screen with the copyable reference when not saved', () => {
+  it('redirects on the first render when the session was already in storage, so the sign-in link is never drawn', () => {
+    signOut();
+    localStorage.setItem('sf-session-v1', JSON.stringify({ state: { token: 't', customer: { id: 1, nickname: null } }, version: 0 }));
+    void useSessionStore.persist.rehydrate();
+    const seen: boolean[] = [];
+    const observer = new MutationObserver(() => seen.push(screen.queryByRole('link', { name: 'Sign in to view your order' }) !== null));
+    observer.observe(document.body, { childList: true, subtree: true });
+    mountSuccess('/payment/success?order=REF1');
+    observer.disconnect();
+    expect(screen.getByText('order page REF1')).toBeInTheDocument();
+    expect(seen.some(Boolean)).toBe(false);
+  });
+
+  it('renders a "thanks, being confirmed" screen with the copyable reference when signed out', () => {
     mountSuccess('/payment/success?order=REF2');
     expect(screen.getByText(/thanks/i)).toBeInTheDocument();
     expect(screen.getByText(/being confirmed/i)).toBeInTheDocument();
@@ -116,6 +141,20 @@ describe('PaymentSuccessPage', () => {
   });
 });
 
+describe('PaymentSuccessPage sign-in prompt', () => {
+  it('signed out, accounts on: thanks, plus the way to the order', () => {
+    features({ accounts: true });
+    mountSuccess('/payment/success?order=REF3');
+    expect(signInLink()?.getAttribute('href')).toBe(SIGN_IN);
+  });
+
+  it('signed out, accounts off: no sign-in link', () => {
+    features({ accounts: false });
+    mountSuccess('/payment/success?order=REF3');
+    expect(signInLink()).toBeNull();
+  });
+});
+
 describe('PaymentCancelPage', () => {
   it('shows "payment cancelled" and "no charge taken"', () => {
     mountCancel('/payment/cancel?order=REF3');
@@ -124,19 +163,23 @@ describe('PaymentCancelPage', () => {
     expect(screen.getByText('REF3')).toBeInTheDocument();
   });
 
-  it('offers "Return to your order" when a saved order exists', () => {
-    saveOrder('REF3', 'key3');
+  it('signed in: "Return to your order" goes to the account order page', () => {
+    signIn();
     mountCancel('/payment/cancel?order=REF3');
-    const link = screen.getByRole('link', { name: /return to your order/i });
-    expect(link).toHaveAttribute('href', '/order/REF3/key3');
+    expect(screen.getByRole('link', { name: 'Return to your order' })).toHaveAttribute('href', '/account/orders/REF3');
     expect(screen.queryByRole('link', { name: /back to shop/i })).toBeNull();
   });
 
-  it('offers "Back to shop" when there is no saved order', () => {
-    mountCancel('/payment/cancel?order=REF4');
-    const link = screen.getByRole('link', { name: /back to shop/i });
-    expect(link).toHaveAttribute('href', '/');
-    expect(screen.queryByRole('link', { name: /return to your order/i })).toBeNull();
+  it('signed out, accounts on: the sign-in link; accounts off: Back to shop', () => {
+    features({ accounts: true });
+    const a = mountCancel('/payment/cancel?order=REF3');
+    expect(signInLink()?.getAttribute('href')).toBe(SIGN_IN);
+    expect(screen.queryByRole('link', { name: /back to shop/i })).toBeNull();
+    a.unmount();
+    features({ accounts: false });
+    mountCancel('/payment/cancel?order=REF3');
+    expect(screen.getByRole('link', { name: 'Back to shop' })).toHaveAttribute('href', '/');
+    expect(signInLink()).toBeNull();
   });
 });
 
@@ -189,6 +232,25 @@ describe('OrderPlacedPage', () => {
     expect(screen.queryByRole('link', { name: /telegram/i })).toBeNull();
     expect(screen.getByText(/quote your order reference/i)).toBeInTheDocument();
     expect(screen.queryByText(/message us on whatsapp or telegram/i)).toBeNull();
+  });
+
+  it('signed out, accounts on: the sign-in link sits with the chat buttons', () => {
+    state.settings = settings({ whatsapp: 'https://wa.me/447700900000', telegram: null });
+    mountOrderPlaced('/order-placed?order=REF3');
+    expect(signInLink()?.getAttribute('href')).toBe(SIGN_IN);
+    expect(screen.getByRole('link', { name: /whatsapp/i })).toBeInTheDocument();
+  });
+
+  it('signed out, accounts on, no chat links: the sign-in link above the fallback', () => {
+    mountOrderPlaced('/order-placed?order=REF3');
+    expect(signInLink()?.getAttribute('href')).toBe(SIGN_IN);
+    expect(screen.getByText(/quote your order reference/i)).toBeInTheDocument();
+  });
+
+  it('signed in: no sign-in link', () => {
+    signIn();
+    mountOrderPlaced('/order-placed?order=REF3');
+    expect(signInLink()).toBeNull();
   });
 
   it('shows "order reference missing" when ?order is absent', () => {

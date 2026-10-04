@@ -99,8 +99,8 @@ describe('labels and fixtures', () => {
 
     expect((f('PaymentSuccess', 'reference') as PaymentPreview).orderRef).toBeTruthy();
     expect((f('PaymentSuccess', 'missing') as PaymentPreview).orderRef).toBeNull();
-    expect(f('PaymentCancel', 'saved')).toMatchObject({ saved: true });
-    expect(f('PaymentCancel', 'unsaved')).toMatchObject({ saved: false });
+    expect((f('PaymentCancel', 'signed-out') as PaymentPreview).signIn).toContain('/login?returnTo=');
+    expect((f('PaymentCancel', 'no-reference') as PaymentPreview).signIn).toBeNull();
     expect((f('PaymentCancel', 'no-reference') as PaymentPreview).orderRef).toBeNull();
     const chat = f('OrderPlaced', 'chat') as PaymentPreview;
     expect(chat.whatsapp).toContain('wa.me');

@@ -28,7 +28,6 @@ import { PaymentCancelPage } from '@/features/payment-redirect/PaymentCancelPage
 import { OrderPlacedPage } from '@/features/payment-redirect/OrderPlacedPage.tsx';
 import { ReferenceRow } from '@/features/payment-redirect/ReferenceRow.tsx';
 import { ContactLinks } from '@/components/ContactLinks.tsx';
-import { saveOrder } from '@/stores/saved-orders.ts';
 import { useCartStore } from '@/stores/cart.ts';
 import { useSessionStore } from '@/stores/session.ts';
 import { useTelegramAuthStore } from '@/stores/telegram.ts';
@@ -104,11 +103,11 @@ describe('contract', () => {
     expect(PAYMENT_SUCCESS_CONTAINER.required).toEqual(['PaymentHeadline', 'PaymentReference']);
     expect(PAYMENT_CANCEL_CONTAINER.required).toEqual(['PaymentHeadline', 'PaymentActions']);
     expect(ORDER_PLACED_CONTAINER.required).toEqual(['PaymentHeadline', 'PaymentReference', 'PaymentActions']);
-    expect(PAYMENT_SUCCESS_CONTAINER.offers).toEqual(PAYMENT_PARTS.filter((p) => p !== 'PaymentActions'));
+    expect(PAYMENT_SUCCESS_CONTAINER.offers).toBeUndefined();
     expect(PAYMENT_CANCEL_CONTAINER.offers).toBeUndefined();
     expect(ORDER_PLACED_CONTAINER.offers).toBeUndefined();
     for (const { spec } of CONTAINERS) expect(spec.insertSlot).toBe('content');
-    expect(defaults('PaymentSuccess').map((i) => i.type)).toEqual(['PaymentMark', 'PaymentEyebrow', 'PaymentHeadline', 'PaymentMessage', 'PaymentReference', 'PaymentContact', 'PaymentBack']);
+    expect(defaults('PaymentSuccess').map((i) => i.type)).toEqual(['PaymentMark', 'PaymentEyebrow', 'PaymentHeadline', 'PaymentMessage', 'PaymentReference', 'PaymentActions', 'PaymentContact', 'PaymentBack']);
     expect(defaults('PaymentCancel').map((i) => i.type)).toEqual(['PaymentMark', 'PaymentEyebrow', 'PaymentHeadline', 'PaymentMessage', 'PaymentReference', 'PaymentActions', 'PaymentContact']);
     expect(defaults('OrderPlaced').map((i) => i.type)).toEqual(['PaymentMark', 'PaymentEyebrow', 'PaymentHeadline', 'PaymentMessage', 'PaymentReference', 'PaymentActions', 'PaymentBack']);
     expect(defaults('LoginOptions').map((i) => i.type)).toEqual(['LoginHeading', 'LoginMethods']);
@@ -187,13 +186,12 @@ describe('rules', () => {
     }
   });
 
-  it('PaymentActions is not offered on the success page', () => {
-    const items = [...defaults('PaymentSuccess'), part('PaymentActions', 'x')];
-    expect(rules('PaymentSuccess', 'payment-success', items)).toContain('part-placement:PaymentActions');
+  it('PaymentActions is offered on every payment page, once', () => {
+    expect(rules('PaymentSuccess', 'payment-success', [...defaults('PaymentSuccess')]).filter((r) => r.startsWith('part-placement'))).toEqual([]);
     expect(rules('PaymentCancel', 'payment-cancel', [...defaults('PaymentCancel')]).filter((r) => r.startsWith('part-placement'))).toEqual([]);
   });
 
-  it('PaymentActions is required on the cancel and placed pages, optional (and unoffered) on success', () => {
+  it('PaymentActions is required on the cancel and placed pages, optional on success', () => {
     expect(rules('PaymentCancel', 'payment-cancel', without(defaults('PaymentCancel'), 'PaymentActions'))).toContain('part-required:PaymentCancel.PaymentActions');
     expect(rules('OrderPlaced', 'order-placed', without(defaults('OrderPlaced'), 'PaymentActions'))).toContain('part-required:OrderPlaced.PaymentActions');
     expect(rules('PaymentSuccess', 'payment-success', defaults('PaymentSuccess')).filter((r) => r.startsWith('part-'))).toEqual([]);
@@ -356,8 +354,8 @@ describe('payment pages', () => {
     },
   );
 
-  it('a saved order still hands a successful payment off to its order page', async () => {
-    saveOrder('NB-1001', 'key-1');
+  it('a signed-in customer is still handed from a successful payment to their order page', async () => {
+    useSessionStore.setState({ token: 't', customer: { id: 1, nickname: null } });
     const m = mountDoc('payment-success', 'storefront', [stored('PaymentSuccess')], { path: '/payment/success?order=NB-1001' });
     await act(async () => { await new Promise((r) => setTimeout(r, 200)); });
     expect(m.container.querySelector('h1')).toBeNull();
@@ -365,7 +363,7 @@ describe('payment pages', () => {
 });
 
 describe('preview states (editor only)', () => {
-  const FIXTURE: PaymentPreview = { orderRef: 'NB-PREVIEW', saved: false, warning: false, whatsapp: LINKS.whatsapp, telegram: LINKS.telegram };
+  const FIXTURE: PaymentPreview = { orderRef: 'NB-PREVIEW', signIn: null, warning: false, whatsapp: LINKS.whatsapp, telegram: LINKS.telegram };
   function previewed(Page: () => ReactNode, name: string, fixture: PaymentPreview) {
     return render(
       <QueryClientProvider client={new QueryClient()}><MantineProvider env="test">
@@ -377,10 +375,10 @@ describe('preview states (editor only)', () => {
   }
   const lines = [{ productId: 1, quantity: 2 }] as never;
 
-  it('success: renders the fixture reference, leaves the cart alone and never redirects, even for a saved order', () => {
+  it('success: renders the fixture reference, leaves the cart alone and never redirects, even for a signed-in customer', () => {
     const clear = vi.fn();
     useCartStore.setState({ clear, lines });
-    const { container } = previewed(() => <PaymentSuccessPage />, 'PaymentSuccess', { ...FIXTURE, saved: true });
+    const { container } = previewed(() => <PaymentSuccessPage />, 'PaymentSuccess', { ...FIXTURE, signIn: '/login' });
     expect(container.textContent).toContain('NB-PREVIEW');
     expect(container.querySelector('h1')).not.toBeNull();
     expect(clear).not.toHaveBeenCalled();
@@ -393,10 +391,13 @@ describe('preview states (editor only)', () => {
     expect(container.querySelector('h1')).toBeNull();
   });
 
-  it('cancel: saved shows the return-to-order action, unsaved the back-to-shop one, no reference hides the row', () => {
-    const saved = previewed(() => <PaymentCancelPage />, 'PaymentCancel', { ...FIXTURE, saved: true });
-    expect(saved.container.querySelector('[class*="_actions_"] a')!.getAttribute('href')).toBe('/');
-    expect(saved.container.querySelector('[class*="_referenceRow_"]')).not.toBeNull();
+  it('cancel: a sign-in link shows the sign-in action, none the back-to-shop one, no reference hides the row', () => {
+    const signedOut = previewed(() => <PaymentCancelPage />, 'PaymentCancel', { ...FIXTURE, signIn: '/login?returnTo=%2Faccount%2Forders%2FNB-PREVIEW' });
+    expect(signedOut.container.querySelector('[class*="_actions_"] a')!.getAttribute('href')).toBe('/login?returnTo=%2Faccount%2Forders%2FNB-PREVIEW');
+    expect(signedOut.container.querySelector('[class*="_referenceRow_"]')).not.toBeNull();
+    cleanup();
+    const plain = previewed(() => <PaymentCancelPage />, 'PaymentCancel', FIXTURE);
+    expect(plain.container.querySelector('[class*="_actions_"] a')!.getAttribute('href')).toBe('/');
     cleanup();
     const none = previewed(() => <PaymentCancelPage />, 'PaymentCancel', { ...FIXTURE, orderRef: null });
     expect(none.container.querySelector('[class*="_referenceRow_"]')).toBeNull();

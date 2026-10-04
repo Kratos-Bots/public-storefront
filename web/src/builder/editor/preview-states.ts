@@ -13,7 +13,7 @@ import type { VerifyEmailPreview } from '@/builder/family-verify-email.ts';
 import { useEditorStore } from '@/builder/editor/store.ts';
 import { effectivePreviewAs } from '@/builder/editor/fixture-mode.ts';
 import {
-  FIXTURE_CHAT_LINKS, FIXTURE_ORDERS, FIXTURE_ORDER_REF, fixtureOrderStates, FIXTURE_REDEEM, FIXTURE_TRACKING, fixtureProfile, fixtureVerification,
+  FIXTURE_CHAT_LINKS, FIXTURE_ORDERS, FIXTURE_ORDER_REF, FIXTURE_SIGN_IN, fixtureOrderStates, FIXTURE_REDEEM, FIXTURE_TRACKING, fixtureProfile, fixtureVerification,
 } from '@/builder/editor/fixtures.ts';
 
 export type ContainerName = keyof typeof PREVIEW_STATE_IDS;
@@ -27,7 +27,7 @@ export const PREVIEW_STATE_LABELS: Record<ContainerName, Labelled> = {
   Referrals: [{ id: 'new', label: 'Not referred yet' }, { id: 'referred', label: 'Referred' }],
   Profile: [{ id: 'website', label: 'Website' }, { id: 'webapp', label: 'Web app (contact section)' }],
   PaymentSuccess: [{ id: 'reference', label: 'With reference' }, { id: 'missing', label: 'Missing reference' }],
-  PaymentCancel: [{ id: 'saved', label: 'Saved order' }, { id: 'unsaved', label: 'No saved order' }, { id: 'no-reference', label: 'No reference' }],
+  PaymentCancel: [{ id: 'signed-out', label: 'Signed out' }, { id: 'no-reference', label: 'No reference' }],
   OrderPlaced: [
     { id: 'chat', label: 'Chat links' }, { id: 'warning', label: 'Warning' }, { id: 'no-chat', label: 'No chat links' }, { id: 'missing', label: 'Missing reference' },
   ],
@@ -82,15 +82,15 @@ const BUILDERS: { [C in ContainerName]: (state: string, now: Date) => unknown } 
   },
   Profile: (state): ProfilePreview => ({ surface: state === 'webapp' ? 'webapp' : 'website', profile: fixtureProfile(PREVIEW_AS) }),
   PaymentSuccess: (state): PaymentPreview => ({
-    orderRef: state === 'missing' ? null : FIXTURE_ORDER_REF, saved: state !== 'missing', warning: false, whatsapp: null, telegram: null,
+    orderRef: state === 'missing' ? null : FIXTURE_ORDER_REF, signIn: state !== 'missing' ? FIXTURE_SIGN_IN : null, warning: false, whatsapp: null, telegram: null,
   }),
   PaymentCancel: (state): PaymentPreview => ({
-    orderRef: state === 'no-reference' ? null : FIXTURE_ORDER_REF, saved: state === 'saved', warning: false, whatsapp: null, telegram: null,
+    orderRef: state === 'no-reference' ? null : FIXTURE_ORDER_REF, signIn: state !== 'no-reference' ? FIXTURE_SIGN_IN : null, warning: false, whatsapp: null, telegram: null,
   }),
   OrderPlaced: (state): PaymentPreview => {
     const chat = state === 'chat' || state === 'warning';
     return {
-      orderRef: state === 'missing' ? null : FIXTURE_ORDER_REF, saved: false, warning: state === 'warning',
+      orderRef: state === 'missing' ? null : FIXTURE_ORDER_REF, signIn: state !== 'missing' ? FIXTURE_SIGN_IN : null, warning: state === 'warning',
       whatsapp: chat ? FIXTURE_CHAT_LINKS.whatsapp : null, telegram: chat ? FIXTURE_CHAT_LINKS.telegram : null,
     };
   },

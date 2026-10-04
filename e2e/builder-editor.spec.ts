@@ -1302,7 +1302,7 @@ test.describe('page builder editor · shell, cart and account parts', () => {
     await walkStates(page, frame, mocks, 'account.referrals', { new: null, referred: null });
     await walkStates(page, frame, mocks, 'account.profile', { website: null, webapp: null });
     await walkStates(page, frame, mocks, 'payment-success', { reference: /NB0977/, missing: /Order reference missing/ });
-    await walkStates(page, frame, mocks, 'payment-cancel', { saved: /No charge taken/, unsaved: /No charge taken/, 'no-reference': null });
+    await walkStates(page, frame, mocks, 'payment-cancel', { 'signed-out': /No charge taken/, 'no-reference': null });
     await walkStates(page, frame, mocks, 'order-placed', { chat: /Order placed/, warning: null, 'no-chat': null, missing: /Order reference missing/ });
     await walkStates(page, frame, mocks, 'tracking', {
       form: /track your order/i, 'found-2': /NB000977GB[\s\S]*NB000978GB/, 'found-1': /NB000977GB/, 'nothing-shipped': null, 'not-found': null, error: null,

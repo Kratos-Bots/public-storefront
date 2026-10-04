@@ -23,5 +23,8 @@ export default defineTextArea('payment', {
   'placed.chatHint': { en: 'Message us on WhatsApp or Telegram to arrange payment — your order reference is already filled in for you.' },
   'placed.payViaWhatsapp': { en: 'Pay via WhatsApp', max: 60 },
   'placed.payViaTelegram': { en: 'Pay via Telegram', max: 60 },
+  'signIn.action': { en: 'Sign in to view your order', max: 40 },
+  'signIn.hint': { en: 'Use the email or phone number you gave at checkout. You can pay for the order and follow it from there.', max: 200 },
+
   'placed.fallback': { en: 'Contact us through your usual channel and quote your order reference to arrange payment.' },
 });

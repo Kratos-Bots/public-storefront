@@ -1,8 +1,10 @@
 import { Link } from 'react-router';
+import { useSettings } from '@/app/settings.ts';
+import { accountOrderPath } from '@/features/checkout/outcome.ts';
+import { selectIsLoggedIn, useSessionStore } from '@/stores/session.ts';
 import { ContactLinks } from '@/components/ContactLinks.tsx';
 import { CheckIcon, CloseIcon, TelegramIcon, WhatsAppIcon } from '@/components/icons.tsx';
 import { orderChatMessage, orderInquiryMessage } from '@/lib/chat-links.ts';
-import { findSavedOrder } from '@/stores/saved-orders.ts';
 import { ReferenceRow } from '@/features/payment-redirect/ReferenceRow.tsx';
 import { PaymentFamily, type PaymentData } from '@/builder/family-payment.ts';
 import type { FamilyValue, PartViewProps } from '@/builder/parts.ts';
@@ -12,6 +14,16 @@ import classes from '@/features/payment-redirect/PaymentRedirect.module.css';
 
 /** The one slot every payment container renders (spec §5.6). */
 export interface PaymentSlots { content: SlotRender }
+
+/** The way to an order for someone who placed it signed out: sign in with the same contact, land on the order. */
+export const signInToOrder = (reference: string) => `/login?returnTo=${encodeURIComponent(accountOrderPath(reference))}`;
+
+/** The sign-in link to offer on a payment page, or null when there is nothing to offer (signed in, accounts off, no order). */
+export function useSignInTarget(orderRef: string | null): string | null {
+  const loggedIn = useSessionStore(selectIsLoggedIn);
+  const { features } = useSettings();
+  return !loggedIn && features.accounts && orderRef ? signInToOrder(orderRef) : null;
+}
 
 // Views of the payment parts: the v0.7.0 JSX of the three pages, branching on `data.kind`.
 
@@ -67,23 +79,29 @@ function ReferenceView({ styleAttrs }: PartViewProps) {
 }
 
 function ActionsView({ styleAttrs }: PartViewProps) {
-  const { kind, orderRef, saved, whatsapp, telegram } = PaymentFamily.useData();
+  const { kind, orderRef, signIn, whatsapp, telegram } = PaymentFamily.useData();
+  const loggedIn = useSessionStore(selectIsLoggedIn);
   const { t } = useText();
-  if (kind === 'success') return null;
+  const signInCta = signIn ? (
+    <>
+      <Link to={signIn} className={classes.cta} data-sf-part="button" data-variant="filled">
+        {t('payment.signIn.action')}
+      </Link>
+      <p className={classes.detail}>{t('payment.signIn.hint')}</p>
+    </>
+  ) : null;
+
+  if (kind === 'success') return signIn ? <div className={classes.actions} {...styleAttrs}>{signInCta}</div> : null;
 
   if (kind === 'cancel') {
-    const order = saved && orderRef ? findSavedOrder(orderRef) : null;
     return (
       <div className={classes.actions} {...styleAttrs}>
-        {saved ? (
-          <Link
-            to={order ? `/order/${encodeURIComponent(order.reference)}/${encodeURIComponent(order.accessKey)}` : '/'}
-            className={classes.cta}
-            data-sf-part="button"
-            data-variant="filled"
-          >
+        {loggedIn && orderRef ? (
+          <Link to={accountOrderPath(orderRef)} className={classes.cta} data-sf-part="button" data-variant="filled">
             {t('payment.cancel.returnToOrder')}
           </Link>
+        ) : signIn ? (
+          signInCta
         ) : (
           <Link to="/" className={classes.cta} data-sf-part="button" data-variant="filled">
             {t('payment.cancel.backToShop')}
@@ -95,6 +113,7 @@ function ActionsView({ styleAttrs }: PartViewProps) {
 
   return whatsapp || telegram ? (
     <div className={classes.actions} {...styleAttrs}>
+      {signInCta}
       {whatsapp ? (
         <a
           href={whatsapp}
@@ -121,6 +140,11 @@ function ActionsView({ styleAttrs }: PartViewProps) {
           {t('payment.placed.payViaTelegram')}
         </a>
       ) : null}
+    </div>
+  ) : signIn ? (
+    <div {...styleAttrs}>
+      <div className={classes.actions}>{signInCta}</div>
+      <p className={classes.fallback}>{t('payment.placed.fallback')}</p>
     </div>
   ) : (
     <p className={classes.fallback} {...styleAttrs}>

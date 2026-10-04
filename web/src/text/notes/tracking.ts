@@ -9,7 +9,6 @@ export default {
   'lookup.placeholder': 'Example order number shown inside the empty lookup box',
   'lookup.hint': 'Help line under the order-number box',
   'lookup.submit': 'Button that looks up the order',
-  'lookup.recent': 'Heading above the orders this browser looked at before',
   'lookup.invalidReference': 'Error beside the order-number label when the number is not in the right shape',
   'hero.summaryAria': 'Screen-reader name of the summary block at the top of a tracking result',
   'hero.orderRef': 'Small line above the headline; {reference} is the order number',

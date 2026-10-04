@@ -17,5 +17,7 @@ export default {
   'placed.chatHint': 'Text above the pay-via-chat buttons',
   'placed.payViaWhatsapp': 'Button that opens WhatsApp with the order reference filled in',
   'placed.payViaTelegram': 'Button that opens Telegram with the order reference filled in',
+  'signIn.action': 'Button that takes a signed-out customer to sign in and then to their order',
+  'signIn.hint': 'Line under the sign-in button on the after-checkout pages',
   'placed.fallback': 'Shown when the shop has no WhatsApp or Telegram link',
 } as const satisfies Record<string, string>;

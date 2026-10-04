@@ -32,8 +32,8 @@ describe('palettes per doc', () => {
     expect(menu('account.orders').filter((g) => g.category === 'part').map((g) => g.title)).toEqual(['Account header parts', 'Order history parts']);
     expect(Object.keys(cfg('cart').categories ?? {})).toEqual(expect.arrayContaining(['part:cart', 'part:cart-summary']));
   });
-  it('payment-success omits PaymentActions; cancel offers it', () => {
-    expect(names('payment-success', 'Payment page parts')).not.toContain('PaymentActions');
+  it('payment-success and cancel both offer PaymentActions', () => {
+    expect(names('payment-success', 'Payment page parts')).toContain('PaymentActions');
     expect(names('payment-success', 'Payment page parts')).toContain('PaymentReference');
     expect(names('payment-cancel', 'Payment page parts')).toContain('PaymentActions');
   });
@@ -64,15 +64,16 @@ describe('allow lists', () => {
     expect(allow(cfg('account.orders'), 'AccountNav', 'body')).not.toContain('Loyalty');
   });
   it('a container slot never takes a part another container offers', () => {
-    expect(allow(cfg('payment-success'), 'PaymentSuccess', 'content')).not.toContain('PaymentActions');
+    expect(allow(cfg('payment-success'), 'PaymentSuccess', 'content')).toContain('PaymentActions');
+    expect(allow(cfg('payment-success'), 'PaymentSuccess', 'content')).not.toContain('CartSummarySubtotal');
     expect(allow(cfg('cart'), 'CartContents', 'main')).not.toContain('CartSummarySubtotal');
   });
 });
 
 describe('partStates and Reset', () => {
-  it('PaymentSuccess omits PaymentActions', () => {
+  it('PaymentSuccess carries PaymentActions (the sign-in prompt for a signed-out customer)', () => {
     const item = defaultDoc('payment-success', 'storefront')!.content[0]!;
-    expect(partStates(item, 'storefront').map((p) => p.type)).not.toContain('PaymentActions');
+    expect(partStates(item, 'storefront').map((p) => p.type)).toContain('PaymentActions');
   });
   it('Reset on a menu Header yields HeaderFilter; a changed variant uses the new one', () => {
     const text = (h: ComponentData) => JSON.stringify(h.props);
