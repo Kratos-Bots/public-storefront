@@ -2,14 +2,15 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
 import { AddressStep } from '@/features/checkout/steps/AddressStep.tsx';
+import type { CountryMode } from '@/features/checkout/collection-mode.ts';
 import { DEFAULT_FORM, type CheckoutForm } from '@/features/checkout/form-state.ts';
 
 afterEach(cleanup);
 
-const mount = (form: Partial<CheckoutForm> = {}, patch = vi.fn()) => {
+const mount = (form: Partial<CheckoutForm> = {}, patch = vi.fn(), mode?: CountryMode) => {
   render(
     <MantineProvider env="test">
-      <AddressStep form={{ ...DEFAULT_FORM, ...form }} patch={patch} errors={{}} countries={['GB', 'IE', 'US', 'FR']} />
+      <AddressStep form={{ ...DEFAULT_FORM, ...form }} patch={patch} errors={{}} countries={['GB', 'IE', 'US', 'FR']} mode={mode} />
     </MantineProvider>,
   );
   return patch;
@@ -48,5 +49,41 @@ describe('AddressStep', () => {
     const patch = mount({ country: '' });
     fireEvent.change(screen.getByLabelText('Country'), { target: { value: 'IE' } });
     expect(patch).toHaveBeenCalledWith({ country: 'IE', phonePrefix: 'IE' });
+  });
+});
+
+describe('AddressStep delivery method', () => {
+  it('offers no switch for a home-only country', () => {
+    mount({ country: 'GB' }, vi.fn(), 'home');
+    expect(screen.queryByRole('radiogroup', { name: 'Deliver to' })).toBeNull();
+    expect(screen.getByLabelText('Address line 1')).toBeTruthy();
+  });
+
+  it('offers the switch when the country allows both, and reports the choice', () => {
+    const patch = mount({ country: 'GB' }, vi.fn(), 'choice');
+    fireEvent.click(screen.getByRole('radio', { name: 'Collection point' }));
+    expect(patch).toHaveBeenCalledWith({ deliveryMethod: 'collection' });
+  });
+
+  it('collection replaces the address fields with the point picker, keeping the country', () => {
+    mount({ country: 'GB', deliveryMethod: 'collection' }, vi.fn(), 'choice');
+    expect(screen.getByLabelText('Country')).toBeTruthy();
+    expect(screen.queryByLabelText('Address line 1')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Search' })).toBeTruthy();
+  });
+
+  it('a collection-only country shows the picker with an explanation and no switch', () => {
+    mount({ country: 'GB', deliveryMethod: 'collection' }, vi.fn(), 'collection');
+    expect(screen.queryByRole('radiogroup', { name: 'Deliver to' })).toBeNull();
+    expect(screen.getByText('Orders to United Kingdom are delivered to a collection point.')).toBeTruthy();
+  });
+
+  it('seeds the point search with the home postcode the first time', () => {
+    const patch = mount({ country: 'GB', zip: 'LS1 6BY' }, vi.fn(), 'choice');
+    fireEvent.click(screen.getByRole('radio', { name: 'Collection point' }));
+    expect(patch).toHaveBeenCalledWith({ deliveryMethod: 'collection', pointPostcode: 'LS1 6BY' });
+    cleanup();
+    mount({ country: 'GB', zip: 'LS1 6BY', deliveryMethod: 'collection' }, vi.fn(), 'choice');
+    expect((screen.getByLabelText('Postcode') as HTMLInputElement).value).toBe('LS1 6BY');
   });
 });

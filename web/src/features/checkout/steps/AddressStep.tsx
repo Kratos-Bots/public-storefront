@@ -1,8 +1,9 @@
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import type { StyleAttrs } from '@/builder/define.ts';
 import type { CheckoutForm } from '@/features/checkout/form-state.ts';
 import { Field } from '@/features/checkout/Field.tsx';
-import { CountrySelect } from '@/features/checkout/CountrySelect.tsx';
+import { PointPicker } from '@/features/checkout/PointPicker.tsx';
+import { CountrySelect, countryName } from '@/features/checkout/CountrySelect.tsx';
 import { addressLabels } from '@/features/checkout/address-profiles.ts';
 import { DIAL_CODES } from '@/lib/dial-codes.ts';
 import { useText } from '@/text/runtime.tsx';
@@ -29,14 +30,16 @@ export interface AddressStepProps {
  * Where the order goes. The country leads the step: it re-prices the order and
  * decides how the fields below it are worded.
  *
- * Delivery is to an address only. The backend's storefront checkout pins every
- * quote to `deliveryMethod: 'home'` and strips service-point fields from the
- * submitted address, so a collection-point picker here would be inert.
+ * With a country that offers collection points the shopper can switch to one: the
+ * address fields give way to a postcode search and a list (PointPicker). The home
+ * fields are kept in the form, so switching back restores them.
  */
-export function AddressStep({ form, patch, errors, notice, before, after, rootAttrs, countries, mode: _mode }: AddressStepProps) {
-  const { t, msg } = useText();
+export function AddressStep({ form, patch, errors, notice, before, after, rootAttrs, countries, mode }: AddressStepProps) {
+  const { t } = useText();
+  const deliverToId = useId();
   // The wording of the last three fields follows the delivery country, which is why the country leads the step.
   const labels = addressLabels(form.country);
+  const collecting = form.deliveryMethod === 'collection' && (mode === 'choice' || mode === 'collection');
   return (
     <div className={classes.step} {...rootAttrs}>
       {before}
@@ -56,61 +59,102 @@ export function AddressStep({ form, patch, errors, notice, before, after, rootAt
         }
       />
 
-      <Field
-        label={t('checkout.address.line1')}
-        value={form.addressLine1}
-        onChange={(v) => patch({ addressLine1: v })}
-        error={errors.addressLine1}
-        autoComplete="address-line1"
-        maxLength={255}
-      />
-      <Field
-        label={t('checkout.address.line2')}
-        value={form.addressLine2}
-        onChange={(v) => patch({ addressLine2: v })}
-        optional
-        autoComplete="address-line2"
-        maxLength={255}
-      />
-      <Field
-        label={t('checkout.address.line3')}
-        value={form.addressLine3}
-        onChange={(v) => patch({ addressLine3: v })}
-        error={errors.addressLine3}
-        optional
-        autoComplete="address-line3"
-        maxLength={255}
-      />
+      {mode === 'choice' ? (
+        <div className={fields.field}>
+          <span className={fields.label} id={deliverToId}>{t('checkout.address.deliverTo')}</span>
+          <div className={fields.segmented} role="radiogroup" aria-labelledby={deliverToId}>
+            {(['home', 'collection'] as const).map((method) => (
+              <label className={fields.segment} key={method}>
+                <input
+                  type="radio"
+                  name="delivery-method"
+                  checked={form.deliveryMethod === method}
+                  onChange={() =>
+                    patch({
+                      deliveryMethod: method,
+                      // First time into collection: start the point search from the postcode already typed.
+                      ...(method === 'collection' && !form.pointPostcode && form.zip ? { pointPostcode: form.zip } : {}),
+                    })
+                  }
+                />
+                <span>{t(method === 'home' ? 'checkout.address.methodHome' : 'checkout.address.methodCollection')}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
-      <Field
-        label={t(labels.city)}
-        value={form.city}
-        onChange={(v) => patch({ city: v })}
-        error={errors.city}
-        autoComplete="address-level2"
-        maxLength={100}
-      />
+      {mode === 'collection' ? (
+        <p className={classes.note}>{t('checkout.address.collectionOnly', { country: countryName(form.country) })}</p>
+      ) : null}
 
-      <div className={fields.pair}>
-        <Field
-          label={t(labels.county)}
-          value={form.county}
-          onChange={(v) => patch({ county: v })}
-          optional
-          autoComplete="address-level1"
-          maxLength={100}
+      {collecting ? (
+        <PointPicker
+          country={form.country}
+          value={form.servicePoint}
+          postcode={form.pointPostcode || form.zip}
+          error={errors.servicePoint}
+          onPostcodeChange={(v) => patch({ pointPostcode: v })}
+          onChoose={(point) => patch({ servicePoint: point })}
         />
-        <Field
-          label={t(labels.zip)}
-          value={form.zip}
-          onChange={(v) => patch({ zip: v })}
-          error={errors.zip}
-          autoComplete="postal-code"
-          maxLength={20}
-        />
-      </div>
+      ) : (
+        <>
+          <Field
+            label={t('checkout.address.line1')}
+            value={form.addressLine1}
+            onChange={(v) => patch({ addressLine1: v })}
+            error={errors.addressLine1}
+            autoComplete="address-line1"
+            maxLength={255}
+          />
+          <Field
+            label={t('checkout.address.line2')}
+            value={form.addressLine2}
+            onChange={(v) => patch({ addressLine2: v })}
+            optional
+            autoComplete="address-line2"
+            maxLength={255}
+          />
+          <Field
+            label={t('checkout.address.line3')}
+            value={form.addressLine3}
+            onChange={(v) => patch({ addressLine3: v })}
+            error={errors.addressLine3}
+            optional
+            autoComplete="address-line3"
+            maxLength={255}
+          />
 
-      {errors.servicePoint ? <p className={classes.note} data-tone="danger">{msg(errors.servicePoint)}</p> : null}
+          <Field
+            label={t(labels.city)}
+            value={form.city}
+            onChange={(v) => patch({ city: v })}
+            error={errors.city}
+            autoComplete="address-level2"
+            maxLength={100}
+          />
+
+          <div className={fields.pair}>
+            <Field
+              label={t(labels.county)}
+              value={form.county}
+              onChange={(v) => patch({ county: v })}
+              optional
+              autoComplete="address-level1"
+              maxLength={100}
+            />
+            <Field
+              label={t(labels.zip)}
+              value={form.zip}
+              onChange={(v) => patch({ zip: v })}
+              error={errors.zip}
+              autoComplete="postal-code"
+              maxLength={20}
+            />
+          </div>
+        </>
+      )}
+
       {notice ? (
         <p className={classes.note} data-tone="danger">
           {notice}
