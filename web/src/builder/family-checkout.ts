@@ -52,6 +52,8 @@ export interface CheckoutData {
   contactModes: ContactModes;
   /** Where the shop delivers (clean ISO codes). Empty = unknown: the pickers list every country. */
   shipCountries: readonly string[];
+  /** What the chosen country offers: home delivery, a collection point, or the shopper's choice. */
+  countryMode: import('@/features/checkout/collection-mode.ts').CountryMode;
   guest: boolean;
   currency: string;
   /** The shown quote (the last good one while a refetch fails). */

@@ -173,6 +173,37 @@ describe('useQuote (logged-in)', () => {
     const call = quoteMock.mock.calls[0]?.[0] as unknown as Record<string, unknown>;
     expect(call.items).toBeUndefined();
   });
+
+  describe('collection points', () => {
+    const point = (carrier: string, id = '1') => ({
+      id, carrier, name: 'Shop', street: 'Kirkgate', houseNumber: '14', postalCode: 'LS1 6BY',
+      city: 'Leeds', country: 'GB', latitude: null, longitude: null, distance: null,
+    });
+
+    it('asks for a collection quote and re-asks when the point moves to another carrier', async () => {
+      const { rerender } = renderHook(({ f }: { f: CheckoutForm }) => useQuote(f, { guest: false }), {
+        wrapper,
+        initialProps: { f: form({ country: 'GB', deliveryMethod: 'collection', servicePoint: point('inpost') }) },
+      });
+      await settle();
+      expect(quoteMock).toHaveBeenCalledTimes(1);
+      expect(quoteMock).toHaveBeenLastCalledWith(expect.objectContaining({ deliveryMethod: 'collection', servicePointCarrier: 'inpost' }));
+
+      rerender({ f: form({ country: 'GB', deliveryMethod: 'collection', servicePoint: point('evri', '2') }) });
+      await settle();
+      expect(quoteMock).toHaveBeenCalledTimes(2);
+      expect(quoteMock).toHaveBeenLastCalledWith(expect.objectContaining({ deliveryMethod: 'collection', servicePointCarrier: 'evri' }));
+    });
+
+    it('a home quote carries neither delivery key', async () => {
+      renderHook(() => useQuote(form({ country: 'GB' }), { guest: false }), { wrapper });
+      await settle();
+      const call = quoteMock.mock.calls[0]![0] as unknown as Record<string, unknown>;
+      expect(Object.keys(call)).not.toEqual(expect.arrayContaining(['deliveryMethod', 'servicePointCarrier']));
+      expect('deliveryMethod' in call).toBe(false);
+      expect('servicePointCarrier' in call).toBe(false);
+    });
+  });
 });
 
 describe('useQuote (guest)', () => {

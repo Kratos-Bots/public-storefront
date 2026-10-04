@@ -8,6 +8,7 @@ export default defineTextArea('checkout', {
   'errors.contactMissing': { en: 'Email or phone is required', max: 80 },
   'errors.countryMissing': { en: 'Select your country', max: 80 },
   'errors.shippingMissing': { en: 'Choose a shipping method', max: 80 },
+  'errors.pointMissing': { en: 'Choose a collection point', max: 80 },
   'errors.coinMissing': { en: 'Choose a coin and network', max: 80 },
   'errors.stillPricing': { en: 'Still pricing your order — one moment', max: 100 },
   'errors.shippingStale': { en: 'That delivery option is no longer available — choose another', max: 120 },

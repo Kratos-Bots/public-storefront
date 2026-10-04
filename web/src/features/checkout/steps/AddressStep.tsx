@@ -21,6 +21,8 @@ export interface AddressStepProps {
   rootAttrs?: StyleAttrs;
   /** Where the shop delivers; empty = every country. */
   countries?: readonly string[];
+  /** What the country offers; omitted = home. */
+  mode?: import('@/features/checkout/collection-mode.ts').CountryMode;
 }
 
 /**
@@ -31,8 +33,8 @@ export interface AddressStepProps {
  * quote to `deliveryMethod: 'home'` and strips service-point fields from the
  * submitted address, so a collection-point picker here would be inert.
  */
-export function AddressStep({ form, patch, errors, notice, before, after, rootAttrs, countries }: AddressStepProps) {
-  const { t } = useText();
+export function AddressStep({ form, patch, errors, notice, before, after, rootAttrs, countries, mode: _mode }: AddressStepProps) {
+  const { t, msg } = useText();
   // The wording of the last three fields follows the delivery country, which is why the country leads the step.
   const labels = addressLabels(form.country);
   return (
@@ -108,6 +110,7 @@ export function AddressStep({ form, patch, errors, notice, before, after, rootAt
         />
       </div>
 
+      {errors.servicePoint ? <p className={classes.note} data-tone="danger">{msg(errors.servicePoint)}</p> : null}
       {notice ? (
         <p className={classes.note} data-tone="danger">
           {notice}

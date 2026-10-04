@@ -6,6 +6,7 @@ export default {
   'errors.contactMissing': 'Under the guest checkout email field, when neither email nor phone is filled in',
   'errors.countryMissing': 'Under the checkout country picker, when no country is chosen',
   'errors.shippingMissing': 'Checkout delivery step, when Continue is pressed with no delivery option chosen',
+  'errors.pointMissing': 'Shown on the address step when collection is chosen but no point is picked',
   'errors.coinMissing': 'Checkout payment step, when crypto is chosen without a coin and network',
   'errors.stillPricing': 'Checkout delivery and payment steps, when Continue is pressed before the order is priced',
   'errors.shippingStale': 'Checkout delivery step, when the chosen delivery option has been withdrawn',

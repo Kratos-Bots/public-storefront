@@ -114,7 +114,7 @@ function Address({ props, styleAttrs }: PartViewProps) {
   if (!d.stack && d.kind !== 'address') return null;
   return framed(d, 'address', (
     <AddressStep
-      form={d.form} patch={d.patch} errors={d.errors} notice={d.addressNotice} countries={d.shipCountries}
+      form={d.form} patch={d.patch} errors={d.errors} notice={d.addressNotice} countries={d.shipCountries} mode={d.countryMode}
       before={slotOf(props, 'before')} after={slotOf(props, 'after')} rootAttrs={styleAttrs}
     />
   ));

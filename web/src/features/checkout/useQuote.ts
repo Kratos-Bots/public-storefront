@@ -5,7 +5,8 @@ import { guestQuote, quote as fetchQuote } from '@/api/checkout.ts';
 import type { ApiError } from '@/api/client.ts';
 import { useCartStore } from '@/stores/cart.ts';
 import type { CheckoutForm } from '@/features/checkout/form-state.ts';
-import type { Quote } from '@/types/checkout.ts';
+import type { Quote, QuoteInput } from '@/types/checkout.ts';
+import { quoteDeliveryFields } from '@/features/checkout/collection-mode.ts';
 
 const DEBOUNCE_MS = 300;
 
@@ -36,6 +37,8 @@ interface HashInput {
   couponCode: string;
   shippingOptionId: number | null;
   useStoreCredit: boolean;
+  deliveryMethod?: QuoteInput['deliveryMethod'];
+  servicePointCarrier?: string;
   lines?: { productId: number; quantity: number }[];
 }
 
@@ -71,11 +74,12 @@ export function useQuote(form: CheckoutForm, { guest, turnstileToken }: UseQuote
       couponCode: form.couponCode.trim().toUpperCase(),
       shippingOptionId: form.shippingOptionId,
       useStoreCredit: form.useStoreCredit,
+      ...quoteDeliveryFields(form),
     };
     return guest
       ? { ...base, lines: lines.map((l) => ({ productId: l.productId, quantity: l.quantity })) }
       : base;
-  }, [form.country, form.couponCode, form.shippingOptionId, form.useStoreCredit, guest, lines]);
+  }, [form.country, form.couponCode, form.shippingOptionId, form.useStoreCredit, form.deliveryMethod, form.servicePoint, guest, lines]);
 
   const [debounced] = useDebouncedValue(hashInput, DEBOUNCE_MS);
   const hash = useMemo(() => JSON.stringify(debounced), [debounced]);
@@ -89,6 +93,8 @@ export function useQuote(form: CheckoutForm, { guest, turnstileToken }: UseQuote
         country: debounced.country || undefined,
         couponCode: debounced.couponCode || undefined,
         shippingOptionId: debounced.shippingOptionId ?? undefined,
+        ...(debounced.deliveryMethod ? { deliveryMethod: debounced.deliveryMethod } : {}),
+        ...(debounced.servicePointCarrier ? { servicePointCarrier: debounced.servicePointCarrier } : {}),
       });
       // Mark this exact token spent the moment the request settles, win or lose — Turnstile
       // consumes it on verification regardless of what the rest of the request did with it,
@@ -106,6 +112,8 @@ export function useQuote(form: CheckoutForm, { guest, turnstileToken }: UseQuote
       couponCode: debounced.couponCode || undefined,
       shippingOptionId: debounced.shippingOptionId ?? undefined,
       useStoreCredit: debounced.useStoreCredit,
+      ...(debounced.deliveryMethod ? { deliveryMethod: debounced.deliveryMethod } : {}),
+      ...(debounced.servicePointCarrier ? { servicePointCarrier: debounced.servicePointCarrier } : {}),
     });
   };
 

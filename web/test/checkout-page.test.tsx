@@ -264,6 +264,12 @@ async function walkToReview() {
   type('Town / City', 'London');
   type(/postcode/i, 'SW1A 1AA');
   fireEvent.change(screen.getByLabelText('Country'), { target: { value: 'GB' } });
+  await walkToReviewFrom('address');
+}
+
+/** From a step that is already filled in: Continue through it, then Shipping → Payment → Review. */
+async function walkToReviewFrom(step: 'contact' | 'address') {
+  if (step === 'contact') pressContinue();
   pressContinue();
   await settle();
 
@@ -396,6 +402,69 @@ describe('CheckoutPage — signed in', () => {
     it('with no list from the backend every country is offered', async () => {
       await toAddress();
       expect(country().options.length).toBeGreaterThan(100);
+    });
+  });
+
+  describe('collection points', () => {
+    const POINT = {
+      id: '12345', carrier: 'inpost', name: 'Tesco Express', street: 'Kirkgate', houseNumber: '14', postalCode: 'LS1 6BY',
+      city: 'Leeds', country: 'GB', latitude: null, longitude: null, distance: 300,
+    };
+    const seedCollection = () => localStorage.setItem('sf-checkout-v1', JSON.stringify({
+      ...DEFAULT_FORM, firstName: 'Ada', surname: 'Lovelace', email: 'ada@example.com', country: 'GB',
+      deliveryMethod: 'collection', servicePoint: POINT,
+    }));
+    const withCollection = () => {
+      state.settings = { ...settings(false), shipping: { countries: ['GB'], collectionCountries: ['GB'] } };
+    };
+
+    it('a collection order sends the point, the point’s address and the shopper’s name', async () => {
+      withCollection();
+      seedCollection();
+      mount();
+      await settle();
+      type(/^phone$/i, '07801 123456');
+      await walkToReviewFrom('contact');
+      pressPlace();
+      await settle();
+      expect(placeOrderMock).toHaveBeenCalledTimes(1);
+      expect(placeOrderMock.mock.calls[0]![0].shippingAddress).toEqual({
+        firstName: 'Ada', surname: 'Lovelace', addressLine1: 'Kirkgate 14', addressLine2: null, addressLine3: null,
+        city: 'Leeds', county: null, zip: 'LS1 6BY', country: 'GB',
+        servicePointId: '12345', servicePointCarrier: 'inpost', servicePointName: 'Tesco Express',
+      });
+      expect(quoteMock.mock.calls.at(-1)![0]).toMatchObject({ deliveryMethod: 'collection', servicePointCarrier: 'inpost' });
+    });
+
+    it('collection without a chosen point cannot leave the address step', async () => {
+      withCollection();
+      localStorage.setItem('sf-checkout-v1', JSON.stringify({ ...DEFAULT_FORM, firstName: 'Ada', surname: 'Lovelace', email: 'ada@example.com', phone: '07801 123456', country: 'GB', deliveryMethod: 'collection' }));
+      mount();
+      await settle();
+      pressContinue(); // Contact → Address
+      pressContinue(); // refused
+      expect(screen.getByText('Choose a collection point')).toBeTruthy();
+    });
+
+    it('collection makes the phone required even when the shop has it optional', async () => {
+      withCollection();
+      seedCollection();
+      mount();
+      await settle();
+      pressContinue(); // Contact, with no phone
+      expect(screen.getByText('Required')).toBeTruthy();
+    });
+
+    it('a home order is unchanged: no point fields and no delivery fields on the quote', async () => {
+      withCollection();
+      mount();
+      await settle();
+      await walkToReview();
+      pressPlace();
+      await settle();
+      const address = placeOrderMock.mock.calls[0]![0].shippingAddress;
+      expect(Object.keys(address)).not.toEqual(expect.arrayContaining(['servicePointId']));
+      expect(Object.keys(quoteMock.mock.calls.at(-1)![0])).not.toEqual(expect.arrayContaining(['deliveryMethod', 'servicePointCarrier']));
     });
   });
 
