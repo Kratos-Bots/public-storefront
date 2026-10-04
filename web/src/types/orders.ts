@@ -10,6 +10,7 @@ export interface OrderDetail {
   payments: Array<{ method: string; methodLabel?: string; amount: number; status: string; createdAt: string }>;
   outstandingBalance: number; shipments: OrderShipment[]; publicUrl: string | null;
   accessKey?: string | null; canCancel?: boolean; cancelBlockedBy?: import('./public-order.ts').CancelBlockedBy | null;
+  shippingAddress?: import('./public-order.ts').ShippingAddress | null;
 }
 
 /** An order the customer can still pay, as `GET storefront/orders/unpaid` returns it. */

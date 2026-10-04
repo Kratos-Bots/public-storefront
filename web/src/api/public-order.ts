@@ -1,5 +1,6 @@
 import { api, unwrap } from '@/api/client.ts';
 import { ApiError } from '@/lib/errors.ts';
+import { asCancelError, PaymentConflictError, type PaymentSelection } from '@/api/orders.ts';
 import type { PaymentMethod } from '@/types/checkout.ts';
 import type {
   CryptoTxidVerification,
@@ -22,14 +23,6 @@ export class InvalidLinkError extends Error {
   constructor() {
     super('Invalid order link');
     this.name = 'InvalidLinkError';
-  }
-}
-
-/** 409 — the order's payment state moved under us (paid, cancelled, no longer pending). */
-export class PaymentConflictError extends Error {
-  constructor() {
-    super('Order payment state changed');
-    this.name = 'PaymentConflictError';
   }
 }
 
@@ -85,12 +78,6 @@ export function fetchPaymentOptions(
   );
 }
 
-export interface PaymentSelection {
-  method: string;
-  coin?: string;
-  network?: string;
-}
-
 /**
  * Create the order's first payment, or switch a pending one. A 409 means the
  * order moved on while the page was open — the caller refetches rather than
@@ -131,26 +118,7 @@ export async function submitCryptoTxid(
     : 'checking';
 }
 
-/** 409 `ORDER_NOT_CANCELLABLE:<reason>` — the order cannot be cancelled by the customer (any more). */
-export class OrderNotCancellableError extends Error {
-  readonly reason: 'not_pending' | 'paid' | 'bank_transfer' | 'crypto_submitted';
-  constructor(reason: OrderNotCancellableError['reason']) {
-    super('Order cannot be cancelled');
-    this.name = 'OrderNotCancellableError';
-    this.reason = reason;
-  }
-}
-
-const CANCEL_REASONS = ['not_pending', 'paid', 'bank_transfer', 'crypto_submitted'] as const;
-
-/** Maps the backend's `409 ORDER_NOT_CANCELLABLE:<reason>`; anything else (including any other 409) is rethrown. */
-export function asCancelError(err: unknown): never {
-  if (err instanceof ApiError && err.status === 409 && err.message.startsWith('ORDER_NOT_CANCELLABLE')) {
-    const reason = err.message.split(':')[1];
-    throw new OrderNotCancellableError(CANCEL_REASONS.find((r) => r === reason) ?? 'not_pending');
-  }
-  throw err;
-}
+export { PaymentConflictError, OrderNotCancellableError, asCancelError, type PaymentSelection } from '@/api/orders.ts';
 
 /** Cancel through the order's own link (a guest, or anyone holding the link). */
 export function cancelPublicOrder(reference: string, accessKey: string): Promise<{ reference: string; status: string }> {
