@@ -64,6 +64,7 @@ function HeadingView({ styleAttrs }: PartViewProps) {
       <h2 className={classes.detailRef}>{data.reference}</h2>
       <StatusPill tone={orderStatusTone(data.status)}>{orderStatusLabel(data.status, t)}</StatusPill>
       <span className={classes.detailDate}>{t('account.order.placed', { date: formatDate(data.createdAt) })}</span>
+      {data.servicePoint ? <span className={classes.detailDate}>{t('account.order.collectFrom', { name: data.servicePoint.name })}</span> : null}
     </div>
   );
 }

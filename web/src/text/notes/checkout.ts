@@ -112,6 +112,7 @@ export default {
   'payment.offlineNote': 'Payment step, under a bank-transfer style method',
   'review.blurb': 'Line at the top of the review step',
   'review.change': 'Button on each review-step box that goes back to that step',
+  'review.collectFrom': 'Review step: label above the collection point on the address slip',
   'review.notChosen': 'Review step, for a delivery option or payment method not yet chosen',
   'review.notes': 'Review step notes field label',
   'review.notesPlaceholder': 'Placeholder inside the order notes field',

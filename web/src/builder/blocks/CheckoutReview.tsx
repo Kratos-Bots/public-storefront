@@ -11,7 +11,7 @@ export const block = defineBlock<{ id: string; before: ComponentData[]; after: C
   part: { family: 'checkout', defaultSlots: (_p, { id }) => stepSlots('CheckoutReview', id) },
   layouts: 'all', routeBound: false, slots: ['before', 'after'],
   style: styleSupport('root', [...BOX]),
-  text: ['checkout.review.blurb', 'checkout.review.change', 'checkout.review.notChosen', 'checkout.steps.contact', 'checkout.steps.addressTitle', 'checkout.steps.shipping', 'checkout.steps.payment', 'common.totals.storeCredit'],
+  text: ['checkout.review.blurb', 'checkout.review.change', 'checkout.review.notChosen', 'checkout.review.collectFrom', 'checkout.steps.contact', 'checkout.steps.addressTitle', 'checkout.steps.shipping', 'checkout.steps.payment', 'common.totals.storeCredit'],
   schema: z.object({ before: slot(), after: slot() }), defaultProps: { before: [], after: [] },
   render: (p) => <CheckoutFamily.PartHost name="CheckoutReview" props={p as Record<string, unknown>} styleAttrs={p.puck.style} />,
 });

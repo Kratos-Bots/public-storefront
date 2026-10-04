@@ -20,6 +20,12 @@ export function AddressCard({ address, rootAttrs }: { address: ShippingAddress; 
     <section className={`${classes.card} ${FADE}`} aria-label={t('order.address.title')} data-sf-part="card" {...rootAttrs}>
       <p className={classes.cardEyebrow}>{t('order.address.title')}</p>
       <address className={classes.address}>
+        {address.servicePoint ? (
+          <>
+            <p className={classes.cardEyebrow}>{t('order.address.collectFrom')}</p>
+            <p className={classes.addressName}>{address.servicePoint.name}</p>
+          </>
+        ) : null}
         <p className={classes.addressName}>
           {address.firstName} {address.surname}
         </p>

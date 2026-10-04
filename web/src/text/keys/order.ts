@@ -71,6 +71,7 @@ export default defineTextArea('order', {
   'items.tax': { en: 'Tax', max: 40 },
 
   'address.title': { en: 'Delivery address', max: 40 },
+  'address.collectFrom': { en: 'Collect from', max: 40 },
 
   // Parcels.
   'shipment.parcel': { en: 'Parcel', max: 40 },

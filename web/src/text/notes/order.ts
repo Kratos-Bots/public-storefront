@@ -54,6 +54,7 @@ export default {
   'items.paymentDiscount': 'Totals row when the payment method gives a discount',
   'items.tax': 'Totals row for tax',
   'address.title': 'Heading of the delivery-address card',
+  'address.collectFrom': 'Delivery-address card: label above the name of the collection point an order goes to',
   'shipment.parcel': 'Heading of the parcel card when there is one parcel',
   'shipment.untitled': 'Parcel card title when the carrier is unknown',
   'shipment.track': 'Link to the carrier\'s tracking page',

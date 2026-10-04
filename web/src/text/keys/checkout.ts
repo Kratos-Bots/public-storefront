@@ -128,6 +128,7 @@ export default defineTextArea('checkout', {
   'review.blurb': { en: 'One last look before we place it.', max: 100 },
   'review.change': { en: 'Change', max: 30 },
   'review.notChosen': { en: 'Not chosen', max: 40 },
+  'review.collectFrom': { en: 'Collect from', max: 40 },
   'review.notes': { en: 'Order notes', max: 40 },
   'review.notesPlaceholder': { en: 'Anything the courier or our packing team should know', max: 120 },
 
