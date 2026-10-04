@@ -19,6 +19,8 @@ export interface ContactStepProps {
   before?: ReactNode;
   after?: ReactNode;
   rootAttrs?: StyleAttrs;
+  /** The shop's delivery countries, which lead the dial-code picker. */
+  countries?: readonly string[];
 }
 
 /**
@@ -27,7 +29,7 @@ export interface ContactStepProps {
  * behind them, email or phone has to be there or the order has no identity at
  * all (STOREFRONT.md §3.5a).
  */
-export function ContactStep({ form, patch, errors, contactModes, guest, before, after, rootAttrs }: ContactStepProps) {
+export function ContactStep({ form, patch, errors, contactModes, guest, before, after, rootAttrs, countries }: ContactStepProps) {
   const { t, tn } = useText();
   const { emailMode, phoneMode } = contactModes;
 
@@ -79,6 +81,7 @@ export function ContactStep({ form, patch, errors, contactModes, guest, before, 
           phone={form.phone}
           optional={phoneMode === 'optional' && !guest}
           error={errors.phone}
+          suggested={countries}
           onPrefixChange={(iso) => patch({ phonePrefix: iso, phonePrefixTouched: true })}
           onPhoneChange={(v) => patch({ phone: v })}
         />

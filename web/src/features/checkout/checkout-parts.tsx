@@ -104,7 +104,7 @@ function Contact({ props, styleAttrs }: PartViewProps) {
   return framed(d, 'contact', (
     <ContactStep
       form={d.form} patch={d.patch} errors={d.errors} contactModes={d.contactModes} guest={d.guest}
-      before={slotOf(props, 'before')} after={slotOf(props, 'after')} rootAttrs={styleAttrs}
+      before={slotOf(props, 'before')} after={slotOf(props, 'after')} rootAttrs={styleAttrs} countries={d.shipCountries}
     />
   ));
 }
