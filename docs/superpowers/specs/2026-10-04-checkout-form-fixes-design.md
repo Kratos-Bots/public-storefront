@@ -193,6 +193,19 @@ profile's label; messages that do not name a field are unchanged.
   Error, hint and "Optional" render under the whole control.
 - Focus styling treats the pair as one field.
 
+**Leading zero.** Customers often type the national form (`07801 123456`).
+The saved number is already right: the storefront submits `+4407801123456` and
+the backend's `normalisePhone` (libphonenumber) stores `+447801123456`, while
+keeping the zero for countries where it is part of the number (Italy). Checked
+on 2026-10-04 for GB, FR, IE and IT. What is wrong is what the customer sees:
+the Review step prints the unstripped `+4407801123456`. This piece adds a
+display helper beside `composePhoneNumber` that drops one leading trunk zero
+for display, except for a short list of countries that keep it (IT, SM, VA),
+and the Review step uses it. The submitted value is not changed: the backend
+stays the single authority on the stored number, so the storefront needs no
+phone-metadata library. Typing `07801…`, `7801…`, `+447801…` or `00447801…`
+all remain accepted.
+
 Props and stored state do not change, so `composePhoneNumber`, the
 prefix-follows-country behaviour in `AddressStep`, and the submitted `phone`
 string are untouched. Password sign-in and the account profile pick up the new
@@ -222,7 +235,10 @@ Storefront:
 - vitest: profile lookup per country and fallback; `addressLine3` in schema and
   request body (present, blank becomes `null`); country list filtered, full-list
   fallback when the field is absent or empty, single-country preselect, stale
-  country cleared; phone field shows the prefix closed and groups its options.
+  country cleared; phone field shows the prefix closed and groups its options;
+  the Review display drops a UK/FR/IE leading zero and keeps an Italian one.
+- Backend: a `normalisePhone` test pinning `+4407801123456` to `+447801123456`
+  and `+39061234567` unchanged, if not already covered.
 - Playwright: `checkout-parts.spec.ts` payload baseline updated for
   `addressLine3`; the e2e mock settings gain `shipping.countries`.
 - DOM-parity baselines and screenshot goldens regenerated for checkout,
