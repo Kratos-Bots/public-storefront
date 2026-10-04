@@ -3,18 +3,23 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { MantineProvider } from '@mantine/core';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, useLocation } from 'react-router';
+import { ApiError } from '@/lib/errors.ts';
 
 vi.mock('@/api/orders.ts', () => ({ fetchUnpaidOrders: vi.fn(), cancelOrder: vi.fn() }));
 vi.mock('@/api/public-order.ts', async (orig) => ({ ...(await orig<typeof import('@/api/public-order.ts')>()), fetchPublicOrder: vi.fn(), cancelPublicOrder: vi.fn() }));
-vi.mock('@/stores/saved-orders.ts', () => ({ listSavedOrders: vi.fn() }));
+vi.mock('@/stores/saved-orders.ts', () => ({ listSavedOrders: vi.fn(), removeSavedOrder: vi.fn() }));
 vi.mock('@/app/builder-gate.ts', () => ({ isBuilderMode: vi.fn(() => false) }));
-vi.mock('@/app/settings.ts', () => ({ useSettings: () => ({ supportLinks: [{ label: 'Chat', url: 'https://t.me/example_shop' }], currency: 'GBP' }) }));
+const shop = vi.hoisted(() => ({ access: undefined as undefined | { storefront: string } }));
+vi.mock('@/app/settings.ts', () => ({ useSettings: () => ({ supportLinks: [{ label: 'Chat', url: 'https://t.me/example_shop' }], currency: 'GBP', access: shop.access }) }));
+vi.mock('@/app/preview-listener.ts', () => ({ isPreviewMode: vi.fn(() => false) }));
 
 import { cancelOrder, fetchUnpaidOrders } from '@/api/orders.ts';
 import { cancelPublicOrder, fetchPublicOrder, InvalidLinkError } from '@/api/public-order.ts';
+import { accessGate } from '@/app/access-gate.ts';
 import { isBuilderMode } from '@/app/builder-gate.ts';
+import { isPreviewMode } from '@/app/preview-listener.ts';
 import { UnpaidOrderPrompt } from '@/features/unpaid-prompt/UnpaidOrderPrompt.tsx';
-import { listSavedOrders } from '@/stores/saved-orders.ts';
+import { listSavedOrders, removeSavedOrder } from '@/stores/saved-orders.ts';
 import { useSessionStore } from '@/stores/session.ts';
 import { useUiStore } from '@/stores/ui.ts';
 
@@ -23,6 +28,8 @@ const cancelMock = vi.mocked(cancelOrder);
 const publicMock = vi.mocked(fetchPublicOrder);
 const savedMock = vi.mocked(listSavedOrders);
 const builderMock = vi.mocked(isBuilderMode);
+const previewMock = vi.mocked(isPreviewMode);
+const removeMock = vi.mocked(removeSavedOrder);
 const cancelPublicMock = vi.mocked(cancelPublicOrder);
 
 const unpaid = (reference: string, over: Record<string, unknown> = {}) => ({
@@ -60,7 +67,11 @@ beforeEach(() => {
   useUiStore.setState({ loginOpen: false, cartOpen: false });
   unpaidMock.mockReset(); cancelMock.mockReset(); publicMock.mockReset(); savedMock.mockReset();
   savedMock.mockReturnValue([]);
+  removeMock.mockReset();
   builderMock.mockReturnValue(false);
+  previewMock.mockReturnValue(false);
+  shop.access = undefined;
+  accessGate.getState().reset();
   signIn();
 });
 afterEach(cleanup);
@@ -317,5 +328,86 @@ describe('UnpaidOrderPrompt', () => {
     // With the confirmation closed, Escape dismisses the pop-up as usual.
     fireEvent.keyDown(screen.getByRole('button', { name: 'Complete payment' }), { key: 'Escape' });
     await waitFor(() => expect(dialog()).toBeNull());
+  });
+
+  it('never shows in the appearance preview, and asks nothing', async () => {
+    previewMock.mockReturnValue(true);
+    unpaidMock.mockResolvedValue([unpaid('K4M2QP')] as never);
+    mount('/');
+    await settle();
+    expect(dialog()).toBeNull();
+    expect(unpaidMock).not.toHaveBeenCalled();
+  });
+
+  it('a session with no customer id yet asks nothing', async () => {
+    useSessionStore.setState({ token: 'tok', customer: null });
+    unpaidMock.mockResolvedValue([unpaid('K4M2QP')] as never);
+    mount('/');
+    await settle();
+    expect(unpaidMock).not.toHaveBeenCalled();
+  });
+
+  it('a customer the shop has refused sees no pop-up on /account and nothing is requested', async () => {
+    unpaidMock.mockResolvedValue([unpaid('K4M2QP')] as never);
+    accessGate.getState().setDenied(true);
+    mount('/account');
+    await settle();
+    expect(dialog()).toBeNull();
+    expect(unpaidMock).not.toHaveBeenCalled();
+  });
+
+  it('a restricted shop waits for the profile to say shopAccess: true, and never requests it itself', async () => {
+    shop.access = { storefront: 'restricted' };
+    unpaidMock.mockResolvedValue([unpaid('K4M2QP')] as never);
+    const client = new QueryClient();
+    const first = mount('/account', client);
+    await settle();
+    expect(dialog()).toBeNull();
+    expect(unpaidMock).not.toHaveBeenCalled();
+    act(() => client.setQueryData(['profile'], { shopAccess: false }));
+    await settle();
+    expect(dialog()).toBeNull();
+    expect(unpaidMock).not.toHaveBeenCalled();
+    act(() => client.setQueryData(['profile'], { shopAccess: true }));
+    await screen.findByRole('dialog', { name: 'You have an unpaid order' });
+    first.unmount();
+  });
+
+  describe('saved links the lookup proves dead are forgotten', () => {
+    const guestMount = () => { signOut(); savedMock.mockReturnValue([saved('AAAAAA')]); return mount('/'); };
+    it('an invalid link is removed', async () => {
+      publicMock.mockRejectedValue(new InvalidLinkError());
+      guestMount();
+      await waitFor(() => expect(removeMock).toHaveBeenCalledWith('AAAAAA'));
+    });
+    it.each(['cancelled', 'refunded'])('a %s order is removed', async (status) => {
+      publicMock.mockResolvedValue({ ...publicOrder('AAAAAA', false), status } as never);
+      guestMount();
+      await waitFor(() => expect(removeMock).toHaveBeenCalledWith('AAAAAA'));
+    });
+    it.each([
+      ['a network error', () => new Error('offline')],
+      ['a server error', () => new ApiError(503, 'down')],
+      ['rate limiting', () => new ApiError(429, 'slow down')],
+    ])('%s keeps the link', async (_name, make) => {
+      publicMock.mockRejectedValue(make());
+      guestMount();
+      await waitFor(() => expect(publicMock).toHaveBeenCalledTimes(1));
+      await settle();
+      expect(removeMock).not.toHaveBeenCalled();
+    });
+    it('a paid but still active order keeps the link', async () => {
+      publicMock.mockResolvedValue({ ...publicOrder('AAAAAA', false), status: 'processing' } as never);
+      guestMount();
+      await waitFor(() => expect(publicMock).toHaveBeenCalledTimes(1));
+      await settle();
+      expect(removeMock).not.toHaveBeenCalled();
+    });
+    it('an order that can be paid keeps the link', async () => {
+      publicMock.mockResolvedValue({ ...publicOrder('AAAAAA', true), status: 'pending' } as never);
+      guestMount();
+      await screen.findByRole('dialog');
+      expect(removeMock).not.toHaveBeenCalled();
+    });
   });
 });

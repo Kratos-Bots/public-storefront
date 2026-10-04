@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/api/auth.ts', () => ({ logout: vi.fn(async () => undefined) }));
+import { logout } from '@/api/auth.ts';
 vi.mock('@/features/cart/useServerCart.ts', () => ({ resetCartSync: vi.fn() }));
 
 import { signOutAndReload } from '@/features/auth/sign-out.ts';
@@ -21,6 +22,15 @@ describe('signing out forgets the saved order links', () => {
     await signOutAndReload();
     expect(localStorage.getItem('sf-orders-v1')).toBeNull();
     expect(guestCandidates(listSavedOrders(), new Date())).toEqual([]);
+    expect(useSessionStore.getState().token).toBeNull();
+  });
+
+  it('a logout request that fails still ends the session and clears them', async () => {
+    vi.mocked(logout).mockRejectedValueOnce(new Error('offline'));
+    useSessionStore.setState({ token: 'tok', customer: { id: 1, nickname: 'Ada' } });
+    saveOrder('K4M2QP', 'abc');
+    await signOutAndReload();
+    expect(listSavedOrders()).toEqual([]);
     expect(useSessionStore.getState().token).toBeNull();
   });
 

@@ -4,7 +4,9 @@ import type { UnpaidOrder } from '@/types/orders.ts';
 import type { CancelBlockedBy, PublicOrder } from '@/types/public-order.ts';
 
 /** Paths where the pop-up would be in the way of paying, or is already the subject of the page. */
-const BLOCKED = [/^\/checkout(\/|$)/, /^\/order\//, /^\/payment\//, /^\/order-placed(\/|$)/, /^\/account\/orders\/[^/]+/, /^\/login(\/|$)/, /^\/auth\//, /^\/__builder/];
+const BLOCKED = [/^\/checkout(\/|$)/, /^\/order\//, /^\/payment\//, /^\/order-placed(\/|$)/, /^\/account\/orders\/[^/]+/, /^\/login(\/|$)/, /^\/auth\//, /^\/__builder/,
+  // Pages the customer reached from an email or a printed label to do one thing.
+  /^\/reset-password(\/|$)/, /^\/verify-email(\/|$)/, /^\/verify(\/|$)/, /^\/tracking(\/|$)/];
 
 export function promptAllowedOn(pathname: string): boolean {
   return !BLOCKED.some((re) => re.test(pathname));
@@ -21,6 +23,11 @@ export function guestCandidates(saved: readonly SavedOrder[], now: Date): SavedO
       return Number.isFinite(at) && now.getTime() - at <= MAX_AGE_MS;
     })
     .slice(0, MAX_GUEST_CHECKS);
+}
+
+/** A saved order the guest lookup should forget: the link is dead, or the order is over for good. */
+export function isTerminalStatus(status: string | undefined): boolean {
+  return status === 'cancelled' || status === 'refunded';
 }
 
 export interface PromptOrder {

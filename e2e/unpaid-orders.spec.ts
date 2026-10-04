@@ -100,6 +100,9 @@ function seedCart(mocks: MockHandle): void {
   };
 }
 
+/** How many times the signed-in customer's unpaid orders were asked for. */
+const unpaidAsks = (mocks: MockHandle): number => mocks.requests().filter((r) => r === 'GET storefront/orders/unpaid').length;
+
 /** Leaves the page in the app (the account page) and comes back by the browser's Back. */
 async function awayAndBack(page: Page): Promise<void> {
   await onlyVisible(page.getByRole('link', { name: 'Your account' })).click();
@@ -194,17 +197,21 @@ test.describe('unpaid orders · the pop-up', () => {
     await prompt(page).getByRole('button', { name: 'Not now' }).click();
     await expect(prompt(page)).toHaveCount(0);
 
+    // The one lookup that raised the pop-up has landed; nothing may ask again.
+    expect(unpaidAsks(mocks)).toBe(1);
+
     await awayAndBack(page);
     await expect(page.locator('[data-sf-part="product-card"]').first()).toBeVisible();
+    await page.waitForLoadState('networkidle');
     await expect(prompt(page)).toHaveCount(0);
+    expect(unpaidAsks(mocks)).toBe(1);
 
     // Session storage survives a reload of the same tab.
-    const asked = () => mocks.requests().filter((r) => r === 'GET storefront/orders/unpaid').length;
-    const before = asked();
     await page.reload();
-    await expect(page.getByRole('link', { name: /^Cart, / }).first()).toBeAttached();
+    await expect(page.locator('[data-sf-part="product-card"]').first()).toBeVisible();
+    await page.waitForLoadState('networkidle');
     await expect(prompt(page)).toHaveCount(0);
-    expect(asked()).toBe(before);
+    expect(unpaidAsks(mocks)).toBe(1);
   });
 
   test('8 · a guest with a saved order link is asked, and Complete payment opens the order link', async ({ page }) => {
@@ -238,13 +245,18 @@ test.describe('unpaid orders · the pop-up', () => {
     await expect(dialog).toBeVisible();
     await dialog.getByRole('button', { name: 'Cancel order' }).click();
     await expect(dialog.getByText(`Cancel order ${REF}?`)).toBeVisible();
+    const asked = unpaidAsks(mocks);
     await dialog.getByRole('button', { name: 'Yes, cancel it' }).click();
     await expect(dialog).toHaveCount(0);
     expect(mocks.state.cancels).toEqual([REF]);
+    // The cancel refreshed the lookup (the mock now answers an empty list), so nothing is left to offer.
+    await expect.poll(() => unpaidAsks(mocks)).toBeGreaterThan(asked);
 
     await awayAndBack(page);
-    await expect(page.getByRole('link', { name: /^Cart, / }).first()).toBeAttached();
+    await expect(page.locator('[data-sf-part="product-card"]').first()).toBeVisible();
+    await page.waitForLoadState('networkidle');
     await expect(prompt(page)).toHaveCount(0);
+    expect(mocks.state.cancels).toEqual([REF]);
   });
 
   test('11 · inside Telegram the pop-up appears and Complete payment works', async ({ page }) => {
@@ -293,9 +305,11 @@ test.describe('unpaid orders · the pop-up', () => {
     await cart.click();
     const drawer = page.getByRole('dialog', { name: 'Your cart' });
     await expect(drawer).toBeVisible();
+    const answered = page.waitForResponse((r) => r.url().endsWith('/api/storefront/orders/unpaid'));
     release();
-    // Let the held answer reach the page and render, then check it did not open on top of the drawer.
-    await expect.poll(() => mocks.requests().filter((r) => r === 'GET storefront/orders/unpaid').length).toBeGreaterThan(0);
+    // The held answer has reached the page; let it render, then check it did not open on top of the drawer.
+    await answered;
+    expect(unpaidAsks(mocks)).toBeGreaterThan(0);
     await page.evaluate(() => new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => done()))));
     await expect(prompt(page)).toHaveCount(0);
     await expect(drawer).toBeVisible();
@@ -315,5 +329,43 @@ test.describe('unpaid orders · the pop-up', () => {
     await expect(dialog.getByText(`Cancel order ${REF}?`)).toHaveCount(0);
     await expect(dialog).toBeVisible();
     await expect(dialog.getByRole('button', { name: 'Complete payment' })).toBeVisible();
+  });
+
+  test('15 · an order that cannot be cancelled shows the contact line, not a Cancel button', async ({ page }) => {
+    await open(page, { unpaidOrders: [unpaidRow({ canCancel: false, cancelBlockedBy: 'bank_transfer' })] });
+    const dialog = prompt(page);
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Complete payment' })).toBeVisible();
+    await expect(dialog.getByText('To cancel this order, contact us: a payment may already be on its way.')).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Cancel order' })).toHaveCount(0);
+  });
+
+  test('16 · a guest cancels from the pop-up through the order link', async ({ page }) => {
+    const mocks = await open(page, {
+      signedIn: false,
+      orderLink: { reference: 'E2E1', accessKey: 'KEY1' },
+      order: (() => { const o = publicOrderVariant('choose'); o.payment!.canCancel = true; o.payment!.cancelBlockedBy = null; return o; })(),
+      saved: [{ reference: 'E2E1', accessKey: 'KEY1', savedAt: '2026-08-24T08:30:00.000Z' }],
+    });
+    const dialog = prompt(page);
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('button', { name: 'Cancel order' }).click();
+    await dialog.getByRole('button', { name: 'Yes, cancel it' }).click();
+    await expect(dialog).toHaveCount(0);
+    expect(mocks.requests().filter((r) => r === 'POST orders/E2E1/KEY1/cancel')).toHaveLength(1);
+    expect(mocks.state.cancels).toEqual(['E2E1']);
+  });
+
+  test('17 · a customer the restricted shop has refused sees no pop-up on their account pages', async ({ page }) => {
+    const mocks = await open(page, {
+      noGoto: true, access: { storefront: 'restricted', denied: true }, unpaidOrders: [unpaidRow()],
+    });
+    const profile = page.waitForResponse((r) => r.url().endsWith('/api/storefront/profile'));
+    await page.goto('/account');
+    // The profile answered shopAccess: false: the account layout knows the customer is refused.
+    await profile;
+    await page.waitForLoadState('networkidle');
+    await expect(prompt(page)).toHaveCount(0);
+    expect(unpaidAsks(mocks)).toBe(0);
   });
 });

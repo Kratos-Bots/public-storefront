@@ -149,4 +149,18 @@ describe('CancelOrder', () => {
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Cancel order' }));
     expect(cancelMock).not.toHaveBeenCalled();
   });
+
+  it('while cancelling, focus stays on the confirm button rather than jumping to the panel', async () => {
+    let release: (v: { reference: string; status: string }) => void = () => {};
+    cancelMock.mockReturnValue(new Promise((r) => { release = r; }));
+    mount();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel order' }));
+    const confirm = screen.getByRole('button', { name: 'Yes, cancel it' });
+    act(() => confirm.focus());
+    fireEvent.click(confirm);
+    const working = await screen.findByRole('button', { name: 'Cancelling…' });
+    expect(working.getAttribute('aria-disabled')).toBe('true');
+    expect(document.activeElement).toBe(working);
+    await act(async () => { release({ reference: 'K4M2QP', status: 'cancelled' }); });
+  });
 });

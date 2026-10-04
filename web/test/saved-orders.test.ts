@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { listSavedOrders, saveOrder, findSavedOrder } from '@/stores/saved-orders.ts';
+import { listSavedOrders, saveOrder, findSavedOrder, removeSavedOrder } from '@/stores/saved-orders.ts';
 
 describe('saved orders', () => {
   beforeEach(() => localStorage.clear());
@@ -8,6 +8,15 @@ describe('saved orders', () => {
     saveOrder('REF1', 'key1');
     saveOrder('REF2', 'key2');
     expect(listSavedOrders().map((o) => o.reference)).toEqual(['REF2', 'REF1']);
+  });
+
+  it('removeSavedOrder forgets one link and keeps the rest', () => {
+    saveOrder('REF1', 'key1');
+    saveOrder('REF2', 'key2');
+    removeSavedOrder('REF1');
+    expect(listSavedOrders().map((o) => o.reference)).toEqual(['REF2']);
+    removeSavedOrder('NOPE');
+    expect(listSavedOrders()).toHaveLength(1);
   });
 
   it('findSavedOrder finds by reference', () => {

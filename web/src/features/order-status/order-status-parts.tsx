@@ -8,8 +8,8 @@ import { useText } from '@/text/runtime.tsx';
 import { AddressCard } from '@/features/order-status/AddressCard.tsx';
 import { ItemsCard } from '@/features/order-status/ItemsCard.tsx';
 import { CancelOrder } from '@/features/order-status/CancelOrder.tsx';
+import { invalidateAfterCancel } from '@/features/order-status/invalidate-after-cancel.ts';
 import { PaymentSection } from '@/features/order-status/PaymentSection.tsx';
-import { publicOrderKey } from '@/features/order-status/queries.ts';
 import { ShipmentCard } from '@/features/order-status/ShipmentCard.tsx';
 import { StatusHero } from '@/features/order-status/StatusHero.tsx';
 import classes from '@/features/order-status/OrderStatus.module.css';
@@ -35,7 +35,7 @@ function PaymentView() {
         viaLink
         canCancel={order.payment?.canCancel}
         blockedBy={order.payment?.cancelBlockedBy}
-        onCancelled={() => void queryClient.invalidateQueries({ queryKey: publicOrderKey(reference, accessKey) })}
+        onCancelled={() => invalidateAfterCancel(queryClient, reference, accessKey)}
       />
     </>
   );

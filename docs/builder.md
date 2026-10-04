@@ -757,8 +757,9 @@ submitted crypto transaction id). Its wording is `order.cancel.*`.
 **Account order parts.** The `OrderBalance` part (the account order page's "Balance due") shows the
 balance and, when the order can still be paid, the same payment section as the order page, fed
 through the order's access key, plus the same cancel control (through the signed-in session). Without
-an access key (order links not configured, or an older backend) it shows the figure alone, as it
-used to.
+an access key (order links not configured, or an older backend) there is no payment section, but the
+cancel control still shows (through the signed-in session) whenever the order can be cancelled; only
+when nothing at all can be shown is it the figure alone, as it used to be.
 
 `CheckoutFlow.steps` accepts only the five step parts (a content block between two steps would
 render inside every step's card); `CheckoutFlow.after` accepts content only. Each step part has
@@ -856,10 +857,17 @@ document can place, move or remove it. A signed-in customer is asked about their
 (`GET storefront/orders/unpaid`); a guest about the order links saved on this device. It offers Complete
 payment (the order page), Cancel order (or the contact line when money may be on its way) and Not now.
 
-It never shows on the checkout, the order and payment pages, `/login`, `/auth/*`, in the page builder,
-or while the sign-in dialog or the cart drawer is open (it may appear once they close). "Not now" lasts
+It never shows on the checkout, the order and payment pages (`/order/*`, `/payment/*`, `/order-placed`,
+`/account/orders/:ref`), `/login`, `/auth/*`, `/reset-password`, `/verify-email`, `/verify/*` and
+`/tracking*`; in the page builder or the appearance preview; to a customer the shop has refused access
+(a restricted shop's account pages stay open to them); or while the cart or sign-in dialog is open (it
+may appear once they close). "Not now" lasts
 for the visit: it is remembered for the browser tab's session, so navigating and reloading do not bring
-it back, and a new tab or visit asks again. Signing out forgets the saved order links.
+it back, and a new tab or visit asks again. Signing out forgets the saved order links; a saved link is also dropped once its lookup answers that the
+link is dead or the order is cancelled or refunded (never on a network error or a server error).
+
+The shell part is only the hook that decides whether to ask; the dialog itself (Modal, cancel control, the
+order page's stylesheet) is a separate lazily loaded chunk, fetched only when there is an order to show.
 
 Its wording is `order.prompt.*`, and the cancel confirmation inside it `order.cancel.*`; both are
 site-wide text groups (`text/site-wide.ts`), editable in the Text panel without a block.

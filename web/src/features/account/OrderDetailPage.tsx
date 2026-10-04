@@ -17,6 +17,7 @@ import {
   type Tone,
 } from '@/features/order-status/status.ts';
 import { CancelOrder } from '@/features/order-status/CancelOrder.tsx';
+import { invalidateAfterCancel } from '@/features/order-status/invalidate-after-cancel.ts';
 import { PaymentSection } from '@/features/order-status/PaymentSection.tsx';
 import { cancelView } from '@/features/order-status/cancel-state.ts';
 import { paymentSignature, pollInterval, visibleCryptoPayments } from '@/features/order-status/payment-state.ts';
@@ -154,11 +155,7 @@ function BalanceView({ styleAttrs }: PartViewProps) {
         reference={data.reference}
         canCancel={data.canCancel}
         blockedBy={data.cancelBlockedBy}
-        onCancelled={() => {
-          void queryClient.invalidateQueries({ queryKey: ['order', data.reference] });
-          void queryClient.invalidateQueries({ queryKey: ['orders'] });
-          if (accessKey) void queryClient.invalidateQueries({ queryKey: publicOrderKey(data.reference, accessKey) });
-        }}
+        onCancelled={() => invalidateAfterCancel(queryClient, data.reference, accessKey)}
       />
     </div>
   );

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fromPublic, fromUnpaid, guestCandidates, promptAllowedOn } from '@/features/unpaid-prompt/rules.ts';
+import { fromPublic, fromUnpaid, guestCandidates, isTerminalStatus, promptAllowedOn } from '@/features/unpaid-prompt/rules.ts';
 
 describe('promptAllowedOn', () => {
   it.each(['/', '/catalog', '/product/12', '/cart', '/account', '/account/orders', '/account/profile', '/track'])('shows on %s', (p) => {
@@ -8,8 +8,16 @@ describe('promptAllowedOn', () => {
   it.each([
     '/checkout', '/checkout/', '/order/K4M2QP/abc', '/payment/success', '/payment/cancel', '/order-placed',
     '/account/orders/K4M2QP', '/login', '/login/code', '/auth/telegram/callback', '/__builder',
+    '/reset-password', '/verify-email', '/verify/ABC123/xyz', '/verify', '/tracking', '/tracking/K4M2QP',
   ])('never shows on %s', (p) => {
     expect(promptAllowedOn(p)).toBe(false);
+  });
+});
+
+describe('isTerminalStatus', () => {
+  it('is true only for cancelled and refunded', () => {
+    expect(['cancelled', 'refunded'].map(isTerminalStatus)).toEqual([true, true]);
+    expect(['pending', 'processing', 'shipped', 'completed', undefined].map(isTerminalStatus)).toEqual([false, false, false, false, false]);
   });
 });
 

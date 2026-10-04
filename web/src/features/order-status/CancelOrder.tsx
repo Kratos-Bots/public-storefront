@@ -56,9 +56,15 @@ export function CancelOrder({ reference, accessKey, viaLink, canCancel, blockedB
     }
   }, [open]);
 
-  // Keep is disabled while the request runs and drops focus; the panel takes it so Escape still lands inside the confirmation.
+  // Keep is disabled while the request runs and drops focus; the panel takes it so Escape still lands inside the
+  // confirmation. When focus is already inside (the confirm button, which stays focusable as aria-disabled) it stays there.
   useEffect(() => {
-    if (working && open) panel.current?.focus();
+    if (!working || !open) return;
+    const el = panel.current;
+    const active = document.activeElement as HTMLElement | null;
+    // A disabled control (Keep) may still be reported as focused; it cannot take keys, so the panel does.
+    const holdsFocus = !!el && !!active && el.contains(active) && !(active as HTMLButtonElement).disabled;
+    if (el && !holdsFocus) el.focus();
   }, [working, open]);
 
   // Without its key there is no way to cancel through a link: a caller bug, so offer nothing.
