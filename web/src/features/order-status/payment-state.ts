@@ -4,8 +4,7 @@ import type {
   PublicOrder,
 } from '@/types/public-order.ts';
 import type { PaymentMethod } from '@/types/checkout.ts';
-import type { StringKey } from '@/text/registry.ts';
-import { textKey, textSnapshot } from '@/text/snapshot.ts';
+import { textSnapshot } from '@/text/snapshot.ts';
 
 // The order page's payment logic, kept out of the components that render it.
 // Ported from `ecommerce-menu/web/src/features/order-status/{PaymentSection,
@@ -95,25 +94,14 @@ export function paymentSignature(order: PublicOrder): string {
   ]);
 }
 
-/** What the customer is offered, named by what it is rather than by who settles it. */
-const SLOT_BASE: Record<PaymentMethod['slot'], Extract<StringKey, `order.method.${'card' | 'crypto'}`> | null> = {
-  card: textKey('order.method.card'),
-  crypto: textKey('order.method.crypto'),
-  // A bank transfer's display name describes the method ('UK Bank Transfer'),
-  // so it is the honest label; the card and crypto slots carry a processor's
-  // brand instead, which only raises questions the customer can't act on.
-  manual: null,
-};
-
 /**
- * Button copy for a payment method: the slot's own name, plus the fee spelled
+ * Button copy for a payment method: the name the shop gave it, plus the fee spelled
  * out. The backend signs every rate ('−3%' / '+2%'), and a bare '−3%' reads as
  * a fee at a glance, so the sign becomes a word.
  */
 export function slotLabel(method: PaymentMethod): string {
   const { t } = textSnapshot();
-  const slot = SLOT_BASE[method.slot];
-  const base = slot ? t(slot) : method.displayName;
+  const base = method.displayName;
   const rate = method.feeRateText?.trim();
   if (!rate) return base;
   if (rate.startsWith('−') || rate.startsWith('-')) return t('order.method.withDiscount', { method: base, rate: rate.slice(1) });
@@ -122,11 +110,11 @@ export function slotLabel(method: PaymentMethod): string {
 
 /**
  * A manual bank transfer can't be started from this page: the backend refuses
- * every `manual: true` gateway on the public payment-method route, so the
+ * every manual gateway on the public payment-method route, so the
  * picker shows the transfer details instead of creating a payment.
  */
 export function isManual(method: PaymentMethod): boolean {
-  return method.slot === 'manual';
+  return method.type === 'offline';
 }
 
 /** An amount in the currency the payment actually settles in. */

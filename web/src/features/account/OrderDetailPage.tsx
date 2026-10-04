@@ -249,7 +249,7 @@ function PaymentsView({ styleAttrs }: PartViewProps) {
       <ul className={classes.items}>
         {data.payments.map((payment, i) => (
           <li key={`${payment.method}-${payment.createdAt}-${i}`} className={classes.event}>
-            <span className={classes.eventName}>{methodLabel(payment.method)}</span>
+            <span className={classes.eventName}>{payment.methodLabel ?? methodLabel(payment.method)}</span>
             <span className={classes.eventWhen}>{formatDateTime(payment.createdAt)}</span>
             <span className={classes.eventFigure}>
               <Money amount={payment.amount} />

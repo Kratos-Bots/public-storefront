@@ -299,6 +299,16 @@ describe('arrangement and state ownership', () => {
     expect(container.querySelector(`.${classes.cta}`)).toHaveAttribute('href', DETAIL.publicUrl);
     expect(container.querySelector('h2')).toHaveTextContent('K4M2QP');
   });
+  it('names a payment by the shop’s name for the method, falling back to the id as words on an older backend', async () => {
+    const payments = [
+      { method: 'stripe', methodLabel: 'Pay by card', amount: 5, status: 'completed', createdAt: '2026-08-12T12:30:00.000Z' },
+      { method: 'bank_transfer', amount: 12, status: 'completed', createdAt: '2026-08-12T12:31:00.000Z' },
+    ];
+    s.order = { data: { ...DETAIL, payments }, isPending: false, isError: false, refetch: noop };
+    await ready(renderOrder(defaultOrder()));
+    expect(await screen.findByText('Pay by card')).toBeInTheDocument();
+    expect(screen.getByText(/bank transfer/i)).toBeInTheDocument();
+  });
   it('a settled order draws no balance band and no link without a public url', async () => {
     s.order = { data: { ...DETAIL, outstandingBalance: 0, publicUrl: null, payments: [], shipments: [] }, isPending: false, isError: false, refetch: noop };
     const { container } = await ready(renderOrder(defaultOrder()));

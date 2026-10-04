@@ -63,7 +63,8 @@ afterEach(() => {
 // ---------------------------------------------------------------- fixtures
 
 const METHODS: PaymentMethod[] = [
-  { slot: 'card', method: 'northpay', displayName: 'NorthPay', type: 'gateway', details: null, feeType: null, feeValue: null, feeRateText: '', feeLabel: '', fee: 0, chargeTotal: 48.5 },
+  // The backend names a shop's card method "Card" until the shop renames it in its payment method list.
+  { slot: 'card', method: 'northpay', displayName: 'Card', type: 'gateway', details: null, feeType: null, feeValue: null, feeRateText: '', feeLabel: '', fee: 0, chargeTotal: 48.5 },
   {
     slot: 'crypto', method: 'crypto', displayName: 'Crypto', type: 'crypto', details: null, feeType: 'percent', feeValue: -3, feeRateText: '−3%', feeLabel: 'Crypto discount', fee: -1.46, chargeTotal: 47.04,
     cryptoOptions: [

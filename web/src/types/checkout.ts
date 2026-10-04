@@ -9,7 +9,9 @@ export interface QuoteCoupon { code: string; discountAmount: number; shippingDis
 export interface ShippingOption { id: number; name: string; courier: string | null; price: number; freeShipping: boolean }
 export interface CryptoOption { coin: string; network: string; coinLabel: string; networkLabel: string; feeType: string | null; feeValue: number | null; feeRateText: string; feeLabel: string; fee: number; chargeTotal: number }
 export interface PaymentMethod {
-  slot: 'card' | 'crypto' | 'manual'; method: string; displayName: string; type: 'gateway' | 'crypto' | 'offline';
+  /** Sent for older builds; not read. */
+  slot?: 'card' | 'crypto' | 'manual';
+  method: string; displayName: string; type: 'gateway' | 'crypto' | 'offline';
   details: Record<string, string> | null; feeType: string | null; feeValue: number | null; feeRateText: string; feeLabel: string;
   fee: number; chargeTotal: number; cryptoOptions?: CryptoOption[];
 }

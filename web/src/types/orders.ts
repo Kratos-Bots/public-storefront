@@ -7,7 +7,7 @@ export interface OrderDetail {
   /** `discountAmount` INCLUDES `promotionDiscount`; the coupon/other part is the difference. */
   subtotal: number; shippingAmount: number; discountAmount: number; totalAmount: number;
   promotionDiscount?: number; promotions?: OrderPromotion[];
-  payments: Array<{ method: string; amount: number; status: string; createdAt: string }>;
+  payments: Array<{ method: string; methodLabel?: string; amount: number; status: string; createdAt: string }>;
   outstandingBalance: number; shipments: OrderShipment[]; publicUrl: string | null;
   accessKey?: string | null; canCancel?: boolean; cancelBlockedBy?: import('./public-order.ts').CancelBlockedBy | null;
 }

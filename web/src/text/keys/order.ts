@@ -125,8 +125,6 @@ export default defineTextArea('order', {
   'method.loading': { en: 'Loading payment methods…', max: 80 },
   'method.none': { en: 'There’s no online payment method for this order right now. Message us and we’ll arrange it.' },
   'method.opening': { en: 'Opening checkout…', max: 60 },
-  'method.card': { en: 'Card', max: 30 },
-  'method.crypto': { en: 'Crypto', max: 30 },
   'method.withDiscount': { en: '{method} ({rate} discount)', max: 80 },
   'method.withFee': { en: '{method} ({rate} fee)', max: 80 },
   'method.preparing': { en: 'Preparing payment…', max: 60 },
