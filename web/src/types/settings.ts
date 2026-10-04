@@ -66,6 +66,8 @@ export interface StorefrontSettings {
   enabled: boolean; closedMessage: string; welcomeMessage: string | null;
   notices: Notice[]; cutoffs: Cutoffs; serverTime: string; contactModes: ContactModes;
   currency: string; supportLinks: SupportLink[];
+  /** Where the shop can deliver (ISO alpha-2). Missing (older backend) or empty = unknown: list every country. */
+  shipping?: { countries: string[] };
   login: {
     whatsapp: { available: boolean; number: string | null };
     /** `oidc`: Telegram's OpenID Connect sign-in is fully set up (absent on older backends: use the widget). */

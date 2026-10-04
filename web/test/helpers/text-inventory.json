@@ -505,8 +505,8 @@
     "Address line 1",
     "Address line 2",
     "City",
-    "ZIP / Postcode",
-    "County / Region"
+    "Postal code",
+    "State / Region"
   ],
   "features/checkout/steps/ContactStep.tsx": [
     "Order updates and the receipt go to this email.",
