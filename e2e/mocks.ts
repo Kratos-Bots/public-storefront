@@ -135,6 +135,8 @@ export interface InstallMocksOptions {
   };
   /** Mutate the profile fixture before it is served (identities, password block). */
   tweakProfile?: (profile: Profile) => void;
+  /** Mutate the account order detail (`GET storefront/orders/:ref`) before it is served. */
+  tweakOrderDetail?: (detail: OrderDetail) => void;
   /** What `GET storefront/service-points` answers with a postcode (default: three synthetic GB points). A number answers with that HTTP status instead. */
   servicePoints?: ServicePoint[] | number;
   /** What the checkout routes answer with as `payment` (default: a crypto address). */
@@ -196,8 +198,8 @@ export interface MockState {
   guestQuotes: Array<Record<string, unknown>>;
   /** Bodies posted to the signed-in quote route, for assertions. */
   quotes: Array<Record<string, unknown>>;
-  /** The postcode of every collection-point search, in order. */
-  servicePointSearches: string[];
+  /** The country and postcode of every collection-point search, in order. */
+  servicePointSearches: Array<{ country: string | null; postalCode: string }>;
   /** Bodies posted to the order's payment-method route (a method / coin / network selection). */
   methods: Array<Record<string, unknown>>;
   /** Bodies posted to the crypto-txid route, for assertions. */
@@ -302,6 +304,7 @@ export const DEFAULT_SERVICE_POINTS: ServicePoint[] = [
   { id: '9001', carrier: 'inpost', name: 'Northbound Locker A', street: 'Kirkgate', houseNumber: '14', postalCode: 'LS1 6BY', city: 'Leeds', country: 'GB', latitude: null, longitude: null, distance: 320 },
   { id: '9002', carrier: 'evri', name: 'Corner News', street: 'Vicar Lane', houseNumber: '2', postalCode: 'LS1 7JH', city: 'Leeds', country: 'GB', latitude: null, longitude: null, distance: 540 },
   { id: '9003', carrier: 'inpost', name: 'Station Locker', street: 'Station Road', houseNumber: '', postalCode: 'LS1 4DY', city: 'Leeds', country: 'GB', latitude: null, longitude: null, distance: null },
+  { id: '9004', carrier: 'evri', name: 'Quayside Parcel Box', street: '', houseNumber: '', postalCode: 'LS1 5AB', city: 'Leeds', country: 'GB', latitude: null, longitude: null, distance: 910 },
 ];
 
 /** The one discount code the mock knows: 10% off the goods, `NORTH10`. Any other code leaves the quote as served. */
@@ -414,6 +417,7 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
 
   options.tweakSettings?.(state.settings);
   options.tweakProfile?.(state.profile);
+  options.tweakOrderDetail?.(state.orderDetail);
   if (options.access) {
     const { denied: _denied, ...asked } = options.access;
     state.settings.access = { ...state.settings.access!, ...asked };
@@ -585,13 +589,16 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     if (path === 'storefront/service-points' && method === 'GET') {
       const query = new URL(route.request().url()).searchParams;
       const postalCode = query.get('postalCode');
+      const country = query.get('country');
       const answer = options.servicePoints ?? DEFAULT_SERVICE_POINTS;
-      if (postalCode) state.servicePointSearches.push(postalCode);
+      if (postalCode) state.servicePointSearches.push({ country, postalCode });
       if (typeof answer === 'number') {
         await route.fulfill({ status: answer, contentType: 'application/json', body: JSON.stringify({ success: false, data: null, error: 'Service point search is temporarily unavailable. Please try again.' }) });
         return;
       }
-      await envelope(route, { available: answer.length > 0, carriers: [...new Set(answer.map((p) => p.carrier))], points: postalCode ? answer : [] });
+      // Only the asked country's points: a client that searches the wrong country finds nothing.
+      const here = answer.filter((p) => p.country === country);
+      await envelope(route, { available: here.length > 0, carriers: [...new Set(here.map((p) => p.carrier))], points: postalCode ? here : [] });
       return;
     }
 

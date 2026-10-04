@@ -34,6 +34,7 @@ interface OpenOptions {
   order?: OrderVariant;
   /** What the collection-point search answers with (see InstallMocksOptions.servicePoints). */
   servicePoints?: InstallMocksOptions['servicePoints'];
+  tweakOrderDetail?: InstallMocksOptions['tweakOrderDetail'];
 }
 
 const LINE = {
@@ -99,6 +100,7 @@ async function open(page: Page, layout: Layout, set: PageSet | null, path: strin
     pages: { [layout]: set },
     order: o.order ? publicOrderVariant(o.order) : undefined,
     servicePoints: o.servicePoints,
+    tweakOrderDetail: o.tweakOrderDetail,
     tweakSettings: (s) => { if (o.guest) s.features.guestCheckout = true; o.tweakSettings?.(s); },
   });
   if (o.seed) {
@@ -314,11 +316,23 @@ test.describe('checkout · collection points', () => {
     await next(page);
   }
 
-  async function searchAndChoose(page: Page, postcode: string, point: RegExp) {
-    await page.getByRole('radio', { name: 'Collection point' }).check({ force: true });
+  /** The Home address / Collection point switch: click its visible segment, as a shopper does. */
+  async function switchTo(page: Page, method: 'Home address' | 'Collection point') {
+    await page.locator('label').filter({ hasText: new RegExp(`^${method}$`) }).click();
+    await expect(page.getByRole('radio', { name: method })).toBeChecked();
+  }
+
+  /** Choosing a point swaps the list for the summary, so the proof is the summary naming it. */
+  async function choosePoint(page: Page, name: string) {
+    await page.locator('label').filter({ hasText: name }).click();
+    await expect(page.locator('[data-point-summary]')).toContainText(name);
+  }
+
+  async function searchAndChoose(page: Page, postcode: string, name: string) {
+    await switchTo(page, 'Collection point');
     await page.getByRole('textbox', { name: 'Postcode' }).fill(postcode);
     await page.getByRole('button', { name: 'Search' }).click();
-    await page.getByRole('radio', { name: point }).click({ force: true });
+    await choosePoint(page, name);
   }
 
   test('a signed-in shopper collects from a point: quote, order body, review', async ({ page }) => {
@@ -327,13 +341,13 @@ test.describe('checkout · collection points', () => {
     await next(page);
 
     await expect(page.getByRole('heading', { name: 'Delivery address' })).toBeVisible();
-    await page.getByRole('radio', { name: 'Collection point' }).check({ force: true });
+    await switchTo(page, 'Collection point');
     await expect(page.getByRole('textbox', { name: 'Address line 1' })).toHaveCount(0);
     await page.getByRole('textbox', { name: 'Postcode' }).fill('LS1 6BY');
     await page.getByRole('button', { name: 'Search' }).click();
     await expect(page.getByRole('radio', { name: /Northbound Locker A/ })).toBeVisible();
-    await expect(page.getByText('3 collection points found')).toBeVisible();
-    await page.getByRole('radio', { name: /Corner News/ }).click({ force: true });
+    await expect(page.getByText('4 collection points found')).toBeVisible();
+    await choosePoint(page, 'Corner News');
     await expect(page.getByText('Your collection point')).toBeVisible();
     await next(page);
 
@@ -343,7 +357,7 @@ test.describe('checkout · collection points', () => {
     await expect(page.getByText('Corner News')).toBeVisible();
 
     await placeOrder(page);
-    expect(mocks.state.servicePointSearches).toEqual(['LS1 6BY']);
+    expect(mocks.state.servicePointSearches).toEqual([{ country: 'GB', postalCode: 'LS1 6BY' }]);
     expect(mocks.state.quotes.at(-1)).toMatchObject({ country: 'GB', deliveryMethod: 'collection', servicePointCarrier: 'evri' });
     expect(mocks.state.checkouts[0]!.shippingAddress).toEqual({
       firstName: 'Ada', surname: 'Sterling', addressLine1: 'Vicar Lane 2', addressLine2: null, addressLine3: null,
@@ -352,22 +366,44 @@ test.describe('checkout · collection points', () => {
     });
   });
 
-  test('a point with no street is sent by its name, and Change keeps or replaces the point', async ({ page }) => {
+  test('a point with no street is sent by its name', async ({ page }) => {
     const { mocks } = await open(page, 'storefront', null, '/checkout', { tweakSettings: withCollection });
     await fillContact(page, '07801 123456');
     await next(page);
-    await searchAndChoose(page, 'LS1 6BY', /Station Locker/);
-    // Change opens the search again, with a way back to the point already chosen.
-    await page.getByRole('button', { name: 'Change' }).click();
-    await expect(page.getByRole('button', { name: 'Keep Station Locker' })).toBeVisible();
-    await page.getByRole('button', { name: 'Keep Station Locker' }).click();
-    await expect(page.getByText('Your collection point')).toBeVisible();
+    await searchAndChoose(page, 'LS1 6BY', 'Quayside Parcel Box');
     await next(page);
     await toReview(page);
+    await expect(page.getByText('Collect from')).toBeVisible();
     await placeOrder(page);
     expect(mocks.state.checkouts[0]!.shippingAddress).toMatchObject({
-      addressLine1: 'Station Road', city: 'Leeds', zip: 'LS1 4DY', servicePointId: '9003', servicePointCarrier: 'inpost', servicePointName: 'Station Locker',
+      addressLine1: 'Quayside Parcel Box', city: 'Leeds', zip: 'LS1 5AB', country: 'GB',
+      servicePointId: '9004', servicePointCarrier: 'evri', servicePointName: 'Quayside Parcel Box',
     });
+  });
+
+  test('Change then Keep leaves the point as it was; Change then another point replaces it', async ({ page }) => {
+    const { mocks } = await open(page, 'storefront', null, '/checkout', { tweakSettings: withCollection });
+    await fillContact(page, '07801 123456');
+    await next(page);
+    await searchAndChoose(page, 'LS1 6BY', 'Corner News');
+
+    await page.getByRole('button', { name: 'Change' }).click();
+    await page.getByRole('button', { name: 'Keep Corner News' }).click();
+    await expect(page.locator('[data-point-summary]')).toContainText('Corner News');
+    await expect(page.getByRole('button', { name: 'Keep Corner News' })).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Change' }).click();
+    await page.getByRole('button', { name: 'Search' }).click();
+    await choosePoint(page, 'Northbound Locker A');
+    await expect(page.locator('[data-point-summary]')).not.toContainText('Corner News');
+    await next(page);
+    await toReview(page);
+    await expect(page.getByText('Northbound Locker A')).toBeVisible();
+    await placeOrder(page);
+    expect(mocks.state.checkouts[0]!.shippingAddress).toMatchObject({
+      addressLine1: 'Kirkgate 14', servicePointId: '9001', servicePointCarrier: 'inpost', servicePointName: 'Northbound Locker A',
+    });
+    expect(mocks.state.quotes.at(-1)).toMatchObject({ deliveryMethod: 'collection', servicePointCarrier: 'inpost' });
   });
 
   test('switching back to home restores the address and sends no point', async ({ page }) => {
@@ -377,9 +413,9 @@ test.describe('checkout · collection points', () => {
     await page.getByRole('textbox', { name: 'Address line 1' }).fill('14 Kirkgate');
     await page.getByRole('textbox', { name: 'Town / City' }).fill('Leeds');
     await page.getByRole('textbox', { name: 'Postcode' }).fill('LS1 6BY');
-    await page.getByRole('radio', { name: 'Collection point' }).check({ force: true });
+    await switchTo(page, 'Collection point');
     await expect(page.getByRole('textbox', { name: 'Postcode' })).toHaveValue('LS1 6BY');
-    await page.getByRole('radio', { name: 'Home address' }).check({ force: true });
+    await switchTo(page, 'Home address');
     await expect(page.getByRole('textbox', { name: 'Address line 1' })).toHaveValue('14 Kirkgate');
     await next(page);
     await toReview(page);
@@ -393,7 +429,7 @@ test.describe('checkout · collection points', () => {
     await open(page, 'storefront', null, '/checkout', { tweakSettings: withCollection });
     await fillContact(page, null);
     await next(page);
-    await searchAndChoose(page, 'LS1', /Northbound Locker A/);
+    await searchAndChoose(page, 'LS1', 'Northbound Locker A');
     await next(page);
     await toReview(page);
     await page.getByRole('button', { name: /^Place order/ }).click();
@@ -405,7 +441,7 @@ test.describe('checkout · collection points', () => {
     const { mocks } = await open(page, 'storefront', null, '/checkout', { guest: true, tweakSettings: withCollection });
     await fillContact(page, '07801 123456');
     await next(page);
-    await searchAndChoose(page, 'LS1 6BY', /Northbound Locker A/);
+    await searchAndChoose(page, 'LS1 6BY', 'Northbound Locker A');
     await next(page);
     await toReview(page);
     // The guest quote is debounced and mints a token of its own: let the one priced for this point land before placing.
@@ -420,7 +456,7 @@ test.describe('checkout · collection points', () => {
     await open(page, 'storefront', null, '/checkout', { tweakSettings: withCollection, servicePoints: 502 });
     await fillContact(page, '07801 123456');
     await next(page);
-    await page.getByRole('radio', { name: 'Collection point' }).check({ force: true });
+    await switchTo(page, 'Collection point');
     await page.getByRole('textbox', { name: 'Postcode' }).fill('LS1 6BY');
     await page.getByRole('button', { name: 'Search' }).click();
     await expect(page.getByText('We couldn\'t load collection points. Please try again.')).toBeVisible();
@@ -439,6 +475,20 @@ test.describe('checkout · collection points', () => {
     await expect(page.getByText('Orders to United Kingdom are delivered to a collection point.')).toBeVisible();
     await expect(page.getByRole('textbox', { name: 'Address line 1' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Search' })).toBeVisible();
+  });
+
+  test('the account order page says where to collect from', async ({ page }) => {
+    await open(page, 'storefront', null, '/account/orders/K4M2QP', {
+      tweakOrderDetail: (d) => { d.servicePoint = { name: 'Corner News', carrier: 'evri' }; },
+    });
+    await expect(page.getByRole('heading', { name: 'Items' })).toBeVisible();
+    await expect(page.getByText('Collect from Corner News')).toBeVisible();
+  });
+
+  test('an account order with no collection point has no Collect from line', async ({ page }) => {
+    await open(page, 'storefront', null, '/account/orders/K4M2QP');
+    await expect(page.getByRole('heading', { name: 'Items' })).toBeVisible();
+    await expect(page.getByText('Collect from')).toHaveCount(0);
   });
 
   test('the public order page says which collection point the order goes to', async ({ page }) => {
