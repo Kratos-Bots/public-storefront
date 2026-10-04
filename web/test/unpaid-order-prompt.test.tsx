@@ -410,4 +410,18 @@ describe('UnpaidOrderPrompt', () => {
       expect(removeMock).not.toHaveBeenCalled();
     });
   });
+
+  it('prunes a dead saved link without refetching the surviving order', async () => {
+    signOut();
+    let store = [saved('AAAAAA'), saved('BBBBBB')];
+    savedMock.mockImplementation(() => store);
+    removeMock.mockImplementation((ref) => { store = store.filter((s) => s.reference !== ref); });
+    publicMock.mockImplementation(async (ref) => ({ ...publicOrder(ref, ref === 'BBBBBB'), status: ref === 'AAAAAA' ? 'cancelled' : 'pending' }) as never);
+    mount('/');
+    await screen.findByRole('dialog', { name: 'You have an unpaid order' });
+    await settle();
+    expect(removeMock).toHaveBeenCalledWith('AAAAAA');
+    expect(publicMock.mock.calls.filter((c) => c[0] === 'BBBBBB')).toHaveLength(1);
+    expect(dialog()).toBeTruthy();
+  });
 });

@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'react-router';
 import { fetchUnpaidOrders } from '@/api/orders.ts';
@@ -50,7 +51,10 @@ export function useUnpaidOrder(): { order: PromptOrder | null; more: boolean } {
   const active = promptAllowedOn(pathname) && !isBuilderMode() && !isPreviewMode() && !isSnoozed() && !otherDialogOpen && !refused;
   // A signed-in customer is only ever asked about their own orders. Saved order links belong to guests: they are
   // consulted only while signed out, so one customer's order is never offered to the next one on the same device.
-  const candidates = !loggedIn && active ? guestCandidates(listSavedOrders(), new Date()) : [];
+  // Read once per activation: the lookup prunes storage, and a list that re-read it would change the query key mid-lookup.
+  const guestActive = !loggedIn && active;
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- deliberately keyed on activation only
+  const candidates = useMemo(() => (guestActive ? guestCandidates(listSavedOrders(), new Date()) : []), [guestActive]);
 
   const signedIn = useQuery({
     // Keyed by customer: a different login without a reload never reads the previous one's list.

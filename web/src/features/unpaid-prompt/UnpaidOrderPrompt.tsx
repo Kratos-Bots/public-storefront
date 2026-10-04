@@ -1,9 +1,13 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useState, type ComponentType } from 'react';
 import { useNavigate } from 'react-router';
+import type { UnpaidOrderDialogProps } from '@/features/unpaid-prompt/UnpaidOrderDialog.tsx';
 import { snooze, useUnpaidOrder } from '@/features/unpaid-prompt/useUnpaidOrder.ts';
 
 // The dialog (Modal, cancel control, order-page stylesheet) is a separate chunk, fetched only once there is an order to show.
-const UnpaidOrderDialog = lazy(() => import('@/features/unpaid-prompt/UnpaidOrderDialog.tsx'));
+// A failed fetch (offline, or a deploy replaced the hashed chunk) means no pop-up this visit, never an error screen.
+const nothing: ComponentType<UnpaidOrderDialogProps> = () => null;
+const UnpaidOrderDialog = lazy((): Promise<{ default: ComponentType<UnpaidOrderDialogProps> }> =>
+  import('@/features/unpaid-prompt/UnpaidOrderDialog.tsx').catch(() => ({ default: nothing })));
 
 /**
  * "You have an unpaid order": once per visit, over whatever the customer was doing. Complete payment, Cancel
