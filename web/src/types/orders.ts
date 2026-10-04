@@ -2,6 +2,7 @@ export interface OrderSummary { reference: string; status: string; createdAt: st
 export interface OrderShipment { status: string; carrier: string | null; trackingNumber: string | null; trackingUrl: string | null; trackingStatusDescription: string | null; shippedAt: string | null; deliveredAt: string | null }
 export interface OrderDetail {
   reference: string; status: string; createdAt: string;
+  servicePoint?: { name: string; carrier: string } | null;
   items: Array<{ name: string; quantity: number; unitPrice: number; lineTotal: number; promotionDiscount?: number }>;
   /** `discountAmount` INCLUDES `promotionDiscount`; the coupon/other part is the difference. */
   subtotal: number; shippingAmount: number; discountAmount: number; totalAmount: number;

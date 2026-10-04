@@ -1,6 +1,7 @@
 // Checkout form state + its localStorage persistence. Kept separate from any React
 // context/provider (unlike the menu's CheckoutContext) so this task's schemas/hook can
 // be tested headlessly; a later task wires this into whatever owns the checkout screen.
+import type { ServicePoint } from '@/types/service-points.ts';
 
 export interface CheckoutForm {
   firstName: string;
@@ -19,6 +20,12 @@ export interface CheckoutForm {
   county: string;
   zip: string;
   country: string;
+  /** Home delivery, or collection from a carrier pick-up point. */
+  deliveryMethod: 'home' | 'collection';
+  /** The chosen pick-up point. Kept while the shopper is on home delivery so switching back restores it; cleared when the country changes. */
+  servicePoint: ServicePoint | null;
+  /** What the shopper last searched for in the point picker. */
+  pointPostcode: string;
   shippingOptionId: number | null;
   couponCode: string;
   useStoreCredit: boolean;
@@ -42,6 +49,9 @@ export const DEFAULT_FORM: CheckoutForm = {
   county: '',
   zip: '',
   country: '',
+  deliveryMethod: 'home',
+  servicePoint: null,
+  pointPostcode: '',
   shippingOptionId: null,
   couponCode: '',
   useStoreCredit: false,

@@ -51,6 +51,8 @@ export interface ShippingAddress {
   county: string | null;
   zip: string;
   country: string;
+  /** The collection point this order goes to; absent on an older backend. */
+  servicePoint?: { name: string; carrier: string } | null;
 }
 
 export interface Shipment {
