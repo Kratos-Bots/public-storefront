@@ -67,7 +67,7 @@ describe('page-set model', () => {
     expect(normalizeDoc({ root: { props: { chrome: 'none', title: 3 } }, content: 'x' }, 'shell')).toEqual({
       root: { props: { title: '', description: '', chrome: 'shell' } }, content: [],
     });
-    expect(normalizeDoc({ root: { props: { chrome: 'none' } }, content: [] }, 'order-status').root.props.chrome).toBe('none');
+    expect(normalizeDoc({ root: { props: { chrome: 'none' } }, content: [] }, 'tracking').root.props.chrome).toBe('none');
   });
 
   it('reset: a fixed page returns to default, the shell to the default shell, a custom page is deleted', () => {

@@ -1,45 +1,7 @@
 import { defineTextArea } from '@/text/define.ts';
 
-/** Area `order`: the order-status page opened from a chat link, and the chat messages it prefills. */
+/** Area `order`: order and payment wording shared by the account order page, tracking and the unpaid prompt, and the chat messages it prefills. */
 export default defineTextArea('order', {
-  documentTitle: { en: 'Order {reference} — {shop}', max: 120 },
-
-  // The hero: where the order is.
-  'hero.ariaLabel': { en: 'Order status', max: 60 },
-  'hero.eyebrow': { en: 'Order status', max: 40 },
-  'hero.deliveredEyebrow': { en: 'Delivered', max: 40 },
-  'hero.pendingHeadline': { en: 'Order received', max: 60 },
-  'hero.pendingDetail': { en: "We've got your order and we're getting it ready." },
-  'hero.confirmedHeadline': { en: 'Order confirmed', max: 60 },
-  'hero.confirmedDetail': { en: 'Your order is confirmed and moving into preparation.' },
-  'hero.processingHeadline': { en: 'Being prepared', max: 60 },
-  'hero.processingDetail': { en: "We're packing your order now." },
-  'hero.partiallyShippedHeadline': { en: 'Partially shipped', max: 60 },
-  'hero.partiallyShippedDetail': { en: 'Some items are on their way. The rest will follow shortly.' },
-  'hero.shippedHeadline': { en: 'On its way', max: 60 },
-  'hero.shippedDetail': { en: 'Your order has shipped. Track it below.' },
-  'hero.deliveredHeadline': { en: 'Delivered', max: 60 },
-  'hero.deliveredDetail': { en: 'Your order has arrived. Thanks for shopping with us.' },
-  'hero.cancelledHeadline': { en: 'Order cancelled', max: 60 },
-  'hero.cancelledDetail': { en: "This order has been cancelled and won't be dispatched." },
-  'hero.refundedHeadline': { en: 'Order refunded', max: 60 },
-  'hero.refundedDetail': { en: 'This order has been refunded.' },
-  'hero.preorderFlag': { en: 'Contains pre-order items', max: 60 },
-  'hero.cancelledNotice': { en: "If that isn't right, reply to the message that sent you this link and we'll sort it out." },
-  'hero.refundedNotice': { en: 'Refunds take 5–10 business days to appear on your statement.' },
-
-  // Dates, shown in the hero and on each parcel.
-  'dates.placed': { en: 'Placed {date}', max: 60 },
-  'dates.shipped': { en: 'Shipped {date}', max: 60 },
-
-  // The four milestones on the route.
-  'steps.ariaLabel': { en: 'Order progress', max: 60 },
-  'steps.received': { en: 'Received', max: 30 },
-  'steps.confirmed': { en: 'Confirmed', max: 30 },
-  'steps.shipped': { en: 'Shipped', max: 30 },
-  'steps.delivered': { en: 'Delivered', max: 30 },
-  'steps.partial': { en: 'Partial', max: 30 },
-
   // Short order-status names (order lists, account order detail, tracking page).
   'status.pending': { en: 'Order received', max: 40 },
   'status.confirmed': { en: 'Confirmed', max: 40 },
@@ -50,28 +12,8 @@ export default defineTextArea('order', {
   'status.cancelled': { en: 'Cancelled', max: 40 },
   'status.refunded': { en: 'Refunded', max: 40 },
 
-  // Loading and error screens.
-  'screens.loading': { en: 'Loading your order', max: 60 },
+  // Eyebrow of the payment-return pages' missing-reference screen.
   'link.eyebrow': { en: 'Order link', max: 40 },
-  'screens.invalidTitle': { en: "This link isn't valid", max: 80 },
-  'screens.invalidDescription': { en: "The link looks incomplete or has expired. Reply to the message that sent it and we'll share a fresh one." },
-  'screens.networkEyebrow': { en: 'Connection', max: 40 },
-  'screens.networkTitle': { en: "We couldn't load your order", max: 80 },
-  'screens.networkDescription': { en: 'Your order is safe — this was a hiccup between your browser and us.' },
-
-  // Footer.
-  'footer.reference': { en: 'Order {reference}', max: 60 },
-  'footer.questions': { en: 'Questions about this order? Message us and quote that reference.' },
-
-  // Items and totals.
-  'items.title': { en: 'Items', max: 40 },
-  'items.delivery': { en: 'Delivery', max: 40 },
-  'items.free': { en: 'Free', max: 30 },
-  'items.paymentDiscount': { en: 'Payment discount', max: 40 },
-  'items.tax': { en: 'Tax', max: 40 },
-
-  'address.title': { en: 'Delivery address', max: 40 },
-  'address.collectFrom': { en: 'Collect from', max: 40 },
 
   // Cancelling an unpaid order.
   'cancel.action': { en: 'Cancel order', max: 40 },
@@ -94,9 +36,6 @@ export default defineTextArea('order', {
   'prompt.more': { en: 'You have other unpaid orders too. See all orders', max: 120 },
 
   // Parcels.
-  'shipment.parcel': { en: 'Parcel', max: 40 },
-  'shipment.untitled': { en: 'On its way', max: 60 },
-  'shipment.track': { en: 'Track this parcel', max: 60 },
   'shipment.status.shipped': { en: 'Shipped', max: 30 },
   'shipment.status.delivered': { en: 'Delivered', max: 30 },
   'shipment.status.returned': { en: 'Returned', max: 30 },

@@ -19,7 +19,7 @@ export interface DefaultAction {
 }
 
 /** Routes that are the end of a purchase: nothing to push the shopper towards. */
-const TERMINAL = ['/checkout', '/order-placed', '/order/', '/payment/'];
+const TERMINAL = ['/checkout', '/order-placed', '/payment/'];
 
 /**
  * The web app's standing primary action, when no page has claimed one: the way

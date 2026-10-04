@@ -307,34 +307,10 @@ function ParcelsView({ styleAttrs }: PartViewProps) {
   );
 }
 
-/** Two siblings (the link and its note): the part's style, if any, lands on the block's wrapper. */
-function PageLinkView() {
-  const { t } = useText();
-  const { order: data } = OrderFamily.useData();
-  if (!data.publicUrl) return null;
-  return (
-    <>
-      <a
-        className={classes.cta}
-        href={data.publicUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        data-sf-part="button"
-        data-variant="filled"
-      >
-        {t('account.order.openOrderPage')}
-      </a>
-      <p className={classes.note}>
-        {t('account.order.orderPageNote')}
-      </p>
-    </>
-  );
-}
-
 /** The order's views (spec §5.4): the v0.7.0 JSX of each piece. */
 export const ORDER_VIEWS: FamilyValue<OrderData>['views'] = {
   OrderBackLink: BackLinkView, OrderHeading: HeadingView, OrderBalance: BalanceView, OrderItems: ItemsView,
-  OrderPayments: PaymentsView, OrderParcels: ParcelsView, OrderPageLink: PageLinkView,
+  OrderPayments: PaymentsView, OrderParcels: ParcelsView,
 };
 
 /**

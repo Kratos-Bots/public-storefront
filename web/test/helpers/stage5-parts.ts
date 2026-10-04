@@ -15,12 +15,6 @@ export const STAGE5_PARTS: Record<string, { family: PartFamily; style: { target:
   CheckoutCoupon: { family: 'checkout', style: T('root', BOX) },
   CheckoutNotes: { family: 'checkout', style: T('root', BOX) },
   CheckoutSummary: { family: 'checkout', style: T('root', BOX) },
-  OrderStatusHero: { family: 'order-status', style: T('root', BOX, TEXT) },
-  OrderStatusPayment: { family: 'order-status', style: T('wrap', BOX) },
-  OrderStatusShipments: { family: 'order-status', style: T('wrap', BOX) },
-  OrderStatusItems: { family: 'order-status', style: T('root', BOX, TEXT) },
-  OrderStatusAddress: { family: 'order-status', style: T('root', BOX, TEXT, VIS) },
-  OrderStatusFooter: { family: 'order-status', style: T('root', BOX, TEXT) },
 };
 
-export const STAGE5_CONTAINERS: Record<string, PartFamily> = { CheckoutFlow: 'checkout', OrderStatus: 'order-status' };
+export const STAGE5_CONTAINERS: Record<string, PartFamily> = { CheckoutFlow: 'checkout' };

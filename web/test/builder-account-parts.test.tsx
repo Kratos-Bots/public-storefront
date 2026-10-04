@@ -95,7 +95,7 @@ const settled = (d: PuckDoc, key: DocKey) => { const r = validateDoc(d, key, 'st
 
 describe('contract', () => {
   it('covers every part of the three containers', () => {
-    expect(NEW_PARTS.sort()).toEqual(['AccountGreeting', 'AccountTabs', 'OrderBackLink', 'OrderBalance', 'OrderHeading', 'OrderItems', 'OrderPageLink',
+    expect(NEW_PARTS.sort()).toEqual(['AccountGreeting', 'AccountTabs', 'OrderBackLink', 'OrderBalance', 'OrderHeading', 'OrderItems',
       'OrderPayments', 'OrderParcels', 'OrdersEmpty', 'OrdersHeading', 'OrdersMore', 'OrdersRows'].sort());
   });
   it.each(NEW_PARTS)('%s: family and style match the stage 4 table', (name) => {
@@ -147,7 +147,7 @@ describe('rules', () => {
     expect(rulesOf(doc([nav([...head, { ...p('nav', name), props: { id: 'dup' } }])]))).toContain(`part-required:AccountNav.${name}`);
     expect(rulesOf(doc([nav(head)]))).not.toContain(`part-required:AccountNav.${name}`);
   });
-  it.each([['OrdersList', ['OrdersRows', 'OrdersEmpty'], ['OrdersHeading', 'OrdersMore']], ['OrderDetail', ['OrderHeading', 'OrderItems'], ['OrderBackLink', 'OrderBalance', 'OrderPayments', 'OrderParcels', 'OrderPageLink']]] as const)(
+  it.each([['OrdersList', ['OrdersRows', 'OrdersEmpty'], ['OrdersHeading', 'OrdersMore']], ['OrderDetail', ['OrderHeading', 'OrderItems'], ['OrderBackLink', 'OrderBalance', 'OrderPayments', 'OrderParcels']]] as const)(
     '%s: required and unique parts', (container, required, optional) => {
       const full = (): ComponentData[] => SPECS[container]!.defaultSlots({}, { layout: 'storefront', id: 'k' }).content!;
       const key = DOC_OF[container]!;
@@ -192,7 +192,7 @@ describe('upgrade (spec section 8)', () => {
     expect(types((out.props.body as ComponentData[])[0]!.props.content)).toEqual(['OrdersHeading', 'OrdersRows', 'OrdersMore', 'OrdersEmpty']);
   });
   it.each([['OrdersList', ['OrdersHeading', 'OrdersRows', 'OrdersMore', 'OrdersEmpty']],
-    ['OrderDetail', ['OrderBackLink', 'OrderHeading', 'OrderBalance', 'OrderItems', 'OrderPayments', 'OrderParcels', 'OrderPageLink']]] as const)(
+    ['OrderDetail', ['OrderBackLink', 'OrderHeading', 'OrderBalance', 'OrderItems', 'OrderPayments', 'OrderParcels']]] as const)(
     '%s: absent content equals the defaults, [] is untouched, a second pass is idempotent', (type, expected) => {
       const once = upgradeItems(stored(type, {}), 'storefront');
       expect(types(once[0]!.props.content)).toEqual(expected);
@@ -289,14 +289,13 @@ describe('arrangement and state ownership', () => {
     await waitFor(() => expect(container.querySelectorAll('section').length).toBe(2));
     expect([...container.querySelectorAll('section')].map((e) => e.getAttribute('aria-label'))).toEqual(['Parcels', 'Items']);
     expect(container.querySelector(`.${classes.back}`)).toBeNull();
-    expect(container.querySelector(`.${classes.cta}`)).toBeNull();
     expect(container.querySelector(`.${classes.body}`)).not.toBeNull();
   });
-  it('order detail default: balance and page link draw', async () => {
+  it('order detail default: the balance band draws and there is no link to a separate order page', async () => {
     s.order = { data: DETAIL, isPending: false, isError: false, refetch: noop };
     const { container } = await ready(renderOrder(defaultOrder()));
     await waitFor(() => expect(container.querySelector(`.${classes.band}`)).not.toBeNull());
-    expect(container.querySelector(`.${classes.cta}`)).toHaveAttribute('href', DETAIL.publicUrl);
+    expect(container.querySelector(`.${classes.cta}`)).toBeNull();
     expect(container.querySelector('h2')).toHaveTextContent('K4M2QP');
   });
   it('names a payment by the shop’s name for the method, falling back to the id as words on an older backend', async () => {
@@ -309,12 +308,11 @@ describe('arrangement and state ownership', () => {
     expect(await screen.findByText('Pay by card')).toBeInTheDocument();
     expect(screen.getByText(/bank transfer/i)).toBeInTheDocument();
   });
-  it('a settled order draws no balance band and no link without a public url', async () => {
+  it('a settled order draws no balance band', async () => {
     s.order = { data: { ...DETAIL, outstandingBalance: 0, publicUrl: null, payments: [], shipments: [] }, isPending: false, isError: false, refetch: noop };
     const { container } = await ready(renderOrder(defaultOrder()));
     await waitFor(() => expect(container.querySelector('h2')).not.toBeNull());
     expect(container.querySelector(`.${classes.band}`)).toBeNull();
-    expect(container.querySelector(`.${classes.cta}`)).toBeNull();
     expect(container.querySelectorAll('section')).toHaveLength(1);
   });
 

@@ -36,8 +36,6 @@ export default {
   'order.awaitingDispatch': 'Shown on a parcel with no tracking number and no dispatch date yet',
   'order.shippedFallback': 'Status of a parcel whose status is not one the shop recognises',
   'order.trackParcel': "Link to the carrier's tracking page for a parcel",
-  'order.openOrderPage': "Button that opens the order's own page",
-  'order.orderPageNote': 'Text under the Open order page button',
   'loyalty.redeemedToast': 'Pop-up after redeeming points; {credit} is the credit gained, {points} the new points balance, {balance} the new credit balance',
   'loyalty.redeemFailed': 'Pop-up when redeeming points fails',
   'loyalty.loadFailedTitle': 'Heading when the loyalty page fails to load',

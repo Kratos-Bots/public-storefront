@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { ROUTE_STEPS, statusView } from '@/features/order-status/status.ts';
 import {
   cardState,
   isManual,
@@ -61,33 +60,6 @@ function method(patch: Partial<PaymentMethod> = {}): PaymentMethod {
     ...patch,
   };
 }
-
-// ---------------------------------------------------------------- statusView
-
-describe('statusView', () => {
-  it('puts a pending order on the first milestone', () => {
-    const view = statusView(order({ status: 'pending' }));
-    expect(view).toMatchObject({ headline: 'Order received', activeStep: 0, terminal: null, tone: 'default' });
-    expect(ROUTE_STEPS[view.activeStep!]).toBe('Received');
-  });
-
-  it('marks a partially shipped order on the Shipped milestone', () => {
-    expect(statusView(order({ status: 'partially_shipped' }))).toMatchObject({
-      headline: 'Partially shipped',
-      activeStep: 2,
-      partial: true,
-      done: false,
-    });
-  });
-
-  it('drops the timeline for a refunded order', () => {
-    expect(statusView(order({ status: 'refunded' }))).toMatchObject({
-      activeStep: null,
-      terminal: 'refunded',
-      tone: 'muted',
-    });
-  });
-});
 
 // ------------------------------------------------------- visibleCryptoPayments
 

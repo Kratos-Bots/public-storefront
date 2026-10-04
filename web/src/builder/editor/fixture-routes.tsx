@@ -3,7 +3,7 @@ import { Navigate, Route, Routes, useBlocker, useLocation } from 'react-router';
 import { notifications } from '@mantine/notifications';
 import { BUILDER_PATH } from '@/app/builder-gate.ts';
 import { useEditorStore } from '@/builder/editor/store.ts';
-import { FIXTURE_ACCESS_KEY, FIXTURE_ORDER_REF } from '@/builder/editor/fixtures.ts';
+import { FIXTURE_ORDER_REF } from '@/builder/editor/fixtures.ts';
 import { usePreviewProduct } from '@/builder/editor/preview-product.ts';
 import type { DocKey, LayoutKind } from '@/builder/types.ts';
 
@@ -25,8 +25,6 @@ export function fixtureLocation(docKey: DocKey, productId: number | null, layout
         : { pattern: 'doc/:docKey', path: 'doc/product', params: { p: String(productId ?? 0) } };
     case 'account.order':
       return { pattern: 'account/orders/:ref', path: `account/orders/${FIXTURE_ORDER_REF}` };
-    case 'order-status':
-      return { pattern: 'order/:ref/:accessKey', path: `order/${FIXTURE_ORDER_REF}/${FIXTURE_ACCESS_KEY}` };
     default:
       return { pattern: 'doc/:docKey', path: `doc/${docKey.replace(':', '-')}` };
   }

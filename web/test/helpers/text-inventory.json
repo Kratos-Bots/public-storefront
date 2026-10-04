@@ -96,9 +96,7 @@
     "parcels",
     "Parcel",
     "Awaiting dispatch",
-    "Track this parcel",
-    "Open order page",
-    "The order page is where you pay, change payment method and follow the parcel — share it with us if you need help with this order."
+    "Track this parcel"
   ],
   "features/account/OrdersPage.tsx": [
     "Orders",
@@ -566,9 +564,6 @@
     "Dismiss: ${}",
     "Dismiss notice"
   ],
-  "features/order-status/AddressCard.tsx": [
-    "Delivery address"
-  ],
   "features/order-status/CopyRow.tsx": [
     "${} copied",
     "Copy ${}",
@@ -602,17 +597,6 @@
     " Payment received in full",
     "We’re taking a closer look at this payment — nothing more is needed from you. Message us if it stays here."
   ],
-  "features/order-status/ItemsCard.tsx": [
-    "Items",
-    "Pre-order",
-    "Subtotal",
-    "Delivery",
-    "Discount",
-    "Payment discount",
-    "Payment fee",
-    "Tax",
-    "Total"
-  ],
   "features/order-status/MethodPicker.tsx": [
     "Loading payment methods…",
     "We couldn't load the payment methods",
@@ -629,10 +613,6 @@
     "Payment reference",
     "Use the order reference so we can match your transfer. Message us once it’s sent and we’ll confirm the order.",
     "Message us and we’ll send the transfer details for order "
-  ],
-  "features/order-status/OrderStatusPage.tsx": [
-    "Order ",
-    "Questions about this order? Message us and quote that reference."
   ],
   "features/order-status/PaymentSection.tsx": [
     "Payment",
@@ -651,53 +631,13 @@
     "Change payment method",
     "Keep this method"
   ],
-  "features/order-status/ShipmentCard.tsx": [
-    "On its way",
-    "Tracking number",
-    "Track this parcel",
-    "Parcel ${} of ${}",
-    "Parcel",
-    "Shipped ${}",
-    "Delivered ${}"
-  ],
-  "features/order-status/StateScreens.tsx": [
-    "Loading your order",
-    "Order link",
-    "This link isn't valid",
-    "The link looks incomplete or has expired. Reply to the message that sent it and we'll share a fresh one.",
-    "Connection",
-    "We couldn't load your order",
-    "Your order is safe — this was a hiccup between your browser and us.",
-    "Try again"
-  ],
-  "features/order-status/StatusHero.tsx": [
-    "Order status",
-    "Contains pre-order items",
-    "Order progress",
-    "Partial",
-    "If that isn't right, reply to the message that sent you this link and we'll sort it out.",
-    "Refunds take 5–10 business days to appear on your statement.",
-    "Delivered ${}",
-    "Placed ${}"
-  ],
   "features/order-status/status.ts": [
-    "Order status",
     "Order received",
-    "We've got your order and we're getting it ready.",
     "Order confirmed",
-    "Your order is confirmed and moving into preparation.",
     "Being prepared",
-    "We're packing your order now.",
     "Partially shipped",
-    "Some items are on their way. The rest will follow shortly.",
     "On its way",
-    "Your order has shipped. Track it below.",
     "Delivered",
-    "Your order has arrived. Thanks for shopping with us.",
-    "Order cancelled",
-    "This order has been cancelled and won't be dispatched.",
-    "Order refunded",
-    "This order has been refunded.",
     "In transit"
   ],
   "features/payment-redirect/MissingReferenceScreen.tsx": [

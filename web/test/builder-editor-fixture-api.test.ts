@@ -96,9 +96,9 @@ describe('fixture interceptor', () => {
     expect((await call(IN_EMPTY, `storefront/orders/${FIXTURE_ORDER_REF}`)).result).toMatchObject({ status: 404 });
   });
 
-  it('serves the fixture order-status link and nothing else under orders/', async () => {
-    expect((await body((await call(OUT, `orders/${FIXTURE_ORDER_REF}/${FIXTURE_ACCESS_KEY}`)).result)).data).toMatchObject({ status: 'shipped' });
-    expect((await call(OUT, 'orders/REAL1/KEY')).result).toMatchObject({ status: 404 });
+  it('no longer answers the key-based order link: nothing under orders/ is served', async () => {
+    expect((await call(OUT, `orders/${FIXTURE_ORDER_REF}/${FIXTURE_ACCESS_KEY}`)).result).toMatchObject({ status: 400 });
+    expect((await call(OUT, 'orders/REAL1/KEY')).result).toMatchObject({ status: 400 });
   });
 
   it('quotes from fixtures without a toast', async () => {

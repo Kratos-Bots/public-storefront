@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Config } from '@puckeditor/core';
 import { defaultDoc } from '@/builder/defaults/index.ts';
-import { blockMenu, buildEditorConfig, editorHints, lockedPresent } from '@/builder/editor/config.ts';
+import { blockMenu, buildEditorConfig, lockedPresent } from '@/builder/editor/config.ts';
 import {
   checkoutNotices, partStates, withPartAdded,
   CHECKOUT_AFTER_NOTICE, CHECKOUT_ASIDE_NOTICE, CHECKOUT_COUPON_OFF_NOTICE, CHECKOUT_NOTES_OFF_NOTICE,
@@ -23,7 +23,6 @@ const L: LayoutKind = 'storefront';
 const items = (v: unknown) => v as ComponentData[];
 const types = (v: unknown) => items(v).map((c) => c.type);
 const checkout = () => defaultDoc('checkout', L)!;
-const orderStatus = () => defaultDoc('order-status', L)!;
 const flow = (doc: PuckDoc) => doc.content[0]!;
 const withFlow = (doc: PuckDoc, f: ComponentData): PuckDoc => ({ ...doc, content: [f, ...doc.content.slice(1)] });
 const step = (f: ComponentData, type: string) => items(f.props.steps).find((s) => s.type === type)!;
@@ -59,39 +58,26 @@ describe('palette', () => {
     expect(parts[0]!.blocks.map((b) => b.name).sort()).toEqual(['CheckoutCoupon', 'CheckoutNotes', 'CheckoutProgress']);
     expect(cfg('checkout', doc).categories!['part:checkout']!.components).toEqual(expect.arrayContaining(['CheckoutProgress']));
   });
-  it('order-status: "Order status parts" offers only the address when absent', () => {
-    const doc = without(orderStatus(), ['OrderStatusAddress']);
-    const parts = blockMenu('order-status', L, lockedPresent(doc, 'order-status')).filter((g) => g.category === 'part');
-    expect(parts.map((g) => g.title)).toEqual(['Order status parts']);
-    expect(parts[0]!.blocks.map((b) => b.name)).toEqual(['OrderStatusAddress']);
-  });
-  it('requiredPartsOn: seven checkout parts, five order-status parts', () => {
+  it('requiredPartsOn: seven checkout parts', () => {
     expect([...requiredPartsOn('checkout', L)].sort()).toEqual(['CheckoutAddress', 'CheckoutContact', 'CheckoutHeading', 'CheckoutPayment', 'CheckoutReview', 'CheckoutShipping', 'CheckoutSummary']);
-    expect([...requiredPartsOn('order-status', L)].sort()).toEqual(['OrderStatusFooter', 'OrderStatusHero', 'OrderStatusItems', 'OrderStatusPayment', 'OrderStatusShipments']);
   });
 });
 
 describe('permissions', () => {
   const c = cfg('checkout', checkout());
-  const o = cfg('order-status', orderStatus());
   it('the five steps cannot be deleted, copied or dragged', () => {
     for (const t of STEP_TYPES_IN_ORDER) expect(perms(c, t), t).toEqual({ delete: false, duplicate: false, drag: false });
   });
-  it('heading, summary and the required order-status parts: no delete/copy, drag allowed', () => {
+  it('heading and summary: no delete/copy, drag allowed', () => {
     for (const t of ['CheckoutHeading', 'CheckoutSummary']) expect(perms(c, t), t).toEqual({ delete: false, duplicate: false });
-    for (const t of ['OrderStatusHero', 'OrderStatusPayment', 'OrderStatusShipments', 'OrderStatusItems', 'OrderStatusFooter']) {
-      expect(perms(o, t), t).toEqual({ delete: false, duplicate: false });
-    }
   });
-  it('coupon, notes, progress, address: no copy only', () => {
+  it('coupon, notes, progress: no copy only', () => {
     for (const t of ['CheckoutCoupon', 'CheckoutNotes', 'CheckoutProgress']) expect(perms(c, t), t).toEqual({ duplicate: false });
-    expect(perms(o, 'OrderStatusAddress')).toEqual({ duplicate: false });
   });
 });
 
 describe('slot allow lists', () => {
   const c = cfg('checkout', checkout());
-  const o = cfg('order-status', orderStatus());
   it('CheckoutFlow.steps is the five steps, in step order', () => {
     expect(allow(c, 'CheckoutFlow', 'steps')).toEqual(STEP_TYPES_IN_ORDER);
   });
@@ -112,14 +98,6 @@ describe('slot allow lists', () => {
     const after = allow(c, 'CheckoutShipping', 'after');
     expect(after).toEqual(expect.arrayContaining(['CheckoutCoupon', 'CheckoutNotes', 'RichText']));
     expect(after).not.toContain('CheckoutContact');
-  });
-  it('OrderStatus.action: content, Payment, Shipments, Items, Address; never Hero or Footer', () => {
-    const a = allow(o, 'OrderStatus', 'action');
-    expect(a).toEqual(expect.arrayContaining(['RichText', 'OrderStatusPayment', 'OrderStatusShipments', 'OrderStatusItems', 'OrderStatusAddress']));
-    expect(a).not.toContain('OrderStatusHero');
-    expect(a).not.toContain('OrderStatusFooter');
-    expect(allow(o, 'OrderStatus', 'top')).toContain('OrderStatusHero');
-    expect(allow(o, 'OrderStatus', 'top')).not.toContain('OrderStatusPayment');
   });
 });
 
@@ -211,15 +189,6 @@ describe('introducesIllegal', () => {
     const further = withFlow(edited, setStep(flow(edited), 'CheckoutContact', (s) => setSlot(s, 'after', [coupon('cp3')])));
     expect(introducesIllegal(edited, further, 'checkout', L)).toContain("Discount code can't go in");
   });
-  it('order-status: content above Payment is fine; Items above Payment is refused', () => {
-    const os = orderStatus();
-    const f = os.content[0]!;
-    const action = items(f.props.action);
-    expect(introducesIllegal(os, withFlow(os, setSlot(f, 'action', [rich(), ...action])), 'order-status', L)).toBeNull();
-    const first = items(f.props.summary)[0]!;
-    const bad = withFlow(os, setSlot(setSlot(f, 'summary', items(f.props.summary).slice(1)), 'action', [first, ...action]));
-    expect(introducesIllegal(os, bad, 'order-status', L)).toBe('Payment must come before tracking and the order details.');
-  });
 });
 
 describe('withPartAdded: default-holder placement', () => {
@@ -294,7 +263,7 @@ describe('reset and quick fixes', () => {
 
   it('quickFixFor maps the rules to the right button', () => {
     expect(quickFixFor('part-order:CheckoutFlow')).toBe('step-order');
-    for (const r of ['part-home:CheckoutCoupon', 'part-placement:CheckoutCoupon', 'slot-accepts:CheckoutFlow.steps', 'part-order:OrderStatus']) {
+    for (const r of ['part-home:CheckoutCoupon', 'part-placement:CheckoutCoupon', 'slot-accepts:CheckoutFlow.steps']) {
       expect(quickFixFor(r), r).toBe('arrangement');
     }
     expect(quickFixFor('part-required:CheckoutFlow.CheckoutHeading')).toBeNull();
@@ -313,12 +282,6 @@ describe('reset and quick fixes', () => {
     const owner = containerOf(badHome.content, homeIssue.blockId!)!;
     expect(owner.type).toBe('CheckoutFlow');
     expect(checkRules(withFlow(badHome, resetArrangement(owner, L)), 'checkout', L)).toEqual([]);
-
-    const os = orderStatus();
-    const f = os.content[0]!;
-    const badOs = withFlow(os, setSlot(setSlot(f, 'summary', items(f.props.summary).slice(1)), 'action', [items(f.props.summary)[0]!, ...items(f.props.action)]));
-    const osIssue = checkRules(badOs, 'order-status', L).find((i) => i.rule === 'part-order:OrderStatus')!;
-    expect(checkRules(withFlow(badOs, resetArrangement(containerOf(badOs.content, osIssue.blockId!)!, L)), 'order-status', L)).toEqual([]);
   });
 });
 
@@ -332,15 +295,5 @@ describe('notices and hints', () => {
       CHECKOUT_COUPON_OFF_NOTICE, CHECKOUT_NOTES_OFF_NOTICE, CHECKOUT_ASIDE_NOTICE, CHECKOUT_AFTER_NOTICE,
     ]);
     expect(checkoutNotices({ type: 'Heading', props: { id: 'h' } })).toEqual([]);
-  });
-
-  it('the order-status hint fires when a content block precedes the Payment part, and only then', () => {
-    expect(editorHints(orderStatus(), 'order-status').map((h) => h.id)).not.toContain('content-before-payment');
-    const f = orderStatus().content[0]!;
-    const doc = withFlow(orderStatus(), setSlot(f, 'action', [rich('intro'), ...items(f.props.action)]));
-    expect(editorHints(doc, 'order-status').find((h) => h.id === 'content-before-payment'))
-      .toMatchObject({ message: 'Customers who still owe payment see this before how to pay.', blockId: 'intro' });
-    const after = withFlow(orderStatus(), setSlot(f, 'action', [...items(f.props.action), rich('outro')]));
-    expect(editorHints(after, 'order-status').map((h) => h.id)).not.toContain('content-before-payment');
   });
 });

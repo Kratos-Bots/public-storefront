@@ -1,14 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { forwardRef, useEffect, useImperativeHandle, useState, type ReactNode } from 'react';
 import type { StorefrontSettings } from '@/types/settings.ts';
-import type { PublicOrder } from '@/types/public-order.ts';
 import type { Quote } from '@/types/checkout.ts';
 
 // Pinned like the goldens: the dates the order fixtures format read the same everywhere.
 vi.hoisted(() => { process.env.TZ = 'Europe/London'; });
 
-const state = vi.hoisted(() => ({ settings: {} as StorefrontSettings, fetches: 0, readOnly: false }));
+const state = vi.hoisted(() => ({ settings: {} as StorefrontSettings, readOnly: false }));
 vi.mock('@/app/settings.ts', () => ({ useSettings: () => state.settings }));
 vi.mock('@/lib/telegram-webapp.ts', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/telegram-webapp.ts')>()),
@@ -16,11 +15,6 @@ vi.mock('@/lib/telegram-webapp.ts', async (importOriginal) => ({
   openExternalLink: () => {},
 }));
 vi.mock('@/api/checkout.ts', () => ({ quote: vi.fn(), guestQuote: vi.fn(), placeOrder: vi.fn(), placeGuestOrder: vi.fn() }));
-vi.mock('@/api/public-order.ts', async (orig) => ({
-  ...(await orig<typeof import('@/api/public-order.ts')>()),
-  fetchPublicOrder: () => { state.fetches += 1; return new Promise(() => {}); },
-  fetchPaymentOptions: () => Promise.resolve([]),
-}));
 vi.mock('@/features/cart/useServerCart.ts', () => ({
   useServerCart: () => ({ mode: 'server', isSyncing: false, issues: [], add: vi.fn(), setQuantity: vi.fn(), remove: vi.fn(), sync: async () => {}, refresh: async () => {} }),
 }));
@@ -58,10 +52,8 @@ import { STEP_TYPE, type CheckoutSlots, type StepKind } from '@/builder/family-c
 import type { ComponentData, PuckDoc } from '@/builder/types.ts';
 import { effectivePreviewAs } from '@/builder/editor/fixture-mode.ts';
 import { fixtureOrderStates } from '@/builder/editor/fixtures.ts';
-import { containerOfDoc, PREVIEW_STATE_LABELS, previewFixturesFor } from '@/builder/editor/preview-states.ts';
 import { CheckoutNote } from '@/builder/editor/CheckoutNote.tsx';
 import { CheckoutPage } from '@/features/checkout/CheckoutPage.tsx';
-import { OrderStatusPage } from '@/features/order-status/OrderStatusPage.tsx';
 import { mountAt } from './helpers/stage4-golden.tsx';
 
 const c = (type: string, id: string, props: Record<string, unknown> = {}): ComponentData => ({ type, props: { id, ...props } });
@@ -101,7 +93,6 @@ function prepare(guest = false) {
   vi.clearAllMocks();
   localStorage.clear();
   turnstile.minted = 0;
-  state.fetches = 0;
   state.readOnly = false;
   state.settings = settings(guest);
   useCartStore.setState({ lines: [line()], mode: guest ? 'local' : 'server' });
@@ -233,11 +224,10 @@ describe('effectivePreviewAs', () => {
     const p = { session: 'signed-out', cart: 'empty' } as const;
     expect(effectivePreviewAs('checkout', p)).toEqual({ session: 'signed-in', cart: 'items' });
     expect(effectivePreviewAs('cart', p)).toBe(p);
-    expect(effectivePreviewAs('order-status', p)).toBe(p);
   });
 });
 
-describe('order-status fixtures', () => {
+describe('order state fixtures', () => {
   const ids = ['shipped', 'awaiting-payment', 'hosted-open', 'crypto-checking', 'two-parcels', 'cancelled'] as const;
   const states = fixtureOrderStates(new Date());
   it('has the six states, all for NB0977', () => {
@@ -268,26 +258,10 @@ describe('order-status fixtures', () => {
       for (const url of json.match(/https?:\/\/[^"\s]+/g) ?? []) expect(new URL(url).host, `${id} ${url}`).toBe('shop.example');
     }
   });
-  it('previewFixturesFor maps each id and defaults to shipped; the order doc has the state control', () => {
+  it('the pay-by date follows the clock it is given, three days out', () => {
     const now = new Date('2031-05-04T09:00:00.000Z');
-    for (const id of ids) expect(previewFixturesFor({ OrderStatus: id }, now).OrderStatus).toEqual(fixtureOrderStates(now)[id]);
-    expect(previewFixturesFor({}, now).OrderStatus).toEqual(fixtureOrderStates(now).shipped);
-    // The pay-by date follows the clock it is given, three days out.
-    const payBy = (previewFixturesFor({ OrderStatus: 'awaiting-payment' }, now).OrderStatus as ReturnType<typeof fixtureOrderStates>['shipped']).payment!.payBy!;
+    const payBy = fixtureOrderStates(now)['awaiting-payment'].payment!.payBy!;
     expect(new Date(payBy).getTime()).toBe(now.getTime() + 3 * 24 * 60 * 60 * 1000);
-    expect(PREVIEW_STATE_LABELS.OrderStatus.map((o) => o.label)).toEqual([
-      'Shipped', 'Awaiting payment', 'Hosted checkout open', 'Crypto sent, checking', 'Two parcels', 'Cancelled',
-    ]);
-    expect(containerOfDoc('order-status', 'storefront')).toBe('OrderStatus');
-  });
-  it('selecting Awaiting payment makes the page render the method picker without fetching', async () => {
-    const fixture = previewFixturesFor({ OrderStatus: 'awaiting-payment' }).OrderStatus as PublicOrder;
-    const m = mountAt(
-      <BuilderModeProvider value={{ ...EDITING, previewFixtures: { OrderStatus: fixture } }}><OrderStatusPage /></BuilderModeProvider>,
-      { path: '/', route: '*' },
-    );
-    await waitFor(() => expect(m.container.textContent).toContain('Choose how to pay'));
-    expect(state.fetches).toBe(0);
   });
   it('a read-only / version mode carries no fixtures, so no container is in preview', () => {
     const seen: unknown[] = [];

@@ -9,7 +9,7 @@ const LAYOUTS: LayoutKind[] = ['storefront', 'menu', 'webapp'];
 const KEYS: DocKey[] = ['shell', ...FIXED_ROUTE_KEYS];
 // Controller ruling F1 (Task 9): the catalogue list blocks are route-bound too — a broken grid takes the page to its default.
 const ROUTE_BLOCKS = ['PageOutlet', 'ProductGrid', 'ProductList', 'WholesaleTable', 'ProductDetail', 'CartContents', 'CartSummary', 'CheckoutFlow', 'LoginOptions', 'OrdersList', 'OrderDetail',
-  'Loyalty', 'Referrals', 'Profile', 'OrderStatus', 'PaymentSuccess', 'PaymentCancel', 'OrderPlaced', 'VerifyForm', 'TrackingLookup', 'ResetPassword', 'VerifyEmail', 'CardTile', 'CardRow'];
+  'Loyalty', 'Referrals', 'Profile', 'PaymentSuccess', 'PaymentCancel', 'OrderPlaced', 'VerifyForm', 'TrackingLookup', 'ResetPassword', 'VerifyEmail', 'CardTile', 'CardRow'];
 
 function ids(items: ComponentData[], out: string[] = []): string[] {
   for (const c of items) {
@@ -43,8 +43,8 @@ describe('default documents', () => {
   it('a shell never holds a MobileCartBar by default (the frame mounts it — v0.6.0 order)', () => {
     for (const layout of LAYOUTS) expect(countBlocks(defaultDoc('shell', layout)!).has('MobileCartBar')).toBe(false);
   });
-  it('the shared order link renders without shop chrome in every layout', () => {
-    for (const layout of LAYOUTS) expect(defaultDoc('order-status', layout)!.root.props.chrome, layout).toBe('none');
+  it('every default page renders inside the shop chrome in every layout', () => {
+    for (const layout of LAYOUTS) for (const key of FIXED_ROUTE_KEYS) expect(defaultDoc(key, layout)!.root.props.chrome, `${layout}/${key}`).toBe('shell');
   });
 });
 

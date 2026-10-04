@@ -37,10 +37,10 @@ function stubFetch(handler: (url: string, init: RequestInit) => Response | Promi
 }
 
 describe('allowlist', () => {
-  it.each(['storefront/settings', 'storefront/cart', 'storefront/tracking', 'catalog', 'catalog/products/4', 'orders/ABC/key', 'orders/ABC/key/payment-options', 'verify/x/y'])('allows %s', (p) => {
+  it.each(['storefront/settings', 'storefront/cart', 'storefront/tracking', 'catalog', 'catalog/products/4', 'verify/x/y'])('allows %s', (p) => {
     expect(isAllowedApiPath(p)).toBe(true);
   });
-  it.each(['', 'products', 'users', 'bot-settings', 'storefront-settings', 'catalogue', 'auth/login', 'wholesale/catalog', '../products'])('blocks %s', (p) => {
+  it.each(['', 'products', 'users', 'bot-settings', 'storefront-settings', 'catalogue', 'auth/login', 'wholesale/catalog', '../products', 'orders/ABC/key', 'orders/ABC/key/payment-options'])('blocks %s', (p) => {
     expect(isAllowedApiPath(p)).toBe(false);
   });
   it('allows the page-set route', () => {

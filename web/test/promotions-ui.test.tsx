@@ -8,7 +8,6 @@ import type { LocalLine } from '@/stores/cart.ts';
 import type { ServerCart, ServerCartLine } from '@/types/cart.ts';
 import type { Product } from '@/types/catalog.ts';
 import type { Quote } from '@/types/checkout.ts';
-import type { PublicOrder } from '@/types/public-order.ts';
 
 vi.mock('@/app/settings.ts', () => ({
   useSettings: () => ({ currency: 'GBP', features: { ordering: true, guestCheckout: false, layout: 'storefront' } }) as unknown as StorefrontSettings,
@@ -19,8 +18,6 @@ import { ProductCard } from '@/features/catalog/ProductCard.tsx';
 import { CartLine } from '@/features/cart/CartLine.tsx';
 import { CartSummary } from '@/features/cart/CartSummary.tsx';
 import { QuoteSummary } from '@/features/checkout/QuoteSummary.tsx';
-import { ItemsCard } from '@/features/order-status/ItemsCard.tsx';
-import { publicOrderPromotions } from '@/lib/promotions.ts';
 import { resetCartSync, setPreviewServerCart } from '@/features/cart/useServerCart.ts';
 import { useCartStore } from '@/stores/cart.ts';
 import { baseProduct } from './helpers/product-fixtures.ts';
@@ -201,32 +198,5 @@ describe('QuoteSummary promotions', () => {
     expect(screen.queryByText(/Add 1 more/)).toBeNull();
     expect(screen.queryByText('3 for 2 on all teas')).toBeNull();
     expect(screen.getAllByText('£37.50').length).toBeGreaterThan(0);
-  });
-});
-
-const ORDER = {
-  items: [{ productName: 'Assam Tea', quantity: 3, unitPrice: 12.5, totalPrice: 37.5, isPreorder: false, promotionDiscount: 12.5 }],
-  totals: { subtotal: 37.5, shippingAmount: 3, discountAmount: 14.5, taxAmount: 0, totalAmount: 26 },
-  promotionDiscount: 12.5, promotions: [{ label: '3 for 2 on all teas', amount: 12.5 }],
-} as unknown as PublicOrder;
-
-describe('ItemsCard promotions', () => {
-  const mountItems = (o: PublicOrder) => wrap(<ItemsCard items={o.items} totals={o.totals} promotions={publicOrderPromotions(o)} currency="GBP" />);
-  it('adds a promotion row and shows the discount row without the promotion part, so the rows add up', () => {
-    mountItems(ORDER);
-    expect(screen.getByText('3 for 2 on all teas')).toBeInTheDocument();
-    expect(screen.getByText('− £12.50')).toBeInTheDocument();
-    expect(screen.getByText('Discount')).toBeInTheDocument();
-    expect(screen.getByText('− £2.00')).toBeInTheDocument(); // 14.50 − 12.50
-  });
-  it('hides the discount row when the promotions account for all of it', () => {
-    mountItems({ ...ORDER, totals: { ...ORDER.totals, discountAmount: 12.5 } });
-    expect(screen.queryByText('Discount')).toBeNull();
-  });
-  it('is unchanged for an order with no promotion fields', () => {
-    const legacy = { items: [{ ...ORDER.items[0]!, promotionDiscount: undefined }], totals: ORDER.totals } as unknown as PublicOrder;
-    mountItems(legacy);
-    expect(screen.getByText('− £14.50')).toBeInTheDocument();
-    expect(screen.queryByText('3 for 2 on all teas')).toBeNull();
   });
 });

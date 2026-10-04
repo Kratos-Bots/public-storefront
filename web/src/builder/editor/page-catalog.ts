@@ -15,7 +15,6 @@ export const DOC_LABELS: Record<'shell' | FixedRouteKey, string> = {
   'account.loyalty': 'Account — loyalty',
   'account.referrals': 'Account — referrals',
   'account.profile': 'Account — profile',
-  'order-status': 'Order status link',
   'payment-success': 'Payment received',
   'payment-cancel': 'Payment cancelled',
   'order-placed': 'Order placed',
@@ -30,7 +29,7 @@ const GROUPS: Array<{ label: string; keys: Array<'shell' | FixedRouteKey> }> = [
   { label: 'Browse', keys: ['catalog', 'product'] },
   { label: 'Buy', keys: ['cart', 'checkout', 'login', 'reset-password'] },
   { label: 'Account', keys: ['account.orders', 'account.order', 'account.loyalty', 'account.referrals', 'account.profile', 'verify-email'] },
-  { label: 'After the order', keys: ['order-status', 'payment-success', 'payment-cancel', 'order-placed'] },
+  { label: 'After the order', keys: ['payment-success', 'payment-cancel', 'order-placed'] },
   { label: 'Tools', keys: ['verify', 'tracking'] },
 ];
 

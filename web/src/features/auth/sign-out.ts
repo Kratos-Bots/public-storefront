@@ -1,7 +1,6 @@
 import { logout } from '@/api/auth.ts';
 import { resetCartSync } from '@/features/cart/useServerCart.ts';
 import { useCartStore } from '@/stores/cart.ts';
-import { clearSavedOrders } from '@/stores/saved-orders.ts';
 import { useSessionStore } from '@/stores/session.ts';
 import { accessGate } from '@/app/access-gate.ts';
 
@@ -16,16 +15,13 @@ import { accessGate } from '@/app/access-gate.ts';
  * handler makes — measured three ways (before the clear, after it, and
  * inside `flushSync`), because the guard re-renders from the external store
  * while React still holds the account tree. Reloading also drops every
- * cached query and in-memory store. The saved order links (localStorage) are
- * forgotten explicitly: a signed-in customer's orders are saved there too, and
- * the next person on this device must not be offered them.
+ * cached query and in-memory store.
  */
 export async function signOutAndReload(): Promise<void> {
   // A revoke that fails still ends the session here: the token is useless to a
   // customer who has left, and refusing to sign them out would be the worse answer.
   await logout().catch(() => undefined);
   useSessionStore.getState().clear();
-  clearSavedOrders();
   useCartStore.getState().clear();
   useCartStore.getState().setMode('local');
   resetCartSync();

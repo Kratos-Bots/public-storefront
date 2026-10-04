@@ -9,11 +9,10 @@ vi.mock('@mantine/notifications', () => ({ notifications: { show: notificationsS
 import { api, setApiInterceptor, unwrap } from '@/api/client.ts';
 import { useCartStore } from '@/stores/cart.ts';
 import { useSessionStore } from '@/stores/session.ts';
-import { saveOrder } from '@/stores/saved-orders.ts';
 import { DEFAULT_FORM, clearPersistedCheckout, persistForm } from '@/features/checkout/form-state.ts';
 import { applyPreviewAs, enterFixtureMode, PREVIEW_ONLY_MESSAGE } from '@/builder/editor/fixture-mode.ts';
 import { createFixtureInterceptor } from '@/builder/editor/fixture-api.ts';
-import { FIXTURE_ACCESS_KEY, FIXTURE_CUSTOMER, FIXTURE_ORDER_REF, FIXTURE_TOKEN } from '@/builder/editor/fixtures.ts';
+import { FIXTURE_CUSTOMER, FIXTURE_ORDER_REF, FIXTURE_TOKEN } from '@/builder/editor/fixtures.ts';
 import type { PreviewAs } from '@/builder/mode.ts';
 import type { Product } from '@/types/catalog.ts';
 
@@ -138,7 +137,7 @@ describe('fixture mode', () => {
     try {
       await unwrap(api.get('storefront/profile'));
       await unwrap(api.get('storefront/cart'));
-      await unwrap(api.get(`orders/${FIXTURE_ORDER_REF}/${FIXTURE_ACCESS_KEY}`));
+      await unwrap(api.get(`storefront/orders/${FIXTURE_ORDER_REF}`));
       await expect(unwrap(api.post('storefront/auth/logout'))).rejects.toMatchObject({ status: 400 });
       as = { session: 'signed-out', cart: 'empty' };
       applyPreviewAs(as, client);
@@ -147,7 +146,6 @@ describe('fixture mode', () => {
       off();
     }
     // What the shopper pages do on their own when they render in the frame:
-    saveOrder(FIXTURE_ORDER_REF, FIXTURE_ACCESS_KEY); // OrderStatusPage on a loaded order
     persistForm({ ...DEFAULT_FORM, email: 'morgan@shop.example' }); // CheckoutPage on typing
     clearPersistedCheckout(); // OrderPlacedPage / PaymentSuccessPage
     localStorage.setItem('sf-theme-v2', '{"v":2,"draft":true}');

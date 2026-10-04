@@ -1,6 +1,6 @@
 import type { Env } from './index';
 
-const ALLOWED_PREFIXES = ['storefront/', 'catalog', 'orders/', 'verify/'];
+const ALLOWED_PREFIXES = ['storefront/', 'catalog', 'verify/'];
 const CACHE_RULES: Array<[RegExp, number]> = [
   [/^storefront\/settings$/, 30],
   // The published page set - same 30 s as settings, so a publish shows within half a minute.

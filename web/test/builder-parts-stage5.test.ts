@@ -42,7 +42,6 @@ vi.mock('@/builder/registry.ts', async (orig) => {
 });
 import { checkRules, containsVisibleType } from '@/builder/rules.ts';
 import { FAMILY_DOCS, familyAllowedOn, flattenTypes } from '@/builder/parts.ts';
-import { PREVIEW_STATE_IDS } from '@/builder/mode.ts';
 import { upgradeItems } from '@/builder/upgrade.ts';
 import { validateDoc } from '@/builder/guard.ts';
 import type { ComponentData, PuckDoc } from '@/builder/types.ts';
@@ -236,15 +235,9 @@ describe('flattenTypes and containsVisibleType', () => {
 });
 
 describe('families', () => {
-  it('checkout and order-status own their own docs', () => {
+  it('checkout owns its own doc', () => {
     expect(FAMILY_DOCS.checkout).toEqual(['checkout']);
-    expect(FAMILY_DOCS['order-status']).toEqual(['order-status']);
     expect(familyAllowedOn('checkout', 'checkout')).toBe(true);
-    expect(familyAllowedOn('checkout', 'order-status')).toBe(false);
-    expect(familyAllowedOn('order-status', 'order-status')).toBe(true);
-  });
-  it('OrderStatus has six preview states, the first being the default', () => {
-    expect(PREVIEW_STATE_IDS.OrderStatus[0]).toBe('shipped');
-    expect(PREVIEW_STATE_IDS.OrderStatus).toHaveLength(6);
+    expect(familyAllowedOn('checkout', 'tracking')).toBe(false);
   });
 });

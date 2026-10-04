@@ -38,8 +38,6 @@ export default defineTextArea('account', {
   'order.awaitingDispatch': { en: 'Awaiting dispatch', max: 60 },
   'order.shippedFallback': { en: 'Shipped', max: 40 },
   'order.trackParcel': { en: 'Track this parcel', max: 60 },
-  'order.openOrderPage': { en: 'Open order page', max: 60 },
-  'order.orderPageNote': { en: 'The order page is where you pay, change payment method and follow the parcel — share it with us if you need help with this order.', max: 300 },
   'loyalty.redeemedToast': { en: '{credit} credit added — you now have {points} points and {balance} in credit.', max: 300 },
   'loyalty.redeemFailed': { en: "We couldn't redeem that", max: 80 },
   'loyalty.loadFailedTitle': { en: "We couldn't load your points", max: 80 },

@@ -154,7 +154,6 @@ describe('editor config', () => {
   it('hints when a root title hides the per-item tab title', () => {
     const titled = (title: string): PuckDoc => ({ root: { props: { title, description: '', chrome: 'shell' } }, content: [] });
     expect(editorHints(titled('Shop'), 'product').map((h) => h.id)).toEqual(['title-overrides-item']);
-    expect(editorHints(titled('Shop'), 'order-status').map((h) => h.id)).toEqual(['title-overrides-item']);
     expect(editorHints(titled(''), 'product')).toEqual([]);
     expect(editorHints(titled('Cart'), 'cart')).toEqual([]);
   });

@@ -88,8 +88,7 @@ describe('stage-5 parts contract (checkout parts spec §9, §12, §13)', () => {
     });
   });
 
-  it('PREVIEW_STATE_IDS.OrderStatus is a registered container', () => {
-    expect(Object.keys(PREVIEW_STATE_IDS)).toContain('OrderStatus');
+  it('every PREVIEW_STATE_IDS entry is a registered container', () => {
     for (const name of Object.keys(PREVIEW_STATE_IDS)) expect(BLOCKS[name] && BLOCKS[name]!.container, name).toBeDefined();
   });
 
@@ -106,8 +105,8 @@ describe('stage-5 parts contract (checkout parts spec §9, §12, §13)', () => {
     const blocks = join(SRC, 'builder', 'blocks');
     const targets = [
       ...Object.keys(STAGE5_PARTS).map((n) => join(blocks, `${n}.tsx`)),
-      join(blocks, '_shared', 'checkout-container.ts'), join(blocks, '_shared', 'order-status-container.ts'),
-      join(SRC, 'builder', 'family-checkout.ts'), join(SRC, 'builder', 'family-order-status.ts'),
+      join(blocks, '_shared', 'checkout-container.ts'),
+      join(SRC, 'builder', 'family-checkout.ts'),
     ];
     const bad: string[] = [];
     for (const file of targets) {
@@ -121,7 +120,7 @@ describe('stage-5 parts contract (checkout parts spec §9, §12, §13)', () => {
 
   describe('text', () => {
     const owners = [...Object.keys(STAGE5_PARTS), ...Object.keys(STAGE5_CONTAINERS)];
-    it('every pattern of both containers and all sixteen parts is a valid TextKeyPattern', () => {
+    it('every pattern of the container and all ten parts is a valid TextKeyPattern', () => {
       for (const name of owners) {
         for (const p of BLOCKS[name]!.text ?? []) {
           const ok = p.endsWith('.*') ? Object.keys(TEXT_ENTRIES).some((k) => matchesTextPattern(k, p)) : isTextKey(p);

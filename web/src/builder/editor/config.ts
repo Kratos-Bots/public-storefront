@@ -35,7 +35,7 @@ export const PART_TITLES: Record<PartFamily, string> = {
   header: 'Header parts', cart: 'Cart parts', 'cart-summary': 'Cart summary parts', account: 'Account header parts', orders: 'Order history parts',
   order: 'Order parts', loyalty: 'Loyalty parts', referrals: 'Referral parts', profile: 'Profile parts', login: 'Sign-in parts',
   payment: 'Payment page parts', tracking: 'Tracking parts', verify: 'Verify parts',
-  checkout: 'Checkout parts', 'order-status': 'Order status parts',
+  checkout: 'Checkout parts',
   'reset-password': 'Reset password parts', 'verify-email': 'Verify email parts',
 };
 
@@ -125,7 +125,7 @@ type Props = Record<string, unknown>;
 
 /** Advice, not an issue: never sent to the admin and never blocks Publish. */
 export interface EditorHint {
-  id: 'double-intro' | 'category-nav-roots' | 'title-overrides-item' | 'cart-summary-outside' | 'content-before-payment';
+  id: 'double-intro' | 'category-nav-roots' | 'title-overrides-item' | 'cart-summary-outside';
   message: string;
   blockId?: string;
 }
@@ -142,8 +142,8 @@ function showsListIntro(c: ComponentData): boolean {
   if (slots.every((v) => !Array.isArray(v))) return true;
   return slots.some((v) => Array.isArray(v) && containsType(v as ComponentData[], 'CatalogIntro'));
 }
-/** Pages whose tab title names the product or order on show; a root title replaces it. */
-const ITEM_TITLE_DOCS: ReadonlySet<DocKey> = new Set<DocKey>(['product', 'order-status']);
+/** Pages whose tab title names the product on show; a root title replaces it. */
+const ITEM_TITLE_DOCS: ReadonlySet<DocKey> = new Set<DocKey>(['product']);
 
 function walk(items: readonly ComponentData[], visit: (c: ComponentData) => void): void {
   for (const item of items) {
@@ -153,18 +153,6 @@ function walk(items: readonly ComponentData[], visit: (c: ComponentData) => void
       if (Array.isArray(children)) walk(children as ComponentData[], visit);
     }
   }
-}
-
-/** The first block of the order page's action column (not a part) that sits above its Payment part. */
-function contentBeforePayment(content: readonly ComponentData[]): ComponentData | undefined {
-  let found: ComponentData | undefined;
-  walk(content, (c) => {
-    if (found || c.type !== 'OrderStatus' || !Array.isArray(c.props.action)) return;
-    const action = c.props.action as ComponentData[];
-    const pay = action.findIndex((x) => containsType([x], 'OrderStatusPayment'));
-    found = pay < 0 ? undefined : action.slice(0, pay).find((x) => !blockDef(x.type)?.part);
-  });
-  return found;
 }
 
 export function editorHints(doc: PuckDoc, docKey: DocKey): EditorHint[] {
@@ -187,7 +175,7 @@ export function editorHints(doc: PuckDoc, docKey: DocKey): EditorHint[] {
   if (ITEM_TITLE_DOCS.has(docKey) && doc.root.props.title.trim() !== '') {
     hints.push({
       id: 'title-overrides-item',
-      message: 'This page title replaces the tab title that names each product or order. Leave it empty to keep those.',
+      message: 'This page title replaces the tab title that names each product. Leave it empty to keep that.',
     });
   }
   const summaryAtTop = docKey === 'cart' ? doc.content.find((c) => c.type === 'CartSummary') : undefined;
@@ -201,14 +189,6 @@ export function editorHints(doc: PuckDoc, docKey: DocKey): EditorHint[] {
         blockId: summaryAtTop.props.id,
       });
     }
-  }
-  const early = docKey === 'order-status' ? contentBeforePayment(doc.content) : undefined;
-  if (early) {
-    hints.push({
-      id: 'content-before-payment',
-      message: 'Customers who still owe payment see this before how to pay.',
-      blockId: early.props.id,
-    });
   }
   if (categoryNav) {
     hints.push({

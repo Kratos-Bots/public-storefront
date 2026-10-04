@@ -146,7 +146,7 @@ describe('hidden-required on a part itself', () => {
 });
 
 describe('families', () => {
-  it('FAMILY_DOCS has the four stage-3 and seventeen new families', () => {
+  it('FAMILY_DOCS names the documents of every family', () => {
     expect(FAMILY_DOCS).toEqual({
       product: ['product'], catalogue: ['catalog'], 'card-tile': ['card:tile'], 'card-row': ['card:row'],
       header: ['shell'], cart: ['cart'], 'cart-summary': ['cart'],
@@ -154,7 +154,7 @@ describe('families', () => {
       orders: ['account.orders'], order: ['account.order'], loyalty: ['account.loyalty'], referrals: ['account.referrals'],
       profile: ['account.profile'], login: ['login'], payment: ['payment-success', 'payment-cancel', 'order-placed'],
       tracking: ['tracking'], verify: ['verify'],
-      checkout: ['checkout'], 'order-status': ['order-status'], // stage 5
+      checkout: ['checkout'], // stage 5
       'reset-password': ['reset-password'],
       'verify-email': ['verify-email'],
     });

@@ -126,7 +126,7 @@ const FRAMES: Record<LayoutKind, Frame> = { storefront: StorefrontFrame, menu: M
 /**
  * Replaces ShellSwitch (spec §5.1): the layout's frame and its system mounts (§5.4 — cart
  * drawer, login modal, Telegram chrome, Overlay slot) around the shell document. A page whose
- * root says `chrome: 'none'` gets the chromeless frame instead (v0.6.0's shared-order-link page).
+ * root says `chrome: 'none'` gets the chromeless frame instead (v0.6.0's chromeless pages).
  * One ShellStateContext wraps header and page alike, so the header search reaches the outlet.
  */
 export function PuckShell() {
@@ -142,11 +142,11 @@ export function PuckShell() {
   const setValue = useMemo(() => ({ pageSet, layout }), [pageSet, layout]);
 
   // As PuckPage: wait for the published set rather than paint the default shell and swap it.
-  // A route whose default document is chromeless (the shared order link) paints its brand header
-  // at once, as v0.6.0 did; the page inside shows the inline skeleton until the set is in.
+  // A route whose default document is chromeless paints its brand header at once, as v0.6.0 did;
+  // the page inside shows the inline skeleton until the set is in.
   if (isLoading) {
     // Accepted trade-off: this reads the route's DEFAULT doc, since the published one isn't in yet.
-    // A published doc that flips that route's chrome (say an order-status page set to chrome:
+    // A published doc that flips that route's chrome (say a page set to chrome:
     // 'shell') briefly shows the Chromeless skeleton before its shell frame paints: a short flash,
     // once per page load, instead of a blank screen on every route while the set loads.
     const fallbackPage = routeKey && isFixedRouteKey(routeKey) ? defaultDoc(routeKey, layout) : null;

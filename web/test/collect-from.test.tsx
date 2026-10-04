@@ -3,11 +3,9 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
 import { MemoryRouter } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { AddressCard } from '@/features/order-status/AddressCard.tsx';
 import { ReviewStep } from '@/features/checkout/steps/ReviewStep.tsx';
 import { OrderDetailPage } from '@/features/account/OrderDetailPage.tsx';
 import { DEFAULT_FORM } from '@/features/checkout/form-state.ts';
-import type { ShippingAddress } from '@/types/public-order.ts';
 
 const h = vi.hoisted(() => ({ order: {} as Record<string, unknown> }));
 vi.mock('@/app/settings.ts', () => ({ useSettings: () => ({ currency: 'GBP', brand: { name: 'Northbound Supply', links: {} } }) }));
@@ -23,30 +21,10 @@ const wrap = (ui: React.ReactNode) =>
     </QueryClientProvider>,
   );
 
-const address: ShippingAddress = {
-  firstName: 'Ada', surname: 'Sterling', addressLine1: 'Kirkgate 14', addressLine2: null, addressLine3: null,
-  city: 'Leeds', county: null, zip: 'LS1 6BY', country: 'GB',
-};
 const point = {
   id: '12345', carrier: 'inpost', name: 'Tesco Express', street: 'Kirkgate', houseNumber: '14', postalCode: 'LS1 6BY',
   city: 'Leeds', country: 'GB', latitude: null, longitude: null, distance: 300,
 };
-
-describe('AddressCard', () => {
-  it('names the collection point above the address', () => {
-    wrap(<AddressCard address={{ ...address, servicePoint: { name: 'Tesco Express', carrier: 'inpost' } }} />);
-    expect(screen.getByText('Collect from')).toBeTruthy();
-    expect(screen.getByText('Tesco Express')).toBeTruthy();
-    expect(screen.getByText('Kirkgate 14')).toBeTruthy();
-  });
-  it('is unchanged for a home delivery and for an older backend', () => {
-    wrap(<AddressCard address={address} />);
-    expect(screen.queryByText('Collect from')).toBeNull();
-    cleanup();
-    wrap(<AddressCard address={{ ...address, servicePoint: null }} />);
-    expect(screen.queryByText('Collect from')).toBeNull();
-  });
-});
 
 describe('ReviewStep address slip', () => {
   const review = (form: typeof DEFAULT_FORM) =>

@@ -13,7 +13,7 @@ import type { VerifyEmailPreview } from '@/builder/family-verify-email.ts';
 import { useEditorStore } from '@/builder/editor/store.ts';
 import { effectivePreviewAs } from '@/builder/editor/fixture-mode.ts';
 import {
-  FIXTURE_CHAT_LINKS, FIXTURE_ORDERS, FIXTURE_ORDER_REF, FIXTURE_SIGN_IN, fixtureOrderStates, FIXTURE_REDEEM, FIXTURE_TRACKING, fixtureProfile, fixtureVerification,
+  FIXTURE_CHAT_LINKS, FIXTURE_ORDERS, FIXTURE_ORDER_REF, FIXTURE_SIGN_IN, FIXTURE_REDEEM, FIXTURE_TRACKING, fixtureProfile, fixtureVerification,
 } from '@/builder/editor/fixtures.ts';
 
 export type ContainerName = keyof typeof PREVIEW_STATE_IDS;
@@ -46,10 +46,6 @@ export const PREVIEW_STATE_LABELS: Record<ContainerName, Labelled> = {
   VerifyEmail: [
     { id: 'verifying', label: 'Confirming' }, { id: 'done', label: 'Confirmed' }, { id: 'invalid', label: 'Expired link' },
     { id: 'otherAccount', label: 'Different account' }, { id: 'error', label: 'Could not confirm' },
-  ],
-  OrderStatus: [
-    { id: 'shipped', label: 'Shipped' }, { id: 'awaiting-payment', label: 'Awaiting payment' }, { id: 'hosted-open', label: 'Hosted checkout open' },
-    { id: 'crypto-checking', label: 'Crypto sent, checking' }, { id: 'two-parcels', label: 'Two parcels' }, { id: 'cancelled', label: 'Cancelled' },
   ],
 };
 
@@ -124,10 +120,6 @@ const BUILDERS: { [C in ContainerName]: (state: string, now: Date) => unknown } 
       default: return { status: 'idle' };
     }
   },
-  OrderStatus: (state, now) => {
-    const states = fixtureOrderStates(now);
-    return states[state as keyof typeof states] ?? states.shipped;
-  },
 };
 
 /** A fixture for every stateful container, each in its picked state (default: its first). */
@@ -154,7 +146,6 @@ const DOC_CONTAINER: Partial<Record<DocKey, ContainerName>> = {
   verify: 'VerifyForm',
   'reset-password': 'ResetPassword',
   'verify-email': 'VerifyEmail',
-  'order-status': 'OrderStatus',
 };
 
 /** The stateful container a document holds (its Preview state applies), or null. */

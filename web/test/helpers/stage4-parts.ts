@@ -34,7 +34,6 @@ export const STAGE4_PARTS: Record<string, { family: PartFamily; style: { target:
   OrderBalance: { family: 'order', style: T('root', BOX, TEXT, VIS) },
   OrderPayments: { family: 'order', style: T('root', BOX, TEXT, VIS) },
   OrderParcels: { family: 'order', style: T('root', BOX, TEXT, VIS) },
-  OrderPageLink: { family: 'order', style: T('wrap', BOX, TEXT, VIS) },
   LoyaltyPoints: { family: 'loyalty', style: T('root', BOX, TEXT) },
   LoyaltyRewards: { family: 'loyalty', style: T('root', BOX, TEXT) },
   LoyaltyCredit: { family: 'loyalty', style: T('root', BOX, TEXT, VIS) },

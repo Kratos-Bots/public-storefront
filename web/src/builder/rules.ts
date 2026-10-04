@@ -26,7 +26,6 @@ export const PLACEMENT: Record<string, readonly DocKey[]> = {
   Loyalty: ['account.loyalty'],
   Referrals: ['account.referrals'],
   Profile: ['account.profile'],
-  OrderStatus: ['order-status'],
   PaymentSuccess: ['payment-success'],
   PaymentCancel: ['payment-cancel'],
   OrderPlaced: ['order-placed'],
@@ -52,7 +51,6 @@ const EXACTLY_ONE: Partial<Record<DocKey, readonly string[]>> = {
   'account.loyalty': ['Loyalty'],
   'account.referrals': ['Referrals'],
   'account.profile': ['Profile'],
-  'order-status': ['OrderStatus'],
   'payment-success': ['PaymentSuccess'],
   'payment-cancel': ['PaymentCancel'],
   'order-placed': ['OrderPlaced'],
@@ -145,14 +143,14 @@ export const FAMILY_NOUN: Record<PartFamily, string> = {
   product: 'product page', catalogue: 'catalogue', 'card-tile': 'product card', 'card-row': 'product row',
   header: 'header', cart: 'cart', 'cart-summary': 'order summary', account: 'account page', orders: 'order history', order: 'order page',
   loyalty: 'loyalty page', referrals: 'referrals page', profile: 'profile page', login: 'sign-in page', payment: 'payment page',
-  tracking: 'tracking page', verify: 'verification page', checkout: 'checkout', 'order-status': 'order page',
+  tracking: 'tracking page', verify: 'verification page', checkout: 'checkout',
   'reset-password': 'password reset page', 'verify-email': 'email verification page',
 };
 const FAMILY_HOME: Record<PartFamily, string> = {
   product: 'Product detail', catalogue: 'product grid or product list', 'card-tile': 'product card', 'card-row': 'product row',
   header: 'Header', cart: 'Cart contents', 'cart-summary': 'Cart summary', account: 'account navigation', orders: 'Orders list',
   order: 'Order detail', loyalty: 'Loyalty block', referrals: 'Referrals block', profile: 'Profile block', login: 'Login options',
-  payment: 'payment page block', tracking: 'Tracking lookup', verify: 'Verify form', checkout: 'Checkout flow', 'order-status': 'Order status',
+  payment: 'payment page block', tracking: 'Tracking lookup', verify: 'Verify form', checkout: 'Checkout flow',
   'reset-password': 'Reset password', 'verify-email': 'Verify email',
 };
 const REQUIRES_MESSAGE: Record<string, string> = {

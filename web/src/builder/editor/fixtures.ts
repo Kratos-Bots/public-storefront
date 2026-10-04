@@ -127,7 +127,7 @@ export const FIXTURE_PUBLIC_ORDER: PublicOrder = {
   payment: { canPay: false, payBy: null, activePayment: null },
 };
 
-// ── Stage 5 previews: the order-status page's states (spec section 11.3) ────────
+// ── Order states: a PublicOrder in each state the order views preview ────────
 
 type OrderStateId = 'shipped' | 'awaiting-payment' | 'hosted-open' | 'crypto-checking' | 'two-parcels' | 'cancelled';
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
