@@ -6,6 +6,7 @@ import type { ServerCart, ServerCartLine, CartLineInput } from '../web/src/types
 import type { OrderDetail, OrderSummary, PageMeta } from '../web/src/types/orders.ts';
 import type { Profile, RedeemOptions } from '../web/src/types/profile.ts';
 import type { PublicOrder, SelectPaymentResult } from '../web/src/types/public-order.ts';
+import type { ServicePoint } from '../web/src/types/service-points.ts';
 import type { StorefrontSettings } from '../web/src/types/settings.ts';
 import type { TrackingLookup } from '../web/src/types/tracking.ts';
 import type { LoginResult, ResetCheck, WhatsappStart } from '../web/src/types/auth.ts';
@@ -59,8 +60,9 @@ export type Layout = 'storefront' | 'menu' | 'webapp';
  * - `shipped`:  paid and on its way — one parcel, nothing owed
  * - `paid`:     paid, nothing shipped yet, nothing owed (every payment and tracking part is silent)
  * - `legacy`:   an older backend's body — no `payment` block, no `cryptoPayments`
+ * - `collection`: paid, going to a collection point (`shippingAddress.servicePoint`: Corner News, Evri)
  */
-export type OrderVariant = 'crypto' | 'choose' | 'shipped' | 'paid' | 'legacy';
+export type OrderVariant = 'crypto' | 'choose' | 'shipped' | 'paid' | 'legacy' | 'collection';
 
 export function publicOrderVariant(kind: OrderVariant): PublicOrder {
   const o = read<PublicOrder>('public-order.json');
@@ -77,6 +79,8 @@ export function publicOrderVariant(kind: OrderVariant): PublicOrder {
         ...o, status: 'shipped', cryptoPayments: [], payment: owed,
         shipments: [{ status: 'shipped', carrier: 'Royal Mail', trackingNumber: 'NB000977GB', trackingUrl: 'https://track.example.invalid/NB000977GB', trackingStatusDescription: 'Handed to the courier', shippedAt: '2026-08-25T09:00:00.000Z', deliveredAt: null }],
       };
+    case 'collection':
+      return { ...o, status: 'confirmed', cryptoPayments: [], payment: owed, shippingAddress: { ...o.shippingAddress, servicePoint: { name: 'Corner News', carrier: 'evri' } } };
     case 'legacy': {
       const { payment: _payment, cryptoPayments: _crypto, ...rest } = o;
       return rest;
@@ -131,6 +135,8 @@ export interface InstallMocksOptions {
   };
   /** Mutate the profile fixture before it is served (identities, password block). */
   tweakProfile?: (profile: Profile) => void;
+  /** What `GET storefront/service-points` answers with a postcode (default: three synthetic GB points). A number answers with that HTTP status instead. */
+  servicePoints?: ServicePoint[] | number;
   /** What the checkout routes answer with as `payment` (default: a crypto address). */
   checkoutPayment?: CheckoutPayment;
   /** The reference the checkout routes answer with (default `E2E1`). */
@@ -190,6 +196,8 @@ export interface MockState {
   guestQuotes: Array<Record<string, unknown>>;
   /** Bodies posted to the signed-in quote route, for assertions. */
   quotes: Array<Record<string, unknown>>;
+  /** The postcode of every collection-point search, in order. */
+  servicePointSearches: string[];
   /** Bodies posted to the order's payment-method route (a method / coin / network selection). */
   methods: Array<Record<string, unknown>>;
   /** Bodies posted to the crypto-txid route, for assertions. */
@@ -289,6 +297,13 @@ function buildCart(items: CartLineInput[], catalog: Catalog): ServerCart {
   };
 }
 
+/** Synthetic collection points (no real shop, carrier account or address). */
+export const DEFAULT_SERVICE_POINTS: ServicePoint[] = [
+  { id: '9001', carrier: 'inpost', name: 'Northbound Locker A', street: 'Kirkgate', houseNumber: '14', postalCode: 'LS1 6BY', city: 'Leeds', country: 'GB', latitude: null, longitude: null, distance: 320 },
+  { id: '9002', carrier: 'evri', name: 'Corner News', street: 'Vicar Lane', houseNumber: '2', postalCode: 'LS1 7JH', city: 'Leeds', country: 'GB', latitude: null, longitude: null, distance: 540 },
+  { id: '9003', carrier: 'inpost', name: 'Station Locker', street: 'Station Road', houseNumber: '', postalCode: 'LS1 4DY', city: 'Leeds', country: 'GB', latitude: null, longitude: null, distance: null },
+];
+
 /** The one discount code the mock knows: 10% off the goods, `NORTH10`. Any other code leaves the quote as served. */
 export const COUPON_CODE = 'NORTH10';
 export const COUPON_DISCOUNT = 4.25;
@@ -381,6 +396,7 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     checkouts: [],
     guestQuotes: [],
     quotes: [],
+    servicePointSearches: [],
     methods: [],
     txids: [],
     webappLogins: [],
@@ -564,6 +580,19 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
         await envelope(route, state.cart);
         return;
       }
+    }
+
+    if (path === 'storefront/service-points' && method === 'GET') {
+      const query = new URL(route.request().url()).searchParams;
+      const postalCode = query.get('postalCode');
+      const answer = options.servicePoints ?? DEFAULT_SERVICE_POINTS;
+      if (postalCode) state.servicePointSearches.push(postalCode);
+      if (typeof answer === 'number') {
+        await route.fulfill({ status: answer, contentType: 'application/json', body: JSON.stringify({ success: false, data: null, error: 'Service point search is temporarily unavailable. Please try again.' }) });
+        return;
+      }
+      await envelope(route, { available: answer.length > 0, carriers: [...new Set(answer.map((p) => p.carrier))], points: postalCode ? answer : [] });
+      return;
     }
 
     if ((path === 'storefront/checkout/quote' || path === 'storefront/checkout/guest/quote') && method === 'POST') {

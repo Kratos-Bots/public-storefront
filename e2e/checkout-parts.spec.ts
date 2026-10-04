@@ -32,6 +32,8 @@ interface OpenOptions {
   /** localStorage keys seeded once, before the app boots. */
   seed?: Record<string, unknown>;
   order?: OrderVariant;
+  /** What the collection-point search answers with (see InstallMocksOptions.servicePoints). */
+  servicePoints?: InstallMocksOptions['servicePoints'];
 }
 
 const LINE = {
@@ -96,6 +98,7 @@ async function open(page: Page, layout: Layout, set: PageSet | null, path: strin
     session: !o.guest && !o.telegram,
     pages: { [layout]: set },
     order: o.order ? publicOrderVariant(o.order) : undefined,
+    servicePoints: o.servicePoints,
     tweakSettings: (s) => { if (o.guest) s.features.guestCheckout = true; o.tweakSettings?.(s); },
   });
   if (o.seed) {
@@ -284,6 +287,164 @@ test.describe('checkout · the contact and address form', () => {
     expect(body.shippingAddress).toMatchObject({ addressLine1: '14 Kirkgate', addressLine3: 'Flat 2', city: 'Leeds', zip: 'LS1 6BY', country: 'GB' });
     // What is sent is unchanged: the backend strips the zero.
     expect(body.phone).toBe('+4407801123456');
+  });
+});
+
+// 4 — collection points ------------------------------------------------------------------------------------
+
+test.describe('checkout · collection points', () => {
+  const withCollection = (s: Parameters<NonNullable<OpenOptions['tweakSettings']>>[0]) => {
+    s.shipping = { countries: ['GB'], collectionCountries: ['GB'] };
+  };
+  const next = (page: Page) => page.getByRole('button', { name: 'Continue' }).click();
+
+  async function fillContact(page: Page, phone: string | null) {
+    await page.getByRole('textbox', { name: 'First name' }).fill('Ada');
+    await page.getByRole('textbox', { name: 'Surname' }).fill('Sterling');
+    await page.getByRole('textbox', { name: 'Email' }).fill('ada@example.invalid');
+    if (phone) await page.getByRole('textbox', { name: 'Phone' }).fill(phone);
+  }
+
+  /** Shipping, Payment and on to Review, from the step after the address. */
+  async function toReview(page: Page) {
+    await page.getByText('Tracked 24').click();
+    await next(page);
+    await page.locator('label').filter({ hasText: 'Crypto' }).first().click();
+    await page.locator('label').filter({ hasText: 'USDT' }).first().click();
+    await next(page);
+  }
+
+  async function searchAndChoose(page: Page, postcode: string, point: RegExp) {
+    await page.getByRole('radio', { name: 'Collection point' }).check({ force: true });
+    await page.getByRole('textbox', { name: 'Postcode' }).fill(postcode);
+    await page.getByRole('button', { name: 'Search' }).click();
+    await page.getByRole('radio', { name: point }).click({ force: true });
+  }
+
+  test('a signed-in shopper collects from a point: quote, order body, review', async ({ page }) => {
+    const { mocks } = await open(page, 'storefront', null, '/checkout', { tweakSettings: withCollection });
+    await fillContact(page, '07801 123456');
+    await next(page);
+
+    await expect(page.getByRole('heading', { name: 'Delivery address' })).toBeVisible();
+    await page.getByRole('radio', { name: 'Collection point' }).check({ force: true });
+    await expect(page.getByRole('textbox', { name: 'Address line 1' })).toHaveCount(0);
+    await page.getByRole('textbox', { name: 'Postcode' }).fill('LS1 6BY');
+    await page.getByRole('button', { name: 'Search' }).click();
+    await expect(page.getByRole('radio', { name: /Northbound Locker A/ })).toBeVisible();
+    await expect(page.getByText('3 collection points found')).toBeVisible();
+    await page.getByRole('radio', { name: /Corner News/ }).click({ force: true });
+    await expect(page.getByText('Your collection point')).toBeVisible();
+    await next(page);
+
+    await toReview(page);
+    await expect(page.getByRole('heading', { name: 'Review your order' })).toBeVisible();
+    await expect(page.getByText('Collect from')).toBeVisible();
+    await expect(page.getByText('Corner News')).toBeVisible();
+
+    await placeOrder(page);
+    expect(mocks.state.servicePointSearches).toEqual(['LS1 6BY']);
+    expect(mocks.state.quotes.at(-1)).toMatchObject({ country: 'GB', deliveryMethod: 'collection', servicePointCarrier: 'evri' });
+    expect(mocks.state.checkouts[0]!.shippingAddress).toEqual({
+      firstName: 'Ada', surname: 'Sterling', addressLine1: 'Vicar Lane 2', addressLine2: null, addressLine3: null,
+      city: 'Leeds', county: null, zip: 'LS1 7JH', country: 'GB',
+      servicePointId: '9002', servicePointCarrier: 'evri', servicePointName: 'Corner News',
+    });
+  });
+
+  test('a point with no street is sent by its name, and Change keeps or replaces the point', async ({ page }) => {
+    const { mocks } = await open(page, 'storefront', null, '/checkout', { tweakSettings: withCollection });
+    await fillContact(page, '07801 123456');
+    await next(page);
+    await searchAndChoose(page, 'LS1 6BY', /Station Locker/);
+    // Change opens the search again, with a way back to the point already chosen.
+    await page.getByRole('button', { name: 'Change' }).click();
+    await expect(page.getByRole('button', { name: 'Keep Station Locker' })).toBeVisible();
+    await page.getByRole('button', { name: 'Keep Station Locker' }).click();
+    await expect(page.getByText('Your collection point')).toBeVisible();
+    await next(page);
+    await toReview(page);
+    await placeOrder(page);
+    expect(mocks.state.checkouts[0]!.shippingAddress).toMatchObject({
+      addressLine1: 'Station Road', city: 'Leeds', zip: 'LS1 4DY', servicePointId: '9003', servicePointCarrier: 'inpost', servicePointName: 'Station Locker',
+    });
+  });
+
+  test('switching back to home restores the address and sends no point', async ({ page }) => {
+    const { mocks } = await open(page, 'storefront', null, '/checkout', { tweakSettings: withCollection });
+    await fillContact(page, null);
+    await next(page);
+    await page.getByRole('textbox', { name: 'Address line 1' }).fill('14 Kirkgate');
+    await page.getByRole('textbox', { name: 'Town / City' }).fill('Leeds');
+    await page.getByRole('textbox', { name: 'Postcode' }).fill('LS1 6BY');
+    await page.getByRole('radio', { name: 'Collection point' }).check({ force: true });
+    await expect(page.getByRole('textbox', { name: 'Postcode' })).toHaveValue('LS1 6BY');
+    await page.getByRole('radio', { name: 'Home address' }).check({ force: true });
+    await expect(page.getByRole('textbox', { name: 'Address line 1' })).toHaveValue('14 Kirkgate');
+    await next(page);
+    await toReview(page);
+    await placeOrder(page);
+    expect(mocks.state.checkouts[0]).toMatchObject(BASE_BODY);
+    expect(Object.keys(mocks.state.checkouts[0]!.shippingAddress as object)).not.toEqual(expect.arrayContaining(['servicePointId']));
+    for (const q of mocks.state.quotes) expect(Object.keys(q)).not.toEqual(expect.arrayContaining(['deliveryMethod']));
+  });
+
+  test('collection needs a phone: placing sends the shopper back to their details', async ({ page }) => {
+    await open(page, 'storefront', null, '/checkout', { tweakSettings: withCollection });
+    await fillContact(page, null);
+    await next(page);
+    await searchAndChoose(page, 'LS1', /Northbound Locker A/);
+    await next(page);
+    await toReview(page);
+    await page.getByRole('button', { name: /^Place order/ }).click();
+    await expect(page.getByRole('heading', { name: 'Your details' })).toBeVisible();
+    await expect(page.getByText('Required')).toBeVisible();
+  });
+
+  test('a guest can collect', async ({ page }) => {
+    const { mocks } = await open(page, 'storefront', null, '/checkout', { guest: true, tweakSettings: withCollection });
+    await fillContact(page, '07801 123456');
+    await next(page);
+    await searchAndChoose(page, 'LS1 6BY', /Northbound Locker A/);
+    await next(page);
+    await toReview(page);
+    // The guest quote is debounced and mints a token of its own: let the one priced for this point land before placing.
+    await expect.poll(() => mocks.state.guestQuotes.some((q) => q.deliveryMethod === 'collection' && q.shippingOptionId === 11)).toBe(true);
+    await expect(page.getByText('Verifying')).toHaveCount(0);
+    await placeOrder(page);
+    expect(mocks.state.checkouts[0]!.shippingAddress).toMatchObject({ servicePointId: '9001', servicePointCarrier: 'inpost' });
+    expect(mocks.state.guestQuotes.at(-1)).toMatchObject({ deliveryMethod: 'collection', servicePointCarrier: 'inpost' });
+  });
+
+  test('a failed search says so', async ({ page }) => {
+    await open(page, 'storefront', null, '/checkout', { tweakSettings: withCollection, servicePoints: 502 });
+    await fillContact(page, '07801 123456');
+    await next(page);
+    await page.getByRole('radio', { name: 'Collection point' }).check({ force: true });
+    await page.getByRole('textbox', { name: 'Postcode' }).fill('LS1 6BY');
+    await page.getByRole('button', { name: 'Search' }).click();
+    await expect(page.getByText('We couldn\'t load collection points. Please try again.')).toBeVisible();
+  });
+
+  test('a country that is collection only has no switch, says why, and shows the picker', async ({ page }) => {
+    await open(page, 'storefront', null, '/checkout', {
+      tweakSettings: (s) => { s.shipping = { countries: ['IE'], collectionCountries: ['GB'] }; },
+    });
+    await fillContact(page, '07801 123456');
+    await next(page);
+    await expect(page.getByRole('heading', { name: 'Delivery address' })).toBeVisible();
+    await expect(page.getByRole('combobox', { name: 'Country' })).toHaveValue('GB');
+    await expect(page.getByRole('radio', { name: 'Collection point' })).toHaveCount(0);
+    await expect(page.getByRole('radio', { name: 'Home address' })).toHaveCount(0);
+    await expect(page.getByText('Orders to United Kingdom are delivered to a collection point.')).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Address line 1' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Search' })).toBeVisible();
+  });
+
+  test('the public order page says which collection point the order goes to', async ({ page }) => {
+    await open(page, 'storefront', null, ORDER_PATH, { order: 'collection' });
+    await expect(page.getByText('Collect from')).toBeVisible();
+    await expect(page.getByText('Corner News')).toBeVisible();
   });
 });
 

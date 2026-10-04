@@ -722,6 +722,22 @@ stays the authority on what can actually be delivered. The label wording comes f
 `checkout.address.*`. `displayPhoneNumber` in `web/src/lib/dial-codes.ts` is for display only (the
 Review step): the submitted number still carries any trunk zero, and the backend normalises it.
 
+Where a country offers collection points (`settings.shipping.collectionCountries`), the address step
+shows a Home address / Collection point switch; a country in that list but not in
+`settings.shipping.countries` is collection only, with a line saying so and no switch. Collection
+replaces the address fields with a postcode search and a list of points
+(`features/checkout/PointPicker.tsx`, fed by `GET storefront/service-points`, limited to 60 searches
+per 15 minutes per shopper). The postcode box is seeded once from the home postcode, the result count
+is announced in a live region, and a chosen point collapses to a summary with a Change action (and,
+once Change is open, a Keep action that returns to the current point). The rules for what a change
+clears live in `features/checkout/collection-mode.ts`: a new country clears the point, and a new
+method or a point from another carrier clears the chosen delivery option. A collection order needs a
+phone number, so the phone field becomes required and a shop that hides it offers no collection. The
+order carries the point's street as the address line, its city, postcode and country, and the point's
+id, carrier and name; the Review step and the order pages read it back as "Collect from". The picker
+is part of the existing Delivery address part: there is no separate block, and its wording is
+ordinary editable Site text under `checkout.address.*`.
+
 **Order-status parts** (`OrderStatus`; every part is unique):
 
 | Part | Required | Home | Why |
