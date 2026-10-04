@@ -158,7 +158,7 @@ export interface InstallMocksOptions {
   tweakOrderDetail?: (detail: OrderDetail) => void;
   /** The public order is served for this reference and access key instead of E2E1 / KEY1 (its `reference` is rewritten to match). */
   orderLink?: { reference: string; accessKey: string };
-  /** Mutate the public order (`GET orders/:ref/:key`) before it is served: cancel flags, an active payment. */
+  /** Mutate the public order before it is served (no mock route serves it since the key-based `orders/` routes were removed; Task 11 rewrites this). */
   tweakOrder?: (order: PublicOrder) => void;
   /** `GET storefront/orders/unpaid` answers these (a signed-in customer only; at most five), minus any order already cancelled. Default: none. */
   unpaidOrders?: UnpaidOrder[];
