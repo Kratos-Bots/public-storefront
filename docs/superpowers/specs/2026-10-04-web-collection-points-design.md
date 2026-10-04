@@ -80,9 +80,10 @@ sorted, each narrowed by the serviceable-countries setting when that is set:
   collection option that has an active service mapping on an enabled SendCloud
   provider whose keys are set, and whose mapping covers that country.
 
-`collectionCountries` must agree with the existing probe: a country is in the
-list exactly when `getServicePointContext(country)` would answer
-`available: true`. Both read the same conditions; a test pins the agreement.
+`collectionCountries` mirrors the existing probe: within the serviceable
+setting, a country is in the list when `getServicePointContext(country)` would
+answer `available: true` (the probe itself does not apply the serviceable
+setting; the quote does). Unit tests cover each of the probe's conditions.
 
 The public settings response becomes
 `shipping: { countries, collectionCountries }`. The "temporary" comment in the
@@ -150,8 +151,8 @@ Orders placed through the bot to a collection point show it too.
 - `StorefrontSettings.shipping` gains optional `collectionCountries`. Missing
   (older backend) means no collection anywhere.
 - The country picker lists the union of `countries` and `collectionCountries`
-  (through the existing `normaliseShipCountries`). As before, when both are
-  empty or missing every country is listed.
+  when `countries` is not empty. When `countries` is empty or missing the
+  shop's home list is unknown and every country is listed, as before.
 - New `web/src/api/service-points.ts`: `searchServicePoints(country,
   postalCode)` calling `storefront/service-points`, with the `ServicePoint`
   type. A `429` and a `502` are surfaced as distinct errors.
@@ -258,10 +259,14 @@ Backend:
 - Unit: `filterOptionsForPointCarrier`; the quote with each delivery method and
   with and without a carrier; an older client's quote (no new fields) is
   unchanged.
-- Database-backed (PGlite, as the existing integration suites): a web
-  collection order stores the three fields and the point's address; each
-  rejection (option not for the carrier, home option with a point, missing
-  phone); a guest collection order.
+- `runCheckout` and `buildQuote` cannot be driven in a test without a full
+  cart, quote and gateway (the existing `checkout-contact-capture.test.ts`
+  pins its behaviour on the source for the same reason). The decisions a
+  collection order needs (delivery method from the address, incomplete point,
+  missing phone, stored address) therefore live in a pure module with unit
+  tests, and a source-pinning test checks they are wired into the quote and
+  the order for signed-in and guest paths. A real collection order on a real
+  database is a manual check after deploy.
 - Unit: the two order views expose `servicePoint` and never the id.
 - The bot's option loading still behaves as before, through the shared filter.
 
