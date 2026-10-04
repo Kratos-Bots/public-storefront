@@ -714,6 +714,14 @@ The checkout is steps only (there is no single-page mode).
 | `CheckoutNotes` | no | `before` / `after` of any of the five steps | no quote dependency |
 | `CheckoutSummary` | yes | `CheckoutFlow.aside` | no one should place an order without seeing the total; the phone collapse and "open on review" belong to the aside |
 
+The address step leads with the country, because the wording of the fields below it (City, County,
+State, Postal code) depends on it. `settings.shipping.countries` limits the country picker and
+leads the phone prefix list; an empty or missing list means every country is listed, and the quote
+stays the authority on what can actually be delivered. The label wording comes from
+`web/src/features/checkout/address-profiles.ts`, whose keys are ordinary editable Site text under
+`checkout.address.*`. `displayPhoneNumber` in `web/src/lib/dial-codes.ts` is for display only (the
+Review step): the submitted number still carries any trunk zero, and the backend normalises it.
+
 **Order-status parts** (`OrderStatus`; every part is unique):
 
 | Part | Required | Home | Why |
@@ -1171,8 +1179,6 @@ images are **never garbage-collected**: removing an `Image` block leaves the fil
   (see *Containers and parts*).
 - An already-edited v0.7.0 product or catalogue document shows once as changed in the admin's
   publish diff after its first editor load (see *Old documents*).
-- The phone country select in the password forms (and in checkout) is clipped to its fixed width:
-  the shared `PhoneField` CSS predates password sign-in and is unchanged.
 - A Telegram-only customer who forgets their password has no self-service reset:
   staff generate a link for them.
 

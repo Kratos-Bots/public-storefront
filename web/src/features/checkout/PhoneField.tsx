@@ -83,6 +83,7 @@ export function PhoneField({
     .map((c) => all.find((o) => o.iso === c.trim().toUpperCase()))
     .filter((o): o is PrefixOption => Boolean(o))
     .filter((o, i, list) => list.indexOf(o) === i);
+  const rest = all.filter((o) => !wanted.has(o.iso));
   const dial = DIAL_CODES[prefix];
 
   return (
@@ -98,13 +99,12 @@ export function PhoneField({
             value={prefix}
             onChange={(e) => onPrefixChange(e.currentTarget.value)}
             aria-label={t('checkout.phone.codeAriaLabel')}
-            autoComplete="tel-country-code"
           >
             <option value="">{t('checkout.phone.code')}</option>
             {top.length > 0 ? (
               <>
                 <optgroup label={t('auth.code.phone.suggested')}><PrefixOptions options={top} /></optgroup>
-                <optgroup label={t('auth.code.phone.allCountries')}><PrefixOptions options={all.filter((o) => !wanted.has(o.iso))} /></optgroup>
+                {rest.length > 0 ? <optgroup label={t('auth.code.phone.allCountries')}><PrefixOptions options={rest} /></optgroup> : null}
               </>
             ) : (
               <PrefixOptions options={all} />
@@ -120,7 +120,7 @@ export function PhoneField({
           className={classes.phoneInput}
           type="tel"
           inputMode="tel"
-          autoComplete="tel-national"
+          autoComplete="tel"
           value={phone}
           onChange={(e) => onPhoneChange(e.currentTarget.value)}
           aria-label={t('checkout.phone.label')}

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
-import { PhoneField } from '@/features/checkout/PhoneField.tsx';
+import { PhoneField, prefixOptions } from '@/features/checkout/PhoneField.tsx';
 
 afterEach(cleanup);
 
@@ -42,6 +42,11 @@ describe('PhoneField', () => {
     expect(groups).toHaveLength(2);
     expect(Array.from(groups[0]!.querySelectorAll('option')).map((o) => o.value)).toEqual(['IE', 'GB']);
     expect(Array.from(groups[1]!.querySelectorAll('option')).some((o) => o.value === 'GB')).toBe(false);
+  });
+
+  it('renders no empty second group when the suggestions cover every country', () => {
+    mount({ suggested: prefixOptions().map((o) => o.iso) });
+    expect(picker().querySelectorAll('optgroup')).toHaveLength(1);
   });
 
   it('without suggestions the list is flat', () => {
