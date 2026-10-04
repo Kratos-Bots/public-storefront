@@ -100,12 +100,29 @@ export async function installTelegramStub(page: Page): Promise<void> {
   await page.addInitScript(TELEGRAM_STUB);
 }
 
+/** Four methods under the shop's own names, in the admin's list order, as the backend answers them: crypto first, a card gateway, a fee-bearing wallet, an offline bank transfer. Totals match the default quote's amount due. */
+export const FOUR_METHODS: PaymentMethod[] = [
+  { method: 'crypto', displayName: 'Pay with crypto', type: 'crypto', details: null, feeType: 'percent', feeValue: -3, feeRateText: '\u22123%', feeLabel: 'Pay with crypto discount', fee: -1.42, chargeTotal: 46.03,
+    cryptoOptions: [{ coin: 'USDT', network: 'polygon', coinLabel: 'USDT', networkLabel: 'Polygon', feeType: 'percent', feeValue: -3, feeRateText: '\u22123%', feeLabel: 'Pay with crypto discount', fee: -1.42, chargeTotal: 46.03 }] },
+  { method: 'stripe', displayName: 'Pay by card', type: 'gateway', details: null, feeType: null, feeValue: null, feeRateText: '', feeLabel: '', fee: 0, chargeTotal: 47.45 },
+  { method: 'paypal', displayName: 'PayPal balance', type: 'gateway', details: null, feeType: 'percent', feeValue: 2, feeRateText: '+2%', feeLabel: 'PayPal balance fee', fee: 0.95, chargeTotal: 48.4 },
+  { method: 'uk_bank_transfer', displayName: 'Bank transfer (UK)', type: 'offline', details: { 'Account name': 'Example Shop Ltd', 'Sort code': '00-00-00', 'Account number': '00000000' }, feeType: null, feeValue: null, feeRateText: '', feeLabel: '', fee: 0, chargeTotal: 47.45 },
+];
+
 export interface InstallMocksOptions {
   /** Which settings fixture to serve. Ignored when `settings` is given outright. */
   layout?: Layout;
   settings?: StorefrontSettings;
   catalog?: Catalog;
   quote?: Quote;
+  /**
+   * The payment methods, exactly as given and in that order: the quote answers (signed in and guest) and the
+   * order page's `payment-options` all return this list, and the account order's payments gain `methodLabel`
+   * from the matching entry's `displayName`. Omitted (the default): every answer is the fixture's, untouched.
+   */
+  paymentMethods?: PaymentMethod[];
+  /** The order's `payment-method` route answers 422 "That payment method is not available for this order". */
+  refuseMethodSelection?: boolean;
   order?: PublicOrder;
   profile?: Profile;
   /** Seed `sf-session-v1` so the app boots signed in. */
@@ -432,6 +449,13 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
   options.tweakSettings?.(state.settings);
   options.tweakProfile?.(state.profile);
   options.tweakOrderDetail?.(state.orderDetail);
+  if (options.paymentMethods) {
+    state.quote = { ...clone(state.quote), paymentMethods: clone(options.paymentMethods) };
+    for (const p of state.orderDetail.payments) {
+      const named = options.paymentMethods.find((m) => m.method === p.method);
+      if (named) p.methodLabel = named.displayName;
+    }
+  }
   if (options.access) {
     const { denied: _denied, ...asked } = options.access;
     state.settings.access = { ...state.settings.access!, ...asked };
@@ -704,6 +728,10 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
       if (tail === 'payment-method' && method === 'POST') {
         const selection = body(route);
         state.methods.push(selection);
+        if (options.refuseMethodSelection) {
+          await fail(route, 422, 'That payment method is not available for this order');
+          return;
+        }
         const chosen = state.quote.paymentMethods.find((m) => m.method === selection.method);
         if (chosen?.type === 'gateway') {
           // A hosted checkout: the order now has an open gateway payment, as the backend's would.

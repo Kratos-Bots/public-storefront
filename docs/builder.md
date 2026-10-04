@@ -754,6 +754,12 @@ under the payment section: "Cancel order" with an inline confirmation while the 
 cancelled, or a pointer to the shop when money may already be on its way (a bank transfer or a
 submitted crypto transaction id). Its wording is `order.cancel.*`.
 
+**Payment method names.** The names on the order page's method picker, the checkout's Payment and Review
+steps, and the account order's payment list are the shop's own, set in the admin app (Storefront settings
+-> Payments) and sent by the backend with each method; they are not Site text, and the two Site text
+entries "Card" and "Crypto" no longer exist. Only the fee wording around a name is still Site text
+(`order.method.withDiscount`, `order.method.withFee`).
+
 **Account order parts.** The `OrderBalance` part (the account order page's "Balance due") shows the
 balance and, when the order can still be paid, the same payment section as the order page, fed
 through the order's access key, plus the same cancel control (through the signed-in session). Without
