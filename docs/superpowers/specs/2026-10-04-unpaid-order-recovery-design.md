@@ -125,9 +125,10 @@ A pending hosted-gateway or Monzo payment does not block cancelling.
 The function returns `{ allowed: true }` or `{ allowed: false, reason }` with
 `reason` one of `not_pending`, `paid`, `bank_transfer`, `crypto_submitted`.
 
-Routes, both calling one service function that re-checks the rule inside the
-transaction and then `updateOrder(id, { status: 'cancelled', reason:
-'Cancelled by customer' })`:
+Routes, both calling one service function that checks the rule and then calls
+`updateOrder(id, { status: 'cancelled', reason: 'Cancelled by customer' })`.
+`updateOrder` validates the transition itself, so of two requests racing the
+second finds the order no longer pending and is refused:
 
 - `POST /api/v1/public/storefront/orders/:reference/cancel`: session; the
   same ownership rule as the order detail (a non-owner and an unknown
@@ -165,6 +166,13 @@ and emits `payment:updated`. The helper is the existing
 added: the Stripe, PayPal, Revolut, OxaPay, Wise, Paygate and NexaPay webhook
 handlers and crypto verification. Hosted-link gateways and Monzo keep their
 current behaviour. Nothing is reinstated automatically.
+
+Because a cancellation now closes pending payments as `failed` (Design 1), the
+two mechanisms that only looked at pending payments are widened so late money
+is still noticed: the hosted-link reconcile sweeps (Sushipp, Orderify, Peer
+Pay) also poll failed payments of cancelled or refunded orders within their
+existing age window, and the Monzo matcher also considers failed Monzo
+payments of cancelled or refunded orders.
 
 ### 5. Storefront: paying from the account order page
 
