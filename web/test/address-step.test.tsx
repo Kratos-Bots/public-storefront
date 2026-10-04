@@ -118,7 +118,14 @@ describe('AddressStep delivery method', () => {
       </MantineProvider>,
     );
     const a = within(screen.getByTestId('a')); const b = within(screen.getByTestId('b'));
-    // Uncontrolled click changes the DOM-level checked state; a shared name would uncheck the other step's radio.
+    // React restores controlled radios, so the click alone can pass with a shared name: compare the names themselves.
+    const groupOf = (s: typeof a) => [s.getByRole('radio', { name: 'Home address' }), s.getByRole('radio', { name: 'Collection point' })].map((r) => (r as HTMLInputElement).name);
+    const [aHome, aColl] = groupOf(a); const [bHome, bColl] = groupOf(b);
+    expect(aHome).not.toBe('');
+    expect(bHome).not.toBe('');
+    expect(aColl).toBe(aHome);
+    expect(bColl).toBe(bHome);
+    expect(aHome).not.toBe(bHome);
     fireEvent.click(a.getByRole('radio', { name: 'Collection point' }));
     expect((b.getByRole('radio', { name: 'Home address' }) as HTMLInputElement).checked).toBe(true);
   });

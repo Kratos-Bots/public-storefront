@@ -44,7 +44,9 @@ export function usePointSearch(country: string): { state: PointSearchState; sear
       searchServicePoints(country, query, controller.signal).then(
         (found) => {
           if (mine !== seq.current) return;
-          setState(found.available && found.points.length > 0 ? { status: 'results', points: found.points } : { status: 'empty' });
+          // A point the order endpoint would reject (no city, postcode, id or carrier) is never offered.
+          const usable = found.available ? found.points.filter((p) => [p.id, p.carrier, p.city, p.postalCode].every((v) => typeof v === 'string' && v.trim() !== '')) : [];
+          setState(usable.length > 0 ? { status: 'results', points: usable } : { status: 'empty' });
         },
         (err: unknown) => {
           if (mine !== seq.current) return;

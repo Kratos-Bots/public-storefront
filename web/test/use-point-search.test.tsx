@@ -46,6 +46,17 @@ describe('usePointSearch', () => {
     expect(result.current.state).toEqual({ status: 'empty' });
   });
 
+  it('drops points with no city, postcode, id or carrier; none left is empty', async () => {
+    const noCity = { ...point('2'), city: '  ' };
+    searchMock.mockResolvedValueOnce({ available: true, carriers: ['inpost'], points: [point('1'), noCity] });
+    const { result } = renderHook(() => usePointSearch('GB'));
+    await act(async () => { result.current.search('LS1'); });
+    expect(result.current.state).toEqual({ status: 'results', points: [point('1')] });
+    searchMock.mockResolvedValueOnce({ available: true, carriers: ['inpost'], points: [noCity, { ...point('3'), postalCode: '' }, { ...point('4'), carrier: ' ' }, { ...point('5'), id: '' }] });
+    await act(async () => { result.current.search('LS2'); });
+    expect(result.current.state).toEqual({ status: 'empty' });
+  });
+
   it('a 429 is "busy"; any other failure is "failed"', async () => {
     const { result } = renderHook(() => usePointSearch('GB'));
     searchMock.mockRejectedValueOnce(new ApiError(429, 'Too many requests'));

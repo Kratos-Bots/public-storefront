@@ -59,6 +59,10 @@ describe('ReviewStep address slip', () => {
     expect(screen.getByText(/Kirkgate 14/)).toBeTruthy();
     expect(screen.queryByText('1 Home Street')).toBeNull();
   });
+  it('a point with no street shows its name once', () => {
+    review({ ...DEFAULT_FORM, country: 'GB', deliveryMethod: 'collection', servicePoint: { ...point, street: '', houseNumber: '' } });
+    expect(screen.getAllByText('Tesco Express')).toHaveLength(1);
+  });
   it('a home delivery shows the home address even when a point is remembered', () => {
     review({ ...DEFAULT_FORM, country: 'GB', addressLine1: '1 Home Street', city: 'York', zip: 'YO1 1AA', servicePoint: point });
     expect(screen.getByText('1 Home Street')).toBeTruthy();

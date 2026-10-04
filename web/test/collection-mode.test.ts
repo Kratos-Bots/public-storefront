@@ -125,6 +125,11 @@ describe('what a collection form sends', () => {
     });
   });
 
+  it('takes the country from the form, not the carrier payload', () => {
+    const lower = { ...collecting, country: 'GB', servicePoint: point({ country: 'gb' }) };
+    expect(collectionAddress(lower)?.country).toBe('GB');
+  });
+
   it('falls back to the point name when it has no street', () => {
     const noStreet = { ...collecting, servicePoint: point({ street: '', houseNumber: '' }) };
     expect(collectionAddress(noStreet)?.addressLine1).toBe('Tesco Express');

@@ -44,7 +44,7 @@ function PointLines({ point }: { point: ServicePoint }) {
  * already chosen it shows that point and a Change action instead of the search.
  */
 export function PointPicker({ country, value, postcode, error, seedPostcode, onPostcodeChange, onChoose }: PointPickerProps) {
-  const { t, msg } = useText();
+  const { t, tp, msg } = useText();
   const { state, search } = usePointSearch(country);
   // Open when there is nothing chosen yet, or when the shopper asked to change it.
   const [changing, setChanging] = useState(false);
@@ -154,7 +154,7 @@ export function PointPicker({ country, value, postcode, error, seedPostcode, onP
       <div aria-live="polite">
         {state.status === 'idle' ? <p className={fields.hint}>{t('checkout.address.pointPrompt')}</p> : null}
         {state.status === 'searching' ? <p className={fields.hint}>{t('checkout.address.pointSearching')}</p> : null}
-        {state.status === 'results' ? <p className={fields.hint}>{t('checkout.address.pointFound', { count: state.points.length })}</p> : null}
+        {state.status === 'results' ? <p className={fields.hint}>{tp('checkout.address.pointFound', state.points.length)}</p> : null}
         {state.status === 'empty' ? <p className={fields.hint}>{t('checkout.address.pointEmpty')}</p> : null}
         {state.status === 'error' ? (
           <p className={fields.error}>{t(state.kind === 'busy' ? 'checkout.address.pointBusy' : 'checkout.address.pointFailed')}</p>

@@ -80,7 +80,7 @@ export default defineTextArea('checkout', {
   'address.pointChosen': { en: 'Your collection point', max: 60 },
   'address.pointChange': { en: 'Change', max: 30 },
   'address.pointKeep': { en: 'Keep {name}', max: 80 },
-  'address.pointFound': { en: '{count} collection points found', max: 80 },
+  'address.pointFound': { en: { one: '{count} collection point found', other: '{count} collection points found' }, max: 80 },
   'address.pointDistance': { en: '{km} km', max: 30 },
 
   'contact.blurbEmail': { en: 'Order updates and the receipt go to this email.', max: 120 },

@@ -54,7 +54,7 @@ export function ReviewStep({ form, quote, method, combo, order, onEdit, before, 
         <>
           <span>{t('checkout.review.collectFrom')}</span>
           {collect.servicePointName}
-          <span>{collect.addressLine1}</span>
+          {collect.addressLine1 !== collect.servicePointName ? <span>{collect.addressLine1}</span> : null}
           <span>
             {collect.city} {collect.zip}
           </span>

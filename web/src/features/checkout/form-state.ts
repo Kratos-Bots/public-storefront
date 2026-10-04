@@ -63,6 +63,29 @@ export const DEFAULT_FORM: CheckoutForm = {
 
 const STORAGE_KEY = 'sf-checkout-v1';
 
+const POINT_STRINGS = ['id', 'carrier', 'name', 'street', 'houseNumber', 'postalCode', 'city', 'country'] as const;
+const finiteOrNull = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+
+/** A stored pick-up point is only trusted if every text field is a string; rebuilt from exactly the known fields, anything else is dropped. */
+export function sanitiseServicePoint(value: unknown): ServicePoint | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const v = value as Record<string, unknown>;
+  if (!POINT_STRINGS.every((k) => typeof v[k] === 'string')) return null;
+  return {
+    id: v.id as string,
+    carrier: v.carrier as string,
+    name: v.name as string,
+    street: v.street as string,
+    houseNumber: v.houseNumber as string,
+    postalCode: v.postalCode as string,
+    city: v.city as string,
+    country: v.country as string,
+    latitude: finiteOrNull(v.latitude),
+    longitude: finiteOrNull(v.longitude),
+    distance: finiteOrNull(v.distance),
+  };
+}
+
 /**
  * Restore a persisted checkout form, if any. Merged over `DEFAULT_FORM` so a field
  * added in a later version gets a sane default rather than `undefined`. There is no
@@ -75,7 +98,13 @@ export function loadPersistedForm(): CheckoutForm | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as unknown;
     if (!parsed || typeof parsed !== 'object') return null;
-    return { ...DEFAULT_FORM, ...(parsed as Partial<CheckoutForm>) };
+    const merged = { ...DEFAULT_FORM, ...(parsed as Partial<CheckoutForm>) };
+    return {
+      ...merged,
+      deliveryMethod: merged.deliveryMethod === 'collection' ? 'collection' : 'home',
+      servicePoint: sanitiseServicePoint(merged.servicePoint),
+      pointPostcode: typeof merged.pointPostcode === 'string' ? merged.pointPostcode : '',
+    };
   } catch {
     return null;
   }

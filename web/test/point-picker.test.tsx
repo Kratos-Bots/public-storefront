@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
 import { ApiError } from '@/lib/errors.ts';
 import type { ServicePoint } from '@/types/service-points.ts';
@@ -85,6 +85,35 @@ describe('PointPicker', () => {
     mount({ postcode: 'LS1' });
     await search();
     expect(screen.getByText('2 collection points found')).toBeTruthy();
+  });
+
+  it('says "1 collection point found" for a single result', async () => {
+    searchMock.mockResolvedValueOnce({ available: true, carriers: [], points: [point()] });
+    mount({ postcode: 'LS1' });
+    await search();
+    expect(screen.getByText('1 collection point found')).toBeTruthy();
+  });
+
+  it('two pickers on one page use different radio group names', async () => {
+    searchMock.mockResolvedValue({ available: true, carriers: [], points: [point(), point({ id: '2', name: 'News Plus' })] });
+    const props = { country: 'GB', value: null, postcode: 'LS1', onPostcodeChange: vi.fn(), onChoose: vi.fn() };
+    render(
+      <MantineProvider env="test">
+        <div data-testid="a"><PointPicker {...props} /></div>
+        <div data-testid="b"><PointPicker {...props} /></div>
+      </MantineProvider>,
+    );
+    for (const button of screen.getAllByRole('button', { name: 'Search' })) {
+      await act(async () => { fireEvent.click(button); });
+    }
+    const names = (id: string) => within(screen.getByTestId(id)).getAllByRole('radio').map((r) => (r as HTMLInputElement).name);
+    const a = names('a'); const b = names('b');
+    expect(a).toHaveLength(2);
+    expect(new Set(a).size).toBe(1);
+    expect(new Set(b).size).toBe(1);
+    expect(a[0]).not.toBe('');
+    expect(b[0]).not.toBe('');
+    expect(a[0]).not.toBe(b[0]);
   });
 
   it('Keep returns to the summary without choosing anything', () => {

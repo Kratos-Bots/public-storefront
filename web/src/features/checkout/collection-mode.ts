@@ -81,7 +81,7 @@ export function collectionAddress(form: CheckoutForm): ShippingAddressInput | nu
     city: point.city,
     county: null,
     zip: point.postalCode,
-    country: point.country,
+    country: form.country,
     servicePointId: point.id,
     servicePointCarrier: point.carrier,
     servicePointName: point.name,
