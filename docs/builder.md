@@ -749,6 +749,17 @@ ordinary editable Site text under `checkout.address.*`.
 | `OrderStatusAddress` | no | `action`, `summary` | informational |
 | `OrderStatusFooter` | yes | `OrderStatus.bottom` | the only visible order reference and the support contact for this order |
 
+The cancel control (`features/order-status/CancelOrder.tsx`) sits in the `OrderStatusPayment` part,
+under the payment section: "Cancel order" with an inline confirmation while the order can still be
+cancelled, or a pointer to the shop when money may already be on its way (a bank transfer or a
+submitted crypto transaction id). Its wording is `order.cancel.*`.
+
+**Account order parts.** The `OrderBalance` part (the account order page's "Balance due") shows the
+balance and, when the order can still be paid, the same payment section as the order page, fed
+through the order's access key, plus the same cancel control (through the signed-in session). Without
+an access key (order links not configured, or an older backend) it shows the figure alone, as it
+used to.
+
 `CheckoutFlow.steps` accepts only the five step parts (a content block between two steps would
 render inside every step's card); `CheckoutFlow.after` accepts content only. Each step part has
 `before` and `after` slots for content blocks and the optional parts that have a home there. Every
@@ -836,6 +847,22 @@ and `order-status-container.ts` (specs), `builder/blocks/Checkout*.tsx` and `Ord
 (sixteen shells), and the views in `features/checkout/checkout-parts.tsx` and
 `features/order-status/order-status-parts.tsx` (both in their lazy page chunks, so the entry grows
 by shells and specs only). Part keys stay within the `partId` budget (at most 23 characters).
+
+### Unpaid order prompt
+
+"You have an unpaid order" is a dialog, not a block: it lives in `features/unpaid-prompt/` and is
+mounted once by each shell frame (storefront, menu, web app) beside the sign-in dialog, so no page
+document can place, move or remove it. A signed-in customer is asked about their newest payable order
+(`GET storefront/orders/unpaid`); a guest about the order links saved on this device. It offers Complete
+payment (the order page), Cancel order (or the contact line when money may be on its way) and Not now.
+
+It never shows on the checkout, the order and payment pages, `/login`, `/auth/*`, in the page builder,
+or while the sign-in dialog or the cart drawer is open (it may appear once they close). "Not now" lasts
+for the visit: it is remembered for the browser tab's session, so navigating and reloading do not bring
+it back, and a new tab or visit asks again. Signing out forgets the saved order links.
+
+Its wording is `order.prompt.*`, and the cancel confirmation inside it `order.cancel.*`; both are
+site-wide text groups (`text/site-wide.ts`), editable in the Text panel without a block.
 
 ### Placement and rules
 

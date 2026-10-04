@@ -3,7 +3,7 @@ import type { Page, Route } from '@playwright/test';
 import type { Catalog, Product } from '../web/src/types/catalog.ts';
 import type { CheckoutPayment, CheckoutResult, PaymentMethod, Quote } from '../web/src/types/checkout.ts';
 import type { ServerCart, ServerCartLine, CartLineInput } from '../web/src/types/cart.ts';
-import type { OrderDetail, OrderSummary, PageMeta } from '../web/src/types/orders.ts';
+import type { OrderDetail, OrderSummary, PageMeta, UnpaidOrder } from '../web/src/types/orders.ts';
 import type { Profile, RedeemOptions } from '../web/src/types/profile.ts';
 import type { PublicOrder, SelectPaymentResult } from '../web/src/types/public-order.ts';
 import type { ServicePoint } from '../web/src/types/service-points.ts';
@@ -137,6 +137,14 @@ export interface InstallMocksOptions {
   tweakProfile?: (profile: Profile) => void;
   /** Mutate the account order detail (`GET storefront/orders/:ref`) before it is served. */
   tweakOrderDetail?: (detail: OrderDetail) => void;
+  /** The public order is served for this reference and access key instead of E2E1 / KEY1 (its `reference` is rewritten to match). */
+  orderLink?: { reference: string; accessKey: string };
+  /** Mutate the public order (`GET orders/:ref/:key`) before it is served: cancel flags, an active payment. */
+  tweakOrder?: (order: PublicOrder) => void;
+  /** `GET storefront/orders/unpaid` answers these (a signed-in customer only; at most five), minus any order already cancelled. Default: none. */
+  unpaidOrders?: UnpaidOrder[];
+  /** What both cancel routes answer. `'ok'` (default) cancels; a number answers that status with 409 `ORDER_NOT_CANCELLABLE:bank_transfer` (any other status answers a plain error) and marks the order as blocked. */
+  cancelAnswers?: number | 'ok';
   /** What `GET storefront/service-points` answers with a postcode (default: three synthetic GB points). A number answers with that HTTP status instead. */
   servicePoints?: ServicePoint[] | number;
   /** What the checkout routes answer with as `payment` (default: a crypto address). */
@@ -224,6 +232,8 @@ export interface MockState {
   textNull: boolean;
   /** The signed-in customer is refused: the personalised routes answer 403 ACCESS_DENIED and the profile says `shopAccess: false`. Flip it mid-test to grant access. */
   denied: boolean;
+  /** References cancelled through either cancel route, in order. */
+  cancels: string[];
   /** How many times the anonymous catalogue (`catalog`, `catalog/products/:id`) was asked for. */
   anonymousCatalogHits: number;
 }
@@ -413,7 +423,11 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     textNull: options.textNull ?? false,
     denied: options.access?.denied ?? false,
     anonymousCatalogHits: 0,
+    cancels: [],
   };
+  const link = options.orderLink ?? { reference: ORDER_REF, accessKey: ORDER_KEY };
+  if (options.orderLink) state.order = { ...clone(state.order), reference: link.reference };
+  options.tweakOrder?.(state.order);
 
   options.tweakSettings?.(state.settings);
   options.tweakProfile?.(state.profile);
@@ -446,6 +460,41 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
         : { available: true, mode: 'verify', channels: ['whatsapp', 'sms'], countries: codeOptions.countries ?? [] };
     state.settings.login.email = email === 'off' ? { available: false, mode: null } : { available: true, mode: email };
   }
+  /** Both cancel routes: the backend's `{ reference, status: 'cancelled' }`, or 409 `ORDER_NOT_CANCELLABLE:<reason>`. */
+  const answerCancel = async (route: Route, reference: string): Promise<void> => {
+    const known = [state.order.reference, state.orderDetail.reference, ...(options.unpaidOrders ?? []).map((o) => o.reference)];
+    if (!known.includes(reference)) {
+      await fail(route, 404, 'Order not found');
+      return;
+    }
+    const answer = options.cancelAnswers ?? 'ok';
+    if (answer !== 'ok') {
+      if (answer === 409) {
+        // What the refusal means: money may be on its way, so the order says so from now on.
+        if (state.orderDetail.reference === reference) { state.orderDetail.canCancel = false; state.orderDetail.cancelBlockedBy = 'bank_transfer'; }
+        if (state.order.reference === reference && state.order.payment) { state.order.payment.canCancel = false; state.order.payment.cancelBlockedBy = 'bank_transfer'; }
+        await fail(route, 409, 'ORDER_NOT_CANCELLABLE:bank_transfer');
+      } else {
+        await fail(route, answer, 'Something went wrong');
+      }
+      return;
+    }
+    state.cancels.push(reference);
+    if (state.orderDetail.reference === reference) {
+      state.orderDetail.status = 'cancelled';
+      state.orderDetail.outstandingBalance = 0;
+      state.orderDetail.canCancel = false;
+      state.orderDetail.cancelBlockedBy = null;
+    }
+    for (const o of state.orders) if (o.reference === reference) { o.status = 'cancelled'; o.outstandingBalance = 0; }
+    if (state.order.reference === reference) {
+      state.order.status = 'cancelled';
+      state.order.cryptoPayments = [];
+      state.order.payment = { canPay: false, canCancel: false, cancelBlockedBy: null, payBy: null, activePayment: null };
+    }
+    await envelope(route, { reference, status: 'cancelled' });
+  };
+
   const code = { channel: 'whatsapp' as string, masked: '', isNew: true, wrong: 0 };
   state.disabled = !state.settings.enabled;
 
@@ -639,7 +688,7 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     const publicOrder = /^orders\/([^/]+)\/([^/]+)(?:\/(.+))?$/.exec(path);
     if (publicOrder) {
       const [, reference, key, tail] = publicOrder;
-      if (reference !== ORDER_REF || key !== ORDER_KEY) {
+      if (reference !== link.reference || key !== link.accessKey) {
         await fail(route, 404, 'Order not found');
         return;
       }
@@ -655,6 +704,16 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
       if (tail === 'payment-method' && method === 'POST') {
         const selection = body(route);
         state.methods.push(selection);
+        const chosen = state.quote.paymentMethods.find((m) => m.method === selection.method);
+        if (chosen?.type === 'gateway') {
+          // A hosted checkout: the order now has an open gateway payment, as the backend's would.
+          const checkoutUrl = `https://pay.example.invalid/checkout/${state.order.reference}`;
+          if (state.order.payment) {
+            state.order.payment.activePayment = { paymentId: 9003, method: chosen.method, kind: 'gateway', status: 'pending', checkoutUrl, canChange: true };
+          }
+          await envelope(route, { paymentId: 9003, method: chosen.method, kind: 'gateway', status: 'pending', checkoutUrl } satisfies SelectPaymentResult);
+          return;
+        }
         const result: SelectPaymentResult = {
           paymentId: 9002,
           method: String(selection.method ?? 'crypto_static'),
@@ -675,6 +734,10 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
         await envelope(route, result);
         return;
       }
+      if (tail === 'cancel' && method === 'POST') {
+        await answerCancel(route, reference!);
+        return;
+      }
       if (tail === 'crypto-txid' && method === 'POST') {
         const submitted = body(route);
         state.txids.push(submitted);
@@ -687,6 +750,26 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
         await envelope(route, { verificationStatus: 'checking' });
         return;
       }
+    }
+
+    // Declared before `storefront/orders/:ref`, which would read "unpaid" as a reference.
+    if (path === 'storefront/orders/unpaid' && method === 'GET') {
+      if (!route.request().headers()['authorization']) {
+        await fail(route, 401, 'Unauthorized');
+        return;
+      }
+      await envelope(route, (options.unpaidOrders ?? []).filter((o) => !state.cancels.includes(o.reference)).slice(0, 5));
+      return;
+    }
+
+    const ownCancel = /^storefront\/orders\/([^/]+)\/cancel$/.exec(path);
+    if (ownCancel && method === 'POST') {
+      if (!route.request().headers()['authorization']) {
+        await fail(route, 401, 'Unauthorized');
+        return;
+      }
+      await answerCancel(route, decodeURIComponent(ownCancel[1]!));
+      return;
     }
 
     if (path === 'storefront/orders' && method === 'GET') {
