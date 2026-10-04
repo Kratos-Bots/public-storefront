@@ -108,12 +108,13 @@ function BalanceView({ styleAttrs }: PartViewProps) {
   // reference is the initial load, which the account order already agrees with. Invalidating
   // ['order', ref] never touches the public query, so this cannot feed itself.
   const signature = publicOrder.data ? paymentSignature(publicOrder.data) : null;
-  const seen = useRef<{ reference: string; signature: string } | null>(null);
+  // Per reference, so going A, B, A still notices a change to A made while B was showing.
+  const seen = useRef(new Map<string, string>());
   useEffect(() => {
     if (!signature) return;
-    const last = seen.current;
-    seen.current = { reference: data.reference, signature };
-    if (!last || last.reference !== data.reference || last.signature === signature) return;
+    const last = seen.current.get(data.reference);
+    seen.current.set(data.reference, signature);
+    if (last === undefined || last === signature) return;
     void queryClient.invalidateQueries({ queryKey: ['order', data.reference] });
   }, [signature, queryClient, data.reference]);
 
@@ -131,9 +132,9 @@ function BalanceView({ styleAttrs }: PartViewProps) {
   // What PaymentSection would draw: a way to pay, or crypto payments to show.
   const payable = loaded && (loaded.payment?.canPay || visibleCryptoPayments(loaded).length > 0) ? loaded : null;
   const cancelShows = cancelView(data.canCancel, data.cancelBlockedBy);
-  // A balance with no way to pay it online and nothing else saying why.
+  // A balance with no way to pay it online and nothing else saying why (so never beside a payment section).
   const payHelp =
-    !!loaded && loaded.payment?.canPay === false && cancelShows !== 'contact' &&
+    !payable && !!loaded && loaded.payment?.canPay === false && cancelShows !== 'contact' &&
     data.status !== 'cancelled' && data.status !== 'refunded' && loaded.status !== 'cancelled' && loaded.status !== 'refunded';
   // The old bare band when there is nothing under it to show.
   if (!payable && !payHelp && cancelShows === 'none') return <p className={classes.band} {...styleAttrs}>{figures}</p>;
