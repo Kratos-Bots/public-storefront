@@ -46,6 +46,7 @@ export function fromUnpaid(order: UnpaidOrder): PromptOrder {
 /** A guest's saved order, if it can still be paid. */
 export function fromPublic(saved: SavedOrder, order: PublicOrder): PromptOrder | null {
   if (!order.payment?.canPay) return null;
+  // `canPay` implies nothing has been paid yet, so the order total is the amount due.
   return {
     reference: saved.reference, accessKey: saved.accessKey, amount: order.totals.totalAmount,
     payPath: `/order/${encodeURIComponent(saved.reference)}/${encodeURIComponent(saved.accessKey)}`, viaLink: true,

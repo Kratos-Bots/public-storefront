@@ -4,6 +4,7 @@ import { adoptAccountCart } from '@/features/auth/useLoginSuccess.ts';
 import { resetCartSync } from '@/features/cart/useServerCart.ts';
 import { ApiError, errorMessage } from '@/lib/errors.ts';
 import { accessGate } from '@/app/access-gate.ts';
+import { clearSavedOrders } from '@/stores/saved-orders.ts';
 import { textSnapshot } from '@/text/snapshot.ts';
 import { isTelegramWebApp, telegramInitData } from '@/lib/telegram-webapp.ts';
 import { useCartStore } from '@/stores/cart.ts';
@@ -33,6 +34,7 @@ async function adoptServerCart(): Promise<void> {
 /** The same reset as signing out (ProfilePage), so nothing of the previous account survives. */
 export function forgetAccount(): void {
   useSessionStore.getState().clear();
+  clearSavedOrders();
   useCartStore.getState().clear();
   useCartStore.getState().setMode('local');
   resetCartSync();

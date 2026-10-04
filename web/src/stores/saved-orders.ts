@@ -41,6 +41,15 @@ export function saveOrder(reference: string, accessKey: string): void {
   }
 }
 
+/** Forget every saved order link: they belong to whoever was using this device, and a sign-out ends that. */
+export function clearSavedOrders(): void {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // ignore (private mode)
+  }
+}
+
 export function findSavedOrder(reference: string): SavedOrder | null {
   return listSavedOrders().find((o) => o.reference === reference) ?? null;
 }

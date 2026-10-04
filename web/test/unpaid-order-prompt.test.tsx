@@ -11,17 +11,19 @@ vi.mock('@/app/builder-gate.ts', () => ({ isBuilderMode: vi.fn(() => false) }));
 vi.mock('@/app/settings.ts', () => ({ useSettings: () => ({ supportLinks: [{ label: 'Chat', url: 'https://t.me/example_shop' }], currency: 'GBP' }) }));
 
 import { cancelOrder, fetchUnpaidOrders } from '@/api/orders.ts';
-import { fetchPublicOrder, InvalidLinkError } from '@/api/public-order.ts';
+import { cancelPublicOrder, fetchPublicOrder, InvalidLinkError } from '@/api/public-order.ts';
 import { isBuilderMode } from '@/app/builder-gate.ts';
 import { UnpaidOrderPrompt } from '@/features/unpaid-prompt/UnpaidOrderPrompt.tsx';
 import { listSavedOrders } from '@/stores/saved-orders.ts';
 import { useSessionStore } from '@/stores/session.ts';
+import { useUiStore } from '@/stores/ui.ts';
 
 const unpaidMock = vi.mocked(fetchUnpaidOrders);
 const cancelMock = vi.mocked(cancelOrder);
 const publicMock = vi.mocked(fetchPublicOrder);
 const savedMock = vi.mocked(listSavedOrders);
 const builderMock = vi.mocked(isBuilderMode);
+const cancelPublicMock = vi.mocked(cancelPublicOrder);
 
 const unpaid = (reference: string, over: Record<string, unknown> = {}) => ({
   reference, accessKey: `key-${reference}`, createdAt: '2026-10-03T10:00:00Z', totalAmount: 46.03, outstandingBalance: 46.03,
@@ -54,6 +56,8 @@ const settle = () => act(async () => { await new Promise((r) => setTimeout(r, 30
 
 beforeEach(() => {
   sessionStorage.clear();
+  cancelPublicMock.mockReset();
+  useUiStore.setState({ loginOpen: false, cartOpen: false });
   unpaidMock.mockReset(); cancelMock.mockReset(); publicMock.mockReset(); savedMock.mockReset();
   savedMock.mockReturnValue([]);
   builderMock.mockReturnValue(false);
@@ -167,7 +171,87 @@ describe('UnpaidOrderPrompt', () => {
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Yes, cancel it' })); });
     expect(cancelMock).toHaveBeenCalledWith('K4M2QP');
     await waitFor(() => expect(dialog()).toBeNull());
-    expect(spy).toHaveBeenCalledWith({ queryKey: ['orders'] });
+    for (const queryKey of [['orders'], ['order', 'K4M2QP'], ['public-order', 'K4M2QP', 'key-K4M2QP'], ['unpaid-prompt']]) {
+      expect(spy).toHaveBeenCalledWith({ queryKey });
+    }
+  });
+
+  it('guest: cancelling through the order link works and refreshes the guest views', async () => {
+    signOut();
+    savedMock.mockReturnValue([saved('BBBBBB')]);
+    publicMock.mockResolvedValue(publicOrder('BBBBBB', true) as never);
+    cancelPublicMock.mockResolvedValue({ reference: 'BBBBBB', status: 'cancelled' });
+    const client = new QueryClient();
+    const spy = vi.spyOn(client, 'invalidateQueries');
+    mount('/', client);
+    await screen.findByRole('dialog');
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel order' }));
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Yes, cancel it' })); });
+    expect(cancelPublicMock).toHaveBeenCalledWith('BBBBBB', 'key-BBBBBB');
+    expect(cancelMock).not.toHaveBeenCalled();
+    await waitFor(() => expect(dialog()).toBeNull());
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['unpaid-prompt'] });
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['public-order', 'BBBBBB', 'key-BBBBBB'] });
+  });
+
+  it('a guest with nothing saved makes no request at all', async () => {
+    signOut();
+    savedMock.mockReturnValue([]);
+    mount('/');
+    await settle();
+    expect(dialog()).toBeNull();
+    expect(publicMock).not.toHaveBeenCalled();
+    expect(unpaidMock).not.toHaveBeenCalled();
+  });
+
+  it.each(['loginOpen', 'cartOpen'] as const)('does not open over, or stay over, the %s panel; it appears when that closes', async (panel) => {
+    unpaidMock.mockResolvedValue([unpaid('K4M2QP')] as never);
+    useUiStore.setState({ [panel]: true });
+    mount('/');
+    await settle();
+    expect(dialog()).toBeNull();
+    expect(unpaidMock).not.toHaveBeenCalled();
+    act(() => useUiStore.setState({ [panel]: false }));
+    await screen.findByRole('dialog', { name: 'You have an unpaid order' });
+    act(() => useUiStore.setState({ [panel]: true }));
+    await waitFor(() => expect(dialog()).toBeNull());
+  });
+
+  it('a different customer logging in without a reload never sees the previous customer’s list', async () => {
+    unpaidMock.mockImplementation(async () => (useSessionStore.getState().customer?.id === 1 ? [unpaid('ADAORD')] : [unpaid('BOBORD')]) as never);
+    const client = new QueryClient();
+    mount('/', client);
+    await screen.findByText('Order ADAORD is waiting for payment.');
+    act(() => useSessionStore.setState({ token: 'tok2', customer: { id: 2, nickname: 'Bob' } }));
+    await screen.findByText('Order BOBORD is waiting for payment.');
+    expect(screen.queryByText('Order ADAORD is waiting for payment.')).toBeNull();
+  });
+
+  it('Escape with focus on the confirmation itself, or while cancelling, leaves the pop-up open', async () => {
+    unpaidMock.mockResolvedValue([unpaid('K4M2QP')] as never);
+    let release: (v: { reference: string; status: string }) => void = () => {};
+    cancelMock.mockReturnValue(new Promise((r) => { release = r; }));
+    mount('/');
+    await screen.findByRole('dialog');
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel order' }));
+    const panel = screen.getByRole('group');
+    // Real key events at the focused element reach Mantine's window listener, as in a browser.
+    const press = (el: Element) => fireEvent.keyDown(el, { key: 'Escape', bubbles: true });
+    // A click on the confirmation text leaves focus on the (focusable) panel; Escape is then sent to it.
+    act(() => panel.focus());
+    expect(document.activeElement).toBe(panel);
+    press(panel);
+    expect(dialog()).toBeTruthy();
+    expect(screen.queryByText('Cancel order K4M2QP?')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel order' }));
+    const open = screen.getByRole('group');
+    // working: Keep is disabled and focus has moved to the panel
+    fireEvent.click(screen.getByRole('button', { name: 'Yes, cancel it' }));
+    await waitFor(() => expect(document.activeElement).toBe(open));
+    press(document.activeElement!);
+    expect(dialog()).toBeTruthy();
+    expect(screen.getByRole('group')).toBeTruthy();
+    await act(async () => { release({ reference: 'K4M2QP', status: 'cancelled' }); });
   });
 
   it('an order that cannot be cancelled shows the contact line instead of Cancel', async () => {

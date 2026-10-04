@@ -3,6 +3,7 @@ import { Modal } from '@mantine/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router';
 import { Money } from '@/components/Money.tsx';
+import { publicOrderKey } from '@/features/order-status/queries.ts';
 import { CancelOrder } from '@/features/order-status/CancelOrder.tsx';
 import { snooze, useUnpaidOrder } from '@/features/unpaid-prompt/useUnpaidOrder.ts';
 import { useText } from '@/text/runtime.tsx';
@@ -33,7 +34,10 @@ export function UnpaidOrderPrompt() {
   };
   const cancelled = () => {
     setDismissed(true);
+    // The same views the account order page refreshes after a cancel.
     void queryClient.invalidateQueries({ queryKey: ['orders'] });
+    void queryClient.invalidateQueries({ queryKey: ['order', order.reference] });
+    if (order.accessKey) void queryClient.invalidateQueries({ queryKey: publicOrderKey(order.reference, order.accessKey) });
     void queryClient.invalidateQueries({ queryKey: ['unpaid-prompt'] });
   };
 

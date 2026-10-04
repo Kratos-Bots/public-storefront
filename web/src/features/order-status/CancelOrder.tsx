@@ -45,6 +45,7 @@ export function CancelOrder({ reference, accessKey, viaLink, canCancel, blockedB
   const busy = useRef(false);
   const trigger = useRef<HTMLButtonElement>(null);
   const keep = useRef<HTMLButtonElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
   const returnFocus = useRef(false);
 
   useEffect(() => {
@@ -54,6 +55,11 @@ export function CancelOrder({ reference, accessKey, viaLink, canCancel, blockedB
       trigger.current?.focus();
     }
   }, [open]);
+
+  // Keep is disabled while the request runs and drops focus; the panel takes it so Escape still lands inside the confirmation.
+  useEffect(() => {
+    if (working && open) panel.current?.focus();
+  }, [working, open]);
 
   // Without its key there is no way to cancel through a link: a caller bug, so offer nothing.
   const view = viaLink && !accessKey ? 'none' : cancelView(canCancel, blockedBy);
@@ -115,6 +121,9 @@ export function CancelOrder({ reference, accessKey, viaLink, canCancel, blockedB
       ) : null}
       {view === 'button' && open ? (
         <div
+          ref={panel}
+          tabIndex={-1}
+          data-mantine-stop-propagation
           className={classes.cancelPanel}
           role="group"
           aria-labelledby={titleId}

@@ -6,6 +6,7 @@ import { isBuilderMode } from '@/app/builder-gate.ts';
 import { fromPublic, fromUnpaid, guestCandidates, promptAllowedOn, type PromptOrder } from '@/features/unpaid-prompt/rules.ts';
 import { listSavedOrders } from '@/stores/saved-orders.ts';
 import { selectIsLoggedIn, useSessionStore } from '@/stores/session.ts';
+import { useUiStore } from '@/stores/ui.ts';
 
 const SNOOZE_KEY = 'sf-unpaid-prompt-snoozed';
 
@@ -30,13 +31,17 @@ const QUERY = { retry: false, staleTime: 60_000, refetchOnWindowFocus: false } a
 export function useUnpaidOrder(): { order: PromptOrder | null; more: boolean } {
   const { pathname } = useLocation();
   const loggedIn = useSessionStore(selectIsLoggedIn);
-  const active = promptAllowedOn(pathname) && !isBuilderMode() && !isSnoozed();
+  const customerId = useSessionStore((s) => s.customer?.id ?? null);
+  // Never on top of the sign-in dialog or the cart drawer: it may appear once they close.
+  const otherDialogOpen = useUiStore((s) => s.loginOpen || s.cartOpen);
+  const active = promptAllowedOn(pathname) && !isBuilderMode() && !isSnoozed() && !otherDialogOpen;
   // A signed-in customer is only ever asked about their own orders. Saved order links belong to guests: they are
   // consulted only while signed out, so one customer's order is never offered to the next one on the same device.
   const candidates = !loggedIn && active ? guestCandidates(listSavedOrders(), new Date()) : [];
 
   const signedIn = useQuery({
-    queryKey: ['orders', 'unpaid'],
+    // Keyed by customer: a different login without a reload never reads the previous one's list.
+    queryKey: ['orders', 'unpaid', customerId],
     queryFn: fetchUnpaidOrders,
     enabled: active && loggedIn,
     ...QUERY,
