@@ -143,9 +143,9 @@ export class OrderNotCancellableError extends Error {
 
 const CANCEL_REASONS = ['not_pending', 'paid', 'bank_transfer', 'crypto_submitted'] as const;
 
-/** Maps the backend's `409 ORDER_NOT_CANCELLABLE:<reason>`; anything else is rethrown. */
+/** Maps the backend's `409 ORDER_NOT_CANCELLABLE:<reason>`; anything else (including any other 409) is rethrown. */
 export function asCancelError(err: unknown): never {
-  if (err instanceof ApiError && err.status === 409) {
+  if (err instanceof ApiError && err.status === 409 && err.message.startsWith('ORDER_NOT_CANCELLABLE')) {
     const reason = err.message.split(':')[1];
     throw new OrderNotCancellableError(CANCEL_REASONS.find((r) => r === reason) ?? 'not_pending');
   }

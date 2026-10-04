@@ -209,4 +209,11 @@ describe('cancelPublicOrder', () => {
     mockFetch(404, { success: false, data: null, error: 'nope' });
     await expect(cancelPublicOrder('AB12CD', 'bad')).rejects.toBeInstanceOf(InvalidLinkError);
   });
+
+  it('rethrows a 409 that is not an ORDER_NOT_CANCELLABLE refusal', async () => {
+    mockFetch(409, { success: false, data: null, error: 'Something else conflicted' });
+    const err = await cancelPublicOrder('AB12CD', 'key9').catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect((err as ApiError).status).toBe(409);
+  });
 });

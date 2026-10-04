@@ -56,25 +56,10 @@ export function CancelOrder({ reference, accessKey, viaLink, canCancel, blockedB
     }
   }, [open]);
 
-  const view = cancelView(canCancel, blockedBy);
-  if (view === 'none') return null;
-
-  if (view === 'contact') {
-    return (
-      <div className={classes.cancelBox} data-sf-part="cancel" {...rootAttrs}>
-        <p className={classes.cancelText}>{t('order.cancel.contact')}</p>
-        {supportLinks.length > 0 ? (
-          <ul className={classes.cancelLinks}>
-            {supportLinks.map((link) => (
-              <li key={link.url}>
-                <a className={classes.cancelLink} href={link.url} target="_blank" rel="noopener noreferrer">{link.label}</a>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-      </div>
-    );
-  }
+  // Without its key there is no way to cancel through a link: a caller bug, so offer nothing.
+  const view = viaLink && !accessKey ? 'none' : cancelView(canCancel, blockedBy);
+  // A refusal or failure outlives the props that change under it (the refetch after a refusal usually hides the control).
+  if (view === 'none' && !message) return null;
 
   const close = () => {
     returnFocus.current = true;
@@ -95,7 +80,10 @@ export function CancelOrder({ reference, accessKey, viaLink, canCancel, blockedB
       onCancelled?.();
     } catch (err) {
       if (err instanceof OrderNotCancellableError) {
-        setMessage(REFUSAL[err.reason]);
+        const refusal = REFUSAL[err.reason];
+        setMessage(refusal);
+        // Also a notification: it survives the control unmounting (the pop-up closes itself after a refusal).
+        notifications.show({ message: t(refusal) });
         close();
         onCancelled?.();
       } else {
@@ -109,7 +97,21 @@ export function CancelOrder({ reference, accessKey, viaLink, canCancel, blockedB
 
   return (
     <div className={classes.cancelBox} data-sf-part="cancel" {...rootAttrs}>
-      {!done ? (
+      {view === 'contact' ? (
+        <>
+          <p className={classes.cancelText}>{t('order.cancel.contact')}</p>
+          {supportLinks.length > 0 ? (
+            <ul className={classes.cancelLinks}>
+              {supportLinks.map((link) => (
+                <li key={link.url}>
+                  <a className={classes.cancelLink} href={link.url} target="_blank" rel="noopener noreferrer">{link.label}</a>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </>
+      ) : null}
+      {view === 'button' && !done ? (
         <button
           ref={trigger}
           type="button"
@@ -120,8 +122,13 @@ export function CancelOrder({ reference, accessKey, viaLink, canCancel, blockedB
           {t('order.cancel.action')}
         </button>
       ) : null}
-      {open ? (
-        <div className={classes.cancelPanel} role="group" aria-labelledby={titleId}>
+      {view === 'button' && open ? (
+        <div
+          className={classes.cancelPanel}
+          role="group"
+          aria-labelledby={titleId}
+          onKeyDown={(e) => { if (e.key === 'Escape' && !working) close(); }}
+        >
           <p id={titleId} className={classes.cancelTitle}>{t('order.cancel.confirmTitle', { reference })}</p>
           <p className={classes.cancelText}>{t('order.cancel.confirmBody')}</p>
           <div className={classes.cancelButtons}>

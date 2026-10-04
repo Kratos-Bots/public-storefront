@@ -105,4 +105,48 @@ describe('CancelOrder', () => {
     // MantineProvider injects <style> tags into the container; the control itself must add no element.
     expect(container.querySelectorAll(':not(style)')).toHaveLength(0);
   });
+
+  const wrap = (props: Parameters<typeof CancelOrder>[0]) => (
+    <MantineProvider env="test"><QueryClientProvider client={new QueryClient()}><CancelOrder {...props} /></QueryClientProvider></MantineProvider>
+  );
+
+  it.each([
+    ['not_pending', { canCancel: false, blockedBy: null }, 'This order is no longer waiting for payment.'],
+    ['paid', { canCancel: false, blockedBy: 'paid' }, 'This order has already been paid, so it can no longer be cancelled here.'],
+  ] as const)('a %s refusal stays on screen after the refreshed order hides the control', async (reason, after, text) => {
+    cancelMock.mockRejectedValueOnce(new OrderNotCancellableError(reason));
+    const base = { reference: 'K4M2QP', canCancel: true, blockedBy: null } as const;
+    const { rerender } = render(wrap(base));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel order' }));
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Yes, cancel it' })); });
+    rerender(wrap({ reference: 'K4M2QP', ...after }));
+    expect(screen.getByText(text)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Cancel order' })).toBeNull();
+  });
+
+  it('a bank_transfer refusal stays alongside the contact line and support link', async () => {
+    cancelMock.mockRejectedValueOnce(new OrderNotCancellableError('bank_transfer'));
+    const { rerender } = render(wrap({ reference: 'K4M2QP', canCancel: true, blockedBy: null }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel order' }));
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Yes, cancel it' })); });
+    rerender(wrap({ reference: 'K4M2QP', canCancel: false, blockedBy: 'bank_transfer' }));
+    expect(screen.getByText('A payment may already be on its way, so this order cannot be cancelled here. Contact us and we will help.')).toBeTruthy();
+    expect(screen.getByText('To cancel this order, contact us: a payment may already be on its way.')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Chat' })).toBeTruthy();
+  });
+
+  it('renders nothing when viaLink is set without an access key', () => {
+    const { container } = render(wrap({ reference: 'K4M2QP', viaLink: true, canCancel: true, blockedBy: null }));
+    expect(container.querySelectorAll(':not(style)')).toHaveLength(0);
+  });
+
+  it('Escape closes the confirmation like Keep and returns focus to the Cancel button', () => {
+    mount();
+    const trigger = screen.getByRole('button', { name: 'Cancel order' });
+    fireEvent.click(trigger);
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Keep the order' }), { key: 'Escape' });
+    expect(screen.queryByText('Cancel order K4M2QP?')).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Cancel order' }));
+    expect(cancelMock).not.toHaveBeenCalled();
+  });
 });
