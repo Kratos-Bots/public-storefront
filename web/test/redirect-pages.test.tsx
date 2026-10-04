@@ -109,17 +109,41 @@ describe('PaymentSuccessPage', () => {
     expect(screen.getByText('order page REF1')).toBeInTheDocument();
   });
 
-  it('redirects on the first render when the session was already in storage, so the sign-in link is never drawn', () => {
-    signOut();
+  it('redirects on the first commit when the session was already in storage, so the sign-in link is never drawn', async () => {
+    // A fresh module graph, so the session store hydrates from storage the way it does on a full page load from the processor.
     localStorage.setItem('sf-session-v1', JSON.stringify({ state: { token: 't', customer: { id: 1, nickname: null } }, version: 0 }));
-    void useSessionStore.persist.rehydrate();
-    const seen: boolean[] = [];
-    const observer = new MutationObserver(() => seen.push(screen.queryByRole('link', { name: 'Sign in to view your order' }) !== null));
-    observer.observe(document.body, { childList: true, subtree: true });
-    mountSuccess('/payment/success?order=REF1');
-    observer.disconnect();
-    expect(screen.getByText('order page REF1')).toBeInTheDocument();
-    expect(seen.some(Boolean)).toBe(false);
+    vi.resetModules();
+    const [react, rtl, mantine, router, query, { PaymentSuccessPage: FreshPage }] = await Promise.all([
+      import('react'),
+      import('@testing-library/react'),
+      import('@mantine/core'),
+      import('react-router'),
+      import('@tanstack/react-query'),
+      import('@/features/payment-redirect/PaymentSuccessPage.tsx'),
+    ]);
+    const { createElement: h, useLayoutEffect } = react;
+    const snapshots: boolean[] = [];
+    const Probe = () => {
+      useLayoutEffect(() => {
+        snapshots.push(rtl.screen.queryByRole('link', { name: 'Sign in to view your order' }) !== null);
+      });
+      return null;
+    };
+    const Stub = () => h('p', null, `order page ${router.useParams().ref}`);
+    rtl.render(
+      h(query.QueryClientProvider, { client: new query.QueryClient() },
+        h(mantine.MantineProvider, { env: 'test' },
+          h(router.MemoryRouter, { initialEntries: ['/payment/success?order=REF1'] },
+            h(Probe),
+            h(router.Routes, null,
+              h(router.Route, { path: '/payment/success', element: h(FreshPage) }),
+              h(router.Route, { path: '/account/orders/:ref', element: h(Stub) }))))),
+    );
+    expect(snapshots.length).toBeGreaterThan(0);
+    expect(snapshots.every((seen) => !seen)).toBe(true);
+    expect(rtl.screen.getByText('order page REF1')).toBeInTheDocument();
+    expect(rtl.screen.queryByRole('link', { name: 'Sign in to view your order' })).toBeNull();
+    rtl.cleanup();
   });
 
   it('renders a "thanks, being confirmed" screen with the copyable reference when signed out', () => {
