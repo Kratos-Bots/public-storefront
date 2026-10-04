@@ -5,7 +5,6 @@ import { logout } from '@/api/auth.ts';
 vi.mock('@/features/cart/useServerCart.ts', () => ({ resetCartSync: vi.fn() }));
 
 import { signOutAndReload } from '@/features/auth/sign-out.ts';
-import { guestCandidates } from '@/features/unpaid-prompt/rules.ts';
 import { clearSavedOrders, listSavedOrders, saveOrder } from '@/stores/saved-orders.ts';
 import { useSessionStore } from '@/stores/session.ts';
 
@@ -18,10 +17,10 @@ describe('signing out forgets the saved order links', () => {
   it('the storage key is gone and nothing is offered to the next visitor', async () => {
     useSessionStore.setState({ token: 'tok', customer: { id: 1, nickname: 'Ada' } });
     saveOrder('K4M2QP', 'abc');
-    expect(guestCandidates(listSavedOrders(), new Date())).toHaveLength(1);
+    expect(listSavedOrders()).toHaveLength(1);
     await signOutAndReload();
     expect(localStorage.getItem('sf-orders-v1')).toBeNull();
-    expect(guestCandidates(listSavedOrders(), new Date())).toEqual([]);
+    expect(listSavedOrders()).toEqual([]);
     expect(useSessionStore.getState().token).toBeNull();
   });
 

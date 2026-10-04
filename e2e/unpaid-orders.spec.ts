@@ -178,14 +178,14 @@ test.describe('unpaid orders · the order link', () => {
 });
 
 test.describe('unpaid orders · the pop-up', () => {
-  test('6 · a signed-in customer is asked on the home page, and Complete payment opens the order', async ({ page }) => {
+  test('6 · a signed-in customer is asked on the home page, and Review or cancel order opens the order', async ({ page }) => {
     await open(page, { unpaidOrders: [unpaidRow()] });
     const dialog = prompt(page);
     await expect(dialog).toBeVisible();
     await expect(dialog.getByText(`Order ${REF} is waiting for payment.`)).toBeVisible();
     await expect(dialog.getByText('Amount due')).toBeVisible();
     await expect(dialog.getByText('46.03')).toBeVisible();
-    await dialog.getByRole('button', { name: 'Complete payment' }).click();
+    await dialog.getByRole('button', { name: 'Review or cancel order' }).click();
     await expect(page).toHaveURL(new RegExp(`/account/orders/${REF}$`));
     await expect(page.getByRole('heading', { name: REF })).toBeVisible();
     await expect(dialog).toHaveCount(0);
@@ -259,7 +259,7 @@ test.describe('unpaid orders · the pop-up', () => {
     expect(mocks.state.cancels).toEqual([REF]);
   });
 
-  test('11 · inside Telegram the pop-up appears and Complete payment works', async ({ page }) => {
+  test('11 · inside Telegram the pop-up appears and Review or cancel order works', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.clock.setFixedTime(FIXED_NOW);
     await installTelegramStub(page);
@@ -270,7 +270,7 @@ test.describe('unpaid orders · the pop-up', () => {
     await expect(page.locator('[data-sf-layout="webapp"]')).toBeVisible();
     const dialog = prompt(page);
     await expect(dialog).toBeVisible();
-    await dialog.getByRole('button', { name: 'Complete payment' }).click();
+    await dialog.getByRole('button', { name: 'Review or cancel order' }).click();
     await expect(page).toHaveURL(new RegExp(`/account/orders/${REF}$`));
     await expect(page.getByRole('heading', { name: REF })).toBeVisible();
   });

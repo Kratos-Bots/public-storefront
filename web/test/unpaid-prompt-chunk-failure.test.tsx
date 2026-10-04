@@ -4,8 +4,7 @@ import { MantineProvider } from '@mantine/core';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router';
 
-vi.mock('@/api/orders.ts', () => ({ fetchUnpaidOrders: vi.fn(), cancelOrder: vi.fn() }));
-vi.mock('@/stores/saved-orders.ts', () => ({ listSavedOrders: vi.fn(() => []), removeSavedOrder: vi.fn() }));
+vi.mock('@/api/orders.ts', async (orig) => ({ ...(await orig<typeof import('@/api/orders.ts')>()), fetchUnpaidOrders: vi.fn() }));
 vi.mock('@/app/builder-gate.ts', () => ({ isBuilderMode: vi.fn(() => false) }));
 vi.mock('@/app/preview-listener.ts', () => ({ isPreviewMode: vi.fn(() => false) }));
 vi.mock('@/app/settings.ts', () => ({ useSettings: () => ({ currency: 'GBP' }) }));
@@ -13,9 +12,11 @@ vi.mock('@/features/unpaid-prompt/UnpaidOrderDialog.tsx', () => { throw new Erro
 
 import { fetchUnpaidOrders } from '@/api/orders.ts';
 import { UnpaidOrderPrompt } from '@/features/unpaid-prompt/UnpaidOrderPrompt.tsx';
+import { resetDismissalForTests } from '@/features/unpaid-prompt/useUnpaidOrder.ts';
 import { useSessionStore } from '@/stores/session.ts';
 
 beforeEach(() => {
+  resetDismissalForTests();
   sessionStorage.clear();
   useSessionStore.setState({ token: 'tok', customer: { id: 1, nickname: 'Ada' } });
 });

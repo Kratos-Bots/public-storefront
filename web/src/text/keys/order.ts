@@ -89,7 +89,7 @@ export default defineTextArea('order', {
   'prompt.title': { en: 'You have an unpaid order', max: 80 },
   'prompt.body': { en: 'Order {reference} is waiting for payment.', max: 160 },
   'prompt.amount': { en: 'Amount due', max: 40 },
-  'prompt.pay': { en: 'Complete payment', max: 40 },
+  'prompt.review': { en: 'Review or cancel order', max: 40 },
   'prompt.later': { en: 'Not now', max: 40 },
   'prompt.more': { en: 'You have other unpaid orders too. See all orders', max: 120 },
 
