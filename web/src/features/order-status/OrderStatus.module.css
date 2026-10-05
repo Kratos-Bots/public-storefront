@@ -54,6 +54,17 @@
   margin-top: -0.65rem;
 }
 
+/* The method leads the line, in the text colour; what follows it is the quiet reassurance. */
+.faceMethod {
+  font-weight: 600;
+  color: var(--sf-text);
+}
+
+.faceAside::before {
+  content: '\00b7';
+  margin: 0 0.4em;
+}
+
 .faceHead + .steps,
 .faceTitle + .picker {
   margin-top: 0.1rem;

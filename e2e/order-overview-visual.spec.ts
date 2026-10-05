@@ -58,16 +58,16 @@ async function expectNoOverflow(page: Page): Promise<void> {
   expect(o.scroll, 'horizontal overflow').toBeLessThanOrEqual(o.inner);
 }
 
-interface Setup { template: string; preset: string; layout: Layout; width: number; fixture: OrderFixtureName }
+interface Setup { template: string; preset: string; layout: Layout; width: number; fixture: OrderFixtureName; browser?: boolean }
 
-async function setup(page: Page, s: Setup, unpaidOrders?: UnpaidOrder[], tweak?: (d: OrderDetail) => void): Promise<void> {
+async function setup(page: Page, s: Setup, unpaidOrders?: UnpaidOrder[], tweak?: (d: OrderDetail) => void) {
   await page.setViewportSize({ width: s.width, height: s.width < 768 ? 844 : 900 });
   await page.clock.setFixedTime(FIXED_NOW);
   await page.emulateMedia({ reducedMotion: 'reduce' });
   // The Mini App frame only renders inside Telegram, so the webapp layout gets the same stub the other specs use.
-  if (s.layout === 'webapp') await installTelegramStub(page);
+  if (s.layout === 'webapp' && !s.browser) await installTelegramStub(page);
   const tweakSettings = await presetTheme(page, s.template, s.preset);
-  await installMocks(page, {
+  return installMocks(page, {
     layout: s.layout, session: true, orderFixture: s.fixture, orderReference: REF, tweakSettings, paymentMethods: METHODS,
     // Long names, so wrapping is exercised. The total is the 47.45 base plus whatever the state's method adds: nothing
     // while none is chosen, the card's fee for the hosted checkout, the crypto discount for crypto and for the paid states.
@@ -115,6 +115,27 @@ for (const t of TEMPLATES) {
 
     // Keyboard focus lands on the pop-up's primary button after one Tab (the dialog opens on its sentence): one ring,
     // no heavier than the template's other focus rings.
+    // The web app layout in a plain browser: Back beside the primary action in the in-page bar.
+    test('webapp 390 bottom bar', async ({ page }) => {
+      const mocks = await setup(page, { ...t, layout: 'webapp', width: 390, fixture: 'unpaid', browser: true });
+      mocks.state.cart = {
+        items: [{
+          productId: 101, name: 'Alpine Extract 10ml', quantity: 1, unitPrice: 42.5, lineTotal: 42.5, imageUrl: null, isPreorder: false,
+          outOfStock: false, priceChanged: false, inactive: false, belowMin: false, aboveMax: false, minOrderQuantity: null, maxOrderQuantity: null,
+        }],
+        subtotal: 42.5, itemCount: 1,
+      };
+      await page.goto('/cart');
+      const bar = page.locator('[data-sf-part="primary-bar"]');
+      await expect(bar.getByRole('button', { name: 'Back' })).toBeVisible();
+      await expect(bar.getByRole('button', { name: /^Checkout · / })).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+      await expectNoOverflow(page);
+      await page.screenshot({
+        path: `${SHOTS}${t.template}/${t.template}-webapp-390-bottom-bar.png`, animations: 'disabled', caret: 'hide',
+      });
+    });
+
     test('storefront 390 popup focus', async ({ page }) => {
       await setup(page, { ...t, layout: 'storefront', width: 390, fixture: 'unpaid' }, [unpaidRow()]);
       await page.goto('/');

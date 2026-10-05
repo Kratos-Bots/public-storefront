@@ -171,6 +171,8 @@ test.describe('inside Telegram', () => {
     const popups: string[] = [];
     page.on('popup', (p) => popups.push(p.url()));
     await openInTelegram(page, { orderFixture: 'hosted', orderReference: 'K4M2QP' }, '/account/orders/K4M2QP');
+    await expect(page.getByText('Paying with Card payment')).toBeVisible();
+    await expect(page.getByText('Secure hosted checkout')).toBeVisible();
     const pay = page.getByRole('link', { name: 'Click here to Pay' });
     await expect(pay).toHaveAttribute('href', 'https://pay.example.invalid/checkout/K4M2QP');
     await pay.click();

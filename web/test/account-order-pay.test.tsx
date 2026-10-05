@@ -127,6 +127,89 @@ describe('account order: pay and cancel', () => {
     });
   });
 
+  describe('the hosted face names the method the customer chose', () => {
+    const attempt = (method: string, methodLabel: string | undefined, status: string, createdAt: string) =>
+      ({ method, methodLabel, amount: 46.03, status, createdAt });
+    const hostedWith = (method: string, paymentId = 9) => publicOrder({
+      canPay: true, payBy: null,
+      activePayment: { paymentId, method, kind: 'gateway', status: 'pending', checkoutUrl: 'https://pay.example/abc', canChange: true },
+    });
+    const line = () => screen.getByText(/^Paying with /).closest('p')!;
+
+    it('says "Paying with" and the shops own name for the pending payment, keeping the reassurance', async () => {
+      h.order = { ...base, canCancel: true, cancelBlockedBy: null, payments: [attempt('stripe', 'Card (Stripe)', 'pending', '2026-01-02T10:01:00Z')] };
+      paymentMock.mockResolvedValue(hostedWith('stripe'));
+      mount();
+      expect((await screen.findByText('Paying with Card (Stripe)')).textContent).toBe('Paying with Card (Stripe)');
+      expect(line().textContent).toContain('Secure hosted checkout');
+    });
+
+    it('uses the newest pending payment of that method, not an older or failed one', async () => {
+      h.order = {
+        ...base, canCancel: true, cancelBlockedBy: null,
+        payments: [
+          attempt('stripe', 'Old card name', 'failed', '2026-01-02T10:05:00Z'),
+          attempt('stripe', 'Card (Stripe)', 'pending', '2026-01-02T10:03:00Z'),
+          attempt('stripe', 'Older card name', 'pending', '2026-01-02T10:01:00Z'),
+          attempt('other', 'Bank transfer', 'pending', '2026-01-02T10:09:00Z'),
+        ],
+      };
+      paymentMock.mockResolvedValue(hostedWith('stripe'));
+      mount();
+      await screen.findByText('Paying with Card (Stripe)');
+    });
+
+    it('without a label it reads the method id as words, like the payment history does', async () => {
+      h.order = { ...base, canCancel: true, cancelBlockedBy: null, payments: [attempt('card_gateway', undefined, 'pending', '2026-01-02T10:01:00Z')] };
+      paymentMock.mockResolvedValue(hostedWith('card_gateway'));
+      mount();
+      await screen.findByText('Paying with Card Gateway');
+    });
+
+    it('with no matching payment on the order it falls back to the readable method id', async () => {
+      h.order = { ...base, canCancel: true, cancelBlockedBy: null, payments: [] };
+      paymentMock.mockResolvedValue(hostedWith('stripe'));
+      mount();
+      await screen.findByText('Paying with Stripe');
+    });
+
+    it('follows the new active payment after the method is changed', async () => {
+      h.order = {
+        ...base, canCancel: true, cancelBlockedBy: null,
+        payments: [
+          attempt('stripe', 'Card (Stripe)', 'pending', '2026-01-02T10:01:00Z'),
+          attempt('sushipp', 'Pay by card', 'pending', '2026-01-02T10:05:00Z'),
+        ],
+      };
+      paymentMock.mockResolvedValue(hostedWith('stripe'));
+      mount();
+      await screen.findByText('Paying with Card (Stripe)');
+      paymentMock.mockResolvedValue(hostedWith('sushipp', 10));
+      await poll();
+      await screen.findByText('Paying with Pay by card');
+      expect(screen.queryByText('Paying with Card (Stripe)')).toBeNull();
+    });
+
+    it('with nothing to name, the old reassurance shows alone', async () => {
+      h.order = { ...base, canCancel: true, cancelBlockedBy: null, payments: [] };
+      paymentMock.mockResolvedValue(hostedWith(''));
+      mount();
+      expect(await screen.findByText('Secure hosted checkout')).toBeTruthy();
+      expect(screen.queryByText(/^Paying with/)).toBeNull();
+    });
+
+    it('a method arranged with the shop gets the line too', async () => {
+      h.order = { ...base, canCancel: true, cancelBlockedBy: null, payments: [attempt('bank_transfer', 'Bank transfer', 'pending', '2026-01-02T10:01:00Z')] };
+      paymentMock.mockResolvedValue(publicOrder({
+        canPay: true, payBy: null,
+        activePayment: { paymentId: 11, method: 'bank_transfer', kind: 'other', status: 'pending', checkoutUrl: null, canChange: true },
+      }));
+      mount();
+      await screen.findByText('Paying with Bank transfer');
+      expect(screen.queryByText('Secure hosted checkout')).toBeNull();
+    });
+  });
+
   it('offers Cancel order on an unpaid order, and refreshes both queries after cancelling', async () => {
     h.order = { ...base, canCancel: true, cancelBlockedBy: null };
     paymentMock.mockResolvedValue(publicOrder({ canPay: true, canCancel: true, payBy: null, activePayment: null }));

@@ -13,6 +13,8 @@ import classes from '@/features/order-status/OrderStatus.module.css';
 export interface PaymentSectionProps {
   order: PublicOrder;
   reference: string;
+  /** The shop's name for the method being paid with now; the faces say "Paying with" it when they have one. */
+  methodName?: string;
 }
 
 /**
@@ -21,7 +23,7 @@ export interface PaymentSectionProps {
  * wears — choose a method, finish a hosted checkout, send crypto, or wait on us — is the backend's call:
  * `payment.canPay` and `payment.activePayment` say what state the order is in, and this only renders it.
  */
-export function PaymentSection({ order, reference }: PaymentSectionProps) {
+export function PaymentSection({ order, reference, methodName }: PaymentSectionProps) {
   const payment = order.payment;
   const crypto = visibleCryptoPayments(order);
   // While the change panel is open the current payment's card is hidden: showing
@@ -84,7 +86,14 @@ export function PaymentSection({ order, reference }: PaymentSectionProps) {
       {payment.canPay && hostedUsable && !changing ? (
         <section className={classes.face} aria-label={t('order.payment.ariaLabel')}>
           <h3 className={classes.faceTitle} tabIndex={-1} data-face-title>{t('order.payment.finishTitle')}</h3>
-          <p className={classes.faceLead}>{t('order.payment.hostedLead')}</p>
+          {methodName ? (
+            <p className={classes.faceLead}>
+              <span className={classes.faceMethod}>{t('order.payment.payingWith', { method: methodName })}</span>
+              <span className={classes.faceAside}>{t('order.payment.hostedLead')}</span>
+            </p>
+          ) : (
+            <p className={classes.faceLead}>{t('order.payment.hostedLead')}</p>
+          )}
           <a
             className={classes.cta}
             href={active.checkoutUrl!}
@@ -110,6 +119,7 @@ export function PaymentSection({ order, reference }: PaymentSectionProps) {
       {payment.canPay && active?.kind === 'other' && !changing ? (
         <section className={classes.face} aria-label={t('order.payment.ariaLabel')}>
           <h3 className={classes.faceTitle} tabIndex={-1} data-face-title>{t('order.payment.pendingTitle')}</h3>
+          {methodName ? <p className={classes.faceLead}><span className={classes.faceMethod}>{t('order.payment.payingWith', { method: methodName })}</span></p> : null}
           <p className={classes.faceNote}>{t('order.payment.pendingNote')}</p>
         </section>
       ) : null}
