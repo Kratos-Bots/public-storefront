@@ -339,7 +339,39 @@ describe('details', () => {
     h.order = { ...base, outstandingBalance: 0, status: 'confirmed', payments: ['pending', 'completed', 'failed', 'cancelled', 'expired', 'refunded', 'odd_state'].map(payment) };
     mount();
     const card = await screen.findByRole('region', { name: 'Payments' });
-    for (const word of ['Waiting', 'Paid', 'Failed', 'Cancelled', 'Expired', 'Refunded', 'odd_state']) expect(within(card).getByText(word)).toBeTruthy();
+    for (const word of ['Waiting', 'Paid', 'Cancelled', 'Expired', 'Refunded', 'odd_state']) expect(within(card).getByText(word)).toBeTruthy();
+    expect(within(card).queryByText('Failed')).toBeNull();
+  });
+
+  describe('failed payments are left out of the history', () => {
+    const pay = (method: string, status: string, i: number) => ({ method, amount: 5, status, createdAt: `2026-01-0${i + 2}T10:00:00Z` });
+    const rows = (card: HTMLElement) => card.querySelectorAll('li');
+
+    it('shows only the pending row when two earlier attempts failed', async () => {
+      h.order = { ...base, outstandingBalance: 0, status: 'confirmed', payments: [pay('stripe', 'failed', 0), pay('crypto', 'failed', 1), pay('bank', 'pending', 2)] };
+      mount();
+      const card = await screen.findByRole('region', { name: 'Payments' });
+      expect(rows(card)).toHaveLength(1);
+      expect(within(card).getByText('Waiting')).toBeTruthy();
+      expect(screen.queryByText(/Failed/)).toBeNull();
+    });
+
+    it('draws no Payments card when every payment failed, and with nothing else to show the page is one column', async () => {
+      h.order = { ...base, outstandingBalance: 0, status: 'confirmed', shippingAddress: null, shipments: [], payments: [pay('stripe', 'failed', 0), pay('crypto', 'failed', 1)] };
+      mount();
+      await screen.findByRole('heading', { level: 1, name: 'K4M2QP' });
+      expect(screen.queryByRole('region', { name: 'Payments' })).toBeNull();
+      expect(overview().dataset.columns).toBe('one');
+    });
+
+    it('shows only the completed row when an earlier attempt failed', async () => {
+      h.order = { ...base, outstandingBalance: 0, status: 'confirmed', payments: [pay('stripe', 'failed', 0), pay('crypto', 'completed', 1)] };
+      mount();
+      const card = await screen.findByRole('region', { name: 'Payments' });
+      expect(rows(card)).toHaveLength(1);
+      expect(within(card).getByText('Paid')).toBeTruthy();
+      expect(within(card).queryByText('Failed')).toBeNull();
+    });
   });
 
   it('parcels are a card with the track link', async () => {

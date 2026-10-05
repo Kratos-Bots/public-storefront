@@ -24,13 +24,21 @@ export function isOwed(order: Pick<OrderDetail, 'status' | 'outstandingBalance'>
   return order.outstandingBalance > 0 && !closed;
 }
 
+/**
+ * The payments the order page lists. Each switch of payment method leaves the previous attempt behind as a failed
+ * row, which would stack up in the history, so those are left out; the backend and the admin still keep them.
+ */
+export function shownPayments<T extends { status: string }>(payments: readonly T[]): T[] {
+  return payments.filter((p) => p.status !== 'failed');
+}
+
 /** Which order parts draw nothing for this order. */
 export function silentParts(order: OrderDetail): Set<string> {
   const silent = new Set<string>();
   if (!isOwed(order)) silent.add('OrderBalance');
   if (!order.shippingAddress) silent.add('OrderAddress');
   if (order.shipments.length === 0) silent.add('OrderParcels');
-  if (order.payments.length === 0) silent.add('OrderPayments');
+  if (shownPayments(order.payments).length === 0) silent.add('OrderPayments');
   return silent;
 }
 
