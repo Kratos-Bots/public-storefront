@@ -32,9 +32,12 @@ import type { OrderShipment } from '@/types/orders.ts';
 import type { ShipmentStatus } from '@/types/public-order.ts';
 import classes from '@/features/account/OrderDetail.module.css';
 
-/** A gateway name is a machine word — give it back its spaces and let the type case it. */
+/** What a payment is called when the shop sent no name for it: the gateway's id read as words, never a raw slug. */
 function methodLabel(method: string): string {
-  return method.replace(/[_-]+/g, ' ');
+  return method
+    .replace(/[_-]+/g, ' ')
+    .trim()
+    .replace(/(^|\s)\p{L}/gu, (c) => c.toUpperCase());
 }
 
 function paymentTone(status: string): Tone {
@@ -81,6 +84,14 @@ function BackLinkView({ styleAttrs }: PartViewProps) {
 function HeadingView({ styleAttrs }: PartViewProps) {
   const { t } = useText();
   const { order: data } = OrderFamily.useData();
+  // A closed order says so in words, and whether any money moved: the status pill alone does not.
+  const moved = data.payments.some((p) => p.status === 'completed' || p.status === 'refunded');
+  const closedNote =
+    data.status === 'refunded'
+      ? t('account.order.refundedNote')
+      : data.status === 'cancelled'
+        ? `${t('account.order.cancelledNote')}${moved ? '' : ` ${t('account.order.nothingCharged')}`}`
+        : null;
   return (
     <header className={classes.heading} {...styleAttrs}>
       <div className={classes.titleRow}>
@@ -89,6 +100,7 @@ function HeadingView({ styleAttrs }: PartViewProps) {
       </div>
       <p className={classes.meta}>{t('account.order.placed', { date: formatDate(data.createdAt) })}</p>
       {data.servicePoint ? <p className={classes.meta}>{t('account.order.collectFrom', { name: data.servicePoint.name })}</p> : null}
+      {closedNote ? <p className={classes.meta}>{closedNote}</p> : null}
     </header>
   );
 }
@@ -130,7 +142,8 @@ function BalanceView({ styleAttrs }: PartViewProps) {
   const read: PaymentRead = previewed
     ? { data: previewed, isError: false, isFetching: false, refetch: () => undefined }
     : { data: query.data, isError: query.isError, isFetching: query.isFetching, refetch: query.refetch };
-  return <OrderPaymentCard order={data} payment={read} styleAttrs={styleAttrs} />;
+  // Keyed on the reference: the card remembers that its last read failed, which belongs to one order only.
+  return <OrderPaymentCard key={data.reference} order={data} payment={read} styleAttrs={styleAttrs} />;
 }
 
 function ItemsView({ styleAttrs }: PartViewProps) {
@@ -143,7 +156,7 @@ function ItemsView({ styleAttrs }: PartViewProps) {
     <section className={classes.card} aria-label={t('account.order.items')} data-sf-part="card" {...styleAttrs}>
       <div className={classes.cardHead}>
         <h2 className={classes.cardTitle}>{t('account.order.items')}</h2>
-        <span className={classes.cardNote}>{tp('account.order.lines', data.items.length)}</span>
+        {data.items.length > 1 ? <span className={classes.cardNote}>{tp('account.order.lines', data.items.length)}</span> : null}
       </div>
       <ul className={classes.lines}>
         {data.items.map((item, i) => {
@@ -199,7 +212,11 @@ function ItemsView({ styleAttrs }: PartViewProps) {
   );
 }
 
-/** Where the order is going. For a collection order the point leads, and the address under it is the point's. */
+/**
+ * Where the order is going. A collection order leads with the point (its name and carrier, then its address),
+ * and the customer's own name comes last, said to be who collects. A closed order is not going anywhere, so its
+ * card carries a neutral title.
+ */
 function AddressView({ styleAttrs }: PartViewProps) {
   const { t } = useText();
   const { order: data } = OrderFamily.useData();
@@ -207,28 +224,33 @@ function AddressView({ styleAttrs }: PartViewProps) {
   if (!a) return null;
   const point = a.servicePoint ?? null;
   const cityLine = [[a.city, a.county].filter((s) => s?.trim()).join(', '), a.zip].filter((s) => s?.trim()).join(' ');
+  const person = `${a.firstName ?? ''} ${a.surname ?? ''}`.trim();
   const lines = [
-    `${a.firstName ?? ''} ${a.surname ?? ''}`.trim(),
+    ...(point ? [] : [person]),
     a.addressLine1, a.addressLine2, a.addressLine3,
     cityLine,
     countryName(a.country ?? ''),
   ].filter((line): line is string => !!line && line.trim() !== '');
-  const titleKey = point ? 'account.order.address.collection' : 'account.order.address.delivery';
+  const closed = data.status === 'cancelled' || data.status === 'refunded';
+  const titleKey = closed ? 'account.order.address.neutral' : point ? 'account.order.address.collection' : 'account.order.address.delivery';
   return (
     <section className={classes.card} aria-label={t(titleKey)} data-sf-part="card" {...styleAttrs}>
       <div className={classes.cardHead}>
         <h2 className={classes.cardTitle}>{t(titleKey)}</h2>
       </div>
-      {point ? (
-        <p className={classes.point}>
-          <span className={classes.pointName}>{point.name}</span>
-          <span className={classes.pointCarrier}>{t('account.order.address.viaCarrier', { carrier: point.carrier })}</span>
-        </p>
-      ) : null}
       <address className={classes.address}>
+        {point ? (
+          <>
+            <span className={classes.pointName} data-address-line>{point.name}</span>
+            <span className={classes.pointCarrier} data-address-line>{t('account.order.address.viaCarrier', { carrier: point.carrier })}</span>
+          </>
+        ) : null}
         {lines.map((line, i) => (
-          <span key={`${i}-${line}`} className={classes.addressLine} data-address-line>{line}</span>
+          <span key={`${i}-${line}`} className={point && i === 0 ? `${classes.addressLine} ${classes.pointGap}` : classes.addressLine} data-address-line>{line}</span>
         ))}
+        {point && person ? (
+          <span className={`${classes.addressLine} ${classes.collecting}`} data-address-line>{t('account.order.address.collecting', { name: person })}</span>
+        ) : null}
       </address>
     </section>
   );
@@ -275,7 +297,7 @@ function ParcelsView({ styleAttrs }: PartViewProps) {
         {data.shipments.map((shipment, i) => (
           <li key={`${shipment.trackingNumber ?? 'parcel'}-${i}`} className={classes.event}>
             <span className={classes.eventName}>{shipment.carrier ?? t('account.order.parcelFallback')}</span>
-            <span className={classes.eventWhen}>
+            <span className={`${classes.eventWhen} ${classes.eventRef}`}>
               {shipment.trackingNumber ??
                 (shipment.shippedAt ? formatDate(shipment.shippedAt) : t('account.order.awaitingDispatch'))}
             </span>
@@ -371,18 +393,21 @@ export function OrderDetailPage({ slots, ctx = STANDALONE }: { slots?: { content
   // The renderer emits a slot's blocks as bare children, and one grid cannot stack two columns
   // independently (rows couple their heights), so the page sorts the items into its areas itself.
   const base: BlockRenderContext = { editing: ctx.editing, docKey: ctx.docKey, layout: ctx.layout };
-  const areas = partitionOrderItems(content.items);
-  const two = sideDraws(areas.side, silentParts(detail));
+  const silent = silentParts(detail);
+  const areas = partitionOrderItems(content.items, silent);
+  const two = sideDraws(areas.side, silent);
   const draw = (items: typeof areas.main) => items.map((item) => renderComponent(item, base));
   return (
     <OrderFamily.Provider value={value}>
-      <div className={classes.overview} data-columns={two ? 'two' : 'one'}>
-        <div className={classes.head}>{draw(areas.head)}</div>
-        <div className={classes.main}>
-          {draw(areas.main)}
-          {two ? null : draw(areas.side)}
+      <div className={classes.page}>
+        <div className={classes.overview} data-columns={two ? 'two' : 'one'}>
+          <div className={classes.head}>{draw(areas.head)}</div>
+          <div className={classes.main}>
+            {draw(areas.main)}
+            {two ? null : draw(areas.side)}
+          </div>
+          {two ? <div className={classes.side}>{draw(areas.side)}</div> : null}
         </div>
-        {two ? <div className={classes.side}>{draw(areas.side)}</div> : null}
       </div>
     </OrderFamily.Provider>
   );

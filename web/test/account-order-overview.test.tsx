@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -118,7 +118,7 @@ describe('payment needed', () => {
     mount();
     const card = await screen.findByRole('region', { name: 'Payment needed' });
     expect(card.getAttribute('data-sf-part')).toBe('card');
-    expect(await within(card).findByText(/Choose how to pay/)).toBeTruthy();
+    expect(await within(card).findByText(/Choose how you.d like to pay/)).toBeTruthy();
     expect(card.querySelector('h2 + p')!.textContent).toContain('£46.03');
     expect(within(card).getByRole('button', { name: 'Cancel order' })).toBeTruthy();
     // The card is the first thing in the main column, above the items.
@@ -134,7 +134,7 @@ describe('payment needed', () => {
     expect(within(card).getByText('Loading payment options…')).toBeTruthy();
     expect(card.querySelector('[aria-busy="true"]')).toBeTruthy();
     expect(within(card).getByRole('button', { name: 'Cancel order' })).toBeTruthy();
-    expect(within(card).queryByText(/Choose how to pay/)).toBeNull();
+    expect(within(card).queryByText(/Choose how you.d like to pay/)).toBeNull();
   });
 
   it('when the payment state fails to load it says so, Try again refetches, and Cancel order is still offered', async () => {
@@ -146,7 +146,7 @@ describe('payment needed', () => {
     expect(alert.textContent).toContain("We couldn't load the payment options.");
     expect(screen.getByRole('button', { name: 'Cancel order' })).toBeTruthy();
     fireEvent.click(within(alert).getByRole('button', { name: 'Try again' }));
-    expect(await screen.findByText(/Choose how to pay/)).toBeTruthy();
+    expect(await screen.findByText(/Choose how you.d like to pay/)).toBeTruthy();
     expect(paymentMock).toHaveBeenCalledTimes(2);
   });
 
@@ -160,8 +160,7 @@ describe('payment needed', () => {
     const retry = within(alert).getByRole('button', { name: 'Try again' });
     retry.focus();
     fireEvent.click(retry);
-    await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
-    expect(paymentMock).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(paymentMock).toHaveBeenCalledTimes(2));
     expect(screen.getByRole('alert')).toBe(alert);
     const busy = within(alert).getByRole('button');
     expect(busy.getAttribute('aria-disabled')).toBe('true');
@@ -170,7 +169,7 @@ describe('payment needed', () => {
     fireEvent.click(busy);
     expect(paymentMock).toHaveBeenCalledTimes(2);
     await act(async () => { settle(publicOrder({ canPay: true, payBy: null, activePayment: null })); });
-    expect(await screen.findByText(/Choose how to pay/)).toBeTruthy();
+    expect(await screen.findByText(/Choose how you.d like to pay/)).toBeTruthy();
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
@@ -179,7 +178,7 @@ describe('payment needed', () => {
     paymentMock.mockResolvedValue(publicOrder({ canPay: true, payBy: null, activePayment: null }));
     const first = mount();
     const card = await screen.findByRole('region', { name: 'Payment needed' });
-    await within(card).findByText(/Choose how to pay/);
+    await within(card).findByText(/Choose how you.d like to pay/);
     expect(within(card).queryByText('Payment required')).toBeNull();
     expect(card.querySelectorAll('[data-sf-part="card"]')).toHaveLength(0); // no card inside the card
     first.unmount();
@@ -371,46 +370,184 @@ describe('stored arrangements', () => {
   });
 });
 
-describe('PaymentSection eyebrows', () => {
+describe('PaymentSection faces', () => {
   const crypto = (verificationStatus: string, txidMasked: string | null) => ({
     paymentId: 5, paymentStatus: 'pending', coin: 'usdt', network: 'polygon', coinLabel: 'USDT', networkLabel: 'Polygon', address: '0xabc',
     coinAmount: '1', fiatAmount: 1, verificationStatus, needsAttention: false, txidMasked,
   });
   const cryptoActive = { paymentId: 5, method: 'crypto', kind: 'crypto' as const, status: 'pending', checkoutUrl: null, canChange: true };
-  const section = (embedded: boolean | undefined, order: PublicOrder) =>
+  const section = (order: PublicOrder) =>
     render(
       <QueryClientProvider client={client}>
-        <MantineProvider env="test"><MemoryRouter><PaymentSection order={order} reference="K4M2QP" embedded={embedded} /></MemoryRouter></MantineProvider>
+        <MantineProvider env="test"><MemoryRouter><PaymentSection order={order} reference="K4M2QP" /></MemoryRouter></MantineProvider>
       </QueryClientProvider>,
     );
 
-  it('without embedded the eyebrows and cards are drawn as before', async () => {
-    section(undefined, publicOrder({ canPay: true, payBy: null, activePayment: null }));
-    expect(await screen.findByText('Payment required')).toBeTruthy();
-    expect(document.querySelector('[data-sf-part="card"]')).toBeTruthy();
+  it('draws no eyebrow and no card of its own: the payment card around it says what is needed', async () => {
+    section(publicOrder({ canPay: true, payBy: null, activePayment: null }));
+    expect(await screen.findByText(/Choose how you.d like to pay/)).toBeTruthy();
+    expect(screen.queryByText('Payment required')).toBeNull();
+    expect(document.querySelector('[data-sf-part="card"]')).toBeNull();
     expect(document.querySelector('[data-embedded]')).toBeNull();
   });
 
-  it('embedded leaves out the awaiting crypto eyebrow, but keeps the crypto label in the checking state', async () => {
-    const awaiting = { ...publicOrder({ canPay: true, payBy: null, activePayment: cryptoActive }), cryptoPayments: [crypto('pending', null)] };
-    const first = section(true, awaiting);
-    await screen.findByRole('region', { name: 'Crypto payment' });
-    expect(screen.queryByText('Payment required')).toBeNull();
-    expect(screen.queryByText('Crypto payment')).toBeNull();
-    expect(document.querySelector('[data-embedded]')).toBeTruthy();
-    first.unmount();
-    section(true, { ...awaiting, cryptoPayments: [crypto('checking', '1a2b3c…d4e5f6')] });
-    await screen.findByRole('region', { name: 'Crypto payment' });
-    expect(screen.getByText('Crypto payment')).toBeTruthy();
+  it('an awaiting crypto face is three numbered steps, states the coin amount once and carries no status pill', async () => {
+    const awaiting = { ...publicOrder({ canPay: true, payBy: null, activePayment: cryptoActive }), cryptoPayments: [{ ...crypto('pending', null), coinAmount: '46.030000' }] };
+    section(awaiting);
+    const face = await screen.findByRole('region', { name: 'Crypto payment' });
+    expect(within(face).getByRole('heading', { name: 'Pay with USDT' })).toBeTruthy();
+    expect(within(face).getAllByText(/46\.03/)).toHaveLength(1);
+    expect(within(face).queryByText('Awaiting payment')).toBeNull();
+    expect(face.querySelector('[data-sf-part="badge"]')).toBeNull();
+    expect(within(face).getByText('Amount to send')).toBeTruthy();
+    expect(within(face).getByText('Transaction ID')).toBeTruthy();
+    expect(['1', '2', '3'].map((n) => within(face).getByText(n, { selector: 'span[aria-hidden]' }).textContent)).toEqual(['1', '2', '3']);
   });
 
-  it('embedded leaves out the pending eyebrow of an offline payment', async () => {
-    const pending = publicOrder({ canPay: true, payBy: null, activePayment: { paymentId: 7, method: 'bank', kind: 'other', status: 'pending', checkoutUrl: null, canChange: false } });
-    const first = section(undefined, pending);
-    expect(await screen.findByText('Payment pending')).toBeTruthy();
-    first.unmount();
-    section(true, pending);
-    await screen.findByRole('heading', { level: 2 });
+  it('keeps a status pill once the transaction is being checked', async () => {
+    const awaiting = { ...publicOrder({ canPay: true, payBy: null, activePayment: cryptoActive }), cryptoPayments: [crypto('checking', '1a2b3c…d4e5f6')] };
+    section(awaiting);
+    const face = await screen.findByRole('region', { name: 'Crypto payment' });
+    expect(within(face).getByText('Verifying', { selector: '[data-sf-part="badge"]' })).toBeTruthy();
+  });
+
+  it('a hosted checkout face says it is secure without repeating the amount', async () => {
+    section(publicOrder({
+      canPay: true, payBy: null,
+      activePayment: { paymentId: 9, method: 'stripe', kind: 'gateway', status: 'pending', checkoutUrl: 'https://pay.example/abc', canChange: false },
+    }));
+    expect(await screen.findByText('Secure hosted checkout')).toBeTruthy();
+    expect(screen.queryByText(/£/)).toBeNull();
+    expect(screen.queryByText('Awaiting payment')).toBeNull();
+  });
+
+  it('the pay-by notice is plain sentence case with only the date in bold', async () => {
+    section(publicOrder({ canPay: true, payBy: '2026-08-26T09:05:00.000Z', activePayment: null }));
+    const notice = (await screen.findByText(/After that the order is cancelled automatically/)).closest('p')!;
+    expect(notice.textContent).toMatch(/^Pay by .+\. After that the order is cancelled automatically\.$/);
+    expect(notice.querySelectorAll('strong')).toHaveLength(1);
+  });
+
+  it('a pending offline payment draws no eyebrow', async () => {
+    section(publicOrder({ canPay: true, payBy: null, activePayment: { paymentId: 7, method: 'bank', kind: 'other', status: 'pending', checkoutUrl: null, canChange: false } }));
+    expect(await screen.findByRole('heading', { level: 3 })).toBeTruthy();
     expect(screen.queryByText('Payment pending')).toBeNull();
+  });
+});
+
+describe('the visual pass', () => {
+  it('only an order page gets the wide account column', async () => {
+    h.order = { ...base, outstandingBalance: 0, status: 'confirmed' };
+    const first = at('/account/orders/K4M2QP', <AccountLayout><OrderDetailPage /></AccountLayout>);
+    await screen.findByRole('heading', { level: 1, name: 'K4M2QP' });
+    expect(document.querySelector('[class*="accountOrder"]')).toBeTruthy();
+    first.unmount();
+    at('/account/orders', <AccountLayout><p>the list</p></AccountLayout>);
+    await screen.findByRole('navigation', { name: 'Account sections' });
+    expect(document.querySelector('[class*="accountOrder"]')).toBeNull();
+  });
+
+  it('a cancelled order says so, and says nothing was charged only when no money moved', async () => {
+    h.order = { ...base, outstandingBalance: 0, status: 'cancelled', shippingAddress: address };
+    const first = mount();
+    const header = (await screen.findByRole('heading', { level: 1, name: 'K4M2QP' })).closest('header')!;
+    expect(header.textContent).toContain('This order was cancelled. Nothing was charged.');
+    expect(screen.getByRole('region', { name: 'Address' })).toBeTruthy();
+    expect(screen.queryByRole('region', { name: 'Delivery address' })).toBeNull();
+    first.unmount();
+    h.order = { ...base, outstandingBalance: 0, status: 'cancelled', payments: [{ method: 'stripe', amount: 46.03, status: 'completed', createdAt: '2026-01-02T10:00:00Z' }] };
+    mount();
+    const again = (await screen.findByRole('heading', { level: 1, name: 'K4M2QP' })).closest('header')!;
+    expect(again.textContent).toContain('This order was cancelled.');
+    expect(again.textContent).not.toContain('Nothing was charged');
+  });
+
+  it('a refunded order says it was refunded', async () => {
+    h.order = { ...base, outstandingBalance: 0, status: 'refunded' };
+    mount();
+    expect((await screen.findByRole('heading', { level: 1, name: 'K4M2QP' })).closest('header')!.textContent).toContain('This order was refunded.');
+  });
+
+  it('a collection address leads with the point, then its address, then who is collecting; no card inside the card', async () => {
+    h.order = { ...base, outstandingBalance: 0, status: 'confirmed', shippingAddress: { ...address, servicePoint: { name: 'Corner Shop', carrier: 'DPD' } } };
+    mount();
+    const card = await screen.findByRole('region', { name: 'Collect from' });
+    const lines = [...card.querySelectorAll('[data-address-line]')].map((l) => l.textContent);
+    expect(lines).toEqual(['Corner Shop', 'Via DPD', '1 Mill Lane', 'Leeds LS1 1AA', 'United Kingdom', 'Collecting: Ada Byron']);
+    expect(card.querySelectorAll('[data-sf-part="card"]')).toHaveLength(0);
+  });
+
+  it('the line count is shown for two lines or more, not for one', async () => {
+    const item = (name: string) => ({ name, quantity: 1, unitPrice: 5, lineTotal: 5 });
+    h.order = { ...base, outstandingBalance: 0, status: 'confirmed', items: [item('One')] };
+    const first = mount();
+    const card = await screen.findByRole('region', { name: 'Items' });
+    expect(within(card).queryByText(/line/)).toBeNull();
+    first.unmount();
+    h.order = { ...base, outstandingBalance: 0, status: 'confirmed', items: [item('One'), item('Two')] };
+    mount();
+    expect(within(await screen.findByRole('region', { name: 'Items' })).getByText('2 lines')).toBeTruthy();
+  });
+
+  it('a payment the shop gave no name for is title-cased, never a raw slug', async () => {
+    h.order = { ...base, outstandingBalance: 0, status: 'confirmed', payments: [{ method: 'crypto_static', amount: 5, status: 'completed', createdAt: '2026-01-02T10:00:00Z' }] };
+    mount();
+    const card = await screen.findByRole('region', { name: 'Payments' });
+    expect(within(card).getByText('Crypto Static')).toBeTruthy();
+    expect(within(card).queryByText('crypto static')).toBeNull();
+  });
+
+  it('with no payment card, parcels sit in the main column under the items; with one, they stay beside the address', async () => {
+    const shipments = [{ status: 'shipped', carrier: 'Royal Mail', trackingNumber: 'RM1', trackingUrl: null, trackingStatusDescription: null, shippedAt: null, deliveredAt: null }];
+    h.order = { ...base, outstandingBalance: 0, status: 'shipped', shippingAddress: address, shipments };
+    const first = mount();
+    const parcels = await screen.findByRole('region', { name: 'Parcels' });
+    const [, main, side] = [...overview().children] as HTMLElement[];
+    expect(main!.contains(parcels)).toBe(true);
+    expect(side!.contains(screen.getByRole('region', { name: 'Delivery address' }))).toBe(true);
+    first.unmount();
+    h.order = { ...base, status: 'pending', canCancel: true, cancelBlockedBy: null, shippingAddress: address, shipments };
+    paymentMock.mockResolvedValue(publicOrder({ canPay: true, payBy: null, activePayment: null }));
+    mount();
+    const beside = await screen.findByRole('region', { name: 'Parcels' });
+    const [, , side2] = [...overview().children] as HTMLElement[];
+    expect(side2!.contains(beside)).toBe(true);
+  });
+
+  it('each way to pay is one whole-width button with what it costs; the first is the filled one', async () => {
+    h.order = { ...base, canCancel: true, cancelBlockedBy: null };
+    paymentMock.mockResolvedValue(publicOrder({ canPay: true, payBy: null, activePayment: null }));
+    optionsMock.mockResolvedValue([
+      { ...method, displayName: 'Pay by card', fee: 1.42, feeRateText: '+3%', chargeTotal: 47.45 },
+      { ...method, method: 'crypto', type: 'crypto', displayName: 'Pay with crypto', fee: -1.42, feeRateText: '−3%', chargeTotal: 44.61 },
+    ]);
+    mount();
+    const card = await screen.findByRole('region', { name: 'Payment needed' });
+    const buttons = await within(card).findAllByRole('button', { name: /^Pay/ });
+    expect(buttons.map((b) => b.getAttribute('data-variant'))).toEqual(['filled', 'default']);
+    expect(buttons[0]!.textContent).toBe('Pay by cardIncludes a £1.42 fee£47.45');
+    expect(buttons[1]!.textContent).toBe('Pay with crypto3% discount£44.61');
+  });
+
+  it('the payment card forgets a failed read when another order is shown', async () => {
+    h.order = { ...base, canCancel: true, cancelBlockedBy: null };
+    paymentMock.mockRejectedValue(new ApiError(500, 'boom'));
+    // A new element each time, or React skips the re-render that shows the other order.
+    const tree = () => (
+      <QueryClientProvider client={client}>
+        <MantineProvider env="test">
+          <MemoryRouter initialEntries={['/account/orders/K4M2QP']}>
+            <Routes><Route path="/account/*" element={<OrderDetailPage />} /></Routes>
+          </MemoryRouter>
+        </MantineProvider>
+      </QueryClientProvider>
+    );
+    const view = render(tree());
+    expect(await screen.findByText("We couldn't load the payment options.")).toBeTruthy();
+    paymentMock.mockReturnValue(new Promise(() => undefined));
+    h.order = { ...base, reference: 'B2B2B2', canCancel: true, cancelBlockedBy: null };
+    view.rerender(tree());
+    await screen.findByRole('region', { name: 'Payment needed' });
+    expect(screen.queryByText("We couldn't load the payment options.")).toBeNull();
   });
 });

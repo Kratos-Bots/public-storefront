@@ -106,7 +106,7 @@ export function AccountLayout({ children, slots, docKey = 'account.orders' }: { 
 
   return (
     <AccountFamily.Provider value={value}>
-      <div className={classes.account}>
+      <div className={isOrderDetailPath(location.pathname) ? `${classes.account} ${classes.accountOrder}` : classes.account}>
         {head()}
         <div key={location.pathname} className={FADE}>
           {children ?? <Outlet />}

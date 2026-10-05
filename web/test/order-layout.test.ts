@@ -16,6 +16,20 @@ describe('order page areas', () => {
     expect(areas.side).toHaveLength(1);
     expect(areas.main).toHaveLength(2);
   });
+  it('parcels join the items in the main column when the payment card is silent, and stay in the side when it is not', () => {
+    const items = [b('OrderHeading'), b('OrderBalance'), b('OrderItems'), b('OrderAddress'), b('OrderParcels'), b('OrderPayments')];
+    const paid = partitionOrderItems(items, silentParts(order));
+    expect(paid.main.map((i) => i.type)).toEqual(['OrderBalance', 'OrderItems', 'OrderParcels']);
+    expect(paid.side.map((i) => i.type)).toEqual(['OrderAddress', 'OrderPayments']);
+    const owed = partitionOrderItems(items, silentParts({ ...(order as object), outstandingBalance: 5, status: 'pending' } as never));
+    expect(owed.main.map((i) => i.type)).toEqual(['OrderBalance', 'OrderItems']);
+    expect(owed.side.map((i) => i.type)).toEqual(['OrderAddress', 'OrderParcels', 'OrderPayments']);
+  });
+  it('a block holding only parcels follows them into the main column', () => {
+    const items = [b('Section', { content: [b('OrderParcels')] })];
+    expect(partitionOrderItems(items).side).toHaveLength(1);
+    expect(partitionOrderItems(items, silentParts(order)).main).toHaveLength(1);
+  });
   it('a stored arrangement that dropped the parcels part opens no empty side column', () => {
     expect(sideDraws([b('OrderAddress'), b('OrderPayments')], silentParts(order))).toBe(false);
     expect(sideDraws([b('OrderAddress')], silentParts({ ...(order as object), shippingAddress: {} } as never))).toBe(true);

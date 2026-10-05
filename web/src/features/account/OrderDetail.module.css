@@ -1,7 +1,7 @@
 /* One order, read on its own: a header, the payment card while money is owed, then cards for the
    items, the address, the parcels and the payment history. Mobile is a single column in that
-   order, so paying comes first; from 62em the payment card and the items sit in a main column and
-   the address, parcels and history in a side one.
+   order, so paying comes first; with room for it the payment card and the items sit in a main column
+   and the address, parcels and history in a side one (parcels join the items when nothing is owed).
 
    Every colour, radius, border, shadow and typeface is a `--sf-*` token, and the cards are
    `data-sf-part="card"`, so each template's own look applies without a rule here knowing about it.
@@ -32,10 +32,18 @@
   gap: 0.25rem;
 }
 
-@media (min-width: 62em) {
+/* Two columns are decided by the room the page has, not by the window: the menu and Mini App shells
+   keep their narrow rails on a wide screen, and a wide window must not squeeze two columns into them.
+   The page is a size container for that. */
+.page {
+  container-type: inline-size;
+  min-width: 0;
+}
+
+@container (min-width: 52rem) {
   .overview[data-columns='two'] {
     display: grid;
-    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1.6fr) minmax(20rem, 1fr);
     column-gap: 1.5rem;
     row-gap: 1rem;
     align-items: start;
@@ -44,6 +52,13 @@
   .overview[data-columns='two'] > .head {
     grid-column: 1 / -1;
   }
+}
+
+/* Status chips on this page are read by people who are not looking for them: no smaller than 12px. */
+.overview [data-sf-part='badge'] {
+  padding: 0.2rem 0.6rem;
+  font-size: calc(12px * var(--sf-text-scale, 1));
+  letter-spacing: 0.08em;
 }
 
 /* -------------------------------------------------------------------- header */
@@ -138,7 +153,7 @@
 }
 
 .cardNote {
-  font-size: calc(0.8125rem * var(--sf-text-scale, 1));
+  font-size: calc(0.875rem * var(--sf-text-scale, 1));
   color: var(--sf-block-fg, var(--sf-muted));
   white-space: nowrap;
 }
@@ -157,13 +172,17 @@
 
 /* ------------------------------------------------------------ payment needed */
 
-/* The bar is in the flow and bleeds to the card's edge, so the card's own border, radius and
-   shadow (whatever the template makes of them) stay untouched and nothing is clipped. */
+/* The bar is in the flow and bleeds to the card's padding edge; the card clips it to its own radius,
+   so a template with rounded cards gets a bar with rounded top corners, and the border, radius and
+   shadow stay the template's. */
+.payCard {
+  overflow: hidden;
+}
+
 .accent {
   display: block;
   height: 4px;
-  margin: calc(-1rem - 1px) calc(-1rem - 1px) 0.9rem;
-  border-radius: var(--sf-card-radius) var(--sf-card-radius) 0 0;
+  margin: -1rem -1rem 0.9rem;
   background: var(--sf-primary);
 }
 
@@ -199,17 +218,6 @@
   gap: 0.9rem;
   margin-top: 1rem;
   min-width: 0;
-}
-
-/* The payment section is rendered `embedded`: its faces carry `data-embedded` instead of
-   `data-sf-part="card"` (so no template paints a card inside this card) and leave out their "Payment
-   required" eyebrow. Their own module still gives them a border, fill and shadow, which this makes flat. */
-.payBody [data-embedded] {
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
 }
 
 .payHelp {
@@ -330,7 +338,7 @@
 
 .lineQty {
   grid-column: 1;
-  font-size: calc(0.8125rem * var(--sf-text-scale, 1));
+  font-size: calc(0.875rem * var(--sf-text-scale, 1));
   font-variant-numeric: tabular-nums;
   color: var(--sf-block-fg, var(--sf-muted));
 }
@@ -350,7 +358,7 @@
 }
 
 .lineWas {
-  font-size: calc(0.8125rem * var(--sf-text-scale, 1));
+  font-size: calc(0.875rem * var(--sf-text-scale, 1));
   font-weight: 400;
   color: var(--sf-block-fg, var(--sf-faint));
 }
@@ -424,14 +432,6 @@
   display: block;
 }
 
-.point {
-  margin: 0.5rem 0 0.25rem;
-  padding: 0.6rem 0.75rem;
-  border: 1px solid var(--sf-line);
-  border-radius: var(--sf-card-radius);
-  background: var(--sf-bg);
-}
-
 .pointName {
   display: block;
   font-weight: 600;
@@ -440,7 +440,17 @@
 
 .pointCarrier {
   display: block;
-  font-size: calc(0.8125rem * var(--sf-text-scale, 1));
+  font-size: calc(0.875rem * var(--sf-text-scale, 1));
+  color: var(--sf-block-fg, var(--sf-muted));
+}
+
+/* The point's address starts a new block under its name and carrier. */
+.pointGap {
+  margin-top: 0.5rem;
+}
+
+.collecting {
+  margin-top: 0.5rem;
   color: var(--sf-block-fg, var(--sf-muted));
 }
 
@@ -473,10 +483,21 @@
 .eventWhen {
   grid-column: 1;
   min-width: 0;
-  font-size: calc(0.8125rem * var(--sf-text-scale, 1));
+  font-size: calc(0.875rem * var(--sf-text-scale, 1));
   font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
   color: var(--sf-block-fg, var(--sf-muted));
+}
+
+/* A tracking number is not a date: it may break, but only when it cannot fit. */
+.eventRef {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* The card's own padding is the bottom edge; a row's padding on top of it left twice the space. */
+.event:last-child {
+  padding-bottom: 0;
 }
 
 .eventFigure {
@@ -540,7 +561,7 @@
   }
 
   .accent {
-    margin: calc(-1.25rem - 1px) calc(-1.25rem - 1px) 1.1rem;
+    margin: -1.25rem -1.25rem 1.1rem;
   }
 
   .title {

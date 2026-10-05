@@ -779,6 +779,12 @@
     max-width: var(--sf-account-col);
     margin: 0 auto;
   }
+
+  /* An order's own page has two columns of cards and needs the shell's whole content width, which is
+     what the header above it uses, not the profile pages' reading column. */
+  .accountOrder {
+    max-width: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

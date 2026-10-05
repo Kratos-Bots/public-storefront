@@ -49,7 +49,7 @@ export function OrderPaymentCard({ order, payment, styleAttrs }: { order: OrderD
   const loading = !loaded && !failed;
 
   return (
-    <section className={classes.card} aria-labelledby={titleId} data-sf-part="card" {...styleAttrs}>
+    <section className={`${classes.card} ${classes.payCard}`} aria-labelledby={titleId} data-sf-part="card" {...styleAttrs}>
       <span className={classes.accent} aria-hidden />
       <div className={classes.payHead}>
         <h2 id={titleId} className={classes.payEyebrow}>{t('account.order.pay.eyebrow')}</h2>
@@ -76,7 +76,7 @@ export function OrderPaymentCard({ order, payment, styleAttrs }: { order: OrderD
       ) : null}
       {payable ? (
         <div className={classes.payBody}>
-          <PaymentSection order={payable} reference={order.reference} embedded />
+          <PaymentSection order={payable} reference={order.reference} />
         </div>
       ) : null}
       {payHelp ? (

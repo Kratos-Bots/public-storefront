@@ -9,6 +9,15 @@ const AREA: Record<string, OrderArea> = {
   OrderAddress: 'side', OrderParcels: 'side', OrderPayments: 'side',
 };
 
+/**
+ * The area a part belongs to for this order. Parcels go beside the address, except when there is no payment card:
+ * the main column would then be one short items card next to a much taller side, so they sit under the items.
+ */
+function areaOf(type: string, silent: ReadonlySet<string>): OrderArea | undefined {
+  if (!Object.hasOwn(AREA, type)) return undefined;
+  return type === 'OrderParcels' && silent.has('OrderBalance') ? 'main' : AREA[type];
+}
+
 /** Which order parts draw nothing for this order. */
 export function silentParts(order: OrderDetail): Set<string> {
   const silent = new Set<string>();
@@ -25,12 +34,12 @@ export function silentParts(order: OrderDetail): Set<string> {
  * area. Any other block (a Section, a text block) goes by the order parts inside it: `side` when every one of
  * them is a side part, else `main`; with no order parts inside, `main`.
  */
-export function partitionOrderItems(items: readonly ComponentData[]): Record<OrderArea, ComponentData[]> {
+export function partitionOrderItems(items: readonly ComponentData[], silent: ReadonlySet<string> = new Set()): Record<OrderArea, ComponentData[]> {
   const out: Record<OrderArea, ComponentData[]> = { head: [], main: [], side: [] };
   for (const item of items) {
-    const own = Object.hasOwn(AREA, item.type) ? AREA[item.type] : undefined;
+    const own = areaOf(item.type, silent);
     if (own) { out[own].push(item); continue; }
-    const inner = flattenTypes([item]).slice(1).map((t) => (Object.hasOwn(AREA, t) ? AREA[t] : undefined)).filter(Boolean);
+    const inner = flattenTypes([item]).slice(1).map((t) => areaOf(t, silent)).filter(Boolean);
     out[inner.length > 0 && inner.every((a) => a === 'side') ? 'side' : 'main'].push(item);
   }
   return out;
