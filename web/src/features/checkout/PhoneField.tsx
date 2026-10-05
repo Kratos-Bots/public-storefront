@@ -96,6 +96,8 @@ export function PhoneField({
         <span className={classes.phoneCode}>
           <select
             className={classes.phoneSelect}
+            name="tel-country"
+            autoComplete="off"
             value={prefix}
             onChange={(e) => onPrefixChange(e.currentTarget.value)}
             aria-label={t('checkout.phone.codeAriaLabel')}
@@ -117,6 +119,8 @@ export function PhoneField({
         </span>
         <input
           id={id}
+          name="tel"
+          data-optional={optional ? 'true' : undefined}
           className={classes.phoneInput}
           type="tel"
           inputMode="tel"

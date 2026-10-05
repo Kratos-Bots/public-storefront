@@ -93,7 +93,7 @@ title: Northbound Supply
 <form class="_form_H" novalidate="">
 <div class="_field_H">
 <label class="_label_H" for="RID">Email address</label>
-<input id="RID" class="_input_H" data-sf-part="input" inputmode="email" aria-label="Email address" autocomplete="username" type="email" value="">
+<input id="RID" class="_input_H" data-sf-part="input" inputmode="email" aria-label="Email address" autocomplete="username" type="email" value="" name="username">
 </div>
 <button type="submit" class="_primary_H" data-sf-part="button" data-variant="filled">Continue</button>
 </form>

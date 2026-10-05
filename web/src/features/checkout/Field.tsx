@@ -35,8 +35,15 @@ export interface FieldProps extends CommonProps {
   type?: 'text' | 'email' | 'tel' | 'password';
   inputMode?: 'text' | 'email' | 'tel' | 'numeric';
   autoComplete?: string;
+  /** Defaults to the autocomplete token, which is already a stable, standard name. */
+  name?: string;
   maxLength?: number;
   placeholder?: string;
+}
+
+/** A field's name when none is given: its autocomplete token, unless that is `off`. */
+function tokenName(token: string | undefined): string | undefined {
+  return token && token !== 'off' ? token : undefined;
 }
 
 /** The eye that reveals a password; slashed while the text is showing. */
@@ -61,6 +68,7 @@ export function Field({
   type = 'text',
   inputMode,
   autoComplete,
+  name,
   maxLength,
   placeholder,
 }: FieldProps) {
@@ -72,6 +80,8 @@ export function Field({
   const input = (
       <input
         id={id}
+        name={name ?? tokenName(autoComplete)}
+        data-optional={optional ? 'true' : undefined}
         className={isPassword ? `${classes.input} ${classes.hasToggle}` : classes.input}
         data-sf-part="input"
         type={isPassword && revealed ? 'text' : type}
@@ -155,6 +165,7 @@ export function SelectField({
       <span className={classes.selectWrap}>
         <select
           id={id}
+          name={tokenName(autoComplete)}
           className={`${classes.input} ${classes.select}`}
           data-sf-part="input"
           value={value}

@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react';
+import { useAutofillAdvance } from '@/lib/use-autofill-advance.ts';
 import { useSettings } from '@/app/settings.ts';
 import { accessOf } from '@/app/access.ts';
 import { useText } from '@/text/runtime.tsx';
@@ -27,6 +28,8 @@ export function PasswordLogin({ onSignInStep }: { onSignInStep?: (onSignIn: bool
   const turnstileRef = useRef<GuestTurnstileHandle | null>(null);
   const form = usePasswordLogin(turnstileRef);
   const root = useRef<HTMLDivElement>(null);
+  // Email filled by the system: on to the password, or closed keyboard when both came in.
+  useAutofillAdvance(root);
   const first = useRef(true);
 
   // After a mode or kind switch, focus moves to the first control of the new view (never on first paint).
@@ -58,7 +61,7 @@ export function PasswordLogin({ onSignInStep }: { onSignInStep?: (onSignIn: bool
     <Field
       label={t('auth.password.emailLabel')}
       type="email"
-      autoComplete="username"
+      autoComplete={form.mode === 'signup' ? 'email' : 'username'}
       inputMode="email"
       value={values.email}
       onChange={(v) => form.setValue('email', v)}

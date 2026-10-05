@@ -38,6 +38,7 @@ export function CouponField({ applied, code, onApply, onRemove, error, busy }: C
       <div className={classes.entry}>
         <input
           id={id}
+          name="coupon"
           className={classes.input}
           value={draft}
           onChange={(e) => setDraft(e.currentTarget.value)}

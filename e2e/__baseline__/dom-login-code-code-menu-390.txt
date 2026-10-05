@@ -82,7 +82,7 @@ title: Northbound Supply
 </svg>Use a different number</button>
 <h2 class="_title_H">Enter your code</h2>
 <p class="_body_H">Enter the 6-digit code we sent to +44 ••• ••• 123 by WhatsApp.</p>
-<input class="_code_H" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" enterkeyhint="go" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="6-digit code" type="text" value="">
+<input class="_code_H" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" enterkeyhint="go" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="6-digit code" type="text" value="" name="code">
 <div class="_help_H">
 <button type="button" class="_link_H" disabled="">Resend code in 1:00</button>
 <button type="button" class="_link_H">Didn’t get it? Send by text message instead</button>
