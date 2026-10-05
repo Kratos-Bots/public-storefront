@@ -1,7 +1,7 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { fetchOrder, fetchOrderPayment, fetchOrders } from '@/api/orders.ts';
 import { orderPaymentKey } from '@/features/order-status/queries.ts';
-import { pollInterval } from '@/features/order-status/payment-state.ts';
+import { paymentPollInterval } from '@/features/order-status/payment-state.ts';
 import { fetchProfile, fetchRedeemOptions } from '@/api/profile.ts';
 
 export const PROFILE_KEY = ['profile'] as const;
@@ -60,7 +60,7 @@ export function useOrderPayment(reference: string, enabled: boolean) {
     enabled,
     retry: false,
     staleTime: 30_000,
-    refetchInterval: (query) => (query.state.data ? pollInterval(query.state.data) : false),
+    refetchInterval: (query) => paymentPollInterval(query.state),
     refetchIntervalInBackground: true,
   });
 }

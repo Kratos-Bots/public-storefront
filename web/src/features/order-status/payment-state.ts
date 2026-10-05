@@ -78,6 +78,22 @@ export function pollInterval(order: PublicOrder): number | false {
   return checking ? 30_000 : false;
 }
 
+// The payment read is rate limited, and a failed read is usually the limit or an outage: back right off.
+const FAILED_READ_POLL_MS = 60_000;
+
+/**
+ * `pollInterval` for a query: React Query keeps the last good data after a failed refetch, so data alone cannot
+ * say the last read failed. After a failure we keep polling, slowly, so a customer who finishes a hosted checkout
+ * in another tab still catches up once the route answers again.
+ */
+export function paymentPollInterval(state: {
+  data: PublicOrder | undefined;
+  status: 'pending' | 'error' | 'success';
+}): number | false {
+  if (!state.data) return false;
+  return state.status === 'error' ? FAILED_READ_POLL_MS : pollInterval(state.data);
+}
+
 /**
  * Everything on the public order that the account order page also shows or acts on: its status,
  * whether it can still be paid or cancelled, the active payment, and each crypto payment's

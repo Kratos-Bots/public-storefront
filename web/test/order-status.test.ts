@@ -3,6 +3,7 @@ import {
   cardState,
   isManual,
   maskTxid,
+  paymentPollInterval,
   pollInterval,
   slotLabel,
   submittedTxidMask,
@@ -223,6 +224,42 @@ describe('pollInterval', () => {
       cryptoPayments: [crypto({ paymentStatus: 'cancelled', verificationStatus: 'checking' })],
     });
     expect(pollInterval(o)).toBe(false);
+  });
+});
+
+// ------------------------------------------------------- paymentPollInterval
+
+describe('paymentPollInterval', () => {
+  const hosted = order({
+    payment: {
+      canPay: true,
+      payBy: null,
+      activePayment: {
+        paymentId: 7,
+        method: 'sushipp',
+        kind: 'gateway',
+        status: 'pending',
+        checkoutUrl: 'https://pay.example/x',
+        canChange: true,
+      },
+    },
+  });
+
+  it('does not poll before a first read has succeeded, even after a failed one', () => {
+    expect(paymentPollInterval({ data: undefined, status: 'pending' })).toBe(false);
+    expect(paymentPollInterval({ data: undefined, status: 'error' })).toBe(false);
+  });
+
+  it('slows to once a minute after a failed read, keeping the last good data', () => {
+    expect(paymentPollInterval({ data: hosted, status: 'error' })).toBe(60_000);
+  });
+
+  it('follows the order own interval while reads succeed', () => {
+    expect(paymentPollInterval({ data: hosted, status: 'success' })).toBe(10_000);
+  });
+
+  it('stops when there is nothing left to wait for', () => {
+    expect(paymentPollInterval({ data: order({ status: 'delivered' }), status: 'success' })).toBe(false);
   });
 });
 

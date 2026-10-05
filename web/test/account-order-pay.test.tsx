@@ -184,6 +184,25 @@ describe('account order: pay and cancel', () => {
     expect(orderKeys(invalidate)).toHaveLength(1);
   });
 
+  it('after a failed read the payment view is read once a minute, not at the order own 10s', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] });
+    try {
+      h.order = { ...base, canCancel: true, cancelBlockedBy: null };
+      paymentMock.mockResolvedValueOnce(hostedOrder).mockRejectedValue(new Error('429'));
+      mount();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(paymentMock).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(paymentMock).toHaveBeenCalledTimes(2);
+      await vi.advanceTimersByTimeAsync(59_000);
+      expect(paymentMock).toHaveBeenCalledTimes(2);
+      await vi.advanceTimersByTimeAsync(1_000);
+      expect(paymentMock).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('going A, B, A still notices a change made to A while B was showing', async () => {
     const at = (ref: string) => (
       <QueryClientProvider client={client}>

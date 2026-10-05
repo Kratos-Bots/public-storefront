@@ -303,9 +303,9 @@ export const ORDER_VIEWS: FamilyValue<OrderData>['views'] = {
 /**
  * One order, in full: what was bought, what it came to, every payment against
  * it, and every parcel out of it. While money is owed the balance part also
- * carries the order's payment actions, by rendering the public order page's own
- * PaymentSection through the order's access key: paying, switching method and
- * submitting a crypto txid still exist once in the shop.
+ * carries the order's payment actions: the payment section runs on the customer's
+ * session, so paying, switching method and submitting a crypto txid exist once in
+ * the shop. There is no public order page.
  *
  * The OrderDetail container: the query and its pending / error / not-found screens stay
  * here; the content slot holds the parts. Without slots the default arrangement is drawn.

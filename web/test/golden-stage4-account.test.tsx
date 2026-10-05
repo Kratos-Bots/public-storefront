@@ -185,7 +185,6 @@ orderCase('full', () => { s.order = ok(DETAIL); });
 orderCase('no-balance', () => { s.order = ok({ ...DETAIL, outstandingBalance: 0 }); });
 orderCase('no-payments', () => { s.order = ok({ ...DETAIL, payments: [] }); });
 orderCase('no-parcels', () => { s.order = ok({ ...DETAIL, shipments: [] }); });
-orderCase('no-public-url', () => { s.order = ok({ ...DETAIL }); });
 
 // ---------------------------------------------------------------- loyalty
 const loyaltyCase = (name: string, setup: () => void, run?: Case['act']) => add({ name: `account-loyalty-${name}`, docKey: 'account.loyalty', section: 'Loyalty', path: '/account/loyalty', page: <LoyaltyPage />, setup, act: run });
@@ -233,6 +232,6 @@ profileCase('telegram-beta-confirm', () => { s.profile = profileQ(); s.layout = 
 profileCase('signing-out', () => { s.profile = profileQ(); }, (m) => click(m, 'Sign out'));
 
 describe('stage 4 account goldens (v0.7.0)', () => {
-  it('has unique case names', () => { expect(cases.length).toBeGreaterThanOrEqual(50); expect(new Set(cases.map((c) => c.name)).size).toBe(cases.length); });
+  it('has unique case names', () => { expect(cases.length).toBeGreaterThanOrEqual(49); expect(new Set(cases.map((c) => c.name)).size).toBe(cases.length); });
   it.each(cases.map((c) => [c.name, c] as const))('%s', async (_n, c) => { await runCase(c); });
 });
