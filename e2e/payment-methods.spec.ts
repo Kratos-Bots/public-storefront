@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { FOUR_METHODS, installMocks, ORDER_PATH, publicOrderVariant, SESSION_CUSTOMER, SESSION_TOKEN, type InstallMocksOptions, type MockHandle } from './mocks.ts';
+import { FOUR_METHODS, installMocks, ORDER_REF, SESSION_CUSTOMER, SESSION_TOKEN, type InstallMocksOptions, type MockHandle } from './mocks.ts';
 import { FIXED_NOW } from './flows.ts';
 
 /**
@@ -84,13 +84,13 @@ async function placeOrder(page: Page, mocks: MockHandle): Promise<void> {
   }, { intervals: [100, 200, 400, 400], timeout: 10_000 }).toBe(true);
   await expect(button).toBeEnabled();
   await button.click();
-  await expect(page).toHaveURL(new RegExp(`${ORDER_PATH}$`));
+  await expect(page).toHaveURL(new RegExp(`/account/orders/${ORDER_REF}$`));
 }
 
 /** The order page's method buttons, in page order. */
 const pickerRows = (page: Page): Locator => page.getByRole('button', { name: /^(Pay with crypto|Pay by card|PayPal balance|Bank transfer \(UK\)|Card payment|Crypto)/ });
 
-const choosing = () => publicOrderVariant('choose');
+const ORDER_PAGE = `/account/orders/${ORDER_REF}`;
 
 test.describe('payment methods · checkout', () => {
   test('1 · the Payment step lists the four methods in the list order, under the shop’s names', async ({ page }) => {
@@ -132,7 +132,7 @@ test.describe('payment methods · checkout', () => {
 
   test('4 · Bank transfer (UK) shows the offline note, and the order page shows the transfer details', async ({ page }) => {
     const mocks = await open(page, {
-      path: '/checkout', cart: true, paymentMethods: FOUR_METHODS, order: choosing(),
+      path: '/checkout', cart: true, paymentMethods: FOUR_METHODS, orderFixture: 'unpaid',
       checkoutPayment: { type: 'manual', paymentId: 9004, method: 'uk_bank_transfer', displayName: 'Bank transfer (UK)', amount: 47.45, instructions: FOUR_METHODS[3]!.details! },
     });
     await toPayment(page, mocks);
@@ -152,7 +152,7 @@ test.describe('payment methods · checkout', () => {
 
 test.describe('payment methods · the order page', () => {
   test('5 · the picker lists the same four names in the same order; a transfer creates no payment; card posts stripe', async ({ page }) => {
-    const mocks = await open(page, { path: ORDER_PATH, session: false, paymentMethods: FOUR_METHODS, order: choosing() });
+    const mocks = await open(page, { path: ORDER_PAGE, orderFixture: 'unpaid', paymentMethods: FOUR_METHODS });
     await expect(page.getByRole('heading', { name: /^Choose how to pay/ })).toBeVisible();
     await expect(pickerRows(page)).toHaveCount(4);
     const texts = await pickerRows(page).allTextContents();
@@ -169,7 +169,7 @@ test.describe('payment methods · the order page', () => {
   });
 
   test('8 · a method the backend refuses is explained, and the picker stays usable', async ({ page }) => {
-    const mocks = await open(page, { path: ORDER_PATH, session: false, paymentMethods: FOUR_METHODS, order: choosing(), refuseMethodSelection: true });
+    const mocks = await open(page, { path: ORDER_PAGE, orderFixture: 'unpaid', paymentMethods: FOUR_METHODS, refuseMethodSelection: true });
     await expect(pickerRows(page)).toHaveCount(4);
     await pickerRows(page).filter({ hasText: 'Pay by card' }).click();
     await expect(page.getByText('That payment method is not available for this order')).toBeVisible();
@@ -183,7 +183,7 @@ test.describe('payment methods · the order page', () => {
   });
 
   test('9 · the fee wording reads with the shop’s name: a discount for crypto, a fee for PayPal', async ({ page }) => {
-    await open(page, { path: ORDER_PATH, session: false, paymentMethods: FOUR_METHODS, order: choosing() });
+    await open(page, { path: ORDER_PAGE, orderFixture: 'unpaid', paymentMethods: FOUR_METHODS });
     await expect(pickerRows(page)).toHaveCount(4);
     await expect(pickerRows(page).nth(0)).toContainText('Pay with crypto (3% discount)');
     await expect(pickerRows(page).nth(2)).toContainText('PayPal balance (2% fee)');
@@ -221,7 +221,7 @@ test.describe('payment methods · an older backend', () => {
   });
 
   test('7b · the order page of an older backend lists its methods and a card choice posts', async ({ page }) => {
-    const mocks = await open(page, { path: ORDER_PATH, session: false, order: choosing() });
+    const mocks = await open(page, { path: ORDER_PAGE, orderFixture: 'unpaid' });
     await expect(pickerRows(page)).toHaveCount(2);
     await expect(pickerRows(page).first()).toContainText('Card payment');
     await pickerRows(page).first().click();
@@ -252,7 +252,7 @@ test.describe('payment methods · a long name', () => {
   });
 
   test('10b · the same name wraps in the order page picker', async ({ page }) => {
-    await open(page, { path: ORDER_PATH, session: false, width: 390, paymentMethods: long, order: choosing() });
+    await open(page, { path: ORDER_PAGE, orderFixture: 'unpaid', width: 390, paymentMethods: long });
     const pick = page.getByRole('button', { name: new RegExp(`^${LONG}`) });
     await expect(pick).toBeVisible();
     await expectContained(page, pick.getByText(/47\.45/).last());

@@ -34,7 +34,7 @@ const CASES: RouteCase[] = [
   { name: 'checkout', path: '/checkout', layouts: ALL, session: true },
   { name: 'login', path: '/login', layouts: ALL, session: false },
   { name: 'account-orders', path: '/account/orders', layouts: ALL, session: true },
-  { name: 'account-order', path: '/account/orders/K4M2QP', layouts: ALL, session: true },
+  { name: 'account-order', path: '/account/orders/K4M2QP', layouts: ALL, session: true, mocks: { orderFixture: 'shipped', orderReference: 'K4M2QP' } },
   { name: 'account-loyalty', path: '/account/loyalty', layouts: ALL, session: true },
   { name: 'account-referrals', path: '/account/referrals', layouts: ALL, session: true },
   { name: 'account-profile', path: '/account/profile', layouts: ALL, session: true },

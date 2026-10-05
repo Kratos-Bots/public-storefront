@@ -23,6 +23,8 @@ interface OpenOptions {
   tweakSettings?: InstallMocksOptions['tweakSettings'];
   cart?: 'none' | 'one' | 'flagged';
   height?: number;
+  orderFixture?: InstallMocksOptions['orderFixture'];
+  orderReference?: string;
 }
 
 /** A server cart line for product 101; `flagged` puts it below an order minimum (checkout is held). */
@@ -41,7 +43,7 @@ async function open(page: Page, layout: Layout, set: PageSet | null, path: strin
   const width = o.width ?? 1280;
   await page.setViewportSize({ width, height: o.height ?? (width < 768 ? 844 : 900) });
   await page.clock.setFixedTime(FIXED_NOW);
-  const mocks = await installMocks(page, { layout, session: o.session ?? true, pages: { [layout]: set }, tweakSettings: o.tweakSettings });
+  const mocks = await installMocks(page, { layout, session: o.session ?? true, pages: { [layout]: set }, tweakSettings: o.tweakSettings, orderFixture: o.orderFixture, orderReference: o.orderReference });
   if (o.cart === 'one' || o.cart === 'flagged') seedCart(mocks, o.cart);
   await page.goto(path);
   return mocks;
@@ -307,13 +309,18 @@ test.describe('account parts', () => {
     await expect(page.getByRole('link', { name: /^E2E1/ })).toBeVisible();
   });
 
-  test('order detail with the parcels before the items', async ({ page }) => {
-    await open(page, 'storefront', arrangedAccountSet(), '/account/orders/K4M2QP');
+  test('order detail with the parcels ahead of the address, in the side column', async ({ page }) => {
+    // The page sorts the parts into head, main and side by itself; an arrangement reorders within an area.
+    await open(page, 'storefront', arrangedAccountSet(), '/account/orders/K4M2QP', { orderFixture: 'shipped', orderReference: 'K4M2QP' });
     const parcels = page.getByRole('heading', { name: 'Parcels' });
+    const address = page.getByRole('heading', { name: 'Delivery address' });
     const items = page.getByRole('heading', { name: 'Items' });
     await expect(items).toBeVisible();
     await expect(parcels).toBeVisible();
-    expect(await precedes(parcels, items)).toBe(true);
+    await expect(address).toBeVisible();
+    expect(await precedes(parcels, address)).toBe(true);
+    // Items is a main-column part: it stays ahead of the side column wherever the document put it.
+    expect(await precedes(items, parcels)).toBe(true);
   });
 
   test('loyalty redeem still confirms through the modal', async ({ page }) => {

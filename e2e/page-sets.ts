@@ -365,7 +365,7 @@ export function v070CartOutsideSummary(layout: Layout = 'storefront'): PageSet {
   return { schemaVersion: 1, shell: shell(layout, c('Footer')), pages: { cart: doc([c('CartContents', {}, 'cart-v070'), c('CartSummary', {}, 'sum-v070')]) } };
 }
 
-/** Tabs above the greeting; the order detail with parcels before items; loyalty and profile as built. */
+/** Tabs above the greeting; the order detail with parcels ahead of the address in its side column; loyalty and profile as built. */
 export function arrangedAccountSet(layout: Layout = 'storefront'): PageSet {
   const head = () => [p('AccountTabs'), p('AccountGreeting')];
   const section = (type: string, props: Record<string, unknown>, id: string) => doc([c('AccountNav', { head: head(), body: [c(type, props, id)] }, 'acct')]);
@@ -375,7 +375,7 @@ export function arrangedAccountSet(layout: Layout = 'storefront'): PageSet {
     pages: {
       'account.orders': section('OrdersList', { content: [p('OrdersHeading'), p('OrdersRows'), p('OrdersMore'), p('OrdersEmpty')] }, 'orders-arr'),
       'account.order': section('OrderDetail', {
-        content: [p('OrderBackLink'), p('OrderHeading'), p('OrderBalance'), p('OrderParcels'), p('OrderItems'), p('OrderPayments'), p('OrderPageLink')],
+        content: [p('OrderBackLink'), p('OrderHeading'), p('OrderBalance'), p('OrderParcels'), p('OrderItems'), p('OrderPayments'), p('OrderAddress')],
       }, 'order-arr'),
       'account.loyalty': section('Loyalty', { content: [p('LoyaltyPoints'), p('LoyaltyCredit'), p('LoyaltyNoPoints'), p('LoyaltyRewards')] }, 'loyalty-arr'),
       'account.profile': section('Profile', { content: [p('ProfileDetails'), p('ProfileContact'), p('ProfileBotSwitch'), p('ProfileSignOut')] }, 'profile-arr'),

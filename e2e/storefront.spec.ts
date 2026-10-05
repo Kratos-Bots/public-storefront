@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { installMocks, ORDER_PATH, ORIGIN, type Layout, type MockHandle } from './mocks.ts';
+import { installMocks, ORDER_REF, ORIGIN, type Layout, type MockHandle } from './mocks.ts';
 import { fillCheckout, onlyVisible, openCart, openProduct, productOpener } from './flows.ts';
 
 /**
@@ -65,9 +65,9 @@ async function openCategory(page: Page, layout: Layout, name: string): Promise<v
 const TXID = '0xabc123def4567890abcdef1234567890';
 const CRYPTO_PAYMENT_ID = 9001;
 
-/** The crypto card on the public order page, through to a submitted txid. */
+/** The crypto card on the account order page, through to a submitted txid. */
 async function payWithCrypto(page: Page, mocks: MockHandle): Promise<void> {
-  await expect(page).toHaveURL(new RegExp(`${ORDER_PATH}$`));
+  await expect(page).toHaveURL(new RegExp(`/account/orders/${ORDER_REF}$`));
   await expect(page.getByRole('heading', { name: 'Send 46.03 USDT' })).toBeVisible();
   await expect(page.getByText('0xE2E1a2b3c4d5e6f7089aabbccddeeff0011223344')).toBeVisible();
 
@@ -119,7 +119,7 @@ for (const layout of LAYOUTS) {
       });
 
       test('2 · detail → cart → checkout → order page → txid', async ({ page }) => {
-        const mocks = await installMocks(page, { layout, session: true });
+        const mocks = await installMocks(page, { layout, session: true, orderFixture: 'crypto' });
         await page.goto('/');
         await expect(page.getByRole('heading', { name: 'All products', level: 1 })).toBeVisible();
 
@@ -221,7 +221,9 @@ test.describe('guest checkout', () => {
     await shot(page, '3-guest-review');
 
     await page.getByRole('button', { name: /^Place order/ }).click();
-    await payWithCrypto(page, mocks);
+    // A guest has no order page: they land on the order-placed screen, which sends them to sign in.
+    await expect(page).toHaveURL(new RegExp(`/order-placed\\?order=${ORDER_REF}$`));
+    await expect(page.getByRole('link', { name: 'Sign in to view your order' })).toBeVisible();
     await shot(page, '3-guest-order');
 
     expect(mocks.requests()).toContain('POST storefront/checkout/guest');
@@ -331,21 +333,6 @@ test.describe('closed shop', () => {
       await page.evaluate(() => (window as unknown as { __sameDocument?: boolean }).__sameDocument),
     ).toBe(true);
     await shot(page, '5-closed-midsession');
-  });
-
-  test('5c · an order link still opens while the shop is closed', async ({ page }) => {
-    await installMocks(page, {
-      layout: 'storefront',
-      tweakSettings: (s) => {
-        s.enabled = false;
-      },
-    });
-    await page.goto(ORDER_PATH);
-
-    await expect(page.getByRole('heading', { name: 'Order received' })).toBeVisible();
-    await expect(page.getByText('Order E2E1')).toBeVisible();
-    await expect(page.getByText('Currently closed')).toHaveCount(0);
-    await shot(page, '5-order-while-closed');
   });
 });
 
