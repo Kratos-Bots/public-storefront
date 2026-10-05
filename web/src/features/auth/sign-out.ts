@@ -3,6 +3,7 @@ import { resetCartSync } from '@/features/cart/useServerCart.ts';
 import { useCartStore } from '@/stores/cart.ts';
 import { useSessionStore } from '@/stores/session.ts';
 import { accessGate } from '@/app/access-gate.ts';
+import { clearLegacyOrderKeys } from '@/app/legacy-storage.ts';
 
 /**
  * Ends the session and reloads to the home page. Signing out is a local act as
@@ -26,5 +27,6 @@ export async function signOutAndReload(): Promise<void> {
   useCartStore.getState().setMode('local');
   resetCartSync();
   accessGate.getState().reset();
+  clearLegacyOrderKeys();
   window.location.assign('/');
 }

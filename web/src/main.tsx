@@ -10,10 +10,14 @@ import '@/builder/style/block-style.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from '@/app/App.tsx';
+import { clearLegacyOrderKeys } from '@/app/legacy-storage.ts';
 import { prefetchTemplate } from '@/templates/runtime.tsx';
 import { readStoredTemplateId } from '@/app/theme-bridge.ts';
 import { bootTelegramSession } from '@/app/telegram-session.ts';
 import { loadTelegramSdk } from '@/lib/telegram-webapp.ts';
+
+// Saved order access keys from the removed order-links store: bearer credentials, so wiped once per browser.
+clearLegacyOrderKeys();
 
 // Start fetching the last visit's template chunk while settings are still in flight.
 prefetchTemplate(readStoredTemplateId());

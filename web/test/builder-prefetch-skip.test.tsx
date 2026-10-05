@@ -51,11 +51,17 @@ describe('usePrefetchPageSet skips when nothing will read the set', () => {
     await settle();
     expect(state.calls).toEqual([]);
   });
-  it('still fetches on a closed-exempt route (the shared order link renders behind a closed shop)', async () => {
-    window.history.replaceState(null, '', '/order/NB-1/key');
+  it('still fetches on a closed-exempt route (a hosted payment returns to a page that renders behind a closed shop)', async () => {
+    window.history.replaceState(null, '', '/payment/success?order=NB-1');
     const { client } = run(false);
     await waitFor(() => expect(client.getQueryState(['pages', 'storefront'])?.status).toBe('success'));
     expect(state.calls).toEqual(['storefront']);
+  });
+  it('does not fetch for the old order link while the shop is closed: it is not exempt, the closed page shows at once', async () => {
+    window.history.replaceState(null, '', '/order/NB-1/key');
+    run(false);
+    await settle();
+    expect(state.calls).toEqual([]);
   });
   it('fetches once the shop reopens', async () => {
     const { client, hook } = run(false);

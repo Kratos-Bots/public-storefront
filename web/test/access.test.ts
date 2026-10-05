@@ -82,7 +82,7 @@ describe('accessDecision', () => {
     expect(accessDecision({ ...base, pathname: '/login' })).toEqual({ kind: 'allow' });
   });
 
-  it.each(['/payment/success', '/payment/cancel', '/order-placed', '/order/ORD-1/abc'])(
+  it.each(['/payment/success', '/payment/cancel', '/order-placed'])(
     'never gates the exempt path %s', (pathname) => {
       expect(accessDecision({ ...base, access: mode('restricted'), pathname })).toEqual({ kind: 'allow' });
       expect(accessDecision({ ...base, access: mode('restricted'), loggedIn: true, denied: true, pathname })).toEqual({ kind: 'allow' });
