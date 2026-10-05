@@ -40,6 +40,7 @@ import { OrderDetailPage } from '@/features/account/OrderDetailPage.tsx';
 import { ApiError } from '@/lib/errors.ts';
 import { isDismissed, resetDismissalForTests } from '@/features/unpaid-prompt/useUnpaidOrder.ts';
 import { useSessionStore } from '@/stores/session.ts';
+import { takeTitleFocus } from '@/features/account/title-focus.ts';
 import type { PublicOrder } from '@/types/public-order.ts';
 
 const paymentMock = vi.mocked(fetchOrderPayment);
@@ -291,6 +292,35 @@ describe('A4: focus does not fall to the page', () => {
     const title = await screen.findByRole('heading', { level: 1, name: 'K4M2QP' });
     await waitFor(() => expect(document.activeElement).toBe(title));
     expect(title.getAttribute('tabindex')).toBe('-1');
+  });
+
+  it('a cancel whose order refetch never lands does not steal focus on a later visit', async () => {
+    vi.spyOn(notifications, 'show').mockReturnValue('x');
+    paymentMock.mockResolvedValue(choose());
+    cancelMock.mockResolvedValue({ reference: 'K4M2QP', status: 'cancelled' });
+    const first = render(tree());
+    await screen.findByText(/Choose how you.d like to pay/);
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel order' }));
+    await act(async () => { fireEvent.click(await screen.findByRole('button', { name: 'Yes, cancel order' })); });
+    // The refetch never lands: the order still reads as waiting for payment when the customer leaves.
+    first.unmount();
+    h.order = { ...base, status: 'cancelled', canCancel: false };
+    render(tree());
+    const title = await screen.findByRole('heading', { level: 1, name: 'K4M2QP' });
+    await screen.findByText(/This order was cancelled\./);
+    expect(document.activeElement).not.toBe(title);
+  });
+
+  it('the pending focus never applies to a different order', async () => {
+    vi.spyOn(notifications, 'show').mockReturnValue('x');
+    paymentMock.mockResolvedValue(choose());
+    cancelMock.mockResolvedValue({ reference: 'K4M2QP', status: 'cancelled' });
+    render(tree());
+    await screen.findByText(/Choose how you.d like to pay/);
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel order' }));
+    await act(async () => { fireEvent.click(await screen.findByRole('button', { name: 'Yes, cancel order' })); });
+    expect(takeTitleFocus('OTHER')).toBe(false);
+    expect(takeTitleFocus('K4M2QP')).toBe(true);
   });
 
   it('when a payment is created, focus moves to the new face heading', async () => {

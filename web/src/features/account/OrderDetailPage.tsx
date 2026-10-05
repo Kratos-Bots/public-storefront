@@ -23,7 +23,7 @@ import { paymentMovedOn, paymentSignature } from '@/features/order-status/paymen
 import { countryName } from '@/features/checkout/CountrySelect.tsx';
 import { OrderPaymentCard, type PaymentRead } from '@/features/account/OrderPaymentCard.tsx';
 import { isOwed, silentParts, partitionOrderItems, sideDraws } from '@/features/account/order-layout.ts';
-import { takeTitleFocus } from '@/features/account/title-focus.ts';
+import { clearTitleFocus, takeTitleFocus } from '@/features/account/title-focus.ts';
 import { dismissForThisLoad } from '@/features/unpaid-prompt/useUnpaidOrder.ts';
 import { useSessionStore } from '@/stores/session.ts';
 import { StatusPill } from '@/features/account/StatusPill.tsx';
@@ -388,6 +388,9 @@ function OrderAnnouncements({ order, previewing }: { order: OrderDetail; preview
       document.querySelector<HTMLElement>('[data-order-title]')?.focus();
     }
   }, [order.status, order.reference]);
+
+  // Leaving the page, or moving to another order, drops a focus request whose cancelled order never came back.
+  useEffect(() => clearTitleFocus, [order.reference]);
 
   return <p className={classes.srOnly} role="status">{received}</p>;
 }

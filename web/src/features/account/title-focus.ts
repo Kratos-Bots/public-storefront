@@ -8,6 +8,14 @@ export function wantTitleFocus(reference: string): void {
   pendingFor = reference;
 }
 
+/**
+ * The order page that was waiting has gone, or is showing another order: a refetch that never landed must not
+ * leave the flag to move focus on some later visit.
+ */
+export function clearTitleFocus(): void {
+  pendingFor = null;
+}
+
 /** True once, when `reference` was waiting for it. */
 export function takeTitleFocus(reference: string): boolean {
   if (pendingFor !== reference) return false;
