@@ -39,8 +39,8 @@ export interface MethodPickerProps {
  * the same ones checkout applied — this page never re-derives them.
  *
  * Three kinds of row, three different things to do:
- *  - a hosted checkout takes the customer to the processor once the payment
- *    exists (the same hand-off checkout uses after placing an order);
+ *  - a hosted checkout only creates the payment; the page then shows "Finish
+ *    your payment", whose button is what opens the processor;
  *  - crypto opens its coin/network combos, and the payment appears on this page;
  *  - a bank transfer opens its details. It is not created here: the backend
  *    refuses every manual gateway on the payment-method route, so offering to
