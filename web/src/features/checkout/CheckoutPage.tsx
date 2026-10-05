@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAutofillAdvance } from '@/lib/use-autofill-advance.ts';
+import { useAutofillDiag } from '@/lib/use-autofill-diag.tsx';
 import { Link, useNavigate } from 'react-router';
 import { Button } from '@mantine/core';
 import { useDebouncedValue } from '@mantine/hooks';
@@ -179,7 +180,9 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
   const cardRef = useRef<HTMLDivElement | null>(null);
   const pageRef = useRef<HTMLDivElement | null>(null);
   // The system filling a contact or address field: focus moves to the next empty one, or the keyboard closes.
-  useAutofillAdvance(pageRef);
+  // Opt-in trace of the autofill events (off unless switched on in this tab); see use-autofill-diag.tsx.
+  const diag = useAutofillDiag();
+  useAutofillAdvance(pageRef, diag.onTrace);
   const turnstileRef = useRef<GuestTurnstileHandle | null>(null);
   const lockTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   /**
@@ -746,7 +749,9 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
           ) : (
             <div key={step} className={`${classes.card} ${FADE}`} ref={cardRef} data-sf-part="card">
               <header className={classes.cardHead}>
-                <span className={classes.cardCount}>
+                {/* Seven quick taps switch the autofill diagnostic on where the URL cannot be edited. pointerup, not click:
+                    iOS does not deliver click to a plain span. No role or cursor, so it still looks and reads as text. */}
+                <span className={classes.cardCount} onPointerUp={diag.onTap}>
                   {t('checkout.steps.count', { current: step + 1, total: order.length })}
                 </span>
                 <h2 className={classes.cardTitle}>{t(meta.title)}</h2>
@@ -842,6 +847,7 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
       {!stack && guest && settings.turnstile ? (
         <GuestTurnstile ref={turnstileRef} siteKey={settings.turnstile.siteKey} />
       ) : null}
+      {diag.panel}
     </div>
     </CheckoutFamily.Provider>
   );

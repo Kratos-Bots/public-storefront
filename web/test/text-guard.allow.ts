@@ -22,4 +22,5 @@ export const TEXT_GUARD_ALLOW: AllowEntry[] = [
   { file: 'builder/blocks/FeaturedProducts.tsx', text: 'Pick products, or a category with products in it.', reason: 'editor-only canvas hint (rendered only while editing)' },
   { file: 'builder/blocks/Image.tsx', text: 'Upload an image and describe it for screen readers.', reason: 'editor-only canvas hint (rendered only while editing)' },
   { file: 'features/auth/password-errors.ts', text: 'RESET PASSWORD', reason: 'the keyword the shop\'s WhatsApp bot matches (backend-fixed, spec "WhatsApp reset"); not shopper-facing copy and deliberately outside the registry' },
+  { file: 'features/diagnostics/AutofillTracePanel.tsx', text: '*', reason: 'developer-only opt-in autofill trace panel (?sfdiag=autofill), never shopper-facing copy' },
 ];
