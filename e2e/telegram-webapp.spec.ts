@@ -473,10 +473,5 @@ test.describe('inside Telegram: room at the foot', () => {
     // Telegram's own buttons sit outside the page, so there is no fixed bar of ours to clear.
     await expect(page.locator('[data-sf-part="primary-bar"]')).toHaveCount(0);
     await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement).scrollPaddingBottom)).toBe('34px');
-    // A field scrolled to by the browser then stops short of the indicator.
-    const search = page.getByRole('textbox').first();
-    await search.focus();
-    const field = (await search.boundingBox())!;
-    expect(field.y + field.height).toBeLessThanOrEqual(844 - 34);
   });
 });

@@ -74,12 +74,25 @@ test.describe('after the system fills a field', () => {
     await expect(page.getByRole('heading', { name: 'Delivery address' })).toBeVisible();
   });
 
-  test('with nothing left to fill the field loses focus, so the keyboard closes', async ({ page }) => {
+  // The keyboard is only closed on a touch screen (a coarse pointer); a desktop keeps its focus.
+  test.describe('on a touch screen', () => {
+    test.use({ hasTouch: true, isMobile: true });
+    test('with nothing left to fill the field loses focus, so the keyboard closes', async ({ page }) => {
     await openGuest(page, 'storefront', '/checkout');
     await expect(page.getByRole('heading', { name: 'Your details' })).toBeVisible();
     await page.getByRole('textbox', { name: 'First name' }).click();
     await systemFill(page, { ...CONTACT, Phone: '7700900123' });
     await expect.poll(() => focusedLabel(page)).toBe('BODY');
+    });
+  });
+
+  test('on a desktop the field keeps focus when nothing is left to fill', async ({ page }) => {
+    await openGuest(page, 'storefront', '/checkout');
+    await expect(page.getByRole('heading', { name: 'Your details' })).toBeVisible();
+    await page.getByRole('textbox', { name: 'First name' }).click();
+    await systemFill(page, { ...CONTACT, Phone: '7700900123' });
+    await page.waitForTimeout(300);
+    expect(await focusedLabel(page)).toBe('First name');
   });
 
   test('a field the shopper tapped meanwhile keeps focus', async ({ page }) => {
@@ -145,9 +158,11 @@ test.describe('a focused field stays clear of the bottom bar', () => {
   test('the step card lands below the sticky header after Continue', async ({ page }) => {
     await openGuest(page, 'storefront', '/checkout');
     await toAddressStep(page);
-    await page.waitForTimeout(400);
-    const header = await box(page.locator('header').first());
-    const card = await box(page.locator('[data-sf-part="card"]').first());
-    expect(card.y).toBeGreaterThanOrEqual(header.y + header.height - 1);
+    // The scroll to the card settles over a few frames.
+    await expect.poll(async () => {
+      const header = await box(page.locator('header').first());
+      const card = await box(page.locator('[data-sf-part="card"]').first());
+      return card.y - (header.y + header.height);
+    }).toBeGreaterThanOrEqual(-1);
   });
 });

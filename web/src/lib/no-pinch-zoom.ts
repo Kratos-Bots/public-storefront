@@ -8,9 +8,12 @@ const EVENTS = ['gesturestart', 'gesturechange'] as const;
 let installed = false;
 const stop = (event: Event) => event.preventDefault();
 
-/** Registers the guards once; calling it again does nothing. */
+/**
+ * Registers the guards once; calling it again does nothing. Only on a touch screen: macOS Safari fires the same
+ * events for a trackpad pinch, and a desktop shopper keeps their zoom.
+ */
 export function disablePinchZoom(): void {
-  if (installed || typeof document === 'undefined') return;
+  if (installed || typeof document === 'undefined' || !window.matchMedia('(pointer: coarse)').matches) return;
   installed = true;
   for (const type of EVENTS) document.addEventListener(type, stop, { passive: false });
 }

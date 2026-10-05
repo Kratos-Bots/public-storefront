@@ -35,7 +35,7 @@ describe('bottom inset', () => {
 
   it("the checkout's sticky Continue band publishes its height on phones only", () => {
     const css = read('features/checkout/CheckoutPage.module.css');
-    expect(css).toMatch(/@media \(max-width: 61\.99em\) \{\s*:global\(:root\):has\(\.nav\) \{\s*--sf-bottom-inset:/);
+    expect(css).toMatch(/@media \(max-width: 61\.99em\) \{\s*(?:\/\*[^*]*\*\/\s*)?:global\(:root\):global\(:root\):has\(\.nav\) \{\s*--sf-bottom-inset:/);
   });
 
   it('the document reserves the inset, and fields keep clear of the sticky header and the edge', () => {

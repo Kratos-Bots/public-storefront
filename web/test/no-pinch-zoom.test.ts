@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { disablePinchZoom, resetPinchZoomForTests } from '@/lib/no-pinch-zoom.ts';
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
@@ -22,8 +22,22 @@ function recordGestureListeners(run: () => void): Array<{ type: string; options:
   return seen;
 }
 
+const setPointer = (coarse: boolean) => {
+  window.matchMedia = ((q: string) => ({ matches: q.includes('coarse') ? coarse : false, media: q, addEventListener() {}, removeEventListener() {} })) as unknown as typeof window.matchMedia;
+};
+
 describe('no pinch zoom', () => {
+  beforeEach(() => setPointer(true));
   afterEach(() => resetPinchZoomForTests());
+
+  it('does nothing on a device with a mouse or trackpad (macOS Safari fires gesturestart for a trackpad pinch)', () => {
+    setPointer(false);
+    const seen = recordGestureListeners(() => disablePinchZoom());
+    expect(seen).toEqual([]);
+    const ev = new Event('gesturestart', { cancelable: true, bubbles: true });
+    document.body.dispatchEvent(ev);
+    expect(ev.defaultPrevented).toBe(false);
+  });
 
   it('prevents the default of iOS gesture events', () => {
     disablePinchZoom();

@@ -31,6 +31,8 @@ function textFields(root: ParentNode): Field[] {
 /** Empty, required for the step, and one the browser is allowed to fill (`autocomplete="off"` fields, such as a coupon, are not part of the form's identity). */
 function needsValue(el: Field): boolean {
   const token = el.getAttribute('autocomplete');
+  // checkVisibility is missing in jsdom and older WebViews; a field rendered at all is then taken as visible.
+  if (typeof el.checkVisibility === 'function' && !el.checkVisibility()) return false;
   return el.value === '' && !!token && token !== 'off' && !el.disabled && !el.readOnly && el.dataset.optional !== 'true';
 }
 
@@ -44,6 +46,8 @@ export function nextFieldToFill(root: ParentNode, anchor: Field): Field | null {
 export interface WatchOptions {
   /** Runs `fn` after the browser has finished filling. Two animation frames by default. */
   schedule?: (fn: () => void) => void;
+  /** Whether the device is a touch screen (a coarse pointer by default). Only there is the keyboard closed when nothing is left. */
+  touch?: boolean;
 }
 
 function afterTwoFrames(fn: () => void) {
@@ -55,7 +59,7 @@ function afterTwoFrames(fn: () => void) {
 }
 
 /** Watches `root` for system fills; returns the cleanup. */
-export function watchAutofill(root: HTMLElement, { schedule = afterTwoFrames }: WatchOptions = {}): () => void {
+export function watchAutofill(root: HTMLElement, { schedule = afterTwoFrames, touch }: WatchOptions = {}): () => void {
   // What each field held when the customer last arrived or typed: the "before" a fill is measured against.
   const known = new WeakMap<Field, string>();
   const remember = () => textFields(root).forEach((f) => known.set(f, f.value));
@@ -73,6 +77,7 @@ export function watchAutofill(root: HTMLElement, { schedule = afterTwoFrames }: 
     const filled = all.filter((f) => (known.get(f) ?? '') === '' && f.value !== '');
     all.forEach((f) => known.set(f, f.value));
     if (filled.length === 0) return;
+    const hasFill = filled.includes(fill.focus as Field) || filled.length > 1;
     // React only learns a value from an input event; some browsers fill without one. A repeat is ignored by React.
     syncing = true;
     try {
@@ -83,9 +88,12 @@ export function watchAutofill(root: HTMLElement, { schedule = afterTwoFrames }: 
     const active = document.activeElement;
     // The customer tapped somewhere else while the browser was filling: that field keeps focus.
     if (active !== fill.focus || !isTextField(active) || !root.contains(active)) return;
+    // A stale record (a remounted or prefilled field) must not authorise a hop alone: the fill has to include
+    // the field the cursor was in, or be a group.
+    if (!hasFill) return;
     const next = nextFieldToFill(root, active);
     if (next) next.focus();
-    else active.blur();
+    else if (touch ?? window.matchMedia('(pointer: coarse)').matches) active.blur();
   };
 
   const start = () => {
@@ -105,9 +113,12 @@ export function watchAutofill(root: HTMLElement, { schedule = afterTwoFrames }: 
     const target = e.target;
     const before = known.get(target) ?? '';
     const type = (e as InputEvent).inputType;
+    // A plain Event('input') comes only from scripts and password-manager extensions; a real keyboard, voice or
+    // predictive-text path always sends an InputEvent, whatever its inputType (it can even be empty).
+    const synthetic = !(e instanceof InputEvent);
     const wasPaste = pasted;
     pasted = false;
-    const looksFilled = !wasPaste && before === '' && (type === 'insertReplacementText' || (!type && Math.abs(target.value.length - before.length) > 1));
+    const looksFilled = !wasPaste && before === '' && (type === 'insertReplacementText' || (synthetic && target.value.length > 1));
     if (looksFilled) start();
     else if (!pending) known.set(target, target.value);
   };

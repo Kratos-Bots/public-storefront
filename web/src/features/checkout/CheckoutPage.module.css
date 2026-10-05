@@ -249,7 +249,8 @@
 /* Sticky over the last fields on a phone: a button's 48px plus the band's own padding. Told to the document so
    a focused field is kept out from under it (global.css). Static from 62em, where it hides nothing. */
 @media (max-width: 61.99em) {
-  :global(:root):has(.nav) {
+  /* :root twice so this outranks a shell's `:root:has(.withBar)` whatever the stylesheet order. */
+  :global(:root):global(:root):has(.nav) {
     --sf-bottom-inset: calc(48px + 0.75rem + max(env(safe-area-inset-bottom, 0px), 0.75rem));
   }
 }

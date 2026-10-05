@@ -22,6 +22,15 @@ function isTextField(el: unknown): el is HTMLInputElement | HTMLTextAreaElement 
 
 const px = (el: Element, property: string) => parseFloat(getComputedStyle(el).getPropertyValue(property)) || 0;
 
+/** The field or an ancestor is fixed or sticky (the header search, a bar's control): it never scrolls with the page, so scrolling the page would only jerk it. */
+function pinned(el: Element): boolean {
+  for (let p: Element | null = el; p && p !== document.documentElement; p = p.parentElement) {
+    const position = getComputedStyle(p).position;
+    if (position === 'fixed' || position === 'sticky') return true;
+  }
+  return false;
+}
+
 /** The nearest ancestor that scrolls on its own, `'fixed'` for a dialog that does not, or null for the page. */
 function scroller(el: Element): HTMLElement | 'fixed' | null {
   for (let p = el.parentElement; p && p !== document.body && p !== document.documentElement; p = p.parentElement) {
@@ -33,6 +42,7 @@ function scroller(el: Element): HTMLElement | 'fixed' | null {
 }
 
 function clear(el: HTMLElement): void {
+  if (pinned(el)) return;
   const holder = scroller(el);
   if (holder === 'fixed') return;
   const vv = window.visualViewport;

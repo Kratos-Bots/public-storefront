@@ -1,5 +1,5 @@
 import { StrictMode, useRef, useState } from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, render, screen } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
 import { MemoryRouter } from 'react-router';
@@ -8,7 +8,12 @@ import { AddressStep } from '@/features/checkout/steps/AddressStep.tsx';
 import { DEFAULT_FORM, type CheckoutForm } from '@/features/checkout/form-state.ts';
 import { useAutofillAdvance } from '@/lib/use-autofill-advance.ts';
 
-afterEach(cleanup);
+// The hook waits two animation frames; fake timers (which fake requestAnimationFrame) make that exact.
+beforeEach(() => { vi.useFakeTimers(); });
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
 
 const modes = { emailMode: 'required', phoneMode: 'required', defaultPhoneCountry: 'GB' } as const;
 
@@ -79,7 +84,7 @@ describe('checkout autofill hints', () => {
       systemFill('Email', 'ada@example.com');
     });
     await act(async () => {
-      await new Promise((r) => setTimeout(r, 120));
+      await vi.advanceTimersByTimeAsync(200);
     });
     expect((screen.getByLabelText('Surname') as HTMLInputElement).value).toBe('Lovelace');
     expect(document.activeElement).toBe(screen.getByLabelText('Phone'));

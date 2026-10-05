@@ -24,6 +24,12 @@ function autofill(el: HTMLInputElement, value: string, inputType?: string) {
   el.dispatchEvent(inputType ? new InputEvent('input', { bubbles: true, inputType, data: null }) : new Event('input', { bubbles: true }));
 }
 
+/** A real InputEvent of any inputType, into the field, leaving `value` in it. */
+function inputEvent(el: HTMLInputElement, value: string, inputType: string) {
+  el.value = value;
+  el.dispatchEvent(new InputEvent('input', { bubbles: true, inputType, data: null }));
+}
+
 function type(el: HTMLInputElement, text: string) {
   for (const ch of text) {
     el.value += ch;
@@ -35,12 +41,15 @@ function type(el: HTMLInputElement, text: string) {
 const animationStart = () => Object.assign(new Event('animationstart', { bubbles: true }), { animationName: AUTOFILL_ANIMATION });
 
 beforeEach(() => {
+  touch = true;
   document.body.innerHTML = '';
   root = document.createElement('div');
   document.body.appendChild(root);
   pending = [];
 });
 afterEach(() => { stop?.(); stop = undefined; });
+
+let touch = true;
 
 function setup() {
   const first = field('given-name');
@@ -49,7 +58,7 @@ function setup() {
   const tel = field('tel');
   const line2 = field('address-line2', { optional: true });
   const coupon = field('coupon', { token: 'off' });
-  stop = watchAutofill(root, { schedule });
+  stop = watchAutofill(root, { schedule, touch });
   return { first, last, email, tel, line2, coupon };
 }
 
@@ -104,6 +113,80 @@ describe('autofill advance', () => {
     settle();
     expect(document.activeElement).not.toBe(line2);
     expect(document.activeElement).not.toBe(coupon);
+  });
+
+  it.each([
+    ['insertCompositionText', 'Ada L'],
+    ['insertText', 'Ada Lovelace'],
+    ['', 'Ada Lovelace'],
+    ['insertFromPaste', 'Ada Lovelace'],
+    ['insertFromYank', 'Ada Lovelace'],
+  ])('does not hop for a real InputEvent of type %j landing %j in an empty field', (inputType, value) => {
+    const { first, last } = setup();
+    first.focus();
+    inputEvent(first, value, inputType);
+    settle();
+    expect(document.activeElement).toBe(first);
+    expect(last.value).toBe('');
+  });
+
+  it('a remount with prefilled values followed by one typed character does not hop', () => {
+    const { last } = setup();
+    // Fields mounted after the watcher started, already holding saved values it never saw empty or full.
+    const city = field('address-level2', { value: 'Leeds' });
+    field('postal-code', { value: 'LS1 6BY' });
+    last.focus();
+    type(last, 'L');
+    settle();
+    expect(document.activeElement).toBe(last);
+    expect(city.value).toBe('Leeds');
+  });
+
+  it('a stale record of a remounted prefilled field cannot authorise a hop on its own', () => {
+    const { first } = setup();
+    field('address-level2', { value: 'Leeds' });
+    first.focus();
+    first.dispatchEvent(animationStart());
+    settle();
+    expect(document.activeElement).toBe(first);
+  });
+
+  it('hops when the fill started in the field the cursor is in and nothing else was filled', () => {
+    const { first, last } = setup();
+    first.focus();
+    inputEvent(first, 'Ada', 'insertReplacementText');
+    settle();
+    expect(document.activeElement).toBe(last);
+  });
+
+  it('never picks a hidden field as the next one', () => {
+    const { first, last, email } = setup();
+    last.checkVisibility = () => false;
+    first.focus();
+    autofill(first, 'Ada');
+    settle();
+    expect(document.activeElement).toBe(email);
+  });
+
+  it('does not drop focus to the page on a device with a keyboard and mouse', () => {
+    touch = false;
+    const { first, last, email, tel } = setup();
+    first.focus();
+    autofill(first, 'Ada');
+    autofill(last, 'Lovelace');
+    autofill(email, 'a@b.co');
+    autofill(tel, '+447700900000');
+    settle();
+    expect(document.activeElement).toBe(first);
+  });
+
+  it('still hops to the next field on a desktop', () => {
+    touch = false;
+    const { first, last } = setup();
+    first.focus();
+    autofill(first, 'Ada');
+    settle();
+    expect(document.activeElement).toBe(last);
   });
 
   it('blurs when nothing required is left, so the keyboard closes', () => {

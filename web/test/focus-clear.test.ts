@@ -174,6 +174,30 @@ describe('keeping a focused field clear', () => {
     expect(winScroll).not.toHaveBeenCalled();
   });
 
+  it('does not move the page for a field inside a sticky ancestor (the header search)', () => {
+    const header = document.createElement('header');
+    header.style.position = 'sticky';
+    document.body.appendChild(header);
+    stop = watchFocusedField();
+    const el = field(10, header);
+    el.focus();
+    openKeyboard();
+    vi.advanceTimersByTime(400);
+    expect(winScroll).not.toHaveBeenCalled();
+  });
+
+  it('does not move the page for a field inside a fixed ancestor', () => {
+    const bar = document.createElement('div');
+    bar.style.position = 'fixed';
+    document.body.appendChild(bar);
+    stop = watchFocusedField();
+    const el = field(740, bar);
+    el.focus();
+    openKeyboard();
+    vi.advanceTimersByTime(400);
+    expect(winScroll).not.toHaveBeenCalled();
+  });
+
   it('does nothing if focus moved on before the keyboard settled', () => {
     stop = watchFocusedField();
     const el = field(740);
