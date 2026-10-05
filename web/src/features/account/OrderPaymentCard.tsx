@@ -6,6 +6,7 @@ import { ApiError } from '@/lib/errors.ts';
 import { wantTitleFocus } from '@/features/account/title-focus.ts';
 import { cancelView } from '@/features/order-status/cancel-state.ts';
 import { invalidateAfterCancel } from '@/features/order-status/invalidate-after-cancel.ts';
+import { activeMethodName } from '@/features/account/payment-method-name.ts';
 import { PaymentSection } from '@/features/order-status/PaymentSection.tsx';
 import { paymentMovedOn, visibleCryptoPayments } from '@/features/order-status/payment-state.ts';
 import { SupportLinks } from '@/features/order-status/SupportLinks.tsx';
@@ -112,7 +113,11 @@ export function OrderPaymentCard({ order, payment, styleAttrs }: { order: OrderD
       ) : null}
       {payable ? (
         <div className={classes.payBody}>
-          <PaymentSection order={payable} reference={order.reference} />
+          <PaymentSection
+            order={payable}
+            reference={order.reference}
+            methodName={activeMethodName(order.payments, payable.payment?.activePayment?.method)}
+          />
         </div>
       ) : null}
       {updating ? (

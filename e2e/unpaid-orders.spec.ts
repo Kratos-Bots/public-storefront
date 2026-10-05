@@ -96,6 +96,18 @@ test.describe('unpaid orders · the pop-up', () => {
     await expect(prompt(page)).toBeVisible();
   });
 
+  test('the pop-up has no close button, and neither a tap outside nor Escape closes it; Not now does', async ({ page }) => {
+    await open(page, { width: 390, unpaidOrders: [unpaidRow()] });
+    const dialog = prompt(page);
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole('button', { name: /close/i })).toHaveCount(0);
+    await page.mouse.click(5, 5);
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('button', { name: 'Not now' }).click();
+    await expect(dialog).toHaveCount(0);
+  });
+
   test('b · Review or cancel order lands on the order page: the payment card, no account tabs', async ({ page }) => {
     await open(page, { unpaidOrders: [unpaidRow()] });
     const dialog = prompt(page);

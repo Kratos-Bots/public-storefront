@@ -152,11 +152,22 @@ describe('UnpaidOrderPrompt', () => {
     expect(unpaidMock).not.toHaveBeenCalled();
   });
 
-  it('closing with the close button counts as Not now', async () => {
+  it('has no close button, and neither an overlay click nor Escape closes it or counts as Not now', async () => {
     unpaidMock.mockResolvedValue([unpaid('K4M2QP')] as never);
     mount('/');
-    await screen.findByRole('dialog');
-    fireEvent.click(document.querySelector('.mantine-Modal-close') as HTMLElement);
+    const open = await screen.findByRole('dialog', { name: 'You have an unpaid order' });
+    expect(document.querySelector('.mantine-Modal-close')).toBeNull();
+    expect(screen.queryByRole('button', { name: /close/i })).toBeNull();
+
+    fireEvent.click(document.querySelector('.mantine-Modal-overlay') as HTMLElement);
+    fireEvent.keyDown(open, { key: 'Escape' });
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    await settle();
+    expect(dialog()).not.toBeNull();
+    expect(isDismissed(1)).toBe(false);
+
+    // Its own buttons are still the way out.
+    fireEvent.click(screen.getByRole('button', { name: 'Not now' }));
     await waitFor(() => expect(dialog()).toBeNull());
     expect(isDismissed(1)).toBe(true);
     expect(sessionStorage.length).toBe(0);

@@ -28,7 +28,10 @@ export default function UnpaidOrderDialog({ order, more, onLater, onReview }: Un
       centered
       size="sm"
       radius="var(--mantine-radius-default)"
-      closeButtonProps={{ 'aria-label': t('common.actions.close') }}
+      // Left only by its own buttons: the customer is asked to decide, so no X, no tap outside, no Escape.
+      withCloseButton={false}
+      closeOnClickOutside={false}
+      closeOnEscape={false}
       classNames={{ content: classes.content, header: classes.header, title: classes.title }}
     >
       <p className={classes.lede} tabIndex={-1} data-autofocus>{t('order.prompt.body', { reference: order.reference })}</p>

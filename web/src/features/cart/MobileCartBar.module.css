@@ -111,6 +111,37 @@
   cursor: not-allowed;
 }
 
+/* The quiet counterpart to .checkout, for a bar that also carries Back: same height, voice and radius, drawn as an
+   outline so the primary keeps the eye and most of the width. */
+.back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 1 7rem;
+  min-height: 48px;
+  padding: 0 1rem;
+  border: 1px solid var(--sf-line-strong);
+  border-radius: var(--sf-btn-radius);
+  background: transparent;
+  color: var(--sf-text);
+  font-family: var(--sf-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.back:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+.back:active {
+  background: var(--sf-surface-2);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .checkout {
     transition: none;

@@ -48,6 +48,7 @@ export default defineTextArea('order', {
   'payment.ariaLabel': { en: 'Payment', max: 40 },
   'payment.chooseTitle': { en: 'Choose how you’d like to pay', max: 80 },
   'payment.finishTitle': { en: 'Finish your payment', max: 60 },
+  'payment.payingWith': { en: 'Paying with {method}', max: 80 },
   'payment.hostedLead': { en: 'Secure hosted checkout', max: 60 },
   'payment.openCheckout': { en: 'Click here to Pay', max: 60 },
   'payment.hostedNote': { en: 'The checkout opens in a new tab. This page updates on its own once the payment lands.' },

@@ -865,7 +865,8 @@ mounted once by each shell frame (storefront, menu, web app) beside the sign-in 
 document can place, move or remove it. A signed-in customer is asked about their newest payable order
 (`GET storefront/orders/unpaid`). It has one button, "Review or cancel order", which opens that order's page in the
 account (where the customer pays, changes method or cancels), a quiet "Not now", and, when more than one order is
-waiting, a "more" link to the order list. Cancelling is not done in the pop-up: its confirmation is a dialog on the
+waiting, a "more" link to the order list. Those are the only ways out: it has no close button, a tap outside does
+not close it, and neither does Escape, so the customer decides. Cancelling is not done in the pop-up: its confirmation is a dialog on the
 order page, and an order the customer cannot cancel (a transfer or a crypto transaction is on its way) gets the same
 pop-up with the same single button.
 

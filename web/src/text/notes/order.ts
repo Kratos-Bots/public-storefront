@@ -35,6 +35,7 @@ export default {
   'payment.ariaLabel': 'Screen-reader label of the payment card',
   'payment.chooseTitle': 'Instruction above the list of ways to pay',
   'payment.finishTitle': 'Payment card heading while a hosted checkout is open',
+  'payment.payingWith': 'Line under "Finish your payment" naming the method the customer chose; {method} is the shop’s own name for it',
   'payment.hostedLead': 'Reassurance line under "Finish your payment"',
   'payment.openCheckout': 'Button that opens the hosted checkout in a new tab; the customer taps it when ready to pay',
   'payment.hostedNote': 'Note under the hosted-checkout button',

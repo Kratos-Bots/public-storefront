@@ -22,6 +22,7 @@ import { invalidateOrderGone } from '@/features/order-status/order-gone.ts';
 import { paymentMovedOn, paymentSignature } from '@/features/order-status/payment-state.ts';
 import { countryName } from '@/features/checkout/CountrySelect.tsx';
 import { OrderPaymentCard, type PaymentRead } from '@/features/account/OrderPaymentCard.tsx';
+import { methodLabel } from '@/features/account/payment-method-name.ts';
 import { isOwed, shownPayments, silentParts, partitionOrderItems, sideDraws } from '@/features/account/order-layout.ts';
 import { clearTitleFocus, takeTitleFocus } from '@/features/account/title-focus.ts';
 import { dismissForThisLoad } from '@/features/unpaid-prompt/useUnpaidOrder.ts';
@@ -37,14 +38,6 @@ import type { BlockRenderContext, SlotRender } from '@/builder/define.ts';
 import type { OrderDetail, OrderShipment } from '@/types/orders.ts';
 import type { ShipmentStatus } from '@/types/public-order.ts';
 import classes from '@/features/account/OrderDetail.module.css';
-
-/** What a payment is called when the shop sent no name for it: the gateway's id read as words, never a raw slug. */
-function methodLabel(method: string): string {
-  return method
-    .replace(/[_-]+/g, ' ')
-    .trim()
-    .replace(/(^|\s)\p{L}/gu, (c) => c.toUpperCase());
-}
 
 /**
  * A collection point's carrier arrives as the carrier's slug ('evri'), where a parcel's carrier arrives named
