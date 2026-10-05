@@ -40,8 +40,9 @@ export function OrderPaymentCard({ order, payment, styleAttrs }: { order: OrderD
   const payHelp =
     !payable && !!loaded && loaded.payment?.canPay === false && cancelShows !== 'contact' &&
     loaded.status !== 'cancelled' && loaded.status !== 'refunded';
-  // A failed read that is being retried looks like a load, not like the failure it replaces.
-  const failed = !loaded && payment.isError && !payment.isFetching;
+  // A failed read stays on screen while it is retried (by the button or the once-a-minute poll): swapping it
+  // for the placeholder every minute would make the card flicker.
+  const failed = !loaded && payment.isError;
   const loading = !loaded && !failed;
 
   return (
@@ -65,7 +66,7 @@ export function OrderPaymentCard({ order, payment, styleAttrs }: { order: OrderD
       {failed ? (
         <div className={`${classes.payBody} ${classes.failed}`} role="alert">
           <p className={classes.failedText}>{t('account.order.pay.loadFailed')}</p>
-          <button type="button" className={classes.retry} data-sf-part="button" data-variant="default" onClick={() => void payment.refetch()}>
+          <button type="button" className={classes.retry} data-sf-part="button" data-variant="default" disabled={payment.isFetching} onClick={() => void payment.refetch()}>
             {t('common.actions.tryAgain')}
           </button>
         </div>

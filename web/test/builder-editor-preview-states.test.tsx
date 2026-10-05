@@ -129,6 +129,7 @@ describe('labels and fixtures', () => {
 
   it('containerOfDoc maps the stateful documents only', () => {
     expect(containerOfDoc('account.orders', 'storefront')).toBe('OrdersList');
+    expect(containerOfDoc('account.order', 'storefront')).toBe('OrderDetail');
     expect(containerOfDoc('tracking', 'menu')).toBe('TrackingLookup');
     expect(containerOfDoc('verify', 'webapp')).toBe('VerifyForm');
     for (const k of ['catalog', 'cart', 'shell', 'checkout', 'product', 'card:tile', 'page:about', 'constructor'] as const) {

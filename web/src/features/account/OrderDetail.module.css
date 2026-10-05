@@ -299,6 +299,11 @@
   border-color: var(--sf-primary);
 }
 
+.retry:disabled {
+  color: var(--sf-faint);
+  cursor: progress;
+}
+
 .retry:focus-visible {
   outline: 2px solid var(--sf-primary);
   outline-offset: 2px;
