@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ClipboardEvent } from 'react';
 import { CheckIcon, CopyIcon } from '@/components/icons.tsx';
 import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/order-status/OrderStatus.module.css';
@@ -48,13 +48,22 @@ export function CopyRow({ label, value, copyValue, step, groupBy }: CopyRowProps
     }
   };
 
+  // Engines disagree on whether the hidden raw copy (`user-select: none` inside `user-select: all`) joins a selection,
+  // and some break a line between the inline-block groups. A wrong paste of a payment address loses money, so a hand
+  // copy is set to the raw value here rather than left to selection behaviour. The value is not editable: no cut.
+  const putRawOnClipboard = (event: ClipboardEvent<HTMLElement>) => {
+    if (!event.clipboardData) return;
+    event.clipboardData.setData('text/plain', copyValue ?? value);
+    event.preventDefault();
+  };
+
   return (
     <div className={step ? `${classes.copyRow} ${classes.copyStep}` : classes.copyRow}>
       {step ? <span className={classes.stepNum} aria-hidden>{step}</span> : null}
       <div className={classes.copyBody}>
         <p className={classes.copyLabel}>{label}</p>
         {groupBy ? (
-          <p className={`${classes.copyValue} ${classes.copyGrouped}`}>
+          <p className={`${classes.copyValue} ${classes.copyGrouped}`} onCopy={putRawOnClipboard}>
             <span className={classes.rawValue}>{value}</span>
             <span aria-hidden>
               {groupsOf(value, groupBy).map((group, i) => <span key={i} className={classes.copyGroup}>{group}</span>)}

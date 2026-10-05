@@ -66,6 +66,30 @@ describe('the grouped wallet address', () => {
     await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
     expect(writeText).toHaveBeenCalledWith(ADDRESS);
   });
+
+  // Engines differ on `user-select: none` inside `user-select: all`, so what a hand copy yields is set explicitly.
+  it('a copy from the address element puts exactly the raw address on the clipboard and nothing else', () => {
+    const { container } = mount();
+    const { value } = parts(container);
+    const clipboardData = { setData: vi.fn() };
+    const event = new Event('copy', { bubbles: true, cancelable: true });
+    Object.defineProperty(event, 'clipboardData', { value: clipboardData });
+    value.dispatchEvent(event);
+    expect(clipboardData.setData).toHaveBeenCalledTimes(1);
+    expect(clipboardData.setData).toHaveBeenCalledWith('text/plain', ADDRESS);
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('a copy from a row without groups is left to the browser', () => {
+    const { container } = render(shell(<CopyRow label="Amount" value="46.03" />));
+    const value = container.querySelector('p[class*="copyValue"]')!;
+    const clipboardData = { setData: vi.fn() };
+    const event = new Event('copy', { bubbles: true, cancelable: true });
+    Object.defineProperty(event, 'clipboardData', { value: clipboardData });
+    value.dispatchEvent(event);
+    expect(clipboardData.setData).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
+  });
 });
 
 describe('the crypto steps', () => {

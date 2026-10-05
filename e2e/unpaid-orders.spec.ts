@@ -278,7 +278,8 @@ test.describe('the order page · what each order state shows', () => {
   // A customer who copies the wallet address by hand must get the address and nothing else: a stray space, a line
   // break or the address twice would send money to nowhere. The address is drawn in groups, so this reads what the
   // browser really selects, unstripped.
-  test('unpaid crypto: a hand selection of the grouped address is exactly the address', async ({ page, browserName }) => {
+  test('unpaid crypto: a hand selection of the grouped address is exactly the address', async ({ page, context, browserName }) => {
+    if (browserName === 'chromium') await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     const ADDRESS = '0xE2E1a2b3c4d5e6f7089aabbccddeeff0011223344';
     await open(page, { path: ORDER_PAGE, fixture: 'crypto' });
     const value = payCard(page).locator('p[class*="copyGrouped"]');
@@ -287,6 +288,11 @@ test.describe('the order page · what each order state shows', () => {
 
     await value.click({ clickCount: 3 });
     const byTripleClick = await selected();
+    // A real keyboard copy: the copy handler, not the engine's selection rules, decides what lands on the clipboard.
+    await page.keyboard.press('Control+C');
+    if (browserName === 'chromium') {
+      expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(ADDRESS);
+    }
     // Selecting everything in the row: the label, the address and the Copy button's text come with it, so only
     // the address's own run is compared, from its first character to its last.
     await page.evaluate(() => {
