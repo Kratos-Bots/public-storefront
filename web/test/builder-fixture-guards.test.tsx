@@ -161,18 +161,18 @@ describe('MethodPicker hosted checkout', () => {
     await waitFor(() => expect(selectOrderPaymentMethod).toHaveBeenCalled());
   }
 
-  it('in builder mode: never opens a blank tab before the (refused) mutation', async () => {
+  it('in builder mode: opens no window around the (refused) mutation', async () => {
     const open = vi.spyOn(window, 'open').mockReturnValue(null);
     await pickCard();
     expect(open).not.toHaveBeenCalled();
     open.mockRestore();
   });
 
-  it('for shoppers: still opens the tab on the click itself', async () => {
+  it('for shoppers: opens no window either (iOS shows an empty one as a blank link)', async () => {
     g.builder = false;
     const open = vi.spyOn(window, 'open').mockReturnValue(null);
     await pickCard();
-    expect(open).toHaveBeenCalledWith('', '_blank');
+    expect(open).not.toHaveBeenCalled();
     open.mockRestore();
   });
 });

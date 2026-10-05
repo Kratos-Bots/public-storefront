@@ -49,7 +49,7 @@ export default defineTextArea('order', {
   'payment.chooseTitle': { en: 'Choose how you’d like to pay', max: 80 },
   'payment.finishTitle': { en: 'Finish your payment', max: 60 },
   'payment.hostedLead': { en: 'Secure hosted checkout', max: 60 },
-  'payment.openCheckout': { en: 'Open secure checkout', max: 60 },
+  'payment.openCheckout': { en: 'Click here to Pay', max: 60 },
   'payment.hostedNote': { en: 'The checkout opens in a new tab. This page updates on its own once the payment lands.' },
   'payment.pendingTitle': { en: 'We’re waiting on your payment', max: 80 },
   'payment.pendingNote': { en: 'This one is arranged with us directly. Message us if anything is unclear.' },

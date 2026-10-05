@@ -36,7 +36,7 @@ export default {
   'payment.chooseTitle': 'Instruction above the list of ways to pay',
   'payment.finishTitle': 'Payment card heading while a hosted checkout is open',
   'payment.hostedLead': 'Reassurance line under "Finish your payment"',
-  'payment.openCheckout': 'Button that opens the hosted checkout',
+  'payment.openCheckout': 'Button that opens the hosted checkout in a new tab; the customer taps it when ready to pay',
   'payment.hostedNote': 'Note under the hosted-checkout button',
   'payment.pendingTitle': 'Heading of the card for a payment arranged with the shop',
   'payment.pendingNote': 'Text of the card for a payment arranged with the shop',

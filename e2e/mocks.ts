@@ -92,7 +92,7 @@ export function publicOrderVariant(kind: OrderVariant): PublicOrder {
  * Each is the order as the customer's session sees it: `detail` is `GET storefront/orders/:ref`, `payment` is
  * `GET storefront/orders/:ref/payment`, and the two agree on status, money and what can still be cancelled.
  * - `unpaid`:     awaiting payment, no method chosen yet: the picker shows
- * - `hosted`:     awaiting payment, a hosted checkout already open (Open secure checkout)
+ * - `hosted`:     awaiting payment, a hosted checkout already open (Click here to Pay)
  * - `crypto`:     awaiting payment, a USDT payment open with its address and txid form
  * - `shipped`:    paid and on its way in two parcels, with a delivery address
  * - `collection`: paid, going to a collection point (Corner News, Evri)

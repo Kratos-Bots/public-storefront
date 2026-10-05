@@ -163,9 +163,17 @@ test.describe('payment methods · the order page', () => {
     await expect(page.getByText('Example Shop Ltd')).toBeVisible();
     expect(mocks.state.methods).toEqual([]);
 
+    // Choosing opens nothing: the page shows the hosted face, and the customer taps its link.
+    const popups: string[] = [];
+    page.on('popup', (p) => popups.push(p.url()));
+    const foreign: string[] = [];
+    page.context().on('request', (r) => { if (r.url().startsWith('https://pay.example.invalid')) foreign.push(r.url()); });
     await pickerRows(page).filter({ hasText: 'Pay by card' }).click();
     await expect.poll(() => mocks.state.methods).toEqual([{ method: 'stripe' }]);
-    await expect(page.getByRole('link', { name: 'Open secure checkout' })).toBeVisible();
+    const pay = page.getByRole('link', { name: 'Click here to Pay' });
+    await expect(pay).toHaveAttribute('href', /^https:\/\/pay\.example\.invalid\/checkout\//);
+    expect(popups).toEqual([]);
+    expect(foreign).toEqual([]);
   });
 
   test('8 · a method the backend refuses is explained, and the picker stays usable', async ({ page }) => {

@@ -4,7 +4,9 @@ import { MantineProvider } from '@mantine/core';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-const h = vi.hoisted(() => ({ order: {} as Record<string, unknown>, links: [] as Array<{ label: string; url: string }> }));
+const h = vi.hoisted(() => ({ order: {} as Record<string, unknown>, links: [] as Array<{ label: string; url: string }>, builder: false }));
+vi.mock('@/app/builder-gate.ts', async (orig) => ({ ...(await orig<typeof import('@/app/builder-gate.ts')>()), isBuilderMode: () => h.builder }));
+vi.mock('@/lib/telegram-webapp.ts', async (orig) => ({ ...(await orig<typeof import('@/lib/telegram-webapp.ts')>()), openExternalLink: vi.fn() }));
 vi.mock('@/app/settings.ts', () => ({
   useSettings: () => ({ currency: 'GBP', brand: { name: 'Northbound Supply', links: {} }, supportLinks: h.links }),
 }));
@@ -21,6 +23,7 @@ vi.mock('@/api/orders.ts', async (orig) => ({
 }));
 
 import { OrderGoneError, PaymentConflictError, cancelOrder, fetchOrderPayment, fetchOrderPaymentOptions, selectOrderPaymentMethod } from '@/api/orders.ts';
+import { openExternalLink } from '@/lib/telegram-webapp.ts';
 import { ApiError } from '@/lib/errors.ts';
 import { paymentSignature } from '@/features/order-status/payment-state.ts';
 import { OrderDetailPage } from '@/features/account/OrderDetailPage.tsx';
@@ -62,6 +65,8 @@ const mount = () =>
 beforeEach(() => {
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   h.links = [];
+  h.builder = false;
+  vi.mocked(openExternalLink).mockClear();
   paymentMock.mockReset();
   optionsMock.mockReset().mockResolvedValue([method]);
   selectMock.mockReset();
@@ -86,7 +91,7 @@ describe('account order: pay and cancel', () => {
       activePayment: { paymentId: 9, method: 'stripe', kind: 'gateway', status: 'pending', checkoutUrl: 'https://pay.example/abc', canChange: true },
     }));
     mount();
-    const link = await screen.findByRole('link', { name: /Open secure checkout/ });
+    const link = await screen.findByRole('link', { name: /Click here to Pay/ });
     expect(link.getAttribute('href')).toBe('https://pay.example/abc');
     expect(screen.getByRole('button', { name: /Change/ })).toBeTruthy();
   });
@@ -157,31 +162,67 @@ describe('account order: pay and cancel', () => {
     await waitFor(() => expect(orderKeys(invalidate)).toHaveLength(1));
     // The payment view has been re-read after the selection: nothing more is refetched once it has settled.
     await waitFor(() => expect(paymentMock.mock.calls.length).toBeGreaterThanOrEqual(2));
-    await screen.findByRole('link', { name: /Open secure checkout/ });
+    await screen.findByRole('link', { name: /Click here to Pay/ });
     expect(orderKeys(invalidate)).toHaveLength(1);
     expect(selectMock).toHaveBeenCalled();
   });
 
-  it('choosing a hosted method opens the window on the click and points it at the checkout once the payment exists', async () => {
-    h.order = { ...base, canCancel: true, cancelBlockedBy: null };
-    paymentMock.mockResolvedValueOnce(publicOrder({ canPay: true, payBy: null, activePayment: null }));
-    let release: (r: Awaited<ReturnType<typeof selectOrderPaymentMethod>>) => void = () => undefined;
-    selectMock.mockReturnValueOnce(new Promise((r) => { release = r; }));
-    const tab = { opener: {} as unknown, location: { href: '' }, close: vi.fn() };
-    const open = vi.spyOn(window, 'open').mockReturnValue(tab as unknown as Window);
-    open.mockClear();
-    mount();
-    fireEvent.click(await screen.findByRole('button', { name: /Card/ }));
-    expect(open).toHaveBeenCalledTimes(1);
-    expect(open).toHaveBeenCalledWith('', '_blank');
-    expect(tab.opener).toBeNull();
-    expect(tab.location.href).toBe('');
-    paymentMock.mockResolvedValue(hostedOrder);
-    await act(async () => {
-      release({ paymentId: 9, method: 'stripe', kind: 'gateway', status: 'pending', checkoutUrl: 'https://pay.example/abc', crypto: null });
+  describe('choosing a hosted method', () => {
+    type Selected = Awaited<ReturnType<typeof selectOrderPaymentMethod>>;
+    const selected = (checkoutUrl: string | null): Selected => ({ paymentId: 9, method: 'stripe', kind: 'gateway', status: 'pending', checkoutUrl, crypto: null });
+
+    // Held open so the test can look at the moment between the tap and the payment existing.
+    const choose = async () => {
+      h.order = { ...base, canCancel: true, cancelBlockedBy: null };
+      paymentMock.mockResolvedValueOnce(publicOrder({ canPay: true, payBy: null, activePayment: null }));
+      let release: (r: Selected) => void = () => undefined;
+      let fail: (e: Error) => void = () => undefined;
+      selectMock.mockReturnValueOnce(new Promise<Selected>((resolve, reject) => { release = resolve; fail = reject; }));
+      const open = vi.spyOn(window, 'open').mockReturnValue(null);
+      open.mockClear();
+      mount();
+      fireEvent.click(await screen.findByRole('button', { name: /Card/ }));
+      await waitFor(() => expect(selectMock).toHaveBeenCalled());
+      return { open, release, fail };
+    };
+
+    it('opens and navigates nowhere, and the finish-payment face offers a Click here to Pay link', async () => {
+      const here = window.location.href;
+      const { open, release } = await choose();
+      expect(open).not.toHaveBeenCalled();
+      expect(openExternalLink).not.toHaveBeenCalled();
+      paymentMock.mockResolvedValue(hostedOrder);
+      await act(async () => { release(selected('https://pay.example/abc')); });
+      const link = await screen.findByRole('link', { name: 'Click here to Pay' });
+      expect(link.getAttribute('href')).toBe('https://pay.example/abc');
+      expect(link.getAttribute('target')).toBe('_blank');
+      expect(link.getAttribute('rel')).toBe('noopener');
+      expect(open).not.toHaveBeenCalled();
+      expect(openExternalLink).not.toHaveBeenCalled();
+      expect(window.location.href).toBe(here);
     });
-    expect(tab.location.href).toBe('https://pay.example/abc');
-    expect(tab.close).not.toHaveBeenCalled();
+
+    it('goes nowhere when the payment has no checkout address', async () => {
+      const { open, release } = await choose();
+      await act(async () => { release(selected(null)); });
+      expect(open).not.toHaveBeenCalled();
+      expect(openExternalLink).not.toHaveBeenCalled();
+    });
+
+    it('goes nowhere when the selection fails', async () => {
+      const { open, fail } = await choose();
+      await act(async () => { fail(new ApiError(500, 'Payment provider unreachable')); });
+      expect(open).not.toHaveBeenCalled();
+      expect(openExternalLink).not.toHaveBeenCalled();
+    });
+
+    it('in the page builder it stays inert even when the selection resolves', async () => {
+      h.builder = true;
+      const { open, release } = await choose();
+      await act(async () => { release(selected('https://pay.example/abc')); });
+      expect(open).not.toHaveBeenCalled();
+      expect(openExternalLink).not.toHaveBeenCalled();
+    });
   });
 
   describe('when choosing a method fails', () => {
@@ -289,7 +330,7 @@ describe('account order: pay and cancel', () => {
     client.setQueryData(['order-payment', 'K4M2QP'], hostedOrder);
     h.order = { ...base, canCancel: true, cancelBlockedBy: null };
     view.rerender(at('K4M2QP'));
-    await screen.findByRole('link', { name: /Open secure checkout/ });
+    await screen.findByRole('link', { name: /Click here to Pay/ });
     await waitFor(() => expect(orderKeys(invalidate)).toHaveLength(1));
   });
 
@@ -311,7 +352,7 @@ describe('account order: pay and cancel', () => {
       </QueryClientProvider>,
     );
     await waitFor(() => expect(paymentMock).toHaveBeenCalledWith('Z9Z9Z9'));
-    await screen.findByRole('link', { name: /Open secure checkout/ });
+    await screen.findByRole('link', { name: /Click here to Pay/ });
     const refetched = invalidate.mock.calls.filter((c) => JSON.stringify((c[0] as { queryKey?: unknown })?.queryKey)?.startsWith('["order"'));
     expect(refetched).toHaveLength(0);
   });

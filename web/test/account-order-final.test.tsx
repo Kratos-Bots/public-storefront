@@ -361,9 +361,9 @@ describe('A5: no second payment while the first is settling', () => {
     fireEvent.click(screen.getByRole('button', { name: /Card/ }));
     expect(selectMock).toHaveBeenCalledTimes(1);
     // The old payment's checkout button must not reappear while the refetch is in flight.
-    expect(screen.queryByRole('link', { name: /Open secure checkout/ })).toBeNull();
+    expect(screen.queryByRole('link', { name: /Click here to Pay/ })).toBeNull();
     await act(async () => { release(hosted(10)); });
-    expect(await screen.findByRole('link', { name: /Open secure checkout/ })).toBeTruthy();
+    expect(await screen.findByRole('link', { name: /Click here to Pay/ })).toBeTruthy();
   });
 
   it('a conflict (409) refetches the payment view and shows no error text', async () => {
@@ -399,7 +399,7 @@ describe('A7: the hosted face needs something to open', () => {
     paymentMock.mockResolvedValue(hosted(9, { status: 'failed' }));
     render(tree());
     expect(await screen.findByText(/Choose how you.d like to pay/)).toBeTruthy();
-    expect(screen.queryByRole('link', { name: /Open secure checkout/ })).toBeNull();
+    expect(screen.queryByRole('link', { name: /Click here to Pay/ })).toBeNull();
   });
 
   it('with nothing to pay with and no way to pay online, it says so', async () => {

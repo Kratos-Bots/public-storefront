@@ -7,7 +7,6 @@ import {
   selectOrderPaymentMethod,
   type PaymentSelection,
 } from '@/api/orders.ts';
-import { isBuilderMode } from '@/app/builder-gate.ts';
 import { ChevronIcon } from '@/components/icons.tsx';
 import { ContactLinks } from '@/components/ContactLinks.tsx';
 import { errorMessage } from '@/lib/errors.ts';
@@ -25,7 +24,7 @@ import {
   type SettlementQuote,
 } from '@/features/order-status/payment-state.ts';
 import type { PaymentMethod } from '@/types/checkout.ts';
-import type { PublicOrder, SelectPaymentResult } from '@/types/public-order.ts';
+import type { PublicOrder } from '@/types/public-order.ts';
 import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/order-status/OrderStatus.module.css';
 
@@ -40,8 +39,8 @@ export interface MethodPickerProps {
  * the same ones checkout applied — this page never re-derives them.
  *
  * Three kinds of row, three different things to do:
- *  - a hosted checkout opens in a new tab (opened on the click itself, so the
- *    popup blocker allows it, and pointed at the session once it exists);
+ *  - a hosted checkout takes the customer to the processor once the payment
+ *    exists (the same hand-off checkout uses after placing an order);
  *  - crypto opens its coin/network combos, and the payment appears on this page;
  *  - a bank transfer opens its details. It is not created here: the backend
  *    refuses every manual gateway on the payment-method route, so offering to
@@ -129,27 +128,13 @@ export function MethodPicker({ order, reference }: MethodPickerProps) {
     );
   }
 
-  /* A hosted checkout has to open on the click itself or the popup blocker eats
-     it, so the tab is opened blank and pointed at the session once it exists. */
+  /* Choosing only creates the payment. Nothing is opened or navigated to from here: iOS (Safari and Telegram's
+     in-app view) shows an empty window opened on the click as a blank link, and a navigation the customer did
+     not ask for is no better. The refetched order shows "Finish your payment", whose button is the tap that
+     opens the checkout. */
   const openHostedCheckout = (method: PaymentMethod) => {
     if (busy) return;
-    // In the page builder the mutation is refused in the frame: no blank tab to strand.
-    const tab = isBuilderMode() ? null : window.open('', '_blank');
-    if (tab) tab.opener = null;
-    select.mutate(
-      { method: method.method },
-      {
-        onSuccess: (result: SelectPaymentResult) => {
-          if (!result.checkoutUrl) {
-            tab?.close();
-            return;
-          }
-          if (tab) tab.location.href = result.checkoutUrl;
-          else window.open(result.checkoutUrl, '_blank', 'noopener');
-        },
-        onError: () => tab?.close(),
-      },
-    );
+    select.mutate({ method: method.method });
   };
 
   const onPick = (method: PaymentMethod) => {
