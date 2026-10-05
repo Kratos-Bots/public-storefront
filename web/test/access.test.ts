@@ -110,6 +110,17 @@ describe('accessDecision', () => {
       expect(accessDecision({ ...base, access: mode('restricted'), loggedIn: true, denied: true, pathname })).toEqual({ kind: 'allow' });
     });
 
+  it('keeps an old order link reachable for a refused customer: it only redirects to their account order page', () => {
+    const ctx = { ...base, access: mode('restricted'), loggedIn: true, denied: true, pathname: '/order/ORD-1/KEY' };
+    expect(accessDecision(ctx)).toEqual({ kind: 'allow' });
+    expect(checksProfile({ ...ctx, denied: false })).toBe(false);
+  });
+
+  it('sends a signed-out visitor of a login shop from an old order link to sign-in and back', () => {
+    expect(accessDecision({ ...base, access: mode('login'), pathname: '/order/ORD-1/KEY' }))
+      .toEqual({ kind: 'redirect', to: '/login?returnTo=%2Forder%2FORD-1%2FKEY' });
+  });
+
   it('keeps /verify-email reachable for a refused customer', () => {
     expect(accessDecision({ ...base, access: mode('restricted'), loggedIn: true, denied: true, pathname: '/verify-email' }))
       .toEqual({ kind: 'allow' });
