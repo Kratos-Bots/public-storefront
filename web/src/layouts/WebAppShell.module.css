@@ -62,8 +62,18 @@
   padding-bottom: calc(76px + var(--tg-safe-bottom, 0px));
 }
 
+/* The same clearance, told to the document (see StorefrontShell). */
+:global(:root):has(.withBar) {
+  --sf-bottom-inset: calc(76px + env(safe-area-inset-bottom, 0px) + var(--tg-safe-bottom, 0px));
+}
+
 /* Telegram keeps the WebView above its MainButton, but the home indicator can
    still cover the last row. */
 .native {
   padding-bottom: var(--tg-safe-bottom, 0px);
+}
+
+/* The buttons themselves are outside the WebView, so only the home indicator is left to keep clear of. */
+:global(:root):has(.native) {
+  --sf-bottom-inset: var(--tg-safe-bottom, 0px);
 }

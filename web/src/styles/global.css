@@ -11,6 +11,11 @@ input, select, textarea { font-size: 16px; } /* iOS zoom guard */
 input:-webkit-autofill { animation: sf-autofill 1ms; }
 input:autofill { animation: sf-autofill 1ms; }
 * { touch-action: manipulation; }
+/* Whatever is fixed or sticky at the foot of a phone (a shell's cart or action bar, the checkout's Continue band)
+   publishes its height as --sf-bottom-inset on :root; scrolling a field into view then stops short of it. */
+html { scroll-padding-bottom: var(--sf-bottom-inset, 0px); }
+/* A field scrolled to sits clear of the sticky header (its offsets come from the shell) and of the screen's edge. */
+input, select, textarea { scroll-margin-top: calc(var(--sf-bar-h, 0px) + var(--sf-pin-h, 0px) + 1rem); scroll-margin-bottom: 1rem; }
 .pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 1rem); }
 .pt-safe { padding-top: env(safe-area-inset-top); }
 /* Off screen, still in the accessibility tree (e.g. a page title the store owner hid). !important so a

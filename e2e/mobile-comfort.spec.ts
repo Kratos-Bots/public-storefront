@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { installMocks, type Layout, type MockHandle } from './mocks.ts';
 import { FIXED_NOW } from './flows.ts';
 
@@ -89,5 +89,65 @@ test.describe('after the system fills a field', () => {
     await systemFill(page, { 'First name': 'Ada' }, 'Email');
     await page.waitForTimeout(300);
     expect(await focusedLabel(page)).toBe('Email');
+  });
+});
+
+/** Contact step filled by hand, on to the address step: its last fields sit at the foot of a phone screen. */
+async function toAddressStep(page: Page): Promise<void> {
+  await expect(page.getByRole('heading', { name: 'Your details' })).toBeVisible();
+  await page.getByRole('textbox', { name: 'First name' }).fill('Ada');
+  await page.getByRole('textbox', { name: 'Surname' }).fill('Sterling');
+  await page.getByRole('textbox', { name: 'Email' }).fill('ada@example.invalid');
+  await page.getByRole('textbox', { name: 'Phone' }).fill('7700900123');
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await expect(page.getByRole('heading', { name: 'Delivery address' })).toBeVisible();
+}
+
+const box = async (loc: Locator) => (await loc.boundingBox())!;
+
+test.describe('a focused field stays clear of the bottom bar', () => {
+  test('storefront layout: the last address field is above the checkout Continue band', async ({ page }) => {
+    await openGuest(page, 'storefront', '/checkout');
+    // A shorter phone (an SE, or a browser with its toolbars out), so the last field really is below the fold.
+    await page.setViewportSize({ width: 390, height: 680 });
+    await toAddressStep(page);
+    const postcode = page.getByRole('textbox', { name: 'Postcode' });
+    await postcode.focus();
+    const band = page.getByRole('button', { name: 'Continue' });
+    await expect(band).toBeVisible();
+    const field = await box(postcode);
+    const bar = await box(band);
+    // The Continue button is inside the sticky band, which has its own padding above it.
+    expect(field.y + field.height).toBeLessThanOrEqual(bar.y);
+    expect(await page.evaluate(() => getComputedStyle(document.documentElement).scrollPaddingBottom)).not.toBe('0px');
+  });
+
+  test('webapp layout in a browser: the last address field is above the checkout Continue band', async ({ page }) => {
+    // The checkout carries its own Continue band here, so the shell's action bar stands down on this page.
+    await openGuest(page, 'webapp', '/checkout');
+    await toAddressStep(page);
+    const postcode = page.getByRole('textbox', { name: 'Postcode' });
+    await postcode.focus();
+    await expect(page.locator('[data-sf-part="primary-bar"]')).toHaveCount(0);
+    const field = await box(postcode);
+    expect(field.y + field.height).toBeLessThanOrEqual((await box(page.getByRole('button', { name: 'Continue' }))).y);
+  });
+
+  test('webapp layout in a browser: the shell reserves the action bar as the bottom inset of the page', async ({ page }) => {
+    await openGuest(page, 'webapp', '/');
+    const bar = page.locator('[data-sf-part="primary-bar"]');
+    await expect(bar).toBeVisible();
+    const barHeight = (await box(bar)).height;
+    const inset = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).scrollPaddingBottom));
+    expect(inset).toBeGreaterThanOrEqual(barHeight);
+  });
+
+  test('the step card lands below the sticky header after Continue', async ({ page }) => {
+    await openGuest(page, 'storefront', '/checkout');
+    await toAddressStep(page);
+    await page.waitForTimeout(400);
+    const header = await box(page.locator('header').first());
+    const card = await box(page.locator('[data-sf-part="card"]').first());
+    expect(card.y).toBeGreaterThanOrEqual(header.y + header.height - 1);
   });
 });

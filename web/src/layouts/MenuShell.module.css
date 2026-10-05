@@ -177,3 +177,10 @@
 .withBar {
   padding-bottom: 76px;
 }
+
+/* The same clearance, told to the document: its scroll-padding-bottom (global.css) keeps a focused field out
+   from under the band. It sits on :root because the document is what scrolls, and a variable set on the shell
+   would never reach it. */
+:global(:root):has(.withBar) {
+  --sf-bottom-inset: calc(76px + env(safe-area-inset-bottom, 0px));
+}

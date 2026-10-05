@@ -459,3 +459,24 @@ test.describe('webapp layout in a plain browser', () => {
     await expect(bar.getByRole('button', { name: 'Back' })).toBeVisible();
   });
 });
+
+test.describe('inside Telegram: room at the foot', () => {
+  test('the WebView has no in-page bar, and the home indicator is the only inset a focused field keeps clear of', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.clock.setFixedTime(FIXED_NOW);
+    await installTelegramStub(page);
+    // The stub exposes Telegram's safe areas; an iPhone's home indicator is 34px.
+    await page.addInitScript(() => { (window as unknown as { Telegram: { WebApp: { safeAreaInset: { bottom: number } } } }).Telegram.WebApp.safeAreaInset.bottom = 34; });
+    await installMocks(page, { layout: 'storefront' });
+    await page.goto('/');
+    await expect(page.locator('[data-sf-layout="webapp"]')).toBeVisible();
+    // Telegram's own buttons sit outside the page, so there is no fixed bar of ours to clear.
+    await expect(page.locator('[data-sf-part="primary-bar"]')).toHaveCount(0);
+    await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement).scrollPaddingBottom)).toBe('34px');
+    // A field scrolled to by the browser then stops short of the indicator.
+    const search = page.getByRole('textbox').first();
+    await search.focus();
+    const field = (await search.boundingBox())!;
+    expect(field.y + field.height).toBeLessThanOrEqual(844 - 34);
+  });
+});
