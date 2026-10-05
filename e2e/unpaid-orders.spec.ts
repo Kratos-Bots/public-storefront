@@ -275,6 +275,40 @@ test.describe('the order page · what each order state shows', () => {
     await expect(payCard(page).getByRole('button', { name: 'Cancel order' })).toBeVisible();
   });
 
+  // A customer who copies the wallet address by hand must get the address and nothing else: a stray space, a line
+  // break or the address twice would send money to nowhere. The address is drawn in groups, so this reads what the
+  // browser really selects, unstripped.
+  test('unpaid crypto: a hand selection of the grouped address is exactly the address', async ({ page, browserName }) => {
+    const ADDRESS = '0xE2E1a2b3c4d5e6f7089aabbccddeeff0011223344';
+    await open(page, { path: ORDER_PAGE, fixture: 'crypto' });
+    const value = payCard(page).locator('p[class*="copyGrouped"]');
+    await expect(value).toHaveCount(1);
+    const selected = () => page.evaluate(() => window.getSelection()?.toString() ?? '');
+
+    await value.click({ clickCount: 3 });
+    const byTripleClick = await selected();
+    // Selecting everything in the row: the label, the address and the Copy button's text come with it, so only
+    // the address's own run is compared, from its first character to its last.
+    await page.evaluate(() => {
+      const p = document.querySelector('p[class*="copyGrouped"]')!;
+      const body = p.closest('div')!.parentElement!;
+      const range = document.createRange();
+      range.selectNodeContents(body);
+      const sel = window.getSelection()!;
+      sel.removeAllRanges();
+      sel.addRange(range);
+    });
+    const byRowSelectAll = await selected();
+    console.log(`[${browserName}] triple-click: ${JSON.stringify(byTripleClick)}`);
+    console.log(`[${browserName}] row select-all: ${JSON.stringify(byRowSelectAll)}`);
+
+    expect(byTripleClick).toBe(ADDRESS);
+    expect(byRowSelectAll.includes(ADDRESS)).toBe(true);
+    expect(byRowSelectAll.split(ADDRESS)).toHaveLength(2);
+    // Only line breaks, which a block boundary adds, may sit next to the address: never a space inside it.
+    expect(byRowSelectAll).toMatch(new RegExp(`(^|\n)${ADDRESS}(\n|$)`));
+  });
+
   test('paid and shipped: two parcels, the delivery address, no payment card', async ({ page }) => {
     await open(page, { path: ORDER_PAGE, fixture: 'shipped' });
     await expect(page.getByRole('heading', { name: REF, level: 1 })).toBeVisible();

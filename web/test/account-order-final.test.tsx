@@ -188,7 +188,9 @@ describe('A2: an order that is gone for this customer', () => {
     const invalidate = vi.spyOn(client, 'invalidateQueries');
     render(tree());
     await waitFor(() => expect(keysOf(invalidate)).toContain(JSON.stringify(['order', 'K4M2QP'])));
-    await act(async () => { await new Promise((r) => setTimeout(r, 30)); });
+    // Everything the invalidation set off has settled; a loop would have invalidated or re-read again by now.
+    await waitFor(() => expect(client.isFetching()).toBe(0));
+    for (let i = 0; i < 3; i += 1) await act(async () => { await Promise.resolve(); });
     expect(keysOf(invalidate).filter((k) => k === JSON.stringify(['order', 'K4M2QP']))).toHaveLength(1);
   });
 
