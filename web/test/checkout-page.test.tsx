@@ -86,6 +86,7 @@ import { guestQuote, placeGuestOrder, placeOrder, quote } from '@/api/checkout.t
 import { ApiError } from '@/lib/errors.ts';
 import { useCartStore } from '@/stores/cart.ts';
 import { usePrimaryActionStore } from '@/stores/primary-action.ts';
+import { useBackActionStore } from '@/stores/back-action.ts';
 import { useSessionStore } from '@/stores/session.ts';
 import { CheckoutPage } from '@/features/checkout/CheckoutPage.tsx';
 import { DEFAULT_FORM } from '@/features/checkout/form-state.ts';
@@ -793,5 +794,73 @@ describe('CheckoutPage — guest', () => {
 
     expect(tg.openLink).toHaveBeenCalledWith('https://pay.example/session/2');
     expect(screen.getByTestId('path')).toHaveTextContent(/^\/order-placed$/);
+  });
+});
+
+describe('CheckoutPage — Back', () => {
+  beforeEach(() => {
+    state.settings = settings(false);
+    useSessionStore.setState({ token: 'sess-1', customer: { id: 5, nickname: 'ada' } });
+    localStorage.setItem('sf-checkout-v1', persistedForm());
+    useBackActionStore.setState({ override: null });
+  });
+
+  afterEach(() => useBackActionStore.setState({ override: null }));
+
+  it('inside Telegram there is no in-page Back on any step, and Telegram Back steps to the previous step', async () => {
+    tg.inTelegram = true;
+    mount();
+    await settle();
+    expect(screen.getByLabelText('First name')).toBeInTheDocument();
+    // First step: nothing is claimed, so Back leaves the checkout as before.
+    expect(useBackActionStore.getState().override).toBeNull();
+    expect(screen.queryByRole('button', { name: /^back$/i })).toBeNull();
+
+    pressContinue();
+    await settle();
+    expect(screen.getByRole('heading', { name: 'Delivery address' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^back$/i })).toBeNull();
+
+    const claimed = useBackActionStore.getState().override;
+    expect(claimed).toBeTypeOf('function');
+    act(() => claimed!());
+    expect(screen.getByLabelText('First name')).toBeInTheDocument();
+    expect(useBackActionStore.getState().override).toBeNull();
+    expect(screen.getByTestId('path')).toHaveTextContent('/checkout');
+  });
+
+  it('leaves no sticky strip behind inside Telegram, on the first step or after it', async () => {
+    tg.inTelegram = true;
+    const { container } = mount();
+    await settle();
+    expect(container.querySelector('[class*="nav"]')).toBeNull();
+    pressContinue();
+    await settle();
+    expect(container.querySelector('[class*="nav"]')).toBeNull();
+  });
+
+  it('in a browser the in-page Back and Continue stay, and nothing is claimed', async () => {
+    mount();
+    await settle();
+    expect(screen.queryByRole('button', { name: /^back$/i })).toBeNull();
+    fireEvent.click(continueButton());
+    await settle();
+    fireEvent.click(screen.getByRole('button', { name: /^back$/i }));
+    expect(screen.getByLabelText('First name')).toBeInTheDocument();
+    expect(useBackActionStore.getState().override).toBeNull();
+  });
+
+  it('Telegram Back does nothing while the order is being placed', async () => {
+    tg.inTelegram = true;
+    let release!: () => void;
+    placeOrderMock.mockImplementation(() => new Promise((resolve) => { release = () => resolve({ reference: 'K7M2QP', publicUrl: null, status: 'pending', total: 1, payment: { type: 'none' } }); }));
+    mount();
+    await walkToReviewFrom('contact');
+    pressPlace();
+    await settle(0);
+    expect(usePrimaryActionStore.getState().override?.busy).toBe(true);
+    act(() => useBackActionStore.getState().override!());
+    expect(screen.getByRole('heading', { name: 'Review your order' })).toBeInTheDocument();
+    await act(async () => { release(); });
   });
 });
