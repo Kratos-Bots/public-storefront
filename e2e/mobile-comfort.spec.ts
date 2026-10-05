@@ -166,3 +166,30 @@ test.describe('a focused field stays clear of the bottom bar', () => {
     }).toBeGreaterThanOrEqual(-1);
   });
 });
+
+test.describe('the opt-in autofill diagnostic', () => {
+  test('?sfdiag=autofill shows a value-free trace panel that Close removes', async ({ page }) => {
+    await openGuest(page, 'storefront', '/checkout?sfdiag=autofill');
+    await expect(page.getByRole('heading', { name: 'Your details' })).toBeVisible();
+    const panel = page.locator('[data-sf-diag="autofill"]');
+    await expect(panel).toBeVisible();
+
+    await page.getByRole('textbox', { name: 'First name' }).click();
+    await page.keyboard.type('Q');
+    const line = panel.getByText(/ input InputEvent .* insertText .* d=1 /);
+    await expect(line).toBeVisible();
+    // Lengths and tokens only: the typed character is not in the line (the token is given-name).
+    expect(await line.textContent()).not.toContain('Q');
+
+    await panel.getByRole('button', { name: 'Close' }).click();
+    await expect(panel).toHaveCount(0);
+  });
+
+  test('without the parameter there is no panel', async ({ page }) => {
+    await openGuest(page, 'storefront', '/checkout');
+    await expect(page.getByRole('heading', { name: 'Your details' })).toBeVisible();
+    await page.getByRole('textbox', { name: 'First name' }).click();
+    await page.keyboard.type('Q');
+    await expect(page.locator('[data-sf-diag]')).toHaveCount(0);
+  });
+});
