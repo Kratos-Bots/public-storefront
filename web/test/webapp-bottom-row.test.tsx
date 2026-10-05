@@ -7,7 +7,7 @@ vi.mock('@/app/settings.ts', () => ({
 }));
 vi.mock('@/features/cart/useServerCart.ts', () => ({ useServerCart: () => ({ issues: [] }) }));
 
-import { PrimaryActionBar } from '@/features/webapp/PrimaryActionBar.tsx';
+import { PrimaryActionBar, usePrimaryBarShowing } from '@/features/webapp/PrimaryActionBar.tsx';
 import { useTelegramChrome } from '@/features/webapp/useTelegramChrome.ts';
 import { useModalOpen } from '@/lib/use-modal-open.ts';
 import { usePrimaryActionStore } from '@/stores/primary-action.ts';
@@ -107,6 +107,22 @@ describe('useModalOpen', () => {
     await waitFor(() => expect(result.current).toBe(false));
   });
 
+  it('ignores mutations that cannot matter: no document-wide query for them, one when a dialog arrives', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const { result } = renderHook(() => useModalOpen());
+    const query = vi.spyOn(Document.prototype, 'querySelector');
+    act(() => { host.appendChild(document.createElement('p')); });
+    act(() => { host.setAttribute('data-x', '1'); });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(query).not.toHaveBeenCalled();
+    act(() => { host.appendChild(openDialog()); });
+    await waitFor(() => expect(result.current).toBe(true));
+    expect(query).toHaveBeenCalled();
+    query.mockRestore();
+    host.remove();
+  });
+
   it('starts true when a dialog is already open', () => {
     openDialog();
     const { result } = renderHook(() => useModalOpen());
@@ -128,11 +144,39 @@ describe('inside Telegram with the SecondaryButton (7.10+)', () => {
     expect(tg.handlers.secondary).toHaveLength(1);
   });
 
-  it('Back alone when there is no primary action', async () => {
+  it('with no primary action, Back alone below and the header arrow too, one handler each, each going back', async () => {
+    const tg = installTelegram('8.0');
+    render(<MemoryRouter initialEntries={['/', '/account']} initialIndex={1}><Harness /></MemoryRouter>);
+    await waitFor(() => expect(tg.secondary.isVisible).toBe(true));
+    await waitFor(() => expect(tg.back.isVisible).toBe(true));
+    expect(tg.main.isVisible).toBe(false);
+    expect(tg.handlers.secondary).toHaveLength(1);
+    expect(tg.handlers.back).toHaveLength(1);
+    act(() => tg.handlers.back.slice().forEach((h) => h()));
+    expect(screen.getByTestId('where').textContent).toBe('/');
+  });
+
+  it('with no primary action, the bottom Back goes back too', async () => {
+    const tg = installTelegram('8.0');
+    render(<MemoryRouter initialEntries={['/', '/account']} initialIndex={1}><Harness /></MemoryRouter>);
+    await waitFor(() => expect(tg.secondary.isVisible).toBe(true));
+    act(() => tg.handlers.secondary.slice().forEach((h) => h()));
+    expect(screen.getByTestId('where').textContent).toBe('/');
+  });
+
+  it('with no primary action, a modal hides both back controls and they return', async () => {
     const tg = installTelegram('8.0');
     mount('/account');
-    await waitFor(() => expect(tg.secondary.isVisible).toBe(true));
-    expect(tg.main.isVisible).toBe(false);
+    await waitFor(() => expect(tg.secondary.isVisible && tg.back.isVisible).toBe(true));
+    let dialog!: HTMLElement;
+    act(() => { dialog = openDialog(); });
+    await waitFor(() => expect(tg.secondary.isVisible || tg.back.isVisible).toBe(false));
+    expect(tg.handlers.secondary).toHaveLength(0);
+    expect(tg.handlers.back).toHaveLength(0);
+    act(() => { dialog.remove(); });
+    await waitFor(() => expect(tg.secondary.isVisible && tg.back.isVisible).toBe(true));
+    expect(tg.handlers.secondary).toHaveLength(1);
+    expect(tg.handlers.back).toHaveLength(1);
   });
 
   it('no Back on the catalogue home', async () => {
@@ -215,15 +259,25 @@ describe('in a browser (the in-page bar)', () => {
     expect(bar.firstElementChild!.firstElementChild).toBe(back);
   });
 
-  it('Back alone when there is no primary action, and nothing on the catalogue home', () => {
+  it('draws no bar at all without a primary action: no Back-only bar, and no room reserved for one', () => {
     mount('/account');
-    expect(screen.getByRole('button', { name: 'Back' })).toBeTruthy();
+    expect(document.querySelector('[data-sf-part="primary-bar"]')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Back' })).toBeNull();
+    const { result } = renderHook(() => usePrimaryBarShowing(), { wrapper: ({ children }) => <MemoryRouter initialEntries={['/account']}>{children}</MemoryRouter> });
+    expect(result.current).toBe(false);
     cleanup();
     mount('/');
     expect(document.querySelector('[data-sf-part="primary-bar"]')).toBeNull();
   });
 
+  it('reserves room for the bar when there is a primary action', () => {
+    claim();
+    const { result } = renderHook(() => usePrimaryBarShowing(), { wrapper: ({ children }) => <MemoryRouter initialEntries={['/cart']}>{children}</MemoryRouter> });
+    expect(result.current).toBe(true);
+  });
+
   it('Back goes back', () => {
+    claim();
     render(<MemoryRouter initialEntries={['/', '/cart']} initialIndex={1}><Harness /></MemoryRouter>);
     fireEvent.click(screen.getByRole('button', { name: 'Back' }));
     expect(screen.getByTestId('where').textContent).toBe('/');

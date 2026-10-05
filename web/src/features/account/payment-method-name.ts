@@ -9,14 +9,16 @@ export function methodLabel(method: string): string {
 }
 
 /**
- * The name to show for the method a customer is paying with now: the shop's own name (`methodLabel`) on the newest
- * pending payment of that method, else the method id read as words. Undefined when there is no method to name.
+ * The shop's own name for the method a customer is paying with now, but only when it is certain. The account
+ * order's payment rows carry no payment id, so the rows are matched by method id: the name is used when every
+ * pending row of that method says the same label. No matching row yet (the account order lags the payment view
+ * for a moment after a switch), no label, or rows that disagree: undefined, and the face shows no "Paying with"
+ * part rather than a guess or the method id read as words.
  */
 export function activeMethodName(payments: OrderDetail['payments'], method: string | null | undefined): string | undefined {
   if (!method) return undefined;
-  const newest = payments
-    .filter((p) => p.method === method && p.status === 'pending')
-    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))[0];
-  const name = newest?.methodLabel?.trim() || methodLabel(method);
-  return name || undefined;
+  const labels = new Set(payments.filter((p) => p.method === method && p.status === 'pending').map((p) => p.methodLabel?.trim() ?? ''));
+  if (labels.size !== 1) return undefined;
+  const [label] = labels;
+  return label || undefined;
 }

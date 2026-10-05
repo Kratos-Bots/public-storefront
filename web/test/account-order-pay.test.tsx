@@ -144,13 +144,13 @@ describe('account order: pay and cancel', () => {
       expect(line().textContent).toContain('Secure hosted checkout');
     });
 
-    it('uses the newest pending payment of that method, not an older or failed one', async () => {
+    it('names it when every pending payment of that method shares one label; failed and other methods do not count', async () => {
       h.order = {
         ...base, canCancel: true, cancelBlockedBy: null,
         payments: [
           attempt('stripe', 'Old card name', 'failed', '2026-01-02T10:05:00Z'),
           attempt('stripe', 'Card (Stripe)', 'pending', '2026-01-02T10:03:00Z'),
-          attempt('stripe', 'Older card name', 'pending', '2026-01-02T10:01:00Z'),
+          attempt('stripe', 'Card (Stripe)', 'pending', '2026-01-02T10:01:00Z'),
           attempt('other', 'Bank transfer', 'pending', '2026-01-02T10:09:00Z'),
         ],
       };
@@ -159,33 +159,68 @@ describe('account order: pay and cancel', () => {
       await screen.findByText('Paying with Card (Stripe)');
     });
 
-    it('without a label it reads the method id as words, like the payment history does', async () => {
-      h.order = { ...base, canCancel: true, cancelBlockedBy: null, payments: [attempt('card_gateway', undefined, 'pending', '2026-01-02T10:01:00Z')] };
-      paymentMock.mockResolvedValue(hostedWith('card_gateway'));
-      mount();
-      await screen.findByText('Paying with Card Gateway');
-    });
-
-    it('with no matching payment on the order it falls back to the readable method id', async () => {
-      h.order = { ...base, canCancel: true, cancelBlockedBy: null, payments: [] };
-      paymentMock.mockResolvedValue(hostedWith('stripe'));
-      mount();
-      await screen.findByText('Paying with Stripe');
-    });
-
-    it('follows the new active payment after the method is changed', async () => {
+    it('two pending payments of the same method with different labels: no guess, the old lead alone', async () => {
       h.order = {
         ...base, canCancel: true, cancelBlockedBy: null,
         payments: [
-          attempt('stripe', 'Card (Stripe)', 'pending', '2026-01-02T10:01:00Z'),
-          attempt('sushipp', 'Pay by card', 'pending', '2026-01-02T10:05:00Z'),
+          attempt('stripe', 'Card (Stripe)', 'pending', '2026-01-02T10:03:00Z'),
+          attempt('stripe', 'Pay by card', 'pending', '2026-01-02T10:01:00Z'),
         ],
       };
       paymentMock.mockResolvedValue(hostedWith('stripe'));
       mount();
+      expect(await screen.findByText('Secure hosted checkout')).toBeTruthy();
+      expect(screen.queryByText(/^Paying with/)).toBeNull();
+    });
+
+    it('a pending payment with no label is not named from its id either', async () => {
+      h.order = { ...base, canCancel: true, cancelBlockedBy: null, payments: [attempt('card_gateway', undefined, 'pending', '2026-01-02T10:01:00Z')] };
+      paymentMock.mockResolvedValue(hostedWith('card_gateway'));
+      mount();
+      expect(await screen.findByText('Secure hosted checkout')).toBeTruthy();
+      expect(screen.queryByText(/^Paying with/)).toBeNull();
+    });
+
+    it('with no matching pending payment on the order yet: no "Paying with" part, never the id read as words', async () => {
+      h.order = { ...base, canCancel: true, cancelBlockedBy: null, payments: [] };
+      paymentMock.mockResolvedValue(hostedWith('stripe'));
+      mount();
+      expect(await screen.findByText('Secure hosted checkout')).toBeTruthy();
+      expect(screen.queryByText(/^Paying with/)).toBeNull();
+    });
+
+    it('after a switch the name follows once the order refetch lands, and is never the old name in between', async () => {
+      h.order = { ...base, canCancel: true, cancelBlockedBy: null, payments: [attempt('stripe', 'Card (Stripe)', 'pending', '2026-01-02T10:01:00Z')] };
+      paymentMock.mockResolvedValue(hostedWith('stripe'));
+      const view = mount();
       await screen.findByText('Paying with Card (Stripe)');
-      paymentMock.mockResolvedValue(hostedWith('sushipp', 10));
+
+      // The payment view moves on first; the account order has not caught up.
+      const invalidate = vi.spyOn(client, 'invalidateQueries');
+      paymentMock.mockResolvedValue({ ...hostedWith('sushipp', 10), payment: { ...hostedWith('sushipp', 10).payment!, payBy: '2026-01-03T10:00:00Z' } });
       await poll();
+      await screen.findByText(/Pay by/);
+      expect(screen.queryByText(/^Paying with/)).toBeNull();
+      // The new active payment is what makes the account order refetch at once.
+      expect(orderKeys(invalidate)).toHaveLength(1);
+
+      // The refetch lands.
+      h.order = {
+        ...base, canCancel: true, cancelBlockedBy: null,
+        payments: [attempt('stripe', 'Card (Stripe)', 'cancelled', '2026-01-02T10:01:00Z'), attempt('sushipp', 'Pay by card', 'pending', '2026-01-02T10:05:00Z')],
+      };
+      paymentMock.mockResolvedValue({ ...hostedWith('sushipp', 10), payment: { ...hostedWith('sushipp', 10).payment!, payBy: '2026-01-04T10:00:00Z' } });
+      await poll();
+      // The account order's own refetch is mocked here, so hand the page the order it would have returned.
+      view.rerender(
+        <QueryClientProvider client={client}>
+          <MantineProvider env="test">
+            <MemoryRouter initialEntries={['/account/orders/K4M2QP']}>
+              <Routes><Route path="/account/orders/:ref" element={<OrderDetailPage />} /></Routes>
+            </MemoryRouter>
+          </MantineProvider>
+        </QueryClientProvider>,
+      );
       await screen.findByText('Paying with Pay by card');
       expect(screen.queryByText('Paying with Card (Stripe)')).toBeNull();
     });

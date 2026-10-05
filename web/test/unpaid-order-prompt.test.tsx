@@ -170,6 +170,7 @@ describe('UnpaidOrderPrompt', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Not now' }));
     await waitFor(() => expect(dialog()).toBeNull());
     expect(isDismissed(1)).toBe(true);
+    expect(sessionStorage.length).toBe(0);
   });
 
   it.each(['/checkout', '/order/K4M2QP/abc', '/payment/success', '/account/orders/K4M2QP', '/login'])('never shows on %s, and asks nothing', async (path) => {

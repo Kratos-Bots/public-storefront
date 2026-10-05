@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef } from 'react';
-import { useLocation, useNavigate } from 'react-router';
+import { useEffect, useRef } from 'react';
+import { useLocation } from 'react-router';
 import { useSettings } from '@/app/settings.ts';
 import { useCartStore, selectCount } from '@/stores/cart.ts';
-import { useModalOpen } from '@/lib/use-modal-open.ts';
+import { useBackControls } from '@/features/webapp/useBackControls.ts';
 import {
   haptic,
   isTelegramWebApp,
@@ -10,7 +10,6 @@ import {
   setChromeColors,
   setClosingConfirmation,
   setVerticalSwipes,
-  supportsSecondaryButton,
   tgExpand,
   tgReady,
   watchSafeAreas,
@@ -20,27 +19,7 @@ function cssVar(name: string, fallback: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
 }
 
-/**
- * Whether this is the first entry of the tab's history (react-router keeps its
- * own index in `history.state`). A page opened straight onto a deep link has
- * nothing behind it, so "back" must go home rather than leave the shop.
- */
-export function isFirstHistoryEntry(): boolean {
-  return (window.history.state as { idx?: number } | null)?.idx === 0;
-}
-
-/**
- * Where "back" goes from this page, or null on the catalogue home, where there is nothing to go back to. One
- * rule for every back control: Telegram's header arrow, its bottom SecondaryButton and the in-page bar's button.
- */
-export function useBackAction(): (() => void) | null {
-  const { pathname } = useLocation();
-  const navigate = useNavigate();
-  return useMemo(
-    () => (pathname === '/' ? null : () => (isFirstHistoryEntry() ? navigate('/', { replace: true }) : navigate(-1))),
-    [pathname, navigate],
-  );
-}
+export { isFirstHistoryEntry } from '@/features/webapp/history-entry.ts';
 
 /**
  * Everything the Mini App asks of Telegram's chrome. All of it is a no-op in a
@@ -53,8 +32,7 @@ export function useBackAction(): (() => void) | null {
 export function useTelegramChrome(): void {
   const { theme } = useSettings();
   const { pathname } = useLocation();
-  const back = useBackAction();
-  const modalOpen = useModalOpen();
+  const { back, showHeaderBack } = useBackControls();
   const count = useCartStore(selectCount);
   const lastCount = useRef(count);
 
@@ -82,9 +60,8 @@ export function useTelegramChrome(): void {
     return () => window.clearTimeout(timer);
   }, [theme]);
 
-  // One back control, not two: a client with the SecondaryButton gets Back in the bottom row (PrimaryActionBar),
-  // so Telegram's header arrow is only for older clients. Neither shows under a dialog.
-  const headerBack = !modalOpen && !supportsSecondaryButton() ? back : null;
+  // Which of the header arrow and the bottom Back show is `backControls`' call (shared with PrimaryActionBar).
+  const headerBack = showHeaderBack ? back : null;
   useEffect(() => {
     setBackButton(headerBack);
   }, [headerBack]);

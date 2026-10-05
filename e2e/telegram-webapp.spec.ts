@@ -202,21 +202,49 @@ test.describe('inside Telegram', () => {
     await expect.poll(() => backShowing(page)).toBe(false);
   });
 
-  test('Back joins the bottom row beside the main button, and the header arrow stands down', async ({ page }) => {
-    await openInTelegram(page);
+  test('with a primary action, Back joins the bottom row beside it and the header arrow stands down', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.clock.setFixedTime(FIXED_NOW);
+    await installTelegramStub(page);
+    const mocks = await installMocks(page, { layout: 'storefront' });
+    await page.goto('/');
+    await expect.poll(() => mocks.state.webappLogins.length).toBe(1);
     await expect.poll(() => tg(page).then((t) => t.secondary.isVisible)).toBe(false);
-    await page.getByRole('link', { name: /^Cart, / }).click();
+    await openProduct(page, 'webapp', firstProductName(mocks));
+    await addFirstToCart(page, 'webapp', mocks);
+    await expect.poll(() => mainText(page)).toMatch(/^View cart · /);
+    await clickMain(page);
     await expect(page).toHaveURL(/\/cart$/);
     await expect.poll(() => tg(page).then((t) => t.secondary.isVisible)).toBe(true);
     const t = await tg(page);
+    expect(t.main.isVisible).toBe(true);
     expect(t.secondary.text).toBe('Back');
     expect(t.secondary.position).toBe('left');
     expect(t.back.isVisible).toBe(false);
     expect(await backHandlers(page)).toBe(0);
+    expect(await secondaryHandlers(page)).toBe(1);
     await clickSecondary(page);
     await expect(page).toHaveURL(/\/$/);
     await expect.poll(() => tg(page).then((x) => x.secondary.isVisible)).toBe(false);
     expect(await secondaryHandlers(page)).toBe(0);
+  });
+
+  test('with no primary action (an account page, empty cart) both back controls show, one handler each, and each goes back', async ({ page }) => {
+    await openInTelegram(page);
+    for (const control of ['bottom', 'header'] as const) {
+      await page.getByRole('link', { name: 'Your account' }).click();
+      await expect(page).toHaveURL(/\/account/);
+      await expect.poll(() => tg(page).then((t) => t.secondary.isVisible && t.back.isVisible)).toBe(true);
+      expect((await tg(page)).main.isVisible).toBe(false);
+      expect(await secondaryHandlers(page)).toBe(1);
+      expect(await backHandlers(page)).toBe(1);
+      if (control === 'bottom') await clickSecondary(page);
+      else await page.evaluate(() => (window as unknown as { __tg: { clickBack(): void } }).__tg.clickBack());
+      await expect(page).toHaveURL(/\/$/);
+      await expect.poll(() => tg(page).then((t) => t.secondary.isVisible || t.back.isVisible)).toBe(false);
+      expect(await secondaryHandlers(page)).toBe(0);
+      expect(await backHandlers(page)).toBe(0);
+    }
   });
 
   test('an older client keeps the header BackButton and has no bottom Back', async ({ page }) => {
@@ -350,6 +378,17 @@ test.describe('webapp layout in a plain browser', () => {
     await back.click();
     await expect(page).toHaveURL(/\/$/);
     await expect(bar.getByRole('button', { name: 'Back' })).toHaveCount(0);
+  });
+
+  test('an account page with an empty cart gets no bar and no reserved room; the header chevron is its Back', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.clock.setFixedTime(FIXED_NOW);
+    await installMocks(page, { layout: 'webapp', session: true });
+    await page.goto('/account');
+    await expect(page.locator('[data-sf-layout="webapp"]')).toBeVisible();
+    await expect(page.locator('[data-sf-part="primary-bar"]')).toHaveCount(0);
+    expect(await page.locator('[data-sf-layout="webapp"]').evaluate((el) => getComputedStyle(el).paddingBottom)).toBe('0px');
+    await expect(page.locator('[data-sf-part="header"]').getByRole('button', { name: 'Back' })).toBeVisible();
   });
 
   test('the bar is not drawn under a dialog, and returns when it closes', async ({ page }) => {

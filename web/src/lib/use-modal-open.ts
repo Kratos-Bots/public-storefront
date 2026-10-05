@@ -16,11 +16,25 @@ function read(): boolean {
   return typeof document !== 'undefined' && document.querySelector(MODAL) !== null;
 }
 
+/** A node that is, or has inside it, a modal dialog. */
+function holdsModal(node: Node): boolean {
+  return node instanceof Element && (node.matches(MODAL) || node.querySelector(MODAL) !== null);
+}
+
+/** Whether a batch of mutations could have opened or closed a dialog: most of a page's mutations cannot. */
+function mayMatter(records: MutationRecord[]): boolean {
+  return records.some((r) => {
+    if (r.type === 'attributes') return true;
+    return holdsModal(r.target) || Array.from(r.addedNodes).some(holdsModal) || Array.from(r.removedNodes).some(holdsModal);
+  });
+}
+
 function subscribe(listener: () => void): () => void {
   listeners.add(listener);
   if (!observer && typeof MutationObserver !== 'undefined') {
     last = read();
-    observer = new MutationObserver(() => {
+    observer = new MutationObserver((records) => {
+      if (!mayMatter(records)) return;
       const now = read();
       if (now === last) return;
       last = now;

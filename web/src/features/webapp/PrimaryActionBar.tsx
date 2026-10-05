@@ -1,62 +1,21 @@
-import { useEffect, useMemo } from 'react';
-import { useLocation, useNavigate } from 'react-router';
+import { useEffect } from 'react';
 import { useSettings } from '@/app/settings.ts';
-import { useSessionStore, selectIsLoggedIn } from '@/stores/session.ts';
-import { useCartStore, selectCount, selectSubtotal } from '@/stores/cart.ts';
-import { usePrimaryActionStore, type PrimaryAction } from '@/stores/primary-action.ts';
-import { useServerCart } from '@/features/cart/useServerCart.ts';
-import { checkoutTarget } from '@/features/cart/checkout-target.ts';
-import { defaultPrimaryAction } from '@/features/webapp/default-action.ts';
-import { formatMoney } from '@/lib/format.ts';
-import { useBackAction } from '@/features/webapp/useTelegramChrome.ts';
+import { useBackControls } from '@/features/webapp/useBackControls.ts';
+import { useResolvedPrimaryAction } from '@/features/webapp/useResolvedPrimaryAction.ts';
 import { useModalOpen } from '@/lib/use-modal-open.ts';
 import { isTelegramWebApp, readableTextOn, setMainButton, setSecondaryButton, supportsSecondaryButton } from '@/lib/telegram-webapp.ts';
 import { Slot } from '@/templates/runtime.tsx';
 import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/webapp/PrimaryActionBar.module.css';
 
-/** A page's own action if it claimed one, else the cart default for this route. */
-export function useResolvedPrimaryAction(): PrimaryAction | null {
-  const override = usePrimaryActionStore((s) => s.override);
-  const { currency, features } = useSettings();
-  const loggedIn = useSessionStore(selectIsLoggedIn);
-  const count = useCartStore(selectCount);
-  const subtotal = useCartStore((s) => selectSubtotal(s.lines));
-  const { issues } = useServerCart();
-  const { pathname } = useLocation();
-  const navigate = useNavigate();
-  const { t } = useText();
-
-  const fallback = defaultPrimaryAction({
-    pathname,
-    count,
-    subtotalLabel: formatMoney(subtotal, currency),
-    checkoutTo: checkoutTarget(loggedIn, features.guestCheckout),
-    ordering: features.ordering,
-    blocked: issues.some((i) => i.inactive || i.belowMin || i.aboveMax),
-  }, t);
-  const label = fallback?.label ?? null;
-  const to = fallback?.to ?? null;
-  const disabled = fallback?.disabled ?? false;
-
-  // One identity per (label, target, disabled): Telegram's MainButton is only
-  // re-hooked when what it shows or where it goes changes, not on every render.
-  const defaultAction = useMemo<PrimaryAction | null>(
-    () => (label !== null && to !== null ? { label, disabled, onClick: () => navigate(to) } : null),
-    [label, to, disabled, navigate],
-  );
-
-  return override ?? defaultAction;
-}
-
 /**
- * Whether the in-page bar is on the page, so the shell can leave room under the content. A dialog hides the bar
- * but not this: the reserved space stays, so the page does not shift behind the dialog.
+ * Whether the in-page bar is on the page, so the shell can leave room under the content. The bar exists only for
+ * a primary action (Back rides inside it); a dialog hides the bar but not this, so the reserved space stays and
+ * the page does not shift behind the dialog.
  */
 export function usePrimaryBarShowing(): boolean {
   const action = useResolvedPrimaryAction();
-  const back = useBackAction();
-  return !isTelegramWebApp() && (action !== null || back !== null);
+  return !isTelegramWebApp() && action !== null;
 }
 
 function primaryColor(): string {
@@ -71,7 +30,7 @@ function backColor(): string {
 
 export function PrimaryActionBar() {
   const action = useResolvedPrimaryAction();
-  const back = useBackAction();
+  const { back, showBottomBack } = useBackControls();
   const modalOpen = useModalOpen();
   const { theme } = useSettings();
   const { t } = useText();
@@ -105,7 +64,7 @@ export function PrimaryActionBar() {
   const backLabel = t('webapp.action.back');
   useEffect(() => {
     if (!bottomBack) return;
-    if (!back || modalOpen) {
+    if (!back || !showBottomBack) {
       setSecondaryButton(null);
       return;
     }
@@ -114,11 +73,11 @@ export function PrimaryActionBar() {
       setSecondaryButton({ text: backLabel, onClick: back, color, textColor: readableTextOn(color) });
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [bottomBack, back, backLabel, modalOpen, theme]);
+  }, [bottomBack, back, showBottomBack, backLabel, theme]);
 
   useEffect(() => (bottomBack ? () => setSecondaryButton(null) : undefined), [bottomBack]);
 
-  if (native || modalOpen || (!action && !back)) return null;
+  if (native || modalOpen || !action) return null;
 
   return (
     <div className={classes.bar} data-sf-part="primary-bar">
