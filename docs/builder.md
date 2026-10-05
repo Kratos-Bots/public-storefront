@@ -592,8 +592,8 @@ no vertical spacing, margins, `maxWidth` or `textSize`: the bar's height is fixe
 **Contract extensions** (`ContainerSpec`, all optional):
 
 - `offers` — the parts of the family this container accepts (default: all). The payment family is
-  shared by three containers, and the success page offers no `PaymentActions` (the hand-off to the
-  saved order is a redirect). A part that is not offered fails `part-placement`.
+  shared by three containers, and every container accepts every part (the success page's `PaymentActions` shows
+  the sign-in or order link by default). A part that is not offered fails `part-placement`.
 - `nests` — containers its slots may hold, at any depth: `CartContents` nests `CartSummary`;
   `AccountNav` nests the five account sections. A nested container keeps its own placement and
   `exactly-one` rules, and owns its own parts.
@@ -623,7 +623,7 @@ is imported only from `builder/editor/**` and its data (including `FIXTURE_TRACK
 the editor chunk. State ids per container are `PREVIEW_STATE_IDS` in `builder/mode.ts`, first is the
 editor's default: `OrdersList` (orders, none, more), `Loyalty` (rewards, no-points), `Referrals`
 (new, referred), `Profile` (website, webapp), `PaymentSuccess` (reference, missing),
-`PaymentCancel` (saved, unsaved, no-reference), `OrderPlaced` (chat, warning, no-chat, missing),
+`PaymentCancel` (signed-out, no-reference), `OrderPlaced` (chat, warning, no-chat, missing),
 `TrackingLookup` (form, found-2, found-1, nothing-shipped, not-found, error), `VerifyForm` (form,
 authentic, expired, not-verified, error), `ResetPassword` (form, set, expired, checking,
 unreachable), `VerifyEmail` (verifying, done, invalid, otherAccount, error), `OrderDetail`
@@ -863,16 +863,21 @@ helpers; type-only feature imports, in the entry), `builder/blocks/_shared/check
 "You have an unpaid order" is a dialog, not a block: it lives in `features/unpaid-prompt/` and is
 mounted once by each shell frame (storefront, menu, web app) beside the sign-in dialog, so no page
 document can place, move or remove it. A signed-in customer is asked about their newest payable order
-(`GET storefront/orders/unpaid`). It offers Complete
-payment (the account order page), Cancel order (or the contact line when money may be on its way) and Not now.
+(`GET storefront/orders/unpaid`). It has one button, "Review or cancel order", which opens that order's page in the
+account (where the customer pays, changes method or cancels), a quiet "Not now", and, when more than one order is
+waiting, a "more" link to the order list. Cancelling is not done in the pop-up: its confirmation is a dialog on the
+order page, and an order the customer cannot cancel (a transfer or a crypto transaction is on its way) gets the same
+pop-up with the same single button.
 
 It never shows on the checkout, the order and payment pages (`/order/*` redirects, `/payment/*`, `/order-placed`,
 `/account/orders/:ref`), `/login`, `/auth/*`, `/reset-password`, `/verify-email`, `/verify/*` and
 `/tracking*`; in the page builder or the appearance preview; to a customer the shop has refused access
 (a restricted shop's account pages stay open to them); or while the cart or sign-in dialog is open (it
 may appear once they close). "Not now" lasts
-for the visit: it is remembered for the browser tab's session, so navigating and reloading do not bring
-it back, and a new tab or visit asks again.
+for the page load: it is a module variable, kept for the customer who said it, so navigating the shop does not bring
+it back, but a reload, a new tab or reopening the Mini App asks again, and a different customer signing in without
+a reload is asked for themselves. Nothing is written to any storage. Opening the order page of an unpaid order counts
+as having been asked for the load, so going back to the shop does not ask about the order the customer was just on.
 
 The shell part is only the hook that decides whether to ask; the dialog itself (Modal, cancel control, the
 order page's stylesheet) is a separate lazily loaded chunk, fetched only when there is an order to show.

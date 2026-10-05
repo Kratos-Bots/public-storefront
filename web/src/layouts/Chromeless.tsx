@@ -5,7 +5,7 @@ import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { Slot } from '@/templates/runtime.tsx';
 import classes from '@/layouts/Chromeless.module.css';
 
-/** Centred brand header and nothing else — used for shared order links. */
+/** Centred brand header and nothing else — the frame of a page set to `chrome: 'none'`, and its loading skeleton. */
 export function Chromeless() {
   return (
     <div className={classes.shell}>

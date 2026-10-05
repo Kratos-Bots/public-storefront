@@ -50,7 +50,7 @@ class MemoryStorage implements Storage {
 }
 
 /**
- * Every other storage writer in the shopper code (saved order links, the checkout form, dismissed
+ * Every other storage writer in the shopper code (the checkout form, dismissed
  * notices, Mantine's colour scheme, the theme payload) reads the global at call time, so shadowing
  * the globals catches them all — including ones added later. The shopper's real values are never
  * read either: the frame starts from empty storage.

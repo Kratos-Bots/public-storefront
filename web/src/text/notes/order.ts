@@ -8,7 +8,7 @@ export default {
   'status.delivered': 'Status name once delivered',
   'status.cancelled': 'Status name of a cancelled order',
   'status.refunded': 'Status name of a refunded order',
-  'link.eyebrow': 'Small line above the "link isn\'t valid" and "reference missing" screens',
+  'link.eyebrow': "Small line above the payment-return pages' missing-reference screen",
   'cancel.action': 'Button that starts cancelling an unpaid order',
   'cancel.confirmTitle': 'Heading of the cancel confirmation; {reference} is the order reference',
   'cancel.confirmBody': 'Cancel confirmation: what cancelling does',
