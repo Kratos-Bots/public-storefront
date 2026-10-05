@@ -5,7 +5,17 @@ body { font-family: var(--sf-font-body); }
 /* Point Mantine's own surfaces at ours so every component follows the client palette. */
 :root[data-mantine-color-scheme] { --mantine-color-body: var(--sf-bg); --mantine-color-text: var(--sf-text); --mantine-color-dimmed: var(--sf-muted); --mantine-color-default: var(--sf-surface); --mantine-color-default-hover: var(--sf-surface-2); --mantine-color-default-border: var(--sf-line-strong); --mantine-color-default-color: var(--sf-text); --mantine-color-placeholder: var(--sf-faint); --mantine-color-error: var(--sf-danger); }
 input, select, textarea { font-size: 16px; } /* iOS zoom guard */
+/* A 1ms animation on a system-filled field: its animationstart is how lib/autofill-advance.ts notices a fill
+   that sets the value without an input event. Nothing visible changes. */
+@keyframes sf-autofill { from { opacity: 1; } to { opacity: 1; } }
+input:-webkit-autofill { animation: sf-autofill 1ms; }
+input:autofill { animation: sf-autofill 1ms; }
 * { touch-action: manipulation; }
+/* Whatever is fixed or sticky at the foot of a phone (a shell's cart or action bar, the checkout's Continue band)
+   publishes its height as --sf-bottom-inset on :root; scrolling a field into view then stops short of it. */
+html { scroll-padding-bottom: var(--sf-bottom-inset, 0px); }
+/* A field scrolled to sits clear of the sticky header (its offsets come from the shell) and of the screen's edge. */
+input, select, textarea { scroll-margin-top: calc(var(--sf-bar-h, 0px) + var(--sf-pin-h, 0px) + 1rem); scroll-margin-bottom: 1rem; }
 .pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 1rem); }
 .pt-safe { padding-top: env(safe-area-inset-top); }
 /* Off screen, still in the accessibility tree (e.g. a page title the store owner hid). !important so a

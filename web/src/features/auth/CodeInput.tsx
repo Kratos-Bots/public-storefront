@@ -43,6 +43,7 @@ export const CodeInput = forwardRef<HTMLInputElement, CodeInputProps>(function C
       className={classes.code}
       type="text"
       inputMode="numeric"
+      name="code"
       autoComplete="one-time-code"
       pattern="[0-9]*"
       enterKeyHint="go"

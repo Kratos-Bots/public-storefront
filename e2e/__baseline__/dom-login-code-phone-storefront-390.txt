@@ -79,7 +79,7 @@ title: Northbound Supply
 <div class="_field_H">
 <label class="_label_H" for="RID">Country</label>
 <span class="_selectWrap_H">
-<select id="RID" class="_input_H _select_H" data-sf-part="input" aria-label="Country" autocomplete="country">
+<select id="RID" name="country" class="_input_H _select_H" data-sf-part="input" aria-label="Country" autocomplete="country">
 <option value="">Choose a country</option>
 <optgroup label="Suggested">
 <option value="GB">United Kingdom (+44)</option>
@@ -337,7 +337,7 @@ title: Northbound Supply
 </div>
 <div class="_field_H">
 <label class="_label_H" for="RID">Phone number</label>
-<input id="RID" class="_input_H" data-sf-part="input" inputmode="tel" aria-label="Phone number" autocomplete="tel" type="tel" value="">
+<input id="RID" class="_input_H" data-sf-part="input" inputmode="tel" aria-label="Phone number" autocomplete="tel" type="tel" value="" name="tel">
 </div>
 <div class="_channels_H">
 <button type="submit" class="_primary_H" data-sf-part="button" data-variant="filled">

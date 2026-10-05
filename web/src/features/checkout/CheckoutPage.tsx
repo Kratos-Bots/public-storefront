@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useAutofillAdvance } from '@/lib/use-autofill-advance.ts';
 import { Link, useNavigate } from 'react-router';
 import { Button } from '@mantine/core';
 import { useDebouncedValue } from '@mantine/hooks';
@@ -176,6 +177,9 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
   const [retryTick, setRetryTick] = useState(0);
 
   const cardRef = useRef<HTMLDivElement | null>(null);
+  const pageRef = useRef<HTMLDivElement | null>(null);
+  // The system filling a contact or address field: focus moves to the next empty one, or the keyboard closes.
+  useAutofillAdvance(pageRef);
   const turnstileRef = useRef<GuestTurnstileHandle | null>(null);
   const lockTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   /**
@@ -730,7 +734,7 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
 
   return (
     <CheckoutFamily.Provider value={value}>
-    <div className={classes.page}>
+    <div className={classes.page} ref={pageRef}>
       {s.head()}
 
       <div className={classes.grid}>

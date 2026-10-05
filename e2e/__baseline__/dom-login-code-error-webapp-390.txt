@@ -90,7 +90,7 @@ title: Northbound Supply
 </svg>Use a different number</button>
 <h2 class="_title_H">Enter your code</h2>
 <p class="_body_H">Enter the 6-digit code we sent to +44 ••• ••• 123 by WhatsApp.</p>
-<input class="_code_H" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" enterkeyhint="go" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="6-digit code" type="text" value="" aria-invalid="true" aria-describedby="RID">
+<input class="_code_H" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" enterkeyhint="go" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="6-digit code" type="text" value="" name="code" aria-invalid="true" aria-describedby="RID">
 <div id="RID" role="alert">
 <p class="_note_H" data-tone="danger">That code isn’t right. 3 tries left.</p>
 </div>

@@ -14,7 +14,12 @@ import { clearLegacyOrderKeys } from '@/app/legacy-storage.ts';
 import { prefetchTemplate } from '@/templates/runtime.tsx';
 import { readStoredTemplateId } from '@/app/theme-bridge.ts';
 import { bootTelegramSession } from '@/app/telegram-session.ts';
+import { keepFocusedFieldClear } from '@/lib/keep-field-clear.ts';
+import { disablePinchZoom } from '@/lib/no-pinch-zoom.ts';
 import { loadTelegramSdk } from '@/lib/telegram-webapp.ts';
+
+disablePinchZoom();
+keepFocusedFieldClear();
 
 // Saved order access keys from the removed order-links store: bearer credentials, so wiped once per browser.
 clearLegacyOrderKeys();

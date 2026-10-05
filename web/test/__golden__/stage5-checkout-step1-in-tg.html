@@ -83,23 +83,23 @@
 <div class="_pair_5c7967">
 <div class="_field_5c7967">
 <label class="_label_5c7967" for="RID">First name</label>
-<input id="RID" class="_input_5c7967" data-sf-part="input" aria-label="First name" autocomplete="given-name" maxlength="100" type="text" value="Ada">
+<input id="RID" class="_input_5c7967" data-sf-part="input" aria-label="First name" autocomplete="given-name" maxlength="100" type="text" value="Ada" name="given-name">
 </div>
 <div class="_field_5c7967">
 <label class="_label_5c7967" for="RID">Surname</label>
-<input id="RID" class="_input_5c7967" data-sf-part="input" aria-label="Surname" autocomplete="family-name" maxlength="100" type="text" value="Lovelace">
+<input id="RID" class="_input_5c7967" data-sf-part="input" aria-label="Surname" autocomplete="family-name" maxlength="100" type="text" value="Lovelace" name="family-name">
 </div>
 </div>
 <div class="_field_5c7967">
 <label class="_label_5c7967" for="RID">Email</label>
-<input id="RID" class="_input_5c7967" data-sf-part="input" inputmode="email" aria-label="Email" autocomplete="email" maxlength="255" type="email" value="ada@example.com">
+<input id="RID" class="_input_5c7967" data-sf-part="input" inputmode="email" aria-label="Email" autocomplete="email" maxlength="255" type="email" value="ada@example.com" name="email">
 </div>
 <div class="_field_5c7967">
 <label class="_label_5c7967" for="RID">Phone<span class="_optional_5c7967">Optional</span>
 </label>
 <div class="_phoneBox_5c7967" data-sf-part="input">
 <span class="_phoneCode_5c7967">
-<select class="_phoneSelect_5c7967" aria-label="Phone country code">
+<select class="_phoneSelect_5c7967" name="tel-country" autocomplete="off" aria-label="Phone country code">
 <option value="">Code</option>
 <option value="AF">+93&nbsp;&nbsp;Afghanistan</option>
 <option value="AX">+358&nbsp;&nbsp;Åland Islands</option>
@@ -351,7 +351,7 @@
 <span class="_phoneCaret_5c7967" aria-hidden="true">
 </span>
 </span>
-<input id="RID" class="_phoneInput_5c7967" inputmode="tel" autocomplete="tel" aria-label="Phone" aria-describedby="RID-note" type="tel" value="">
+<input id="RID" data-optional="true" class="_phoneInput_5c7967" inputmode="tel" autocomplete="tel" aria-label="Phone" aria-describedby="RID-note" type="tel" value="" name="tel">
 </div>
 <p id="RID-note" class="_hint_5c7967">Couriers may use this for delivery.</p>
 </div>

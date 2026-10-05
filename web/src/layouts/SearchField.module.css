@@ -18,6 +18,17 @@
   min-height: 2.25rem;
 }
 
+/* Mantine's size sm is 14px, and iOS zooms the page in on any field under 16px. A desktop keeps the smaller size. */
+.root .input {
+  font-size: 16px;
+}
+
+@media (min-width: 62em) {
+  .root .input {
+    font-size: var(--input-fz, 14px);
+  }
+}
+
 .input::placeholder {
   color: var(--sf-faint);
 }
