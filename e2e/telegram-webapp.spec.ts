@@ -143,6 +143,18 @@ test.describe('inside Telegram', () => {
     await expect.poll(() => tg(page).then((t) => t.back.isVisible)).toBe(true);
   });
 
+  test('the hosted face\'s pay button hands the checkout to Telegram\'s link opener', async ({ page }) => {
+    const popups: string[] = [];
+    page.on('popup', (p) => popups.push(p.url()));
+    await openInTelegram(page, { orderFixture: 'hosted', orderReference: 'K4M2QP' }, '/account/orders/K4M2QP');
+    const pay = page.getByRole('link', { name: 'Click here to Pay' });
+    await expect(pay).toHaveAttribute('href', 'https://pay.example.invalid/checkout/K4M2QP');
+    await pay.click();
+    await expect.poll(async () => (await callsNamed(page, 'openLink')).map((c) => c[1])).toEqual(['https://pay.example.invalid/checkout/K4M2QP']);
+    expect(popups).toEqual([]);
+    await expect(page).toHaveURL(/\/account\/orders\/K4M2QP$/);
+  });
+
   test("the bot's order deep link opens signed in, on the order", async ({ page }) => {
     const mocks = await openInTelegram(page, {}, '/account/orders/K4M2QP');
     await expect(page.getByRole('heading', { name: 'K4M2QP' })).toBeVisible();

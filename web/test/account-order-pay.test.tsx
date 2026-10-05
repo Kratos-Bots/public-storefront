@@ -4,9 +4,9 @@ import { MantineProvider } from '@mantine/core';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-const h = vi.hoisted(() => ({ order: {} as Record<string, unknown>, links: [] as Array<{ label: string; url: string }>, builder: false }));
+const h = vi.hoisted(() => ({ order: {} as Record<string, unknown>, links: [] as Array<{ label: string; url: string }>, builder: false, inTelegram: false }));
 vi.mock('@/app/builder-gate.ts', async (orig) => ({ ...(await orig<typeof import('@/app/builder-gate.ts')>()), isBuilderMode: () => h.builder }));
-vi.mock('@/lib/telegram-webapp.ts', async (orig) => ({ ...(await orig<typeof import('@/lib/telegram-webapp.ts')>()), openExternalLink: vi.fn() }));
+vi.mock('@/lib/telegram-webapp.ts', async (orig) => ({ ...(await orig<typeof import('@/lib/telegram-webapp.ts')>()), openExternalLink: vi.fn(), isTelegramWebApp: () => h.inTelegram }));
 vi.mock('@/app/settings.ts', () => ({
   useSettings: () => ({ currency: 'GBP', brand: { name: 'Northbound Supply', links: {} }, supportLinks: h.links }),
 }));
@@ -66,6 +66,7 @@ beforeEach(() => {
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   h.links = [];
   h.builder = false;
+  h.inTelegram = false;
   vi.mocked(openExternalLink).mockClear();
   paymentMock.mockReset();
   optionsMock.mockReset().mockResolvedValue([method]);
@@ -94,6 +95,36 @@ describe('account order: pay and cancel', () => {
     const link = await screen.findByRole('link', { name: /Click here to Pay/ });
     expect(link.getAttribute('href')).toBe('https://pay.example/abc');
     expect(screen.getByRole('button', { name: /Change/ })).toBeTruthy();
+  });
+
+  describe('the pay link', () => {
+    const showLink = async () => {
+      h.order = { ...base, canCancel: true, cancelBlockedBy: null };
+      paymentMock.mockResolvedValue(publicOrder({
+        canPay: true, payBy: null,
+        activePayment: { paymentId: 9, method: 'stripe', kind: 'gateway', status: 'pending', checkoutUrl: 'https://pay.example/abc', canChange: true },
+      }));
+      mount();
+      return screen.findByRole('link', { name: 'Click here to Pay' });
+    };
+
+    it('outside Telegram it is a plain link: the click is left alone', async () => {
+      const link = await showLink();
+      const proceeded = fireEvent.click(link);
+      expect(proceeded).toBe(true);
+      expect(openExternalLink).not.toHaveBeenCalled();
+    });
+
+    it('inside Telegram the click goes to Telegram\'s link opener, and the link keeps its href', async () => {
+      h.inTelegram = true;
+      const link = await showLink();
+      const proceeded = fireEvent.click(link);
+      expect(proceeded).toBe(false);
+      expect(openExternalLink).toHaveBeenCalledTimes(1);
+      expect(openExternalLink).toHaveBeenCalledWith('https://pay.example/abc');
+      expect(link.getAttribute('href')).toBe('https://pay.example/abc');
+      expect(link.getAttribute('target')).toBe('_blank');
+    });
   });
 
   it('offers Cancel order on an unpaid order, and refreshes both queries after cancelling', async () => {
