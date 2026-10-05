@@ -9,9 +9,18 @@ import type { PublicOrder } from '@/types/public-order.ts';
 import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/order-status/OrderStatus.module.css';
 
+/** What tags a face as a card for the templates; an embedded face sits inside a card already and is flattened by it. */
+const cardAttrs = (embedded: boolean) => (embedded ? { 'data-embedded': '' } : { 'data-sf-part': 'card' });
+
 export interface PaymentSectionProps {
   order: PublicOrder;
   reference: string;
+  /**
+   * Drawn inside a card that already says payment is needed (the account order's payment card): the
+   * "Payment required" and "Payment pending" eyebrows are left out, and the faces are not cards of their
+   * own (`data-embedded`, not `data-sf-part="card"`, so no template paints a card inside a card).
+   */
+  embedded?: boolean;
 }
 
 /**
@@ -20,7 +29,7 @@ export interface PaymentSectionProps {
  * backend's call: `payment.canPay` and `payment.activePayment` say what state
  * the order is in, and this only renders it.
  */
-export function PaymentSection({ order, reference }: PaymentSectionProps) {
+export function PaymentSection({ order, reference, embedded = false }: PaymentSectionProps) {
   const payment = order.payment;
   const crypto = visibleCryptoPayments(order);
   // While the change panel is open the current payment's card is hidden: showing
@@ -38,6 +47,7 @@ export function PaymentSection({ order, reference }: PaymentSectionProps) {
           payment={p}
           reference={reference}
           currency={order.currency}
+          embedded={embedded}
         />
       ));
 
@@ -54,18 +64,18 @@ export function PaymentSection({ order, reference }: PaymentSectionProps) {
       {payment.canPay ? <Deadline payBy={payment.payBy} /> : null}
 
       {payment.canPay && !active ? (
-        <section className={`${classes.card} ${classes.cardAction}`} aria-label={t('order.payment.ariaLabel')} data-sf-part="card">
-          <p className={`${classes.cardEyebrow} ${classes.cardEyebrowAction}`}>{t('order.payment.required')}</p>
+        <section className={`${classes.card} ${classes.cardAction}`} aria-label={t('order.payment.ariaLabel')} {...cardAttrs(embedded)}>
+          {embedded ? null : <p className={`${classes.cardEyebrow} ${classes.cardEyebrowAction}`}>{t('order.payment.required')}</p>}
           <h2 className={classes.cardTitle}>{t('order.payment.chooseHowToPay', { total })}</h2>
           <MethodPicker order={order} reference={reference} />
         </section>
       ) : null}
 
       {payment.canPay && active?.kind === 'gateway' && !changing ? (
-        <section className={`${classes.card} ${classes.cardAction}`} aria-label={t('order.payment.ariaLabel')} data-sf-part="card">
+        <section className={`${classes.card} ${classes.cardAction}`} aria-label={t('order.payment.ariaLabel')} {...cardAttrs(embedded)}>
           <div className={classes.cardHead}>
             <div className={classes.cardHeadBody}>
-              <p className={`${classes.cardEyebrow} ${classes.cardEyebrowAction}`}>{t('order.payment.required')}</p>
+              {embedded ? null : <p className={`${classes.cardEyebrow} ${classes.cardEyebrowAction}`}>{t('order.payment.required')}</p>}
               <h2 className={classes.cardTitle}>{t('order.payment.finishTitle')}</h2>
               <p className={classes.cardFigure}>{t('order.payment.hostedFigure', { total })}</p>
             </div>
@@ -90,8 +100,8 @@ export function PaymentSection({ order, reference }: PaymentSectionProps) {
       ) : null}
 
       {payment.canPay && active?.kind === 'other' && !changing ? (
-        <section className={classes.card} aria-label={t('order.payment.ariaLabel')} data-sf-part="card">
-          <p className={classes.cardEyebrow}>{t('order.payment.pendingEyebrow')}</p>
+        <section className={classes.card} aria-label={t('order.payment.ariaLabel')} {...cardAttrs(embedded)}>
+          {embedded ? null : <p className={classes.cardEyebrow}>{t('order.payment.pendingEyebrow')}</p>}
           <h2 className={classes.cardTitle}>{t('order.payment.pendingTitle')}</h2>
           <p className={classes.cardNote}>{t('order.payment.pendingNote')}</p>
         </section>
@@ -106,6 +116,7 @@ export function PaymentSection({ order, reference }: PaymentSectionProps) {
           open={changing}
           onToggle={() => setChanging((v) => !v)}
           onSelected={() => setChanging(false)}
+          embedded={embedded}
         />
       ) : null}
     </>
@@ -132,6 +143,7 @@ function ChangeMethod({
   open,
   onToggle,
   onSelected,
+  embedded = false,
 }: PaymentSectionProps & { open: boolean; onToggle: () => void; onSelected: () => void }) {
   const { t } = useText();
   return (
@@ -143,7 +155,7 @@ function ChangeMethod({
         </span>
       </button>
       {open ? (
-        <div className={`${classes.card} ${classes.disclosurePanel}`} data-sf-part="card">
+        <div className={`${classes.card} ${classes.disclosurePanel}`} {...cardAttrs(embedded)}>
           <MethodPicker
             order={order}
             reference={reference}

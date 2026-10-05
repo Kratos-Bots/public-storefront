@@ -766,6 +766,12 @@ the open hosted checkout, the crypto address, or "we're checking your payment"),
 rule. While the payment state loads the card shows a busy placeholder; if it fails it says so with a Try again
 button; if the order cannot be paid online it shows the help text and the shop's support links. Everything
 runs on the customer's session (no access key).
+On this page the payment card's own heading replaces the eyebrows that otherwise say payment is needed: it renders
+`PaymentSection` with `embedded`, which leaves out `order.payment.required` (method-picker and hosted-checkout faces),
+`order.payment.pendingEyebrow` (pending face) and the awaiting crypto card's `order.payment.required` eyebrow, so those
+three texts do not show here (they still show wherever `PaymentSection` is used without `embedded`). The crypto card's
+`order.crypto.label` eyebrow in its checking, confirmed and attention states stays. Embedded faces carry `data-embedded`
+instead of `data-sf-part="card"`, so no template paints a card inside the payment card.
 
 The page sorts the container's items into three areas itself (`features/account/order-layout.ts`): `head`
 (back link, heading), `main` (payment, items) and `side` (address, parcels, payments), keeping their order

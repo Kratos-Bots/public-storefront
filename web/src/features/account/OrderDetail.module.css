@@ -201,21 +201,15 @@
   min-width: 0;
 }
 
-/* The payment section draws its own cards (a method picker, a hosted checkout, a crypto address).
-   Inside this card they would be cards in a card, so they are made flat: no border, fill, shadow or
-   inset. The selector is deliberately heavier than the template rules that paint every
-   `data-sf-part="card"`, which a single class could never beat. The section's own eyebrow is
-   dropped when a title follows it, since this card already says "Payment needed". */
-.payBody.payBody.payBody [data-sf-part='card'] {
+/* The payment section is rendered `embedded`: its faces carry `data-embedded` instead of
+   `data-sf-part="card"` (so no template paints a card inside this card) and leave out their "Payment
+   required" eyebrow. Their own module still gives them a border, fill and shadow, which this makes flat. */
+.payBody [data-embedded] {
   padding: 0;
   border: 0;
   border-radius: 0;
   background: transparent;
   box-shadow: none;
-}
-
-.payBody p:has(+ h2) {
-  display: none;
 }
 
 .payHelp {
@@ -231,6 +225,7 @@
   border-top: 1px solid var(--sf-line);
 }
 
+/* Relies on CancelOrder rendering nothing at all (no wrapper) when it has nothing to offer. */
 .payFoot:empty {
   display: none;
 }
@@ -299,7 +294,7 @@
   border-color: var(--sf-primary);
 }
 
-.retry:disabled {
+.retry[aria-disabled='true'] {
   color: var(--sf-faint);
   cursor: progress;
 }

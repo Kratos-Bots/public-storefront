@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -25,6 +25,11 @@ import { fetchOrderPayment, fetchOrderPaymentOptions } from '@/api/orders.ts';
 import { AccountLayout, isOrderDetailPath } from '@/features/account/AccountLayout.tsx';
 import { OrderDetailPage } from '@/features/account/OrderDetailPage.tsx';
 import { ApiError } from '@/lib/errors.ts';
+import { RenderDoc } from '@/builder/render.tsx';
+import { validateDoc } from '@/builder/guard.ts';
+import { partId } from '@/builder/parts.ts';
+import { PaymentSection } from '@/features/order-status/PaymentSection.tsx';
+import type { ComponentData, PuckDoc } from '@/builder/types.ts';
 import type { PublicOrder } from '@/types/public-order.ts';
 
 const paymentMock = vi.mocked(fetchOrderPayment);
@@ -145,6 +150,60 @@ describe('payment needed', () => {
     expect(paymentMock).toHaveBeenCalledTimes(2);
   });
 
+  it('a failed read stays on screen while Try again is in flight, with the button busy, until the second read settles', async () => {
+    h.order = { ...base, canCancel: true, cancelBlockedBy: null };
+    let settle!: (o: PublicOrder) => void;
+    paymentMock.mockRejectedValueOnce(new ApiError(503, 'STOREFRONT_DISABLED'));
+    paymentMock.mockReturnValueOnce(new Promise<PublicOrder>((r) => { settle = r; }));
+    mount();
+    const alert = await screen.findByRole('alert');
+    const retry = within(alert).getByRole('button', { name: 'Try again' });
+    retry.focus();
+    fireEvent.click(retry);
+    await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
+    expect(paymentMock).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole('alert')).toBe(alert);
+    const busy = within(alert).getByRole('button');
+    expect(busy.getAttribute('aria-disabled')).toBe('true');
+    expect(busy.textContent).toBe('Loading');
+    expect(document.activeElement).toBe(busy);
+    fireEvent.click(busy);
+    expect(paymentMock).toHaveBeenCalledTimes(2);
+    await act(async () => { settle(publicOrder({ canPay: true, payBy: null, activePayment: null })); });
+    expect(await screen.findByText(/Choose how to pay/)).toBeTruthy();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('inside the payment card the "Payment required" eyebrow is absent in the method-picker and hosted-checkout faces', async () => {
+    h.order = { ...base, canCancel: true, cancelBlockedBy: null };
+    paymentMock.mockResolvedValue(publicOrder({ canPay: true, payBy: null, activePayment: null }));
+    const first = mount();
+    const card = await screen.findByRole('region', { name: 'Payment needed' });
+    await within(card).findByText(/Choose how to pay/);
+    expect(within(card).queryByText('Payment required')).toBeNull();
+    expect(card.querySelectorAll('[data-sf-part="card"]')).toHaveLength(0); // no card inside the card
+    first.unmount();
+    client.clear();
+    paymentMock.mockResolvedValue(publicOrder({
+      canPay: true, payBy: null,
+      activePayment: { paymentId: 9, method: 'stripe', kind: 'gateway', status: 'pending', checkoutUrl: 'https://pay.example/abc', canChange: true },
+    }));
+    mount();
+    const hosted = await screen.findByRole('region', { name: 'Payment needed' });
+    await within(hosted).findByRole('link', { name: /Open secure checkout/ });
+    expect(within(hosted).queryByText('Payment required')).toBeNull();
+  });
+
+  it('an unpaid order whose payment read says nothing payable (an older backend, no payment block) shows the help text', async () => {
+    h.order = { ...base, canCancel: true, cancelBlockedBy: null };
+    h.links = [{ label: 'Chat on WhatsApp', url: 'https://wa.me/447700900123' }];
+    paymentMock.mockResolvedValue({ ...publicOrder(undefined), payment: undefined });
+    mount();
+    const card = await screen.findByRole('region', { name: 'Payment needed' });
+    expect(await within(card).findByText(/can't be paid online/)).toBeTruthy();
+    expect(within(card).getByRole('link', { name: 'Chat on WhatsApp' })).toBeTruthy();
+  });
+
   it('an unpaid order that cannot be paid online shows the help text and support links', async () => {
     h.order = { ...base, canCancel: true, cancelBlockedBy: null };
     h.links = [{ label: 'Chat on WhatsApp', url: 'https://wa.me/447700900123' }];
@@ -258,5 +317,100 @@ describe('layout', () => {
     const names = [...overview().querySelectorAll('h1, :scope > div > section')]
       .map((e) => (e.tagName === 'H1' ? 'title' : e.getAttribute('aria-label') ?? 'Payment needed'));
     expect(names).toEqual(['title', 'Payment needed', 'Items', 'Delivery address', 'Parcels', 'Payments']);
+  });
+});
+
+describe('stored arrangements', () => {
+  const root = { props: { title: '', description: '', chrome: 'shell' } } as PuckDoc['root'];
+  const c = (type: string, id: string, props: Record<string, unknown> = {}): ComponentData => ({ type, props: { id, ...props } });
+  const part = (type: string): ComponentData => c(type, partId('od', type));
+  const section = (id: string, content: ComponentData[]): ComponentData =>
+    c('Section', id, { padding: 'lg', backgroundToken: 'none', textToken: 'none', width: 'rail', content });
+  const settled = { ...base, outstandingBalance: 0, status: 'confirmed', items: [{ name: 'Oat Bar', quantity: 1, unitPrice: 4, lineTotal: 4 }] };
+  const renderStored = (content: ComponentData[], guard = true) => {
+    const doc: PuckDoc = { root, content: [c('OrderDetail', 'od', { content })] };
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const out = guard ? validateDoc(doc, 'account.order', 'storefront').doc! : doc;
+    warn.mockRestore();
+    return at('/account/orders/K4M2QP', <RenderDoc doc={out} docKey="account.order" layout="storefront" />);
+  };
+
+  it('an arrangement without OrderAddress and OrderParcels, for an order with no payments, is one column with no side wrapper', async () => {
+    h.order = { ...settled, shippingAddress: address };
+    renderStored([part('OrderHeading'), part('OrderItems'), part('OrderPayments')]);
+    await screen.findByRole('heading', { level: 1, name: 'K4M2QP' });
+    expect(overview().dataset.columns).toBe('one');
+    expect(overview().children).toHaveLength(2);
+  });
+
+  it('a content block wrapping parcels and items lands in the main column', async () => {
+    h.order = {
+      ...settled, shippingAddress: address,
+      shipments: [{ status: 'shipped', carrier: 'Royal Mail', trackingNumber: 'RM1', trackingUrl: null, trackingStatusDescription: null, shippedAt: null, deliveredAt: null }],
+    };
+    renderStored([part('OrderHeading'), section('wrap', [part('OrderParcels'), part('OrderItems')]), part('OrderAddress')], false);
+    await screen.findByRole('region', { name: 'Parcels' });
+    expect(overview().dataset.columns).toBe('two');
+    const [, main, side] = [...overview().children] as HTMLElement[];
+    expect(within(main!).getByRole('region', { name: 'Items' })).toBeTruthy();
+    expect(within(main!).getByRole('region', { name: 'Parcels' })).toBeTruthy();
+    expect(within(side!).getByRole('region', { name: 'Delivery address' })).toBeTruthy();
+  });
+
+  it('with no side column, a side-bound content block still renders, at the end of the main column', async () => {
+    h.order = { ...settled, shippingAddress: null };
+    renderStored([part('OrderHeading'), part('OrderItems'), section('wrap', [part('OrderParcels')])], false);
+    await screen.findByRole('heading', { level: 1, name: 'K4M2QP' });
+    expect(overview().dataset.columns).toBe('one');
+    expect(overview().children).toHaveLength(2);
+    const main = overview().children[1] as HTMLElement;
+    const last = main.lastElementChild as HTMLElement;
+    expect(last.tagName).toBe('SECTION');
+    expect(last.getAttribute('aria-label')).toBeNull();
+    expect(last).not.toBe(within(main).getByRole('region', { name: 'Items' }));
+  });
+});
+
+describe('PaymentSection eyebrows', () => {
+  const crypto = (verificationStatus: string, txidMasked: string | null) => ({
+    paymentId: 5, paymentStatus: 'pending', coin: 'usdt', network: 'polygon', coinLabel: 'USDT', networkLabel: 'Polygon', address: '0xabc',
+    coinAmount: '1', fiatAmount: 1, verificationStatus, needsAttention: false, txidMasked,
+  });
+  const cryptoActive = { paymentId: 5, method: 'crypto', kind: 'crypto' as const, status: 'pending', checkoutUrl: null, canChange: true };
+  const section = (embedded: boolean | undefined, order: PublicOrder) =>
+    render(
+      <QueryClientProvider client={client}>
+        <MantineProvider env="test"><MemoryRouter><PaymentSection order={order} reference="K4M2QP" embedded={embedded} /></MemoryRouter></MantineProvider>
+      </QueryClientProvider>,
+    );
+
+  it('without embedded the eyebrows and cards are drawn as before', async () => {
+    section(undefined, publicOrder({ canPay: true, payBy: null, activePayment: null }));
+    expect(await screen.findByText('Payment required')).toBeTruthy();
+    expect(document.querySelector('[data-sf-part="card"]')).toBeTruthy();
+    expect(document.querySelector('[data-embedded]')).toBeNull();
+  });
+
+  it('embedded leaves out the awaiting crypto eyebrow, but keeps the crypto label in the checking state', async () => {
+    const awaiting = { ...publicOrder({ canPay: true, payBy: null, activePayment: cryptoActive }), cryptoPayments: [crypto('pending', null)] };
+    const first = section(true, awaiting);
+    await screen.findByRole('region', { name: 'Crypto payment' });
+    expect(screen.queryByText('Payment required')).toBeNull();
+    expect(screen.queryByText('Crypto payment')).toBeNull();
+    expect(document.querySelector('[data-embedded]')).toBeTruthy();
+    first.unmount();
+    section(true, { ...awaiting, cryptoPayments: [crypto('checking', '1a2b3c…d4e5f6')] });
+    await screen.findByRole('region', { name: 'Crypto payment' });
+    expect(screen.getByText('Crypto payment')).toBeTruthy();
+  });
+
+  it('embedded leaves out the pending eyebrow of an offline payment', async () => {
+    const pending = publicOrder({ canPay: true, payBy: null, activePayment: { paymentId: 7, method: 'bank', kind: 'other', status: 'pending', checkoutUrl: null, canChange: false } });
+    const first = section(undefined, pending);
+    expect(await screen.findByText('Payment pending')).toBeTruthy();
+    first.unmount();
+    section(true, pending);
+    await screen.findByRole('heading', { level: 2 });
+    expect(screen.queryByText('Payment pending')).toBeNull();
   });
 });

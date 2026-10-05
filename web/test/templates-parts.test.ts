@@ -98,12 +98,20 @@ describe('parts', () => {
   const count = (src: string, needle: string) => src.split(needle).length - 1;
 
   it.each<[string, number]>([
-    ['../src/features/order-status/CryptoPaymentCard.tsx', 1],
-    ['../src/features/order-status/PaymentSection.tsx', 4],
     ['../src/features/tracking/ParcelCard.tsx', 1],
     ['../src/features/checkout/CheckoutPage.tsx', 1],
-  ])('%s tags exactly its %i card root(s) — seven in all', (file, n) => {
+  ])('%s tags exactly its %i card root(s)', (file, n) => {
     expect(count(read(file), 'data-sf-part="card"')).toBe(n);
+  });
+
+  // The order-status faces can sit inside another card (`embedded`): they tag through one switch, not a literal.
+  it('CryptoPaymentCard tags its one card root through the embedded switch', () => {
+    expect(count(read('../src/features/order-status/CryptoPaymentCard.tsx'), "{ 'data-sf-part': 'card' }")).toBe(1);
+  });
+  it('PaymentSection tags its four card roots through the embedded switch', () => {
+    const src = read('../src/features/order-status/PaymentSection.tsx');
+    expect(count(src, "{ 'data-sf-part': 'card' }")).toBe(1);
+    expect(count(src, '{...cardAttrs(embedded)}')).toBe(4);
   });
 
   it('tags every checkout text field (input, select, textarea)', () => {

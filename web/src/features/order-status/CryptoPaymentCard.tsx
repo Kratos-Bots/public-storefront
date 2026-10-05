@@ -40,6 +40,12 @@ export interface CryptoPaymentCardProps {
   payment: PublicCryptoPayment;
   reference: string;
   currency: string;
+  /**
+   * Drawn inside a card that already says payment is needed (the account order's payment card): the
+   * awaiting state's "Payment required" eyebrow is left out, and the card is not a card of its own
+   * (`data-embedded`, not `data-sf-part="card"`, so no template paints a card inside a card).
+   */
+  embedded?: boolean;
 }
 
 /**
@@ -48,7 +54,7 @@ export interface CryptoPaymentCardProps {
  * instant a txid is accepted — the order refetch then takes over as the source
  * of truth.
  */
-export function CryptoPaymentCard({ payment, reference, currency }: CryptoPaymentCardProps) {
+export function CryptoPaymentCard({ payment, reference, currency, embedded = false }: CryptoPaymentCardProps) {
   const queryClient = useQueryClient();
   const [txid, setTxid] = useState('');
   const { t, tn } = useText();
@@ -82,19 +88,21 @@ export function CryptoPaymentCard({ payment, reference, currency }: CryptoPaymen
     <section
       className={`${state === 'awaiting' ? `${classes.card} ${classes.cardAction}` : classes.card} ${FADE}`}
       aria-label={t('order.crypto.label')}
-      data-sf-part="card"
+      {...(embedded ? { 'data-embedded': '' } : { 'data-sf-part': 'card' })}
     >
       <div className={classes.cardHead}>
         <div className={classes.cardHeadBody}>
-          <p
-            className={
-              state === 'awaiting'
-                ? `${classes.cardEyebrow} ${classes.cardEyebrowAction}`
-                : classes.cardEyebrow
-            }
-          >
-            {state === 'awaiting' ? t('order.payment.required') : t('order.crypto.label')}
-          </p>
+          {embedded && state === 'awaiting' ? null : (
+            <p
+              className={
+                state === 'awaiting'
+                  ? `${classes.cardEyebrow} ${classes.cardEyebrowAction}`
+                  : classes.cardEyebrow
+              }
+            >
+              {state === 'awaiting' ? t('order.payment.required') : t('order.crypto.label')}
+            </p>
+          )}
           <h2 className={classes.cardTitle}>
             {state === 'awaiting' ? t('order.crypto.sendTitle', { amount, coin: payment.coinLabel }) : t(TITLE[state])}
           </h2>
