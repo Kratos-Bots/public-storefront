@@ -185,6 +185,17 @@ const BASE_BODY = {
   shippingAddress: { firstName: 'Ada', surname: 'Sterling', addressLine1: '14 Kirkgate', city: 'Leeds', zip: 'LS1 6BY', country: 'GB' },
 };
 
+/**
+ * A guest's quote is debounced (300 ms) and mints a token of its own, and the Place order button is down while it does.
+ * Picking the shipping option starts that run, and the walk reaches Review well inside a second: a click landing in the
+ * gap before it starts is answered by an error, and one landing as it starts hits a disabled button and does nothing.
+ * So wait for the quote priced for the pick to be asked for and finished, as a shopper would see the button come back.
+ */
+async function guestQuoteSettled(page: Page, mocks: MockHandle): Promise<void> {
+  await expect.poll(() => mocks.state.guestQuotes.some((q) => q.shippingOptionId === 11)).toBe(true);
+  await expect(page.getByText('Verifying')).toHaveCount(0);
+}
+
 /** The cart is spent and the saved checkout form is gone. */
 async function expectSpent(page: Page): Promise<void> {
   const left = await page.evaluate(() => ({
@@ -229,6 +240,7 @@ test.describe('checkout · the default arrangement sends what v0.7.0 sent', () =
       const { mocks } = await open(page, layout, defaultCheckoutSet(layout), '/checkout', { width: 390, guest: true });
       await expect(page.getByRole('heading', { name: 'Guest checkout', level: 1 })).toBeVisible();
       await walk(page, { order: LEGAL_STEP_ORDERS[0]! });
+      await guestQuoteSettled(page, mocks);
       await placeOrder(page);
       await expectSpent(page);
       expect(mocks.state.checkouts).toHaveLength(1);
@@ -526,6 +538,7 @@ test.describe('checkout · rearranged, end to end', () => {
     test(`${layout} · 390px · guest: same arrangement, a token per request, coupon and notes sent`, async ({ page }) => {
       const { mocks } = await open(page, layout, arrangedCheckoutSet(layout), '/checkout', { width: 390, guest: true });
       await walk(page, { order: LEGAL_STEP_ORDERS[1]!, coupon: COUPON_CODE, notes: NOTE, content: true });
+      await guestQuoteSettled(page, mocks);
       await placeOrder(page);
       await expectSpent(page);
       expect(mocks.state.checkouts).toHaveLength(1);
