@@ -152,4 +152,39 @@ describe('CancelOrder', () => {
     expect(screen.getByText('To cancel this order, contact us: a payment may already be on its way.')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Chat' })).toBeTruthy();
   });
+
+  describe('the order changes under an open dialog', () => {
+    const open = { reference: 'K4M2QP', canCancel: true, blockedBy: null } as const;
+
+    it.each(['bank_transfer', 'crypto_submitted'] as const)(
+      'blockedBy %s closes the dialog, shows the contact line and the support links, and sends nothing', async (blockedBy) => {
+        const { rerender } = render(wrap(open));
+        await openDialog();
+        rerender(wrap({ reference: 'K4M2QP', canCancel: false, blockedBy }));
+        await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+        expect(screen.getByText('To cancel this order, contact us: a payment may already be on its way.')).toBeTruthy();
+        expect(screen.getByRole('link', { name: 'Chat' }).getAttribute('href')).toBe('https://t.me/example_shop');
+        expect(screen.queryByRole('button', { name: 'Cancel order' })).toBeNull();
+        expect(cancelMock).not.toHaveBeenCalled();
+      });
+
+    it('a payment arriving closes the dialog and says the order has already been paid, with no request', async () => {
+      const { rerender } = render(wrap(open));
+      await openDialog();
+      rerender(wrap({ reference: 'K4M2QP', canCancel: false, blockedBy: 'paid' }));
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+      expect(screen.getByText('This order has already been paid, so it can no longer be cancelled here.')).toBeTruthy();
+      expect(screen.queryByRole('button', { name: 'Cancel order' })).toBeNull();
+      expect(cancelMock).not.toHaveBeenCalled();
+    });
+
+    it('an order that is simply no longer cancellable says it is no longer waiting for payment', async () => {
+      const { rerender } = render(wrap(open));
+      await openDialog();
+      rerender(wrap({ reference: 'K4M2QP', canCancel: false, blockedBy: null }));
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+      expect(screen.getByText('This order is no longer waiting for payment.')).toBeTruthy();
+      expect(cancelMock).not.toHaveBeenCalled();
+    });
+  });
 });
