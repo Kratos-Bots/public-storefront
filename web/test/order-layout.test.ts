@@ -1,8 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { partitionOrderItems, sideDraws, silentParts } from '@/features/account/order-layout.ts';
+import { partitionOrderItems, shownPayments, sideDraws, silentParts } from '@/features/account/order-layout.ts';
 
 const b = (type: string, props: Record<string, unknown> = {}) => ({ type, props: { id: type, ...props } });
 const order = { status: 'confirmed', outstandingBalance: 0, shippingAddress: null, shipments: [], payments: [] } as never;
+
+describe('shownPayments', () => {
+  const pay = (status: string, id: number) => ({ method: 'stripe', amount: 5, status, createdAt: `2026-01-0${id}T10:00:00Z` });
+  it('drops only failed payments and keeps the order of the rest', () => {
+    const all = ['pending', 'failed', 'completed', 'refunded', 'cancelled', 'expired', 'odd_state', 'failed'].map((s, i) => pay(s, i + 1));
+    expect(shownPayments(all as never).map((p) => p.status)).toEqual(['pending', 'completed', 'refunded', 'cancelled', 'expired', 'odd_state']);
+    expect(shownPayments([])).toEqual([]);
+  });
+  it('the payment card is silent when every payment failed, and not when one did not', () => {
+    const withPayments = (payments: unknown[]) => silentParts({ ...(order as object), payments } as never).has('OrderPayments');
+    expect(withPayments([pay('failed', 1), pay('failed', 2)])).toBe(true);
+    expect(withPayments([pay('failed', 1), pay('pending', 2)])).toBe(false);
+    expect(withPayments([])).toBe(true);
+  });
+});
 
 describe('order page areas', () => {
   it('sorts parts into head, main and side, keeping their order', () => {

@@ -22,7 +22,7 @@ import { invalidateOrderGone } from '@/features/order-status/order-gone.ts';
 import { paymentMovedOn, paymentSignature } from '@/features/order-status/payment-state.ts';
 import { countryName } from '@/features/checkout/CountrySelect.tsx';
 import { OrderPaymentCard, type PaymentRead } from '@/features/account/OrderPaymentCard.tsx';
-import { isOwed, silentParts, partitionOrderItems, sideDraws } from '@/features/account/order-layout.ts';
+import { isOwed, shownPayments, silentParts, partitionOrderItems, sideDraws } from '@/features/account/order-layout.ts';
 import { clearTitleFocus, takeTitleFocus } from '@/features/account/title-focus.ts';
 import { dismissForThisLoad } from '@/features/unpaid-prompt/useUnpaidOrder.ts';
 import { useSessionStore } from '@/stores/session.ts';
@@ -285,14 +285,15 @@ function AddressView({ styleAttrs }: PartViewProps) {
 function PaymentsView({ styleAttrs }: PartViewProps) {
   const { t } = useText();
   const { order: data } = OrderFamily.useData();
-  if (data.payments.length === 0) return null;
+  const payments = shownPayments(data.payments);
+  if (payments.length === 0) return null;
   return (
     <section className={classes.card} aria-label={t('account.order.payments')} data-sf-part="card" {...styleAttrs}>
       <div className={classes.cardHead}>
         <h2 className={classes.cardTitle}>{t('account.order.payments')}</h2>
       </div>
       <ul className={classes.events}>
-        {data.payments.map((payment, i) => (
+        {payments.map((payment, i) => (
           <li key={`${payment.method}-${payment.createdAt}-${i}`} className={classes.event}>
             <span className={classes.eventName}>{payment.methodLabel ?? methodLabel(payment.method)}</span>
             <span className={classes.eventWhen}>{formatDateTime(payment.createdAt)}</span>
