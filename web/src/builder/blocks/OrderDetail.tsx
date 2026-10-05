@@ -15,5 +15,5 @@ export const block = defineBlock<{ id: string; content: ComponentData[] }>({
     'account.order.loadFailedTitle', 'account.order.loadFailedBody', 'common.actions.tryAgain', 'common.status.loading'],
   container: ORDER_CONTAINER,
   schema: z.object({ content: slot() }), defaultProps: { content: [] },
-  render: ({ content }) => <OrderDetailPage slots={{ content }} />,
+  render: ({ content, puck }) => <OrderDetailPage slots={{ content }} ctx={puck} />,
 });

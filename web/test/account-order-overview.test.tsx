@@ -1,0 +1,262 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { MantineProvider } from '@mantine/core';
+import { MemoryRouter, Route, Routes } from 'react-router';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const h = vi.hoisted(() => ({ order: {} as Record<string, unknown>, links: [] as Array<{ label: string; url: string }> }));
+vi.mock('@/app/settings.ts', () => ({
+  useSettings: () => ({ currency: 'GBP', brand: { name: 'Northbound Supply', links: {} }, supportLinks: h.links }),
+}));
+vi.mock('@/features/account/queries.ts', async (orig) => ({
+  ...(await orig<typeof import('@/features/account/queries.ts')>()),
+  useOrder: () => ({ data: h.order, isPending: false, isError: false }),
+  useProfile: () => ({ data: undefined, isPending: true, isError: false }),
+}));
+vi.mock('@/api/orders.ts', async (orig) => ({
+  ...(await orig<typeof import('@/api/orders.ts')>()),
+  cancelOrder: vi.fn(),
+  fetchOrderPayment: vi.fn(),
+  fetchOrderPaymentOptions: vi.fn(),
+  selectOrderPaymentMethod: vi.fn(),
+}));
+
+import { fetchOrderPayment, fetchOrderPaymentOptions } from '@/api/orders.ts';
+import { AccountLayout, isOrderDetailPath } from '@/features/account/AccountLayout.tsx';
+import { OrderDetailPage } from '@/features/account/OrderDetailPage.tsx';
+import { ApiError } from '@/lib/errors.ts';
+import type { PublicOrder } from '@/types/public-order.ts';
+
+const paymentMock = vi.mocked(fetchOrderPayment);
+const optionsMock = vi.mocked(fetchOrderPaymentOptions);
+
+const base = {
+  reference: 'K4M2QP', totalAmount: 46.03, outstandingBalance: 46.03, createdAt: '2026-01-02T10:00:00Z', status: 'pending',
+  subtotal: 40, shippingAmount: 6.03, discountAmount: 0, items: [], payments: [], shipments: [],
+};
+const address = { firstName: 'Ada', surname: 'Byron', addressLine1: '1 Mill Lane', addressLine2: null, addressLine3: '', city: 'Leeds', county: null, zip: 'LS1 1AA', country: 'GB', servicePoint: null };
+
+const publicOrder = (payment: PublicOrder['payment']): PublicOrder => ({
+  reference: 'K4M2QP', status: 'pending', createdAt: '2026-01-02T10:00:00Z', deliveredAt: null, isPreorder: false, currency: 'GBP',
+  items: [], totals: { subtotal: 40, shippingAmount: 6.03, discountAmount: 0, taxAmount: 0, totalAmount: 46.03 },
+  shippingAddress: null, shipments: [], cryptoPayments: [], payment,
+});
+const method = {
+  slot: 'card' as const, method: 'stripe', displayName: 'Card', type: 'gateway' as const, details: null, feeType: null,
+  feeValue: null, feeRateText: '', feeLabel: '', fee: 0, chargeTotal: 46.03,
+};
+
+let client: QueryClient;
+const at = (path: string, ui = <OrderDetailPage />) =>
+  render(
+    <QueryClientProvider client={client}>
+      <MantineProvider env="test">
+        <MemoryRouter initialEntries={[path]}>
+          <Routes><Route path="/account/*" element={ui} /></Routes>
+        </MemoryRouter>
+      </MantineProvider>
+    </QueryClientProvider>,
+  );
+const mount = () => at('/account/orders/K4M2QP');
+const overview = () => document.querySelector('[data-columns]') as HTMLElement;
+
+beforeEach(() => {
+  client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  h.links = [];
+  paymentMock.mockReset();
+  optionsMock.mockReset().mockResolvedValue([method]);
+});
+afterEach(cleanup);
+
+describe('the account around an order', () => {
+  it('hides the account greeting and the section tabs on an order page, and keeps them on the list', async () => {
+    h.order = { ...base, outstandingBalance: 0, status: 'confirmed' };
+    const first = at('/account/orders/K4M2QP', <AccountLayout><OrderDetailPage /></AccountLayout>);
+    await screen.findByRole('heading', { level: 1, name: 'K4M2QP' });
+    expect(screen.queryByRole('navigation', { name: 'Account sections' })).toBeNull();
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    first.unmount();
+    at('/account/orders', <AccountLayout><p>the list</p></AccountLayout>);
+    expect(await screen.findByRole('navigation', { name: 'Account sections' })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1 })).toBeTruthy();
+  });
+
+  it('isOrderDetailPath matches only a single order', () => {
+    expect(['/account/orders/K4M2QP', '/account/orders/K4M2QP/'].map(isOrderDetailPath)).toEqual([true, true]);
+    expect(['/account/orders', '/account/orders/', '/account/profile', '/account/orders/A/b'].map(isOrderDetailPath)).toEqual([false, false, false, false]);
+  });
+});
+
+describe('the header', () => {
+  it('has a back link, the reference as the one h1, the status in words, and the order date', async () => {
+    h.order = { ...base, outstandingBalance: 0, status: 'confirmed' };
+    mount();
+    const title = await screen.findByRole('heading', { level: 1, name: 'K4M2QP' });
+    const back = screen.getByRole('link', { name: 'All orders' });
+    expect(back.getAttribute('href')).toBe('/account/orders');
+    expect(title.parentElement!.textContent).toMatch(/K4M2QP\S*\s*\S+/);
+    expect(screen.getByText(/Placed 2 January 2026/)).toBeTruthy();
+  });
+
+  it('a collection order keeps "Collect from {name}" in the heading', async () => {
+    h.order = { ...base, outstandingBalance: 0, status: 'confirmed', servicePoint: { name: 'Corner Shop', carrier: 'DPD' } };
+    mount();
+    const title = await screen.findByRole('heading', { level: 1, name: 'K4M2QP' });
+    expect(title.closest('header')!.textContent).toContain('Collect from Corner Shop');
+  });
+});
+
+describe('payment needed', () => {
+  it('unpaid: the payment card leads with the amount and holds the method picker and Cancel order', async () => {
+    h.order = { ...base, canCancel: true, cancelBlockedBy: null };
+    paymentMock.mockResolvedValue(publicOrder({ canPay: true, payBy: null, activePayment: null }));
+    mount();
+    const card = await screen.findByRole('region', { name: 'Payment needed' });
+    expect(card.getAttribute('data-sf-part')).toBe('card');
+    expect(await within(card).findByText(/Choose how to pay/)).toBeTruthy();
+    expect(card.querySelector('h2 + p')!.textContent).toContain('£46.03');
+    expect(within(card).getByRole('button', { name: 'Cancel order' })).toBeTruthy();
+    // The card is the first thing in the main column, above the items.
+    const main = overview().children[1]!;
+    expect(main.firstElementChild).toBe(card);
+  });
+
+  it('while the payment state loads there is a busy placeholder, not a bare figure, and Cancel order is already there', async () => {
+    h.order = { ...base, canCancel: true, cancelBlockedBy: null };
+    paymentMock.mockReturnValue(new Promise(() => {}));
+    mount();
+    const card = await screen.findByRole('region', { name: 'Payment needed' });
+    expect(within(card).getByText('Loading payment options…')).toBeTruthy();
+    expect(card.querySelector('[aria-busy="true"]')).toBeTruthy();
+    expect(within(card).getByRole('button', { name: 'Cancel order' })).toBeTruthy();
+    expect(within(card).queryByText(/Choose how to pay/)).toBeNull();
+  });
+
+  it('when the payment state fails to load it says so, Try again refetches, and Cancel order is still offered', async () => {
+    h.order = { ...base, canCancel: true, cancelBlockedBy: null };
+    paymentMock.mockRejectedValueOnce(new ApiError(503, 'STOREFRONT_DISABLED'));
+    paymentMock.mockResolvedValue(publicOrder({ canPay: true, payBy: null, activePayment: null }));
+    mount();
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toContain("We couldn't load the payment options.");
+    expect(screen.getByRole('button', { name: 'Cancel order' })).toBeTruthy();
+    fireEvent.click(within(alert).getByRole('button', { name: 'Try again' }));
+    expect(await screen.findByText(/Choose how to pay/)).toBeTruthy();
+    expect(paymentMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('an unpaid order that cannot be paid online shows the help text and support links', async () => {
+    h.order = { ...base, canCancel: true, cancelBlockedBy: null };
+    h.links = [{ label: 'Chat on WhatsApp', url: 'https://wa.me/447700900123' }];
+    paymentMock.mockResolvedValue(publicOrder({ canPay: false, payBy: null, activePayment: null }));
+    mount();
+    const card = await screen.findByRole('region', { name: 'Payment needed' });
+    expect(await within(card).findByText(/can't be paid online/)).toBeTruthy();
+    expect(within(card).getByRole('link', { name: 'Chat on WhatsApp' }).getAttribute('href')).toBe('https://wa.me/447700900123');
+    expect(within(card).getByRole('button', { name: 'Cancel order' })).toBeTruthy();
+  });
+
+  it('a paid order has no payment card and asks for no payment state', async () => {
+    h.order = { ...base, outstandingBalance: 0, status: 'confirmed', canCancel: false, cancelBlockedBy: 'paid' };
+    mount();
+    await screen.findByRole('heading', { level: 1, name: 'K4M2QP' });
+    expect(screen.queryByRole('region', { name: 'Payment needed' })).toBeNull();
+    expect(paymentMock).not.toHaveBeenCalled();
+  });
+
+  it('a cancelled order with a balance on paper has no payment card', async () => {
+    h.order = { ...base, status: 'cancelled', outstandingBalance: 46.03, canCancel: false, cancelBlockedBy: null };
+    mount();
+    await screen.findByRole('heading', { level: 1, name: 'K4M2QP' });
+    expect(screen.queryByRole('region', { name: 'Payment needed' })).toBeNull();
+    expect(paymentMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('details', () => {
+  it('items are a card with the grand total as its own, emphasised line', async () => {
+    h.order = { ...base, outstandingBalance: 0, status: 'confirmed', items: [{ name: 'Oat Bar', quantity: 3, unitPrice: 4.5, lineTotal: 13.5 }] };
+    mount();
+    const card = await screen.findByRole('region', { name: 'Items' });
+    expect(card.getAttribute('data-sf-part')).toBe('card');
+    expect(within(card).getByRole('heading', { level: 2, name: 'Items' })).toBeTruthy();
+    expect(card.textContent).toContain('Oat Bar');
+    const total = within(card).getByText('Total');
+    expect(total.parentElement!.textContent).toContain('£46.03');
+  });
+
+  it('shows the delivery address, skipping blank lines', async () => {
+    h.order = { ...base, outstandingBalance: 0, status: 'confirmed', shippingAddress: address };
+    mount();
+    const card = await screen.findByRole('region', { name: 'Delivery address' });
+    expect(card.textContent).toContain('Ada Byron');
+    expect(card.textContent).toContain('1 Mill Lane');
+    expect(card.textContent).toContain('LS1 1AA');
+    expect(card.textContent).toContain('United Kingdom');
+    expect(card.querySelectorAll('[data-address-line]')).toHaveLength(4); // name, line 1, city + postcode, country
+  });
+
+  it('a collection order says Collect from with the point name and carrier', async () => {
+    h.order = { ...base, outstandingBalance: 0, status: 'confirmed', shippingAddress: { ...address, servicePoint: { name: 'Corner Shop', carrier: 'DPD' } } };
+    mount();
+    const card = await screen.findByRole('region', { name: 'Collect from' });
+    expect(card.textContent).toContain('Corner Shop');
+    expect(card.textContent).toContain('DPD');
+  });
+
+  it('no address: the address part draws nothing', async () => {
+    h.order = { ...base, outstandingBalance: 0, status: 'confirmed', shippingAddress: null };
+    mount();
+    await screen.findByRole('heading', { level: 1, name: 'K4M2QP' });
+    expect(screen.queryByRole('region', { name: 'Delivery address' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Collect from' })).toBeNull();
+  });
+
+  it('payment history says the status in plain words, and an unknown status as it came', async () => {
+    const payment = (status: string, i: number) => ({ method: 'stripe', amount: 5, status, createdAt: `2026-01-0${i + 2}T10:00:00Z` });
+    h.order = { ...base, outstandingBalance: 0, status: 'confirmed', payments: ['pending', 'completed', 'failed', 'cancelled', 'expired', 'refunded', 'odd_state'].map(payment) };
+    mount();
+    const card = await screen.findByRole('region', { name: 'Payments' });
+    for (const word of ['Waiting', 'Paid', 'Failed', 'Cancelled', 'Expired', 'Refunded', 'odd_state']) expect(within(card).getByText(word)).toBeTruthy();
+  });
+
+  it('parcels are a card with the track link', async () => {
+    h.order = {
+      ...base, outstandingBalance: 0, status: 'shipped',
+      shipments: [{ status: 'in_transit', carrier: 'Royal Mail', trackingNumber: 'RM1', trackingUrl: 'https://track.example/RM1', trackingStatusDescription: 'At the depot', shippedAt: null, deliveredAt: null }],
+    };
+    mount();
+    const card = await screen.findByRole('region', { name: 'Parcels' });
+    expect(within(card).getByRole('link', { name: 'Track this parcel' }).getAttribute('href')).toBe('https://track.example/RM1');
+    expect(card.textContent).toContain('At the depot');
+  });
+});
+
+describe('layout', () => {
+  it('two columns when the side column has something to draw, one when it has not', async () => {
+    h.order = { ...base, outstandingBalance: 0, status: 'confirmed', shippingAddress: address };
+    const first = mount();
+    await screen.findByRole('heading', { level: 1, name: 'K4M2QP' });
+    expect(overview().dataset.columns).toBe('two');
+    first.unmount();
+    h.order = { ...base, outstandingBalance: 0, status: 'confirmed', shippingAddress: null, shipments: [], payments: [] };
+    mount();
+    await screen.findByRole('heading', { level: 1, name: 'K4M2QP' });
+    expect(overview().dataset.columns).toBe('one');
+  });
+
+  it('the DOM order is the mobile order: header, payment, items, then address, parcels and history', async () => {
+    h.order = {
+      ...base, canCancel: true, cancelBlockedBy: null, shippingAddress: address,
+      shipments: [{ status: 'shipped', carrier: 'Royal Mail', trackingNumber: 'RM1', trackingUrl: null, trackingStatusDescription: null, shippedAt: null, deliveredAt: null }],
+      payments: [{ method: 'stripe', amount: 5, status: 'pending', createdAt: '2026-01-02T10:00:00Z' }],
+    };
+    paymentMock.mockResolvedValue(publicOrder({ canPay: true, payBy: null, activePayment: null }));
+    mount();
+    await screen.findByRole('region', { name: 'Payment needed' });
+    // Direct children of the areas only: the payment section draws sections of its own inside the card.
+    const names = [...overview().querySelectorAll('h1, :scope > div > section')]
+      .map((e) => (e.tagName === 'H1' ? 'title' : e.getAttribute('aria-label') ?? 'Payment needed'));
+    expect(names).toEqual(['title', 'Payment needed', 'Items', 'Delivery address', 'Parcels', 'Payments']);
+  });
+});

@@ -16,7 +16,7 @@ vi.hoisted(() => { process.env.TZ = 'Europe/London'; });
 const s = vi.hoisted(() => ({
   profile: null as unknown, orders: null as unknown, order: null as unknown, redeem: null as unknown,
   inTelegram: false, layout: 'storefront', mode: 'off', links: { whatsapp: null, telegram: null } as { whatsapp: string | null; telegram: string | null },
-  claimFails: false,
+  claimFails: false, payment: 'loading' as 'loading' | 'error',
 }));
 
 vi.mock('@/app/settings.ts', () => ({
@@ -42,6 +42,11 @@ vi.mock('@/api/profile.ts', async () => {
   };
 });
 vi.mock('@/api/auth.ts', () => ({ logout: () => new Promise(() => {}) }));
+// The order page reads the payment state of an unpaid order: it either never answers or fails, so a golden is a fixed state.
+vi.mock('@/api/orders.ts', async (orig) => ({
+  ...(await orig<typeof import('@/api/orders.ts')>()),
+  fetchOrderPayment: () => (s.payment === 'error' ? Promise.reject(new Error('payment unavailable')) : new Promise(() => {})),
+}));
 
 import { AccountLayout } from '@/features/account/AccountLayout.tsx';
 import { OrdersPage } from '@/features/account/OrdersPage.tsx';
@@ -102,7 +107,7 @@ const LADDER: RedeemOptions = {
 
 function reset() {
   s.profile = pending; s.orders = pending; s.order = pending; s.redeem = ok<RedeemOptions | null>(null);
-  s.inTelegram = false; s.layout = 'storefront'; s.mode = 'off'; s.links = { whatsapp: null, telegram: null }; s.claimFails = false;
+  s.inTelegram = false; s.layout = 'storefront'; s.mode = 'off'; s.links = { whatsapp: null, telegram: null }; s.claimFails = false; s.payment = 'loading';
   useSessionStore.setState({ token: null, customer: null });
 }
 beforeEach(reset);
@@ -185,6 +190,13 @@ orderCase('full', () => { s.order = ok(DETAIL); });
 orderCase('no-balance', () => { s.order = ok({ ...DETAIL, outstandingBalance: 0 }); });
 orderCase('no-payments', () => { s.order = ok({ ...DETAIL, payments: [] }); });
 orderCase('no-parcels', () => { s.order = ok({ ...DETAIL, shipments: [] }); });
+const ADDRESS = { firstName: 'Ada', surname: 'Byron', addressLine1: '1 Mill Lane', addressLine2: null, addressLine3: null, city: 'Leeds', county: null, zip: 'LS1 1AA', country: 'GB' };
+const UNPAID = { ...DETAIL, status: 'pending', payments: [], shipments: [], canCancel: true, cancelBlockedBy: null } satisfies OrderDetail;
+orderCase('unpaid-loading', () => { s.order = ok(UNPAID); });
+orderCase('unpaid-error', () => { s.order = ok(UNPAID); s.payment = 'error'; });
+orderCase('delivery', () => { s.order = ok({ ...DETAIL, outstandingBalance: 0, shippingAddress: ADDRESS }); });
+orderCase('collection', () => { s.order = ok({ ...DETAIL, outstandingBalance: 0, servicePoint: { name: 'Corner Shop', carrier: 'DPD' }, shippingAddress: { ...ADDRESS, servicePoint: { name: 'Corner Shop', carrier: 'DPD' } } }); });
+orderCase('cancelled', () => { s.order = ok({ ...DETAIL, status: 'cancelled', shipments: [] }); });
 
 // ---------------------------------------------------------------- loyalty
 const loyaltyCase = (name: string, setup: () => void, run?: Case['act']) => add({ name: `account-loyalty-${name}`, docKey: 'account.loyalty', section: 'Loyalty', path: '/account/loyalty', page: <LoyaltyPage />, setup, act: run });
@@ -232,6 +244,6 @@ profileCase('telegram-beta-confirm', () => { s.profile = profileQ(); s.layout = 
 profileCase('signing-out', () => { s.profile = profileQ(); }, (m) => click(m, 'Sign out'));
 
 describe('stage 4 account goldens (v0.7.0)', () => {
-  it('has unique case names', () => { expect(cases.length).toBeGreaterThanOrEqual(49); expect(new Set(cases.map((c) => c.name)).size).toBe(cases.length); });
+  it('has unique case names', () => { expect(cases.length).toBeGreaterThanOrEqual(54); expect(new Set(cases.map((c) => c.name)).size).toBe(cases.length); });
   it.each(cases.map((c) => [c.name, c] as const))('%s', async (_n, c) => { await runCase(c); });
 });

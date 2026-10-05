@@ -3,12 +3,12 @@ import { defineBlock } from '@/builder/define.ts';
 import { OrderFamily } from '@/builder/family-order.ts';
 import { BOX, TEXT, VIS, styleSupport } from '@/builder/style/model.ts';
 
-/** Every payment made against the order. */
+/** Where the order is going: the delivery address, or the collection point. Absent when the order has no address. */
 export const block = defineBlock<{ id: string }>({
-  name: 'OrderPayments', label: 'Payments', category: 'part', part: { family: 'order' },
+  name: 'OrderAddress', label: 'Delivery address', category: 'part', part: { family: 'order' },
   layouts: 'all', routeBound: false, slots: [],
   style: styleSupport('root', [...BOX, ...TEXT, ...VIS]),
-  text: ['account.order.payments', 'account.order.paymentStatus.*'],
+  text: ['account.order.address.*'],
   schema: z.object({}), defaultProps: {},
-  render: (p) => <OrderFamily.PartHost name="OrderPayments" props={p as Record<string, unknown>} styleAttrs={p.puck.style} />,
+  render: (p) => <OrderFamily.PartHost name="OrderAddress" props={p as Record<string, unknown>} styleAttrs={p.puck.style} />,
 });

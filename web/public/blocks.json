@@ -2336,6 +2336,40 @@
       }
     },
     {
+      "name": "OrderAddress",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "order"
+      }
+    },
+    {
       "name": "OrderBackLink",
       "category": "part",
       "layouts": [
@@ -2443,8 +2477,9 @@
           "OrderHeading",
           "OrderBalance",
           "OrderItems",
-          "OrderPayments",
-          "OrderParcels"
+          "OrderAddress",
+          "OrderParcels",
+          "OrderPayments"
         ],
         "insertSlot": "content"
       }

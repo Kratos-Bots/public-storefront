@@ -40,6 +40,7 @@ import { OrderFamily } from '@/builder/family-order.ts';
 import type { ComponentData, DocKey, LayoutKind, PuckDoc } from '@/builder/types.ts';
 import { STAGE4_PARTS } from './helpers/stage4-parts.ts';
 import classes from '@/features/account/Account.module.css';
+import orderClasses from '@/features/account/OrderDetail.module.css';
 
 afterEach(cleanup);
 
@@ -95,7 +96,7 @@ const settled = (d: PuckDoc, key: DocKey) => { const r = validateDoc(d, key, 'st
 describe('contract', () => {
   it('covers every part of the three containers', () => {
     expect(NEW_PARTS.sort()).toEqual(['AccountGreeting', 'AccountTabs', 'OrderBackLink', 'OrderBalance', 'OrderHeading', 'OrderItems',
-      'OrderPayments', 'OrderParcels', 'OrdersEmpty', 'OrdersHeading', 'OrdersMore', 'OrdersRows'].sort());
+      'OrderPayments', 'OrderParcels', 'OrderAddress', 'OrdersEmpty', 'OrdersHeading', 'OrdersMore', 'OrdersRows'].sort());
   });
   it.each(NEW_PARTS)('%s: family and style match the stage 4 table', (name) => {
     const def = BLOCKS[name]!;
@@ -146,7 +147,7 @@ describe('rules', () => {
     expect(rulesOf(doc([nav([...head, { ...p('nav', name), props: { id: 'dup' } }])]))).toContain(`part-required:AccountNav.${name}`);
     expect(rulesOf(doc([nav(head)]))).not.toContain(`part-required:AccountNav.${name}`);
   });
-  it.each([['OrdersList', ['OrdersRows', 'OrdersEmpty'], ['OrdersHeading', 'OrdersMore']], ['OrderDetail', ['OrderHeading', 'OrderItems'], ['OrderBackLink', 'OrderBalance', 'OrderPayments', 'OrderParcels']]] as const)(
+  it.each([['OrdersList', ['OrdersRows', 'OrdersEmpty'], ['OrdersHeading', 'OrdersMore']], ['OrderDetail', ['OrderHeading', 'OrderItems'], ['OrderBackLink', 'OrderBalance', 'OrderAddress', 'OrderPayments', 'OrderParcels']]] as const)(
     '%s: required and unique parts', (container, required, optional) => {
       const full = (): ComponentData[] => SPECS[container]!.defaultSlots({}, { layout: 'storefront', id: 'k' }).content!;
       const key = DOC_OF[container]!;
@@ -191,7 +192,7 @@ describe('upgrade (spec section 8)', () => {
     expect(types((out.props.body as ComponentData[])[0]!.props.content)).toEqual(['OrdersHeading', 'OrdersRows', 'OrdersMore', 'OrdersEmpty']);
   });
   it.each([['OrdersList', ['OrdersHeading', 'OrdersRows', 'OrdersMore', 'OrdersEmpty']],
-    ['OrderDetail', ['OrderBackLink', 'OrderHeading', 'OrderBalance', 'OrderItems', 'OrderPayments', 'OrderParcels']]] as const)(
+    ['OrderDetail', ['OrderBackLink', 'OrderHeading', 'OrderBalance', 'OrderItems', 'OrderAddress', 'OrderParcels', 'OrderPayments']]] as const)(
     '%s: absent content equals the defaults, [] is untouched, a second pass is idempotent', (type, expected) => {
       const once = upgradeItems(stored(type, {}), 'storefront');
       expect(types(once[0]!.props.content)).toEqual(expected);
@@ -281,21 +282,21 @@ describe('arrangement and state ownership', () => {
     expect(refetch).toHaveBeenCalled();
   });
 
-  it('order detail: parcels before items, and a removed part is absent', async () => {
+  it('order detail: the page sorts parcels after items whatever the arrangement, and a removed part is absent', async () => {
     s.order = { data: DETAIL, isPending: false, isError: false, refetch: noop };
     const d = settled(accountDoc(undefined, [c('OrderDetail', 'od', { content: [p('od', 'OrderHeading'), p('od', 'OrderParcels'), p('od', 'OrderItems')] })]), 'account.order');
     const { container } = await ready(renderOrder(d));
     await waitFor(() => expect(container.querySelectorAll('section').length).toBe(2));
-    expect([...container.querySelectorAll('section')].map((e) => e.getAttribute('aria-label'))).toEqual(['Parcels', 'Items']);
-    expect(container.querySelector(`.${classes.back}`)).toBeNull();
-    expect(container.querySelector(`.${classes.body}`)).not.toBeNull();
+    expect([...container.querySelectorAll('section')].map((e) => e.getAttribute('aria-label'))).toEqual(['Items', 'Parcels']);
+    expect(container.querySelector(`.${orderClasses.back}`)).toBeNull();
+    expect(container.querySelector(`.${orderClasses.overview}`)).not.toBeNull();
   });
-  it('order detail default: the balance band draws and there is no link to a separate order page', async () => {
+  it('order detail default: the payment card draws and there is no link to a separate order page', async () => {
     s.order = { data: DETAIL, isPending: false, isError: false, refetch: noop };
     const { container } = await ready(renderOrder(defaultOrder()));
-    await waitFor(() => expect(container.querySelector(`.${classes.band}`)).not.toBeNull());
+    await waitFor(() => expect(screen.getByRole('region', { name: 'Payment needed' })).toBeInTheDocument());
     expect(container.querySelector(`.${classes.cta}`)).toBeNull();
-    expect(container.querySelector('h2')).toHaveTextContent('K4M2QP');
+    expect(container.querySelector('h1')).toHaveTextContent('K4M2QP');
   });
   it('names a payment by the shop’s name for the method, falling back to the id as words on an older backend', async () => {
     const payments = [
@@ -307,11 +308,11 @@ describe('arrangement and state ownership', () => {
     expect(await screen.findByText('Pay by card')).toBeInTheDocument();
     expect(screen.getByText(/bank transfer/i)).toBeInTheDocument();
   });
-  it('a settled order draws no balance band', async () => {
+  it('a settled order draws no payment card', async () => {
     s.order = { data: { ...DETAIL, outstandingBalance: 0, payments: [], shipments: [] }, isPending: false, isError: false, refetch: noop };
     const { container } = await ready(renderOrder(defaultOrder()));
-    await waitFor(() => expect(container.querySelector('h2')).not.toBeNull());
-    expect(container.querySelector(`.${classes.band}`)).toBeNull();
+    await waitFor(() => expect(container.querySelector('h1')).not.toBeNull());
+    expect(screen.queryByRole('region', { name: 'Payment needed' })).toBeNull();
     expect(container.querySelectorAll('section')).toHaveLength(1);
   });
 
@@ -349,10 +350,16 @@ describe('family views', () => {
 
 describe('css (spec section 9)', () => {
   const css = readFileSync(resolve(process.cwd(), 'src/features/account/Account.module.css'), 'utf8').replaceAll(String.fromCharCode(13), '');
-  it.each(['.eyebrow', '.name', '.tab', '.sectionTitle', '.ref', '.total', '.date', '.due', '.ghost', '.back', '.detailRef', '.band',
-    '.itemName', '.rowLabel', '.eventName', '.tracking', '.cta', '.note'])('%s takes the fg and text-size variables', (sel) => {
+  it.each(['.eyebrow', '.name', '.tab', '.sectionTitle', '.ref', '.total', '.date', '.due', '.ghost', '.rowLabel', '.cta', '.note'])('%s takes the fg and text-size variables', (sel) => {
     const m = new RegExp(`\\n\\${sel} \\{\\n([\\s\\S]*?)\\n\\}`).exec(css)!;
     expect(m[1]).toContain('var(--sf-block-fg,');
     expect(m[1]).toMatch(/--sf-text-scale/);
   });
+  const orderCss = readFileSync(resolve(process.cwd(), 'src/features/account/OrderDetail.module.css'), 'utf8').replaceAll(String.fromCharCode(13), '');
+  it.each(['.back', '.title', '.meta', '.cardTitle', '.payAmount', '.lineName', '.lineQty', '.lineTotal', '.sum', '.address', '.eventName', '.eventWhen', '.eventFigure', '.tracking'])(
+    'order page %s takes the fg and text-size variables', (sel) => {
+      const m = new RegExp(`\\n\\${sel} \\{\\n([\\s\\S]*?)\\n\\}`).exec(orderCss)!;
+      expect(m[1]).toContain('var(--sf-block-fg,');
+      expect(m[1]).toMatch(/--sf-text-scale/);
+    });
 });

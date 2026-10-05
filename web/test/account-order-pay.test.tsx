@@ -283,8 +283,9 @@ describe('account order: pay and cancel', () => {
       h.order = { ...base, status: 'cancelled', canCancel: false, cancelBlockedBy: null };
       paymentMock.mockResolvedValue({ ...stuck(), status: 'cancelled' });
       mount();
-      await waitFor(() => expect(paymentMock).toHaveBeenCalled());
       await new Promise((r) => setTimeout(r, 20));
+      // A closed order is not read for payment state at all: there is nothing to pay on it.
+      expect(paymentMock).not.toHaveBeenCalled();
       expect(screen.queryByText(help)).toBeNull();
     });
     it('is not shown beside a payment section drawn for a visible crypto payment', async () => {

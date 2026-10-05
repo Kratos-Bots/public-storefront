@@ -6,7 +6,7 @@
 <style data-mantine-styles="classes">@media (max-width: 35.99375em) {.mantine-visible-from-xs {display: none !important;}}@media (min-width: 36em) {.mantine-hidden-from-xs {display: none !important;}}@media (max-width: 47.99375em) {.mantine-visible-from-sm {display: none !important;}}@media (min-width: 48em) {.mantine-hidden-from-sm {display: none !important;}}@media (max-width: 61.99375em) {.mantine-visible-from-md {display: none !important;}}@media (min-width: 62em) {.mantine-hidden-from-md {display: none !important;}}@media (max-width: 74.99375em) {.mantine-visible-from-lg {display: none !important;}}@media (min-width: 75em) {.mantine-hidden-from-lg {display: none !important;}}@media (max-width: 87.99375em) {.mantine-visible-from-xl {display: none !important;}}@media (min-width: 88em) {.mantine-hidden-from-xl {display: none !important;}}</style>
 <div class="_account_3fdc23">
 <div class="anim-fade">
-<div class="_overview_8b03ba" data-columns="two">
+<div class="_overview_8b03ba" data-columns="one">
 <div class="_head_8b03ba">
 <a class="_back_8b03ba" href="/account/orders" data-discover="true">
 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
@@ -18,7 +18,7 @@
 <header class="_heading_8b03ba">
 <div class="_titleRow_8b03ba">
 <h1 class="_title_8b03ba">K4M2QP</h1>
-<span class="_pill_3fdc23" data-sf-part="badge">On its way</span>
+<span class="_pill_3fdc23" data-sf-part="badge">Order received</span>
 </div>
 <p class="_meta_8b03ba">Placed 12 August 2026</p>
 </header>
@@ -34,14 +34,20 @@
 <span style="font-variant-numeric: tabular-nums;">£10.00</span>
 </p>
 </div>
-<div class="_payBody_8b03ba _skeleton_8b03ba" aria-busy="true">
-<span class="_srOnly_8b03ba">Loading payment options…</span>
-<span class="_skeletonLine_8b03ba" aria-hidden="true">
-</span>
-<span class="_skeletonLine_8b03ba" aria-hidden="true">
-</span>
+<div class="_payBody_8b03ba _failed_8b03ba" role="alert">
+<p class="_failedText_8b03ba">We couldn't load the payment options.</p>
+<button type="button" class="_retry_8b03ba" data-sf-part="button" data-variant="default">Try again</button>
 </div>
 <div class="_payFoot_8b03ba">
+<div class="_cancelBox_a4ca06" data-sf-part="cancel">
+<button type="button" class="_cancelAction_a4ca06" aria-haspopup="dialog">Cancel order</button>
+<div>
+<div style="--modal-radius: var(--mantine-radius-default); --modal-size: var(--modal-size-sm); --modal-y-offset: 5dvh; --mb-z-index: 200;" class="m_9df02822 mantine-Modal-root" data-size="sm" data-centered="true" id="mantine-ID">
+</div>
+</div>
+<p class="_cancelLive_a4ca06" aria-live="polite">
+</p>
+</div>
 </div>
 </section>
 <section class="_card_8b03ba" aria-label="Items" data-sf-part="card">
@@ -92,32 +98,6 @@
 </span>
 </div>
 </div>
-</section>
-</div>
-<div class="_side_8b03ba">
-<section class="_card_8b03ba" aria-label="Parcels" data-sf-part="card">
-<div class="_cardHead_8b03ba">
-<h2 class="_cardTitle_8b03ba">Parcels</h2>
-<span class="_cardNote_8b03ba">2 parcels</span>
-</div>
-<ul class="_events_8b03ba">
-<li class="_event_8b03ba">
-<span class="_eventName_8b03ba">Royal Mail</span>
-<span class="_eventWhen_8b03ba">RM123456789GB</span>
-<span class="_eventStatus_8b03ba _eventStatusTop_8b03ba">
-<span class="_pill_3fdc23" data-sf-part="badge">Shipped</span>
-</span>
-<p class="_eventDetail_8b03ba">In transit to the depot</p>
-<a class="_tracking_8b03ba" href="https://track.example/RM123456789GB" target="_blank" rel="noopener noreferrer">Track this parcel</a>
-</li>
-<li class="_event_8b03ba">
-<span class="_eventName_8b03ba">Parcel</span>
-<span class="_eventWhen_8b03ba">Awaiting dispatch</span>
-<span class="_eventStatus_8b03ba _eventStatusTop_8b03ba">
-<span class="_pill_3fdc23" data-sf-part="badge">Shipped</span>
-</span>
-</li>
-</ul>
 </section>
 </div>
 </div>

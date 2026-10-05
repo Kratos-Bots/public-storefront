@@ -29,6 +29,7 @@ import { resolveDoc } from '@/builder/runtime.tsx';
 import { docsFromPageSet, toPageSet } from '@/builder/editor/page-set.ts';
 import { FIXED_ROUTE_KEYS, type ComponentData, type PageSet, type PuckDoc } from '@/builder/types.ts';
 import classes from '@/features/account/Account.module.css';
+import orderClasses from '@/features/account/OrderDetail.module.css';
 
 afterEach(cleanup);
 
@@ -67,8 +68,8 @@ describe('a stored order detail that still holds the removed link block', () => 
         <Route path="/account/orders/:ref" element={<Suspense fallback={null}><RenderDoc doc={doc} docKey="account.order" layout="storefront" /></Suspense>} />
       </Routes></MemoryRouter></MantineProvider></QueryClientProvider>,
     );
-    await waitFor(() => expect(container.querySelector(`.${classes.body}`)).not.toBeNull());
-    expect(container.querySelector('h2')).toHaveTextContent('K4M2QP');
+    await waitFor(() => expect(container.querySelector(`.${orderClasses.overview}`)).not.toBeNull());
+    expect(container.querySelector('h1')).toHaveTextContent('K4M2QP');
     expect(container.textContent).toContain('Oat Bar');
     expect(container.querySelector(`.${classes.cta}`)).toBeNull();
   });
