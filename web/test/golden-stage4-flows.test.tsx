@@ -47,7 +47,6 @@ import { VerifyPage } from '@/features/verify/VerifyPage.tsx';
 import { useSessionStore } from '@/stores/session.ts';
 import { useTelegramAuthStore } from '@/stores/telegram.ts';
 import { useCartStore } from '@/stores/cart.ts';
-import { saveOrder } from '@/stores/saved-orders.ts';
 import { expectStage4, mountAt, mountDefault, mountDoc, type Mounted } from './helpers/stage4-golden.tsx';
 
 const NOW = Date.parse('2026-07-07T12:00:00Z');
@@ -62,11 +61,11 @@ const LINKS: Links = { whatsapp: 'https://wa.me/447700900000', telegram: 'https:
 interface SettingsOpts {
   links?: Links; siteKey?: string | null;
   whatsapp?: boolean; telegramBot?: string | null; password?: boolean;
-  phone?: 'verify' | 'whatsapp' | 'off'; email?: 'verify' | 'email' | 'off';
+  phone?: 'verify' | 'whatsapp' | 'off'; email?: 'verify' | 'email' | 'off'; accounts?: boolean;
 }
 function useSettingsState(o: SettingsOpts = {}) {
   state.settings = {
-    currency: 'GBP', enabled: true, supportLinks: [], notices: [], features: {},
+    currency: 'GBP', enabled: true, supportLinks: [], notices: [], features: o.accounts ? { accounts: true } : {},
     brand: { name: 'Northbound Supply', shortName: 'Northbound', title: 'Northbound Supply', tagline: null, links: o.links ?? NO_LINKS },
     turnstile: o.siteKey === null ? undefined : { siteKey: o.siteKey ?? 'site-key' },
     login: {
@@ -243,9 +242,9 @@ describe('stage 4 payment page goldens (v0.7.0)', () => {
   it('payment-success-missing-reference', async () => {
     await threeWays(SUCCESS, 'payment-success-missing-reference', '/payment/success');
   });
-  it('payment-success: a saved order hands off to its page (no golden)', async () => {
-    saveOrder('NB-1001', 'key-1');
-    const stubs = { '/order/:ref/:accessKey': 'ORDER PAGE STUB' };
+  it('payment-success: a signed-in customer is handed off to their order page (no golden)', async () => {
+    useSessionStore.setState({ token: 't', customer: { id: 1, nickname: null } });
+    const stubs = { '/account/orders/:ref': 'ORDER PAGE STUB' };
     mountRoutes(<PaymentSuccessPage />, '/payment/success?order=NB-1001', stubs);
     expect(screen.getByText('ORDER PAGE STUB')).toBeInTheDocument();
     cleanup();
@@ -254,9 +253,17 @@ describe('stage 4 payment page goldens (v0.7.0)', () => {
     expect(screen.getByText('ORDER PAGE STUB')).toBeInTheDocument();
   });
 
-  it('payment-cancel-saved-order', async () => {
-    saveOrder('NB-1002', 'key-2');
-    await threeWays(CANCEL, 'payment-cancel-saved-order', '/payment/cancel?order=NB-1002');
+  it('payment-cancel-signed-in', async () => {
+    useSessionStore.setState({ token: 't', customer: { id: 1, nickname: null } });
+    await threeWays(CANCEL, 'payment-cancel-signed-in', '/payment/cancel?order=NB-1002');
+  });
+  it('payment-cancel-signed-out-sign-in', async () => {
+    useSettingsState({ accounts: true });
+    await threeWays(CANCEL, 'payment-cancel-signed-out-sign-in', '/payment/cancel?order=NB-1002');
+  });
+  it('payment-success-signed-out-sign-in', async () => {
+    useSettingsState({ accounts: true });
+    await threeWays(SUCCESS, 'payment-success-signed-out-sign-in', '/payment/success?order=NB-1001');
   });
   it('payment-cancel-no-saved-order', async () => {
     await threeWays(CANCEL, 'payment-cancel-no-saved-order', '/payment/cancel?order=NB-1002');
@@ -280,6 +287,14 @@ describe('stage 4 payment page goldens (v0.7.0)', () => {
   it('order-placed-telegram-only', async () => {
     useSettingsState({ links: { whatsapp: null, telegram: LINKS.telegram } });
     await threeWays(PLACED, 'order-placed-telegram-only', '/order-placed?order=NB-1003');
+  });
+  it('stage4-order-placed-guest-sign-in', async () => {
+    useSettingsState({ links: LINKS, accounts: true });
+    await threeWays(PLACED, 'order-placed-guest-sign-in', '/order-placed?order=NB-1003');
+  });
+  it('order-placed-guest-sign-in-no-chat-links', async () => {
+    useSettingsState({ accounts: true });
+    await threeWays(PLACED, 'order-placed-guest-sign-in-no-chat-links', '/order-placed?order=NB-1003');
   });
   it('order-placed-warning', async () => {
     await threeWays(PLACED, 'order-placed-warning', '/order-placed?order=NB-1003&warning=1');
@@ -328,7 +343,7 @@ const FOUND_1 = order([parcel(1, 'IN_TRANSIT', TRANSIT_EVENTS)]);
 
 interface TrackingCase {
   name: string; path?: string; siteKey?: string | null; token?: boolean; links?: Links;
-  lookup?: () => Promise<unknown>; blockedTimer?: boolean; saved?: boolean;
+  lookup?: () => Promise<unknown>; blockedTimer?: boolean;
 }
 const ok = (d: TrackingLookup) => () => Promise.resolve(d);
 const fail = (status: number) => () => Promise.reject(new TrackingLookupError(status, 'nope'));
@@ -338,7 +353,6 @@ const TRACKING_CASES: TrackingCase[] = [
   { name: 'no-site-key', siteKey: null, path: '/tracking' },
   { name: 'no-site-key-with-links', siteKey: null, path: '/tracking', links: LINKS },
   { name: 'idle-form', path: '/tracking' },
-  { name: 'idle-form-recent-orders', path: '/tracking', saved: true },
   { name: 'pending-awaiting-token', path: REF },
   { name: 'pending-verifying', path: REF, token: true },
   { name: 'blocked', path: REF, blockedTimer: true, links: LINKS },
@@ -373,7 +387,6 @@ describe('stage 4 tracking goldens (v0.7.0)', () => {
     useSettingsState({ siteKey: c.siteKey, links: c.links });
     state.token = c.token ?? false;
     state.lookup = c.lookup ?? (() => new Promise(() => {}));
-    if (c.saved) { saveOrder('NB-1001', 'key-1'); saveOrder('NB-1002', 'key-2'); }
     if (c.blockedTimer) {
       // The 15 s token wait would stall the suite: shorten exactly that timer.
       const real = window.setTimeout.bind(window);

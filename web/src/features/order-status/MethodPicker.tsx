@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  OrderGoneError,
   PaymentConflictError,
-  fetchPaymentOptions,
-  selectPaymentMethod,
+  fetchOrderPaymentOptions,
+  selectOrderPaymentMethod,
   type PaymentSelection,
-} from '@/api/public-order.ts';
+} from '@/api/orders.ts';
 import { isBuilderMode } from '@/app/builder-gate.ts';
-import { ArrowUpRightIcon } from '@/components/icons.tsx';
+import { ChevronIcon } from '@/components/icons.tsx';
 import { ContactLinks } from '@/components/ContactLinks.tsx';
 import { errorMessage } from '@/lib/errors.ts';
 import { methodName } from '@/lib/method-name.ts';
@@ -15,11 +16,12 @@ import { orderChatMessage } from '@/lib/chat-links.ts';
 import { formatAmountPlain, formatMoney } from '@/lib/format.ts';
 import { CryptoComboPicker, type CryptoCombo } from '@/features/checkout/CryptoComboPicker.tsx';
 import { CopyRow } from '@/features/order-status/CopyRow.tsx';
-import { paymentOptionsKey, publicOrderKey } from '@/features/order-status/queries.ts';
+import { invalidateOrderGone } from '@/features/order-status/order-gone.ts';
+import { orderPaymentKey, paymentOptionsKey } from '@/features/order-status/queries.ts';
 import {
   isManual,
+  methodNote,
   settlementQuote,
-  slotLabel,
   type SettlementQuote,
 } from '@/features/order-status/payment-state.ts';
 import type { PaymentMethod } from '@/types/checkout.ts';
@@ -30,9 +32,6 @@ import classes from '@/features/order-status/OrderStatus.module.css';
 export interface MethodPickerProps {
   order: PublicOrder;
   reference: string;
-  accessKey: string;
-  /** Called once a payment has been created — lets the change panel fold away. */
-  onSelected?: () => void;
 }
 
 /**
@@ -45,47 +44,61 @@ export interface MethodPickerProps {
  *    popup blocker allows it, and pointed at the session once it exists);
  *  - crypto opens its coin/network combos, and the payment appears on this page;
  *  - a bank transfer opens its details. It is not created here: the backend
- *    refuses every manual gateway on the public payment route, so offering to
+ *    refuses every manual gateway on the payment-method route, so offering to
  *    "select" one would be a guaranteed error. The details are the answer.
  */
-export function MethodPicker({ order, reference, accessKey, onSelected }: MethodPickerProps) {
+export function MethodPicker({ order, reference }: MethodPickerProps) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState<string | null>(null);
   const [combo, setCombo] = useState<CryptoCombo | null>(null);
   const { t } = useText();
 
   const options = useQuery({
-    // Keyed on the reference alone: the access key is a credential, not an
-    // input, and the backend re-derives the country and total from the order.
+    // Keyed on the reference alone: the session says who is asking, and the
+    // backend re-derives the country and total from the order.
     queryKey: paymentOptionsKey(reference),
-    queryFn: () => fetchPaymentOptions(reference, accessKey),
+    queryFn: () => fetchOrderPaymentOptions(reference),
     enabled: !!order.payment?.canPay,
     staleTime: 60_000,
   });
 
   const refetchOrder = () =>
-    queryClient.invalidateQueries({ queryKey: publicOrderKey(reference, accessKey) });
+    queryClient.invalidateQueries({ queryKey: orderPaymentKey(reference) });
+
+  // Between the payment being created and the payment view showing it: the rows stay disabled, so a second
+  // tap cannot create or switch another payment (and open another hosted tab) while the first is settling.
+  const [settling, setSettling] = useState(false);
+  const settle = () => {
+    setSettling(true);
+    void refetchOrder().finally(() => setSettling(false));
+  };
 
   const select = useMutation({
-    mutationFn: (selection: PaymentSelection) => selectPaymentMethod(reference, accessKey, selection),
-    onSuccess: () => {
-      void refetchOrder();
-      onSelected?.();
-    },
+    mutationFn: (selection: PaymentSelection) => selectOrderPaymentMethod(reference, selection),
+    onSuccess: settle,
     onError: (err: Error) => {
       // 409: the order moved under us (paid, cancelled, no longer pending).
       // The new state is the answer, so re-render reality instead of an error.
-      if (err instanceof PaymentConflictError) void refetchOrder();
+      if (err instanceof PaymentConflictError) settle();
+      // 404: the order is gone for this customer; the page says so, and no method error helps.
+      if (err instanceof OrderGoneError) invalidateOrderGone(queryClient, reference);
     },
   });
 
-  const busy = select.isPending;
+  const busy = select.isPending || settling;
+
+  const optionsGone = options.error instanceof OrderGoneError;
+  useEffect(() => {
+    if (optionsGone) invalidateOrderGone(queryClient, reference);
+  }, [optionsGone, queryClient, reference]);
 
   // `isLoading`, not `isPending`: a disabled query is pending forever, and this
   // must never sit on "Loading…" with nothing in flight.
   if (options.isLoading) {
     return <p className={classes.cardNote}>{t('order.method.loading')}</p>;
   }
+
+  if (optionsGone) return null;
 
   if (options.isError) {
     return (
@@ -153,11 +166,10 @@ export function MethodPicker({ order, reference, accessKey, onSelected }: Method
   return (
     <div className={classes.picker}>
       <div className={classes.pickerList}>
-        {methods.map((method) => {
+        {methods.map((method, index) => {
           const combos = method.cryptoOptions ?? [];
-          // A row either opens something on this page or leaves for a hosted
-          // checkout, and it says which before it is pressed: a square marker
-          // for the first, the shop's "opens elsewhere" arrow for the second.
+          // A row either opens something on this page or leaves for a hosted checkout. Either way it is one
+          // whole-width control; the first method the shop offers is the one to press, so it is the filled one.
           const opensHere = combos.length > 0 || isManual(method);
           const expanded = open === method.method;
           const inFlight = busy && select.variables?.method === method.method;
@@ -165,41 +177,37 @@ export function MethodPicker({ order, reference, accessKey, onSelected }: Method
           // submit is in flight on the row too, but the drawer's own button is
           // already narrating it ("Preparing payment...") and no checkout opens.
           const opening = inFlight && !opensHere;
+          const note = methodNote(method, order.currency);
+          const rowClass = [
+            classes.method,
+            index === 0 ? classes.methodPrimary : '',
+            expanded ? classes.methodOpen : '',
+          ].filter(Boolean).join(' ');
 
           return (
-            <div key={method.method}>
+            <div key={method.method} className={classes.methodItem}>
               <button
                 type="button"
-                className={classes.pickerRow}
+                className={rowClass}
                 onClick={() => onPick(method)}
                 disabled={busy}
                 aria-expanded={opensHere ? expanded : undefined}
+                aria-busy={inFlight || undefined}
+                data-sf-part="button"
+                data-variant={index === 0 ? 'filled' : 'default'}
               >
-                {opensHere ? (
-                  <span
-                    className={expanded ? `${classes.pickerMark} ${classes.pickerMarkOn}` : classes.pickerMark}
-                    aria-hidden
-                  >
-                    {expanded ? <span className={classes.pickerMarkCore} /> : null}
-                  </span>
-                ) : (
-                  <span className={classes.pickerSpacer} aria-hidden />
-                )}
-                <span className={classes.pickerLabel}>
-                  {opening ? t('order.method.opening') : slotLabel(method)}
+                <span className={classes.methodText}>
+                  <span className={classes.methodName}>{opening ? t('order.method.opening') : methodName(method)}</span>
+                  {note ? <span className={classes.methodNote}>{note}</span> : null}
                 </span>
-                <span className={classes.pickerFigure}>
-                  {formatMoney(method.chargeTotal, order.currency)}
+                <span className={classes.methodFigure}>{formatMoney(method.chargeTotal, order.currency)}</span>
+                <span className={expanded ? `${classes.chevron} ${classes.chevronOpen}` : classes.chevron} aria-hidden>
+                  <ChevronIcon size={16} />
                 </span>
-                {opensHere ? null : (
-                  <span className={classes.pickerAway} aria-hidden>
-                    <ArrowUpRightIcon size={12} />
-                  </span>
-                )}
               </button>
 
               {expanded && combos.length > 0 ? (
-                <div className={classes.pickerDrawer}>
+                <div className={classes.methodDrawer}>
                   <CryptoComboPicker
                     options={combos}
                     value={combo}
@@ -232,7 +240,7 @@ export function MethodPicker({ order, reference, accessKey, onSelected }: Method
               ) : null}
 
               {expanded && isManual(method) ? (
-                <div className={classes.pickerDrawer}>
+                <div className={classes.methodDrawer}>
                   <TransferDetails
                     method={method}
                     reference={order.reference}
@@ -245,8 +253,8 @@ export function MethodPicker({ order, reference, accessKey, onSelected }: Method
         })}
       </div>
 
-      {select.isError && !(select.error instanceof PaymentConflictError) ? (
-        <p className={classes.note} data-tone="danger">
+      {select.isError && !(select.error instanceof PaymentConflictError) && !(select.error instanceof OrderGoneError) ? (
+        <p className={classes.note} data-tone="danger" role="alert">
           {errorMessage(select.error, t('order.errors.methodUnavailable'))}
         </p>
       ) : null}
@@ -282,10 +290,7 @@ function TransferDetails({
 
   return (
     <>
-      <p className={classes.pickerHead}>
-        {t('order.method.transferHead', { method: methodName(method) })}
-        <span className={classes.pickerHeadRule} aria-hidden />
-      </p>
+      <p className={classes.drawerHead}>{t('order.method.transferHead', { method: methodName(method) })}</p>
       {details.length > 0 ? (
         <>
           {details.map(([label, value]) => (

@@ -20,9 +20,15 @@ const TABS = [
   { to: '/account/profile', label: textKey('account.nav.profile') },
 ];
 
+/** One order's own page: it is read on its own, so the account's greeting and section rail stay out of the way. */
+export function isOrderDetailPath(pathname: string): boolean {
+  return /^\/account\/orders\/[^/]+\/?$/.test(pathname);
+}
+
 function GreetingView({ styleAttrs }: PartViewProps) {
   const { t, tp } = useText();
-  const { name, standing } = AccountFamily.useData();
+  const { name, standing, pathname } = AccountFamily.useData();
+  if (isOrderDetailPath(pathname)) return null;
   return (
     <header className={classes.letterhead} {...styleAttrs}>
       <span className={classes.eyebrow}>{t('account.layout.eyebrow')}</span>
@@ -41,6 +47,8 @@ function GreetingView({ styleAttrs }: PartViewProps) {
 
 function TabsView({ styleAttrs }: PartViewProps) {
   const { t } = useText();
+  const { pathname } = AccountFamily.useData();
+  if (isOrderDetailPath(pathname)) return null;
   return (
     <nav className={classes.tabs} aria-label={t('account.nav.ariaLabel')} {...styleAttrs}>
       {TABS.map((tab) => (
@@ -58,21 +66,21 @@ function TabsView({ styleAttrs }: PartViewProps) {
   );
 }
 
-/** The account header's views (spec §5.3): the letterhead and the rail. */
+/** The account header's views (spec section 5.3): the letterhead and the rail. */
 export const ACCOUNT_VIEWS: FamilyValue<AccountData>['views'] = { AccountGreeting: GreetingView, AccountTabs: TabsView };
 
 /**
  * The statement's letterhead and its rail of sections. The name comes from the
- * session the moment the page paints — the profile behind it only fills in the
- * standing line — so a returning customer is greeted before the network answers.
+ * session the moment the page paints â€” the profile behind it only fills in the
+ * standing line â€” so a returning customer is greeted before the network answers.
  *
  * The rail is built from links rather than an ARIA tablist: every section is a
  * real route, so it has to survive a middle-click, a bookmark and the back
- * button, and `/account/orders/:ref` keeps the Orders section marked as the one
- * it belongs to.
+ * button. An order's own page (`/account/orders/:ref`) hides both: it is read on
+ * its own, with an "All orders" link back, so the rail would only compete with it.
  *
  * The page builder's AccountNav block passes the section as `children` and its
- * `head` slot (the letterhead and the rail are parts, spec §5.3); a route that
+ * `head` slot (the letterhead and the rail are parts, spec section 5.3); a route that
  * nests under it still uses the outlet. Without `slots` the default head is drawn.
  */
 export function AccountLayout({ children, slots, docKey = 'account.orders' }: { children?: ReactNode; slots?: { head: SlotRender }; docKey?: DocKey }) {
@@ -98,7 +106,7 @@ export function AccountLayout({ children, slots, docKey = 'account.orders' }: { 
 
   return (
     <AccountFamily.Provider value={value}>
-      <div className={classes.account}>
+      <div className={isOrderDetailPath(location.pathname) ? `${classes.account} ${classes.accountOrder}` : classes.account}>
         {head()}
         <div key={location.pathname} className={FADE}>
           {children ?? <Outlet />}

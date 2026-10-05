@@ -5,7 +5,6 @@ export const TEXT_GUARD_ALLOW: AllowEntry[] = [
   { file: 'builder/guard.ts', text: '*', reason: 'editor issue messages — the editor\'s own UI text is a non-goal (spec §12)' },
   { file: 'builder/style/labels.ts', text: '*', reason: 'editor-only Style row labels (Style panel and editor issue messages)' },
   { file: 'builder/rules.ts', text: '*', reason: 'editor issue messages — the editor\'s own UI text is a non-goal (spec §12)' },
-  { file: 'builder/blocks/_shared/order-status-container.ts', text: '*', reason: 'editor issue message for an illegal arrangement (spec §4.2) — surfaced only by the editor rules check' },
   { file: 'builder/blocks/_shared/checkout-container.ts', text: '*', reason: 'editor issue reasons for a misplaced part (spec §4.2) — surfaced only by the editor rules check' },
   { file: 'builder/family-checkout.ts', text: '*', reason: 'editor issue messages for an illegal step order (spec §4.2) — surfaced only by the editor rules check' },
   { file: 'builder/define.ts', text: '*', reason: 'zod messages surfaced only as editor field issues' },

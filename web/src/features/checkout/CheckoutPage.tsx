@@ -6,7 +6,6 @@ import { notifications } from '@mantine/notifications';
 import { useSettings } from '@/app/settings.ts';
 import { useSessionStore, selectIsLoggedIn } from '@/stores/session.ts';
 import { useCartStore } from '@/stores/cart.ts';
-import { saveOrder } from '@/stores/saved-orders.ts';
 import { useServerCart } from '@/features/cart/useServerCart.ts';
 import { placeGuestOrder, placeOrder } from '@/api/checkout.ts';
 import { ApiError, errorMessage } from '@/lib/errors.ts';
@@ -29,7 +28,7 @@ import {
 import { applyShipCountries } from '@/features/checkout/ship-countries.ts';
 import { collectionAddress, modeForCountry, pickerCountries, quoteDeliveryFields, reconcileDelivery, shipListsOf } from '@/features/checkout/collection-mode.ts';
 import { useQuote } from '@/features/checkout/useQuote.ts';
-import { publicOrderPath, resolveCheckoutOutcome } from '@/features/checkout/outcome.ts';
+import { accountOrderPath, resolveCheckoutOutcome } from '@/features/checkout/outcome.ts';
 import { GuestTurnstile, type GuestTurnstileHandle } from '@/features/checkout/GuestTurnstile.tsx';
 import { CHECKOUT_VIEWS, InertActionBand } from '@/features/checkout/checkout-parts.tsx';
 import { STEP_META } from '@/features/checkout/step-meta.ts';
@@ -592,25 +591,17 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
       clearCart();
       clearPersistedCheckout();
 
-      // Keep the order's access key: it is the only way back to `/order/:ref/:key`
-      // once this tab is gone, and a guest has no account to find it in.
-      const orderPath = publicOrderPath(result.publicUrl);
-      const match = orderPath ? /^\/order\/([^/]+)\/([^/]+)$/.exec(orderPath) : null;
-      if (match) saveOrder(decodeURIComponent(match[1]!), decodeURIComponent(match[2]!));
-
       if (inTelegram) haptic.notify('success');
-      const outcome = resolveCheckoutOutcome(result);
+      const outcome = resolveCheckoutOutcome(result, loggedIn);
       if (outcome.kind === 'external' && inTelegram) {
         // Some gateways refuse to run inside Telegram's WebView: pay in the
         // browser, and leave the Mini App on the order so the shopper comes back
         // to its status rather than an empty checkout. A signed-in shopper lands
         // on their account order (inside the Mini App shell, with the BackButton);
-        // the chromeless public page has no way back to the shop. Guests keep it.
+        // a guest has no order page, so they get the order-placed screen.
         openExternalLink(outcome.url);
         navigate(
-          loggedIn
-            ? `/account/orders/${encodeURIComponent(result.reference)}`
-            : (orderPath ?? `/order-placed?${new URLSearchParams({ order: result.reference })}`),
+          loggedIn ? accountOrderPath(result.reference) : `/order-placed?${new URLSearchParams({ order: result.reference })}`,
           { replace: true },
         );
       } else if (outcome.kind === 'external') {

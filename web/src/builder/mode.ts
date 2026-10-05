@@ -13,13 +13,13 @@ export interface BuilderMode {
 /** State ids per container; the first of each is the editor's default. */
 export const PREVIEW_STATE_IDS = {
   OrdersList: ['orders', 'none', 'more'], Loyalty: ['rewards', 'no-points'], Referrals: ['new', 'referred'],
-  Profile: ['website', 'webapp'], PaymentSuccess: ['reference', 'missing'], PaymentCancel: ['saved', 'unsaved', 'no-reference'],
+  Profile: ['website', 'webapp'], PaymentSuccess: ['reference', 'missing'], PaymentCancel: ['signed-out', 'no-reference'],
   OrderPlaced: ['chat', 'warning', 'no-chat', 'missing'],
   TrackingLookup: ['form', 'found-2', 'found-1', 'nothing-shipped', 'not-found', 'error'],
   VerifyForm: ['form', 'authentic', 'expired', 'not-verified', 'error'],
   ResetPassword: ['form', 'set', 'expired', 'checking', 'unreachable'],
   VerifyEmail: ['verifying', 'done', 'invalid', 'otherAccount', 'error'],
-  OrderStatus: ['shipped', 'awaiting-payment', 'hosted-open', 'crypto-checking', 'two-parcels', 'cancelled'],
+  OrderDetail: ['awaiting-payment', 'hosted-open', 'crypto-waiting', 'shipped', 'collection', 'cancelled'],
 } as const;
 
 const SHOPPER: BuilderMode = { editing: false, previewAs: null };

@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
-  badgeParts, basketPromotions, lineFigures, nudgeSentence, otherDiscount, publicOrderPromotions, snapshotMatchesLines,
+  badgeParts, basketPromotions, lineFigures, nudgeSentence, otherDiscount, snapshotMatchesLines,
 } from '@/lib/promotions.ts';
 import { createTextApi, DEFAULT_TEXT_LAYERS } from '@/text/snapshot.ts';
 import type { Nudge, ServerCart } from '@/types/cart.ts';
-import type { PublicOrder } from '@/types/public-order.ts';
 
 // Fixed 'en' text and a hand-rolled money formatter: nothing here depends on the machine's locale.
 const text = createTextApi(DEFAULT_TEXT_LAYERS);
@@ -107,22 +106,6 @@ describe('snapshotMatchesLines', () => {
   });
   it('never matches without a snapshot', () => {
     expect(snapshotMatchesLines(null, [])).toBe(false);
-  });
-});
-
-describe('publicOrderPromotions', () => {
-  const base = { totals: { subtotal: 0, shippingAmount: 0, discountAmount: 0, taxAmount: 0, totalAmount: 0 } } as Pick<PublicOrder, 'totals' | 'promotions' | 'promotionDiscount'>;
-  it('is empty for a backend that predates promotions', () => {
-    expect(publicOrderPromotions(base)).toEqual({ discount: 0, promotions: [] });
-  });
-  it('reads the breakdown from the order or from its totals', () => {
-    const rows = [{ label: '3 for 2', amount: 12.5 }];
-    expect(publicOrderPromotions({ ...base, promotionDiscount: 12.5, promotions: rows })).toEqual({ discount: 12.5, promotions: rows });
-    expect(publicOrderPromotions({ totals: { ...base.totals, promotionDiscount: 12.5, promotions: rows } })).toEqual({ discount: 12.5, promotions: rows });
-  });
-  it('leaves out a promotion that took nothing off (a free-shipping deal)', () => {
-    expect(publicOrderPromotions({ ...base, promotionDiscount: 5, promotions: [{ label: 'Free delivery', amount: 0 }, { label: '10% off', amount: 5 }] }).promotions)
-      .toEqual([{ label: '10% off', amount: 5 }]);
   });
 });
 

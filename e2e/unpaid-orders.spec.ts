@@ -1,93 +1,50 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import {
-  installMocks, installTelegramStub, publicOrderVariant, SESSION_CUSTOMER, SESSION_TOKEN,
-  type InstallMocksOptions, type MockHandle,
+  installMocks, installTelegramStub, markOrderPaid, ORIGIN, PASSWORD_ACCOUNT,
+  type InstallMocksOptions, type MockHandle, type OrderFixtureName,
 } from './mocks.ts';
 import { FIXED_NOW, onlyVisible } from './flows.ts';
-import type { OrderDetail, UnpaidOrder } from '../web/src/types/orders.ts';
-import type { PublicOrder } from '../web/src/types/public-order.ts';
+import type { UnpaidOrder } from '../web/src/types/orders.ts';
 
 /**
- * Unpaid order recovery, as a shopper meets it: paying and cancelling from the account order page, from the
- * order link, and from the "you have an unpaid order" pop-up. Everything runs against the mocked backend,
- * whose cancel and unpaid routes mirror the real ones (`ORDER_NOT_CANCELLABLE:<reason>` on 409, the
+ * Unpaid order recovery, as a signed-in shopper meets it: the "you have an unpaid order" pop-up, the account order
+ * page it leads to, paying from there, and cancelling behind a confirmation. Everything runs against the mocked
+ * backend, whose cancel and unpaid routes mirror the real ones (`ORDER_NOT_CANCELLABLE:<reason>` on 409, the
  * `{ reference, status: 'cancelled' }` answer). Synthetic data only.
  */
 
 const REF = 'K4M2QP';
 const KEY = 'KEY2';
-const LINK = { reference: REF, accessKey: KEY };
 const TOTAL = 46.03;
 const PROMPT_TITLE = 'You have an unpaid order';
-const SAVED = 'sf-orders-v1';
-
-/** The account order, unpaid and with no way of paying chosen yet. */
-function unpaidDetail(d: OrderDetail): void {
-  d.status = 'pending';
-  d.items = [{ name: 'Alpine Extract 10ml', quantity: 1, unitPrice: 42.5, lineTotal: 42.5 }];
-  d.subtotal = 42.5;
-  d.shippingAmount = 4.95;
-  d.totalAmount = TOTAL;
-  d.payments = [];
-  d.shipments = [];
-  d.outstandingBalance = TOTAL;
-  d.publicUrl = `http://localhost:5199/order/${REF}/${KEY}`;
-  d.accessKey = KEY;
-  d.canCancel = true;
-  d.cancelBlockedBy = null;
-}
-
-/** The same order through its link: awaiting payment, no method chosen, cancellable. */
-function choosing(): PublicOrder {
-  const o = publicOrderVariant('choose');
-  o.payment = { ...o.payment!, canCancel: true, cancelBlockedBy: null };
-  return o;
-}
+const ORDER_PAGE = `/account/orders/${REF}`;
 
 const unpaidRow = (over: Partial<UnpaidOrder> = {}): UnpaidOrder => ({
-  reference: REF, accessKey: KEY, createdAt: '2026-08-24T08:30:00.000Z', totalAmount: TOTAL, outstandingBalance: TOTAL,
+  reference: REF, createdAt: '2026-08-24T08:30:00.000Z', totalAmount: TOTAL, outstandingBalance: TOTAL,
   payBy: null, canCancel: true, cancelBlockedBy: null, ...over,
 });
 
 interface OpenOptions extends InstallMocksOptions {
   width?: number;
   path?: string;
-  /** Saved order links (`sf-orders-v1`), seeded once per tab so a reload does not bring them back. */
-  saved?: Array<{ reference: string; accessKey: string; savedAt: string }>;
-  /** Boot signed in (once per tab: a sign-out and reload stays signed out). */
-  signedIn?: boolean;
   /** Skip the navigation, so the test can arrange routes first. */
   noGoto?: boolean;
+  fixture?: OrderFixtureName;
 }
 
-/** An account order K4M2QP that is unpaid, plus the same order through its link, unless a test says otherwise. */
+/** An account order K4M2QP, unpaid with no method chosen unless a test says otherwise, and a signed-in customer. */
 async function open(page: Page, o: OpenOptions = {}): Promise<MockHandle> {
-  const { width = 1280, path = '/', saved, signedIn = true, noGoto, ...rest } = o;
+  const { width = 1280, path = '/', noGoto, fixture = 'unpaid', session = true, ...rest } = o;
   await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
   await page.clock.setFixedTime(FIXED_NOW);
-  const mocks = await installMocks(page, {
-    layout: 'storefront',
-    orderLink: LINK,
-    order: choosing(),
-    ...rest,
-    tweakOrderDetail: rest.tweakOrderDetail ?? unpaidDetail,
-  });
-  await page.addInitScript(
-    (seed) => {
-      if (window.sessionStorage.getItem('e2e-seeded')) return;
-      window.sessionStorage.setItem('e2e-seeded', '1');
-      if (seed.saved) window.localStorage.setItem('sf-orders-v1', JSON.stringify(seed.saved));
-      if (seed.session) {
-        window.localStorage.setItem('sf-session-v1', JSON.stringify({ state: { token: seed.session.token, customer: seed.session.customer }, version: 0 }));
-      }
-    },
-    { saved, session: signedIn ? { token: SESSION_TOKEN, customer: SESSION_CUSTOMER } : null },
-  );
+  const mocks = await installMocks(page, { layout: 'storefront', orderFixture: fixture, orderReference: REF, session, ...rest });
   if (!noGoto) await page.goto(path);
   return mocks;
 }
 
 const prompt = (page: Page): Locator => page.getByRole('dialog', { name: PROMPT_TITLE });
+const payCard = (page: Page): Locator => page.getByRole('region', { name: 'Payment needed' });
+const cancelDialog = (page: Page): Locator => page.getByRole('dialog', { name: `Cancel order ${REF}?` });
 
 /** A server cart with one line, so /checkout stays on the checkout instead of sending the shopper back. */
 function seedCart(mocks: MockHandle): void {
@@ -103,7 +60,7 @@ function seedCart(mocks: MockHandle): void {
 /** How many times the signed-in customer's unpaid orders were asked for. */
 const unpaidAsks = (mocks: MockHandle): number => mocks.requests().filter((r) => r === 'GET storefront/orders/unpaid').length;
 
-/** Leaves the page in the app (the account page) and comes back by the browser's Back. */
+/** Leaves the page in the app (the account page) and comes back by the browser's Back, without a reload. */
 async function awayAndBack(page: Page): Promise<void> {
   await onlyVisible(page.getByRole('link', { name: 'Your account' })).click();
   await expect(page).toHaveURL(/\/account/);
@@ -112,125 +69,56 @@ async function awayAndBack(page: Page): Promise<void> {
   await expect(page).toHaveURL(/\/$/);
 }
 
-test.describe('unpaid orders · the account order page', () => {
-  test('1 · an unpaid order with no method shows the picker, and choosing one posts it', async ({ page }) => {
-    const mocks = await open(page, { path: `/account/orders/${REF}` });
-    await expect(page.getByRole('heading', { name: REF })).toBeVisible();
-    await expect(page.getByRole('heading', { name: /^Choose how to pay/ })).toBeVisible();
-    await page.getByRole('button', { name: /^Card/ }).click();
-    await expect.poll(() => mocks.state.methods).toEqual([{ method: 'sushipp' }]);
-    // The order now has a hosted payment open: the page moved on to it.
-    await expect(page.getByRole('link', { name: 'Open secure checkout' })).toBeVisible();
-  });
-
-  test('2 · a pending hosted payment shows its checkout link', async ({ page }) => {
-    await open(page, {
-      path: `/account/orders/${REF}`,
-      order: (() => {
-        const o = choosing();
-        o.payment!.activePayment = { paymentId: 9003, method: 'sushipp', kind: 'gateway', status: 'pending', checkoutUrl: 'https://pay.example.invalid/checkout/K4M2QP', canChange: true };
-        return o;
-      })(),
-    });
-    await expect(page.getByRole('heading', { name: 'Finish your payment' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Open secure checkout' })).toHaveAttribute('href', 'https://pay.example.invalid/checkout/K4M2QP');
-  });
-
-  test('3 · cancelling from the order page shows the order cancelled', async ({ page }) => {
-    const mocks = await open(page, { path: `/account/orders/${REF}` });
-    await expect(page.getByRole('heading', { name: REF })).toBeVisible();
-    await page.getByRole('button', { name: 'Cancel order' }).click();
-    await expect(page.getByText(`Cancel order ${REF}?`)).toBeVisible();
-    await page.getByRole('button', { name: 'Yes, cancel it' }).click();
-    await expect(page.getByText('Cancelled', { exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Cancel order' })).toHaveCount(0);
-    await expect(page.getByRole('heading', { name: /^Choose how to pay/ })).toHaveCount(0);
-    expect(mocks.state.cancels).toEqual([REF]);
-  });
-
-  test('4 · a refused cancel says a payment may be on its way and refreshes the order', async ({ page }) => {
-    const mocks = await open(page, { path: `/account/orders/${REF}`, cancelAnswers: 409 });
-    await expect(page.getByRole('heading', { name: REF })).toBeVisible();
-    const reads = () => mocks.requests().filter((r) => r === `GET storefront/orders/${REF}`).length;
-    const before = reads();
-    await page.getByRole('button', { name: 'Cancel order' }).click();
-    await page.getByRole('button', { name: 'Yes, cancel it' }).click();
-    await expect(page.getByText('A payment may already be on its way, so this order cannot be cancelled here.').first()).toBeVisible();
-    // The refresh shows what the backend now says: money may be coming, so contact the shop instead.
-    await expect(page.getByText('To cancel this order, contact us: a payment may already be on its way.')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Cancel order' })).toHaveCount(0);
-    expect(reads()).toBeGreaterThan(before);
-    expect(mocks.state.cancels).toEqual([]);
-  });
-});
-
-test.describe('unpaid orders · the order link', () => {
-  test('5 · cancelling from the public order page', async ({ page }) => {
-    const mocks = await open(page, { path: `/order/${REF}/${KEY}`, signedIn: false });
-    await page.getByRole('button', { name: 'Cancel order' }).click();
-    await expect(page.getByText(`Cancel order ${REF}?`)).toBeVisible();
-    await page.getByRole('button', { name: 'Yes, cancel it' }).click();
-    await expect.poll(() => mocks.state.cancels).toEqual([REF]);
-    await expect(page.getByRole('button', { name: 'Cancel order' })).toHaveCount(0);
-    await expect(page.getByRole('heading', { name: /^Choose how to pay/ })).toHaveCount(0);
-    expect(mocks.requests()).toContain(`POST orders/${REF}/${KEY}/cancel`);
-  });
-});
-
 test.describe('unpaid orders · the pop-up', () => {
-  test('6 · a signed-in customer is asked on the home page, and Complete payment opens the order', async ({ page }) => {
-    await open(page, { unpaidOrders: [unpaidRow()] });
+  test('a · asked on the home page; Not now hides it for the visit, a reload brings it back', async ({ page }) => {
+    const mocks = await open(page, { width: 390, unpaidOrders: [unpaidRow()] });
     const dialog = prompt(page);
     await expect(dialog).toBeVisible();
     await expect(dialog.getByText(`Order ${REF} is waiting for payment.`)).toBeVisible();
     await expect(dialog.getByText('Amount due')).toBeVisible();
     await expect(dialog.getByText('46.03')).toBeVisible();
-    await dialog.getByRole('button', { name: 'Complete payment' }).click();
-    await expect(page).toHaveURL(new RegExp(`/account/orders/${REF}$`));
-    await expect(page.getByRole('heading', { name: REF })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Review or cancel order' })).toBeVisible();
+
+    await dialog.getByRole('button', { name: 'Not now' }).click();
     await expect(dialog).toHaveCount(0);
-  });
-
-  test('7 · Not now lasts for the visit: in-app navigation and a reload do not bring it back', async ({ page }) => {
-    const mocks = await open(page, { width: 390, unpaidOrders: [unpaidRow()] });
-    await expect(prompt(page)).toBeVisible();
-    await prompt(page).getByRole('button', { name: 'Not now' }).click();
-    await expect(prompt(page)).toHaveCount(0);
-
     // The one lookup that raised the pop-up has landed; nothing may ask again.
     expect(unpaidAsks(mocks)).toBe(1);
 
+    // Navigating inside the site keeps it hidden, without asking again.
     await awayAndBack(page);
     await expect(page.locator('[data-sf-part="product-card"]').first()).toBeVisible();
     await page.waitForLoadState('networkidle');
     await expect(prompt(page)).toHaveCount(0);
     expect(unpaidAsks(mocks)).toBe(1);
 
-    // Session storage survives a reload of the same tab.
+    // Dismissal lives in the document, not in storage: a reload starts the visit over.
     await page.reload();
-    await expect(page.locator('[data-sf-part="product-card"]').first()).toBeVisible();
-    await page.waitForLoadState('networkidle');
-    await expect(prompt(page)).toHaveCount(0);
-    expect(unpaidAsks(mocks)).toBe(1);
+    await expect(prompt(page)).toBeVisible();
   });
 
-  test('8 · a guest with a saved order link is asked, and Complete payment opens the order link', async ({ page }) => {
-    await open(page, {
-      signedIn: false,
-      orderLink: { reference: 'E2E1', accessKey: 'KEY1' },
-      order: (() => { const o = publicOrderVariant('choose'); o.payment!.canCancel = true; o.payment!.cancelBlockedBy = null; return o; })(),
-      saved: [{ reference: 'E2E1', accessKey: 'KEY1', savedAt: '2026-08-24T08:30:00.000Z' }],
-    });
+  test('b · Review or cancel order lands on the order page: the payment card, no account tabs', async ({ page }) => {
+    await open(page, { unpaidOrders: [unpaidRow()] });
     const dialog = prompt(page);
     await expect(dialog).toBeVisible();
-    await expect(dialog.getByText('Order E2E1 is waiting for payment.')).toBeVisible();
-    await expect(dialog.getByText('46.03')).toBeVisible();
-    await dialog.getByRole('button', { name: 'Complete payment' }).click();
-    await expect(page).toHaveURL(/\/order\/E2E1\/KEY1$/);
+    await dialog.getByRole('button', { name: 'Review or cancel order' }).click();
+    await expect(page).toHaveURL(new RegExp(`/account/orders/${REF}$`));
+    await expect(page.getByRole('heading', { name: REF, level: 1 })).toBeVisible();
+    await expect(payCard(page)).toBeVisible();
+    await expect(page.getByRole('link', { name: 'All orders' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Account sections' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Loyalty' })).toHaveCount(0);
     await expect(dialog).toHaveCount(0);
   });
 
-  test('9 · it never appears on the checkout, and is not even asked for there', async ({ page }) => {
+  test('f · a signed-out visitor gets no pop-up, and the unpaid orders are not even asked for', async ({ page }) => {
+    const mocks = await open(page, { session: false, unpaidOrders: [unpaidRow()] });
+    await expect(page.locator('[data-sf-part="product-card"]').first()).toBeVisible();
+    await page.waitForLoadState('networkidle');
+    await expect(prompt(page)).toHaveCount(0);
+    expect(unpaidAsks(mocks)).toBe(0);
+  });
+
+  test('it never appears on the checkout, and is not even asked for there', async ({ page }) => {
     const mocks = await open(page, { noGoto: true, unpaidOrders: [unpaidRow()] });
     seedCart(mocks);
     await page.goto('/checkout');
@@ -239,59 +127,21 @@ test.describe('unpaid orders · the pop-up', () => {
     expect(mocks.requests()).not.toContain('GET storefront/orders/unpaid');
   });
 
-  test('10 · cancelling from the pop-up closes it for good', async ({ page }) => {
-    const mocks = await open(page, { width: 390, unpaidOrders: [unpaidRow()] });
-    const dialog = prompt(page);
-    await expect(dialog).toBeVisible();
-    await dialog.getByRole('button', { name: 'Cancel order' }).click();
-    await expect(dialog.getByText(`Cancel order ${REF}?`)).toBeVisible();
-    const asked = unpaidAsks(mocks);
-    await dialog.getByRole('button', { name: 'Yes, cancel it' }).click();
-    await expect(dialog).toHaveCount(0);
-    expect(mocks.state.cancels).toEqual([REF]);
-    // The cancel refreshed the lookup (the mock now answers an empty list), so nothing is left to offer.
-    await expect.poll(() => unpaidAsks(mocks)).toBeGreaterThan(asked);
-
-    await awayAndBack(page);
-    await expect(page.locator('[data-sf-part="product-card"]').first()).toBeVisible();
-    await page.waitForLoadState('networkidle');
-    await expect(prompt(page)).toHaveCount(0);
-    expect(mocks.state.cancels).toEqual([REF]);
-  });
-
-  test('11 · inside Telegram the pop-up appears and Complete payment works', async ({ page }) => {
+  test('inside Telegram the pop-up appears and Review or cancel order opens the order', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.clock.setFixedTime(FIXED_NOW);
     await installTelegramStub(page);
-    await installMocks(page, {
-      layout: 'storefront', orderLink: LINK, order: choosing(), tweakOrderDetail: unpaidDetail, unpaidOrders: [unpaidRow()],
-    });
+    await installMocks(page, { layout: 'storefront', orderFixture: 'unpaid', orderReference: REF, unpaidOrders: [unpaidRow()] });
     await page.goto('/');
     await expect(page.locator('[data-sf-layout="webapp"]')).toBeVisible();
     const dialog = prompt(page);
     await expect(dialog).toBeVisible();
-    await dialog.getByRole('button', { name: 'Complete payment' }).click();
+    await dialog.getByRole('button', { name: 'Review or cancel order' }).click();
     await expect(page).toHaveURL(new RegExp(`/account/orders/${REF}$`));
-    await expect(page.getByRole('heading', { name: REF })).toBeVisible();
+    await expect(page.getByRole('heading', { name: REF, level: 1 })).toBeVisible();
   });
 
-  test('12 · signing out forgets the saved order link: nothing is offered after the reload', async ({ page }) => {
-    const mocks = await open(page, {
-      path: '/account/profile',
-      orderLink: { reference: 'E2E1', accessKey: 'KEY1' },
-      order: choosing(),
-      saved: [{ reference: 'E2E1', accessKey: 'KEY1', savedAt: '2026-08-24T08:30:00.000Z' }],
-    });
-    await page.getByRole('button', { name: 'Sign out' }).click();
-    await expect(page).toHaveURL(/\/$/);
-    // Signed out and loaded: the catalogue is up, and the saved link that would have raised the pop-up is gone.
-    await expect(page.locator('[data-sf-part="product-card"]').first()).toBeVisible();
-    await expect(prompt(page)).toHaveCount(0);
-    expect(await page.evaluate((k) => window.localStorage.getItem(k), SAVED)).toBeNull();
-    expect(mocks.requests().filter((r) => r.startsWith('GET orders/E2E1/'))).toEqual([]);
-  });
-
-  test('13 · with the cart drawer open the pop-up waits, and appears once it is closed', async ({ page }) => {
+  test('with the cart drawer open the pop-up waits, and appears once it is closed', async ({ page }) => {
     // Hold the unpaid answer so the drawer can be opened before it arrives.
     let release: () => void = () => {};
     const gate = new Promise<void>((resolve) => { release = resolve; });
@@ -319,44 +169,7 @@ test.describe('unpaid orders · the pop-up', () => {
     await expect(prompt(page)).toBeVisible();
   });
 
-  test('14 · Escape in the cancel confirmation closes only the confirmation, not the pop-up', async ({ page }) => {
-    await open(page, { unpaidOrders: [unpaidRow()] });
-    const dialog = prompt(page);
-    await expect(dialog).toBeVisible();
-    await dialog.getByRole('button', { name: 'Cancel order' }).click();
-    await expect(dialog.getByText(`Cancel order ${REF}?`)).toBeVisible();
-    await page.keyboard.press('Escape');
-    await expect(dialog.getByText(`Cancel order ${REF}?`)).toHaveCount(0);
-    await expect(dialog).toBeVisible();
-    await expect(dialog.getByRole('button', { name: 'Complete payment' })).toBeVisible();
-  });
-
-  test('15 · an order that cannot be cancelled shows the contact line, not a Cancel button', async ({ page }) => {
-    await open(page, { unpaidOrders: [unpaidRow({ canCancel: false, cancelBlockedBy: 'bank_transfer' })] });
-    const dialog = prompt(page);
-    await expect(dialog).toBeVisible();
-    await expect(dialog.getByRole('button', { name: 'Complete payment' })).toBeVisible();
-    await expect(dialog.getByText('To cancel this order, contact us: a payment may already be on its way.')).toBeVisible();
-    await expect(dialog.getByRole('button', { name: 'Cancel order' })).toHaveCount(0);
-  });
-
-  test('16 · a guest cancels from the pop-up through the order link', async ({ page }) => {
-    const mocks = await open(page, {
-      signedIn: false,
-      orderLink: { reference: 'E2E1', accessKey: 'KEY1' },
-      order: (() => { const o = publicOrderVariant('choose'); o.payment!.canCancel = true; o.payment!.cancelBlockedBy = null; return o; })(),
-      saved: [{ reference: 'E2E1', accessKey: 'KEY1', savedAt: '2026-08-24T08:30:00.000Z' }],
-    });
-    const dialog = prompt(page);
-    await expect(dialog).toBeVisible();
-    await dialog.getByRole('button', { name: 'Cancel order' }).click();
-    await dialog.getByRole('button', { name: 'Yes, cancel it' }).click();
-    await expect(dialog).toHaveCount(0);
-    expect(mocks.requests().filter((r) => r === 'POST orders/E2E1/KEY1/cancel')).toHaveLength(1);
-    expect(mocks.state.cancels).toEqual(['E2E1']);
-  });
-
-  test('17 · a customer the restricted shop has refused sees no pop-up on their account pages', async ({ page }) => {
+  test('a customer the restricted shop has refused sees no pop-up on their account pages', async ({ page }) => {
     const mocks = await open(page, {
       noGoto: true, access: { storefront: 'restricted', denied: true }, unpaidOrders: [unpaidRow()],
     });
@@ -367,5 +180,268 @@ test.describe('unpaid orders · the pop-up', () => {
     await page.waitForLoadState('networkidle');
     await expect(prompt(page)).toHaveCount(0);
     expect(unpaidAsks(mocks)).toBe(0);
+  });
+});
+
+test.describe('unpaid orders · the order page', () => {
+  test('c · Cancel order asks first: no close button, the overlay does not close it, Keep order does, Yes cancels', async ({ page }) => {
+    const mocks = await open(page, { path: ORDER_PAGE });
+    await expect(payCard(page)).toBeVisible();
+    await payCard(page).getByRole('button', { name: 'Cancel order' }).click();
+
+    const dialog = cancelDialog(page);
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Keep order' })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Yes, cancel order' })).toBeVisible();
+    // Only its two buttons close it: nothing named Close, and a click on the overlay leaves it open.
+    await expect(dialog.getByRole('button', { name: /close/i })).toHaveCount(0);
+    await page.mouse.click(5, 5);
+    await expect(dialog).toBeVisible();
+
+    await dialog.getByRole('button', { name: 'Keep order' }).click();
+    await expect(dialog).toHaveCount(0);
+    expect(mocks.state.cancels).toEqual([]);
+    await expect(payCard(page)).toBeVisible();
+
+    await payCard(page).getByRole('button', { name: 'Cancel order' }).click();
+    await cancelDialog(page).getByRole('button', { name: 'Yes, cancel order' }).click();
+    await expect(page.getByText('Cancelled', { exact: true }).first()).toBeVisible();
+    await expect(payCard(page)).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Cancel order' })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: /^Choose how you.d like to pay/ })).toHaveCount(0);
+    expect(mocks.state.cancels).toEqual([REF]);
+  });
+
+  test('a refused cancel says a payment may be on its way and refreshes the order', async ({ page }) => {
+    const mocks = await open(page, { path: ORDER_PAGE, cancelAnswers: 409 });
+    await expect(payCard(page)).toBeVisible();
+    const reads = () => mocks.requests().filter((r) => r === `GET storefront/orders/${REF}`).length;
+    const before = reads();
+    await payCard(page).getByRole('button', { name: 'Cancel order' }).click();
+    await cancelDialog(page).getByRole('button', { name: 'Yes, cancel order' }).click();
+    await expect(page.getByText('A payment may already be on its way, so this order cannot be cancelled here.').first()).toBeVisible();
+    // The refresh shows what the backend now says: money may be coming, so contact the shop instead.
+    await expect(page.getByText('To cancel this order, contact us: a payment may already be on its way.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Cancel order' })).toHaveCount(0);
+    expect(reads()).toBeGreaterThan(before);
+    expect(mocks.state.cancels).toEqual([]);
+  });
+
+  test('d · choosing a hosted method opens its checkout, and posts the choice', async ({ page }) => {
+    const mocks = await open(page, { path: ORDER_PAGE });
+    await expect(page.getByRole('heading', { name: REF, level: 1 })).toBeVisible();
+    await expect(payCard(page).getByRole('heading', { name: /^Choose how you.d like to pay/ })).toBeVisible();
+    await payCard(page).getByRole('button', { name: /^Card/ }).click();
+    await expect.poll(() => mocks.state.methods).toEqual([{ method: 'sushipp' }]);
+    // The order now has a hosted payment open: the page moved on to it.
+    await expect(payCard(page).getByRole('link', { name: 'Open secure checkout' })).toBeVisible();
+  });
+
+  test('an order that already has a hosted checkout open shows its link', async ({ page }) => {
+    await open(page, { path: ORDER_PAGE, fixture: 'hosted' });
+    await expect(payCard(page).getByRole('heading', { name: 'Finish your payment' })).toBeVisible();
+    await expect(payCard(page).getByRole('link', { name: 'Open secure checkout' })).toHaveAttribute('href', `https://pay.example.invalid/checkout/${REF}`);
+  });
+});
+
+test.describe('unpaid orders · the old order link', () => {
+  test('e · signed out, /order/<ref>/<key> goes to sign-in and, once signed in, to the order', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.clock.setFixedTime(FIXED_NOW);
+    await installMocks(page, { layout: 'storefront', orderFixture: 'unpaid', orderReference: REF, passwordLogin: true });
+    await page.goto(`/order/${REF}/${KEY}`);
+    await expect(page).toHaveURL(new RegExp(`/login\\?returnTo=%2Faccount%2Forders%2F${REF}$`));
+
+    await page.getByRole('textbox', { name: 'Email address' }).fill(PASSWORD_ACCOUNT.email);
+    await page.getByLabel('Password', { exact: true }).fill(PASSWORD_ACCOUNT.password);
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`/account/orders/${REF}$`));
+    await expect(page.getByRole('heading', { name: REF, level: 1 })).toBeVisible();
+    await expect(payCard(page)).toBeVisible();
+  });
+
+  test('signed in, /order/<ref>/<key> opens the order straight away', async ({ page }) => {
+    await open(page, { path: `/order/${REF}/${KEY}` });
+    await expect(page).toHaveURL(new RegExp(`/account/orders/${REF}$`));
+    await expect(payCard(page)).toBeVisible();
+  });
+});
+
+test.describe('the order page · what each order state shows', () => {
+  test('unpaid crypto: the card carries the address and the txid form', async ({ page }) => {
+    await open(page, { path: ORDER_PAGE, fixture: 'crypto' });
+    await expect(payCard(page).getByRole('heading', { name: 'Pay with USDT' })).toBeVisible();
+    await expect(payCard(page).getByRole('textbox', { name: 'Transaction ID' })).toBeVisible();
+    await expect(payCard(page).getByRole('button', { name: 'Cancel order' })).toBeVisible();
+  });
+
+  // A customer who copies the wallet address by hand must get the address and nothing else: a stray space, a line
+  // break or the address twice would send money to nowhere. The address is drawn in groups, so this reads what the
+  // browser really selects, unstripped.
+  test('unpaid crypto: a hand selection of the grouped address is exactly the address', async ({ page, context, browserName }) => {
+    if (browserName === 'chromium') await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    const ADDRESS = '0xE2E1a2b3c4d5e6f7089aabbccddeeff0011223344';
+    await open(page, { path: ORDER_PAGE, fixture: 'crypto' });
+    const value = payCard(page).locator('p[class*="copyGrouped"]');
+    await expect(value).toHaveCount(1);
+    const selected = () => page.evaluate(() => window.getSelection()?.toString() ?? '');
+
+    await value.click({ clickCount: 3 });
+    const byTripleClick = await selected();
+    // A real keyboard copy: the copy handler, not the engine's selection rules, decides what lands on the clipboard.
+    await page.keyboard.press('Control+C');
+    if (browserName === 'chromium') {
+      expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(ADDRESS);
+    }
+    // Selecting everything in the row: the label, the address and the Copy button's text come with it, so only
+    // the address's own run is compared, from its first character to its last.
+    await page.evaluate(() => {
+      const p = document.querySelector('p[class*="copyGrouped"]')!;
+      const body = p.closest('div')!.parentElement!;
+      const range = document.createRange();
+      range.selectNodeContents(body);
+      const sel = window.getSelection()!;
+      sel.removeAllRanges();
+      sel.addRange(range);
+    });
+    const byRowSelectAll = await selected();
+    console.log(`[${browserName}] triple-click: ${JSON.stringify(byTripleClick)}`);
+    console.log(`[${browserName}] row select-all: ${JSON.stringify(byRowSelectAll)}`);
+
+    expect(byTripleClick).toBe(ADDRESS);
+    expect(byRowSelectAll.includes(ADDRESS)).toBe(true);
+    expect(byRowSelectAll.split(ADDRESS)).toHaveLength(2);
+    // Only line breaks, which a block boundary adds, may sit next to the address: never a space inside it.
+    expect(byRowSelectAll).toMatch(new RegExp(`(^|\n)${ADDRESS}(\n|$)`));
+  });
+
+  test('paid and shipped: two parcels, the delivery address, no payment card', async ({ page }) => {
+    await open(page, { path: ORDER_PAGE, fixture: 'shipped' });
+    await expect(page.getByRole('heading', { name: REF, level: 1 })).toBeVisible();
+    await expect(payCard(page)).toHaveCount(0);
+    await expect(page.getByRole('region', { name: 'Parcels' }).getByText('NB000977GB')).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Parcels' }).getByText('EV123456789')).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Delivery address' }).getByText('14 Kirkgate')).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Payments' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Cancel order' })).toHaveCount(0);
+  });
+
+  test('a collection-point order says where to collect from', async ({ page }) => {
+    await open(page, { path: ORDER_PAGE, fixture: 'collection' });
+    await expect(page.getByRole('region', { name: 'Collection point' }).getByText('Corner News')).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Delivery address' })).toHaveCount(0);
+    await expect(payCard(page)).toHaveCount(0);
+  });
+
+  test('a cancelled order shows its state and no payment card', async ({ page }) => {
+    await open(page, { path: ORDER_PAGE, fixture: 'cancelled' });
+    await expect(page.getByRole('heading', { name: REF, level: 1 })).toBeVisible();
+    await expect(page.getByText('Cancelled', { exact: true }).first()).toBeVisible();
+    await expect(payCard(page)).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Cancel order' })).toHaveCount(0);
+  });
+});
+
+test.describe('the old order link, with the shop closed or accounts off', () => {
+  test('accounts off: an old emailed link ends on the order-placed page with the reference, not a 404', async ({ page }) => {
+    await open(page, {
+      session: false, noGoto: true, tweakSettings: (s) => { s.features.accounts = false; s.features.guestCheckout = true; },
+    });
+    await page.goto(`/order/${REF}/${KEY}`);
+    await expect(page).toHaveURL(`${ORIGIN}/order-placed?order=${REF}`);
+    await expect(page.getByRole('heading', { name: 'Order placed' })).toBeVisible();
+    await expect(page.getByText(REF).first()).toBeVisible();
+  });
+
+  test('accounts off: a reference that needs encoding survives the redirect', async ({ page }) => {
+    await open(page, {
+      session: false, noGoto: true, tweakSettings: (s) => { s.features.accounts = false; s.features.guestCheckout = true; },
+    });
+    await page.goto(`/order/${encodeURIComponent('A B/1')}/${KEY}`);
+    await expect(page.getByRole('heading', { name: 'Order placed' })).toBeVisible();
+    expect(new URL(page.url()).pathname).toBe('/order-placed');
+    expect(new URL(page.url()).searchParams.get('order')).toBe('A B/1');
+  });
+
+  test('a closed shop shows the closed page on an old order link, which stays where it is', async ({ page }) => {
+    await open(page, { session: false, noGoto: true, tweakSettings: (s) => { s.enabled = false; } });
+    await page.goto(`/order/${REF}/${KEY}`);
+    await expect(page.getByText('Currently closed')).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/order/${REF}/${KEY}$`));
+    await expect(page.getByRole('heading', { name: /Order placed|couldn.t load/i })).toHaveCount(0);
+  });
+});
+
+test.describe('the pop-up and the order page', () => {
+  test('opening the order page counts as being asked: no pop-up for it on the way back, a reload asks again', async ({ page }) => {
+    const mocks = await open(page, { path: ORDER_PAGE, unpaidOrders: [unpaidRow()] });
+    await expect(payCard(page)).toBeVisible();
+    await expect(prompt(page)).toHaveCount(0);
+
+    // Back to the shop inside the app, with no reload: the order the shopper just looked at is not asked about.
+    await page.evaluate(() => {
+      window.history.pushState({}, '', '/');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    await expect(page.locator('[data-sf-part="product-card"]').first()).toBeVisible();
+    await page.waitForLoadState('networkidle');
+    await expect(prompt(page)).toHaveCount(0);
+    expect(unpaidAsks(mocks)).toBeLessThanOrEqual(1);
+
+    // A fresh page load is a fresh visit: the order is still unpaid, so it is asked about.
+    await page.reload();
+    await expect(prompt(page)).toBeVisible();
+  });
+});
+
+test.describe('/order-placed for a signed-in customer', () => {
+  test('offers a way to the order; a guest is not offered one', async ({ page }) => {
+    await open(page, { path: `/order-placed?order=${REF}` });
+    await expect(page.getByRole('heading', { name: 'Order placed' })).toBeVisible();
+    await onlyVisible(page.getByText('View your order', { exact: true })).click();
+    await expect(page).toHaveURL(new RegExp(`/account/orders/${REF}$`));
+    await expect(page.getByRole('heading', { name: REF, level: 1 })).toBeVisible();
+  });
+
+  test('a signed-out visitor sees the sign-in hint and no View your order', async ({ page }) => {
+    await open(page, { path: `/order-placed?order=${REF}`, session: false });
+    await expect(page.getByRole('heading', { name: 'Order placed' })).toBeVisible();
+    await expect(page.getByText('View your order', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('Use the email or phone number you gave at checkout.')).toBeVisible();
+  });
+});
+
+test.describe('the order page · a payment lands, or the order goes', () => {
+  test('a hosted payment completing: a thank-you, the card goes, and "can\'t be paid online" is never shown', async ({ page }) => {
+    // Watch every DOM change for the wrong sentence: it would flash by too fast to catch with an assertion.
+    await page.addInitScript(() => {
+      const w = window as unknown as { __sawHelp: boolean };
+      w.__sawHelp = false;
+      const look = () => { if (/can.t be paid online/.test(document.body?.textContent ?? '')) w.__sawHelp = true; };
+      new MutationObserver(look).observe(document, { subtree: true, childList: true, characterData: true });
+    });
+    const mocks = await open(page, { path: ORDER_PAGE, fixture: 'hosted' });
+    await expect(payCard(page).getByRole('link', { name: 'Open secure checkout' })).toBeVisible();
+
+    // The customer pays in the other tab and comes back: the page is asked again when it regains focus.
+    markOrderPaid(mocks.state);
+    await page.evaluate(() => {
+      window.dispatchEvent(new Event('focus'));
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    await expect(page.getByRole('status').filter({ hasText: 'Payment received. Thank you.' })).toBeAttached({ timeout: 20_000 });
+    await expect(page.getByRole('alert').filter({ hasText: 'Payment received. Thank you.' })).toBeVisible();
+    await expect(payCard(page)).toHaveCount(0);
+    expect(await page.evaluate(() => (window as unknown as { __sawHelp: boolean }).__sawHelp)).toBe(false);
+  });
+
+  test('a method choice answered 404 means the order has gone: the not-found screen, and no method error', async ({ page }) => {
+    const mocks = await open(page, { path: ORDER_PAGE });
+    await expect(payCard(page).getByRole('heading', { name: /^Choose how you.d like to pay/ })).toBeVisible();
+    mocks.state.payGone = true;
+    await payCard(page).getByRole('button', { name: /^Card/ }).click();
+    await expect(page.getByRole('heading', { name: "We can't find that order" })).toBeVisible();
+    await expect(page.getByRole('alert')).toHaveCount(0);
+    await expect(payCard(page)).toHaveCount(0);
   });
 });

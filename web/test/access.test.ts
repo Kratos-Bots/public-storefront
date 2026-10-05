@@ -82,7 +82,7 @@ describe('accessDecision', () => {
     expect(accessDecision({ ...base, pathname: '/login' })).toEqual({ kind: 'allow' });
   });
 
-  it.each(['/payment/success', '/payment/cancel', '/order-placed', '/order/ORD-1/abc'])(
+  it.each(['/payment/success', '/payment/cancel', '/order-placed'])(
     'never gates the exempt path %s', (pathname) => {
       expect(accessDecision({ ...base, access: mode('restricted'), pathname })).toEqual({ kind: 'allow' });
       expect(accessDecision({ ...base, access: mode('restricted'), loggedIn: true, denied: true, pathname })).toEqual({ kind: 'allow' });
@@ -109,6 +109,17 @@ describe('accessDecision', () => {
     'keeps %s reachable for a refused customer', (pathname) => {
       expect(accessDecision({ ...base, access: mode('restricted'), loggedIn: true, denied: true, pathname })).toEqual({ kind: 'allow' });
     });
+
+  it('keeps an old order link reachable for a refused customer: it only redirects to their account order page', () => {
+    const ctx = { ...base, access: mode('restricted'), loggedIn: true, denied: true, pathname: '/order/ORD-1/KEY' };
+    expect(accessDecision(ctx)).toEqual({ kind: 'allow' });
+    expect(checksProfile({ ...ctx, denied: false })).toBe(false);
+  });
+
+  it('sends a signed-out visitor of a login shop from an old order link to sign-in and back', () => {
+    expect(accessDecision({ ...base, access: mode('login'), pathname: '/order/ORD-1/KEY' }))
+      .toEqual({ kind: 'redirect', to: '/login?returnTo=%2Forder%2FORD-1%2FKEY' });
+  });
 
   it('keeps /verify-email reachable for a refused customer', () => {
     expect(accessDecision({ ...base, access: mode('restricted'), loggedIn: true, denied: true, pathname: '/verify-email' }))

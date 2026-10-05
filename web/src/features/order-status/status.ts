@@ -1,6 +1,6 @@
-import { defaultText, type StringKey } from '@/text/registry.ts';
+import type { StringKey } from '@/text/registry.ts';
 import { textKey, textSnapshot, type TextApi } from '@/text/snapshot.ts';
-import type { PublicOrder, PublicOrderStatus, ShipmentStatus } from '@/types/public-order.ts';
+import type { ShipmentStatus } from '@/types/public-order.ts';
 
 // Ported from `ecommerce-menu/web/src/features/order-status/status.ts` (plus
 // `orderStatusLabel` from that app's tracking/status.ts). The only change is the
@@ -9,93 +9,6 @@ import type { PublicOrder, PublicOrderStatus, ShipmentStatus } from '@/types/pub
 
 /** Accent role, resolved to a theme token by whatever renders it. */
 export type Tone = 'default' | 'success' | 'danger' | 'muted';
-
-// The customer-facing milestones the timeline renders. Distinct from the many
-// internal order statuses — several statuses collapse onto the same milestone.
-export const ROUTE_STEP_KEYS = [
-  textKey('order.steps.received'),
-  textKey('order.steps.confirmed'),
-  textKey('order.steps.shipped'),
-  textKey('order.steps.delivered'),
-] as const;
-/** The milestones' built-in English (read by tests); the timeline renders ROUTE_STEP_KEYS. */
-export const ROUTE_STEPS = ROUTE_STEP_KEYS.map(defaultText);
-
-export interface StatusView {
-  /** Small mono eyebrow above the headline. */
-  eyebrow: string;
-  /** Large display headline. */
-  headline: string;
-  /** One plain sentence under the headline. */
-  detail: string;
-  /** Index into ROUTE_STEPS for the current milestone, or null for terminal states. */
-  activeStep: number | null;
-  /** Delivered — every milestone renders complete. */
-  done: boolean;
-  /** Shipped, but only some items — shows a "Partial" marker on the current step. */
-  partial: boolean;
-  /** Cancelled/refunded orders replace the timeline with a notice. */
-  terminal: 'cancelled' | 'refunded' | null;
-  /** Accent role for the eyebrow, mapped to a theme token by the hero. */
-  tone: Tone;
-}
-
-type Shape = Omit<StatusView, 'eyebrow' | 'headline' | 'detail'>;
-const PROGRESS: Shape = { activeStep: 0, done: false, partial: false, terminal: null, tone: 'default' };
-
-type HeroKey = Extract<StringKey, `order.hero.${string}`>;
-
-/**
- * Wording comes from `t`: a component passes `useText().t` (the nearest provider, and it re-renders on
- * a text change); non-React callers may omit it and get the mounted text at call time.
- */
-export function statusView(order: PublicOrder, t: TextApi['t'] = textSnapshot().t): StatusView {
-  const view = (eyebrow: HeroKey, headline: HeroKey, detail: HeroKey, shape: Shape): StatusView =>
-    ({ eyebrow: t(eyebrow), headline: t(headline), detail: t(detail), ...shape });
-  const status: PublicOrderStatus = order.status;
-  const eyebrow = textKey('order.hero.eyebrow');
-
-  switch (status) {
-    case 'pending':
-      return view(eyebrow, 'order.hero.pendingHeadline', 'order.hero.pendingDetail', PROGRESS);
-    case 'confirmed':
-      return view(eyebrow, 'order.hero.confirmedHeadline', 'order.hero.confirmedDetail', { ...PROGRESS, activeStep: 1 });
-    case 'processing':
-      // No dedicated "Preparing" step — packing shows as progress toward Shipped.
-      return view(eyebrow, 'order.hero.processingHeadline', 'order.hero.processingDetail', { ...PROGRESS, activeStep: 2 });
-    case 'partially_shipped':
-      return view(eyebrow, 'order.hero.partiallyShippedHeadline', 'order.hero.partiallyShippedDetail', {
-        ...PROGRESS,
-        activeStep: 2,
-        partial: true,
-      });
-    case 'shipped':
-      return view(eyebrow, 'order.hero.shippedHeadline', 'order.hero.shippedDetail', { ...PROGRESS, activeStep: 2 });
-    case 'delivered':
-      return view('order.hero.deliveredEyebrow', 'order.hero.deliveredHeadline', 'order.hero.deliveredDetail', {
-        ...PROGRESS,
-        activeStep: 3,
-        done: true,
-        tone: 'success',
-      });
-    case 'cancelled':
-      return view(eyebrow, 'order.hero.cancelledHeadline', 'order.hero.cancelledDetail', {
-        ...PROGRESS,
-        activeStep: null,
-        terminal: 'cancelled',
-        tone: 'danger',
-      });
-    case 'refunded':
-      return view(eyebrow, 'order.hero.refundedHeadline', 'order.hero.refundedDetail', {
-        ...PROGRESS,
-        activeStep: null,
-        terminal: 'refunded',
-        tone: 'muted',
-      });
-    default:
-      return view(eyebrow, 'order.hero.pendingHeadline', 'order.hero.pendingDetail', PROGRESS);
-  }
-}
 
 export const SHIPMENT_LABEL_KEYS: Record<ShipmentStatus, Extract<StringKey, `order.shipment.status.${string}` | 'common.shipment.inTransit'>> = {
   shipped: textKey('order.shipment.status.shipped'),
@@ -151,11 +64,7 @@ export function orderStatusLabel(status: string, t: TextApi['t'] = textSnapshot(
   return t(key);
 }
 
-/**
- * The same tones `statusView` assigns, reachable from a bare status string —
- * an order list row and an order-history detail carry a status without the rest
- * of the public order payload `statusView` reads.
- */
+/** The tone of an order status, for the pill on an order list row and an order detail. */
 export const ORDER_STATUS_TONE: Record<string, Tone> = {
   delivered: 'success',
   cancelled: 'danger',

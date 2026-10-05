@@ -3,6 +3,7 @@ import { PREVIEW_STATE_IDS, type BuilderMode } from '@/builder/mode.ts';
 import type { LayoutKind, DocKey } from '@/builder/types.ts';
 import type { LoyaltyPreview } from '@/builder/family-loyalty.ts';
 import type { OrdersPreview } from '@/builder/family-orders.ts';
+import type { OrderPreview } from '@/builder/family-order.ts';
 import type { PaymentPreview } from '@/builder/family-payment.ts';
 import type { ProfilePreview } from '@/builder/family-profile.ts';
 import type { ReferralsPreview } from '@/builder/family-referrals.ts';
@@ -13,7 +14,8 @@ import type { VerifyEmailPreview } from '@/builder/family-verify-email.ts';
 import { useEditorStore } from '@/builder/editor/store.ts';
 import { effectivePreviewAs } from '@/builder/editor/fixture-mode.ts';
 import {
-  FIXTURE_CHAT_LINKS, FIXTURE_ORDERS, FIXTURE_ORDER_REF, fixtureOrderStates, FIXTURE_REDEEM, FIXTURE_TRACKING, fixtureProfile, fixtureVerification,
+  FIXTURE_CHAT_LINKS, FIXTURE_ORDERS, FIXTURE_ORDER_REF, FIXTURE_SIGN_IN, FIXTURE_REDEEM, FIXTURE_TRACKING, fixtureOrderDetails, fixtureOrderStates,
+  fixtureProfile, fixtureVerification,
 } from '@/builder/editor/fixtures.ts';
 
 export type ContainerName = keyof typeof PREVIEW_STATE_IDS;
@@ -27,7 +29,7 @@ export const PREVIEW_STATE_LABELS: Record<ContainerName, Labelled> = {
   Referrals: [{ id: 'new', label: 'Not referred yet' }, { id: 'referred', label: 'Referred' }],
   Profile: [{ id: 'website', label: 'Website' }, { id: 'webapp', label: 'Web app (contact section)' }],
   PaymentSuccess: [{ id: 'reference', label: 'With reference' }, { id: 'missing', label: 'Missing reference' }],
-  PaymentCancel: [{ id: 'saved', label: 'Saved order' }, { id: 'unsaved', label: 'No saved order' }, { id: 'no-reference', label: 'No reference' }],
+  PaymentCancel: [{ id: 'signed-out', label: 'Signed out' }, { id: 'no-reference', label: 'No reference' }],
   OrderPlaced: [
     { id: 'chat', label: 'Chat links' }, { id: 'warning', label: 'Warning' }, { id: 'no-chat', label: 'No chat links' }, { id: 'missing', label: 'Missing reference' },
   ],
@@ -43,13 +45,14 @@ export const PREVIEW_STATE_LABELS: Record<ContainerName, Labelled> = {
     { id: 'form', label: 'Choose a new password' }, { id: 'set', label: 'Choose a password (no password yet)' },
     { id: 'expired', label: 'Expired link' }, { id: 'checking', label: 'Checking the link' }, { id: 'unreachable', label: 'Could not check' },
   ],
+  OrderDetail: [
+    { id: 'awaiting-payment', label: 'Awaiting payment' }, { id: 'hosted-open', label: 'Card checkout open' },
+    { id: 'crypto-waiting', label: 'Waiting for crypto' }, { id: 'shipped', label: 'Shipped' },
+    { id: 'collection', label: 'Collection point' }, { id: 'cancelled', label: 'Cancelled' },
+  ],
   VerifyEmail: [
     { id: 'verifying', label: 'Confirming' }, { id: 'done', label: 'Confirmed' }, { id: 'invalid', label: 'Expired link' },
     { id: 'otherAccount', label: 'Different account' }, { id: 'error', label: 'Could not confirm' },
-  ],
-  OrderStatus: [
-    { id: 'shipped', label: 'Shipped' }, { id: 'awaiting-payment', label: 'Awaiting payment' }, { id: 'hosted-open', label: 'Hosted checkout open' },
-    { id: 'crypto-checking', label: 'Crypto sent, checking' }, { id: 'two-parcels', label: 'Two parcels' }, { id: 'cancelled', label: 'Cancelled' },
   ],
 };
 
@@ -82,15 +85,15 @@ const BUILDERS: { [C in ContainerName]: (state: string, now: Date) => unknown } 
   },
   Profile: (state): ProfilePreview => ({ surface: state === 'webapp' ? 'webapp' : 'website', profile: fixtureProfile(PREVIEW_AS) }),
   PaymentSuccess: (state): PaymentPreview => ({
-    orderRef: state === 'missing' ? null : FIXTURE_ORDER_REF, saved: state !== 'missing', warning: false, whatsapp: null, telegram: null,
+    orderRef: state === 'missing' ? null : FIXTURE_ORDER_REF, signIn: state !== 'missing' ? FIXTURE_SIGN_IN : null, warning: false, whatsapp: null, telegram: null,
   }),
   PaymentCancel: (state): PaymentPreview => ({
-    orderRef: state === 'no-reference' ? null : FIXTURE_ORDER_REF, saved: state === 'saved', warning: false, whatsapp: null, telegram: null,
+    orderRef: state === 'no-reference' ? null : FIXTURE_ORDER_REF, signIn: state !== 'no-reference' ? FIXTURE_SIGN_IN : null, warning: false, whatsapp: null, telegram: null,
   }),
   OrderPlaced: (state): PaymentPreview => {
     const chat = state === 'chat' || state === 'warning';
     return {
-      orderRef: state === 'missing' ? null : FIXTURE_ORDER_REF, saved: false, warning: state === 'warning',
+      orderRef: state === 'missing' ? null : FIXTURE_ORDER_REF, signIn: state !== 'missing' ? FIXTURE_SIGN_IN : null, warning: state === 'warning',
       whatsapp: chat ? FIXTURE_CHAT_LINKS.whatsapp : null, telegram: chat ? FIXTURE_CHAT_LINKS.telegram : null,
     };
   },
@@ -114,6 +117,10 @@ const BUILDERS: { [C in ContainerName]: (state: string, now: Date) => unknown } 
     }
   },
   VerifyEmail: (state): VerifyEmailPreview => ({ phase: (['done', 'invalid', 'otherAccount', 'error'] as const).find((p) => p === state) ?? 'verifying' }),
+  OrderDetail: (state, now): OrderPreview => {
+    const id = (PREVIEW_STATE_IDS.OrderDetail as readonly string[]).includes(state) ? (state as keyof ReturnType<typeof fixtureOrderStates>) : 'awaiting-payment';
+    return { detail: fixtureOrderDetails(now)[id], payment: fixtureOrderStates(now)[id] };
+  },
   VerifyForm: (state, now): VerifyPreview => {
     const v = fixtureVerification(now);
     switch (state) {
@@ -123,10 +130,6 @@ const BUILDERS: { [C in ContainerName]: (state: string, now: Date) => unknown } 
       case 'error': return { status: 'error' };
       default: return { status: 'idle' };
     }
-  },
-  OrderStatus: (state, now) => {
-    const states = fixtureOrderStates(now);
-    return states[state as keyof typeof states] ?? states.shipped;
   },
 };
 
@@ -144,6 +147,7 @@ export function previewStatesFor(states: Readonly<Record<string, string>>): Reco
 
 const DOC_CONTAINER: Partial<Record<DocKey, ContainerName>> = {
   'account.orders': 'OrdersList',
+  'account.order': 'OrderDetail',
   'account.loyalty': 'Loyalty',
   'account.referrals': 'Referrals',
   'account.profile': 'Profile',
@@ -154,7 +158,6 @@ const DOC_CONTAINER: Partial<Record<DocKey, ContainerName>> = {
   verify: 'VerifyForm',
   'reset-password': 'ResetPassword',
   'verify-email': 'VerifyEmail',
-  'order-status': 'OrderStatus',
 };
 
 /** The stateful container a document holds (its Preview state applies), or null. */

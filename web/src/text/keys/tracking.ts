@@ -12,7 +12,6 @@ export default defineTextArea('tracking', {
   'lookup.placeholder': { en: 'A7K2QM', max: 40 },
   'lookup.hint': { en: 'Six characters, on your order confirmation.' },
   'lookup.submit': { en: 'Track order', max: 40 },
-  'lookup.recent': { en: 'Recent', max: 40 },
   'lookup.invalidReference': { en: 'Check that reference', max: 60 },
 
   // ── hero (summary above the fold) ─────────────────────────────────────────

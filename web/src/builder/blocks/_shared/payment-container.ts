@@ -15,11 +15,10 @@ function paymentContainer(opts: { required: readonly string[]; defaults: readonl
   };
 }
 
-/** A hosted checkout's success return has no actions: the hand-off to the saved order is a redirect. */
+/** A hosted checkout's success return hands a signed-in customer straight to their order, so its actions only ever show the sign-in prompt for a signed-out one. */
 export const PAYMENT_SUCCESS_CONTAINER = paymentContainer({
   required: ['PaymentHeadline', 'PaymentReference'],
-  defaults: ['PaymentMark', 'PaymentEyebrow', 'PaymentHeadline', 'PaymentMessage', 'PaymentReference', 'PaymentContact', 'PaymentBack'],
-  offers: PARTS.filter((p) => p !== 'PaymentActions'),
+  defaults: ['PaymentMark', 'PaymentEyebrow', 'PaymentHeadline', 'PaymentMessage', 'PaymentReference', 'PaymentActions', 'PaymentContact', 'PaymentBack'],
 });
 
 export const PAYMENT_CANCEL_CONTAINER = paymentContainer({

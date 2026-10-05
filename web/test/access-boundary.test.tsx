@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, render, screen } from '@testing-library/react';
-import { createMemoryRouter, RouterProvider, useLocation } from 'react-router';
+import { createMemoryRouter, Outlet, RouterProvider, useLocation } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MantineProvider } from '@mantine/core';
 
@@ -13,6 +13,7 @@ vi.mock('@/features/access/LockedPage.tsx', () => ({
 vi.mock('@/components/Brand.tsx', () => ({ Brand: () => <span>brand</span> }));
 
 import { AccessBoundary } from '@/app/AccessBoundary.tsx';
+import { OrderLinkRedirect } from '@/app/OrderLinkRedirect.tsx';
 import { SETTINGS_KEY } from '@/app/settings.ts';
 import { accessGate } from '@/app/access-gate.ts';
 import { useSessionStore } from '@/stores/session.ts';
@@ -101,6 +102,32 @@ describe('AccessBoundary', () => {
     accessGate.getState().setDenied(true);
     mount('/account/orders', settings({ storefront: 'restricted' }));
     expect(screen.getByText('shop frame')).toBeInTheDocument();
+  });
+
+  it('ends a refused customer on their account order page when they open an old order link', async () => {
+    signedIn();
+    accessGate.getState().setDenied(true);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    client.setQueryData(SETTINGS_KEY, settings({ storefront: 'restricted' }));
+    const router = createMemoryRouter(
+      [{
+        path: '/',
+        element: <AccessBoundary><Where /><Outlet /></AccessBoundary>,
+        children: [
+          { path: 'order/:ref/:accessKey', element: <OrderLinkRedirect /> },
+          { path: 'account/orders/:ref', element: <div>order page</div> },
+        ],
+      }],
+      { initialEntries: ['/order/ORD-1/KEY'] },
+    );
+    render(
+      <QueryClientProvider client={client}>
+        <MantineProvider env="test"><RouterProvider router={router} /></MantineProvider>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText('order page')).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/account/orders/ORD-1');
+    expect(screen.queryByText(/^locked:/)).toBeNull();
   });
 
   it('re-renders to the lockout screen when the gate flips after mount', async () => {

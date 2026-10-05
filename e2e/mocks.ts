@@ -5,7 +5,7 @@ import type { CheckoutPayment, CheckoutResult, PaymentMethod, Quote } from '../w
 import type { ServerCart, ServerCartLine, CartLineInput } from '../web/src/types/cart.ts';
 import type { OrderDetail, OrderSummary, PageMeta, UnpaidOrder } from '../web/src/types/orders.ts';
 import type { Profile, RedeemOptions } from '../web/src/types/profile.ts';
-import type { PublicOrder, SelectPaymentResult } from '../web/src/types/public-order.ts';
+import type { PublicOrder, SelectPaymentResult, Shipment } from '../web/src/types/public-order.ts';
 import type { ServicePoint } from '../web/src/types/service-points.ts';
 import type { StorefrontSettings } from '../web/src/types/settings.ts';
 import type { TrackingLookup } from '../web/src/types/tracking.ts';
@@ -20,7 +20,6 @@ export const ORIGIN = 'http://localhost:5199';
 
 export const ORDER_REF = 'E2E1';
 export const ORDER_KEY = 'KEY1';
-export const ORDER_PATH = `/order/${ORDER_REF}/${ORDER_KEY}`;
 
 const read = <T>(name: string): T =>
   JSON.parse(readFileSync(fileUrl(`./fixtures/${name}`), 'utf8')) as T;
@@ -80,11 +79,86 @@ export function publicOrderVariant(kind: OrderVariant): PublicOrder {
         shipments: [{ status: 'shipped', carrier: 'Royal Mail', trackingNumber: 'NB000977GB', trackingUrl: 'https://track.example.invalid/NB000977GB', trackingStatusDescription: 'Handed to the courier', shippedAt: '2026-08-25T09:00:00.000Z', deliveredAt: null }],
       };
     case 'collection':
-      return { ...o, status: 'confirmed', cryptoPayments: [], payment: owed, shippingAddress: { ...o.shippingAddress, servicePoint: { name: 'Corner News', carrier: 'evri' } } };
+      return { ...o, status: 'confirmed', cryptoPayments: [], payment: owed, shippingAddress: { ...o.shippingAddress!, servicePoint: { name: 'Corner News', carrier: 'evri' } } };
     case 'legacy': {
       const { payment: _payment, cryptoPayments: _crypto, ...rest } = o;
       return rest;
     }
+  }
+}
+
+/**
+ * Named orders for the account order page, selectable per test (`installMocks(page, { orderFixture: 'hosted' })`).
+ * Each is the order as the customer's session sees it: `detail` is `GET storefront/orders/:ref`, `payment` is
+ * `GET storefront/orders/:ref/payment`, and the two agree on status, money and what can still be cancelled.
+ * - `unpaid`:     awaiting payment, no method chosen yet: the picker shows
+ * - `hosted`:     awaiting payment, a hosted checkout already open (Open secure checkout)
+ * - `crypto`:     awaiting payment, a USDT payment open with its address and txid form
+ * - `shipped`:    paid and on its way in two parcels, with a delivery address
+ * - `collection`: paid, going to a collection point (Corner News, Evri)
+ * - `cancelled`:  cancelled, nothing owed
+ */
+export type OrderFixtureName = 'unpaid' | 'hosted' | 'crypto' | 'shipped' | 'collection' | 'cancelled';
+
+export interface OrderFixture { detail: OrderDetail; payment: PublicOrder }
+
+const ORDER_TOTAL = 46.03;
+
+export function orderFixture(name: OrderFixtureName, reference: string = ORDER_REF): OrderFixture {
+  const base = publicOrderVariant('crypto');
+  const address = base.shippingAddress!;
+  const detail: OrderDetail = {
+    reference,
+    status: 'pending',
+    createdAt: '2026-08-24T09:05:00.000Z',
+    items: [{ name: 'Alpine Extract 10ml', quantity: 1, unitPrice: 42.5, lineTotal: 42.5 }],
+    subtotal: 42.5, shippingAmount: 4.95, discountAmount: 0, totalAmount: ORDER_TOTAL,
+    payments: [],
+    outstandingBalance: ORDER_TOTAL,
+    shipments: [],
+    canCancel: true,
+    cancelBlockedBy: null,
+    shippingAddress: address,
+  };
+  const paidPayment = { method: 'crypto_static', methodLabel: 'Pay with crypto', amount: ORDER_TOTAL, status: 'completed', createdAt: '2026-08-24T09:10:00.000Z' };
+  const parcels: Shipment[] = [
+    { status: 'shipped', carrier: 'Royal Mail', trackingNumber: 'NB000977GB', trackingUrl: 'https://track.example.invalid/NB000977GB', trackingStatusDescription: 'Handed to the courier', shippedAt: '2026-08-25T09:00:00.000Z', deliveredAt: null },
+    { status: 'delivered', carrier: 'Evri', trackingNumber: 'EV123456789', trackingUrl: 'https://track.example.invalid/EV123456789', trackingStatusDescription: 'Delivered', shippedAt: '2026-08-25T09:30:00.000Z', deliveredAt: '2026-08-26T11:12:00.000Z' },
+  ];
+  // The payment view of an order nothing more can be paid on.
+  const settled = (status: PublicOrder['status'], over: Partial<PublicOrder> = {}): PublicOrder => ({
+    ...publicOrderVariant('paid'), status, payment: { canPay: false, canCancel: false, cancelBlockedBy: 'paid', payBy: null, activePayment: null }, ...over,
+  });
+  const withCancel = (o: PublicOrder): PublicOrder => ({ ...o, payment: { ...o.payment!, canCancel: true, cancelBlockedBy: null } });
+  switch (name) {
+    case 'unpaid':
+      return { detail, payment: { ...withCancel(publicOrderVariant('choose')), reference } };
+    case 'hosted': {
+      const payment = withCancel(publicOrderVariant('choose'));
+      payment.payment!.activePayment = { paymentId: 9003, method: 'sushipp', kind: 'gateway', status: 'pending', checkoutUrl: `https://pay.example.invalid/checkout/${reference}`, canChange: true };
+      detail.payments = [{ method: 'sushipp', methodLabel: 'Card payment', amount: ORDER_TOTAL, status: 'pending', createdAt: '2026-08-24T09:10:00.000Z' }];
+      return { detail, payment: { ...payment, reference } };
+    }
+    case 'crypto':
+      detail.payments = [{ method: 'crypto_static', methodLabel: 'Pay with crypto', amount: ORDER_TOTAL, status: 'pending', createdAt: '2026-08-24T09:10:00.000Z' }];
+      return { detail, payment: { ...withCancel(base), reference } };
+    case 'shipped':
+      return {
+        detail: { ...detail, status: 'shipped', payments: [paidPayment], shipments: parcels, outstandingBalance: 0, canCancel: false, cancelBlockedBy: 'paid' },
+        payment: settled('shipped', { reference, shipments: parcels }),
+      };
+    case 'collection': {
+      const point = { name: 'Corner News', carrier: 'evri' };
+      return {
+        detail: { ...detail, status: 'confirmed', payments: [paidPayment], outstandingBalance: 0, canCancel: false, cancelBlockedBy: 'paid', servicePoint: point, shippingAddress: { ...address, servicePoint: point } },
+        payment: settled('confirmed', { reference, shippingAddress: { ...address, servicePoint: point } }),
+      };
+    }
+    case 'cancelled':
+      return {
+        detail: { ...detail, status: 'cancelled', outstandingBalance: 0, canCancel: false, cancelBlockedBy: null },
+        payment: settled('cancelled', { reference, payment: { canPay: false, canCancel: false, cancelBlockedBy: null, payBy: null, activePayment: null } }),
+      };
   }
 }
 
@@ -126,6 +200,10 @@ export interface InstallMocksOptions {
   paymentMethods?: PaymentMethod[];
   /** The order's `payment-method` route answers 422 "That payment method is not available for this order". */
   refuseMethodSelection?: boolean;
+  /** The order's `payment-method` route answers 409: another payment got there first (the page refetches and shows what is current). */
+  conflictMethodSelection?: boolean;
+  /** Every pay route (`payment`, `payment-options`, `payment-method`, `crypto-txid`) answers 404 "Order not found" from the start; see `MockState.payGone` to flip it mid-test. */
+  payRoutesGone?: boolean;
   order?: PublicOrder;
   profile?: Profile;
   /** Seed `sf-session-v1` so the app boots signed in. */
@@ -157,9 +235,13 @@ export interface InstallMocksOptions {
   tweakProfile?: (profile: Profile) => void;
   /** Mutate the account order detail (`GET storefront/orders/:ref`) before it is served. */
   tweakOrderDetail?: (detail: OrderDetail) => void;
-  /** The public order is served for this reference and access key instead of E2E1 / KEY1 (its `reference` is rewritten to match). */
-  orderLink?: { reference: string; accessKey: string };
-  /** Mutate the public order (`GET orders/:ref/:key`) before it is served: cancel flags, an active payment. */
+  /**
+   * Serve this named order (see `orderFixture`) as the account order and its payment view, under `orderReference`
+   * (default E2E1). Overrides the profile fixture's delivered K4M2QP order; `tweakOrderDetail` / `tweakOrder` then apply.
+   */
+  orderFixture?: OrderFixtureName;
+  orderReference?: string;
+  /** Mutate the payment view (`GET storefront/orders/:ref/payment`) before it is served. */
   tweakOrder?: (order: PublicOrder) => void;
   /** `GET storefront/orders/unpaid` answers these (a signed-in customer only; at most five), minus any order already cancelled. Default: none. */
   unpaidOrders?: UnpaidOrder[];
@@ -254,8 +336,35 @@ export interface MockState {
   denied: boolean;
   /** References cancelled through either cancel route, in order. */
   cancels: string[];
+  /** The pay routes answer 404 "Order not found". The first such answer also takes the order's own read with it (`orderGone`), as an order that has gone would. */
+  payGone: boolean;
+  /** `GET storefront/orders/:ref` answers 404. */
+  orderGone: boolean;
   /** How many times the anonymous catalogue (`catalog`, `catalog/products/:id`) was asked for. */
   anonymousCatalogHits: number;
+}
+
+/**
+ * The customer pays outside the app, as a hosted checkout does: the payment completes, the order is confirmed and
+ * nothing is owed. Both views of the order change together, so whichever the page reads next says so.
+ */
+export function markOrderPaid(state: MockState): void {
+  const detail = state.orderDetail;
+  if (detail.reference === state.order.reference) {
+    detail.status = 'confirmed';
+    detail.outstandingBalance = 0;
+    detail.canCancel = false;
+    detail.cancelBlockedBy = 'paid';
+    detail.payments = detail.payments.map((p) => ({ ...p, status: 'completed' }));
+  }
+  state.order.status = 'confirmed';
+  state.order.cryptoPayments = [];
+  if (state.order.payment) {
+    state.order.payment = {
+      canPay: false, canCancel: false, cancelBlockedBy: 'paid', payBy: null,
+      activePayment: state.order.payment.activePayment ? { ...state.order.payment.activePayment, status: 'completed', canChange: false } : null,
+    };
+  }
 }
 
 export interface MockHandle {
@@ -444,9 +553,14 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     denied: options.access?.denied ?? false,
     anonymousCatalogHits: 0,
     cancels: [],
+    payGone: options.payRoutesGone ?? false,
+    orderGone: false,
   };
-  const link = options.orderLink ?? { reference: ORDER_REF, accessKey: ORDER_KEY };
-  if (options.orderLink) state.order = { ...clone(state.order), reference: link.reference };
+  if (options.orderFixture) {
+    const fixture = orderFixture(options.orderFixture, options.orderReference);
+    state.orderDetail = fixture.detail;
+    if (!options.order) state.order = fixture.payment;
+  }
   options.tweakOrder?.(state.order);
 
   options.tweakSettings?.(state.settings);
@@ -487,11 +601,63 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
         : { available: true, mode: 'verify', channels: ['whatsapp', 'sms'], countries: codeOptions.countries ?? [] };
     state.settings.login.email = email === 'off' ? { available: false, mode: null } : { available: true, mode: email };
   }
+  /**
+   * Whether the order can still be paid or cancelled: pending, with no completed payment. An order the mock holds no
+   * state for (the unpaid list's other entries) is open until it is cancelled.
+   */
+  const orderIsOpen = (reference: string): boolean => {
+    if (state.cancels.includes(reference)) return false;
+    const completed = (state.order.reference === reference && (state.order.payment?.activePayment?.status === 'completed' || state.order.status !== 'pending'))
+      || (state.orderDetail.reference === reference && (state.orderDetail.status !== 'pending' || state.orderDetail.payments.some((p) => p.status === 'completed')));
+    return !completed;
+  };
+
+  /**
+   * What choosing a method does to the order, as the backend's selection does: an open payment for the chosen method
+   * (replacing any earlier one), and a total that carries the method's fee. Both views of the order are updated, so a
+   * reload shows what the selection left behind.
+   */
+  const applySelection = (selection: Record<string, unknown>, result: SelectPaymentResult): void => {
+    const chosen = state.quote.paymentMethods.find((m) => m.method === selection.method);
+    const option = chosen?.cryptoOptions?.find((o) => o.coin === selection.coin && o.network === selection.network);
+    const fee = option ?? chosen;
+    const detail = state.orderDetail;
+    if (detail.reference === state.order.reference) {
+      if (fee) {
+        const total = Math.round((detail.subtotal + detail.shippingAmount - detail.discountAmount + fee.fee) * 100) / 100;
+        detail.totalAmount = total;
+        detail.outstandingBalance = total;
+        state.order.totals = { ...state.order.totals, totalAmount: total, paymentFeeAmount: fee.fee, paymentFeeLabel: fee.fee ? fee.feeLabel : null };
+      }
+      detail.payments = [
+        ...detail.payments.filter((p) => p.status === 'completed'),
+        { method: result.method, methodLabel: chosen?.displayName ?? result.method, amount: detail.totalAmount, status: 'pending', createdAt: new Date().toISOString() },
+      ];
+    }
+    if (!state.order.payment) return;
+    state.order.payment.activePayment = {
+      paymentId: result.paymentId, method: result.method, kind: result.kind, status: 'pending', checkoutUrl: result.checkoutUrl, canChange: true,
+    };
+    if (result.crypto) {
+      state.order.cryptoPayments = [{
+        paymentId: result.paymentId, paymentStatus: 'pending', coin: result.crypto.coin, network: result.crypto.network,
+        coinLabel: result.crypto.coinLabel, networkLabel: result.crypto.networkLabel, address: result.crypto.address,
+        coinAmount: result.crypto.coinAmount, fiatAmount: result.crypto.fiatAmount, verificationStatus: 'pending', needsAttention: false, txidMasked: null,
+      }];
+    } else {
+      state.order.cryptoPayments = [];
+    }
+  };
+
   /** Both cancel routes: the backend's `{ reference, status: 'cancelled' }`, or 409 `ORDER_NOT_CANCELLABLE:<reason>`. */
   const answerCancel = async (route: Route, reference: string): Promise<void> => {
     const known = [state.order.reference, state.orderDetail.reference, ...(options.unpaidOrders ?? []).map((o) => o.reference)];
     if (!known.includes(reference)) {
       await fail(route, 404, 'Order not found');
+      return;
+    }
+    if (!orderIsOpen(reference)) {
+      await fail(route, 409, 'ORDER_NOT_CANCELLABLE:not_pending');
       return;
     }
     const answer = options.cancelAnswers ?? 'ok';
@@ -571,8 +737,8 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     const method = route.request().method();
     state.requests.push(`${method} ${path}`);
 
-    // The kill switch: the order link's own routes stay up, everything else 503s.
-    if (state.disabled && path !== 'storefront/settings' && !path.startsWith('orders/')) {
+    // The kill switch: everything but the settings 503s.
+    if (state.disabled && path !== 'storefront/settings') {
       await fail(route, 503, 'STOREFRONT_DISABLED');
       return;
     }
@@ -690,7 +856,7 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
       state.checkouts.push(body(route));
       const result: CheckoutResult = {
         reference: options.checkoutReference ?? ORDER_REF,
-        publicUrl: `${ORIGIN}${ORDER_PATH}`,
+        publicUrl: `${ORIGIN}/order/${ORDER_REF}/${ORDER_KEY}`,
         status: 'pending',
         total: 46.03,
         payment: options.checkoutPayment ?? {
@@ -712,19 +878,36 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
       return;
     }
 
-    const publicOrder = /^orders\/([^/]+)\/([^/]+)(?:\/(.+))?$/.exec(path);
-    if (publicOrder) {
-      const [, reference, key, tail] = publicOrder;
-      if (reference !== link.reference || key !== link.accessKey) {
+    // Declared before `storefront/orders/:ref`, which would read "unpaid" as a reference.
+    if (path === 'storefront/orders/unpaid' && method === 'GET') {
+      if (!route.request().headers()['authorization']) {
+        await fail(route, 401, 'Unauthorized');
+        return;
+      }
+      await envelope(route, (options.unpaidOrders ?? []).filter((o) => orderIsOpen(o.reference)).slice(0, 5));
+      return;
+    }
+
+    // The customer's own pay routes: the same payment view the removed key-based routes served, on the session.
+    const ownPay = /^storefront\/orders\/([^/]+)\/(payment|payment-options|payment-method|crypto-txid)$/.exec(path);
+    if (ownPay) {
+      const [, askedRef, tail] = ownPay;
+      if (!route.request().headers()['authorization']) {
+        await fail(route, 401, 'Unauthorized');
+        return;
+      }
+      if (state.payGone || decodeURIComponent(askedRef!) !== state.order.reference) {
+        if (state.payGone) state.orderGone = true;
         await fail(route, 404, 'Order not found');
         return;
       }
-      if (!tail && method === 'GET') {
+      if (tail === 'payment' && method === 'GET') {
         await envelope(route, state.order);
         return;
       }
       if (tail === 'payment-options' && method === 'GET') {
-        const methods: PaymentMethod[] = state.quote.paymentMethods;
+        // An order that is no longer open has nothing left to choose.
+        const methods: PaymentMethod[] = orderIsOpen(state.order.reference) ? state.quote.paymentMethods : [];
         await envelope(route, methods);
         return;
       }
@@ -735,14 +918,17 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
           await fail(route, 422, 'That payment method is not available for this order');
           return;
         }
+        if (options.conflictMethodSelection) {
+          await fail(route, 409, 'Another payment is already open on this order');
+          return;
+        }
         const chosen = state.quote.paymentMethods.find((m) => m.method === selection.method);
         if (chosen?.type === 'gateway') {
           // A hosted checkout: the order now has an open gateway payment, as the backend's would.
           const checkoutUrl = `https://pay.example.invalid/checkout/${state.order.reference}`;
-          if (state.order.payment) {
-            state.order.payment.activePayment = { paymentId: 9003, method: chosen.method, kind: 'gateway', status: 'pending', checkoutUrl, canChange: true };
-          }
-          await envelope(route, { paymentId: 9003, method: chosen.method, kind: 'gateway', status: 'pending', checkoutUrl } satisfies SelectPaymentResult);
+          const hosted: SelectPaymentResult = { paymentId: 9003, method: chosen.method, kind: 'gateway', status: 'pending', checkoutUrl, crypto: null };
+          applySelection(selection, hosted);
+          await envelope(route, hosted);
           return;
         }
         const result: SelectPaymentResult = {
@@ -762,35 +948,21 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
             verificationStatus: 'pending',
           },
         };
+        applySelection(selection, result);
         await envelope(route, result);
-        return;
-      }
-      if (tail === 'cancel' && method === 'POST') {
-        await answerCancel(route, reference!);
         return;
       }
       if (tail === 'crypto-txid' && method === 'POST') {
         const submitted = body(route);
         state.txids.push(submitted);
-        const txid = String(submitted.txid ?? '');
         const payment = state.order.cryptoPayments?.[0];
         if (payment) {
           payment.verificationStatus = 'checking';
-          payment.txidMasked = maskTxid(txid);
+          payment.txidMasked = maskTxid(String(submitted.txid ?? ''));
         }
         await envelope(route, { verificationStatus: 'checking' });
         return;
       }
-    }
-
-    // Declared before `storefront/orders/:ref`, which would read "unpaid" as a reference.
-    if (path === 'storefront/orders/unpaid' && method === 'GET') {
-      if (!route.request().headers()['authorization']) {
-        await fail(route, 401, 'Unauthorized');
-        return;
-      }
-      await envelope(route, (options.unpaidOrders ?? []).filter((o) => !state.cancels.includes(o.reference)).slice(0, 5));
-      return;
     }
 
     const ownCancel = /^storefront\/orders\/([^/]+)\/cancel$/.exec(path);
@@ -818,7 +990,7 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
 
     const orderDetail = /^storefront\/orders\/([^/]+)$/.exec(path);
     if (orderDetail && method === 'GET') {
-      if (orderDetail[1] !== state.orderDetail.reference) {
+      if (state.orderGone || orderDetail[1] !== state.orderDetail.reference) {
         await fail(route, 404, 'Order not found');
         return;
       }

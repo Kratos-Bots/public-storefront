@@ -75,104 +75,122 @@ title: Northbound Supply
 </span>
 </section>
 <main class="_main_H _main_H" data-sf-part="main">
-<div class="_account_H">
-<header class="_letterhead_H">
-<span class="_eyebrow_H">Account</span>
-<h1 class="_name_H">Ada</h1>
-<p class="_meta_H">Member since 11 February 2026 · 4 orders</p>
-</header>
-<nav class="_tabs_H" aria-label="Account sections">
-<a aria-current="page" class="_tab_H _tabActive_H" href="/account/orders" data-discover="true">Orders</a>
-<a class="_tab_H" href="/account/loyalty" data-discover="true">Loyalty</a>
-<a class="_tab_H" href="/account/referrals" data-discover="true">Referrals</a>
-<a class="_tab_H" href="/account/profile" data-discover="true">Profile</a>
-</nav>
+<div class="_account_H _accountOrder_H">
 <div class="anim-fade">
-<div class="_body_H">
-<a class="_back_H" href="/account/orders" data-discover="true">← All orders</a>
-<div class="_detailHead_H">
-<h2 class="_detailRef_H">K4M2QP</h2>
-<span class="_pill_H _toneSuccess_H" data-sf-part="badge">Delivered</span>
-<span class="_detailDate_H">Placed 2 July 2026</span>
+<div class="_page_H">
+<p class="_srOnly_H" role="status">
+</p>
+<div class="_overview_H" data-columns="two">
+<div class="_head_H">
+<a class="_back_H" href="/account/orders" data-discover="true">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
+<path d="M19 12H5">
+</path>
+<path d="m11 6-6 6 6 6">
+</path>
+</svg>All orders</a>
+<header class="_heading_H">
+<div class="_titleRow_H">
+<h1 class="_title_H" tabindex="-1" data-order-title="true">K4M2QP</h1>
+<span class="_pill_H" data-sf-part="badge">On its way</span>
 </div>
-<section class="_section_H" aria-label="Items">
-<div class="_sectionHead_H">
-<h3 class="_sectionTitle_H">Items</h3>
-<span class="_sectionNote_H">2 lines</span>
+<p class="_meta_H">Placed 24 August 2026</p>
+</header>
 </div>
-<ul class="_items_H">
-<li class="_item_H">
-<span class="_itemName_H">Borealis Drops 25ml</span>
-<span class="_itemQty_H">1 × <span style="font-variant-numeric: tabular-nums;">£68.00</span>
-</span>
-<span class="_itemTotal_H">
-<span style="font-variant-numeric: tabular-nums;">£68.00</span>
-</span>
-</li>
-<li class="_item_H">
-<span class="_itemName_H">Citrine Capsules 60ct</span>
-<span class="_itemQty_H">2 × <span style="font-variant-numeric: tabular-nums;">£24.00</span>
-</span>
-<span class="_itemTotal_H">
-<span style="font-variant-numeric: tabular-nums;">£48.00</span>
-</span>
-</li>
-</ul>
-<div class="_row_H">
-<span class="_rowLabel_H">Subtotal</span>
-<span class="_rowFigure_H">
-<span style="font-variant-numeric: tabular-nums;">£116.00</span>
-</span>
+<div class="_main_H">
+<section class="_card_H" aria-label="Items" data-sf-part="card">
+<div class="_cardHead_H">
+<h2 class="_cardTitle_H">Items</h2>
 </div>
-<div class="_row_H">
-<span class="_rowLabel_H">Shipping</span>
-<span class="_rowFigure_H">
-<span style="font-variant-numeric: tabular-nums;">£12.90</span>
+<ul class="_lines_H">
+<li class="_line_H">
+<span class="_lineName_H">Alpine Extract 10ml</span>
+<span class="_lineQty_H">1 × <span style="font-variant-numeric: tabular-nums;">£42.50</span>
 </span>
-</div>
-<div class="_row_H _grand_H">
-<span class="_rowLabel_H">Total</span>
-<span class="_rowFigure_H _grandFigure_H">
-<span style="font-variant-numeric: tabular-nums;">£128.90</span>
-</span>
-</div>
-</section>
-<section class="_section_H" aria-label="Payments">
-<div class="_sectionHead_H">
-<h3 class="_sectionTitle_H">Payments</h3>
-</div>
-<ul class="_items_H">
-<li class="_event_H">
-<span class="_eventName_H">sushipp</span>
-<span class="_eventWhen_H">Jul 2, 2026, 3:21 PM</span>
-<span class="_eventFigure_H">
-<span style="font-variant-numeric: tabular-nums;">£128.90</span>
-</span>
-<span class="_eventStatus_H">
-<span class="_pill_H _toneSuccess_H" data-sf-part="badge">completed</span>
+<span class="_lineTotal_H">
+<span style="font-variant-numeric: tabular-nums;">£42.50</span>
 </span>
 </li>
 </ul>
-</section>
-<section class="_section_H" aria-label="Parcels">
-<div class="_sectionHead_H">
-<h3 class="_sectionTitle_H">Parcels</h3>
-<span class="_sectionNote_H">1 parcel</span>
+<div class="_totals_H">
+<div class="_sum_H">
+<span class="_sumLabel_H">Subtotal</span>
+<span class="_sumFigure_H">
+<span style="font-variant-numeric: tabular-nums;">£42.50</span>
+</span>
 </div>
-<ul class="_items_H">
+<div class="_sum_H">
+<span class="_sumLabel_H">Shipping</span>
+<span class="_sumFigure_H">
+<span style="font-variant-numeric: tabular-nums;">£4.95</span>
+</span>
+</div>
+<div class="_sum_H _grand_H">
+<span class="_sumLabel_H _grandLabel_H">Total</span>
+<span class="_sumFigure_H _grandFigure_H">
+<span style="font-variant-numeric: tabular-nums;">£46.03</span>
+</span>
+</div>
+</div>
+</section>
+<section class="_card_H" aria-label="Parcels" data-sf-part="card">
+<div class="_cardHead_H">
+<h2 class="_cardTitle_H">Parcels</h2>
+<span class="_cardNote_H">2 parcels</span>
+</div>
+<ul class="_events_H">
 <li class="_event_H">
 <span class="_eventName_H">Royal Mail</span>
-<span class="_eventWhen_H">AB123456789GB</span>
-<span class="_eventStatus_H">
+<span class="_eventWhen_H _eventRef_H">NB000977GB</span>
+<span class="_eventStatus_H _eventStatusTop_H">
+<span class="_pill_H" data-sf-part="badge">Shipped</span>
+</span>
+<p class="_eventDetail_H">Handed to the courier</p>
+<a class="_tracking_H" href="https://track.example.invalid/NB000977GB" target="_blank" rel="noopener noreferrer">Track this parcel</a>
+</li>
+<li class="_event_H">
+<span class="_eventName_H">Evri</span>
+<span class="_eventWhen_H _eventRef_H">EV123456789</span>
+<span class="_eventStatus_H _eventStatusTop_H">
 <span class="_pill_H _toneSuccess_H" data-sf-part="badge">Delivered</span>
 </span>
 <p class="_eventDetail_H">Delivered</p>
-<a class="_tracking_H" href="https://example.invalid/track/AB123456789GB" target="_blank" rel="noopener noreferrer">Track this parcel</a>
+<a class="_tracking_H" href="https://track.example.invalid/EV123456789" target="_blank" rel="noopener noreferrer">Track this parcel</a>
 </li>
 </ul>
 </section>
-<a class="_cta_H" href="http://ORIGIN/order/K4M2QP/KEY2" target="_blank" rel="noopener noreferrer" data-sf-part="button" data-variant="filled">Open order page</a>
-<p class="_note_H">The order page is where you pay, change payment method and follow the parcel — share it with us if you need help with this order.</p>
+</div>
+<div class="_side_H">
+<section class="_card_H" aria-label="Delivery address" data-sf-part="card">
+<div class="_cardHead_H">
+<h2 class="_cardTitle_H">Delivery address</h2>
+</div>
+<address class="_address_H">
+<span class="_addressLine_H" data-address-line="true">Ada Sterling</span>
+<span class="_addressLine_H" data-address-line="true">14 Kirkgate</span>
+<span class="_addressLine_H" data-address-line="true">Leeds, West Yorkshire LS1 6BY</span>
+<span class="_addressLine_H" data-address-line="true">United Kingdom</span>
+</address>
+</section>
+<section class="_card_H" aria-label="Payments" data-sf-part="card">
+<div class="_cardHead_H">
+<h2 class="_cardTitle_H">Payments</h2>
+</div>
+<ul class="_events_H">
+<li class="_event_H">
+<span class="_eventName_H">Pay with crypto</span>
+<span class="_eventWhen_H">Aug 24, 2026, 10:10 AM</span>
+<span class="_eventFigure_H">
+<span style="font-variant-numeric: tabular-nums;">£46.03</span>
+</span>
+<span class="_eventStatus_H">
+<span class="_pill_H _toneSuccess_H" data-sf-part="badge">Paid</span>
+</span>
+</li>
+</ul>
+</section>
+</div>
+</div>
 </div>
 </div>
 </div>

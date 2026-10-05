@@ -23,7 +23,6 @@ export const ROUTE_BOUND: Record<'shell' | FixedRouteKey | CardKey, Entry> = {
   'account.loyalty': { blocks: ['Loyalty'], exactlyOne: true },
   'account.referrals': { blocks: ['Referrals'], exactlyOne: true },
   'account.profile': { blocks: ['Profile'], exactlyOne: true },
-  'order-status': { blocks: ['OrderStatus'], exactlyOne: true },
   'payment-success': { blocks: ['PaymentSuccess'], exactlyOne: true },
   'payment-cancel': { blocks: ['PaymentCancel'], exactlyOne: true },
   'order-placed': { blocks: ['OrderPlaced'], exactlyOne: true },

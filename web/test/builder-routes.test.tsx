@@ -29,9 +29,9 @@ vi.mock('@/features/webapp/useTelegramChrome.ts', () => ({ useTelegramChrome: ()
 vi.mock('@/features/cart/CartPage.tsx', () => ({ CartPage: () => <p>cart page</p> }));
 vi.mock('@/features/cart/CartSummary.tsx', () => ({ CartSummary: () => <p>cart summary</p> }));
 vi.mock('@/features/catalog/ProductDetailPage.tsx', () => ({ ProductDetailPage: () => <p>product page</p> }));
-vi.mock('@/features/order-status/OrderStatusPage.tsx', () => ({ OrderStatusPage: () => <p>order status</p> }));
 
 import { CartRoute, CustomPageRoute, ProductRoute, routes } from '@/app/routes.tsx';
+import { OrderLinkRedirect } from '@/app/OrderLinkRedirect.tsx';
 import { Guard, type GuardSpec } from '@/app/guards.tsx';
 import { PageSetOverrideProvider } from '@/builder/runtime.tsx';
 import { FIXED_ROUTE_KEYS } from '@/builder/types.ts';
@@ -151,9 +151,11 @@ describe('route table', () => {
     for (const key of FIXED_ROUTE_KEYS) expect(tagged.has(key), key).toBe(true);
     expect(tagged.has('page')).toBe(true);
   });
-  it('renders the shared order link under the shell route (PuckShell swaps in the chromeless frame)', () => {
+  it('keeps the old order link as a redirect under the shell route, not a page of its own', () => {
     const shell = routes.find((r) => r.path === '/')!;
-    expect(shell.children!.some((r) => r.path === 'order/:ref/:accessKey')).toBe(true);
+    const link = shell.children!.find((r) => r.path === 'order/:ref/:accessKey')!;
+    expect(isValidElement(link.element) && link.element.type).toBe(OrderLinkRedirect);
+    expect(link.handle).toBeUndefined();
     expect(routes.some((r) => r.path === '/order/:ref/:accessKey')).toBe(false);
   });
   it('keeps every v0.6.0 path and param name', () => {
@@ -195,14 +197,15 @@ describe('the real route table', () => {
     return { client };
   }
 
-  it('/order/:ref/:accessKey renders chromeless: no cart drawer, login modal, cart bar or Telegram chrome', async () => {
-    const container = document.body;
-    mountRoutes('/order/NB-1001/key123', null);
-    expect(await screen.findByText('order status')).toBeInTheDocument();
-    expect(container.querySelectorAll('header')).toHaveLength(1);
-    for (const mark of ['cart-drawer', 'login-modal', 'cart-bar', 'primary-bar']) {
-      expect(container.querySelector(`[data-mark="${mark}"]`), mark).toBeNull();
-    }
+  it('/order/:ref/:accessKey sends a signed-out visitor to sign-in, then back to the account order page', async () => {
+    const router = createMemoryRouter(routes, { initialEntries: ['/order/NB-1001/key123'] });
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MantineProvider env="test"><PageSetOverrideProvider pageSet={null}><RouterProvider router={router} /></PageSetOverrideProvider></MantineProvider>
+      </QueryClientProvider>,
+    );
+    await waitFor(() => expect(router.state.location.pathname).toBe('/login'));
+    expect(new URLSearchParams(router.state.location.search).get('returnTo')).toBe('/account/orders/NB-1001');
   });
 
   it('shell and page read the same page set: Telegram\'s web app, whatever the store chose', async () => {

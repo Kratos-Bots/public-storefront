@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { installMocks, type InstallMocksOptions, type Layout, type MockHandle } from './mocks.ts';
+import { installMocks, type InstallMocksOptions, type Layout, type MockHandle, type OrderFixtureName } from './mocks.ts';
 import { FIXED_NOW } from './flows.ts';
 import { presetTheme } from './template-theme.ts';
 import {
@@ -23,6 +23,8 @@ interface OpenOptions {
   tweakSettings?: InstallMocksOptions['tweakSettings'];
   cart?: 'none' | 'one' | 'flagged';
   height?: number;
+  orderFixture?: InstallMocksOptions['orderFixture'];
+  orderReference?: string;
 }
 
 /** A server cart line for product 101; `flagged` puts it below an order minimum (checkout is held). */
@@ -41,7 +43,7 @@ async function open(page: Page, layout: Layout, set: PageSet | null, path: strin
   const width = o.width ?? 1280;
   await page.setViewportSize({ width, height: o.height ?? (width < 768 ? 844 : 900) });
   await page.clock.setFixedTime(FIXED_NOW);
-  const mocks = await installMocks(page, { layout, session: o.session ?? true, pages: { [layout]: set }, tweakSettings: o.tweakSettings });
+  const mocks = await installMocks(page, { layout, session: o.session ?? true, pages: { [layout]: set }, tweakSettings: o.tweakSettings, orderFixture: o.orderFixture, orderReference: o.orderReference });
   if (o.cart === 'one' || o.cart === 'flagged') seedCart(mocks, o.cart);
   await page.goto(path);
   return mocks;
@@ -307,13 +309,19 @@ test.describe('account parts', () => {
     await expect(page.getByRole('link', { name: /^E2E1/ })).toBeVisible();
   });
 
-  test('order detail with the parcels before the items', async ({ page }) => {
-    await open(page, 'storefront', arrangedAccountSet(), '/account/orders/K4M2QP');
+  test('order detail with nothing owed: the parcels sit in the main column, ahead of the items as arranged, and the address follows in the side', async ({ page }) => {
+    // The page sorts the parts into head, main and side by itself; an arrangement reorders within an area. With no
+    // payment card to draw the parcels join the items, so the arrangement's order (parcels, then items) is what shows.
+    await open(page, 'storefront', arrangedAccountSet(), '/account/orders/K4M2QP', { orderFixture: 'shipped', orderReference: 'K4M2QP' });
     const parcels = page.getByRole('heading', { name: 'Parcels' });
+    const address = page.getByRole('heading', { name: 'Delivery address' });
     const items = page.getByRole('heading', { name: 'Items' });
     await expect(items).toBeVisible();
     await expect(parcels).toBeVisible();
+    await expect(address).toBeVisible();
     expect(await precedes(parcels, items)).toBe(true);
+    // The address is a side-column part: it stays behind the main column wherever the document put it.
+    expect(await precedes(items, address)).toBe(true);
   });
 
   test('loyalty redeem still confirms through the modal', async ({ page }) => {
@@ -440,11 +448,13 @@ const SIGNED_OUT: typeof SIGNED_IN = [
   { name: 'verify', path: '/verify', ready: (p) => p.getByRole('textbox', { name: 'Verification code' }) },
 ];
 
-async function sweep(page: Page, layout: Layout, template: string, preset: string, session: boolean, pages: typeof SIGNED_IN): Promise<string[]> {
+async function sweep(
+  page: Page, layout: Layout, template: string, preset: string, session: boolean, pages: typeof SIGNED_IN, orderFixture?: OrderFixtureName,
+): Promise<string[]> {
   await page.setViewportSize({ width: 360, height: 800 });
   await page.clock.setFixedTime(FIXED_NOW);
   const mocks = await installMocks(page, {
-    layout, session, pages: { [layout]: arrangedEverythingSet(layout) }, tweakSettings: await presetTheme(page, template, preset),
+    layout, session, pages: { [layout]: arrangedEverythingSet(layout) }, tweakSettings: await presetTheme(page, template, preset), orderFixture,
   });
   seedCart(mocks, 'one');
   const failures: string[] = [];
@@ -469,6 +479,16 @@ for (const t of TEMPLATES) {
         failures.push(...await sweep(await fresh.newPage(), layout, t.template, t.preset, false, SIGNED_OUT));
       } finally {
         await fresh.close();
+      }
+      // The order page while it still wants paying: the picker, a hosted checkout, a crypto payment with its address and steps.
+      for (const fixture of ['unpaid', 'hosted', 'crypto'] as const) {
+        const ctx = await browser.newContext();
+        try {
+          const orderPage: typeof SIGNED_IN = [{ name: `order (${fixture})`, path: '/account/orders/E2E1', ready: (p) => p.getByRole('heading', { name: 'E2E1', level: 1 }) }];
+          failures.push(...await sweep(await ctx.newPage(), layout, t.template, t.preset, true, orderPage, fixture));
+        } finally {
+          await ctx.close();
+        }
       }
       expect(failures).toEqual([]);
     });

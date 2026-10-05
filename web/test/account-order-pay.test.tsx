@@ -8,31 +8,32 @@ const h = vi.hoisted(() => ({ order: {} as Record<string, unknown>, links: [] as
 vi.mock('@/app/settings.ts', () => ({
   useSettings: () => ({ currency: 'GBP', brand: { name: 'Northbound Supply', links: {} }, supportLinks: h.links }),
 }));
-vi.mock('@/features/account/queries.ts', () => ({
+vi.mock('@/features/account/queries.ts', async (orig) => ({
+  ...(await orig<typeof import('@/features/account/queries.ts')>()),
   useOrder: () => ({ data: h.order, isPending: false, isError: false }),
 }));
-vi.mock('@/api/orders.ts', () => ({ cancelOrder: vi.fn() }));
-vi.mock('@/api/public-order.ts', async (orig) => ({
-  ...(await orig<typeof import('@/api/public-order.ts')>()),
-  fetchPublicOrder: vi.fn(),
-  fetchPaymentOptions: vi.fn(),
-  selectPaymentMethod: vi.fn(),
+vi.mock('@/api/orders.ts', async (orig) => ({
+  ...(await orig<typeof import('@/api/orders.ts')>()),
+  cancelOrder: vi.fn(),
+  fetchOrderPayment: vi.fn(),
+  fetchOrderPaymentOptions: vi.fn(),
+  selectOrderPaymentMethod: vi.fn(),
 }));
 
-import { cancelOrder } from '@/api/orders.ts';
-import { fetchPaymentOptions, fetchPublicOrder, selectPaymentMethod } from '@/api/public-order.ts';
+import { OrderGoneError, PaymentConflictError, cancelOrder, fetchOrderPayment, fetchOrderPaymentOptions, selectOrderPaymentMethod } from '@/api/orders.ts';
+import { ApiError } from '@/lib/errors.ts';
 import { paymentSignature } from '@/features/order-status/payment-state.ts';
 import { OrderDetailPage } from '@/features/account/OrderDetailPage.tsx';
 import type { PublicOrder } from '@/types/public-order.ts';
 
-const fetchMock = vi.mocked(fetchPublicOrder);
-const optionsMock = vi.mocked(fetchPaymentOptions);
-const selectMock = vi.mocked(selectPaymentMethod);
+const paymentMock = vi.mocked(fetchOrderPayment);
+const optionsMock = vi.mocked(fetchOrderPaymentOptions);
+const selectMock = vi.mocked(selectOrderPaymentMethod);
 const cancelMock = vi.mocked(cancelOrder);
 
 const base = {
   reference: 'K4M2QP', totalAmount: 46.03, outstandingBalance: 46.03, createdAt: '2026-01-02T10:00:00Z', status: 'pending',
-  subtotal: 40, shippingAmount: 6.03, discountAmount: 0, items: [], payments: [], shipments: [], publicUrl: null,
+  subtotal: 40, shippingAmount: 6.03, discountAmount: 0, items: [], payments: [], shipments: []
 };
 
 const publicOrder = (payment: PublicOrder['payment']): PublicOrder => ({
@@ -61,7 +62,7 @@ const mount = () =>
 beforeEach(() => {
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   h.links = [];
-  fetchMock.mockReset();
+  paymentMock.mockReset();
   optionsMock.mockReset().mockResolvedValue([method]);
   selectMock.mockReset();
   cancelMock.mockReset();
@@ -69,18 +70,18 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('account order: pay and cancel', () => {
-  it('an unpaid order with an access key shows the payment section under the balance', async () => {
-    h.order = { ...base, accessKey: 'abc123', canCancel: true, cancelBlockedBy: null };
-    fetchMock.mockResolvedValue(publicOrder({ canPay: true, payBy: null, activePayment: null }));
+  it('an unpaid order shows the payment section with no access key on the order', async () => {
+    h.order = { ...base, canCancel: true, cancelBlockedBy: null };
+    paymentMock.mockResolvedValue(publicOrder({ canPay: true, payBy: null, activePayment: null }));
     mount();
-    expect(await screen.findByText(/Choose how to pay/)).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledWith('K4M2QP', 'abc123');
+    expect(await screen.findByText(/Choose how you.d like to pay/)).toBeTruthy();
+    expect(paymentMock).toHaveBeenCalledWith('K4M2QP');
     expect(screen.getByText('Balance due')).toBeTruthy();
   });
 
   it('with a pending hosted payment it offers the checkout link', async () => {
-    h.order = { ...base, accessKey: 'abc123', canCancel: true, cancelBlockedBy: null };
-    fetchMock.mockResolvedValue(publicOrder({
+    h.order = { ...base, canCancel: true, cancelBlockedBy: null };
+    paymentMock.mockResolvedValue(publicOrder({
       canPay: true, payBy: null,
       activePayment: { paymentId: 9, method: 'stripe', kind: 'gateway', status: 'pending', checkoutUrl: 'https://pay.example/abc', canChange: true },
     }));
@@ -91,65 +92,46 @@ describe('account order: pay and cancel', () => {
   });
 
   it('offers Cancel order on an unpaid order, and refreshes both queries after cancelling', async () => {
-    h.order = { ...base, accessKey: 'abc123', canCancel: true, cancelBlockedBy: null };
-    fetchMock.mockResolvedValue(publicOrder({ canPay: true, canCancel: true, payBy: null, activePayment: null }));
+    h.order = { ...base, canCancel: true, cancelBlockedBy: null };
+    paymentMock.mockResolvedValue(publicOrder({ canPay: true, canCancel: true, payBy: null, activePayment: null }));
     cancelMock.mockResolvedValueOnce({ reference: 'K4M2QP', status: 'cancelled' });
     mount();
-    await screen.findByText(/Choose how to pay/);
+    await screen.findByText(/Choose how you.d like to pay/);
     const invalidate = vi.spyOn(client, 'invalidateQueries');
     fireEvent.click(screen.getByRole('button', { name: 'Cancel order' }));
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Yes, cancel it' })); });
+    await act(async () => { fireEvent.click(await screen.findByRole('button', { name: 'Yes, cancel order' })); });
     expect(cancelMock).toHaveBeenCalledWith('K4M2QP');
     const keys = invalidate.mock.calls.map((c) => JSON.stringify(c[0]?.queryKey));
     expect(keys).toContain(JSON.stringify(['order', 'K4M2QP']));
     expect(keys).toContain(JSON.stringify(['orders']));
-    expect(keys).toContain(JSON.stringify(['public-order', 'K4M2QP', 'abc123']));
+    expect(keys).toContain(JSON.stringify(['order-payment', 'K4M2QP']));
   });
 
   it('shows the contact line when the order cannot be cancelled by the customer', async () => {
-    h.order = { ...base, accessKey: 'abc123', canCancel: false, cancelBlockedBy: 'bank_transfer' };
-    fetchMock.mockResolvedValue(publicOrder({ canPay: false, payBy: null, activePayment: null }));
+    h.order = { ...base, canCancel: false, cancelBlockedBy: 'bank_transfer' };
+    paymentMock.mockResolvedValue(publicOrder({ canPay: false, payBy: null, activePayment: null }));
     mount();
     expect(await screen.findByText(/To cancel this order, contact us/)).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Cancel order' })).toBeNull();
   });
 
-  it.each([['undefined', undefined], ['null', null]])('without an access key (%s) the page is exactly as before', async (_name, accessKey) => {
-    h.order = { ...base, accessKey };
-    const { container } = mount();
-    expect(screen.getByText('Balance due')).toBeTruthy();
-    expect(fetchMock).not.toHaveBeenCalled();
-    expect(screen.queryByText(/Choose how to pay/)).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Cancel order' })).toBeNull();
-    const band = [...container.querySelectorAll('p')].find((p) => p.textContent?.startsWith('Balance due'))!;
-    expect(band.parentElement?.className).not.toContain('balance');
-    expect(band.parentElement?.querySelector('[data-sf-part="cancel"]')).toBeNull();
-    // Cancel flags that show nothing (no reason, or already paid) leave the markup untouched.
-    const before = container.innerHTML;
-    for (const flags of [{ canCancel: false, cancelBlockedBy: null }, { canCancel: false, cancelBlockedBy: 'paid' }]) {
-      cleanup();
-      h.order = { ...base, accessKey, ...flags };
-      expect(mount().container.innerHTML).toBe(before);
-    }
-  });
-
-  it('a settled order shows neither', async () => {
-    h.order = { ...base, outstandingBalance: 0, accessKey: 'abc123', canCancel: false, cancelBlockedBy: 'paid' };
+  it('a paid order asks for no payment state at all', async () => {
+    h.order = { ...base, outstandingBalance: 0, status: 'confirmed', canCancel: false, cancelBlockedBy: 'paid' };
     mount();
-    await new Promise((r) => setTimeout(r, 20));
-    expect(fetchMock).not.toHaveBeenCalled();
+    await screen.findByText('K4M2QP');
+    expect(paymentMock).not.toHaveBeenCalled();
     expect(screen.queryByText('Balance due')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Cancel order' })).toBeNull();
-    expect(screen.queryByText(/Choose how to pay/)).toBeNull();
+    expect(screen.queryByText(/Choose how you.d like to pay/)).toBeNull();
   });
 
-  it('if the order link cannot be loaded the balance still shows', async () => {
-    h.order = { ...base, accessKey: 'abc123', canCancel: true, cancelBlockedBy: null };
-    fetchMock.mockRejectedValue(new Error('offline'));
+  it('if the payment view cannot be loaded the balance still shows', async () => {
+    h.order = { ...base, canCancel: true, cancelBlockedBy: null };
+    paymentMock.mockRejectedValue(new Error('offline'));
     mount();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    await waitFor(() => expect(paymentMock).toHaveBeenCalled());
     expect(screen.getByText('Balance due')).toBeTruthy();
-    expect(screen.queryByText(/Choose how to pay/)).toBeNull();
+    expect(screen.queryByText(/Choose how you.d like to pay/)).toBeNull();
   });
 
   const orderKeys = (invalidate: { mock: { calls: unknown[][] } }) =>
@@ -158,11 +140,11 @@ describe('account order: pay and cancel', () => {
     canPay: true, payBy: null,
     activePayment: { paymentId: 9, method: 'stripe', kind: 'gateway', status: 'pending', checkoutUrl: 'https://pay.example/abc', canChange: true },
   });
-  const poll = async () => { await act(async () => { await client.refetchQueries({ queryKey: ['public-order', 'K4M2QP', 'abc123'] }); }); };
+  const poll = async () => { await act(async () => { await client.refetchQueries({ queryKey: ['order-payment', 'K4M2QP'] }); }); };
 
   it('choosing a method refetches the account order exactly once; the first load does not', async () => {
-    h.order = { ...base, accessKey: 'abc123', canCancel: true, cancelBlockedBy: null };
-    fetchMock.mockResolvedValueOnce(publicOrder({ canPay: true, payBy: null, activePayment: null }));
+    h.order = { ...base, canCancel: true, cancelBlockedBy: null };
+    paymentMock.mockResolvedValueOnce(publicOrder({ canPay: true, payBy: null, activePayment: null }));
     selectMock.mockResolvedValueOnce({
       paymentId: 9, method: 'stripe', kind: 'gateway', status: 'pending', checkoutUrl: 'https://pay.example/abc', crypto: null,
     });
@@ -171,36 +153,116 @@ describe('account order: pay and cancel', () => {
     const invalidate = vi.spyOn(client, 'invalidateQueries');
     fireEvent.click(await screen.findByRole('button', { name: /Card/ }));
     expect(orderKeys(invalidate)).toHaveLength(0);
-    fetchMock.mockResolvedValue(hostedOrder);
+    paymentMock.mockResolvedValue(hostedOrder);
     await waitFor(() => expect(orderKeys(invalidate)).toHaveLength(1));
-    await new Promise((r) => setTimeout(r, 50));
+    // The payment view has been re-read after the selection: nothing more is refetched once it has settled.
+    await waitFor(() => expect(paymentMock.mock.calls.length).toBeGreaterThanOrEqual(2));
+    await screen.findByRole('link', { name: /Open secure checkout/ });
     expect(orderKeys(invalidate)).toHaveLength(1);
     expect(selectMock).toHaveBeenCalled();
   });
 
-  it('the first load of the public order does not refetch the account order', async () => {
-    h.order = { ...base, accessKey: 'abc123', canCancel: true, cancelBlockedBy: null };
-    fetchMock.mockResolvedValue(publicOrder({ canPay: true, payBy: null, activePayment: null }));
+  it('choosing a hosted method opens the window on the click and points it at the checkout once the payment exists', async () => {
+    h.order = { ...base, canCancel: true, cancelBlockedBy: null };
+    paymentMock.mockResolvedValueOnce(publicOrder({ canPay: true, payBy: null, activePayment: null }));
+    let release: (r: Awaited<ReturnType<typeof selectOrderPaymentMethod>>) => void = () => undefined;
+    selectMock.mockReturnValueOnce(new Promise((r) => { release = r; }));
+    const tab = { opener: {} as unknown, location: { href: '' }, close: vi.fn() };
+    const open = vi.spyOn(window, 'open').mockReturnValue(tab as unknown as Window);
+    open.mockClear();
+    mount();
+    fireEvent.click(await screen.findByRole('button', { name: /Card/ }));
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(open).toHaveBeenCalledWith('', '_blank');
+    expect(tab.opener).toBeNull();
+    expect(tab.location.href).toBe('');
+    paymentMock.mockResolvedValue(hostedOrder);
+    await act(async () => {
+      release({ paymentId: 9, method: 'stripe', kind: 'gateway', status: 'pending', checkoutUrl: 'https://pay.example/abc', crypto: null });
+    });
+    expect(tab.location.href).toBe('https://pay.example/abc');
+    expect(tab.close).not.toHaveBeenCalled();
+  });
+
+  describe('when choosing a method fails', () => {
+    const chooseCard = async () => {
+      h.order = { ...base, canCancel: true, cancelBlockedBy: null };
+      paymentMock.mockResolvedValue(publicOrder({ canPay: true, payBy: null, activePayment: null }));
+      vi.spyOn(window, 'open').mockReturnValue(null);
+      mount();
+      fireEvent.click(await screen.findByRole('button', { name: /Card/ }));
+    };
+
+    it('a conflict (the order moved on) re-reads the payment view and shows no error', async () => {
+      selectMock.mockRejectedValue(new PaymentConflictError());
+      await chooseCard();
+      await waitFor(() => expect(paymentMock.mock.calls.length).toBeGreaterThanOrEqual(2));
+      expect(screen.queryByRole('alert')).toBeNull();
+      expect(screen.queryByText(/isn.t available right now/)).toBeNull();
+    });
+
+    it('a server error says so, leaves the buttons enabled, and a second click retries', async () => {
+      selectMock.mockRejectedValue(new ApiError(500, 'Payment provider unreachable'));
+      await chooseCard();
+      expect((await screen.findByRole('alert')).textContent).toBe('Payment provider unreachable');
+      const card = screen.getByRole('button', { name: /Card/ }) as HTMLButtonElement;
+      expect(card.disabled).toBe(false);
+      fireEvent.click(card);
+      await waitFor(() => expect(selectMock).toHaveBeenCalledTimes(2));
+    });
+
+    it('an order that is gone shows no method error and crashes nothing: the page learns it from the order read', async () => {
+      selectMock.mockRejectedValue(new OrderGoneError());
+      await chooseCard();
+      const invalidate = vi.spyOn(client, 'invalidateQueries');
+      await waitFor(() => expect(JSON.stringify(invalidate.mock.calls.map((c) => c[0]?.queryKey))).toContain('"order","K4M2QP"'));
+      expect(screen.queryByRole('alert')).toBeNull();
+      expect((screen.getByRole('button', { name: /Card/ }) as HTMLButtonElement).disabled).toBe(false);
+    });
+  });
+
+  it('the first load of the payment view does not refetch the account order', async () => {
+    h.order = { ...base, canCancel: true, cancelBlockedBy: null };
+    paymentMock.mockResolvedValue(publicOrder({ canPay: true, payBy: null, activePayment: null }));
     const invalidate = vi.spyOn(client, 'invalidateQueries');
     mount();
-    await screen.findByText(/Choose how to pay/);
+    await screen.findByText(/Choose how you.d like to pay/);
     expect(orderKeys(invalidate)).toHaveLength(0);
   });
 
   it('polls that return the same data never refetch the account order; a changed payment state does, once', async () => {
-    h.order = { ...base, accessKey: 'abc123', canCancel: true, cancelBlockedBy: null };
-    fetchMock.mockResolvedValue(publicOrder({ canPay: true, payBy: null, activePayment: null }));
+    h.order = { ...base, canCancel: true, cancelBlockedBy: null };
+    paymentMock.mockResolvedValue(publicOrder({ canPay: true, payBy: null, activePayment: null }));
     const invalidate = vi.spyOn(client, 'invalidateQueries');
     mount();
-    await screen.findByText(/Choose how to pay/);
+    await screen.findByText(/Choose how you.d like to pay/);
     await poll(); await poll(); await poll();
-    expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(4);
+    expect(paymentMock.mock.calls.length).toBeGreaterThanOrEqual(4);
     expect(orderKeys(invalidate)).toHaveLength(0);
-    fetchMock.mockResolvedValue(hostedOrder);
+    paymentMock.mockResolvedValue(hostedOrder);
     await poll();
     await waitFor(() => expect(orderKeys(invalidate)).toHaveLength(1));
     await poll();
     expect(orderKeys(invalidate)).toHaveLength(1);
+  });
+
+  it('after a failed read the payment view is read once a minute, not at the order own 10s', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] });
+    try {
+      h.order = { ...base, canCancel: true, cancelBlockedBy: null };
+      paymentMock.mockResolvedValueOnce(hostedOrder).mockRejectedValue(new Error('429'));
+      mount();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(paymentMock).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(paymentMock).toHaveBeenCalledTimes(2);
+      await vi.advanceTimersByTimeAsync(59_000);
+      expect(paymentMock).toHaveBeenCalledTimes(2);
+      await vi.advanceTimersByTimeAsync(1_000);
+      expect(paymentMock).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('going A, B, A still notices a change made to A while B was showing', async () => {
@@ -213,32 +275,32 @@ describe('account order: pay and cancel', () => {
         </MantineProvider>
       </QueryClientProvider>
     );
-    h.order = { ...base, accessKey: 'abc123', canCancel: true, cancelBlockedBy: null };
-    fetchMock.mockImplementation(async (ref: string) => ({ ...publicOrder({ canPay: true, payBy: null, activePayment: null }), reference: ref }));
+    h.order = { ...base, canCancel: true, cancelBlockedBy: null };
+    paymentMock.mockImplementation(async (ref: string) => ({ ...publicOrder({ canPay: true, payBy: null, activePayment: null }), reference: ref }));
     const invalidate = vi.spyOn(client, 'invalidateQueries');
     const view = mount();
-    await screen.findByText(/Choose how to pay/);
-    h.order = { ...base, reference: 'Z9Z9Z9', accessKey: 'other', canCancel: true, cancelBlockedBy: null };
+    await screen.findByText(/Choose how you.d like to pay/);
+    h.order = { ...base, reference: 'Z9Z9Z9', canCancel: true, cancelBlockedBy: null };
     view.rerender(at('Z9Z9Z9'));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('Z9Z9Z9', 'other'));
-    await screen.findByText(/Choose how to pay/);
+    await waitFor(() => expect(paymentMock).toHaveBeenCalledWith('Z9Z9Z9'));
+    await screen.findByText(/Choose how you.d like to pay/);
     expect(orderKeys(invalidate)).toHaveLength(0);
     // A's payment state moves on while B is showing (what its last poll would have stored).
-    client.setQueryData(['public-order', 'K4M2QP', 'abc123'], hostedOrder);
-    h.order = { ...base, accessKey: 'abc123', canCancel: true, cancelBlockedBy: null };
+    client.setQueryData(['order-payment', 'K4M2QP'], hostedOrder);
+    h.order = { ...base, canCancel: true, cancelBlockedBy: null };
     view.rerender(at('K4M2QP'));
     await screen.findByRole('link', { name: /Open secure checkout/ });
     await waitFor(() => expect(orderKeys(invalidate)).toHaveLength(1));
   });
 
   it("showing another order does not refetch on that order's first load", async () => {
-    h.order = { ...base, accessKey: 'abc123', canCancel: true, cancelBlockedBy: null };
-    fetchMock.mockResolvedValue(publicOrder({ canPay: true, payBy: null, activePayment: null }));
+    h.order = { ...base, canCancel: true, cancelBlockedBy: null };
+    paymentMock.mockResolvedValue(publicOrder({ canPay: true, payBy: null, activePayment: null }));
     const invalidate = vi.spyOn(client, 'invalidateQueries');
     const view = mount();
-    await screen.findByText(/Choose how to pay/);
-    h.order = { ...base, reference: 'Z9Z9Z9', accessKey: 'other', canCancel: true, cancelBlockedBy: null };
-    fetchMock.mockResolvedValue({ ...hostedOrder, reference: 'Z9Z9Z9' });
+    await screen.findByText(/Choose how you.d like to pay/);
+    h.order = { ...base, reference: 'Z9Z9Z9', canCancel: true, cancelBlockedBy: null };
+    paymentMock.mockResolvedValue({ ...hostedOrder, reference: 'Z9Z9Z9' });
     view.rerender(
       <QueryClientProvider client={client}>
         <MantineProvider env="test">
@@ -248,7 +310,7 @@ describe('account order: pay and cancel', () => {
         </MantineProvider>
       </QueryClientProvider>,
     );
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('Z9Z9Z9', 'other'));
+    await waitFor(() => expect(paymentMock).toHaveBeenCalledWith('Z9Z9Z9'));
     await screen.findByRole('link', { name: /Open secure checkout/ });
     const refetched = invalidate.mock.calls.filter((c) => JSON.stringify((c[0] as { queryKey?: unknown })?.queryKey)?.startsWith('["order"'));
     expect(refetched).toHaveLength(0);
@@ -259,45 +321,47 @@ describe('account order: pay and cancel', () => {
     const stuck = () => publicOrder({ canPay: false, payBy: null, activePayment: null });
     it('says so, with the shop support links', async () => {
       h.links = [{ label: 'Chat', url: 'https://t.me/example_shop' }];
-      h.order = { ...base, accessKey: 'abc123', canCancel: false, cancelBlockedBy: null };
-      fetchMock.mockResolvedValue(stuck());
+      h.order = { ...base, canCancel: false, cancelBlockedBy: null };
+      paymentMock.mockResolvedValue(stuck());
       mount();
       expect(await screen.findByText(help)).toBeTruthy();
       expect(screen.getByRole('link', { name: 'Chat' }).getAttribute('href')).toBe('https://t.me/example_shop');
     });
     it('is not shown when the order can be paid', async () => {
-      h.order = { ...base, accessKey: 'abc123', canCancel: true, cancelBlockedBy: null };
-      fetchMock.mockResolvedValue(publicOrder({ canPay: true, payBy: null, activePayment: null }));
+      h.order = { ...base, canCancel: true, cancelBlockedBy: null };
+      paymentMock.mockResolvedValue(publicOrder({ canPay: true, payBy: null, activePayment: null }));
       mount();
-      await screen.findByText(/Choose how to pay/);
+      await screen.findByText(/Choose how you.d like to pay/);
       expect(screen.queryByText(help)).toBeNull();
     });
-    it('is not shown before the public order has loaded', async () => {
-      h.order = { ...base, accessKey: 'abc123', canCancel: false, cancelBlockedBy: null };
-      fetchMock.mockReturnValue(new Promise(() => {}));
+    it('is not shown before the payment view has loaded', async () => {
+      h.order = { ...base, canCancel: false, cancelBlockedBy: null };
+      paymentMock.mockReturnValue(new Promise(() => {}));
       mount();
-      await new Promise((r) => setTimeout(r, 20));
+      await waitFor(() => expect(paymentMock).toHaveBeenCalled());
+      expect(screen.getByRole('region', { name: 'Payment needed' })).toBeTruthy();
       expect(screen.queryByText(help)).toBeNull();
     });
     it('is not shown for a cancelled order', async () => {
-      h.order = { ...base, status: 'cancelled', accessKey: 'abc123', canCancel: false, cancelBlockedBy: null };
-      fetchMock.mockResolvedValue({ ...stuck(), status: 'cancelled' });
+      h.order = { ...base, status: 'cancelled', canCancel: false, cancelBlockedBy: null };
+      paymentMock.mockResolvedValue({ ...stuck(), status: 'cancelled' });
       mount();
-      await waitFor(() => expect(fetchMock).toHaveBeenCalled());
-      await new Promise((r) => setTimeout(r, 20));
+      await screen.findByRole('heading', { level: 1, name: 'K4M2QP' });
+      // A closed order is not read for payment state at all: there is nothing to pay on it.
+      expect(paymentMock).not.toHaveBeenCalled();
       expect(screen.queryByText(help)).toBeNull();
     });
     it('is not shown beside a payment section drawn for a visible crypto payment', async () => {
-      h.order = { ...base, accessKey: 'abc123', canCancel: false, cancelBlockedBy: null };
+      h.order = { ...base, canCancel: false, cancelBlockedBy: null };
       const crypto = { paymentId: 5, paymentStatus: 'pending', coin: 'usdt', network: 'polygon', coinLabel: 'USDT', networkLabel: 'Polygon', address: '0xabc', coinAmount: '1', fiatAmount: 1, verificationStatus: 'checking', needsAttention: false, txidMasked: '0x12...ef' };
-      fetchMock.mockResolvedValue({ ...stuck(), cryptoPayments: [crypto] });
+      paymentMock.mockResolvedValue({ ...stuck(), cryptoPayments: [crypto] });
       mount();
       await screen.findByRole('region', { name: 'Crypto payment' });
       expect(screen.queryByText(help)).toBeNull();
     });
     it('is not shown beside the cancel control\'s own contact line', async () => {
-      h.order = { ...base, accessKey: 'abc123', canCancel: false, cancelBlockedBy: 'bank_transfer' };
-      fetchMock.mockResolvedValue(stuck());
+      h.order = { ...base, canCancel: false, cancelBlockedBy: 'bank_transfer' };
+      paymentMock.mockResolvedValue(stuck());
       mount();
       await screen.findByText(/To cancel this order, contact us/);
       expect(screen.queryByText(help)).toBeNull();

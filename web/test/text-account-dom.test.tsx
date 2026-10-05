@@ -16,7 +16,6 @@ const order = {
   items: [],
   payments: [],
   shipments: [],
-  publicUrl: null,
 };
 
 vi.mock('@/app/settings.ts', () => ({ useSettings: () => ({ currency: 'GBP', brand: { name: 'Northbound Supply', links: {} } }) }));
@@ -26,6 +25,7 @@ vi.mock('@/features/account/queries.ts', () => ({
     isPending: false, isError: false, hasNextPage: false, isFetchingNextPage: false,
   }),
   useOrder: () => ({ data: order, isPending: false, isError: false }),
+  useOrderPayment: () => ({ data: undefined, isPending: true, isError: false, isFetching: true, refetch: () => {} }),
 }));
 
 import { OrdersPage } from '@/features/account/OrdersPage.tsx';
@@ -52,7 +52,7 @@ describe('account DOM stays identical to the literal JSX', () => {
   });
   it('order detail "Placed" date is one text run', () => {
     const { container } = wrap(<OrderDetailPage />);
-    const el = [...container.querySelectorAll('span')].find((s) => s.textContent?.startsWith('Placed'))!;
+    const el = [...container.querySelectorAll('p')].find((s) => s.textContent?.startsWith('Placed'))!;
     expect(el.textContent).toBe(`Placed ${formatDate(order.createdAt)}`);
     expect(el.children.length).toBe(0);
   });

@@ -46,7 +46,7 @@ state.catalog = {
 const minus = (keys: readonly StyleKey[], drop: readonly StyleKey[]) => keys.filter((k) => !drop.includes(k));
 const ALLTEXT = [...BOX, ...TEXT, ...VIS];
 const ROUTE = ['ProductGrid', 'ProductList', 'WholesaleTable', 'ProductDetail', 'CartContents', 'CartSummary', 'CheckoutFlow',
-  'LoginOptions', 'OrdersList', 'OrderDetail', 'Loyalty', 'Referrals', 'Profile', 'OrderStatus', 'PaymentSuccess',
+  'LoginOptions', 'OrdersList', 'OrderDetail', 'Loyalty', 'Referrals', 'Profile', 'PaymentSuccess',
   'PaymentCancel', 'OrderPlaced', 'VerifyForm', 'TrackingLookup', 'ResetPassword', 'VerifyEmail'];
 
 /**

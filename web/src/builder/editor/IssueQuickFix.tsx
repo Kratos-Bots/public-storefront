@@ -15,7 +15,7 @@ export type QuickFixKind = 'step-order' | 'arrangement';
 /** The one-click repair for an arrangement issue, or null when the issue has none (spec 10.4). */
 export function quickFixFor(rule: string): QuickFixKind | null {
   if (rule === 'part-order:CheckoutFlow') return 'step-order';
-  if (/^(?:part-home|part-placement|slot-accepts):/.test(rule) || rule === 'part-order:OrderStatus') return 'arrangement';
+  if (/^(?:part-home|part-placement|slot-accepts):/.test(rule)) return 'arrangement';
   return null;
 }
 

@@ -30,7 +30,6 @@ import { WebAppShell } from '@/layouts/WebAppShell.tsx';
 import { PageSetOverrideProvider, PuckShell } from '@/builder/runtime.tsx';
 import { defaultDoc } from '@/builder/defaults/index.ts';
 import { useShellSearch } from '@/layouts/shell-context.ts';
-import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { TemplateProvider } from '@/templates/runtime.tsx';
 import { resolveTheme } from '@/templates/resolve.ts';
 import { lookupManifest } from '@/templates/registry.ts';
@@ -230,29 +229,6 @@ describe('PuckShell safety nets', () => {
     expect(skeleton.querySelector('[class*="_bar_"]')).not.toBeNull();
     expect(container.querySelector('header')).toBeNull();
     expect(screen.queryByText('page')).toBeNull();
-  });
-  it('waits on the published set inside the chromeless frame for the shared order link: brand header now, inline skeleton below', () => {
-    settings('storefront');
-    const router = createMemoryRouter([{ path: '/', element: <PuckShell />, children: [{ path: 'order/:ref/:accessKey', handle: { routeKey: 'order-status' }, element: <PageSkeleton inline /> }] }], { initialEntries: ['/order/NB-1/key'] });
-    const resolved = resolveTheme({ ...THEME, options: {} }, lookupManifest);
-    const { container } = render(
-      <QueryClientProvider client={new QueryClient()}>
-        <MantineProvider env="test">
-          <TemplateProvider resolved={resolved} fallback={null} load={() => Promise.resolve(MODULE)} peek={() => MODULE}>
-            <RouterProvider router={router} />
-          </TemplateProvider>
-        </MantineProvider>
-      </QueryClientProvider>,
-    );
-    const header = container.querySelector('header[data-sf-part="header"]');
-    expect(header).not.toBeNull();
-    expect(header!.textContent).toBe('brand');
-    const skeleton = screen.getByRole('status', { name: 'Loading' });
-    expect(skeleton.className).toMatch(/inline/);
-    expect(skeleton.querySelector('[class*="_bar_"]')).toBeNull();
-    for (const mark of ['cart-drawer', 'login-modal', 'cart-bar', 'primary-bar']) {
-      expect(container.querySelector(`[data-mark="${mark}"]`), mark).toBeNull();
-    }
   });
   it.each(['storefront', 'menu', 'webapp'] as const)('%s: a chrome: none page mounts no cart drawer, login modal, cart bar or Telegram bar', (layout) => {
     settings(layout);

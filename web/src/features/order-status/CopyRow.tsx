@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ClipboardEvent } from 'react';
 import { CheckIcon, CopyIcon } from '@/components/icons.tsx';
 import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/order-status/OrderStatus.module.css';
@@ -9,6 +9,19 @@ export interface CopyRowProps {
   value: string;
   /** What lands on the clipboard, when that differs from what is shown. */
   copyValue?: string;
+  /** Draws the row as that numbered step of a sequence. */
+  step?: number;
+  /**
+   * Shows the value in fixed groups of this many characters, so a long run (a wallet address) wraps between groups
+   * into even lines instead of leaving a short tail. The clipboard and assistive technology still get the raw value.
+   */
+  groupBy?: number;
+}
+
+function groupsOf(value: string, size: number): string[] {
+  const groups: string[] = [];
+  for (let i = 0; i < value.length; i += size) groups.push(value.slice(i, i + size));
+  return groups;
 }
 
 /**
@@ -17,7 +30,7 @@ export interface CopyRowProps {
  * the row, so the control is a 44 px target and the value is `user-select: all`
  * for the browsers where the clipboard is unavailable.
  */
-export function CopyRow({ label, value, copyValue }: CopyRowProps) {
+export function CopyRow({ label, value, copyValue, step, groupBy }: CopyRowProps) {
   const { t } = useText();
   const [copied, setCopied] = useState(false);
   const timer = useRef<number | null>(null);
@@ -35,11 +48,30 @@ export function CopyRow({ label, value, copyValue }: CopyRowProps) {
     }
   };
 
+  // Engines disagree on whether the hidden raw copy (`user-select: none` inside `user-select: all`) joins a selection,
+  // and some break a line between the inline-block groups. A wrong paste of a payment address loses money, so a hand
+  // copy is set to the raw value here rather than left to selection behaviour. The value is not editable: no cut.
+  const putRawOnClipboard = (event: ClipboardEvent<HTMLElement>) => {
+    if (!event.clipboardData) return;
+    event.clipboardData.setData('text/plain', copyValue ?? value);
+    event.preventDefault();
+  };
+
   return (
-    <div className={classes.copyRow}>
+    <div className={step ? `${classes.copyRow} ${classes.copyStep}` : classes.copyRow}>
+      {step ? <span className={classes.stepNum} aria-hidden>{step}</span> : null}
       <div className={classes.copyBody}>
         <p className={classes.copyLabel}>{label}</p>
-        <p className={classes.copyValue}>{value}</p>
+        {groupBy ? (
+          <p className={`${classes.copyValue} ${classes.copyGrouped}`} onCopy={putRawOnClipboard}>
+            <span className={classes.rawValue}>{value}</span>
+            <span aria-hidden>
+              {groupsOf(value, groupBy).map((group, i) => <span key={i} className={classes.copyGroup}>{group}</span>)}
+            </span>
+          </p>
+        ) : (
+          <p className={classes.copyValue}>{value}</p>
+        )}
       </div>
       <button
         type="button"

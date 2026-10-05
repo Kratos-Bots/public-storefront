@@ -2,7 +2,7 @@ import type { ApiInterceptor } from '@/api/client.ts';
 import type { PreviewAs } from '@/builder/mode.ts';
 import { notifyPreviewOnly, PREVIEW_ONLY_MESSAGE } from '@/builder/editor/fixture-mode.ts';
 import {
-  FIXTURE_ACCESS_KEY, FIXTURE_ORDER_DETAIL, FIXTURE_ORDER_REF, FIXTURE_ORDERS, FIXTURE_PUBLIC_ORDER, FIXTURE_QUOTE,
+  FIXTURE_ORDER_DETAIL, FIXTURE_ORDER_REF, FIXTURE_ORDERS, FIXTURE_PUBLIC_ORDER, FIXTURE_QUOTE,
   FIXTURE_PRODUCT, FIXTURE_REDEEM, fixtureProfile, fixtureServerCart,
 } from '@/builder/editor/fixtures.ts';
 
@@ -28,8 +28,9 @@ function safeDecode(segment: string): string | null {
 
 /** Live, shopper-independent reads the editor must show for real (spec §6). */
 const LIVE_GET = /^(?:storefront\/settings|catalog|catalog\/products\/\d+|storefront\/pages\/[a-z]+)$/;
-const PUBLIC_ORDER = /^orders\/([^/]+)\/([^/]+)(?:\/(.+))?$/;
 const ACCOUNT_ORDER = /^storefront\/orders\/([^/]+)$/;
+/** What the account order page reads to show its payment section: the payment view and the method list. */
+const ORDER_PAYMENT = /^storefront\/orders\/([^/]+)\/(payment|payment-options)$/;
 /** The "Preview with" sample (spec §11): an empty catalogue still has a product to show. */
 const FIXTURE_PRODUCT_PATH = `catalog/products/${FIXTURE_PRODUCT.id}`;
 
@@ -85,13 +86,11 @@ export function createFixtureInterceptor(getPreviewAs: () => PreviewAs, notify: 
           ? respond(200, FIXTURE_ORDER_DETAIL)
           : respond(404, 'Order not found');
       }
-      const publicOrder = PUBLIC_ORDER.exec(path);
-      if (publicOrder) {
-        const [, ref, key, tail] = publicOrder;
-        if (ref !== FIXTURE_ORDER_REF || key !== FIXTURE_ACCESS_KEY) return respond(404, 'Order not found');
-        if (!tail) return respond(200, FIXTURE_PUBLIC_ORDER);
-        if (tail === 'payment-options') return respond(200, FIXTURE_QUOTE.paymentMethods);
-        return respond(404, 'Not found');
+      const orderPayment = ORDER_PAYMENT.exec(path);
+      if (orderPayment) {
+        if (!signedIn) return respond(401, 'Unauthorized');
+        if (as.session !== 'signed-in-orders' || safeDecode(orderPayment[1]!) !== FIXTURE_ORDER_REF) return respond(404, 'Order not found');
+        return respond(200, orderPayment[2] === 'payment' ? FIXTURE_PUBLIC_ORDER : FIXTURE_QUOTE.paymentMethods);
       }
       if (/^storefront\/auth\/attempts\/[^/]+$/.test(path)) return respond(200, { status: 'pending' });
     }

@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { ROUTE_STEPS, statusView } from '@/features/order-status/status.ts';
 import {
   cardState,
   isManual,
   maskTxid,
+  paymentPollInterval,
   pollInterval,
-  slotLabel,
+  methodNote,
   submittedTxidMask,
   visibleCryptoPayments,
 } from '@/features/order-status/payment-state.ts';
@@ -61,33 +61,6 @@ function method(patch: Partial<PaymentMethod> = {}): PaymentMethod {
     ...patch,
   };
 }
-
-// ---------------------------------------------------------------- statusView
-
-describe('statusView', () => {
-  it('puts a pending order on the first milestone', () => {
-    const view = statusView(order({ status: 'pending' }));
-    expect(view).toMatchObject({ headline: 'Order received', activeStep: 0, terminal: null, tone: 'default' });
-    expect(ROUTE_STEPS[view.activeStep!]).toBe('Received');
-  });
-
-  it('marks a partially shipped order on the Shipped milestone', () => {
-    expect(statusView(order({ status: 'partially_shipped' }))).toMatchObject({
-      headline: 'Partially shipped',
-      activeStep: 2,
-      partial: true,
-      done: false,
-    });
-  });
-
-  it('drops the timeline for a refunded order', () => {
-    expect(statusView(order({ status: 'refunded' }))).toMatchObject({
-      activeStep: null,
-      terminal: 'refunded',
-      tone: 'muted',
-    });
-  });
-});
 
 // ------------------------------------------------------- visibleCryptoPayments
 
@@ -254,34 +227,74 @@ describe('pollInterval', () => {
   });
 });
 
-// ----------------------------------------------------------------- slotLabel
+// ------------------------------------------------------- paymentPollInterval
 
-describe('slotLabel', () => {
-  it('is the name the shop gave the method, whatever slot an older backend sent', () => {
-    expect(slotLabel(method({ slot: 'crypto', displayName: 'Pay by card' }))).toBe('Pay by card');
-    expect(slotLabel(method({ method: 'crypto', type: 'crypto', displayName: 'Pay with crypto' }))).toBe('Pay with crypto');
+describe('paymentPollInterval', () => {
+  const hosted = order({
+    payment: {
+      canPay: true,
+      payBy: null,
+      activePayment: {
+        paymentId: 7,
+        method: 'sushipp',
+        kind: 'gateway',
+        status: 'pending',
+        checkoutUrl: 'https://pay.example/x',
+        canChange: true,
+      },
+    },
   });
 
-  it('spells a discount out rather than showing a bare minus', () => {
-    expect(slotLabel(method({ displayName: 'Pay with crypto', feeRateText: '−3%' }))).toBe('Pay with crypto (3% discount)');
+  it('does not poll before a first read has succeeded, even after a failed one', () => {
+    expect(paymentPollInterval({ data: undefined, status: 'pending' })).toBe(false);
+    expect(paymentPollInterval({ data: undefined, status: 'error' })).toBe(false);
   });
 
-  it('handles an ASCII hyphen the same way', () => {
-    expect(slotLabel(method({ displayName: 'Pay with crypto', feeRateText: '-5%' }))).toBe('Pay with crypto (5% discount)');
+  it('slows to once a minute after a failed read, keeping the last good data', () => {
+    expect(paymentPollInterval({ data: hosted, status: 'error' })).toBe(60_000);
   });
 
-  it('calls a surcharge a fee', () => {
-    expect(slotLabel(method({ displayName: 'Card', feeRateText: '+2%' }))).toBe('Card (2% fee)');
+  it('follows the order own interval while reads succeed', () => {
+    expect(paymentPollInterval({ data: hosted, status: 'success' })).toBe(10_000);
   });
 
-  it('falls back to the method id as words when the name is empty', () => {
-    expect(slotLabel(method({ method: 'uk_bank_transfer', displayName: '  ' }))).toBe('uk bank transfer');
-    expect(slotLabel(method({ method: 'paypal', displayName: '', feeRateText: '+2%' }))).toBe('paypal (2% fee)');
-    expect(slotLabel(method({ method: 'crypto_static', displayName: '', feeRateText: '−3%' }))).toBe('crypto static (3% discount)');
+  it('stops when there is nothing left to wait for', () => {
+    expect(paymentPollInterval({ data: order({ status: 'delivered' }), status: 'success' })).toBe(false);
   });
 
-  it('keeps a bank transfer’s own name', () => {
-    expect(slotLabel(method({ type: 'offline', displayName: 'UK Bank Transfer' }))).toBe('UK Bank Transfer');
+  it('slows to at least once a minute after ten minutes of watching, and never speeds a slower poll up', () => {
+    const TEN = 10 * 60_000;
+    expect(paymentPollInterval({ data: hosted, status: 'success' }, TEN - 1)).toBe(10_000);
+    expect(paymentPollInterval({ data: hosted, status: 'success' }, TEN)).toBe(60_000);
+    const choosing = order({ payment: { canPay: true, payBy: null, activePayment: null } });
+    expect(paymentPollInterval({ data: choosing, status: 'success' }, TEN)).toBe(60_000);
+    expect(paymentPollInterval({ data: order({ status: 'delivered' }), status: 'success' }, TEN)).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------- methodNote
+
+describe('methodNote', () => {
+  it('says nothing about a method that costs what is due', () => {
+    expect(methodNote(method({ fee: 0 }), 'GBP')).toBeNull();
+  });
+
+  it('spells a discount out by its rate, whichever minus the backend signed it with', () => {
+    expect(methodNote(method({ fee: -1.42, feeRateText: '−3%' }), 'GBP')).toBe('3% discount');
+    expect(methodNote(method({ fee: -2, feeRateText: '-5%' }), 'GBP')).toBe('5% discount');
+  });
+
+  it('names a discount by its amount when the shop gave no rate', () => {
+    expect(methodNote(method({ fee: -1.42, feeRateText: '' }), 'GBP')).toBe('Saves £1.42');
+  });
+
+  it('says what a surcharge comes to', () => {
+    expect(methodNote(method({ fee: 1.42, feeRateText: '+3%' }), 'GBP')).toBe('Includes a £1.42 fee');
+  });
+
+  it('uses the fee label the shop gave the method, when there is one', () => {
+    expect(methodNote(method({ fee: 1.42, feeRateText: '+3%', feeLabel: 'Card fee' }), 'GBP')).toBe('Card fee of £1.42 included');
+    expect(methodNote(method({ fee: 1.42, feeLabel: '  ' }), 'GBP')).toBe('Includes a £1.42 fee');
   });
 });
 

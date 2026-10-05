@@ -1,326 +1,68 @@
-/* The order page. Two jobs, one chassis: tell the customer where the order is,
-   and — while there is money owed — get it paid.
+/* Styles for paying, cancelling and copying on an order: the payment section inside the account order
+   page's payment card, the cancel control and its dialog, and the unpaid-order prompt.
 
-   Everything is cut from the shop's own ledger idiom (hairlines, tracked
-   micro-caps, tabular figures) so a link from a chat message lands somewhere
-   that plainly belongs to the same shop the order was placed in. The signature
-   is the route: four square nodes on a rail, in the same 15/7 px geometry the
-   checkout's choice marker uses — the mark that meant "your choice" there means
-   "where your order is" here.
+   Everything here sits inside a card that already says "Payment needed" and states the amount, so the
+   faces are flat: no border, fill or eyebrow of their own. Words are sentence case at body size, nothing
+   is smaller than 12px, and every colour is a `--sf-*` token so each template's palette and radii apply.
+   A control that carries `data-sf-part="button"` takes its fill from the template (solid, outlined or glowing),
+   so the rules below give shape and spacing and let the template decide how loud it is. */
 
-   One class per selector, so nothing in this file can cancel anything else out,
-   and every colour is a `--sf-*` token. */
+/* ------------------------------------------------------------------ the faces */
 
-.page {
+/* The wrapper PaymentSection keeps its faces in (to find the heading to focus); it takes no part in layout. */
+.faces {
+  display: contents;
+}
+
+.face {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  max-width: 34rem;
-  margin: 0 auto;
-}
-
-/* ------------------------------------------------------------------ the hero */
-
-.hero {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 0.5rem;
-}
-
-.eyebrow {
-  margin: 0;
-  font-family: var(--sf-font-mono);
-  font-size: calc(10px * var(--sf-text-scale, 1));
-  font-weight: 600;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
-  color: var(--sf-block-fg, var(--sf-primary));
-}
-
-.eyebrow[data-tone='success'] {
-  color: var(--sf-block-fg, var(--sf-success));
-}
-
-.eyebrow[data-tone='danger'] {
-  color: var(--sf-block-fg, var(--sf-danger));
-}
-
-.eyebrow[data-tone='muted'] {
-  color: var(--sf-block-fg, var(--sf-faint));
-}
-
-.headline {
-  margin: 0;
-  font-family: var(--sf-font-heading);
-  font-size: calc(1.75rem * var(--sf-text-scale, 1));
-  font-weight: 700;
-  line-height: 1.08;
-  letter-spacing: -0.02em;
-  color: var(--sf-block-fg, var(--sf-text));
-}
-
-.detail {
-  margin: 0;
-  max-width: 26rem;
-  font-size: calc(0.875rem * var(--sf-text-scale, 1));
-  line-height: 1.6;
-  color: var(--sf-block-fg, var(--sf-muted));
-}
-
-.meta {
-  margin: 0;
-  font-family: var(--sf-font-mono);
-  font-size: calc(10px * var(--sf-text-scale, 1));
-  font-weight: 500;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  font-variant-numeric: tabular-nums;
-  color: var(--sf-block-fg, var(--sf-faint));
-}
-
-/* The pre-order flag: the same rule-in-a-tone the rest of the shop flies. */
-.flag {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  margin-top: 0.25rem;
-  padding: 0.35rem 0.6rem;
-  border-left: 2px solid var(--sf-warn);
-  border-radius: 0 var(--sf-card-radius) var(--sf-card-radius) 0;
-  background: var(--sf-bg-deep);
-  font-family: var(--sf-font-mono);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--sf-warn);
-}
-
-/* ----------------------------------------------------------------- the route */
-
-.route {
-  margin: 0.75rem 0 0;
-  padding: 0;
-  list-style: none;
-  text-align: left;
-  align-self: center;
-  min-width: 13rem;
-}
-
-.step {
-  display: grid;
-  grid-template-columns: 15px 1fr;
-  gap: 0 0.75rem;
-}
-
-/* The rail. Drawn from the node down, in the tone of the leg it describes:
-   travelled legs in the client's own accent, the rest as a hairline. */
-.rail {
-  grid-column: 1;
-  grid-row: 2;
-  width: 1px;
-  min-height: 22px;
-  justify-self: center;
-  background: var(--sf-line-strong);
-}
-
-.railDone {
-  background: var(--sf-primary);
-}
-
-.node {
-  position: relative;
-  grid-column: 1;
-  grid-row: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 15px;
-  height: 15px;
-  margin-top: 2px;
-  border: 1px solid var(--sf-line-strong);
-  color: var(--sf-bg);
-}
-
-.nodeDone {
-  border-color: var(--sf-primary);
-  background: var(--sf-primary);
-}
-
-.nodeArrived {
-  border-color: var(--sf-success);
-  background: var(--sf-success);
-}
-
-.nodeHere {
-  border-color: var(--sf-primary);
-}
-
-/* The one filled 7px core the whole shop uses for "this one". */
-.nodeCore {
-  width: 7px;
-  height: 7px;
-  background: var(--sf-primary);
-}
-
-.stepBody {
-  grid-column: 2;
-  grid-row: 1;
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 0.25rem 0.5rem;
-  padding-bottom: 0.15rem;
-}
-
-.stepLabel {
-  font-family: var(--sf-font-mono);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--sf-faint);
-}
-
-.stepLabelOn {
-  color: var(--sf-text);
-}
-
-.stepWhen {
-  font-family: var(--sf-font-mono);
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  font-variant-numeric: tabular-nums;
-  color: var(--sf-faint);
-}
-
-.stepMark {
-  padding: 0.1rem 0.35rem;
-  border: 1px solid var(--sf-warn);
-  font-family: var(--sf-font-mono);
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--sf-warn);
-}
-
-/* Cancelled / refunded: the route is replaced by what happens next. */
-.terminal {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.6rem;
-  margin-top: 0.75rem;
-  padding: 0.6rem 0.75rem;
-  border-left: 2px solid var(--sf-line-strong);
-  border-radius: 0 var(--sf-card-radius) var(--sf-card-radius) 0;
-  background: var(--sf-bg-deep);
-  text-align: left;
-  font-size: 0.8125rem;
-  line-height: 1.55;
-  color: var(--sf-muted);
-}
-
-.terminalDanger {
-  border-left-color: var(--sf-danger);
-}
-
-/* ---------------------------------------------------------------- the layout */
-
-.layout {
-  display: grid;
   gap: 0.9rem;
-  align-items: start;
-}
-
-.column {
-  display: grid;
-  gap: 0.9rem;
-  align-content: start;
   min-width: 0;
 }
 
-/* A styled Payment or Tracking part wraps its cards in one element; the wrapper stands in for
-   the column's own grid so the gap between the cards stays today's. An unstyled part adds no element. */
-.column > [data-sf-style='OrderStatusPayment'],
-.column > [data-sf-style='OrderStatusShipments'] {
-  display: grid;
-  gap: 0.9rem;
-}
-
-/* ----------------------------------------------------------------- the cards */
-
-.card {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  padding: 0.95rem 1rem 1.05rem;
-  border: var(--sf-card-border);
-  border-radius: var(--sf-card-radius);
-  background: color-mix(in srgb, var(--sf-surface) 40%, transparent);
-  box-shadow: var(--sf-card-shadow);
-}
-
-/* The one card that wants something from the customer wears the shop's
-   "this needs you" silhouette rather than a second border colour. */
-.cardAction {
-  border-left: 2px solid var(--sf-primary);
-}
-
-.cardHead {
+.faceHead {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.75rem;
 }
 
-.cardHeadBody {
+.faceHeadBody {
   min-width: 0;
 }
 
-.cardEyebrow {
+.faceTitle {
   margin: 0;
-  font-family: var(--sf-font-mono);
-  font-size: calc(10px * var(--sf-text-scale, 1));
-  font-weight: 600;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--sf-block-fg, var(--sf-faint));
-}
-
-.cardEyebrowAction {
-  color: var(--sf-primary);
-}
-
-.cardTitle {
-  margin: 0.2rem 0 0;
   font-family: var(--sf-font-heading);
-  font-size: 1.0625rem;
-  font-weight: 600;
+  font-size: 1.125rem;
+  font-weight: var(--sf-heading-weight, 600);
+  letter-spacing: var(--sf-heading-tracking, normal);
+  text-transform: var(--sf-heading-transform, none);
   line-height: 1.25;
-  letter-spacing: -0.01em;
   color: var(--sf-text);
 }
 
-.cardNote {
-  margin: 0.35rem 0 0;
-  font-size: 0.8125rem;
-  line-height: 1.55;
+.faceLead {
+  margin: 0.2rem 0 0;
+  font-size: 0.9375rem;
+  line-height: 1.45;
   color: var(--sf-muted);
 }
 
-.cardFigure {
-  margin: 0.3rem 0 0;
-  font-family: var(--sf-font-mono);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  font-variant-numeric: tabular-nums;
+.face > .faceTitle + .faceLead {
+  margin-top: -0.65rem;
+}
+
+.faceHead + .steps,
+.faceTitle + .picker {
+  margin-top: 0.1rem;
+}
+
+.faceNote {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
   color: var(--sf-muted);
 }
 
@@ -328,13 +70,13 @@
   flex: none;
   display: inline-flex;
   align-items: center;
-  padding: 0.2rem 0.5rem;
+  padding: 0.2rem 0.6rem;
   border: 1px solid var(--sf-line-strong);
-  border-radius: 0;
+  border-radius: var(--sf-pill-radius);
   font-family: var(--sf-font-mono);
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   white-space: nowrap;
   color: var(--sf-muted);
@@ -345,27 +87,16 @@
   color: var(--sf-success);
 }
 
-.pillDanger {
-  border-color: var(--sf-danger);
-  color: var(--sf-danger);
-}
-
 .pillWarn {
   border-color: var(--sf-warn);
   color: var(--sf-warn);
 }
 
-.pillMuted {
-  color: var(--sf-faint);
-}
-
-/* The page's one moving part: a hairline that runs while the shop is waiting on
-   something it cannot hurry — a hosted checkout open in another tab, a
-   transaction being read off a chain. Same sweep the checkout docket flies. */
+/* The page's one moving part: a hairline that runs while the shop is waiting on something it cannot
+   hurry, here a transaction being read off a chain. It sits directly under the sentence that says so. */
 .waiting {
   position: relative;
   height: 2px;
-  margin: 0.9rem 0 0;
   overflow: hidden;
   background: var(--sf-line);
 }
@@ -392,8 +123,8 @@
   display: flex;
   align-items: baseline;
   gap: 0.5rem;
-  margin: 0.55rem 0 0;
-  font-size: 0.8125rem;
+  margin: 0;
+  font-size: 0.875rem;
   line-height: 1.55;
   color: var(--sf-muted);
 }
@@ -404,146 +135,92 @@
   white-space: nowrap;
 }
 
-/* One statement of the auto-cancel deadline, above whichever payment card is
-   showing — every way of paying is on the same clock. */
+/* The notice above the ways to pay: a surface built from the card's own radius and border and a warm
+   tint, in ordinary type, with only the date set bold. */
 .deadline {
-  /* A row of the payment column's own grid — the gap is the spacing. */
   margin: 0;
-  padding: 0.45rem 0.65rem;
-  border-left: 2px solid var(--sf-warn);
-  border-radius: 0 var(--sf-card-radius) var(--sf-card-radius) 0;
-  background: var(--sf-bg-deep);
-  font-family: var(--sf-font-mono);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  line-height: 1.6;
-  color: var(--sf-warn);
-}
-
-.deadlineWhen {
-  font-variant-numeric: tabular-nums;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--sf-warn) 45%, var(--sf-line));
+  border-radius: var(--sf-card-radius);
+  background: color-mix(in srgb, var(--sf-warn) 12%, var(--sf-surface));
+  font-size: 0.9375rem;
+  line-height: 1.5;
   color: var(--sf-text);
 }
 
-.items {
-  margin: 0.75rem 0 0;
+.deadlineWhen {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------- numbered steps, copy */
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.item {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 0.15rem 1rem;
-  padding: 0.55rem 0;
-  border-bottom: 1px solid var(--sf-line);
-}
-
-.itemName {
-  grid-column: 1;
-  grid-row: 1;
-  font-size: calc(0.875rem * var(--sf-text-scale, 1));
-  line-height: 1.4;
-  color: var(--sf-block-fg, var(--sf-text));
-}
-
-.itemQty {
-  grid-column: 1;
-  grid-row: 2;
+/* One step of the list: its figure or form, and the notice that belongs to it. */
+.stepItem {
   display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  font-family: var(--sf-font-mono);
-  font-size: calc(10px * var(--sf-text-scale, 1));
-  font-weight: 500;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  font-variant-numeric: tabular-nums;
-  color: var(--sf-block-fg, var(--sf-faint));
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
 }
 
-.itemFlag {
-  padding: 0 0.3rem;
-  border: 1px solid var(--sf-warn);
-  font-size: 9px;
-  letter-spacing: 0.1em;
+/* The warning that a wrong amount or network loses the money. It must not read as the pay-by notice above it,
+   so it leads with a mark and carries the warning colour down its left edge. */
+.sendWarning {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  border-left: 4px solid var(--sf-warn);
+}
+
+.sendWarning > svg {
+  flex: none;
+  margin-top: 0.15rem;
   color: var(--sf-warn);
 }
 
-.itemTotal {
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  align-self: center;
-  font-family: var(--sf-font-mono);
-  font-size: calc(0.9375rem * var(--sf-text-scale, 1));
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  color: var(--sf-block-fg, var(--sf-text));
-}
-
-.totals {
-  margin: 0.85rem 0 0;
-}
-
-.row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.2rem 0;
-}
-
-.rowLabel {
-  margin: 0;
-  font-family: var(--sf-font-mono);
-  font-size: calc(10px * var(--sf-text-scale, 1));
-  font-weight: 600;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--sf-block-fg, var(--sf-muted));
-}
-
-.rowFigure {
-  margin: 0;
-  font-family: var(--sf-font-mono);
-  font-size: calc(0.875rem * var(--sf-text-scale, 1));
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  color: var(--sf-block-fg, var(--sf-text));
-}
-
-.rowGood {
-  color: var(--sf-success);
-}
-
-/* The line a promotion discounted: what it came to, struck, above what is charged. */
-.itemWas {
-  display: block;
-  text-align: right;
-  font-size: calc(10px * var(--sf-text-scale, 1));
-  font-weight: 500;
-  color: var(--sf-block-fg, var(--sf-faint));
-}
-
-.grand {
-  margin-top: 0.5rem;
-  padding-top: 0.6rem;
-  border-top: 1px solid var(--sf-line-strong);
-}
-
-.grandFigure {
-  font-size: calc(1.25rem * var(--sf-text-scale, 1));
+.stepNum {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 1px solid var(--sf-line-strong);
+  border-radius: var(--sf-pill-radius);
+  font-size: 0.875rem;
   font-weight: 700;
+  line-height: 1;
+  color: var(--sf-text);
 }
 
-/* --------------------------------------------------------------- copy fields */
+.stepHead {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
 
-/* A value the customer has to carry into another app — an address, an amount, a
-   tracking number. The figure is the row; the copy control sits beside it. */
+.stepBody {
+  min-width: 0;
+}
+
+.stepLabel {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--sf-text);
+}
+
+/* A value the customer has to carry into another app: an address, an amount, a tracking number. The
+   figure is the row; the copy control sits beside it. */
 .copyRow {
   display: flex;
   align-items: center;
@@ -554,24 +231,42 @@
   border-top: 1px solid var(--sf-line);
 }
 
+/* In the steps the number leads and there are no rules: the sequence is the structure. */
+.copyStep {
+  align-items: flex-start;
+  margin: 0;
+  padding: 0;
+  border-top: 0;
+}
+
+.copyStep .copyBody {
+  flex: 1;
+}
+
+.copyStep .copyButton {
+  align-self: center;
+}
+
 .copyBody {
   min-width: 0;
 }
 
 .copyLabel {
   margin: 0;
-  font-family: var(--sf-font-mono);
-  font-size: 9px;
+  font-size: 0.875rem;
   font-weight: 600;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--sf-faint);
+  line-height: 1.3;
+  color: var(--sf-muted);
+}
+
+.copyStep .copyLabel {
+  color: var(--sf-text);
 }
 
 .copyValue {
-  margin: 0.15rem 0 0;
+  margin: 0.2rem 0 0;
   font-family: var(--sf-font-mono);
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   line-height: 1.45;
@@ -580,36 +275,59 @@
   user-select: all;
 }
 
+/* A long address in groups that wrap between themselves, so no line ends on a stray character or two. The raw
+   value is there for assistive technology and is not selectable, so a selection copies the address once. */
+.copyGrouped {
+  overflow-wrap: normal;
+  word-break: normal;
+  letter-spacing: 0.02em;
+}
+
+.copyGroup {
+  display: inline-block;
+  margin-right: 0.6ch;
+}
+
+.rawValue {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  user-select: none;
+}
+
 .copyButton {
   flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  min-width: 68px;
+  min-width: 5rem;
   min-height: 44px;
-  padding: 0 0.6rem;
+  padding: 0 0.8rem;
   border: 1px solid var(--sf-line-strong);
-  border-radius: var(--sf-card-radius);
+  border-radius: var(--sf-btn-radius);
   background: transparent;
-  color: var(--sf-muted);
-  font-family: var(--sf-font-mono);
-  font-size: 9px;
+  color: var(--sf-text);
+  font-family: var(--sf-font-body);
+  font-size: 0.875rem;
   font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
   cursor: pointer;
   transition: border-color 120ms ease, color 120ms ease;
-}
-
-.copyButton:hover {
-  border-color: var(--sf-primary);
-  color: var(--sf-text);
 }
 
 .copyButton:focus-visible {
   outline: 2px solid var(--sf-primary);
   outline-offset: 2px;
+}
+
+@media (hover: hover) {
+  .copyButton:hover {
+    border-color: var(--sf-primary);
+  }
 }
 
 .copyDone {
@@ -625,25 +343,20 @@
   justify-content: center;
   gap: 0.5rem;
   width: 100%;
-  min-height: 48px;
-  margin-top: 0.9rem;
+  min-height: 52px;
   padding: 0 1rem;
   border: 0;
   border-radius: var(--sf-btn-radius);
   background: var(--sf-primary);
   color: var(--sf-bg);
-  font-family: var(--sf-font-mono);
-  font-size: 11px;
+  font-family: var(--sf-btn-font, var(--sf-font-body));
+  font-size: 0.9375rem;
   font-weight: 700;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
+  letter-spacing: var(--sf-btn-tracking-sm, 0.04em);
+  text-transform: var(--sf-btn-transform, none);
   text-decoration: none;
   cursor: pointer;
   transition: opacity 120ms ease, transform 150ms ease;
-}
-
-.cta:hover {
-  opacity: 0.88;
 }
 
 .cta:active:not(:disabled) {
@@ -655,11 +368,18 @@
   outline-offset: 2px;
 }
 
+/* Still a button while it waits: an outline and a label that both read at 3:1 or better. */
 .cta:disabled {
-  background: var(--sf-surface-2);
-  color: var(--sf-faint);
+  border: 1px solid var(--sf-muted);
+  background: transparent;
+  color: var(--sf-muted);
   cursor: not-allowed;
-  opacity: 1;
+}
+
+@media (hover: hover) {
+  .cta:hover:not(:disabled) {
+    opacity: 0.88;
+  }
 }
 
 .ghost {
@@ -668,24 +388,17 @@
   justify-content: center;
   gap: 0.45rem;
   min-height: 44px;
-  padding: 0 0.9rem;
+  padding: 0 1rem;
   border: 1px solid var(--sf-line-strong);
-  border-radius: var(--sf-card-radius);
+  border-radius: var(--sf-btn-radius);
   background: transparent;
-  color: var(--sf-muted);
-  font-family: var(--sf-font-mono);
-  font-size: 10px;
+  color: var(--sf-text);
+  font-family: var(--sf-font-body);
+  font-size: 0.9375rem;
   font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
   text-decoration: none;
   cursor: pointer;
-  transition: border-color 120ms ease, color 120ms ease;
-}
-
-.ghost:hover {
-  border-color: var(--sf-primary);
-  color: var(--sf-text);
+  transition: border-color 120ms ease;
 }
 
 .ghost:focus-visible {
@@ -693,10 +406,10 @@
   outline-offset: 2px;
 }
 
-.ghost:disabled {
-  border-color: var(--sf-line);
-  color: var(--sf-faint);
-  cursor: not-allowed;
+@media (hover: hover) {
+  .ghost:hover {
+    border-color: var(--sf-primary);
+  }
 }
 
 .ghostWide {
@@ -704,169 +417,186 @@
   margin-top: 0.9rem;
 }
 
-/* The "something is off" line, shared by every error on the page. */
+/* The "something is off" line, shared by every notice and error in the payment area: sentence case at
+   body size, tinted by its tone, never a strip of small capitals. */
 .note {
-  margin: 0.7rem 0 0;
-  padding: 0.45rem 0.65rem;
-  border-left: 2px solid var(--sf-line-strong);
-  border-radius: 0 var(--sf-card-radius) var(--sf-card-radius) 0;
-  background: var(--sf-bg);
-  font-family: var(--sf-font-mono);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  line-height: 1.6;
-  color: var(--sf-muted);
+  margin: 0;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--sf-line-strong);
+  border-radius: var(--sf-card-radius);
+  background: var(--sf-surface-2);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--sf-text);
 }
 
 .note[data-tone='danger'] {
-  border-left-color: var(--sf-danger);
-  color: var(--sf-danger);
+  border-color: color-mix(in srgb, var(--sf-danger) 55%, var(--sf-line));
+  background: color-mix(in srgb, var(--sf-danger) 12%, var(--sf-surface));
 }
 
 .note[data-tone='warn'] {
-  border-left-color: var(--sf-warn);
-  color: var(--sf-warn);
+  border-color: color-mix(in srgb, var(--sf-warn) 45%, var(--sf-line));
+  background: color-mix(in srgb, var(--sf-warn) 12%, var(--sf-surface));
 }
 
 .note[data-tone='success'] {
-  border-left-color: var(--sf-success);
-  color: var(--sf-success);
+  border-color: color-mix(in srgb, var(--sf-success) 55%, var(--sf-line));
+  background: color-mix(in srgb, var(--sf-success) 12%, var(--sf-surface));
+}
+
+.chevron {
+  flex: none;
+  display: flex;
+  align-items: center;
+  transform: rotate(-90deg);
+  transition: transform 150ms ease;
+}
+
+.chevronOpen {
+  transform: rotate(0deg);
 }
 
 /* ------------------------------------------------------------- method picker */
 
 .picker {
-  margin-top: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
-/* One hairline block, one row per method — the same list the checkout's payment
-   step draws, so the combos that open inside it are already at home. */
 .pickerList {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--sf-line-strong);
-  border-radius: var(--sf-card-radius);
-  background: var(--sf-bg);
-  overflow: hidden;
+  gap: 0.65rem;
 }
 
-/* The rule sits between the block's children, not on the row: a row that opens
-   a drawer is wrapped, so a rule on the row itself would erase every divider. */
-.pickerList > * + * {
-  border-top: 1px solid var(--sf-line);
+.methodItem {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
-.pickerRow {
+/* One whole-width control per way to pay, never shorter than 56px: what it is called, what is special
+   about it, what it will charge, and a chevron that says there is a next step. Outlined by default; the
+   first method the shop offers is the filled one. The template's own button rules (carried by
+   data-sf-part="button") may restyle the fill, the border and the type voice, so the text spans set
+   their own case and tracking: a payment method's name is a name, not a shout. */
+.method {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.85rem;
   width: 100%;
-  min-height: 56px;
-  padding: 0.7rem 0.85rem;
-  border: 0;
+  min-height: 60px;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--sf-line-strong);
+  border-radius: var(--sf-btn-radius);
   background: transparent;
   color: var(--sf-text);
   text-align: left;
   cursor: pointer;
-  transition: background-color 120ms ease;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
 }
 
-.pickerRow:hover {
-  background: var(--sf-surface);
-}
-
-.pickerRow:focus-visible {
-  outline: 2px solid var(--sf-primary);
-  outline-offset: -2px;
-}
-
-.pickerRow:disabled {
-  cursor: wait;
-  color: var(--sf-faint);
-}
-
-.pickerMark {
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 15px;
-  height: 15px;
-  border: 1px solid var(--sf-line-strong);
-}
-
-.pickerMarkOn {
+.methodPrimary {
   border-color: var(--sf-primary);
-}
-
-.pickerMarkCore {
-  width: 7px;
-  height: 7px;
   background: var(--sf-primary);
+  color: var(--sf-bg);
 }
 
-/* A row that leaves the page has no marker to fill, but keeps the marker's
-   width so every label starts on the same vertical. */
-.pickerSpacer {
-  flex: none;
-  width: 15px;
+@media (hover: hover) {
+  .method:hover:not(:disabled) {
+    border-color: var(--sf-primary);
+    background: var(--sf-surface);
+  }
+
+  .methodPrimary:hover:not(:disabled) {
+    background: var(--sf-primary);
+    opacity: 0.9;
+  }
 }
 
-.pickerAway {
-  display: flex;
-  align-items: center;
-  color: var(--sf-faint);
+.method:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
 }
 
-.pickerLabel {
+.method:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* The row that was pressed keeps its full strength while its checkout opens. */
+.method[aria-busy='true'] {
+  cursor: progress;
+  opacity: 1;
+}
+
+.methodText {
+  flex: 1;
   min-width: 0;
-  overflow-wrap: anywhere;
-  font-family: var(--sf-font-mono);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
 }
 
-.pickerFigure {
-  margin-left: auto;
-  padding-left: 0.5rem;
-  font-family: var(--sf-font-mono);
-  font-size: 0.875rem;
+.methodName {
+  font-family: var(--sf-font-body);
+  font-size: 1rem;
   font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: 0;
+  text-transform: none;
+  overflow-wrap: anywhere;
+}
+
+.methodNote {
+  font-family: var(--sf-font-body);
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.35;
+  letter-spacing: 0;
+  text-transform: none;
+  opacity: 0.88;
+}
+
+.methodFigure {
+  flex: none;
+  font-family: var(--sf-font-body);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  color: inherit;
 }
 
-/* The combos and the transfer details open under the method that owns them, on
-   one rail — a continuation, not a panel inside a panel. */
-.pickerDrawer {
-  margin: 0 0.85rem 0.85rem 1.55rem;
-  padding-left: 0.85rem;
-  border-left: 1px solid var(--sf-line-strong);
+/* What a method opens is attached to its row: the row's lower corners square off and the panel hangs
+   from it on the same edges, so it reads as the next step of that row and not as a new block. */
+.methodOpen {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
 }
 
-.pickerHead {
+.methodDrawer {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0 0 0.6rem;
-  font-family: var(--sf-font-mono);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--sf-faint);
+  flex-direction: column;
+  padding: 1rem;
+  border: 1px solid var(--sf-line-strong);
+  border-top: 0;
+  border-radius: 0 0 var(--sf-btn-radius) var(--sf-btn-radius);
+  background: var(--sf-bg);
 }
 
-.pickerHeadRule {
-  flex: 1;
-  height: 1px;
-  background: var(--sf-line);
+.methodDrawer > .cta {
+  margin-top: 0.9rem;
+}
+
+.drawerHead {
+  margin: 0 0 0.25rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--sf-text);
 }
 
 .chatLinks {
@@ -876,31 +606,29 @@
   margin-top: 0.9rem;
 }
 
-/* Change payment method: a disclosure, folded away until it is wanted. */
-.disclosure {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  width: 100%;
-  min-height: 48px;
-  padding: 0 1rem;
-  border: 1px solid var(--sf-line);
-  border-radius: var(--sf-card-radius);
-  background: transparent;
+.cardNote {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
   color: var(--sf-muted);
-  font-family: var(--sf-font-mono);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: color 120ms ease, border-color 120ms ease;
 }
 
-.disclosure:hover {
-  border-color: var(--sf-line-strong);
-  color: var(--sf-text);
+/* Change payment method: a quiet text button with a chevron, folded away until it is wanted. */
+.disclosure {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 44px;
+  margin-left: -0.25rem;
+  padding: 0 0.25rem;
+  border: 0;
+  background: transparent;
+  color: var(--sf-muted);
+  font-family: var(--sf-font-body);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 120ms ease;
 }
 
 .disclosure:focus-visible {
@@ -908,52 +636,41 @@
   outline-offset: 2px;
 }
 
-.disclosureSign {
-  font-size: 13px;
+@media (hover: hover) {
+  .disclosure:hover {
+    color: var(--sf-text);
+    text-decoration: underline;
+    text-underline-offset: 0.25em;
+  }
 }
 
-/* The panel the disclosure opens: the same card, tucked under its own control. */
-.disclosurePanel {
-  margin-top: 0.5rem;
-  padding-top: 0.15rem;
+/* The list the disclosure opens, tucked under its own control. */
+.changePanel {
+  margin-top: 0.25rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--sf-line);
 }
 
 /* --------------------------------------------------------------- txid submit */
 
 .txidForm {
-  margin-top: 0.9rem;
-  padding-top: 0.8rem;
-  border-top: 1px solid var(--sf-line);
-}
-
-.txidLabel {
-  display: block;
-  font-family: var(--sf-font-mono);
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--sf-faint);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .txidBlurb {
-  margin: 0.3rem 0 0;
-  font-size: 0.8125rem;
-  line-height: 1.55;
+  margin: 0.2rem 0 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
   color: var(--sf-muted);
 }
 
-.txidRow {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 0.6rem;
-}
-
 .txidInput {
-  flex: 1;
+  width: 100%;
   min-width: 0;
-  min-height: 44px;
-  padding: 0 0.7rem;
+  min-height: 48px;
+  padding: 0 0.8rem;
   border: 1px solid var(--sf-line-strong);
   border-radius: var(--sf-card-radius);
   background: var(--sf-bg);
@@ -963,7 +680,7 @@
 }
 
 .txidInput::placeholder {
-  color: var(--sf-faint);
+  color: var(--sf-muted);
 }
 
 .txidInput:focus {
@@ -972,99 +689,44 @@
   box-shadow: inset 0 0 0 1px var(--sf-primary);
 }
 
+/* A button even while it waits for an id: outlined and legible at 3:1, filled once there is something to send. */
 .txidSubmit {
-  flex: none;
-}
-
-/* --------------------------------------------------------------- the address */
-
-.address {
-  margin: 0.6rem 0 0;
-  font-style: normal;
-}
-
-.addressName {
-  margin: 0;
-  font-size: calc(0.875rem * var(--sf-text-scale, 1));
-  font-weight: 600;
-  line-height: 1.45;
-  color: var(--sf-block-fg, var(--sf-text));
-}
-
-.addressLine {
-  margin: 0;
-  font-size: calc(0.8125rem * var(--sf-text-scale, 1));
-  line-height: 1.6;
-  color: var(--sf-block-fg, var(--sf-muted));
-}
-
-/* ------------------------------------------------------------- state screens */
-
-.screen {
-  display: flex;
-  flex-direction: column;
+  display: inline-flex;
   align-items: center;
-  gap: 0.65rem;
-  max-width: 30rem;
-  margin: 2rem auto 0;
-  text-align: center;
-}
-
-.screenRule {
-  width: 2rem;
-  height: 2px;
-  margin-bottom: 0.35rem;
-  background: var(--sf-line-strong);
-}
-
-.skeleton {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.75rem;
-  max-width: 34rem;
-  margin: 0 auto;
-}
-
-.block {
-  border-radius: var(--sf-card-radius);
-  background: var(--sf-surface);
-  animation: breathe 1.6s ease-in-out infinite;
-}
-
-.blockCard {
+  justify-content: center;
   width: 100%;
-  height: 9rem;
-  margin-top: 1rem;
+  min-height: 48px;
+  padding: 0 1rem;
+  border: 1px solid var(--sf-primary);
+  border-radius: var(--sf-btn-radius);
+  background: var(--sf-primary);
+  color: var(--sf-bg);
+  font-family: var(--sf-btn-font, var(--sf-font-body));
+  font-size: 0.9375rem;
+  font-weight: 700;
+  letter-spacing: var(--sf-btn-tracking-sm, 0.04em);
+  text-transform: var(--sf-btn-transform, none);
+  cursor: pointer;
 }
 
-@keyframes breathe {
-  0%,
-  100% {
-    opacity: 0.55;
-  }
-  50% {
-    opacity: 0.85;
-  }
+.txidSubmit[data-variant='default'] {
+  border-color: var(--sf-muted);
+  background: transparent;
+  color: var(--sf-text);
 }
 
-/* ---------------------------------------------------------------- responsive */
+.txidSubmit:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
 
-@media (min-width: 62em) {
-  /* The summary keeps its own column only when there is something to act on
-     beside it — otherwise the grid would draw an empty track. */
-  .pageWide {
-    max-width: 60rem;
-  }
+.txidSubmit:disabled {
+  cursor: not-allowed;
+}
 
-  .layoutWide {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 21rem);
-    gap: 1.25rem;
-  }
-
-  .headline {
-    font-size: calc(2rem * var(--sf-text-scale, 1));
-  }
+.txidSubmit[data-variant='default']:disabled {
+  border-color: var(--sf-muted);
+  color: var(--sf-muted);
 }
 
 /* ------------------------------------------------------------ cancel control */
@@ -1076,27 +738,42 @@
   gap: 0.25rem;
 }
 
-/* A quiet text action in the danger colour: it must be findable, not inviting. */
+/* The danger colour lifted toward the text colour: red text that still reads at 4.5:1 on every template's surface. */
+.cancelAction,
+.cancelError,
+.cancelLive {
+  --sf-danger-text: color-mix(in srgb, var(--sf-danger) 60%, var(--sf-text));
+}
+
+/* A quiet text button: muted at AA, 14px or more, a 44px target, and the danger colour only on the way in. */
 .cancelAction {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
-  padding: 0 0.15rem;
+  margin-left: -0.25rem;
+  padding: 0 0.25rem;
   border: 0;
   background: transparent;
-  color: var(--sf-danger);
-  font-family: var(--sf-font-mono);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  text-decoration: underline;
-  text-underline-offset: 0.3em;
+  color: var(--sf-muted);
+  font-family: var(--sf-font-body);
+  font-size: 0.9375rem;
+  font-weight: 500;
   cursor: pointer;
+  transition: color 120ms ease;
 }
 
-.cancelAction:hover {
-  text-decoration-thickness: 2px;
+.cancelAction:focus-visible {
+  color: var(--sf-danger-text);
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+}
+
+@media (hover: hover) {
+  .cancelAction:hover {
+    color: var(--sf-danger-text);
+    text-decoration: underline;
+    text-underline-offset: 0.25em;
+  }
 }
 
 .cancelAction:focus-visible,
@@ -1106,59 +783,136 @@
   outline-offset: 2px;
 }
 
-.cancelPanel {
-  width: 100%;
-  padding: 0.8rem 0.9rem;
+/* The dialog wears the page's own surface, as the unpaid-order pop-up does. */
+.cancelDialog {
+  background: var(--sf-bg-deep);
   border: 1px solid var(--sf-line-strong);
-  border-left: 2px solid var(--sf-danger);
-  border-radius: 0 var(--sf-card-radius) var(--sf-card-radius) 0;
-  background: var(--sf-bg);
+  border-top: 2px solid var(--sf-danger);
 }
 
-.cancelTitle {
-  margin: 0;
+.cancelHeader {
+  background: transparent;
+  padding-bottom: 0.5rem;
+}
+
+.cancelDialogTitle {
   font-family: var(--sf-font-heading);
-  font-size: calc(1rem * var(--sf-text-scale, 1));
+  font-size: calc(1.25rem * var(--sf-text-scale, 1));
   font-weight: 700;
+  letter-spacing: -0.01em;
   line-height: 1.3;
   color: var(--sf-text);
 }
 
+.cancelDialogText {
+  margin: 0;
+  font-size: calc(1rem * var(--sf-text-scale, 1));
+  line-height: 1.5;
+  color: var(--sf-muted);
+}
+
+.cancelError {
+  margin: 0.75rem 0 0;
+  font-size: calc(0.875rem * var(--sf-text-scale, 1));
+  line-height: 1.5;
+  color: var(--sf-danger-text);
+}
+
 .cancelText {
   margin: 0.35rem 0 0;
-  font-size: calc(0.8125rem * var(--sf-text-scale, 1));
+  font-size: calc(0.875rem * var(--sf-text-scale, 1));
   line-height: 1.55;
   color: var(--sf-muted);
 }
 
+/* Stacked and full width on a phone, side by side from 36em. Keep order comes first: it is the safe default. */
 .cancelButtons {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 0.6rem;
-  margin-top: 0.8rem;
+  margin-top: 1.25rem;
 }
 
-.cancelConfirm {
+.cancelButtons > button {
+  width: 100%;
+  min-height: 48px;
+  white-space: nowrap;
+}
+
+@media (min-width: 36em) {
+  .cancelButtons {
+    flex-direction: row;
+  }
+
+  .cancelButtons > button {
+    width: auto;
+    flex: 1 1 auto;
+    min-height: 44px;
+  }
+}
+
+/* The stronger choice in this dialog: the shop's primary button, as the pay button is. */
+.cancelKeep {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
-  padding: 0 1rem;
+  padding: 0 0.9rem;
   border: 0;
   border-radius: var(--sf-btn-radius);
-  background: var(--sf-danger);
+  background: var(--sf-primary);
   color: var(--sf-bg);
-  font-family: var(--sf-font-mono);
-  font-size: 11px;
+  font-family: var(--sf-btn-font, var(--sf-font-body));
+  font-size: 0.875rem;
   font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  letter-spacing: var(--sf-btn-tracking-sm, 0.04em);
+  text-transform: var(--sf-btn-transform, none);
   cursor: pointer;
   transition: opacity 120ms ease;
 }
 
-.cancelConfirm:hover {
-  opacity: 0.88;
+.cancelKeep:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+.cancelKeep:disabled {
+  border: 1px solid var(--sf-muted);
+  background: transparent;
+  color: var(--sf-muted);
+  cursor: not-allowed;
+}
+
+@media (hover: hover) {
+  .cancelKeep:hover:not(:disabled) {
+    opacity: 0.88;
+  }
+}
+
+/* Outlined, not filled: clearly the destructive choice without outshouting Keep order. The label is the
+   danger colour lifted toward the text colour so it reads on every template's dialog surface. */
+.cancelConfirm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.9rem;
+  border: 1px solid var(--sf-danger);
+  border-radius: var(--sf-btn-radius);
+  background: transparent;
+  color: color-mix(in srgb, var(--sf-danger) 55%, var(--sf-text));
+  font-family: var(--sf-btn-font, var(--sf-font-body));
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: var(--sf-btn-tracking-sm, 0.04em);
+  text-transform: var(--sf-btn-transform, none);
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+/* Hover only where there is a pointer: a tap on a touch screen must not leave the button filled. */
+@media (hover: hover) {
+  .cancelConfirm:hover:not([aria-disabled='true']) {
+    background: color-mix(in srgb, var(--sf-danger) 24%, transparent);
+  }
 }
 
 .cancelConfirm[aria-disabled='true'] {
@@ -1169,9 +923,9 @@
 /* Polite live region: always in the DOM so a refusal is announced when it appears. */
 .cancelLive {
   margin: 0;
-  font-size: calc(0.8125rem * var(--sf-text-scale, 1));
+  font-size: calc(0.875rem * var(--sf-text-scale, 1));
   line-height: 1.55;
-  color: var(--sf-danger);
+  color: var(--sf-danger-text);
 }
 
 .cancelLive:not(:empty) {
@@ -1199,16 +953,17 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .waiting::after,
-  .block {
+  .waiting::after {
     animation: none;
   }
 
   .copyButton,
   .cta,
   .ghost,
+  .cancelKeep,
   .cancelConfirm,
-  .pickerRow,
+  .method,
+  .chevron,
   .disclosure {
     transition: none;
   }

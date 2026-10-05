@@ -1,6 +1,6 @@
 import { part, type ContainerSpec } from '@/builder/parts.ts';
 
-const PARTS = ['OrderBackLink', 'OrderHeading', 'OrderBalance', 'OrderItems', 'OrderPayments', 'OrderParcels', 'OrderPageLink'] as const;
+const PARTS = ['OrderBackLink', 'OrderHeading', 'OrderBalance', 'OrderItems', 'OrderAddress', 'OrderParcels', 'OrderPayments'] as const;
 
 export const ORDER_CONTAINER: ContainerSpec = {
   family: 'order', insertSlot: 'content', required: ['OrderHeading', 'OrderItems'], unique: PARTS,

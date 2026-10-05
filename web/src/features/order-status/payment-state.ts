@@ -4,7 +4,7 @@ import type {
   PublicOrder,
 } from '@/types/public-order.ts';
 import type { PaymentMethod } from '@/types/checkout.ts';
-import { methodName } from '@/lib/method-name.ts';
+import { formatMoney } from '@/lib/format.ts';
 import { textSnapshot } from '@/text/snapshot.ts';
 
 // The order page's payment logic, kept out of the components that render it.
@@ -78,6 +78,41 @@ export function pollInterval(order: PublicOrder): number | false {
   return checking ? 30_000 : false;
 }
 
+// The payment read is rate limited, and a failed read is usually the limit or an outage: back right off.
+const FAILED_READ_POLL_MS = 60_000;
+// After this long on one order the poll is never faster than once a minute.
+const LONG_WATCH_MS = 10 * 60_000;
+const LONG_WATCH_POLL_MS = 60_000;
+
+/**
+ * The payment view is the fresher read: it says the order has moved on (paid, confirmed, cancelled) before the
+ * account order, which is read separately, has caught up. True when its status differs from the account order's,
+ * is no longer `pending`, or a crypto payment on it has completed.
+ */
+export function paymentMovedOn(payment: PublicOrder, accountStatus: string): boolean {
+  return (
+    payment.status !== 'pending' ||
+    payment.status !== accountStatus ||
+    (payment.cryptoPayments ?? []).some((p) => p.paymentStatus === 'completed')
+  );
+}
+
+/**
+ * `pollInterval` for a query: React Query keeps the last good data after a failed refetch, so data alone cannot
+ * say the last read failed. After a failure we keep polling, slowly, so a customer who finishes a hosted checkout
+ * in another tab still catches up once the route answers again.
+ */
+export function paymentPollInterval(
+  state: { data: PublicOrder | undefined; status: 'pending' | 'error' | 'success' },
+  watchedMs = 0,
+): number | false {
+  if (!state.data) return false;
+  if (state.status === 'error') return FAILED_READ_POLL_MS;
+  const interval = pollInterval(state.data);
+  // A tab left open on an unpaid order is not being watched any more: stop asking every ten seconds.
+  return interval !== false && watchedMs >= LONG_WATCH_MS ? Math.max(interval, LONG_WATCH_POLL_MS) : interval;
+}
+
 /**
  * Everything on the public order that the account order page also shows or acts on: its status,
  * whether it can still be paid or cancelled, the active payment, and each crypto payment's
@@ -96,22 +131,27 @@ export function paymentSignature(order: PublicOrder): string {
 }
 
 /**
- * Button copy for a payment method: the name the shop gave it, plus the fee spelled
- * out. The backend signs every rate ('−3%' / '+2%'), and a bare '−3%' reads as
- * a fee at a glance, so the sign becomes a word.
+ * The second line of a method's row: what makes its charge differ from the amount due, so the figure on the
+ * row is never a surprise. The backend signs every rate ('−3%' / '+2%'); the sentence says discount or fee,
+ * so only the number stays. A method that costs the same as the amount due has nothing to say.
  */
-export function slotLabel(method: PaymentMethod): string {
+export function methodNote(method: PaymentMethod, currency: string): string | null {
   const { t } = textSnapshot();
-  const base = methodName(method);
-  const rate = method.feeRateText?.trim();
-  if (!rate) return base;
-  if (rate.startsWith('−') || rate.startsWith('-')) return t('order.method.withDiscount', { method: base, rate: rate.slice(1) });
-  return t('order.method.withFee', { method: base, rate: rate.replace(/^\+/, '') });
+  if (method.fee > 0.004) {
+    const fee = formatMoney(method.fee, currency);
+    const label = method.feeLabel?.trim();
+    return label ? t('order.method.feeLabelNote', { label, fee }) : t('order.method.feeNote', { fee });
+  }
+  if (method.fee < -0.004) {
+    const rate = method.feeRateText?.trim().replace(/^[^\d.]+/, '');
+    return rate ? t('order.method.discountNote', { rate }) : t('order.method.savesNote', { amount: formatMoney(-method.fee, currency) });
+  }
+  return null;
 }
 
 /**
  * A manual bank transfer can't be started from this page: the backend refuses
- * every manual gateway on the public payment-method route, so the
+ * every manual gateway on the payment-method route, so the
  * picker shows the transfer details instead of creating a payment.
  */
 export function isManual(method: PaymentMethod): boolean {

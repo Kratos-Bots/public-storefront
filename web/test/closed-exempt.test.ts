@@ -3,8 +3,8 @@ import { isClosedExemptPath } from '@/app/closed-gate.ts';
 
 describe('isClosedExemptPath', () => {
   it.each([
-    ['/order/K7M2QP/ab12cd34', true],
-    ['/order/x/y', true],
+    ['/order/K7M2QP/ab12cd34', false],
+    ['/order/x/y', false],
     ['/payment/success', true],
     ['/payment/cancel', true],
     ['/order-placed', true],

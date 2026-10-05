@@ -1,7 +1,6 @@
 import { useId, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router';
-import { listSavedOrders } from '@/stores/saved-orders.ts';
 import { FADE } from '@/lib/motion.ts';
 import { textKey, useText } from '@/text/runtime.tsx';
 import type { StyleAttrs } from '@/builder/define.ts';
@@ -9,9 +8,6 @@ import classes from '@/features/tracking/Tracking.module.css';
 
 /** Same shape the backend accepts, so a reference it would reject never costs a request. */
 const REFERENCE_RE = /^[A-Z0-9_-]{1,64}$/;
-
-/** How many previously opened references are worth offering back. */
-const RECENT_LIMIT = 4;
 
 export interface LookupFormProps {
   initial?: string;
@@ -33,8 +29,6 @@ export function LookupForm({ initial = '', rootAttrs }: LookupFormProps) {
   const inputId = useId();
   const errorId = useId();
   const hintId = useId();
-  // Read once on mount: references this browser has already opened, newest first.
-  const [recent] = useState(() => listSavedOrders().slice(0, RECENT_LIMIT));
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -87,24 +81,6 @@ export function LookupForm({ initial = '', rootAttrs }: LookupFormProps) {
       >
         {t('tracking.lookup.submit')}
       </button>
-
-      {recent.length > 0 ? (
-        <div className={classes.recent}>
-          <p className={classes.recentLabel}>{t('tracking.lookup.recent')}</p>
-          <div className={classes.chips}>
-            {recent.map((o) => (
-              <button
-                key={o.reference}
-                className={classes.chip}
-                type="button"
-                onClick={() => navigate(`/tracking/${encodeURIComponent(o.reference)}`)}
-              >
-                {o.reference}
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : null}
     </form>
   );
 }

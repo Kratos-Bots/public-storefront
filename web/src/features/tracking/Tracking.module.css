@@ -206,57 +206,6 @@
   outline-offset: 2px;
 }
 
-.recent {
-  margin-top: 1.75rem;
-  padding-top: 1.1rem;
-  border-top: 1px solid var(--sf-line);
-}
-
-.recentLabel {
-  margin: 0;
-  font-family: var(--sf-font-mono);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--sf-faint);
-}
-
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.7rem;
-}
-
-.chip {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  padding: 0 0.85rem;
-  border: 1px solid var(--sf-line-strong);
-  border-radius: var(--sf-card-radius);
-  background: transparent;
-  color: var(--sf-muted);
-  font-family: var(--sf-font-mono);
-  font-size: 13px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.08em;
-  cursor: pointer;
-  transition: border-color 120ms ease, color 120ms ease;
-}
-
-.chip:hover {
-  border-color: var(--sf-primary);
-  color: var(--sf-text);
-}
-
-.chip:focus-visible {
-  outline: 2px solid var(--sf-primary);
-  outline-offset: 2px;
-}
-
 /* ------------------------------------------------------------------ the hero */
 
 .hero {
@@ -1059,7 +1008,6 @@
   }
 
   .seg,
-  .chip,
   .ghost,
   .input,
   .submit,

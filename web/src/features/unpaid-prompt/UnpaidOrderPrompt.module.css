@@ -17,6 +17,12 @@
   color: var(--sf-text);
 }
 
+/* Takes the dialog's first focus (so the order is read out before any control, and no button wears a ring it was
+   not tabbed to); it is not a control, so it draws none. */
+.lede:focus {
+  outline: none;
+}
+
 .lede {
   margin: 0;
   font-size: 1rem;
@@ -52,12 +58,39 @@
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  margin-top: 1.1rem;
 }
 
-/* The primary button comes from the order page's own .cta; this only spaces the group. */
+/* The primary button comes from the order page's own .cta. "Not now" is a quiet text button: still a
+   44px target, in the template's button voice so the two labels are cased alike, but with nothing
+   drawn around it, so it never competes with the primary. */
 .later {
   align-self: stretch;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
   margin-top: 0.25rem;
+  padding: 0 1rem;
+  border: 0;
+  background: transparent;
+  color: var(--sf-muted);
+  font-family: var(--sf-btn-font, inherit);
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.later:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) {
+  .later:hover {
+    color: var(--sf-text);
+    text-decoration: underline;
+    text-underline-offset: 0.25em;
+  }
 }
 
 .more {

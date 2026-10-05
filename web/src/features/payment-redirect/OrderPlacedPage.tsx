@@ -5,7 +5,7 @@ import { useCartStore } from '@/stores/cart.ts';
 import { clearPersistedCheckout } from '@/features/checkout/form-state.ts';
 import { orderChatMessage, withPrefilledText } from '@/lib/chat-links.ts';
 import { MissingReferenceScreen } from '@/features/payment-redirect/MissingReferenceScreen.tsx';
-import { PAYMENT_VIEWS, type PaymentSlots } from '@/features/payment-redirect/payment-parts.tsx';
+import { PAYMENT_VIEWS, useSignInTarget, type PaymentSlots } from '@/features/payment-redirect/payment-parts.tsx';
 import { PaymentFamily, type PaymentData, type PaymentPreview } from '@/builder/family-payment.ts';
 import { usePreviewFixture } from '@/builder/mode.ts';
 import type { FamilyValue } from '@/builder/parts.ts';
@@ -32,6 +32,8 @@ export function OrderPlacedPage({ slots }: { slots?: PaymentSlots } = {}) {
   const warning = preview ? preview.warning : params.get('warning') === '1';
   const clearCart = useCartStore((s) => s.clear);
   const { brand } = useSettings();
+  const liveSignIn = useSignInTarget(orderRef);
+  const signIn = preview ? preview.signIn : liveSignIn;
   const { t } = useText();
 
   // The order was created on the backend before navigating here — start the
@@ -55,8 +57,8 @@ export function OrderPlacedPage({ slots }: { slots?: PaymentSlots } = {}) {
       whatsapp = withPrefilledText(whatsappLink, message);
       telegram = withPrefilledText(telegramLink, message);
     }
-    return { data: { kind: 'placed', orderRef, saved: false, warning, whatsapp, telegram }, views: PAYMENT_VIEWS };
-  }, [orderRef, warning, preview, whatsappLink, telegramLink, t]);
+    return { data: { kind: 'placed', orderRef, signIn, warning, whatsapp, telegram }, views: PAYMENT_VIEWS };
+  }, [orderRef, signIn, warning, preview, whatsappLink, telegramLink, t]);
 
   if (!orderRef) {
     return <MissingReferenceScreen />;

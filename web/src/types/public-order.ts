@@ -1,6 +1,6 @@
-// Shape of the backend's public order-status payload
-// (GET /api/v1/public/orders/:reference/:accessKey). Distinct from the minimal
-// `OrderStatus` in checkout.ts, which only carries payment state for success-page polling.
+// Shape of the order's payment view, as the session route returns it
+// (GET /api/v1/storefront/orders/:reference/payment): what is owed, the active payment, the crypto payments
+// and the cancel flags. The account order itself (`OrderDetail`, in orders.ts) is a different payload.
 
 export type PublicOrderStatus =
   | 'pending'
@@ -123,9 +123,6 @@ export interface PublicOrder {
   cryptoPayments?: PublicCryptoPayment[];
   /** Payment state + deadline. Optional: absent from older backends. */
   payment?: OrderPaymentState;
-  /** Where the promotion breakdown sits is not pinned down yet — read it with `publicOrderPromotions`, which accepts it here or in `totals`. */
-  promotionDiscount?: number;
-  promotions?: PublicOrderPromotion[];
 }
 
 export type CryptoTxidVerification = 'confirmed' | 'checking' | 'needs_review';

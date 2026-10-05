@@ -2336,6 +2336,40 @@
       }
     },
     {
+      "name": "OrderAddress",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "order"
+      }
+    },
+    {
       "name": "OrderBackLink",
       "category": "part",
       "layouts": [
@@ -2443,9 +2477,9 @@
           "OrderHeading",
           "OrderBalance",
           "OrderItems",
-          "OrderPayments",
+          "OrderAddress",
           "OrderParcels",
-          "OrderPageLink"
+          "OrderPayments"
         ],
         "insertSlot": "content"
       }
@@ -2510,40 +2544,6 @@
           "textSize",
           "align",
           "maxWidth"
-        ]
-      },
-      "part": {
-        "family": "order"
-      }
-    },
-    {
-      "name": "OrderPageLink",
-      "category": "part",
-      "layouts": [
-        "storefront",
-        "menu",
-        "webapp"
-      ],
-      "routeBound": false,
-      "style": {
-        "target": "wrap",
-        "keys": [
-          "bg",
-          "fg",
-          "padTop",
-          "padBottom",
-          "padX",
-          "marginTop",
-          "marginBottom",
-          "border",
-          "borderColor",
-          "borderStyle",
-          "radius",
-          "shadow",
-          "textSize",
-          "align",
-          "maxWidth",
-          "hide"
         ]
       },
       "part": {
@@ -2843,251 +2843,6 @@
       },
       "part": {
         "family": "orders"
-      }
-    },
-    {
-      "name": "OrderStatus",
-      "category": "post-order",
-      "layouts": [
-        "storefront",
-        "menu",
-        "webapp"
-      ],
-      "routeBound": true,
-      "style": {
-        "target": "wrap",
-        "keys": [
-          "bg",
-          "padTop",
-          "padBottom",
-          "padX",
-          "marginTop",
-          "marginBottom",
-          "border",
-          "borderColor",
-          "borderStyle",
-          "radius",
-          "shadow",
-          "maxWidth"
-        ]
-      },
-      "container": {
-        "family": "order-status",
-        "slots": [
-          "top",
-          "action",
-          "summary",
-          "bottom"
-        ],
-        "required": [
-          "OrderStatusHero",
-          "OrderStatusPayment",
-          "OrderStatusShipments",
-          "OrderStatusItems",
-          "OrderStatusFooter"
-        ],
-        "unique": [
-          "OrderStatusHero",
-          "OrderStatusPayment",
-          "OrderStatusShipments",
-          "OrderStatusItems",
-          "OrderStatusAddress",
-          "OrderStatusFooter"
-        ],
-        "insertSlot": "summary"
-      }
-    },
-    {
-      "name": "OrderStatusAddress",
-      "category": "part",
-      "layouts": [
-        "storefront",
-        "menu",
-        "webapp"
-      ],
-      "routeBound": false,
-      "style": {
-        "target": "root",
-        "keys": [
-          "bg",
-          "fg",
-          "padTop",
-          "padBottom",
-          "padX",
-          "marginTop",
-          "marginBottom",
-          "border",
-          "borderColor",
-          "borderStyle",
-          "radius",
-          "shadow",
-          "textSize",
-          "align",
-          "maxWidth",
-          "hide"
-        ]
-      },
-      "part": {
-        "family": "order-status"
-      }
-    },
-    {
-      "name": "OrderStatusFooter",
-      "category": "part",
-      "layouts": [
-        "storefront",
-        "menu",
-        "webapp"
-      ],
-      "routeBound": false,
-      "style": {
-        "target": "root",
-        "keys": [
-          "bg",
-          "fg",
-          "padTop",
-          "padBottom",
-          "padX",
-          "marginTop",
-          "marginBottom",
-          "border",
-          "borderColor",
-          "borderStyle",
-          "radius",
-          "shadow",
-          "textSize",
-          "align",
-          "maxWidth"
-        ]
-      },
-      "part": {
-        "family": "order-status"
-      }
-    },
-    {
-      "name": "OrderStatusHero",
-      "category": "part",
-      "layouts": [
-        "storefront",
-        "menu",
-        "webapp"
-      ],
-      "routeBound": false,
-      "style": {
-        "target": "root",
-        "keys": [
-          "bg",
-          "fg",
-          "padTop",
-          "padBottom",
-          "padX",
-          "marginTop",
-          "marginBottom",
-          "border",
-          "borderColor",
-          "borderStyle",
-          "radius",
-          "shadow",
-          "textSize",
-          "align",
-          "maxWidth"
-        ]
-      },
-      "part": {
-        "family": "order-status"
-      }
-    },
-    {
-      "name": "OrderStatusItems",
-      "category": "part",
-      "layouts": [
-        "storefront",
-        "menu",
-        "webapp"
-      ],
-      "routeBound": false,
-      "style": {
-        "target": "root",
-        "keys": [
-          "bg",
-          "fg",
-          "padTop",
-          "padBottom",
-          "padX",
-          "marginTop",
-          "marginBottom",
-          "border",
-          "borderColor",
-          "borderStyle",
-          "radius",
-          "shadow",
-          "textSize",
-          "align",
-          "maxWidth"
-        ]
-      },
-      "part": {
-        "family": "order-status"
-      }
-    },
-    {
-      "name": "OrderStatusPayment",
-      "category": "part",
-      "layouts": [
-        "storefront",
-        "menu",
-        "webapp"
-      ],
-      "routeBound": false,
-      "style": {
-        "target": "wrap",
-        "keys": [
-          "bg",
-          "padTop",
-          "padBottom",
-          "padX",
-          "marginTop",
-          "marginBottom",
-          "border",
-          "borderColor",
-          "borderStyle",
-          "radius",
-          "shadow",
-          "maxWidth"
-        ]
-      },
-      "part": {
-        "family": "order-status"
-      }
-    },
-    {
-      "name": "OrderStatusShipments",
-      "category": "part",
-      "layouts": [
-        "storefront",
-        "menu",
-        "webapp"
-      ],
-      "routeBound": false,
-      "style": {
-        "target": "wrap",
-        "keys": [
-          "bg",
-          "padTop",
-          "padBottom",
-          "padX",
-          "marginTop",
-          "marginBottom",
-          "border",
-          "borderColor",
-          "borderStyle",
-          "radius",
-          "shadow",
-          "maxWidth"
-        ]
-      },
-      "part": {
-        "family": "order-status"
       }
     },
     {

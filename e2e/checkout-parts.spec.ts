@@ -1,20 +1,20 @@
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import {
-  COUPON_CODE, installMocks, installTelegramStub, ORDER_PATH, publicOrderVariant, type InstallMocksOptions, type Layout, type MockHandle, type OrderVariant,
+  COUPON_CODE, installMocks, installTelegramStub, type InstallMocksOptions, type Layout, type MockHandle,
 } from './mocks.ts';
 import { FIXED_NOW } from './flows.ts';
 import { presetTheme } from './template-theme.ts';
 import {
-  arrangedCheckoutSet, arrangedOrderSet, defaultCheckoutSet, defaultOrderSet, illegalCheckoutSet, illegalOrderSet, LEGAL_STEP_ORDERS, noCouponCheckoutSet,
-  ORDER_NOTE, SHIPS_NOTE, sectionedPaymentOrderSet, type IllegalCheckout, type IllegalOrder, type StepKind,
+  arrangedCheckoutSet, defaultCheckoutSet, illegalCheckoutSet, LEGAL_STEP_ORDERS, noCouponCheckoutSet,
+  SHIPS_NOTE, type IllegalCheckout, type StepKind,
 } from './page-sets.ts';
 import type { PageSet } from '../web/src/builder/types.ts';
 
 /**
- * Checkout and order-status parts, as a shopper meets them (spec 2026-09-30-checkout-parts §12, §13):
+ * Checkout parts, as a shopper meets them (spec 2026-09-30-checkout-parts §12, §13):
  * the checkout rearranged and in every legal step order, the default arrangement's request payloads, a
  * removed coupon or notes part never sending a saved value, an illegal document serving the default
- * checkout, the order page rearranged, and no horizontal overflow at 360 px under every template. All
+ * checkout, and no horizontal overflow at 360 px under every template. All
  * against the mocked backend; nothing leaves the dev server.
  */
 
@@ -31,7 +31,6 @@ interface OpenOptions {
   tweakSettings?: InstallMocksOptions['tweakSettings'];
   /** localStorage keys seeded once, before the app boots. */
   seed?: Record<string, unknown>;
-  order?: OrderVariant;
   /** What the collection-point search answers with (see InstallMocksOptions.servicePoints). */
   servicePoints?: InstallMocksOptions['servicePoints'];
   tweakOrderDetail?: InstallMocksOptions['tweakOrderDetail'];
@@ -98,7 +97,6 @@ async function open(page: Page, layout: Layout, set: PageSet | null, path: strin
     layout,
     session: !o.guest && !o.telegram,
     pages: { [layout]: set },
-    order: o.order ? publicOrderVariant(o.order) : undefined,
     servicePoints: o.servicePoints,
     tweakOrderDetail: o.tweakOrderDetail,
     tweakSettings: (s) => { if (o.guest) s.features.guestCheckout = true; o.tweakSettings?.(s); },
@@ -170,10 +168,13 @@ async function walk(page: Page, w: Walk): Promise<void> {
   await expect(page.getByText('USDT · Polygon')).toBeVisible();
 }
 
-async function placeOrder(page: Page, via?: () => Promise<void>): Promise<void> {
+/** Where placing an order leaves a shopper: the account order page when signed in, the thank-you page for a guest. */
+const AFTER_ORDER = { account: /\/account\/orders\/E2E1$/, guest: /\/order-placed\?order=E2E1$/ };
+
+async function placeOrder(page: Page, after: keyof typeof AFTER_ORDER, via?: () => Promise<void>): Promise<void> {
   if (via) await via();
   else await page.getByRole('button', { name: /^Place order/ }).click();
-  await expect(page).toHaveURL(new RegExp(`${ORDER_PATH}$`));
+  await expect(page).toHaveURL(AFTER_ORDER[after]);
 }
 
 /** What the existing checkout e2e (storefront.spec.ts) asserts of the posted order: v0.7.0's behaviour. */
@@ -181,6 +182,17 @@ const BASE_BODY = {
   shippingOptionId: 11, paymentMethod: 'crypto_static', coin: 'usdt', network: 'polygon', email: 'ada@example.invalid',
   shippingAddress: { firstName: 'Ada', surname: 'Sterling', addressLine1: '14 Kirkgate', city: 'Leeds', zip: 'LS1 6BY', country: 'GB' },
 };
+
+/**
+ * A guest's quote is debounced (300 ms) and mints a token of its own, and the Place order button is down while it does.
+ * Picking the shipping option starts that run, and the walk reaches Review well inside a second: a click landing in the
+ * gap before it starts is answered by an error, and one landing as it starts hits a disabled button and does nothing.
+ * So wait for the quote priced for the pick to be asked for and finished, as a shopper would see the button come back.
+ */
+async function guestQuoteSettled(page: Page, mocks: MockHandle): Promise<void> {
+  await expect.poll(() => mocks.state.guestQuotes.some((q) => q.shippingOptionId === 11)).toBe(true);
+  await expect(page.getByText('Verifying')).toHaveCount(0);
+}
 
 /** The cart is spent and the saved checkout form is gone. */
 async function expectSpent(page: Page): Promise<void> {
@@ -198,7 +210,7 @@ test.describe('checkout · the default arrangement sends what v0.7.0 sent', () =
     test(`${layout} · signed in: the order, and the requests, equal the no-page-set checkout`, async ({ page, browser }) => {
       const first = await open(page, layout, defaultCheckoutSet(layout), '/checkout', { width: 390 });
       await walk(page, { order: LEGAL_STEP_ORDERS[0]! });
-      await placeOrder(page);
+      await placeOrder(page, 'account');
       await expectSpent(page);
       expect(first.mocks.state.checkouts).toHaveLength(1);
       expect(first.mocks.state.checkouts[0]).toMatchObject(BASE_BODY);
@@ -214,7 +226,7 @@ test.describe('checkout · the default arrangement sends what v0.7.0 sent', () =
         const p2 = await ctx.newPage();
         const second = await open(p2, layout, null, '/checkout', { width: 390 });
         await walk(p2, { order: LEGAL_STEP_ORDERS[0]! });
-        await placeOrder(p2);
+        await placeOrder(p2, 'account');
         expect(second.mocks.state.checkouts[0]).toEqual(first.mocks.state.checkouts[0]);
         expect(second.mocks.state.quotes).toEqual(first.mocks.state.quotes);
       } finally {
@@ -226,7 +238,8 @@ test.describe('checkout · the default arrangement sends what v0.7.0 sent', () =
       const { mocks } = await open(page, layout, defaultCheckoutSet(layout), '/checkout', { width: 390, guest: true });
       await expect(page.getByRole('heading', { name: 'Guest checkout', level: 1 })).toBeVisible();
       await walk(page, { order: LEGAL_STEP_ORDERS[0]! });
-      await placeOrder(page);
+      await guestQuoteSettled(page, mocks);
+      await placeOrder(page, 'guest');
       await expectSpent(page);
       expect(mocks.state.checkouts).toHaveLength(1);
       const body = mocks.state.checkouts[0]!;
@@ -284,7 +297,7 @@ test.describe('checkout · the contact and address form', () => {
     await expect(page.getByText('+447801123456')).toBeVisible();
     await expect(page.getByText('Flat 2')).toBeVisible();
 
-    await placeOrder(page);
+    await placeOrder(page, 'account');
     const body = mocks.state.checkouts[0]!;
     expect(body.shippingAddress).toMatchObject({ addressLine1: '14 Kirkgate', addressLine3: 'Flat 2', city: 'Leeds', zip: 'LS1 6BY', country: 'GB' });
     // What is sent is unchanged: the backend strips the zero.
@@ -356,7 +369,7 @@ test.describe('checkout · collection points', () => {
     await expect(page.getByText('Collect from')).toBeVisible();
     await expect(page.getByText('Corner News')).toBeVisible();
 
-    await placeOrder(page);
+    await placeOrder(page, 'account');
     expect(mocks.state.servicePointSearches).toEqual([{ country: 'GB', postalCode: 'LS1 6BY' }]);
     await expect.poll(() => mocks.state.quotes.at(-1)).toMatchObject({ country: 'GB', deliveryMethod: 'collection', servicePointCarrier: 'evri' });
     expect(mocks.state.checkouts[0]!.shippingAddress).toEqual({
@@ -374,7 +387,7 @@ test.describe('checkout · collection points', () => {
     await next(page);
     await toReview(page);
     await expect(page.getByText('Collect from')).toBeVisible();
-    await placeOrder(page);
+    await placeOrder(page, 'account');
     expect(mocks.state.checkouts[0]!.shippingAddress).toMatchObject({
       addressLine1: 'Quayside Parcel Box', city: 'Leeds', zip: 'LS1 5AB', country: 'GB',
       servicePointId: '9004', servicePointCarrier: 'evri', servicePointName: 'Quayside Parcel Box',
@@ -399,7 +412,7 @@ test.describe('checkout · collection points', () => {
     await next(page);
     await toReview(page);
     await expect(page.getByText('Northbound Locker A')).toBeVisible();
-    await placeOrder(page);
+    await placeOrder(page, 'account');
     expect(mocks.state.checkouts[0]!.shippingAddress).toMatchObject({
       addressLine1: 'Kirkgate 14', servicePointId: '9001', servicePointCarrier: 'inpost', servicePointName: 'Northbound Locker A',
     });
@@ -419,7 +432,7 @@ test.describe('checkout · collection points', () => {
     await expect(page.getByRole('textbox', { name: 'Address line 1' })).toHaveValue('14 Kirkgate');
     await next(page);
     await toReview(page);
-    await placeOrder(page);
+    await placeOrder(page, 'account');
     expect(mocks.state.checkouts[0]).toMatchObject(BASE_BODY);
     expect(Object.keys(mocks.state.checkouts[0]!.shippingAddress as object)).not.toEqual(expect.arrayContaining(['servicePointId']));
     for (const q of mocks.state.quotes) expect(Object.keys(q)).not.toEqual(expect.arrayContaining(['deliveryMethod']));
@@ -447,7 +460,7 @@ test.describe('checkout · collection points', () => {
     // The guest quote is debounced and mints a token of its own: let the one priced for this point land before placing.
     await expect.poll(() => mocks.state.guestQuotes.some((q) => q.deliveryMethod === 'collection' && q.shippingOptionId === 11)).toBe(true);
     await expect(page.getByText('Verifying')).toHaveCount(0);
-    await placeOrder(page);
+    await placeOrder(page, 'guest');
     expect(mocks.state.checkouts[0]!.shippingAddress).toMatchObject({ servicePointId: '9001', servicePointCarrier: 'inpost' });
     expect(mocks.state.guestQuotes.at(-1)).toMatchObject({ deliveryMethod: 'collection', servicePointCarrier: 'inpost' });
   });
@@ -490,12 +503,6 @@ test.describe('checkout · collection points', () => {
     await expect(page.getByRole('heading', { name: 'Items' })).toBeVisible();
     await expect(page.getByText('Collect from')).toHaveCount(0);
   });
-
-  test('the public order page says which collection point the order goes to', async ({ page }) => {
-    await open(page, 'storefront', null, ORDER_PATH, { order: 'collection' });
-    await expect(page.getByText('Collect from')).toBeVisible();
-    await expect(page.getByText('Corner News')).toBeVisible();
-  });
 });
 
 // 1 — rearranged: storefront, menu and web app, at a phone and a desktop width -------------------------
@@ -514,7 +521,7 @@ test.describe('checkout · rearranged, end to end', () => {
         await expect(page.getByRole('heading', { name: HEADING.contact })).toHaveCount(0);
 
         await walk(page, { order: LEGAL_STEP_ORDERS[1]!, coupon: COUPON_CODE, notes: NOTE, content: true });
-        await placeOrder(page);
+        await placeOrder(page, 'account');
         await expectSpent(page);
 
         expect(mocks.state.checkouts).toHaveLength(1);
@@ -529,7 +536,8 @@ test.describe('checkout · rearranged, end to end', () => {
     test(`${layout} · 390px · guest: same arrangement, a token per request, coupon and notes sent`, async ({ page }) => {
       const { mocks } = await open(page, layout, arrangedCheckoutSet(layout), '/checkout', { width: 390, guest: true });
       await walk(page, { order: LEGAL_STEP_ORDERS[1]!, coupon: COUPON_CODE, notes: NOTE, content: true });
-      await placeOrder(page);
+      await guestQuoteSettled(page, mocks);
+      await placeOrder(page, 'guest');
       await expectSpent(page);
       expect(mocks.state.checkouts).toHaveLength(1);
       const body = mocks.state.checkouts[0]!;
@@ -564,7 +572,7 @@ test.describe('checkout · inside Telegram', () => {
       await expect(page.getByRole('button', { name: /^Place order/ })).toHaveCount(0);
       expect(await mainText(page)).toContain(arranged ? '41.78' : '46.03');
       await clickMain(page);
-      await expect(page).toHaveURL(new RegExp(`${ORDER_PATH}$`));
+      await expect(page).toHaveURL(AFTER_ORDER.account);
       expect(mocks.state.checkouts).toHaveLength(1);
       expect(mocks.state.checkouts[0]).toMatchObject(arranged ? { ...BASE_BODY, couponCode: COUPON_CODE, notes: NOTE } : BASE_BODY);
       expect(((await tg(page)).calls.filter((c) => c[0] === 'haptic.notify')).map((c) => c[1])).toContain('success');
@@ -583,7 +591,7 @@ test.describe('checkout · step orders', () => {
       const labels: Record<StepKind, string> = { contact: 'Contact', address: 'Address', shipping: 'Shipping', payment: 'Payment', review: 'Review' };
       await expect(page.locator('[data-sf-part="stepper"]')).toHaveText(new RegExp(order.map((k) => labels[k]).join('[\\s\\S]*')));
       await walk(page, { order, coupon: COUPON_CODE, notes: NOTE, content: true });
-      await placeOrder(page);
+      await placeOrder(page, 'account');
       expect(mocks.state.checkouts[0]).toMatchObject({ ...BASE_BODY, couponCode: COUPON_CODE, notes: NOTE });
       expect(logs).toEqual([]);
     });
@@ -605,7 +613,7 @@ test.describe('checkout · step orders', () => {
       expect(logs.filter((l) => l.includes('[checkout]'))).toEqual([]);
       // And it is a working checkout, in the default order.
       await walk(page, { order: LEGAL_STEP_ORDERS[0]! });
-      await placeOrder(page);
+      await placeOrder(page, 'account');
       expect(mocks.state.checkouts[0]).toMatchObject(BASE_BODY);
     });
   }
@@ -621,7 +629,7 @@ test.describe('checkout · removed coupon and notes parts', () => {
     await walk(page, { order: LEGAL_STEP_ORDERS[0]! });
     // No coupon row anywhere on a checkout without the part.
     await expect(page.getByRole('textbox', { name: 'Coupon code' })).toHaveCount(0);
-    await placeOrder(page);
+    await placeOrder(page, 'account');
     expect(gone.mocks.state.quotes.length).toBeGreaterThan(0);
     for (const q of gone.mocks.state.quotes) expect(q.couponCode, JSON.stringify(q)).toBeUndefined();
     expect(gone.mocks.state.checkouts[0]).toMatchObject(BASE_BODY);
@@ -634,7 +642,7 @@ test.describe('checkout · removed coupon and notes parts', () => {
       const p2 = await ctx.newPage();
       const back = await open(p2, 'storefront', noCouponCheckoutSet('storefront', { coupon: true, notes: true }), '/checkout', { seed: SAVED });
       await walk(p2, { order: LEGAL_STEP_ORDERS[0]! });
-      await placeOrder(p2);
+      await placeOrder(p2, 'account');
       expect(back.mocks.state.quotes.some((q) => q.couponCode === COUPON_CODE)).toBe(true);
       expect(back.mocks.state.checkouts[0]).toMatchObject({ ...BASE_BODY, couponCode: COUPON_CODE, notes: 'Saved note from a previous visit' });
     } finally {
@@ -645,7 +653,7 @@ test.describe('checkout · removed coupon and notes parts', () => {
   test('guest: the same, and exactly one Turnstile mint per guest request', async ({ page, browser }) => {
     const gone = await open(page, 'storefront', noCouponCheckoutSet('storefront'), '/checkout', { guest: true, seed: SAVED });
     await walk(page, { order: LEGAL_STEP_ORDERS[0]! });
-    await placeOrder(page);
+    await placeOrder(page, 'guest');
     expect(gone.mocks.state.guestQuotes.length).toBeGreaterThan(0);
     for (const q of gone.mocks.state.guestQuotes) expect(q.couponCode, JSON.stringify(q)).toBeUndefined();
     const body = gone.mocks.state.checkouts[0]!;
@@ -662,7 +670,7 @@ test.describe('checkout · removed coupon and notes parts', () => {
       const p2 = await ctx.newPage();
       const back = await open(p2, 'storefront', noCouponCheckoutSet('storefront', { coupon: true, notes: true }), '/checkout', { guest: true, seed: SAVED });
       await walk(p2, { order: LEGAL_STEP_ORDERS[0]! });
-      await placeOrder(p2);
+      await placeOrder(p2, 'guest');
       expect(back.mocks.state.guestQuotes.some((q) => q.couponCode === COUPON_CODE)).toBe(true);
       expect(back.mocks.state.checkouts[0]).toMatchObject({ ...BASE_BODY, couponCode: COUPON_CODE, notes: 'Saved note from a previous visit' });
       const used2 = [...back.mocks.state.guestQuotes.map((q) => q.turnstileToken), back.mocks.state.checkouts[0]!.turnstileToken];
@@ -674,161 +682,7 @@ test.describe('checkout · removed coupon and notes parts', () => {
   });
 });
 
-// 6 — the order page -----------------------------------------------------------------------------------------------
-
-const hero = (page: Page) => page.getByRole('heading', { level: 1 }).first();
-const pageWide = (page: Page) => page.locator('[class*="pageWide"]');
-const precedes = async (a: Locator, b: Locator) => {
-  const bh = await b.elementHandle();
-  return a.evaluate((el, other) => !!(el.compareDocumentPosition(other as Node) & Node.DOCUMENT_POSITION_FOLLOWING), bh);
-};
-
-/** The default order page's DOM with React's generated ids (and CSS-module hashes) made comparable. */
-async function orderDom(page: Page): Promise<string> {
-  await page.waitForLoadState('networkidle');
-  await page.waitForTimeout(500);
-  const html = await page.evaluate(() => {
-    // The page itself: the shell around it is the set's own published shell, which differs from the built-in one.
-    const main = document.querySelector('main [class*="_page_"]')!.cloneNode(true) as HTMLElement;
-    main.querySelectorAll('script, style').forEach((s) => s.remove());
-    return main.innerHTML;
-  });
-  return html
-    .replace(/\b(id|for|aria-[a-z]+)="([^"]*)"/g, (_m, attr: string, val: string) => `${attr}="${val.replace(/(mantine-)[a-z0-9]{5,}/gi, '$1ID').replace(/«r[0-9a-z]+»|:r[0-9a-z]+:|_r_[0-9a-z]+_/g, 'RID')}"`)
-    .replace(/(_[A-Za-z][\w-]*?)_[a-z0-9]{5}_\d+(?![\w-])/g, '$1_H')
-    .replace(/></g, '>\n<');
-}
-
-test.describe('order page · parts', () => {
-  for (const layout of LAYOUTS) {
-    for (const width of WIDTHS) {
-      test(`${layout} · ${width}px · the default arrangement written out as parts draws the no-page-set page`, async ({ page, browser }) => {
-        await open(page, layout, defaultOrderSet(layout), ORDER_PATH, { width });
-        await expect(page.getByRole('heading', { name: 'Send 46.03 USDT' })).toBeAttached();
-        const parts = await orderDom(page);
-        const ctx = await browser.newContext();
-        try {
-          const p2 = await ctx.newPage();
-          await open(p2, layout, null, ORDER_PATH, { width });
-          await expect(p2.getByRole('heading', { name: 'Send 46.03 USDT' })).toBeAttached();
-          expect(parts).toBe(await orderDom(p2));
-        } finally {
-          await ctx.close();
-        }
-      });
-    }
-  }
-
-  test('awaiting payment, rearranged: the payment card is first, the note and Items follow, Address is gone; choosing a method posts it', async ({ page }) => {
-    const { mocks, logs } = await open(page, 'storefront', arrangedOrderSet('storefront'), ORDER_PATH, { order: 'choose' });
-    await expect(page.getByRole('heading', { name: /^Choose how to pay/ })).toBeVisible();
-    const card = page.locator('[data-sf-part="card"]').first();
-    const note = page.getByText(ORDER_NOTE);
-    const items = page.getByRole('region', { name: 'Items' });
-    await expect(note).toBeVisible();
-    await expect(items).toBeVisible();
-    expect(await precedes(card, note)).toBe(true);
-    expect(await precedes(note, items)).toBe(true);
-    await expect(page.getByRole('region', { name: 'Delivery address' })).toHaveCount(0);
-    // The action column holds everything, so the page stays a single column.
-    await expect(pageWide(page)).toHaveCount(0);
-
-    await page.getByRole('button', { name: /^Crypto/ }).click();
-    await page.locator('label').filter({ hasText: 'USDT' }).first().click();
-    await page.getByRole('button', { name: /^Pay with / }).click();
-    await expect.poll(() => mocks.state.methods).toEqual([{ method: 'crypto_static', coin: 'usdt', network: 'polygon' }]);
-    expect(logs).toEqual([]);
-  });
-
-  test('awaiting payment with a crypto payment open: txid, change of method and a refresh all work with the parts moved', async ({ page }) => {
-    const { mocks } = await open(page, 'storefront', arrangedOrderSet('storefront'), ORDER_PATH);
-    await expect(page.getByRole('heading', { name: 'Send 46.03 USDT' })).toBeVisible();
-    const txid = 'a1b2c3d4e5f60718293a4b5c6d7e8f9011223344556677889900aabbccddeeff';
-    await page.getByRole('textbox', { name: 'Transaction ID' }).fill(`  ${txid}  `);
-    await page.getByRole('button', { name: 'Submit' }).click();
-    await expect(page.getByRole('heading', { name: 'Verifying your payment' })).toBeVisible();
-    expect(mocks.state.txids).toEqual([{ paymentId: 9001, txid }]);
-
-    // A refresh keeps the page, the parts and the submitted state (the order is the backend's).
-    await page.reload();
-    await expect(page.getByRole('heading', { name: 'Verifying your payment' })).toBeVisible();
-    await expect(page.getByText(ORDER_NOTE)).toBeVisible();
-  });
-
-  test('changing the payment method from the disclosure posts the selection', async ({ page }) => {
-    const { mocks } = await open(page, 'storefront', arrangedOrderSet('storefront'), ORDER_PATH);
-    await expect(page.getByRole('heading', { name: 'Send 46.03 USDT' })).toBeVisible();
-    await page.getByRole('button', { name: 'Change payment method' }).click();
-    await page.getByRole('button', { name: /^Crypto/ }).click();
-    await page.locator('label').filter({ hasText: 'BTC' }).first().click();
-    await page.getByRole('button', { name: /^Pay with / }).click();
-    await expect.poll(() => mocks.state.methods).toEqual([{ method: 'crypto_static', coin: 'btc', network: 'bitcoin' }]);
-    await page.reload();
-    await expect(page.getByText(ORDER_NOTE)).toBeVisible();
-  });
-
-  test('shipped: the tracking card shows, with no payment card', async ({ page }) => {
-    await open(page, 'storefront', arrangedOrderSet('storefront'), ORDER_PATH, { order: 'shipped' });
-    await expect(page.getByText('NB000977GB')).toBeVisible();
-    await expect(page.getByText(ORDER_NOTE)).toBeVisible();
-    await expect(page.getByRole('heading', { name: /pay|Send/i })).toHaveCount(0);
-    await expect(page.getByRole('textbox', { name: 'Transaction ID' })).toHaveCount(0);
-  });
-
-  test('a pre-v0.7 order (no payment block) renders without error, parts moved or not', async ({ page }) => {
-    const errors: string[] = [];
-    page.on('pageerror', (e) => errors.push(e.message));
-    const { logs } = await open(page, 'storefront', arrangedOrderSet('storefront'), ORDER_PATH, { order: 'legacy' });
-    await expect(page.getByRole('region', { name: 'Items' })).toBeVisible();
-    await expect(page.getByText(ORDER_NOTE)).toBeVisible();
-    expect(errors).toEqual([]);
-    expect(logs).toEqual([]);
-  });
-
-  const ILLEGAL: IllegalOrder[] = ['shipments-first', 'hidden-payment'];
-  for (const kind of ILLEGAL) {
-    test(`an illegal published document (${kind}) serves the default order page, quietly`, async ({ page }) => {
-      const { logs } = await open(page, 'storefront', illegalOrderSet('storefront', kind), ORDER_PATH, { order: 'shipped' });
-      await expect(page.getByText('NB000977GB')).toBeVisible();
-      await expect(page.getByRole('region', { name: 'Items' })).toBeVisible();
-      await expect(page.getByText(/rendering the default|breaks part-/i)).toHaveCount(0);
-      expect(logs.filter((l) => l.startsWith('error: [builder] "order-status"'))).toHaveLength(1);
-    });
-  }
-
-  test('a Section holding a payment part with nothing owed leaves the page narrow, exactly like the default', async ({ page, browser }) => {
-    // Paid, nothing shipped yet: payment and tracking both draw nothing.
-    await open(page, 'storefront', sectionedPaymentOrderSet('storefront'), ORDER_PATH, { order: 'paid' });
-    await expect(page.getByRole('region', { name: 'Items' })).toBeVisible();
-    await expect(pageWide(page)).toHaveCount(0);
-    const width = async (p: Page) => (await p.locator('[class*="_layout_"]').first().boundingBox())!.width;
-    const sectioned = await width(page);
-
-    const ctx = await browser.newContext();
-    try {
-      const p2 = await ctx.newPage();
-      await open(p2, 'storefront', defaultOrderSet('storefront'), ORDER_PATH, { order: 'paid' });
-      await expect(p2.getByRole('region', { name: 'Items' })).toBeVisible();
-      await expect(pageWide(p2)).toHaveCount(0);
-      expect(sectioned).toBe(await width(p2));
-    } finally {
-      await ctx.close();
-    }
-    // And while money is owed the same document goes wide (the Section is not silent).
-    const ctx2 = await browser.newContext();
-    try {
-      const p3 = await ctx2.newPage();
-      await open(p3, 'storefront', sectionedPaymentOrderSet('storefront'), ORDER_PATH, { order: 'choose' });
-      await expect(p3.getByRole('region', { name: 'Items' })).toBeVisible();
-      await expect(pageWide(p3)).toHaveCount(1);
-    } finally {
-      await ctx2.close();
-    }
-    expect(await hero(page).count()).toBeGreaterThan(0);
-  });
-});
-
-// 7 — no horizontal overflow at 360 px under every template ---------------------------------------------------------
+// 6 — no horizontal overflow at 360 px under every template ---------------------------------------------------------
 
 const TEMPLATES = [
   { template: 'modern', preset: 'default' },
@@ -849,7 +703,7 @@ const overflow = (page: Page) => page.evaluate(() => ({ sw: document.documentEle
 
 for (const t of TEMPLATES) {
   for (const layout of ['storefront', 'menu', 'webapp'] as const) {
-    test(`${t.template}/${t.preset} · ${layout} · rearranged checkout steps 1-5 and order page at 360px have no horizontal overflow`, async ({ page }) => {
+    test(`${t.template}/${t.preset} · ${layout} · rearranged checkout steps 1-5 at 360px have no horizontal overflow`, async ({ page }) => {
       const failures: string[] = [];
       const measure = async (where: string) => {
         await page.waitForTimeout(250);
@@ -889,14 +743,6 @@ for (const t of TEMPLATES) {
       }
       expect(failures).toEqual([]);
 
-      // The order page, rearranged, in the states that draw the most.
-      for (const variant of ['crypto', 'choose', 'shipped'] as const) {
-        mocks.state.order = publicOrderVariant(variant);
-        mocks.state.pages[layout] = arrangedOrderSet(layout);
-        await page.goto(ORDER_PATH);
-        await expect(page.getByText(ORDER_NOTE)).toBeVisible();
-        await measure(`order page (${variant})`);
-      }
       expect(failures).toEqual([]);
     });
   }

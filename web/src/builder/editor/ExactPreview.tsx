@@ -36,7 +36,7 @@ export const routeKeyFor = (docKey: DocKey, layout: LayoutKind): RouteKey =>
  * as the live routes do. Fixture mode stays on; there are no editor hints (`editing: false`).
  *
  * The routes nest under the fixture route (fixture-routes.tsx gives it a trailing `/*`), so blocks
- * read the same fixture params (`p/:id`, `order/:ref/:accessKey`). PuckShell's route-key lookup
+ * read the same fixture params (`p/:id`, `account/orders/:ref`). PuckShell's route-key lookup
  * finds no `handle` here, so the chrome choice PuckShell would make from it is made below instead.
  *
  * Nothing can be edited while it shows, so nothing is posted (session.ts), and Puck's hotkeys are

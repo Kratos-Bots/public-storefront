@@ -7,7 +7,7 @@ import type { ComponentData } from '@/builder/types.ts';
 
 const PaymentSuccessPage = lazy(() => import('@/features/payment-redirect/PaymentSuccessPage.tsx').then((m) => ({ default: m.PaymentSuccessPage })));
 
-/** The hosted-checkout success page: a container of payment parts; a saved order still hands off to its page. */
+/** The hosted-checkout success page: a container of payment parts; its sign-in and order actions come from the payment actions part. */
 export const block = defineBlock<{ id: string; content: ComponentData[] }>({
   name: 'PaymentSuccess', label: 'Payment received', category: 'post-order', layouts: 'all', routeBound: true, slots: ['content'],
   style: styleSupport('wrap', [...BOX]),

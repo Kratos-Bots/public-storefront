@@ -5,6 +5,7 @@ import { useEffectiveLayout } from '@/app/layout.ts';
 import { Guard } from '@/app/guards.tsx';
 import { AccessBoundary, AuthOnlyFrame } from '@/app/AccessBoundary.tsx';
 import { TelegramCallbackPage } from '@/features/auth/TelegramCallbackPage.tsx';
+import { OrderLinkRedirect } from '@/app/OrderLinkRedirect.tsx';
 import { BuilderRoute } from '@/app/builder-route.tsx';
 import { PuckPage, PuckShell } from '@/builder/runtime.tsx';
 import { customPageKey, type FixedRouteKey } from '@/builder/types.ts';
@@ -141,9 +142,8 @@ export const routes: RouteObject[] = [
           { path: 'profile', ...page('account.profile') },
         ],
       },
-      // Reached from a chat link: its default document says chrome: 'none', so PuckShell
-      // renders v0.6.0's Chromeless frame around it.
-      { path: 'order/:ref/:accessKey', ...page('order-status') },
+      // The old key link, still written into order emails and hosted-payment return addresses.
+      { path: 'order/:ref/:accessKey', element: <OrderLinkRedirect /> },
       { path: 'payment/success', ...page('payment-success') },
       { path: 'payment/cancel', ...page('payment-cancel') },
       { path: 'order-placed', ...page('order-placed') },

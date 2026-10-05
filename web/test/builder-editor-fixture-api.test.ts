@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createFixtureInterceptor } from '@/builder/editor/fixture-api.ts';
-import { FIXTURE_ACCESS_KEY, FIXTURE_ORDER_REF } from '@/builder/editor/fixtures.ts';
+import { FIXTURE_ORDER_REF, FIXTURE_PUBLIC_ORDER, FIXTURE_QUOTE } from '@/builder/editor/fixtures.ts';
 import type { PreviewAs } from '@/builder/mode.ts';
 
 const ORIGIN = 'http://localhost:3000';
@@ -71,7 +71,7 @@ describe('fixture interceptor', () => {
 
   it('never answers a GET with a status ky would retry', async () => {
     const paths = ['storefront/profile', 'storefront/cart', 'storefront/orders', `storefront/orders/${FIXTURE_ORDER_REF}`, 'storefront/orders/X',
-      `orders/${FIXTURE_ORDER_REF}/${FIXTURE_ACCESS_KEY}`, 'orders/A/B', 'orders/A/B/payment-options', 'verify/A/1', 'storefront/profile/redeem-options', 'nope'];
+      `storefront/orders/${FIXTURE_ORDER_REF}/payment`, `storefront/orders/${FIXTURE_ORDER_REF}/payment-options`, `storefront/orders/X/payment`, `orders/${FIXTURE_ORDER_REF}/key`, 'verify/A/1', 'storefront/profile/redeem-options', 'nope'];
     for (const as of [IN_ORDERS, IN_EMPTY, OUT]) {
       for (const path of paths) {
         const { result } = await call(as, path);
@@ -96,9 +96,19 @@ describe('fixture interceptor', () => {
     expect((await call(IN_EMPTY, `storefront/orders/${FIXTURE_ORDER_REF}`)).result).toMatchObject({ status: 404 });
   });
 
-  it('serves the fixture order-status link and nothing else under orders/', async () => {
-    expect((await body((await call(OUT, `orders/${FIXTURE_ORDER_REF}/${FIXTURE_ACCESS_KEY}`)).result)).data).toMatchObject({ status: 'shipped' });
-    expect((await call(OUT, 'orders/REAL1/KEY')).result).toMatchObject({ status: 404 });
+  it('no longer answers the key-based order link: nothing under orders/ is served', async () => {
+    expect((await call(OUT, `orders/${FIXTURE_ORDER_REF}/key`)).result).toMatchObject({ status: 400 });
+    expect((await call(OUT, 'orders/REAL1/KEY')).result).toMatchObject({ status: 400 });
+  });
+
+  it('serves the account order payment view and method list from fixtures, with the same session rules as the order', async () => {
+    const view = await call(IN_ORDERS, `storefront/orders/${FIXTURE_ORDER_REF}/payment`);
+    expect((await body(view.result)).data).toEqual(FIXTURE_PUBLIC_ORDER);
+    expect(view.notify).not.toHaveBeenCalled();
+    expect((await body((await call(IN_ORDERS, `storefront/orders/${FIXTURE_ORDER_REF}/payment-options`)).result)).data).toEqual(FIXTURE_QUOTE.paymentMethods);
+    expect((await call(OUT, `storefront/orders/${FIXTURE_ORDER_REF}/payment`)).result).toMatchObject({ status: 401 });
+    expect((await call(IN_EMPTY, `storefront/orders/${FIXTURE_ORDER_REF}/payment`)).result).toMatchObject({ status: 404 });
+    expect((await call(IN_ORDERS, 'storefront/orders/X/payment-options')).result).toMatchObject({ status: 404 });
   });
 
   it('quotes from fixtures without a toast', async () => {
@@ -114,7 +124,8 @@ describe('fixture interceptor', () => {
     ['POST', 'storefront/auth/whatsapp/start'],
     ['POST', 'storefront/auth/logout'],
     ['POST', 'storefront/profile/redeem'],
-    ['POST', `orders/${FIXTURE_ORDER_REF}/${FIXTURE_ACCESS_KEY}/payment-method`],
+    ['POST', `storefront/orders/${FIXTURE_ORDER_REF}/payment-method`],
+    ['POST', `storefront/orders/${FIXTURE_ORDER_REF}/crypto-txid`],
     ['POST', 'storefront/tracking'],
     ['GET', 'verify/ABC/123'],
     ['DELETE', 'storefront/anything-new'],

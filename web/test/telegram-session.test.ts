@@ -7,7 +7,6 @@ import { useSessionStore } from '@/stores/session.ts';
 import { useCartStore } from '@/stores/cart.ts';
 import { useTelegramAuthStore } from '@/stores/telegram.ts';
 import { ApiError } from '@/lib/errors.ts';
-import { listSavedOrders, saveOrder } from '@/stores/saved-orders.ts';
 import { accessGate } from '@/app/access-gate.ts';
 import { textSnapshot } from '@/text/snapshot.ts';
 import type { LoginResult } from '@/types/auth.ts';
@@ -114,14 +113,6 @@ describe('bootTelegramSession', () => {
     await bootTelegramSession(d);
     expect(useTelegramAuthStore.getState().status).toBe('failed');
     expect(d.login).not.toHaveBeenCalled();
-  });
-
-  it('a failed launch keeps the saved order links: it is not a deliberate sign-out', async () => {
-    saveOrder('K4M2QP', 'abc');
-    await bootTelegramSession(deps({ login: vi.fn(async () => { throw new Error('offline'); }) }));
-    await bootTelegramSession(deps({ initData: () => null }));
-    expect(listSavedOrders()).toHaveLength(1);
-    localStorage.clear();
   });
 
   it('forgets the previous account on every failure path', async () => {

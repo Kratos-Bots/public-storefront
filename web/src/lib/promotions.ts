@@ -1,5 +1,4 @@
 import type { CartPromotion, Nudge, PromotionTag, ServerCart } from '@/types/cart.ts';
-import type { PublicOrder, PublicOrderPromotion } from '@/types/public-order.ts';
 import type { TextApi } from '@/text/snapshot.ts';
 
 // Everything the storefront does with the backend's promotion fields that is not drawing. Every
@@ -77,11 +76,4 @@ export function snapshotMatchesLines(
   if (!cart || cart.items.length !== lines.length) return false;
   const local = new Map(lines.map((l) => [l.productId, l.quantity]));
   return cart.items.every((i) => local.get(i.productId) === i.quantity);
-}
-
-/** The public order view's promotion breakdown. Accepted on the order or in its totals — the contract names the fields, not their parent. */
-export function publicOrderPromotions(order: Pick<PublicOrder, 'totals' | 'promotions' | 'promotionDiscount'>): { discount: number; promotions: PublicOrderPromotion[] } {
-  const promotions = order.promotions ?? order.totals.promotions ?? [];
-  const discount = order.promotionDiscount ?? order.totals.promotionDiscount ?? 0;
-  return { discount, promotions: promotions.filter((p) => p.amount > 0) };
 }

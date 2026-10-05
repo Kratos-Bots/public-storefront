@@ -26,7 +26,7 @@ From `web/src/builder/types.ts`:
 export type LayoutKind = 'storefront' | 'menu' | 'webapp';
 
 export const FIXED_ROUTE_KEYS = ['catalog', 'product', 'cart', 'checkout', 'login', 'account.orders', 'account.order',
-  'account.loyalty', 'account.referrals', 'account.profile', 'order-status', 'payment-success', 'payment-cancel',
+  'account.loyalty', 'account.referrals', 'account.profile', 'payment-success', 'payment-cancel',
   'order-placed', 'verify', 'tracking', 'reset-password', 'verify-email'] as const;
 export type FixedRouteKey = typeof FIXED_ROUTE_KEYS[number];
 export type RouteKey = FixedRouteKey | `page:${string}`; // slug /^[a-z0-9-]{1,60}$/
@@ -43,7 +43,7 @@ A page set is **sparse**: `shell` is required, `pages` holds only the routes the
 customised. A missing key means "the default document". Custom pages live under `page:<slug>` and
 are served at `/pages/<slug>`. The root props are `title` (the tab title; empty leaves the store's
 own), `description` (the meta description) and `chrome` (`'shell'`, or `'none'` for the chromeless
-frame — the default of `order-status`, the shared order link).
+frame — no built-in page uses it now).
 
 ## How a page renders
 
@@ -193,7 +193,6 @@ The 47 blocks of this release. "All" layouts = storefront, menu and webapp. Slot
 
 | Block | Layouts | Route-bound | Props |
 |---|---|---|---|
-| `OrderStatus` | all | yes (`order-status`) | none |
 | `PaymentSuccess` | all | yes (`payment-success`) | `content` *(slot; `PaymentHeadline`, `PaymentReference` required)* |
 | `PaymentCancel` | all | yes (`payment-cancel`) | `content` *(slot; `PaymentHeadline`, `PaymentActions` required)* |
 | `OrderPlaced` | all | yes (`order-placed`) | `content` *(slot; `PaymentHeadline`, `PaymentReference`, `PaymentActions` required)* |
@@ -317,7 +316,7 @@ country names in that locale, falling back to the legacy profile when `Intl` rej
 ### Blocks and the Text panel
 
 `BlockDef.text` lists the keys a block renders — exact keys or `area.part.*` prefixes
-(`OrderStatus: ['order.*', …]`, `Header: ['shell.header.*', 'catalog.search.*', …]`); the
+(`OrderPayments: ['order.*', …]`, `Header: ['shell.header.*', 'catalog.search.*', …]`); the
 editor shows them under **Text in this block**. Template-slot patterns shared by several blocks
 live in `builder/blocks/_shared/text-patterns.ts` (`HERO_TEXT`, `FOOTER_TEXT`, `TOP_BAR_TEXT`, …).
 Keys of mounts that belong to no block — cart drawer, login modal, phone cart bar safety net,
@@ -573,7 +572,7 @@ shells. The families, their containers and the documents they live on:
 | `cart-summary` | `CartSummary` (nested in `CartContents`) | `cart` | `CartSummarySubtotal`, `CartSummaryCheckout` |
 | `account` | `AccountNav` (nests the five sections) | `account.*` | `AccountGreeting`, `AccountTabs` |
 | `orders` | `OrdersList` | `account.orders` | `OrdersRows`, `OrdersEmpty` |
-| `order` | `OrderDetail` | `account.order` | `OrderHeading`, `OrderItems` |
+| `order` | `OrderDetail` | `account.order` | `OrderHeading`, `OrderItems` (optional: `OrderBackLink`, `OrderBalance`, `OrderAddress`, `OrderParcels`, `OrderPayments`) |
 | `loyalty` | `Loyalty` | `account.loyalty` | `LoyaltyPoints`, `LoyaltyRewards` |
 | `referrals` | `Referrals` | `account.referrals` | `ReferralCode` |
 | `profile` | `Profile` | `account.profile` | `ProfileSignOut` (`ProfilePassword` is an optional part: it draws nothing while the shop has password sign-in off) |
@@ -593,8 +592,8 @@ no vertical spacing, margins, `maxWidth` or `textSize`: the bar's height is fixe
 **Contract extensions** (`ContainerSpec`, all optional):
 
 - `offers` — the parts of the family this container accepts (default: all). The payment family is
-  shared by three containers, and the success page offers no `PaymentActions` (the hand-off to the
-  saved order is a redirect). A part that is not offered fails `part-placement`.
+  shared by three containers, and every container accepts every part (the success page's `PaymentActions` shows
+  the sign-in or order link by default). A part that is not offered fails `part-placement`.
 - `nests` — containers its slots may hold, at any depth: `CartContents` nests `CartSummary`;
   `AccountNav` nests the five account sections. A nested container keeps its own placement and
   `exactly-one` rules, and owns its own parts.
@@ -624,10 +623,12 @@ is imported only from `builder/editor/**` and its data (including `FIXTURE_TRACK
 the editor chunk. State ids per container are `PREVIEW_STATE_IDS` in `builder/mode.ts`, first is the
 editor's default: `OrdersList` (orders, none, more), `Loyalty` (rewards, no-points), `Referrals`
 (new, referred), `Profile` (website, webapp), `PaymentSuccess` (reference, missing),
-`PaymentCancel` (saved, unsaved, no-reference), `OrderPlaced` (chat, warning, no-chat, missing),
+`PaymentCancel` (signed-out, no-reference), `OrderPlaced` (chat, warning, no-chat, missing),
 `TrackingLookup` (form, found-2, found-1, nothing-shipped, not-found, error), `VerifyForm` (form,
 authentic, expired, not-verified, error), `ResetPassword` (form, set, expired, checking,
-unreachable), `VerifyEmail` (verifying, done, invalid, otherAccount, error). The editor's Page / Drawer switch previews the two cart
+unreachable), `VerifyEmail` (verifying, done, invalid, otherAccount, error), `OrderDetail`
+(awaiting-payment, hosted-open, crypto-waiting, shipped, collection, cancelled: an order and its payment view
+from the fixtures, so the page reads neither). The editor's Page / Drawer switch previews the two cart
 surfaces.
 
 Stage-4 files: `builder/blocks/_shared/<family>-container.ts` (specs), `builder/blocks/<Part>.tsx`
@@ -688,13 +689,11 @@ through `accessOf()` in `app/access.ts`, so a backend that predates it means a p
 - Button links are rendered only when they start with `https://`. Wording is Site text under
   `auth.access.*` and `errors.*` (not fixed; the lockout message and button labels come from settings).
 
-### Checkout and order status parts
+### Checkout parts
 
-Stage 5 turns the checkout page and the order-status page into containers. **`CheckoutFlow`**
-(`family: 'checkout'`, document `checkout`) and **`OrderStatus`** (`family: 'order-status'`,
-document `order-status`) keep everything that spends money or talks to the backend: the quote, the
-guest identity and Turnstile token, the place-order call, the payment hand-off, the order queries
-and the pay-by timer. The parts only decide what the shopper *sees* and where. The action band
+Stage 5 turns the checkout page into a container. **`CheckoutFlow`**
+(`family: 'checkout'`, document `checkout`) keeps everything that spends money or talks to the backend: the quote, the
+guest identity and Turnstile token, the place-order call and the payment hand-off. The parts only decide what the shopper *sees* and where. The action band
 (Back / Continue / Place order), the terms line, the alerts and the Turnstile widget are not parts;
 they stay in the container, so no arrangement can remove a consent or a way to place the order.
 The checkout is steps only (there is no single-page mode).
@@ -738,43 +737,55 @@ id, carrier and name; the Review step and the order pages read it back as "Colle
 is part of the existing Delivery address part: there is no separate block, and its wording is
 ordinary editable Site text under `checkout.address.*`.
 
-**Order-status parts** (`OrderStatus`; every part is unique):
+**The old order link.** The key-based order page (`/order/:ref/:accessKey`), its `OrderStatus` container and
+its six parts are gone. The backend still writes that address into order emails and uses it as the return
+address of hosted payments, so the route stays as a redirect (`app/OrderLinkRedirect.tsx`) to the account
+order page, `/account/orders/:ref`; the key is not read, and a signed-out visitor goes through sign-in and
+back. A page set saved while the old page existed keeps its `order-status` entry harmlessly: nothing reads
+it, and a stored `OrderDetail` that still holds an `OrderPageLink` block drops it with a `drop:unknown-block`
+issue. The cancel control (`features/order-status/CancelOrder.tsx`) sits at the foot of the account order's
+payment card: a quiet "Cancel order" button that opens a confirmation dialog while the order can still be
+cancelled, or a pointer to the shop when money may already be on its way. Its wording is `order.cancel.*`.
 
-| Part | Required | Home | Why |
-|---|---|---|---|
-| `OrderStatusHero` | yes | `OrderStatus.top` | the page's only `h1`; the order's state |
-| `OrderStatusPayment` | yes | `OrderStatus.action` | the only thing on the page the customer can still change; payment actions while unpaid |
-| `OrderStatusShipments` | yes | `action`, `summary` | where the parcel is |
-| `OrderStatusItems` | yes | `action`, `summary` | what the total is made of (fees, discounts) |
-| `OrderStatusAddress` | no | `action`, `summary` | informational |
-| `OrderStatusFooter` | yes | `OrderStatus.bottom` | the only visible order reference and the support contact for this order |
-
-The cancel control (`features/order-status/CancelOrder.tsx`) sits in the `OrderStatusPayment` part,
-under the payment section: "Cancel order" with an inline confirmation while the order can still be
-cancelled, or a pointer to the shop when money may already be on its way (a bank transfer or a
-submitted crypto transaction id). Its wording is `order.cancel.*`.
-
-**Payment method names.** The names on the order page's method picker, the checkout's Payment and Review
+**Payment method names.** The names on the account order's method picker, the checkout's Payment and Review
 steps, and the account order's payment list are the shop's own, set in the admin app (Storefront settings
 -> Payments) and sent by the backend with each method; they are not Site text, and the two Site text
-entries "Card" and "Crypto" no longer exist. On the order page the fee wording around a name is still Site text
+entries "Card" and "Crypto" no longer exist. On the account order page the fee wording around a name is still Site text
 (`order.method.withDiscount`, `order.method.withFee`); on the checkout's Payment step the fee note under a name
 comes from the backend (its `feeLabel` and rate), not from Site text. A method sent with an empty name is shown by
 its id read as words.
 
-**Account order parts.** The `OrderBalance` part (the account order page's "Balance due") shows the
-balance and, when the order can still be paid, the same payment section as the order page, fed
-through the order's access key, plus the same cancel control (through the signed-in session). Without
-an access key (order links not configured, or an older backend) there is no payment section, but the
-cancel control still shows (through the signed-in session) whenever the order can be cancelled; only
-when nothing at all can be shown is it the figure alone, as it used to be.
+**Account order parts.** The `OrderDetail` container holds `OrderBackLink`, `OrderHeading`, `OrderBalance`,
+`OrderItems`, `OrderAddress`, `OrderParcels` and `OrderPayments`; only `OrderHeading` and `OrderItems` are
+required, and a stored arrangement does not gain `OrderAddress` until the owner adds it. The account's
+greeting and section tabs draw nothing on `/account/orders/:ref` (`isOrderDetailPath`).
+
+`OrderBalance` ("Payment needed") draws only while money is owed on an order that is not cancelled or refunded.
+It is one card: the amount due as the largest figure on the page, then the payment section (a method picker,
+the open hosted checkout, the crypto address, or "we're checking your payment"), then Cancel order under a
+rule. While the payment state loads the card shows a busy placeholder; if it fails it says so with a Try again
+button; if the order cannot be paid online it shows the help text and the shop's support links. Everything
+runs on the customer's session (no access key).
+On this page the payment card's own heading replaces the eyebrows that otherwise say payment is needed: it renders
+`PaymentSection` with `embedded`, which leaves out `order.payment.required` (method-picker and hosted-checkout faces),
+`order.payment.pendingEyebrow` (pending face) and the awaiting crypto card's `order.payment.required` eyebrow, so those
+three texts do not show here (they still show wherever `PaymentSection` is used without `embedded`). The crypto card's
+`order.crypto.label` eyebrow in its checking, confirmed and attention states stays. Embedded faces carry `data-embedded`
+instead of `data-sf-part="card"`, so no template paints a card inside the payment card.
+
+The page sorts the container's items into three areas itself (`features/account/order-layout.ts`): `head`
+(back link, heading), `main` (payment, items) and `side` (address, parcels, payments), keeping their order
+within each. A content block goes to `side` only when every order part inside it is a side part. On the
+published site the areas become a header, a main column and, when something placed in the side column will
+draw, a side column from 62em (DOM order puts the side column last, so a phone reads payment, items, address,
+parcels, history). In the editor the slot stays one drop zone and is drawn as one column.
 
 `CheckoutFlow.steps` accepts only the five step parts (a content block between two steps would
 render inside every step's card); `CheckoutFlow.after` accepts content only. Each step part has
 `before` and `after` slots for content blocks and the optional parts that have a home there. Every
 required part and `CheckoutCoupon` / `CheckoutNotes` are `noHide`: they may not carry `hide`, nor
 sit inside a block that hides. In checkout only `CheckoutProgress` and content blocks accept
-`hide`; on the order page only `OrderStatusAddress` and content blocks.
+`hide`.
 
 **The four legal step orders.** Over the step parts in stored order: Review is last; Address comes
 before Shipping, and Shipping before Payment; Contact may sit anywhere before Review. That admits
@@ -796,12 +807,6 @@ A document with an illegal order is not served. The shop guard rejects it like a
 failure, so the shopper gets the **default** checkout page. The container keeps a second line of
 defence: if an illegal order ever reaches it (a path that bypasses the guard), it falls back to the
 default step order and logs a console warning once per page load.
-
-**Order status: payment first.** Inside `action`, no `OrderStatusItems`, `OrderStatusAddress` or
-`OrderStatusShipments` may come before `OrderStatusPayment` (rule id `part-order:OrderStatus`).
-Content blocks (a rich text, an image) may precede payment; tracking and the order details may
-not. `action` renders before `summary` at every width, so this keeps payment ahead of every other
-order card in reading order.
 
 **The effective form.** The shopper's checkout form persists in the browser and outlives any one
 arrangement. The container derives `couponShown` / `notesShown` from the *visible* slots (a part
@@ -839,9 +844,7 @@ Counting for `part-required`, `part-unique` and `part-home` goes through the slo
 step head, in the owner's order, so each step's `before` / `after` slots are droppable and the whole
 flow is visible; one inert copy of the action band follows the last card, then the terms line and
 `after`. Alerts and the Turnstile widget are not mounted. The exact preview renders the real
-stepper. The checkout previews as a signed-in shopper with a sample cart; the order page has a
-**Preview order** control with six Northbound Supply states (`PREVIEW_STATE_IDS.OrderStatus`:
-shipped, awaiting-payment, hosted-open, crypto-checking, two-parcels, cancelled). Placing an order
+stepper. The checkout previews as a signed-in shopper with a sample cart. Placing an order
 or choosing a payment in the editor is refused by the fixture API ("Preview only — nothing was
 sent."). The step parts cannot be deleted, duplicated or dragged; other required parts can be moved
 within their homes but not deleted. A legality guard in the editor reverts any insert, move, reorder
@@ -850,29 +853,31 @@ or replace that would break an arrangement rule (`part-home`, `part-placement`, 
 violation of a rule id already present in a stored document is tolerated in the editor (publishing
 stays blocked).
 
-Files: `builder/family-checkout.ts` and `family-order-status.ts` (family data and the step-order
+Files: `builder/family-checkout.ts` (family data and the step-order
 helpers; type-only feature imports, in the entry), `builder/blocks/_shared/checkout-container.ts`
-and `order-status-container.ts` (specs), `builder/blocks/Checkout*.tsx` and `OrderStatus*.tsx`
-(sixteen shells), and the views in `features/checkout/checkout-parts.tsx` and
-`features/order-status/order-status-parts.tsx` (both in their lazy page chunks, so the entry grows
-by shells and specs only). Part keys stay within the `partId` budget (at most 23 characters).
+(spec), `builder/blocks/Checkout*.tsx` (the container and ten part shells), and the views in `features/checkout/checkout-parts.tsx`
+(in its lazy page chunk, so the entry grows by shells and specs only). Part keys stay within the `partId` budget (at most 23 characters).
 
 ### Unpaid order prompt
 
 "You have an unpaid order" is a dialog, not a block: it lives in `features/unpaid-prompt/` and is
 mounted once by each shell frame (storefront, menu, web app) beside the sign-in dialog, so no page
 document can place, move or remove it. A signed-in customer is asked about their newest payable order
-(`GET storefront/orders/unpaid`); a guest about the order links saved on this device. It offers Complete
-payment (the order page), Cancel order (or the contact line when money may be on its way) and Not now.
+(`GET storefront/orders/unpaid`). It has one button, "Review or cancel order", which opens that order's page in the
+account (where the customer pays, changes method or cancels), a quiet "Not now", and, when more than one order is
+waiting, a "more" link to the order list. Cancelling is not done in the pop-up: its confirmation is a dialog on the
+order page, and an order the customer cannot cancel (a transfer or a crypto transaction is on its way) gets the same
+pop-up with the same single button.
 
-It never shows on the checkout, the order and payment pages (`/order/*`, `/payment/*`, `/order-placed`,
+It never shows on the checkout, the order and payment pages (`/order/*` redirects, `/payment/*`, `/order-placed`,
 `/account/orders/:ref`), `/login`, `/auth/*`, `/reset-password`, `/verify-email`, `/verify/*` and
 `/tracking*`; in the page builder or the appearance preview; to a customer the shop has refused access
 (a restricted shop's account pages stay open to them); or while the cart or sign-in dialog is open (it
 may appear once they close). "Not now" lasts
-for the visit: it is remembered for the browser tab's session, so navigating and reloading do not bring
-it back, and a new tab or visit asks again. Signing out forgets the saved order links; a saved link is also dropped once its lookup answers that the
-link is dead or the order is cancelled or refunded (never on a network error or a server error).
+for the page load: it is a module variable, kept for the customer who said it, so navigating the shop does not bring
+it back, but a reload, a new tab or reopening the Mini App asks again, and a different customer signing in without
+a reload is asked for themselves. Nothing is written to any storage. Opening the order page of an unpaid order counts
+as having been asked for the load, so going back to the shop does not ask about the order the customer was just on.
 
 The shell part is only the hook that decides whether to ask; the dialog itself (Modal, cancel control, the
 order page's stylesheet) is a separate lazily loaded chunk, fetched only when there is an order to show.
@@ -1131,7 +1136,7 @@ fall back to the route's default document.
 **EXACTLY_ONE**: `shell` → `PageOutlet`; `product` → `ProductDetail`; `cart` → `CartContents` and
 `CartSummary`; `checkout` → `CheckoutFlow`; `login` → `LoginOptions`; `account.orders` →
 `OrdersList`; `account.order` → `OrderDetail`; `account.loyalty` → `Loyalty`; `account.referrals`
-→ `Referrals`; `account.profile` → `Profile`; `order-status` → `OrderStatus`; `payment-success` →
+→ `Referrals`; `account.profile` → `Profile`; `payment-success` →
 `PaymentSuccess`; `payment-cancel` → `PaymentCancel`; `order-placed` → `OrderPlaced`; `verify` →
 `VerifyForm`; `tracking` → `TrackingLookup`; `reset-password` → `ResetPassword`; `verify-email` →
 `VerifyEmail`. (`catalog` and custom pages have none.)
@@ -1173,7 +1178,7 @@ From `defaults/groups/*.ts`, resolved by `defaultDoc(docKey, layout)`:
   slot. **checkout** — `CheckoutFlow`. **login** — `LoginOptions`.
 - **account.\*** — `AccountNav` with the route's block (`OrdersList`, `OrderDetail`, `Loyalty`,
   `Referrals`, `Profile`) in its `body` slot.
-- **order-status** — `OrderStatus`, root `chrome: 'none'`. **payment-success**, **payment-cancel**,
+- **payment-success**, **payment-cancel**,
   **order-placed**, **verify**, **tracking** — their one block.
 - **reset-password**, **verify-email** — their one container with its default arrangement
   (heading, then form / status).

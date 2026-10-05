@@ -1,8 +1,7 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Modal } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { cancelOrder } from '@/api/orders.ts';
-import { cancelPublicOrder, OrderNotCancellableError } from '@/api/public-order.ts';
-import type { StyleAttrs } from '@/builder/define.ts';
+import { cancelOrder, OrderNotCancellableError } from '@/api/orders.ts';
 import { cancelView } from '@/features/order-status/cancel-state.ts';
 import { SupportLinks } from '@/features/order-status/SupportLinks.tsx';
 import { useText } from '@/text/runtime.tsx';
@@ -11,15 +10,11 @@ import classes from '@/features/order-status/OrderStatus.module.css';
 
 export interface CancelOrderProps {
   reference: string;
-  accessKey?: string | null;
-  /** Cancel through the order's own link (`cancelPublicOrder`) rather than the signed-in session. */
-  viaLink?: boolean;
   /** Both flags are absent on a backend that predates customer cancel: the control then renders nothing. */
   canCancel: boolean | undefined;
   blockedBy: CancelBlockedBy | null | undefined;
-  /** Called after a cancel and after a refusal, so the caller refetches the order. */
-  onCancelled?: () => void;
-  rootAttrs?: StyleAttrs;
+  /** Called after a cancel and after a refusal, so the caller refetches the order; says which of the two it was. */
+  onCancelled?: (outcome: 'cancelled' | 'refused') => void;
 }
 
 type Refusal = 'order.cancel.refusedPaid' | 'order.cancel.refusedInFlight' | 'order.cancel.refusedGone' | 'order.cancel.failed';
@@ -32,50 +27,32 @@ const REFUSAL: Record<OrderNotCancellableError['reason'], Refusal> = {
 };
 
 /**
- * "Cancel order" for an unpaid order: an inline confirmation (never `confirm()`),
+ * "Cancel order" for an unpaid order: a confirmation dialog that only its two buttons can close,
  * or, when money may already be on its way, a pointer to the shop instead.
  */
-export function CancelOrder({ reference, accessKey, viaLink, canCancel, blockedBy, onCancelled, rootAttrs }: CancelOrderProps) {
+export function CancelOrder({ reference, canCancel, blockedBy, onCancelled }: CancelOrderProps) {
   const { t } = useText();
   const [open, setOpen] = useState(false);
   const [working, setWorking] = useState(false);
   const [done, setDone] = useState(false);
   const [message, setMessage] = useState<Refusal | null>(null);
-  const titleId = useId();
   const busy = useRef(false);
-  const trigger = useRef<HTMLButtonElement>(null);
-  const keep = useRef<HTMLButtonElement>(null);
-  const panel = useRef<HTMLDivElement>(null);
-  const returnFocus = useRef(false);
 
+  const view = cancelView(canCancel, blockedBy);
+
+  // The flags can flip under an open dialog (paid in another tab, a transfer or txid now on its way). The dialog
+  // closes rather than offering a cancel the backend would refuse, and the page says why.
   useEffect(() => {
-    if (open) keep.current?.focus();
-    else if (returnFocus.current) {
-      returnFocus.current = false;
-      trigger.current?.focus();
-    }
-  }, [open]);
-
-  // Keep is disabled while the request runs and drops focus; the panel takes it so Escape still lands inside the
-  // confirmation. When focus is already inside (the confirm button, which stays focusable as aria-disabled) it stays there.
-  useEffect(() => {
-    if (!working || !open) return;
-    const el = panel.current;
-    const active = document.activeElement as HTMLElement | null;
-    // A disabled control (Keep) may still be reported as focused; it cannot take keys, so the panel does.
-    const holdsFocus = !!el && !!active && el.contains(active) && !(active as HTMLButtonElement).disabled;
-    if (el && !holdsFocus) el.focus();
-  }, [working, open]);
-
-  // Without its key there is no way to cancel through a link: a caller bug, so offer nothing.
-  const view = viaLink && !accessKey ? 'none' : cancelView(canCancel, blockedBy);
-  // A refusal or failure outlives the props that change under it (the refetch after a refusal usually hides the control).
-  if (view === 'none' && !message) return null;
-
-  const close = () => {
-    returnFocus.current = true;
+    if (!open || view === 'button') return;
     setOpen(false);
-  };
+    if (view === 'none') setMessage(blockedBy === 'paid' ? 'order.cancel.refusedPaid' : 'order.cancel.refusedGone');
+  }, [open, view, blockedBy]);
+
+  // Stays mounted while the dialog is open, and while a refusal or failure is still being said: the refetch after
+  // a refusal usually hides the control, and this component is what carries the message.
+  if (view === 'none' && !message && !open) return null;
+
+  const close = () => setOpen(false);
 
   const confirm = async () => {
     if (busy.current) return;
@@ -83,20 +60,19 @@ export function CancelOrder({ reference, accessKey, viaLink, canCancel, blockedB
     setWorking(true);
     setMessage(null);
     try {
-      if (viaLink && accessKey) await cancelPublicOrder(reference, accessKey);
-      else await cancelOrder(reference);
+      await cancelOrder(reference);
       setDone(true);
       setOpen(false);
       notifications.show({ message: t('order.cancel.done', { reference }) });
-      onCancelled?.();
+      onCancelled?.('cancelled');
     } catch (err) {
       if (err instanceof OrderNotCancellableError) {
         const refusal = REFUSAL[err.reason];
         setMessage(refusal);
-        // Also a notification: it survives the control unmounting (the pop-up closes itself after a refusal).
+        // Also a notification: it survives the control unmounting when the refetch that follows hides it.
         notifications.show({ message: t(refusal) });
         close();
-        onCancelled?.();
+        onCancelled?.('refused');
       } else {
         setMessage('order.cancel.failed');
       }
@@ -107,7 +83,7 @@ export function CancelOrder({ reference, accessKey, viaLink, canCancel, blockedB
   };
 
   return (
-    <div className={classes.cancelBox} data-sf-part="cancel" {...rootAttrs}>
+    <div className={classes.cancelBox} data-sf-part="cancel">
       {view === 'contact' ? (
         <>
           <p className={classes.cancelText}>{t('order.cancel.contact')}</p>
@@ -116,44 +92,40 @@ export function CancelOrder({ reference, accessKey, viaLink, canCancel, blockedB
       ) : null}
       {view === 'button' && !done ? (
         <button
-          ref={trigger}
           type="button"
           className={classes.cancelAction}
-          aria-expanded={open}
+          aria-haspopup="dialog"
           onClick={() => { setMessage(null); setOpen(true); }}
         >
           {t('order.cancel.action')}
         </button>
       ) : null}
-      {view === 'button' && open ? (
-        <div
-          ref={panel}
-          tabIndex={-1}
-          data-mantine-stop-propagation
-          className={classes.cancelPanel}
-          role="group"
-          aria-labelledby={titleId}
-          onKeyDown={(e) => { if (e.key === 'Escape' && !working) close(); }}
-        >
-          <p id={titleId} className={classes.cancelTitle}>{t('order.cancel.confirmTitle', { reference })}</p>
-          <p className={classes.cancelText}>{t('order.cancel.confirmBody')}</p>
-          <div className={classes.cancelButtons}>
-            <button
-              type="button"
-              data-mantine-stop-propagation
-              className={classes.cancelConfirm}
-              aria-disabled={working}
-              onClick={() => void confirm()}
-            >
-              {working ? t('order.cancel.working') : t('order.cancel.confirm')}
-            </button>
-            <button ref={keep} type="button" data-mantine-stop-propagation className={classes.ghost} disabled={working} onClick={close}>
-              {t('order.cancel.keep')}
-            </button>
-          </div>
+      <Modal
+        opened={open && view === 'button'}
+        onClose={() => { if (!working) close(); }}
+        title={t('order.cancel.confirmTitle', { reference })}
+        centered
+        size="md"
+        radius="var(--mantine-radius-default)"
+        withCloseButton={false}
+        closeOnClickOutside={false}
+        closeOnEscape={!working}
+        returnFocus
+        classNames={{ content: classes.cancelDialog, header: classes.cancelHeader, title: classes.cancelDialogTitle }}
+      >
+        <p className={classes.cancelDialogText}>{t('order.cancel.confirmBody')}</p>
+        {message === 'order.cancel.failed' ? <p className={classes.cancelError} role="alert">{t(message)}</p> : null}
+        <div className={classes.cancelButtons}>
+          <button type="button" data-autofocus className={classes.cancelKeep} data-sf-part="button" data-variant="filled" disabled={working} onClick={close}>
+            {t('order.cancel.keep')}
+          </button>
+          <button type="button" className={classes.cancelConfirm} aria-disabled={working} onClick={() => void confirm()}>
+            {working ? t('order.cancel.working') : t('order.cancel.confirm')}
+          </button>
         </div>
-      ) : null}
-      <p className={classes.cancelLive} aria-live="polite">{message ? t(message) : ''}</p>
+      </Modal>
+      {/* A refusal is said on the page too; a plain failure is said inside the dialog, where the customer can retry. */}
+      <p className={classes.cancelLive} aria-live="polite">{message && message !== 'order.cancel.failed' ? t(message) : ''}</p>
     </div>
   );
 }

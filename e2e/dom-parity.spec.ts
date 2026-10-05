@@ -1,6 +1,6 @@
 // e2e/dom-parity.spec.ts
 import { expect, test, type Page } from '@playwright/test';
-import { installMocks, ORDER_PATH, PASSWORD_ACCOUNT, type InstallMocksOptions, type Layout } from './mocks.ts';
+import { installMocks, PASSWORD_ACCOUNT, type InstallMocksOptions, type Layout } from './mocks.ts';
 import { FIXED_NOW } from './flows.ts';
 import type { StorefrontSettings } from '../web/src/types/settings.ts';
 
@@ -34,11 +34,10 @@ const CASES: RouteCase[] = [
   { name: 'checkout', path: '/checkout', layouts: ALL, session: true },
   { name: 'login', path: '/login', layouts: ALL, session: false },
   { name: 'account-orders', path: '/account/orders', layouts: ALL, session: true },
-  { name: 'account-order', path: '/account/orders/K4M2QP', layouts: ALL, session: true },
+  { name: 'account-order', path: '/account/orders/K4M2QP', layouts: ALL, session: true, mocks: { orderFixture: 'shipped', orderReference: 'K4M2QP' } },
   { name: 'account-loyalty', path: '/account/loyalty', layouts: ALL, session: true },
   { name: 'account-referrals', path: '/account/referrals', layouts: ALL, session: true },
   { name: 'account-profile', path: '/account/profile', layouts: ALL, session: true },
-  { name: 'order-status', path: ORDER_PATH, layouts: ALL, session: false },
   { name: 'payment-success', path: '/payment/success?order=E2E9', layouts: ALL, session: false },
   { name: 'payment-cancel', path: '/payment/cancel', layouts: ALL, session: false },
   { name: 'order-placed', path: '/order-placed', layouts: ALL, session: false },

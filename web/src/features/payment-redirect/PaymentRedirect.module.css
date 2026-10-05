@@ -1,6 +1,6 @@
 /* The three hand-off screens after checkout: back from a hosted gateway
    (success/cancel) or straight off a chat-settled order. Same ledger idiom as
-   the order-status page — hairlines, tracked micro-caps, a copyable reference
+   the account order page — hairlines, tracked micro-caps, a copyable reference
    — so landing here never feels like it left the shop, even mid-checkout.
    One class per selector; every colour is a `--sf-*` token. */
 

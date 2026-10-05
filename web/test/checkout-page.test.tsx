@@ -490,6 +490,25 @@ describe('CheckoutPage — signed in', () => {
     });
   });
 
+  it('sends a signed-in shopper to the account order page after an offline-paid order, and saves nothing to this browser', async () => {
+    placeOrderMock.mockResolvedValue({
+      reference: 'K7M2QP',
+      publicUrl: `${window.location.origin}/order/K7M2QP/key123`,
+      status: 'pending',
+      total: 84.99,
+      payment: {
+      type: 'manual' as const, paymentId: 3, method: 'bank', displayName: 'Bank transfer', amount: 84.99, instructions: {},
+    },
+    });
+    mount();
+    await walkToReview();
+    pressPlace();
+    await settle();
+
+    expect(screen.getByTestId('path')).toHaveTextContent('/account/orders/K7M2QP');
+    expect(localStorage.getItem('sf-orders-v1')).toBeNull();
+  });
+
   it('holds the shopper on the contact step until the required fields are filled', () => {
     mount();
     fireEvent.click(continueButton());
@@ -740,7 +759,25 @@ describe('CheckoutPage — guest', () => {
     const submitToken = placeGuestOrderMock.mock.calls[0]![0].turnstileToken;
     expect(quoteTokens).not.toContain(submitToken);
   });
-  it('keeps the public order page after an external payment inside Telegram', async () => {
+  it('sends a guest to the order-placed screen after an offline-paid order, and saves nothing to this browser', async () => {
+    placeGuestOrderMock.mockResolvedValue({
+      reference: 'G8N3RQ',
+      publicUrl: `${window.location.origin}/order/G8N3RQ/key456`,
+      status: 'pending',
+      total: 84.99,
+      payment: {
+      type: 'manual' as const, paymentId: 3, method: 'bank', displayName: 'Bank transfer', amount: 84.99, instructions: {},
+    },
+    });
+    mount();
+    await walkToReview();
+    pressPlace();
+    await settle();
+
+    expect(screen.getByTestId('path')).toHaveTextContent(/^\/order-placed$/);
+    expect(localStorage.getItem('sf-orders-v1')).toBeNull();
+  });
+  it('sends a guest to the order-placed screen after an external payment inside Telegram', async () => {
     tg.inTelegram = true;
     placeGuestOrderMock.mockResolvedValue({
       reference: 'G8N3RQ',
@@ -755,6 +792,6 @@ describe('CheckoutPage — guest', () => {
     await settle();
 
     expect(tg.openLink).toHaveBeenCalledWith('https://pay.example/session/2');
-    expect(screen.getByTestId('path')).toHaveTextContent('/order/G8N3RQ/key456');
+    expect(screen.getByTestId('path')).toHaveTextContent(/^\/order-placed$/);
   });
 });

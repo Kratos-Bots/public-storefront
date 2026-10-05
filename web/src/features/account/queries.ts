@@ -1,5 +1,8 @@
+import { useRef } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { fetchOrder, fetchOrders } from '@/api/orders.ts';
+import { fetchOrder, fetchOrderPayment, fetchOrders } from '@/api/orders.ts';
+import { orderPaymentKey } from '@/features/order-status/queries.ts';
+import { paymentPollInterval } from '@/features/order-status/payment-state.ts';
 import { fetchProfile, fetchRedeemOptions } from '@/api/profile.ts';
 
 export const PROFILE_KEY = ['profile'] as const;
@@ -43,5 +46,25 @@ export function useOrder(reference: string | undefined) {
     queryKey: ['order', reference] as const,
     queryFn: () => fetchOrder(reference as string),
     enabled: !!reference,
+  });
+}
+
+/**
+ * What is owed on the order and how its payment stands, through the session. Polled while a payment is open
+ * (the interval comes from the order's own state) and in the background: a customer finishing a hosted checkout
+ * in another tab is not looking at this one, and that is when it most needs to keep up.
+ */
+export function useOrderPayment(reference: string, enabled: boolean) {
+  // When this page started watching this order: the poll slows down the longer a tab sits on it.
+  const watching = useRef({ reference, since: Date.now() });
+  if (watching.current.reference !== reference) watching.current = { reference, since: Date.now() };
+  return useQuery({
+    queryKey: orderPaymentKey(reference),
+    queryFn: () => fetchOrderPayment(reference),
+    enabled,
+    retry: false,
+    staleTime: 30_000,
+    refetchInterval: (query) => paymentPollInterval(query.state, Date.now() - watching.current.since),
+    refetchIntervalInBackground: true,
   });
 }

@@ -5,16 +5,12 @@ export const closedGate = create<{ closed: boolean; setClosed: (v: boolean) => v
   setClosed: (closed) => set({ closed }),
 }));
 
-// Flat routes a shopper can land on mid-checkout or from a chat link — a
-// hosted-checkout redirect, a chat-settled order handoff, or a shared order
-// URL. All three read from endpoints that stay up during the kill switch
-// (`/api/orders/*`), and the visitor is already holding the link, so trading
-// it for `ClosedPage` would strand someone who has money in flight or is only
-// there to check a delivery. `/order` alone (no reference) and `/orders`
-// (no such route) are deliberately excluded — only a link with something to
-// look up is exempt.
+// Exactly three flat routes stay up while the shop is closed: the two return pages of a hosted payment and the
+// order-placed page. Someone coming back from a payment already in flight must be told what happened, and these
+// pages read nothing from the account. The old /order/:ref/:accessKey link is not exempt: it redirects to the
+// customer's order page, whose routes answer 503 while the shop is closed, so showing the closed page at once is
+// the honest answer (this gate reads the address once, above the router, and would not notice that redirect).
 const EXEMPT_EXACT_PATHS = ['/payment/success', '/payment/cancel', '/order-placed'];
-const EXEMPT_PREFIX = '/order/';
 
 /** Tolerate exactly one trailing slash (`/payment/success/`) without opening up a prefix match. */
 function stripTrailingSlash(pathname: string): string {
@@ -29,5 +25,5 @@ function stripTrailingSlash(pathname: string): string {
  */
 export function isClosedExemptPath(pathname: string): boolean {
   const normalized = stripTrailingSlash(pathname);
-  return EXEMPT_EXACT_PATHS.includes(normalized) || normalized.startsWith(EXEMPT_PREFIX);
+  return EXEMPT_EXACT_PATHS.includes(normalized);
 }

@@ -1,45 +1,7 @@
 import { defineTextArea } from '@/text/define.ts';
 
-/** Area `order`: the order-status page opened from a chat link, and the chat messages it prefills. */
+/** Area `order`: order and payment wording shared by the account order page, tracking and the unpaid prompt, and the chat messages it prefills. */
 export default defineTextArea('order', {
-  documentTitle: { en: 'Order {reference} — {shop}', max: 120 },
-
-  // The hero: where the order is.
-  'hero.ariaLabel': { en: 'Order status', max: 60 },
-  'hero.eyebrow': { en: 'Order status', max: 40 },
-  'hero.deliveredEyebrow': { en: 'Delivered', max: 40 },
-  'hero.pendingHeadline': { en: 'Order received', max: 60 },
-  'hero.pendingDetail': { en: "We've got your order and we're getting it ready." },
-  'hero.confirmedHeadline': { en: 'Order confirmed', max: 60 },
-  'hero.confirmedDetail': { en: 'Your order is confirmed and moving into preparation.' },
-  'hero.processingHeadline': { en: 'Being prepared', max: 60 },
-  'hero.processingDetail': { en: "We're packing your order now." },
-  'hero.partiallyShippedHeadline': { en: 'Partially shipped', max: 60 },
-  'hero.partiallyShippedDetail': { en: 'Some items are on their way. The rest will follow shortly.' },
-  'hero.shippedHeadline': { en: 'On its way', max: 60 },
-  'hero.shippedDetail': { en: 'Your order has shipped. Track it below.' },
-  'hero.deliveredHeadline': { en: 'Delivered', max: 60 },
-  'hero.deliveredDetail': { en: 'Your order has arrived. Thanks for shopping with us.' },
-  'hero.cancelledHeadline': { en: 'Order cancelled', max: 60 },
-  'hero.cancelledDetail': { en: "This order has been cancelled and won't be dispatched." },
-  'hero.refundedHeadline': { en: 'Order refunded', max: 60 },
-  'hero.refundedDetail': { en: 'This order has been refunded.' },
-  'hero.preorderFlag': { en: 'Contains pre-order items', max: 60 },
-  'hero.cancelledNotice': { en: "If that isn't right, reply to the message that sent you this link and we'll sort it out." },
-  'hero.refundedNotice': { en: 'Refunds take 5–10 business days to appear on your statement.' },
-
-  // Dates, shown in the hero and on each parcel.
-  'dates.placed': { en: 'Placed {date}', max: 60 },
-  'dates.shipped': { en: 'Shipped {date}', max: 60 },
-
-  // The four milestones on the route.
-  'steps.ariaLabel': { en: 'Order progress', max: 60 },
-  'steps.received': { en: 'Received', max: 30 },
-  'steps.confirmed': { en: 'Confirmed', max: 30 },
-  'steps.shipped': { en: 'Shipped', max: 30 },
-  'steps.delivered': { en: 'Delivered', max: 30 },
-  'steps.partial': { en: 'Partial', max: 30 },
-
   // Short order-status names (order lists, account order detail, tracking page).
   'status.pending': { en: 'Order received', max: 40 },
   'status.confirmed': { en: 'Confirmed', max: 40 },
@@ -50,35 +12,15 @@ export default defineTextArea('order', {
   'status.cancelled': { en: 'Cancelled', max: 40 },
   'status.refunded': { en: 'Refunded', max: 40 },
 
-  // Loading and error screens.
-  'screens.loading': { en: 'Loading your order', max: 60 },
+  // Eyebrow of the payment-return pages' missing-reference screen.
   'link.eyebrow': { en: 'Order link', max: 40 },
-  'screens.invalidTitle': { en: "This link isn't valid", max: 80 },
-  'screens.invalidDescription': { en: "The link looks incomplete or has expired. Reply to the message that sent it and we'll share a fresh one." },
-  'screens.networkEyebrow': { en: 'Connection', max: 40 },
-  'screens.networkTitle': { en: "We couldn't load your order", max: 80 },
-  'screens.networkDescription': { en: 'Your order is safe — this was a hiccup between your browser and us.' },
-
-  // Footer.
-  'footer.reference': { en: 'Order {reference}', max: 60 },
-  'footer.questions': { en: 'Questions about this order? Message us and quote that reference.' },
-
-  // Items and totals.
-  'items.title': { en: 'Items', max: 40 },
-  'items.delivery': { en: 'Delivery', max: 40 },
-  'items.free': { en: 'Free', max: 30 },
-  'items.paymentDiscount': { en: 'Payment discount', max: 40 },
-  'items.tax': { en: 'Tax', max: 40 },
-
-  'address.title': { en: 'Delivery address', max: 40 },
-  'address.collectFrom': { en: 'Collect from', max: 40 },
 
   // Cancelling an unpaid order.
   'cancel.action': { en: 'Cancel order', max: 40 },
   'cancel.confirmTitle': { en: 'Cancel order {reference}?', max: 80 },
   'cancel.confirmBody': { en: 'The order will be cancelled and nothing will be charged. This cannot be undone.', max: 200 },
-  'cancel.confirm': { en: 'Yes, cancel it', max: 40 },
-  'cancel.keep': { en: 'Keep the order', max: 40 },
+  'cancel.confirm': { en: 'Yes, cancel order', max: 40 },
+  'cancel.keep': { en: 'Keep order', max: 40 },
   'cancel.working': { en: 'Cancelling…', max: 40 },
   'cancel.done': { en: 'Order {reference} was cancelled.', max: 120 },
   'cancel.contact': { en: 'To cancel this order, contact us: a payment may already be on its way.', max: 200 },
@@ -89,14 +31,11 @@ export default defineTextArea('order', {
   'prompt.title': { en: 'You have an unpaid order', max: 80 },
   'prompt.body': { en: 'Order {reference} is waiting for payment.', max: 160 },
   'prompt.amount': { en: 'Amount due', max: 40 },
-  'prompt.pay': { en: 'Complete payment', max: 40 },
+  'prompt.review': { en: 'Review or cancel order', max: 40 },
   'prompt.later': { en: 'Not now', max: 40 },
   'prompt.more': { en: 'You have other unpaid orders too. See all orders', max: 120 },
 
   // Parcels.
-  'shipment.parcel': { en: 'Parcel', max: 40 },
-  'shipment.untitled': { en: 'On its way', max: 60 },
-  'shipment.track': { en: 'Track this parcel', max: 60 },
   'shipment.status.shipped': { en: 'Shipped', max: 30 },
   'shipment.status.delivered': { en: 'Delivered', max: 30 },
   'shipment.status.returned': { en: 'Returned', max: 30 },
@@ -107,17 +46,14 @@ export default defineTextArea('order', {
 
   // Paying.
   'payment.ariaLabel': { en: 'Payment', max: 40 },
-  'payment.required': { en: 'Payment required', max: 40 },
-  'payment.chooseHowToPay': { en: 'Choose how to pay {total}', max: 80 },
+  'payment.chooseTitle': { en: 'Choose how you’d like to pay', max: 80 },
   'payment.finishTitle': { en: 'Finish your payment', max: 60 },
-  'payment.hostedFigure': { en: '{total} · secure hosted checkout', max: 80 },
-  'payment.awaiting': { en: 'Awaiting payment', max: 40 },
+  'payment.hostedLead': { en: 'Secure hosted checkout', max: 60 },
   'payment.openCheckout': { en: 'Open secure checkout', max: 60 },
   'payment.hostedNote': { en: 'The checkout opens in a new tab. This page updates on its own once the payment lands.' },
-  'payment.pendingEyebrow': { en: 'Payment pending', max: 40 },
   'payment.pendingTitle': { en: 'We’re waiting on your payment', max: 80 },
   'payment.pendingNote': { en: 'This one is arranged with us directly. Message us if anything is unclear.' },
-  'payment.deadline': { en: 'Pay by {when} — after that the order cancels itself.' },
+  'payment.deadline': { en: 'Pay by {when}. After that the order is cancelled automatically.' },
   'payment.changeMethod': { en: 'Change payment method', max: 60 },
   'payment.keepMethod': { en: 'Keep this method', max: 60 },
 
@@ -125,8 +61,10 @@ export default defineTextArea('order', {
   'method.loading': { en: 'Loading payment methods…', max: 80 },
   'method.none': { en: 'There’s no online payment method for this order right now. Message us and we’ll arrange it.' },
   'method.opening': { en: 'Opening checkout…', max: 60 },
-  'method.withDiscount': { en: '{method} ({rate} discount)', max: 80 },
-  'method.withFee': { en: '{method} ({rate} fee)', max: 80 },
+  'method.discountNote': { en: '{rate} discount', max: 60 },
+  'method.savesNote': { en: 'Saves {amount}', max: 60 },
+  'method.feeNote': { en: 'Includes a {fee} fee', max: 60 },
+  'method.feeLabelNote': { en: '{label} of {fee} included', max: 80 },
   'method.preparing': { en: 'Preparing payment…', max: 60 },
   'method.payWith': { en: 'Pay with {coin}', max: 80 },
   'method.chooseCoin': { en: 'Choose a coin above', max: 60 },
@@ -144,14 +82,14 @@ export default defineTextArea('order', {
   'crypto.titleChecking': { en: 'Verifying your payment', max: 60 },
   'crypto.titleConfirmed': { en: 'Payment confirmed', max: 60 },
   'crypto.titleAttention': { en: 'Payment in review', max: 60 },
-  'crypto.sendTitle': { en: 'Send {amount} {coin}', max: 80 },
-  'crypto.figure': { en: '{coin} · {network} network · {fiat}', max: 120 },
+  'crypto.payTitle': { en: 'Pay with {coin}', max: 80 },
+  'crypto.network': { en: '{network} network · {fiat}', max: 120 },
   'crypto.amountToSend': { en: 'Amount to send', max: 40 },
   'crypto.addressLabel': { en: '{coin} address ({network})', max: 80 },
-  'crypto.sendExactly': { en: 'Send exactly {amount} {coin} on the {network} network. A different amount or network can delay or lose your payment.', max: 300 },
+  'crypto.warning': { en: 'Send exactly this amount on the {network} network. A different amount or network can delay or lose your payment.', max: 300 },
   'crypto.txidLabel': { en: 'Transaction ID', max: 40 },
   'crypto.txidBlurb': { en: 'Once you’ve sent it, paste the transaction ID from your wallet and we’ll verify it on-chain.' },
-  'crypto.txidPlaceholder': { en: 'Paste transaction ID', max: 60 },
+  'crypto.txidPlaceholder': { en: 'Paste it here', max: 60 },
   'crypto.sending': { en: 'Sending…', max: 30 },
   'crypto.submit': { en: 'Submit', max: 30 },
   'crypto.checkingNote': { en: 'Reading it off the chain — this can take a few minutes. The page updates on its own.' },

@@ -83,7 +83,6 @@ describe('parts', () => {
     ['../src/features/notices/CutoffBar.tsx', ['data-sf-part="cutoff"']],
     ['../src/features/tracking/ProgressStepper.tsx', ['data-sf-part="stepper"']],
     ['../src/features/account/LoyaltyPage.tsx', ['data-sf-part="button"', 'data-variant="filled"']],
-    ['../src/features/account/OrderDetailPage.tsx', ['data-sf-part="button"', 'data-variant="filled"']],
     ['../src/features/auth/WhatsappLogin.tsx', ['data-sf-part="button"', 'data-variant="filled"']],
     ['../src/features/order-status/MethodPicker.tsx', ['data-sf-part="button"', 'data-variant="filled"']],
     ['../src/features/order-status/PaymentSection.tsx', ['data-sf-part="button"', 'data-variant="filled"']],
@@ -99,15 +98,28 @@ describe('parts', () => {
   const count = (src: string, needle: string) => src.split(needle).length - 1;
 
   it.each<[string, number]>([
-    ['../src/features/order-status/AddressCard.tsx', 1],
-    ['../src/features/order-status/CryptoPaymentCard.tsx', 1],
-    ['../src/features/order-status/ItemsCard.tsx', 1],
-    ['../src/features/order-status/PaymentSection.tsx', 4],
-    ['../src/features/order-status/ShipmentCard.tsx', 1],
     ['../src/features/tracking/ParcelCard.tsx', 1],
     ['../src/features/checkout/CheckoutPage.tsx', 1],
-  ])('%s tags exactly its %i card root(s) — ten in all', (file, n) => {
+  ])('%s tags exactly its %i card root(s)', (file, n) => {
     expect(count(read(file), 'data-sf-part="card"')).toBe(n);
+  });
+
+  // The payment faces sit inside the order page's payment card, so none of them is a card of its own.
+  it.each(['CryptoPaymentCard', 'PaymentSection', 'MethodPicker'])('%s paints no card inside the payment card', (name) => {
+    expect(read(`../src/features/order-status/${name}.tsx`)).not.toContain('data-sf-part="card"');
+  });
+
+  // Every method is a template button (the first is the filled one), and so are the crypto pay and submit buttons.
+  it('MethodPicker tags its method rows and its crypto pay button as template buttons', () => {
+    const src = read('../src/features/order-status/MethodPicker.tsx');
+    expect(count(src, 'data-sf-part="button"')).toBe(2);
+    expect(src).toContain("data-variant={index === 0 ? 'filled' : 'default'}");
+    expect(count(src, 'data-variant="filled"')).toBe(1);
+  });
+  it('CryptoPaymentCard tags its submit as a template button, filled once there is an id to send', () => {
+    const src = read('../src/features/order-status/CryptoPaymentCard.tsx');
+    expect(count(src, 'data-sf-part="button"')).toBe(1);
+    expect(src).toContain("data-variant={valid ? 'filled' : 'default'}");
   });
 
   it('tags every checkout text field (input, select, textarea)', () => {
@@ -122,13 +134,11 @@ describe('parts', () => {
 
   it.each<[string, number]>([
     ['../src/features/account/LoyaltyPage.tsx', 1],
-    ['../src/features/account/OrderDetailPage.tsx', 1],
     ['../src/features/auth/WhatsappLogin.tsx', 3],
-    ['../src/features/order-status/MethodPicker.tsx', 1],
     ['../src/features/order-status/PaymentSection.tsx', 1],
     ['../src/features/tracking/LookupForm.tsx', 1],
     ['../src/features/verify/VerifyPage.tsx', 1],
-    ['../src/features/payment-redirect/payment-parts.tsx', 4],
+    ['../src/features/payment-redirect/payment-parts.tsx', 6],
     ['../src/features/wholesale/WholesaleBar.tsx', 1],
   ])('%s tags exactly its %i primary-CTA button(s) as shared filled buttons', (file, n) => {
     const src = read(file);

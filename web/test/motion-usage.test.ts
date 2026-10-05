@@ -22,17 +22,11 @@ describe('motion is applied', () => {
   it('tracking parcel cards stagger', () => expect(src('features/tracking/ParcelCard.tsx')).toContain('staggerAnim('));
 
   it.each([
-    'features/order-status/StatusHero.tsx', 'features/order-status/ItemsCard.tsx', 'features/order-status/AddressCard.tsx',
-    'features/order-status/ShipmentCard.tsx', 'features/order-status/CryptoPaymentCard.tsx', 'features/order-status/PaymentSection.tsx',
+    'features/order-status/CryptoPaymentCard.tsx', 'features/order-status/PaymentSection.tsx',
     'features/catalog/ProductList.tsx', 'features/catalog/ProductGrid.tsx', 'features/catalog/ProductDetailPage.tsx',
     'features/catalog/ProductDetailSheet.tsx', 'features/checkout/CheckoutPage.tsx', 'features/tracking/OrderHero.tsx',
     'features/tracking/LookupForm.tsx', 'features/verify/VerifyPage.tsx', 'features/payment-redirect/PaymentSuccessPage.tsx',
     'features/payment-redirect/PaymentCancelPage.tsx', 'features/payment-redirect/OrderPlacedPage.tsx',
     'features/account/AccountLayout.tsx', 'features/auth/LoginOptions.tsx', 'components/EmptyState.tsx',
   ])('%s fades in', (file) => expect(src(file)).toMatch(/\bFADE\b/));
-
-  it('the current route node pings', () => {
-    expect(src('features/order-status/StatusHero.tsx')).toContain('className="ping"');
-    expect(src('features/order-status/OrderStatus.module.css')).toMatch(/\.node\s*\{[^}]*position: relative/s);
-  });
 });
