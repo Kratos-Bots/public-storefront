@@ -239,7 +239,7 @@ describe('payment needed', () => {
     }));
     mount();
     const hosted = await screen.findByRole('region', { name: 'Payment needed' });
-    await within(hosted).findByRole('link', { name: /Open secure checkout/ });
+    await within(hosted).findByRole('link', { name: /Click here to Pay/ });
     expect(within(hosted).queryByText('Payment required')).toBeNull();
   });
 

@@ -5,6 +5,7 @@ import { CryptoPaymentCard } from '@/features/order-status/CryptoPaymentCard.tsx
 import { MethodPicker } from '@/features/order-status/MethodPicker.tsx';
 import { visibleCryptoPayments } from '@/features/order-status/payment-state.ts';
 import { FADE } from '@/lib/motion.ts';
+import { isTelegramWebApp, openExternalLink } from '@/lib/telegram-webapp.ts';
 import type { PublicOrder } from '@/types/public-order.ts';
 import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/order-status/OrderStatus.module.css';
@@ -89,6 +90,13 @@ export function PaymentSection({ order, reference }: PaymentSectionProps) {
             href={active.checkoutUrl!}
             target="_blank"
             rel="noopener"
+            // Some gateways refuse Telegram's in-app view, so inside the Mini App Telegram's own opener (the
+            // system browser) takes it, called within the tap. The anchor keeps its href for everything else.
+            onClick={(event) => {
+              if (!isTelegramWebApp()) return;
+              event.preventDefault();
+              openExternalLink(active.checkoutUrl!);
+            }}
             data-sf-part="button"
             data-variant="filled"
           >

@@ -227,20 +227,36 @@ test.describe('unpaid orders · the order page', () => {
     expect(mocks.state.cancels).toEqual([]);
   });
 
-  test('d · choosing a hosted method opens its checkout, and posts the choice', async ({ page }) => {
+  test('d · choosing a hosted method posts the choice and opens nothing; the customer taps Click here to Pay', async ({ page }) => {
+    const popups: string[] = [];
+    page.on('popup', (p) => popups.push(p.url()));
     const mocks = await open(page, { path: ORDER_PAGE });
     await expect(page.getByRole('heading', { name: REF, level: 1 })).toBeVisible();
     await expect(payCard(page).getByRole('heading', { name: /^Choose how you.d like to pay/ })).toBeVisible();
+    const checkoutUrl = `https://pay.example.invalid/checkout/${REF}`;
+    const foreign: string[] = [];
+    page.context().on('request', (r) => { if (r.url().startsWith('https://pay.example.invalid')) foreign.push(r.url()); });
     await payCard(page).getByRole('button', { name: /^Card/ }).click();
     await expect.poll(() => mocks.state.methods).toEqual([{ method: 'sushipp' }]);
-    // The order now has a hosted payment open: the page moved on to it.
-    await expect(payCard(page).getByRole('link', { name: 'Open secure checkout' })).toBeVisible();
+    // The page moved on to the hosted face; nothing was opened or navigated to by the choice itself.
+    const pay = payCard(page).getByRole('link', { name: 'Click here to Pay' });
+    await expect(pay).toHaveAttribute('href', checkoutUrl);
+    await expect(pay).toHaveAttribute('target', '_blank');
+    await expect(page).toHaveURL(new RegExp(`${ORDER_PAGE}$`));
+    expect(popups).toEqual([]);
+    expect(foreign).toEqual([]);
+    // The tap opens the checkout in a new tab (the mock aborts foreign origins, so only the page itself is seen).
+    const popup = page.waitForEvent('popup');
+    await pay.click();
+    await popup;
+    await expect.poll(() => foreign).toEqual([checkoutUrl]);
+    await expect(page).toHaveURL(new RegExp(`${ORDER_PAGE}$`));
   });
 
   test('an order that already has a hosted checkout open shows its link', async ({ page }) => {
     await open(page, { path: ORDER_PAGE, fixture: 'hosted' });
     await expect(payCard(page).getByRole('heading', { name: 'Finish your payment' })).toBeVisible();
-    await expect(payCard(page).getByRole('link', { name: 'Open secure checkout' })).toHaveAttribute('href', `https://pay.example.invalid/checkout/${REF}`);
+    await expect(payCard(page).getByRole('link', { name: 'Click here to Pay' })).toHaveAttribute('href', `https://pay.example.invalid/checkout/${REF}`);
   });
 });
 
@@ -421,7 +437,7 @@ test.describe('the order page · a payment lands, or the order goes', () => {
       new MutationObserver(look).observe(document, { subtree: true, childList: true, characterData: true });
     });
     const mocks = await open(page, { path: ORDER_PAGE, fixture: 'hosted' });
-    await expect(payCard(page).getByRole('link', { name: 'Open secure checkout' })).toBeVisible();
+    await expect(payCard(page).getByRole('link', { name: 'Click here to Pay' })).toBeVisible();
 
     // The customer pays in the other tab and comes back: the page is asked again when it regains focus.
     markOrderPaid(mocks.state);
