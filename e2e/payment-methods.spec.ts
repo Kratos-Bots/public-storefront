@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { FOUR_METHODS, installMocks, ORDER_REF, SESSION_CUSTOMER, SESSION_TOKEN, type InstallMocksOptions, type MockHandle } from './mocks.ts';
+import { FOUR_METHODS, installMocks, ORDER_REF, type InstallMocksOptions, type MockHandle } from './mocks.ts';
 import { FIXED_NOW } from './flows.ts';
 
 /**

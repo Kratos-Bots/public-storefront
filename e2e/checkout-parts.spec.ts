@@ -1,6 +1,6 @@
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import {
-  COUPON_CODE, installMocks, installTelegramStub, type InstallMocksOptions, type Layout, type MockHandle, type OrderVariant,
+  COUPON_CODE, installMocks, installTelegramStub, type InstallMocksOptions, type Layout, type MockHandle,
 } from './mocks.ts';
 import { FIXED_NOW } from './flows.ts';
 import { presetTheme } from './template-theme.ts';
@@ -31,7 +31,6 @@ interface OpenOptions {
   tweakSettings?: InstallMocksOptions['tweakSettings'];
   /** localStorage keys seeded once, before the app boots. */
   seed?: Record<string, unknown>;
-  order?: OrderVariant;
   /** What the collection-point search answers with (see InstallMocksOptions.servicePoints). */
   servicePoints?: InstallMocksOptions['servicePoints'];
   tweakOrderDetail?: InstallMocksOptions['tweakOrderDetail'];
@@ -98,7 +97,6 @@ async function open(page: Page, layout: Layout, set: PageSet | null, path: strin
     layout,
     session: !o.guest && !o.telegram,
     pages: { [layout]: set },
-    order: o.order ? publicOrderVariant(o.order) : undefined,
     servicePoints: o.servicePoints,
     tweakOrderDetail: o.tweakOrderDetail,
     tweakSettings: (s) => { if (o.guest) s.features.guestCheckout = true; o.tweakSettings?.(s); },
@@ -171,12 +169,12 @@ async function walk(page: Page, w: Walk): Promise<void> {
 }
 
 /** Where placing an order leaves a shopper: the account order page when signed in, the thank-you page for a guest. */
-const AFTER_ORDER = /\/(account\/orders\/E2E1|order-placed\?order=E2E1)$/;
+const AFTER_ORDER = { account: /\/account\/orders\/E2E1$/, guest: /\/order-placed\?order=E2E1$/ };
 
-async function placeOrder(page: Page, via?: () => Promise<void>): Promise<void> {
+async function placeOrder(page: Page, after: keyof typeof AFTER_ORDER, via?: () => Promise<void>): Promise<void> {
   if (via) await via();
   else await page.getByRole('button', { name: /^Place order/ }).click();
-  await expect(page).toHaveURL(AFTER_ORDER);
+  await expect(page).toHaveURL(AFTER_ORDER[after]);
 }
 
 /** What the existing checkout e2e (storefront.spec.ts) asserts of the posted order: v0.7.0's behaviour. */
@@ -212,7 +210,7 @@ test.describe('checkout · the default arrangement sends what v0.7.0 sent', () =
     test(`${layout} · signed in: the order, and the requests, equal the no-page-set checkout`, async ({ page, browser }) => {
       const first = await open(page, layout, defaultCheckoutSet(layout), '/checkout', { width: 390 });
       await walk(page, { order: LEGAL_STEP_ORDERS[0]! });
-      await placeOrder(page);
+      await placeOrder(page, 'account');
       await expectSpent(page);
       expect(first.mocks.state.checkouts).toHaveLength(1);
       expect(first.mocks.state.checkouts[0]).toMatchObject(BASE_BODY);
@@ -228,7 +226,7 @@ test.describe('checkout · the default arrangement sends what v0.7.0 sent', () =
         const p2 = await ctx.newPage();
         const second = await open(p2, layout, null, '/checkout', { width: 390 });
         await walk(p2, { order: LEGAL_STEP_ORDERS[0]! });
-        await placeOrder(p2);
+        await placeOrder(p2, 'account');
         expect(second.mocks.state.checkouts[0]).toEqual(first.mocks.state.checkouts[0]);
         expect(second.mocks.state.quotes).toEqual(first.mocks.state.quotes);
       } finally {
@@ -241,7 +239,7 @@ test.describe('checkout · the default arrangement sends what v0.7.0 sent', () =
       await expect(page.getByRole('heading', { name: 'Guest checkout', level: 1 })).toBeVisible();
       await walk(page, { order: LEGAL_STEP_ORDERS[0]! });
       await guestQuoteSettled(page, mocks);
-      await placeOrder(page);
+      await placeOrder(page, 'guest');
       await expectSpent(page);
       expect(mocks.state.checkouts).toHaveLength(1);
       const body = mocks.state.checkouts[0]!;
@@ -299,7 +297,7 @@ test.describe('checkout · the contact and address form', () => {
     await expect(page.getByText('+447801123456')).toBeVisible();
     await expect(page.getByText('Flat 2')).toBeVisible();
 
-    await placeOrder(page);
+    await placeOrder(page, 'account');
     const body = mocks.state.checkouts[0]!;
     expect(body.shippingAddress).toMatchObject({ addressLine1: '14 Kirkgate', addressLine3: 'Flat 2', city: 'Leeds', zip: 'LS1 6BY', country: 'GB' });
     // What is sent is unchanged: the backend strips the zero.
@@ -371,7 +369,7 @@ test.describe('checkout · collection points', () => {
     await expect(page.getByText('Collect from')).toBeVisible();
     await expect(page.getByText('Corner News')).toBeVisible();
 
-    await placeOrder(page);
+    await placeOrder(page, 'account');
     expect(mocks.state.servicePointSearches).toEqual([{ country: 'GB', postalCode: 'LS1 6BY' }]);
     await expect.poll(() => mocks.state.quotes.at(-1)).toMatchObject({ country: 'GB', deliveryMethod: 'collection', servicePointCarrier: 'evri' });
     expect(mocks.state.checkouts[0]!.shippingAddress).toEqual({
@@ -389,7 +387,7 @@ test.describe('checkout · collection points', () => {
     await next(page);
     await toReview(page);
     await expect(page.getByText('Collect from')).toBeVisible();
-    await placeOrder(page);
+    await placeOrder(page, 'account');
     expect(mocks.state.checkouts[0]!.shippingAddress).toMatchObject({
       addressLine1: 'Quayside Parcel Box', city: 'Leeds', zip: 'LS1 5AB', country: 'GB',
       servicePointId: '9004', servicePointCarrier: 'evri', servicePointName: 'Quayside Parcel Box',
@@ -414,7 +412,7 @@ test.describe('checkout · collection points', () => {
     await next(page);
     await toReview(page);
     await expect(page.getByText('Northbound Locker A')).toBeVisible();
-    await placeOrder(page);
+    await placeOrder(page, 'account');
     expect(mocks.state.checkouts[0]!.shippingAddress).toMatchObject({
       addressLine1: 'Kirkgate 14', servicePointId: '9001', servicePointCarrier: 'inpost', servicePointName: 'Northbound Locker A',
     });
@@ -434,7 +432,7 @@ test.describe('checkout · collection points', () => {
     await expect(page.getByRole('textbox', { name: 'Address line 1' })).toHaveValue('14 Kirkgate');
     await next(page);
     await toReview(page);
-    await placeOrder(page);
+    await placeOrder(page, 'account');
     expect(mocks.state.checkouts[0]).toMatchObject(BASE_BODY);
     expect(Object.keys(mocks.state.checkouts[0]!.shippingAddress as object)).not.toEqual(expect.arrayContaining(['servicePointId']));
     for (const q of mocks.state.quotes) expect(Object.keys(q)).not.toEqual(expect.arrayContaining(['deliveryMethod']));
@@ -462,7 +460,7 @@ test.describe('checkout · collection points', () => {
     // The guest quote is debounced and mints a token of its own: let the one priced for this point land before placing.
     await expect.poll(() => mocks.state.guestQuotes.some((q) => q.deliveryMethod === 'collection' && q.shippingOptionId === 11)).toBe(true);
     await expect(page.getByText('Verifying')).toHaveCount(0);
-    await placeOrder(page);
+    await placeOrder(page, 'guest');
     expect(mocks.state.checkouts[0]!.shippingAddress).toMatchObject({ servicePointId: '9001', servicePointCarrier: 'inpost' });
     expect(mocks.state.guestQuotes.at(-1)).toMatchObject({ deliveryMethod: 'collection', servicePointCarrier: 'inpost' });
   });
@@ -523,7 +521,7 @@ test.describe('checkout · rearranged, end to end', () => {
         await expect(page.getByRole('heading', { name: HEADING.contact })).toHaveCount(0);
 
         await walk(page, { order: LEGAL_STEP_ORDERS[1]!, coupon: COUPON_CODE, notes: NOTE, content: true });
-        await placeOrder(page);
+        await placeOrder(page, 'account');
         await expectSpent(page);
 
         expect(mocks.state.checkouts).toHaveLength(1);
@@ -539,7 +537,7 @@ test.describe('checkout · rearranged, end to end', () => {
       const { mocks } = await open(page, layout, arrangedCheckoutSet(layout), '/checkout', { width: 390, guest: true });
       await walk(page, { order: LEGAL_STEP_ORDERS[1]!, coupon: COUPON_CODE, notes: NOTE, content: true });
       await guestQuoteSettled(page, mocks);
-      await placeOrder(page);
+      await placeOrder(page, 'guest');
       await expectSpent(page);
       expect(mocks.state.checkouts).toHaveLength(1);
       const body = mocks.state.checkouts[0]!;
@@ -574,7 +572,7 @@ test.describe('checkout · inside Telegram', () => {
       await expect(page.getByRole('button', { name: /^Place order/ })).toHaveCount(0);
       expect(await mainText(page)).toContain(arranged ? '41.78' : '46.03');
       await clickMain(page);
-      await expect(page).toHaveURL(AFTER_ORDER);
+      await expect(page).toHaveURL(AFTER_ORDER.account);
       expect(mocks.state.checkouts).toHaveLength(1);
       expect(mocks.state.checkouts[0]).toMatchObject(arranged ? { ...BASE_BODY, couponCode: COUPON_CODE, notes: NOTE } : BASE_BODY);
       expect(((await tg(page)).calls.filter((c) => c[0] === 'haptic.notify')).map((c) => c[1])).toContain('success');
@@ -593,7 +591,7 @@ test.describe('checkout · step orders', () => {
       const labels: Record<StepKind, string> = { contact: 'Contact', address: 'Address', shipping: 'Shipping', payment: 'Payment', review: 'Review' };
       await expect(page.locator('[data-sf-part="stepper"]')).toHaveText(new RegExp(order.map((k) => labels[k]).join('[\\s\\S]*')));
       await walk(page, { order, coupon: COUPON_CODE, notes: NOTE, content: true });
-      await placeOrder(page);
+      await placeOrder(page, 'account');
       expect(mocks.state.checkouts[0]).toMatchObject({ ...BASE_BODY, couponCode: COUPON_CODE, notes: NOTE });
       expect(logs).toEqual([]);
     });
@@ -615,7 +613,7 @@ test.describe('checkout · step orders', () => {
       expect(logs.filter((l) => l.includes('[checkout]'))).toEqual([]);
       // And it is a working checkout, in the default order.
       await walk(page, { order: LEGAL_STEP_ORDERS[0]! });
-      await placeOrder(page);
+      await placeOrder(page, 'account');
       expect(mocks.state.checkouts[0]).toMatchObject(BASE_BODY);
     });
   }
@@ -631,7 +629,7 @@ test.describe('checkout · removed coupon and notes parts', () => {
     await walk(page, { order: LEGAL_STEP_ORDERS[0]! });
     // No coupon row anywhere on a checkout without the part.
     await expect(page.getByRole('textbox', { name: 'Coupon code' })).toHaveCount(0);
-    await placeOrder(page);
+    await placeOrder(page, 'account');
     expect(gone.mocks.state.quotes.length).toBeGreaterThan(0);
     for (const q of gone.mocks.state.quotes) expect(q.couponCode, JSON.stringify(q)).toBeUndefined();
     expect(gone.mocks.state.checkouts[0]).toMatchObject(BASE_BODY);
@@ -644,7 +642,7 @@ test.describe('checkout · removed coupon and notes parts', () => {
       const p2 = await ctx.newPage();
       const back = await open(p2, 'storefront', noCouponCheckoutSet('storefront', { coupon: true, notes: true }), '/checkout', { seed: SAVED });
       await walk(p2, { order: LEGAL_STEP_ORDERS[0]! });
-      await placeOrder(p2);
+      await placeOrder(p2, 'account');
       expect(back.mocks.state.quotes.some((q) => q.couponCode === COUPON_CODE)).toBe(true);
       expect(back.mocks.state.checkouts[0]).toMatchObject({ ...BASE_BODY, couponCode: COUPON_CODE, notes: 'Saved note from a previous visit' });
     } finally {
@@ -655,7 +653,7 @@ test.describe('checkout · removed coupon and notes parts', () => {
   test('guest: the same, and exactly one Turnstile mint per guest request', async ({ page, browser }) => {
     const gone = await open(page, 'storefront', noCouponCheckoutSet('storefront'), '/checkout', { guest: true, seed: SAVED });
     await walk(page, { order: LEGAL_STEP_ORDERS[0]! });
-    await placeOrder(page);
+    await placeOrder(page, 'guest');
     expect(gone.mocks.state.guestQuotes.length).toBeGreaterThan(0);
     for (const q of gone.mocks.state.guestQuotes) expect(q.couponCode, JSON.stringify(q)).toBeUndefined();
     const body = gone.mocks.state.checkouts[0]!;
@@ -672,7 +670,7 @@ test.describe('checkout · removed coupon and notes parts', () => {
       const p2 = await ctx.newPage();
       const back = await open(p2, 'storefront', noCouponCheckoutSet('storefront', { coupon: true, notes: true }), '/checkout', { guest: true, seed: SAVED });
       await walk(p2, { order: LEGAL_STEP_ORDERS[0]! });
-      await placeOrder(p2);
+      await placeOrder(p2, 'guest');
       expect(back.mocks.state.guestQuotes.some((q) => q.couponCode === COUPON_CODE)).toBe(true);
       expect(back.mocks.state.checkouts[0]).toMatchObject({ ...BASE_BODY, couponCode: COUPON_CODE, notes: 'Saved note from a previous visit' });
       const used2 = [...back.mocks.state.guestQuotes.map((q) => q.turnstileToken), back.mocks.state.checkouts[0]!.turnstileToken];

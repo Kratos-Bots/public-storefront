@@ -31,9 +31,12 @@ const UNPAID_STATES: OrderFixtureName[] = ['unpaid', 'hosted', 'crypto'];
 
 const LONG_ITEM = 'Alpine Extract 10ml, Limited Winter Reserve Edition with presentation box and a hand-written card';
 
-/** The shop's ways to pay: a card with a fee, crypto with a discount, and a bank transfer under a long name. */
+/**
+ * The shop's ways to pay, all on one base of 47.45 (42.50 + 4.95 delivery): a card with a 3% fee (1.42, so 48.87),
+ * crypto with a 3% discount (-1.42, so 46.03), and a bank transfer under a long name (no fee, so 47.45).
+ */
 const METHODS: PaymentMethod[] = [
-  { method: 'sushipp', displayName: 'Pay by card', type: 'gateway', details: null, feeType: 'percent', feeValue: 3, feeRateText: '+3%', feeLabel: 'Card fee', fee: 1.42, chargeTotal: 47.45 },
+  { method: 'sushipp', displayName: 'Pay by card', type: 'gateway', details: null, feeType: 'percent', feeValue: 3, feeRateText: '+3%', feeLabel: 'Card fee', fee: 1.42, chargeTotal: 48.87 },
   { method: 'crypto_static', displayName: 'Pay with crypto', type: 'crypto', details: null, feeType: 'percent', feeValue: -3, feeRateText: '−3%', feeLabel: 'Crypto discount', fee: -1.42, chargeTotal: 46.03,
     cryptoOptions: [
       { coin: 'btc', network: 'bitcoin', coinLabel: 'BTC', networkLabel: 'Bitcoin', feeType: 'percent', feeValue: -3, feeRateText: '−3%', feeLabel: 'Crypto discount', fee: -1.42, chargeTotal: 46.03 },
@@ -47,6 +50,14 @@ const unpaidRow = (): UnpaidOrder => ({
   payBy: null, canCancel: true, cancelBlockedBy: null,
 });
 
+const STATE_TOTALS: Record<OrderFixtureName, number> = { unpaid: 47.45, hosted: 48.87, crypto: 46.03, shipped: 46.03, collection: 46.03, cancelled: 47.45 };
+
+/** Nothing on the page pokes out sideways: the one thing this spec asserts of every capture. */
+async function expectNoOverflow(page: Page): Promise<void> {
+  const o = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, inner: window.innerWidth }));
+  expect(o.scroll, 'horizontal overflow').toBeLessThanOrEqual(o.inner);
+}
+
 interface Setup { template: string; preset: string; layout: Layout; width: number; fixture: OrderFixtureName }
 
 async function setup(page: Page, s: Setup, unpaidOrders?: UnpaidOrder[]): Promise<void> {
@@ -58,10 +69,14 @@ async function setup(page: Page, s: Setup, unpaidOrders?: UnpaidOrder[]): Promis
   const tweakSettings = await presetTheme(page, s.template, s.preset);
   await installMocks(page, {
     layout: s.layout, session: true, orderFixture: s.fixture, orderReference: REF, tweakSettings, paymentMethods: METHODS,
-    // Long names, so wrapping is exercised; an order with no method chosen yet is owed the undiscounted total.
+    // Long names, so wrapping is exercised. The total is the 47.45 base plus whatever the state's method adds: nothing
+    // while none is chosen, the card's fee for the hosted checkout, the crypto discount for crypto and for the paid states.
     tweakOrderDetail: (d) => {
       d.items[0]!.name = LONG_ITEM;
-      if (s.fixture === 'unpaid') { d.totalAmount = 47.45; d.outstandingBalance = 47.45; }
+      const total = STATE_TOTALS[s.fixture];
+      d.totalAmount = total;
+      if (d.outstandingBalance > 0) d.outstandingBalance = total;
+      for (const p of d.payments) p.amount = total;
     },
     ...(unpaidOrders ? { unpaidOrders } : {}),
   });
@@ -87,6 +102,7 @@ for (const t of TEMPLATES) {
             await setup(page, { ...t, layout, width, fixture });
             await page.goto(`/account/orders/${REF}`);
             await settle(page, fixture);
+            await expectNoOverflow(page);
             await page.screenshot({
               path: `${SHOTS}${t.template}/${t.template}-${layout}-${width}-${fixture}.png`,
               fullPage: true, animations: 'disabled', caret: 'hide',
@@ -104,6 +120,7 @@ for (const t of TEMPLATES) {
         await page.getByRole('region', { name: 'Payment needed' }).getByRole('button', { name: 'Cancel order' }).click();
         await expect(page.getByRole('dialog', { name: `Cancel order ${REF}?` })).toBeVisible();
         await page.evaluate(() => document.fonts.ready);
+        await expectNoOverflow(page);
         await page.screenshot({
           path: `${SHOTS}${t.template}/${t.template}-storefront-${width}-cancel-dialog.png`, animations: 'disabled', caret: 'hide',
         });
@@ -115,6 +132,7 @@ for (const t of TEMPLATES) {
         await expect(page.getByRole('dialog', { name: 'You have an unpaid order' })).toBeVisible();
         await page.evaluate(() => document.fonts.ready);
         await page.waitForLoadState('networkidle');
+        await expectNoOverflow(page);
         await page.screenshot({
           path: `${SHOTS}${t.template}/${t.template}-storefront-${width}-popup.png`, animations: 'disabled', caret: 'hide',
         });

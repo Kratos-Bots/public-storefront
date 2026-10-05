@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { installMocks, type InstallMocksOptions, type Layout, type MockHandle } from './mocks.ts';
+import { installMocks, type InstallMocksOptions, type Layout, type MockHandle, type OrderFixtureName } from './mocks.ts';
 import { FIXED_NOW } from './flows.ts';
 import { presetTheme } from './template-theme.ts';
 import {
@@ -447,11 +447,13 @@ const SIGNED_OUT: typeof SIGNED_IN = [
   { name: 'verify', path: '/verify', ready: (p) => p.getByRole('textbox', { name: 'Verification code' }) },
 ];
 
-async function sweep(page: Page, layout: Layout, template: string, preset: string, session: boolean, pages: typeof SIGNED_IN): Promise<string[]> {
+async function sweep(
+  page: Page, layout: Layout, template: string, preset: string, session: boolean, pages: typeof SIGNED_IN, orderFixture?: OrderFixtureName,
+): Promise<string[]> {
   await page.setViewportSize({ width: 360, height: 800 });
   await page.clock.setFixedTime(FIXED_NOW);
   const mocks = await installMocks(page, {
-    layout, session, pages: { [layout]: arrangedEverythingSet(layout) }, tweakSettings: await presetTheme(page, template, preset),
+    layout, session, pages: { [layout]: arrangedEverythingSet(layout) }, tweakSettings: await presetTheme(page, template, preset), orderFixture,
   });
   seedCart(mocks, 'one');
   const failures: string[] = [];
@@ -476,6 +478,16 @@ for (const t of TEMPLATES) {
         failures.push(...await sweep(await fresh.newPage(), layout, t.template, t.preset, false, SIGNED_OUT));
       } finally {
         await fresh.close();
+      }
+      // The order page while it still wants paying: the picker, a hosted checkout, a crypto payment with its address and steps.
+      for (const fixture of ['unpaid', 'hosted', 'crypto'] as const) {
+        const ctx = await browser.newContext();
+        try {
+          const orderPage: typeof SIGNED_IN = [{ name: `order (${fixture})`, path: '/account/orders/E2E1', ready: (p) => p.getByRole('heading', { name: 'E2E1', level: 1 }) }];
+          failures.push(...await sweep(await ctx.newPage(), layout, t.template, t.preset, true, orderPage, fixture));
+        } finally {
+          await ctx.close();
+        }
       }
       expect(failures).toEqual([]);
     });
