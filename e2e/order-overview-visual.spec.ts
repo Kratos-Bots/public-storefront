@@ -113,6 +113,29 @@ for (const t of TEMPLATES) {
       }
     }
 
+    // Keyboard focus lands on the pop-up's primary button after one Tab (the dialog opens on its sentence): one ring,
+    // no heavier than the template's other focus rings.
+    test('storefront 390 popup focus', async ({ page }) => {
+      await setup(page, { ...t, layout: 'storefront', width: 390, fixture: 'unpaid' }, [unpaidRow()]);
+      await page.goto('/');
+      const dialog = page.getByRole('dialog', { name: 'You have an unpaid order' });
+      await expect(dialog).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+      await page.keyboard.press('Tab');
+      const primary = dialog.getByRole('button', { name: 'Review or cancel order' });
+      await expect(primary).toBeFocused();
+      expect(await page.evaluate(() => document.activeElement?.textContent?.trim())).toBe('Review or cancel order');
+      await page.waitForLoadState('networkidle');
+      const ring = await primary.evaluate((el) => {
+        const s = getComputedStyle(el);
+        return { outline: `${s.outlineWidth} ${s.outlineStyle} ${s.outlineColor}`, offset: s.outlineOffset, shadow: s.boxShadow };
+      });
+      console.log(`FOCUS ${t.template}: ${JSON.stringify(ring)}`);
+      await page.screenshot({
+        path: `${SHOTS}${t.template}/${t.template}-storefront-390-popup-focus.png`, animations: 'disabled', caret: 'hide',
+      });
+    });
+
     for (const width of WIDTHS) {
       test(`storefront ${width} cancel dialog`, async ({ page }) => {
         await setup(page, { ...t, layout: 'storefront', width, fixture: 'unpaid' });
