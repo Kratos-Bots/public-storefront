@@ -70,6 +70,8 @@ title: Northbound Supply
 <div class="_account_H _accountOrder_H">
 <div class="anim-fade">
 <div class="_page_H">
+<p class="_srOnly_H" role="status">
+</p>
 <div class="_overview_H" data-columns="two">
 <div class="_head_H">
 <a class="_back_H" href="/account/orders" data-discover="true">
@@ -81,7 +83,7 @@ title: Northbound Supply
 </svg>All orders</a>
 <header class="_heading_H">
 <div class="_titleRow_H">
-<h1 class="_title_H">K4M2QP</h1>
+<h1 class="_title_H" tabindex="-1" data-order-title="true">K4M2QP</h1>
 <span class="_pill_H" data-sf-part="badge">On its way</span>
 </div>
 <p class="_meta_H">Placed 24 August 2026</p>

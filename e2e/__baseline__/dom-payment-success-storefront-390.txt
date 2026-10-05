@@ -85,7 +85,7 @@ title: Northbound Supply
 </div>
 <div class="_actions_H">
 <a class="_cta_H" data-sf-part="button" data-variant="filled" href="/login?returnTo=%2Faccount%2Forders%2FE2E9" data-discover="true">Sign in to view your order</a>
-<p class="_detail_H">Use the email or phone number you gave at checkout. You can pay for the order and follow it from there.</p>
+<p class="_detail_H">Use the email or phone number you gave at checkout.</p>
 </div>
 <div class="_contact_H">
 <div class="_inline_H">
