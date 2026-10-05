@@ -309,8 +309,9 @@ test.describe('account parts', () => {
     await expect(page.getByRole('link', { name: /^E2E1/ })).toBeVisible();
   });
 
-  test('order detail with the parcels ahead of the address, in the side column', async ({ page }) => {
-    // The page sorts the parts into head, main and side by itself; an arrangement reorders within an area.
+  test('order detail with nothing owed: the parcels sit in the main column, ahead of the items as arranged, and the address follows in the side', async ({ page }) => {
+    // The page sorts the parts into head, main and side by itself; an arrangement reorders within an area. With no
+    // payment card to draw the parcels join the items, so the arrangement's order (parcels, then items) is what shows.
     await open(page, 'storefront', arrangedAccountSet(), '/account/orders/K4M2QP', { orderFixture: 'shipped', orderReference: 'K4M2QP' });
     const parcels = page.getByRole('heading', { name: 'Parcels' });
     const address = page.getByRole('heading', { name: 'Delivery address' });
@@ -318,9 +319,9 @@ test.describe('account parts', () => {
     await expect(items).toBeVisible();
     await expect(parcels).toBeVisible();
     await expect(address).toBeVisible();
-    expect(await precedes(parcels, address)).toBe(true);
-    // Items is a main-column part: it stays ahead of the side column wherever the document put it.
-    expect(await precedes(items, parcels)).toBe(true);
+    expect(await precedes(parcels, items)).toBe(true);
+    // The address is a side-column part: it stays behind the main column wherever the document put it.
+    expect(await precedes(items, address)).toBe(true);
   });
 
   test('loyalty redeem still confirms through the modal', async ({ page }) => {

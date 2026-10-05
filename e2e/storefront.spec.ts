@@ -69,7 +69,8 @@ const CRYPTO_PAYMENT_ID = 9001;
 async function payWithCrypto(page: Page, mocks: MockHandle): Promise<void> {
   await expect(page).toHaveURL(new RegExp(`/account/orders/${ORDER_REF}$`));
   await expect(page.getByRole('heading', { name: 'Pay with USDT' })).toBeVisible();
-  await expect(page.getByText('0xE2E1a2b3c4d5e6f7089aabbccddeeff0011223344')).toBeVisible();
+  // The address is drawn in groups of four for reading aloud to a wallet; the whole value is also there for a screen reader and for Copy.
+  await expect(page.locator('[aria-hidden="true"]').filter({ hasText: '0xE2E1a2b3c4d5e6f7089aabbccddeeff0011223344' }).first()).toBeVisible();
 
   // Padded on purpose: the client trims before it sends, and the backend rejects
   // an untrimmed id — so the assertion below is what proves the trim happens.

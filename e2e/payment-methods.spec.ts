@@ -189,7 +189,7 @@ test.describe('payment methods · the order page', () => {
     await expect(pickerRows(page).nth(0)).toContainText('Pay with crypto');
     await expect(pickerRows(page).nth(0)).toContainText('3% discount');
     await expect(pickerRows(page).nth(2)).toContainText('PayPal balance');
-    await expect(pickerRows(page).nth(2)).toContainText('Includes a £0.95 fee');
+    await expect(pickerRows(page).nth(2)).toContainText('PayPal balance fee of £0.95 included');
     // No fee, no wording: the card row is the bare name.
     await expect(pickerRows(page).nth(1)).not.toContainText('fee');
     await expect(pickerRows(page).nth(1)).not.toContainText('discount');
