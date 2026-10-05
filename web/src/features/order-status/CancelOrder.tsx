@@ -1,4 +1,5 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
+import { Modal } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { cancelOrder, OrderNotCancellableError } from '@/api/orders.ts';
 import type { StyleAttrs } from '@/builder/define.ts';
@@ -28,7 +29,7 @@ const REFUSAL: Record<OrderNotCancellableError['reason'], Refusal> = {
 };
 
 /**
- * "Cancel order" for an unpaid order: an inline confirmation (never `confirm()`),
+ * "Cancel order" for an unpaid order: a confirmation dialog that only its two buttons can close,
  * or, when money may already be on its way, a pointer to the shop instead.
  */
 export function CancelOrder({ reference, canCancel, blockedBy, onCancelled, rootAttrs }: CancelOrderProps) {
@@ -37,40 +38,13 @@ export function CancelOrder({ reference, canCancel, blockedBy, onCancelled, root
   const [working, setWorking] = useState(false);
   const [done, setDone] = useState(false);
   const [message, setMessage] = useState<Refusal | null>(null);
-  const titleId = useId();
   const busy = useRef(false);
-  const trigger = useRef<HTMLButtonElement>(null);
-  const keep = useRef<HTMLButtonElement>(null);
-  const panel = useRef<HTMLDivElement>(null);
-  const returnFocus = useRef(false);
-
-  useEffect(() => {
-    if (open) keep.current?.focus();
-    else if (returnFocus.current) {
-      returnFocus.current = false;
-      trigger.current?.focus();
-    }
-  }, [open]);
-
-  // Keep is disabled while the request runs and drops focus; the panel takes it so Escape still lands inside the
-  // confirmation. When focus is already inside (the confirm button, which stays focusable as aria-disabled) it stays there.
-  useEffect(() => {
-    if (!working || !open) return;
-    const el = panel.current;
-    const active = document.activeElement as HTMLElement | null;
-    // A disabled control (Keep) may still be reported as focused; it cannot take keys, so the panel does.
-    const holdsFocus = !!el && !!active && el.contains(active) && !(active as HTMLButtonElement).disabled;
-    if (el && !holdsFocus) el.focus();
-  }, [working, open]);
 
   const view = cancelView(canCancel, blockedBy);
   // A refusal or failure outlives the props that change under it (the refetch after a refusal usually hides the control).
   if (view === 'none' && !message) return null;
 
-  const close = () => {
-    returnFocus.current = true;
-    setOpen(false);
-  };
+  const close = () => setOpen(false);
 
   const confirm = async () => {
     if (busy.current) return;
@@ -110,44 +84,40 @@ export function CancelOrder({ reference, canCancel, blockedBy, onCancelled, root
       ) : null}
       {view === 'button' && !done ? (
         <button
-          ref={trigger}
           type="button"
           className={classes.cancelAction}
-          aria-expanded={open}
+          aria-haspopup="dialog"
           onClick={() => { setMessage(null); setOpen(true); }}
         >
           {t('order.cancel.action')}
         </button>
       ) : null}
-      {view === 'button' && open ? (
-        <div
-          ref={panel}
-          tabIndex={-1}
-          data-mantine-stop-propagation
-          className={classes.cancelPanel}
-          role="group"
-          aria-labelledby={titleId}
-          onKeyDown={(e) => { if (e.key === 'Escape' && !working) close(); }}
-        >
-          <p id={titleId} className={classes.cancelTitle}>{t('order.cancel.confirmTitle', { reference })}</p>
-          <p className={classes.cancelText}>{t('order.cancel.confirmBody')}</p>
-          <div className={classes.cancelButtons}>
-            <button
-              type="button"
-              data-mantine-stop-propagation
-              className={classes.cancelConfirm}
-              aria-disabled={working}
-              onClick={() => void confirm()}
-            >
-              {working ? t('order.cancel.working') : t('order.cancel.confirm')}
-            </button>
-            <button ref={keep} type="button" data-mantine-stop-propagation className={classes.ghost} disabled={working} onClick={close}>
-              {t('order.cancel.keep')}
-            </button>
-          </div>
+      <Modal
+        opened={open}
+        onClose={() => { if (!working) close(); }}
+        title={t('order.cancel.confirmTitle', { reference })}
+        centered
+        size="sm"
+        radius="var(--mantine-radius-default)"
+        withCloseButton={false}
+        closeOnClickOutside={false}
+        closeOnEscape={!working}
+        returnFocus
+        classNames={{ content: classes.cancelDialog, header: classes.cancelHeader, title: classes.cancelDialogTitle }}
+      >
+        <p className={classes.cancelDialogText}>{t('order.cancel.confirmBody')}</p>
+        {message === 'order.cancel.failed' ? <p className={classes.cancelError} role="alert">{t(message)}</p> : null}
+        <div className={classes.cancelButtons}>
+          <button type="button" data-autofocus className={classes.ghost} disabled={working} onClick={close}>
+            {t('order.cancel.keep')}
+          </button>
+          <button type="button" className={classes.cancelConfirm} aria-disabled={working} onClick={() => void confirm()}>
+            {working ? t('order.cancel.working') : t('order.cancel.confirm')}
+          </button>
         </div>
-      ) : null}
-      <p className={classes.cancelLive} aria-live="polite">{message ? t(message) : ''}</p>
+      </Modal>
+      {/* A refusal is said on the page too; a plain failure is said inside the dialog, where the customer can retry. */}
+      <p className={classes.cancelLive} aria-live="polite">{message && message !== 'order.cancel.failed' ? t(message) : ''}</p>
     </div>
   );
 }

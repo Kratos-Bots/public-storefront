@@ -98,7 +98,7 @@ describe('account order: pay and cancel', () => {
     await screen.findByText(/Choose how to pay/);
     const invalidate = vi.spyOn(client, 'invalidateQueries');
     fireEvent.click(screen.getByRole('button', { name: 'Cancel order' }));
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Yes, cancel it' })); });
+    await act(async () => { fireEvent.click(await screen.findByRole('button', { name: 'Yes, cancel order' })); });
     expect(cancelMock).toHaveBeenCalledWith('K4M2QP');
     const keys = invalidate.mock.calls.map((c) => JSON.stringify(c[0]?.queryKey));
     expect(keys).toContain(JSON.stringify(['order', 'K4M2QP']));
