@@ -301,11 +301,6 @@
   color: var(--sf-faint);
 }
 
-.toneWarn {
-  border-color: var(--sf-warn);
-  color: var(--sf-warn);
-}
-
 /* ------------------------------------------------------------------- orders */
 
 .orders {
