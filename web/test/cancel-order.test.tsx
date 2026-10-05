@@ -4,15 +4,12 @@ import { MantineProvider } from '@mantine/core';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 vi.mock('@/api/orders.ts', async (orig) => ({ ...(await orig<typeof import('@/api/orders.ts')>()), cancelOrder: vi.fn() }));
-vi.mock('@/api/public-order.ts', async (orig) => ({ ...(await orig<typeof import('@/api/public-order.ts')>()), cancelPublicOrder: vi.fn() }));
 vi.mock('@/app/settings.ts', () => ({ useSettings: () => ({ supportLinks: [{ label: 'Chat', url: 'https://t.me/example_shop' }] }) }));
 
-import { cancelOrder } from '@/api/orders.ts';
-import { cancelPublicOrder, OrderNotCancellableError } from '@/api/public-order.ts';
+import { cancelOrder, OrderNotCancellableError } from '@/api/orders.ts';
 import { CancelOrder } from '@/features/order-status/CancelOrder.tsx';
 
 const cancelMock = vi.mocked(cancelOrder);
-const cancelPublicMock = vi.mocked(cancelPublicOrder);
 
 const mount = (over: Partial<Parameters<typeof CancelOrder>[0]> = {}) => {
   const props = { reference: 'K4M2QP', canCancel: true, blockedBy: null, onCancelled: vi.fn(), ...over };
@@ -26,7 +23,7 @@ const mount = (over: Partial<Parameters<typeof CancelOrder>[0]> = {}) => {
   return props;
 };
 
-beforeEach(() => { cancelMock.mockReset(); cancelPublicMock.mockReset(); });
+beforeEach(() => { cancelMock.mockReset(); });
 afterEach(cleanup);
 
 describe('CancelOrder', () => {
@@ -45,16 +42,7 @@ describe('CancelOrder', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cancel order' }));
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Yes, cancel it' })); });
     expect(cancelMock).toHaveBeenCalledWith('K4M2QP');
-    expect(cancelPublicMock).not.toHaveBeenCalled();
     expect(props.onCancelled).toHaveBeenCalledTimes(1);
-  });
-
-  it('with an access key and no session flag it cancels through the order link', async () => {
-    cancelPublicMock.mockResolvedValueOnce({ reference: 'K4M2QP', status: 'cancelled' });
-    mount({ accessKey: 'abc123', viaLink: true });
-    fireEvent.click(screen.getByRole('button', { name: 'Cancel order' }));
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Yes, cancel it' })); });
-    expect(cancelPublicMock).toHaveBeenCalledWith('K4M2QP', 'abc123');
   });
 
   it.each([
@@ -133,11 +121,6 @@ describe('CancelOrder', () => {
     expect(screen.getByText('A payment may already be on its way, so this order cannot be cancelled here. Contact us and we will help.')).toBeTruthy();
     expect(screen.getByText('To cancel this order, contact us: a payment may already be on its way.')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Chat' })).toBeTruthy();
-  });
-
-  it('renders nothing when viaLink is set without an access key', () => {
-    const { container } = render(wrap({ reference: 'K4M2QP', viaLink: true, canCancel: true, blockedBy: null }));
-    expect(container.querySelectorAll(':not(style)')).toHaveLength(0);
   });
 
   it('Escape closes the confirmation like Keep and returns focus to the Cancel button', () => {

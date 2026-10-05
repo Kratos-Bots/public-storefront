@@ -89,7 +89,6 @@ const DETAIL: OrderDetail = {
     { status: 'shipped', carrier: 'Royal Mail', trackingNumber: 'RM123456789GB', trackingUrl: 'https://track.example/RM123456789GB', trackingStatusDescription: 'In transit to the depot', shippedAt: '2026-08-14T12:00:00.000Z', deliveredAt: null },
     { status: 'unknown_state', carrier: null, trackingNumber: null, trackingUrl: null, trackingStatusDescription: null, shippedAt: null, deliveredAt: null },
   ],
-  publicUrl: 'https://shop.example/o/K4M2QP/abc',
 };
 
 const LADDER: RedeemOptions = {
@@ -186,7 +185,7 @@ orderCase('full', () => { s.order = ok(DETAIL); });
 orderCase('no-balance', () => { s.order = ok({ ...DETAIL, outstandingBalance: 0 }); });
 orderCase('no-payments', () => { s.order = ok({ ...DETAIL, payments: [] }); });
 orderCase('no-parcels', () => { s.order = ok({ ...DETAIL, shipments: [] }); });
-orderCase('no-public-url', () => { s.order = ok({ ...DETAIL, publicUrl: null }); });
+orderCase('no-public-url', () => { s.order = ok({ ...DETAIL }); });
 
 // ---------------------------------------------------------------- loyalty
 const loyaltyCase = (name: string, setup: () => void, run?: Case['act']) => add({ name: `account-loyalty-${name}`, docKey: 'account.loyalty', section: 'Loyalty', path: '/account/loyalty', page: <LoyaltyPage />, setup, act: run });

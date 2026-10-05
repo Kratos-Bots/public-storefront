@@ -51,7 +51,7 @@ describe('ReviewStep address slip', () => {
 describe('account order heading', () => {
   const base = {
     reference: 'NB-1001', totalAmount: 25, outstandingBalance: 0, createdAt: '2026-01-02T10:00:00Z', status: 'pending',
-    subtotal: 20, shippingAmount: 5, discountAmount: 0, items: [], payments: [], shipments: [], publicUrl: null,
+    subtotal: 20, shippingAmount: 5, discountAmount: 0, items: [], payments: [], shipments: []
   };
   it('says which point a collection order goes to', () => {
     h.order = { ...base, servicePoint: { name: 'Tesco Express', carrier: 'inpost' } };

@@ -1,11 +1,11 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { submitCryptoTxid } from '@/api/public-order.ts';
+import { submitOrderCryptoTxid } from '@/api/orders.ts';
 import { CheckIcon, ClockIcon } from '@/components/icons.tsx';
 import { errorMessage } from '@/lib/errors.ts';
 import { formatCoinAmount, formatMoney } from '@/lib/format.ts';
 import { CopyRow } from '@/features/order-status/CopyRow.tsx';
-import { publicOrderKey } from '@/features/order-status/queries.ts';
+import { orderPaymentKey } from '@/features/order-status/queries.ts';
 import {
   cardState,
   submittedTxidMask,
@@ -39,7 +39,6 @@ const TXID_MAX = 120;
 export interface CryptoPaymentCardProps {
   payment: PublicCryptoPayment;
   reference: string;
-  accessKey: string;
   currency: string;
 }
 
@@ -49,15 +48,15 @@ export interface CryptoPaymentCardProps {
  * instant a txid is accepted — the order refetch then takes over as the source
  * of truth.
  */
-export function CryptoPaymentCard({ payment, reference, accessKey, currency }: CryptoPaymentCardProps) {
+export function CryptoPaymentCard({ payment, reference, currency }: CryptoPaymentCardProps) {
   const queryClient = useQueryClient();
   const [txid, setTxid] = useState('');
   const { t, tn } = useText();
 
   const submit = useMutation({
-    mutationFn: (value: string) => submitCryptoTxid(reference, accessKey, payment.paymentId, value),
+    mutationFn: (value: string) => submitOrderCryptoTxid(reference, payment.paymentId, value),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: publicOrderKey(reference, accessKey) });
+      void queryClient.invalidateQueries({ queryKey: orderPaymentKey(reference) });
     },
   });
 

@@ -24,7 +24,7 @@ const builderMock = vi.mocked(isBuilderMode);
 const previewMock = vi.mocked(isPreviewMode);
 
 const unpaid = (reference: string, over: Record<string, unknown> = {}) => ({
-  reference, accessKey: `key-${reference}`, createdAt: '2026-10-03T10:00:00Z', totalAmount: 46.03, outstandingBalance: 46.03,
+  reference, createdAt: '2026-10-03T10:00:00Z', totalAmount: 46.03, outstandingBalance: 46.03,
   payBy: null, canCancel: true, cancelBlockedBy: null, ...over,
 });
 

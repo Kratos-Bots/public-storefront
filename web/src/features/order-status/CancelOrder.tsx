@@ -1,7 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { notifications } from '@mantine/notifications';
-import { cancelOrder } from '@/api/orders.ts';
-import { cancelPublicOrder, OrderNotCancellableError } from '@/api/public-order.ts';
+import { cancelOrder, OrderNotCancellableError } from '@/api/orders.ts';
 import type { StyleAttrs } from '@/builder/define.ts';
 import { cancelView } from '@/features/order-status/cancel-state.ts';
 import { SupportLinks } from '@/features/order-status/SupportLinks.tsx';
@@ -11,9 +10,6 @@ import classes from '@/features/order-status/OrderStatus.module.css';
 
 export interface CancelOrderProps {
   reference: string;
-  accessKey?: string | null;
-  /** Cancel through the order's own link (`cancelPublicOrder`) rather than the signed-in session. */
-  viaLink?: boolean;
   /** Both flags are absent on a backend that predates customer cancel: the control then renders nothing. */
   canCancel: boolean | undefined;
   blockedBy: CancelBlockedBy | null | undefined;
@@ -35,7 +31,7 @@ const REFUSAL: Record<OrderNotCancellableError['reason'], Refusal> = {
  * "Cancel order" for an unpaid order: an inline confirmation (never `confirm()`),
  * or, when money may already be on its way, a pointer to the shop instead.
  */
-export function CancelOrder({ reference, accessKey, viaLink, canCancel, blockedBy, onCancelled, rootAttrs }: CancelOrderProps) {
+export function CancelOrder({ reference, canCancel, blockedBy, onCancelled, rootAttrs }: CancelOrderProps) {
   const { t } = useText();
   const [open, setOpen] = useState(false);
   const [working, setWorking] = useState(false);
@@ -67,8 +63,7 @@ export function CancelOrder({ reference, accessKey, viaLink, canCancel, blockedB
     if (el && !holdsFocus) el.focus();
   }, [working, open]);
 
-  // Without its key there is no way to cancel through a link: a caller bug, so offer nothing.
-  const view = viaLink && !accessKey ? 'none' : cancelView(canCancel, blockedBy);
+  const view = cancelView(canCancel, blockedBy);
   // A refusal or failure outlives the props that change under it (the refetch after a refusal usually hides the control).
   if (view === 'none' && !message) return null;
 
@@ -83,8 +78,7 @@ export function CancelOrder({ reference, accessKey, viaLink, canCancel, blockedB
     setWorking(true);
     setMessage(null);
     try {
-      if (viaLink && accessKey) await cancelPublicOrder(reference, accessKey);
-      else await cancelOrder(reference);
+      await cancelOrder(reference);
       setDone(true);
       setOpen(false);
       notifications.show({ message: t('order.cancel.done', { reference }) });

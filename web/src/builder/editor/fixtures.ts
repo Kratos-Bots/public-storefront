@@ -17,7 +17,6 @@ export const FIXTURE_CUSTOMER: SessionCustomer = { id: 900001, nickname: 'Morgan
 export const FIXTURE_ORDER_REF = 'NB0977';
 /** The sign-in link a signed-out customer sees on the payment pages. */
 export const FIXTURE_SIGN_IN = `/login?returnTo=${encodeURIComponent(`/account/orders/${FIXTURE_ORDER_REF}`)}`;
-export const FIXTURE_ACCESS_KEY = 'preview';
 
 /**
  * "Preview with" when the catalogue is empty (spec §11): the product the product page, the sheet
@@ -101,7 +100,6 @@ export const FIXTURE_ORDER_DETAIL: OrderDetail = {
     status: 'in_transit', carrier: 'Royal Mail', trackingNumber: 'NB000977GB', trackingUrl: 'https://shop.example/track/NB000977GB',
     trackingStatusDescription: 'In transit', shippedAt: '2026-09-03T08:00:00.000Z', deliveredAt: null,
   }],
-  publicUrl: `https://shop.example/order/${FIXTURE_ORDER_REF}/${FIXTURE_ACCESS_KEY}`,
 };
 
 export const FIXTURE_PUBLIC_ORDER: PublicOrder = {

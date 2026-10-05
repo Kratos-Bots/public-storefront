@@ -16,10 +16,10 @@ describe('promptAllowedOn', () => {
 
 describe('prompt order', () => {
   it('an unpaid order is reviewed on its account page', () => {
-    expect(fromUnpaid({ reference: 'K4M2QP', accessKey: null, createdAt: '', totalAmount: 46.03, outstandingBalance: 46.03, payBy: null, canCancel: true, cancelBlockedBy: null }))
+    expect(fromUnpaid({ reference: 'K4M2QP', createdAt: '', totalAmount: 46.03, outstandingBalance: 46.03, payBy: null, canCancel: true, cancelBlockedBy: null }))
       .toEqual({ reference: 'K4M2QP', amount: 46.03, reviewPath: '/account/orders/K4M2QP' });
   });
   it('encodes a reference that needs it', () => {
-    expect(fromUnpaid({ reference: 'A/1', accessKey: null, createdAt: '', totalAmount: 1, outstandingBalance: 1, payBy: null, canCancel: false, cancelBlockedBy: 'paid' }).reviewPath).toBe('/account/orders/A%2F1');
+    expect(fromUnpaid({ reference: 'A/1', createdAt: '', totalAmount: 1, outstandingBalance: 1, payBy: null, canCancel: false, cancelBlockedBy: 'paid' }).reviewPath).toBe('/account/orders/A%2F1');
   });
 });

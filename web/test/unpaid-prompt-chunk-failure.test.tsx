@@ -25,7 +25,7 @@ afterEach(cleanup);
 describe('UnpaidOrderPrompt when its dialog chunk cannot load', () => {
   it('renders nothing, throws nothing and logs nothing', async () => {
     const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
-    vi.mocked(fetchUnpaidOrders).mockResolvedValue([{ reference: 'K4M2QP', accessKey: 'k', createdAt: '', totalAmount: 5, outstandingBalance: 5, payBy: null, canCancel: true, cancelBlockedBy: null }] as never);
+    vi.mocked(fetchUnpaidOrders).mockResolvedValue([{ reference: 'K4M2QP', createdAt: '', totalAmount: 5, outstandingBalance: 5, payBy: null, canCancel: true, cancelBlockedBy: null }] as never);
     render(
       <MantineProvider env="test">
         <QueryClientProvider client={new QueryClient()}>

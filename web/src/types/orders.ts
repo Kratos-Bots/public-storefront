@@ -8,14 +8,14 @@ export interface OrderDetail {
   subtotal: number; shippingAmount: number; discountAmount: number; totalAmount: number;
   promotionDiscount?: number; promotions?: OrderPromotion[];
   payments: Array<{ method: string; methodLabel?: string; amount: number; status: string; createdAt: string }>;
-  outstandingBalance: number; shipments: OrderShipment[]; publicUrl: string | null;
-  accessKey?: string | null; canCancel?: boolean; cancelBlockedBy?: import('./public-order.ts').CancelBlockedBy | null;
+  outstandingBalance: number; shipments: OrderShipment[];
+  canCancel?: boolean; cancelBlockedBy?: import('./public-order.ts').CancelBlockedBy | null;
   shippingAddress?: import('./public-order.ts').ShippingAddress | null;
 }
 
 /** An order the customer can still pay, as `GET storefront/orders/unpaid` returns it. */
 export interface UnpaidOrder {
-  reference: string; accessKey: string | null; createdAt: string; totalAmount: number; outstandingBalance: number;
+  reference: string; createdAt: string; totalAmount: number; outstandingBalance: number;
   payBy: string | null; canCancel: boolean; cancelBlockedBy: import('./public-order.ts').CancelBlockedBy | null;
 }
 export interface PageMeta { page: number; limit: number; totalItems: number; totalPages: number; hasNextPage: boolean; hasPrevPage: boolean }

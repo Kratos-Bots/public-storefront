@@ -16,7 +16,6 @@ const order = {
   items: [],
   payments: [],
   shipments: [],
-  publicUrl: null,
 };
 
 vi.mock('@/app/settings.ts', () => ({ useSettings: () => ({ currency: 'GBP', brand: { name: 'Northbound Supply', links: {} } }) }));

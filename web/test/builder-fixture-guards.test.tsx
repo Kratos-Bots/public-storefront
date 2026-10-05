@@ -30,10 +30,10 @@ vi.mock('@/app/settings.ts', async (orig) => ({ ...(await orig<typeof import('@/
 vi.mock('@/lib/telegram-webapp.ts', async (orig) => ({ ...(await orig<typeof import('@/lib/telegram-webapp.ts')>()), isTelegramWebApp: () => false }));
 vi.mock('@/api/pages.ts', () => ({ fetchPageSet: (layout: string) => { g.pageFetches.push(layout); return Promise.resolve(null); }, fetchPublished: (layout: string) => { g.pageFetches.push(layout); return Promise.resolve({ pageSet: null, text: null }); } }));
 vi.mock('@/api/auth.ts', async (orig) => ({ ...(await orig<typeof import('@/api/auth.ts')>()), logout: vi.fn(() => Promise.reject(new Error('Preview only'))) }));
-vi.mock('@/api/public-order.ts', () => ({
-  PaymentConflictError: class PaymentConflictError extends Error {},
-  fetchPaymentOptions: vi.fn(),
-  selectPaymentMethod: vi.fn(() => Promise.reject(new Error('Preview only'))),
+vi.mock('@/api/orders.ts', async (orig) => ({
+  ...(await orig<typeof import('@/api/orders.ts')>()),
+  fetchOrderPaymentOptions: vi.fn(),
+  selectOrderPaymentMethod: vi.fn(() => Promise.reject(new Error('Preview only'))),
 }));
 vi.mock('@/api/tracking.ts', async (orig) => ({ ...(await orig<typeof import('@/api/tracking.ts')>()), lookupTracking: vi.fn(() => new Promise(() => undefined)) }));
 vi.mock('@/features/account/queries.ts', () => ({
@@ -54,7 +54,7 @@ import { builderOverrides } from '@/app/builder-gate.ts';
 import { useEffectiveLayout } from '@/app/layout.ts';
 import { usePrefetchPageSet } from '@/app/App.tsx';
 import { logout } from '@/api/auth.ts';
-import { fetchPaymentOptions, selectPaymentMethod } from '@/api/public-order.ts';
+import { fetchOrderPaymentOptions, selectOrderPaymentMethod } from '@/api/orders.ts';
 import { lookupTracking } from '@/api/tracking.ts';
 import { TELEGRAM_WIDGET_SRC, TelegramLogin } from '@/features/auth/TelegramLogin.tsx';
 import { GuestTurnstile, type GuestTurnstileHandle } from '@/features/checkout/GuestTurnstile.tsx';
@@ -155,10 +155,10 @@ describe('MethodPicker hosted checkout', () => {
   } as unknown as PublicOrder;
 
   async function pickCard() {
-    vi.mocked(fetchPaymentOptions).mockResolvedValue([card]);
-    render(wrap(<MethodPicker order={order} reference="NB0977" accessKey="preview" />));
+    vi.mocked(fetchOrderPaymentOptions).mockResolvedValue([card]);
+    render(wrap(<MethodPicker order={order} reference="NB0977" />));
     fireEvent.click((await screen.findAllByRole('button', { name: /^Card/ }))[0]!);
-    await waitFor(() => expect(selectPaymentMethod).toHaveBeenCalled());
+    await waitFor(() => expect(selectOrderPaymentMethod).toHaveBeenCalled());
   }
 
   it('in builder mode: never opens a blank tab before the (refused) mutation', async () => {

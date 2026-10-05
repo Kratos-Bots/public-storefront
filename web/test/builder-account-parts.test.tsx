@@ -58,7 +58,6 @@ const DETAIL: OrderDetail = {
   subtotal: 13.5, shippingAmount: 3.5, discountAmount: 0, totalAmount: 17, outstandingBalance: 5,
   payments: [{ method: 'bank_transfer', amount: 12, status: 'completed', createdAt: '2026-08-12T12:30:00.000Z' }],
   shipments: [{ status: 'shipped', carrier: 'Royal Mail', trackingNumber: 'RM1', trackingUrl: null, trackingStatusDescription: null, shippedAt: null, deliveredAt: null }],
-  publicUrl: 'https://shop.example/o/K4M2QP/abc',
 };
 const PROFILE = { nickname: 'Ada', memberSince: '2026-03-04T12:00:00.000Z', totalOrders: 4 } as Profile;
 const pending = { data: undefined, isPending: true, isError: false, refetch: noop };
@@ -309,7 +308,7 @@ describe('arrangement and state ownership', () => {
     expect(screen.getByText(/bank transfer/i)).toBeInTheDocument();
   });
   it('a settled order draws no balance band', async () => {
-    s.order = { data: { ...DETAIL, outstandingBalance: 0, publicUrl: null, payments: [], shipments: [] }, isPending: false, isError: false, refetch: noop };
+    s.order = { data: { ...DETAIL, outstandingBalance: 0, payments: [], shipments: [] }, isPending: false, isError: false, refetch: noop };
     const { container } = await ready(renderOrder(defaultOrder()));
     await waitFor(() => expect(container.querySelector('h2')).not.toBeNull());
     expect(container.querySelector(`.${classes.band}`)).toBeNull();

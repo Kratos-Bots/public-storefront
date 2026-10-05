@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@mantine/core';
 import { Link, useParams } from 'react-router';
 import { EmptyState } from '@/components/EmptyState.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { Money } from '@/components/Money.tsx';
-import { fetchPublicOrder } from '@/api/public-order.ts';
 import { ApiError } from '@/lib/errors.ts';
 import { formatDate, formatDateTime } from '@/lib/format.ts';
 import { lineFigures, otherDiscount } from '@/lib/promotions.ts';
@@ -20,11 +19,10 @@ import { CancelOrder } from '@/features/order-status/CancelOrder.tsx';
 import { invalidateAfterCancel } from '@/features/order-status/invalidate-after-cancel.ts';
 import { PaymentSection } from '@/features/order-status/PaymentSection.tsx';
 import { cancelView } from '@/features/order-status/cancel-state.ts';
-import { paymentSignature, pollInterval, visibleCryptoPayments } from '@/features/order-status/payment-state.ts';
+import { paymentSignature, visibleCryptoPayments } from '@/features/order-status/payment-state.ts';
 import { SupportLinks } from '@/features/order-status/SupportLinks.tsx';
-import { publicOrderKey } from '@/features/order-status/queries.ts';
 import { StatusPill } from '@/features/account/StatusPill.tsx';
-import { useOrder } from '@/features/account/queries.ts';
+import { useOrder, useOrderPayment } from '@/features/account/queries.ts';
 import { useText, type TextApi } from '@/text/runtime.tsx';
 import { OrderFamily, type OrderData } from '@/builder/family-order.ts';
 import type { FamilyValue, PartViewProps } from '@/builder/parts.ts';
@@ -79,36 +77,25 @@ function HeadingView({ styleAttrs }: PartViewProps) {
 }
 
 /**
- * What is owed, and the means to settle it. The payment section is the public
- * order page's own component, fed the same public order through the order's
- * access key, so paying, changing method and submitting a crypto transaction id
- * exist once in the shop. Without an access key (order links not configured, or
- * an older backend) only the figure shows, as before.
+ * What is owed, and the means to settle it. Paying runs through the customer's session: the payment section
+ * is fed the order's payment view, so paying, changing method and submitting a crypto transaction id exist
+ * once in the shop, and there is no access key anywhere on the way.
  */
 function BalanceView({ styleAttrs }: PartViewProps) {
   const { t } = useText();
   const { order: data } = OrderFamily.useData();
   const queryClient = useQueryClient();
   const owed = data.outstandingBalance > 0;
-  const accessKey = data.accessKey ?? null;
 
-  // The same key and polling as the order page itself, so the two share one cache entry.
-  const publicOrder = useQuery({
-    queryKey: publicOrderKey(data.reference, accessKey ?? ''),
-    queryFn: () => fetchPublicOrder(data.reference, accessKey!),
-    enabled: owed && !!accessKey,
-    retry: false,
-    staleTime: 30_000,
-    refetchInterval: (query) => (query.state.data ? pollInterval(query.state.data) : false),
-    refetchIntervalInBackground: true,
-  });
+  // Polled while a payment is open; the payment section refetches the same cache entry after any change.
+  const payment = useOrderPayment(data.reference, owed);
 
-  // The payment section refreshes the public order itself; the account order (its payments list,
+  // The payment section refreshes the payment view itself; the account order (its payments list,
   // balance and cancel flags) has to follow when something it shows changed. Polling re-reads the
   // same order every few seconds, so only a changed signature counts, and the first one seen for a
   // reference is the initial load, which the account order already agrees with. Invalidating
-  // ['order', ref] never touches the public query, so this cannot feed itself.
-  const signature = publicOrder.data ? paymentSignature(publicOrder.data) : null;
+  // ['order', ref] never touches the payment query, so this cannot feed itself.
+  const signature = payment.data ? paymentSignature(payment.data) : null;
   // Per reference, so going A, B, A still notices a change to A made while B was showing.
   const seen = useRef(new Map<string, string>());
   useEffect(() => {
@@ -129,7 +116,7 @@ function BalanceView({ styleAttrs }: PartViewProps) {
       </span>
     </>
   );
-  const loaded = accessKey ? publicOrder.data : undefined;
+  const loaded = payment.data;
   // What PaymentSection would draw: a way to pay, or crypto payments to show.
   const payable = loaded && (loaded.payment?.canPay || visibleCryptoPayments(loaded).length > 0) ? loaded : null;
   const cancelShows = cancelView(data.canCancel, data.cancelBlockedBy);
@@ -143,7 +130,7 @@ function BalanceView({ styleAttrs }: PartViewProps) {
   return (
     <div className={classes.balance} {...styleAttrs}>
       <p className={classes.band}>{figures}</p>
-      {payable ? <PaymentSection order={payable} reference={data.reference} accessKey={accessKey!} /> : null}
+      {payable ? <PaymentSection order={payable} reference={data.reference} /> : null}
       {payHelp ? (
         <div>
           <p className={classes.payHelp}>{t('account.order.payHelp')}</p>
@@ -155,7 +142,7 @@ function BalanceView({ styleAttrs }: PartViewProps) {
         reference={data.reference}
         canCancel={data.canCancel}
         blockedBy={data.cancelBlockedBy}
-        onCancelled={() => invalidateAfterCancel(queryClient, data.reference, accessKey)}
+        onCancelled={() => invalidateAfterCancel(queryClient, data.reference)}
       />
     </div>
   );

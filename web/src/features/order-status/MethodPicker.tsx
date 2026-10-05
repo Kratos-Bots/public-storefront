@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   PaymentConflictError,
-  fetchPaymentOptions,
-  selectPaymentMethod,
+  fetchOrderPaymentOptions,
+  selectOrderPaymentMethod,
   type PaymentSelection,
-} from '@/api/public-order.ts';
+} from '@/api/orders.ts';
 import { isBuilderMode } from '@/app/builder-gate.ts';
 import { ArrowUpRightIcon } from '@/components/icons.tsx';
 import { ContactLinks } from '@/components/ContactLinks.tsx';
@@ -15,7 +15,7 @@ import { orderChatMessage } from '@/lib/chat-links.ts';
 import { formatAmountPlain, formatMoney } from '@/lib/format.ts';
 import { CryptoComboPicker, type CryptoCombo } from '@/features/checkout/CryptoComboPicker.tsx';
 import { CopyRow } from '@/features/order-status/CopyRow.tsx';
-import { paymentOptionsKey, publicOrderKey } from '@/features/order-status/queries.ts';
+import { orderPaymentKey, paymentOptionsKey } from '@/features/order-status/queries.ts';
 import {
   isManual,
   settlementQuote,
@@ -30,7 +30,6 @@ import classes from '@/features/order-status/OrderStatus.module.css';
 export interface MethodPickerProps {
   order: PublicOrder;
   reference: string;
-  accessKey: string;
   /** Called once a payment has been created — lets the change panel fold away. */
   onSelected?: () => void;
 }
@@ -48,26 +47,26 @@ export interface MethodPickerProps {
  *    refuses every manual gateway on the public payment route, so offering to
  *    "select" one would be a guaranteed error. The details are the answer.
  */
-export function MethodPicker({ order, reference, accessKey, onSelected }: MethodPickerProps) {
+export function MethodPicker({ order, reference, onSelected }: MethodPickerProps) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState<string | null>(null);
   const [combo, setCombo] = useState<CryptoCombo | null>(null);
   const { t } = useText();
 
   const options = useQuery({
-    // Keyed on the reference alone: the access key is a credential, not an
-    // input, and the backend re-derives the country and total from the order.
+    // Keyed on the reference alone: the session says who is asking, and the
+    // backend re-derives the country and total from the order.
     queryKey: paymentOptionsKey(reference),
-    queryFn: () => fetchPaymentOptions(reference, accessKey),
+    queryFn: () => fetchOrderPaymentOptions(reference),
     enabled: !!order.payment?.canPay,
     staleTime: 60_000,
   });
 
   const refetchOrder = () =>
-    queryClient.invalidateQueries({ queryKey: publicOrderKey(reference, accessKey) });
+    queryClient.invalidateQueries({ queryKey: orderPaymentKey(reference) });
 
   const select = useMutation({
-    mutationFn: (selection: PaymentSelection) => selectPaymentMethod(reference, accessKey, selection),
+    mutationFn: (selection: PaymentSelection) => selectOrderPaymentMethod(reference, selection),
     onSuccess: () => {
       void refetchOrder();
       onSelected?.();

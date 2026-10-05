@@ -12,7 +12,6 @@ import classes from '@/features/order-status/OrderStatus.module.css';
 export interface PaymentSectionProps {
   order: PublicOrder;
   reference: string;
-  accessKey: string;
 }
 
 /**
@@ -21,7 +20,7 @@ export interface PaymentSectionProps {
  * backend's call: `payment.canPay` and `payment.activePayment` say what state
  * the order is in, and this only renders it.
  */
-export function PaymentSection({ order, reference, accessKey }: PaymentSectionProps) {
+export function PaymentSection({ order, reference }: PaymentSectionProps) {
   const payment = order.payment;
   const crypto = visibleCryptoPayments(order);
   // While the change panel is open the current payment's card is hidden: showing
@@ -38,7 +37,6 @@ export function PaymentSection({ order, reference, accessKey }: PaymentSectionPr
           key={p.paymentId}
           payment={p}
           reference={reference}
-          accessKey={accessKey}
           currency={order.currency}
         />
       ));
@@ -59,7 +57,7 @@ export function PaymentSection({ order, reference, accessKey }: PaymentSectionPr
         <section className={`${classes.card} ${classes.cardAction}`} aria-label={t('order.payment.ariaLabel')} data-sf-part="card">
           <p className={`${classes.cardEyebrow} ${classes.cardEyebrowAction}`}>{t('order.payment.required')}</p>
           <h2 className={classes.cardTitle}>{t('order.payment.chooseHowToPay', { total })}</h2>
-          <MethodPicker order={order} reference={reference} accessKey={accessKey} />
+          <MethodPicker order={order} reference={reference} />
         </section>
       ) : null}
 
@@ -105,7 +103,6 @@ export function PaymentSection({ order, reference, accessKey }: PaymentSectionPr
         <ChangeMethod
           order={order}
           reference={reference}
-          accessKey={accessKey}
           open={changing}
           onToggle={() => setChanging((v) => !v)}
           onSelected={() => setChanging(false)}
@@ -132,7 +129,6 @@ function Deadline({ payBy }: { payBy: string | null }) {
 function ChangeMethod({
   order,
   reference,
-  accessKey,
   open,
   onToggle,
   onSelected,
@@ -151,7 +147,6 @@ function ChangeMethod({
           <MethodPicker
             order={order}
             reference={reference}
-            accessKey={accessKey}
             onSelected={onSelected}
           />
         </div>

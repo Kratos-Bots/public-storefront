@@ -4,16 +4,16 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { PaymentMethod } from '@/types/checkout.ts';
 import type { ActivePayment, PublicOrder } from '@/types/public-order.ts';
 
-vi.mock('@/api/public-order.ts', () => ({
-  PaymentConflictError: class PaymentConflictError extends Error {},
-  fetchPaymentOptions: vi.fn(),
-  selectPaymentMethod: vi.fn(),
+vi.mock('@/api/orders.ts', async (orig) => ({
+  ...(await orig<typeof import('@/api/orders.ts')>()),
+  fetchOrderPaymentOptions: vi.fn(),
+  selectOrderPaymentMethod: vi.fn(),
 }));
 vi.mock('@/app/settings.ts', () => ({
   useSettings: () => ({ brand: { links: { whatsapp: null, telegram: null } } }),
 }));
 
-import { fetchPaymentOptions } from '@/api/public-order.ts';
+import { fetchOrderPaymentOptions } from '@/api/orders.ts';
 import { formatAmountPlain } from '@/lib/format.ts';
 import { settlementQuote } from '@/features/order-status/payment-state.ts';
 import { MethodPicker } from '@/features/order-status/MethodPicker.tsx';
@@ -95,11 +95,11 @@ describe('MethodPicker bank transfer details', () => {
   });
 
   async function openBankTransfer(o: PublicOrder) {
-    vi.mocked(fetchPaymentOptions).mockResolvedValue([card, bank]);
+    vi.mocked(fetchOrderPaymentOptions).mockResolvedValue([card, bank]);
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
       <QueryClientProvider client={client}>
-        <MethodPicker order={o} reference="AB12CD" accessKey="key" />
+        <MethodPicker order={o} reference="AB12CD" />
       </QueryClientProvider>,
     );
     fireEvent.click(await screen.findByRole('button', { name: /UK Bank Transfer/ }));

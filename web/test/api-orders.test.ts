@@ -3,7 +3,6 @@ import {
   cancelOrder, fetchOrder, fetchOrderPayment, fetchOrderPaymentOptions, fetchOrders, fetchUnpaidOrders,
   OrderGoneError, OrderNotCancellableError, PaymentConflictError, selectOrderPaymentMethod, submitOrderCryptoTxid,
 } from '@/api/orders.ts';
-import * as publicOrder from '@/api/public-order.ts';
 import { fetchRedeemOptions } from '@/api/profile.ts';
 import { useSessionStore } from '@/stores/session.ts';
 
@@ -66,7 +65,6 @@ describe('fetchOrder', () => {
       discountAmount: 0,
       payments: [{ method: 'stripe', amount: 25, status: 'completed', createdAt: '2026-08-01T12:01:00.000Z' }],
       shipments: [],
-      publicUrl: 'https://order.example.com/AB12CD/0f3a',
     };
     const spy = mockFetch(200, { success: true, data: detail, error: null });
     await expect(fetchOrder('AB12CD')).resolves.toEqual(detail);
@@ -184,10 +182,5 @@ describe('order payment through the session', () => {
     expect(await submitOrderCryptoTxid('K4M2QP', 9, '  abc1234567  ')).toBe('checking');
     expect(sent[0]!.url).toContain('storefront/orders/K4M2QP/crypto-txid');
     expect(sent[0]!.body).toEqual({ paymentId: 9, txid: 'abc1234567' });
-  });
-
-  it('public-order re-exports the very same error classes, not copies', () => {
-    expect(publicOrder.PaymentConflictError).toBe(PaymentConflictError);
-    expect(publicOrder.OrderNotCancellableError).toBe(OrderNotCancellableError);
   });
 });

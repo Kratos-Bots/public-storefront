@@ -36,7 +36,7 @@ const DETAIL: OrderDetail = {
   reference: 'K4M2QP', status: 'shipped', createdAt: '2026-08-12T12:00:00.000Z',
   items: [{ name: 'Oat Bar', quantity: 3, unitPrice: 4.5, lineTotal: 13.5 }],
   subtotal: 13.5, shippingAmount: 3.5, discountAmount: 0, totalAmount: 17, outstandingBalance: 0,
-  payments: [], shipments: [], publicUrl: 'https://shop.example/o/K4M2QP/abc',
+  payments: [], shipments: [],
 };
 const root = { props: { title: '', description: '', chrome: 'shell' } } as PuckDoc['root'];
 const c = (type: string, id: string, props: Record<string, unknown> = {}): ComponentData => ({ type, props: { id, ...props } });
