@@ -20,7 +20,8 @@ vi.mock('@/api/orders.ts', async (orig) => ({
   selectOrderPaymentMethod: vi.fn(),
 }));
 
-import { cancelOrder, fetchOrderPayment, fetchOrderPaymentOptions, selectOrderPaymentMethod } from '@/api/orders.ts';
+import { OrderGoneError, PaymentConflictError, cancelOrder, fetchOrderPayment, fetchOrderPaymentOptions, selectOrderPaymentMethod } from '@/api/orders.ts';
+import { ApiError } from '@/lib/errors.ts';
 import { paymentSignature } from '@/features/order-status/payment-state.ts';
 import { OrderDetailPage } from '@/features/account/OrderDetailPage.tsx';
 import type { PublicOrder } from '@/types/public-order.ts';
@@ -154,9 +155,70 @@ describe('account order: pay and cancel', () => {
     expect(orderKeys(invalidate)).toHaveLength(0);
     paymentMock.mockResolvedValue(hostedOrder);
     await waitFor(() => expect(orderKeys(invalidate)).toHaveLength(1));
-    await new Promise((r) => setTimeout(r, 50));
+    // The payment view has been re-read after the selection: nothing more is refetched once it has settled.
+    await waitFor(() => expect(paymentMock.mock.calls.length).toBeGreaterThanOrEqual(2));
+    await screen.findByRole('link', { name: /Open secure checkout/ });
     expect(orderKeys(invalidate)).toHaveLength(1);
     expect(selectMock).toHaveBeenCalled();
+  });
+
+  it('choosing a hosted method opens the window on the click and points it at the checkout once the payment exists', async () => {
+    h.order = { ...base, canCancel: true, cancelBlockedBy: null };
+    paymentMock.mockResolvedValueOnce(publicOrder({ canPay: true, payBy: null, activePayment: null }));
+    let release: (r: Awaited<ReturnType<typeof selectOrderPaymentMethod>>) => void = () => undefined;
+    selectMock.mockReturnValueOnce(new Promise((r) => { release = r; }));
+    const tab = { opener: {} as unknown, location: { href: '' }, close: vi.fn() };
+    const open = vi.spyOn(window, 'open').mockReturnValue(tab as unknown as Window);
+    open.mockClear();
+    mount();
+    fireEvent.click(await screen.findByRole('button', { name: /Card/ }));
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(open).toHaveBeenCalledWith('', '_blank');
+    expect(tab.opener).toBeNull();
+    expect(tab.location.href).toBe('');
+    paymentMock.mockResolvedValue(hostedOrder);
+    await act(async () => {
+      release({ paymentId: 9, method: 'stripe', kind: 'gateway', status: 'pending', checkoutUrl: 'https://pay.example/abc', crypto: null });
+    });
+    expect(tab.location.href).toBe('https://pay.example/abc');
+    expect(tab.close).not.toHaveBeenCalled();
+  });
+
+  describe('when choosing a method fails', () => {
+    const chooseCard = async () => {
+      h.order = { ...base, canCancel: true, cancelBlockedBy: null };
+      paymentMock.mockResolvedValue(publicOrder({ canPay: true, payBy: null, activePayment: null }));
+      vi.spyOn(window, 'open').mockReturnValue(null);
+      mount();
+      fireEvent.click(await screen.findByRole('button', { name: /Card/ }));
+    };
+
+    it('a conflict (the order moved on) re-reads the payment view and shows no error', async () => {
+      selectMock.mockRejectedValue(new PaymentConflictError());
+      await chooseCard();
+      await waitFor(() => expect(paymentMock.mock.calls.length).toBeGreaterThanOrEqual(2));
+      expect(screen.queryByRole('alert')).toBeNull();
+      expect(screen.queryByText(/isn.t available right now/)).toBeNull();
+    });
+
+    it('a server error says so, leaves the buttons enabled, and a second click retries', async () => {
+      selectMock.mockRejectedValue(new ApiError(500, 'Payment provider unreachable'));
+      await chooseCard();
+      expect((await screen.findByRole('alert')).textContent).toBe('Payment provider unreachable');
+      const card = screen.getByRole('button', { name: /Card/ }) as HTMLButtonElement;
+      expect(card.disabled).toBe(false);
+      fireEvent.click(card);
+      await waitFor(() => expect(selectMock).toHaveBeenCalledTimes(2));
+    });
+
+    it('an order that is gone shows no method error and crashes nothing: the page learns it from the order read', async () => {
+      selectMock.mockRejectedValue(new OrderGoneError());
+      await chooseCard();
+      const invalidate = vi.spyOn(client, 'invalidateQueries');
+      await waitFor(() => expect(JSON.stringify(invalidate.mock.calls.map((c) => c[0]?.queryKey))).toContain('"order","K4M2QP"'));
+      expect(screen.queryByRole('alert')).toBeNull();
+      expect((screen.getByRole('button', { name: /Card/ }) as HTMLButtonElement).disabled).toBe(false);
+    });
   });
 
   it('the first load of the payment view does not refetch the account order', async () => {
@@ -276,14 +338,15 @@ describe('account order: pay and cancel', () => {
       h.order = { ...base, canCancel: false, cancelBlockedBy: null };
       paymentMock.mockReturnValue(new Promise(() => {}));
       mount();
-      await new Promise((r) => setTimeout(r, 20));
+      await waitFor(() => expect(paymentMock).toHaveBeenCalled());
+      expect(screen.getByRole('region', { name: 'Payment needed' })).toBeTruthy();
       expect(screen.queryByText(help)).toBeNull();
     });
     it('is not shown for a cancelled order', async () => {
       h.order = { ...base, status: 'cancelled', canCancel: false, cancelBlockedBy: null };
       paymentMock.mockResolvedValue({ ...stuck(), status: 'cancelled' });
       mount();
-      await new Promise((r) => setTimeout(r, 20));
+      await screen.findByRole('heading', { level: 1, name: 'K4M2QP' });
       // A closed order is not read for payment state at all: there is nothing to pay on it.
       expect(paymentMock).not.toHaveBeenCalled();
       expect(screen.queryByText(help)).toBeNull();

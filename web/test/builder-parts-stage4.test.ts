@@ -209,6 +209,7 @@ describe('preview state', () => {
   it('PREVIEW_STATE_IDS defaults', () => {
     expect(PREVIEW_STATE_IDS.TrackingLookup[0]).toBe('form');
     expect(PREVIEW_STATE_IDS.OrderPlaced).toEqual(['chat', 'warning', 'no-chat', 'missing']);
+    expect(PREVIEW_STATE_IDS.OrderDetail).toEqual(['awaiting-payment', 'hosted-open', 'crypto-waiting', 'shipped', 'collection', 'cancelled']);
   });
 });
 

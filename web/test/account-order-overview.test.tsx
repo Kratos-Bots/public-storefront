@@ -111,6 +111,56 @@ describe('the header', () => {
   });
 });
 
+describe('items: promotions and discounts', () => {
+  const tea = { name: 'Sencha 100g', quantity: 3, unitPrice: 9.5, lineTotal: 28.5, promotionDiscount: 12.5 };
+  const paid = { ...base, outstandingBalance: 0, status: 'confirmed', items: [tea], subtotal: 28.5, shippingAmount: 0, discountAmount: 14.5, totalAmount: 14, promotionDiscount: 12.5, promotions: [{ label: '3 for 2 on all teas', amount: 12.5 }] };
+  const items = async () => within(await screen.findByRole('region', { name: 'Items' }));
+
+  it('adds a promotion row and shows the discount row without the promotion part, so the rows add up', async () => {
+    h.order = paid;
+    mount();
+    const card = await items();
+    expect(card.getByText('3 for 2 on all teas')).toBeTruthy();
+    expect(card.getByText('3 for 2 on all teas').nextElementSibling!.textContent).toBe('−£12.50');
+    expect(card.getByText('Discount').nextElementSibling!.textContent).toBe('−£2.00'); // 14.50 − 12.50
+  });
+
+  it('hides the discount row when the promotions account for all of it', async () => {
+    h.order = { ...paid, discountAmount: 12.5, totalAmount: 16 };
+    mount();
+    const card = await items();
+    expect(card.getByText('3 for 2 on all teas')).toBeTruthy();
+    expect(card.queryByText('Discount')).toBeNull();
+  });
+
+  it('is unchanged for an order with no promotion fields: one discount row, no promotion row', async () => {
+    h.order = { ...paid, items: [{ ...tea, promotionDiscount: undefined }], promotionDiscount: undefined, promotions: undefined };
+    mount();
+    const card = await items();
+    expect(card.getByText('Discount').nextElementSibling!.textContent).toBe('−£14.50');
+    expect(card.queryByText('3 for 2 on all teas')).toBeNull();
+    expect(card.getByText('Sencha 100g').closest('li')!.querySelector('s')).toBeNull();
+  });
+
+  it('a line made free by a promotion says Free, with the full price struck through', async () => {
+    h.order = { ...paid, items: [{ ...tea, quantity: 1, lineTotal: 9.5, promotionDiscount: 9.5 }], promotionDiscount: 9.5, promotions: [{ label: 'Free tea', amount: 9.5 }], discountAmount: 9.5, totalAmount: 0 };
+    mount();
+    const card = await items();
+    const line = card.getByText('Sencha 100g').closest('li')!;
+    expect(line.querySelector('s')!.textContent).toBe('£9.50');
+    expect(line.textContent).toContain('Free');
+    expect(line.textContent).not.toMatch(/£0\.00/);
+  });
+
+  it('a line with part of its price taken off shows the struck price and the net', async () => {
+    h.order = paid;
+    mount();
+    const line = (await items()).getByText('Sencha 100g').closest('li')!;
+    expect(line.querySelector('s')!.textContent).toBe('£28.50');
+    expect(line.textContent).toContain('£16.00');
+  });
+});
+
 describe('payment needed', () => {
   it('unpaid: the payment card leads with the amount and holds the method picker and Cancel order', async () => {
     h.order = { ...base, canCancel: true, cancelBlockedBy: null };
