@@ -572,7 +572,7 @@ shells. The families, their containers and the documents they live on:
 | `cart-summary` | `CartSummary` (nested in `CartContents`) | `cart` | `CartSummarySubtotal`, `CartSummaryCheckout` |
 | `account` | `AccountNav` (nests the five sections) | `account.*` | `AccountGreeting`, `AccountTabs` |
 | `orders` | `OrdersList` | `account.orders` | `OrdersRows`, `OrdersEmpty` |
-| `order` | `OrderDetail` | `account.order` | `OrderHeading`, `OrderItems` |
+| `order` | `OrderDetail` | `account.order` | `OrderHeading`, `OrderItems` (optional: `OrderBackLink`, `OrderBalance`, `OrderAddress`, `OrderParcels`, `OrderPayments`) |
 | `loyalty` | `Loyalty` | `account.loyalty` | `LoyaltyPoints`, `LoyaltyRewards` |
 | `referrals` | `Referrals` | `account.referrals` | `ReferralCode` |
 | `profile` | `Profile` | `account.profile` | `ProfileSignOut` (`ProfilePassword` is an optional part: it draws nothing while the shop has password sign-in off) |
@@ -626,7 +626,9 @@ editor's default: `OrdersList` (orders, none, more), `Loyalty` (rewards, no-poin
 `PaymentCancel` (saved, unsaved, no-reference), `OrderPlaced` (chat, warning, no-chat, missing),
 `TrackingLookup` (form, found-2, found-1, nothing-shipped, not-found, error), `VerifyForm` (form,
 authentic, expired, not-verified, error), `ResetPassword` (form, set, expired, checking,
-unreachable), `VerifyEmail` (verifying, done, invalid, otherAccount, error). The editor's Page / Drawer switch previews the two cart
+unreachable), `VerifyEmail` (verifying, done, invalid, otherAccount, error), `OrderDetail`
+(awaiting-payment, hosted-open, crypto-waiting, shipped, collection, cancelled: an order and its payment view
+from the fixtures, so the page reads neither). The editor's Page / Drawer switch previews the two cart
 surfaces.
 
 Stage-4 files: `builder/blocks/_shared/<family>-container.ts` (specs), `builder/blocks/<Part>.tsx`
@@ -741,9 +743,9 @@ address of hosted payments, so the route stays as a redirect (`app/OrderLinkRedi
 order page, `/account/orders/:ref`; the key is not read, and a signed-out visitor goes through sign-in and
 back. A page set saved while the old page existed keeps its `order-status` entry harmlessly: nothing reads
 it, and a stored `OrderDetail` that still holds an `OrderPageLink` block drops it with a `drop:unknown-block`
-issue. The cancel control (`features/order-status/CancelOrder.tsx`) now sits under the account order's
-balance part: "Cancel order" with an inline confirmation while the order can still be cancelled, or a pointer
-to the shop when money may already be on its way. Its wording is `order.cancel.*`.
+issue. The cancel control (`features/order-status/CancelOrder.tsx`) sits at the foot of the account order's
+payment card: a quiet "Cancel order" button that opens a confirmation dialog while the order can still be
+cancelled, or a pointer to the shop when money may already be on its way. Its wording is `order.cancel.*`.
 
 **Payment method names.** The names on the account order's method picker, the checkout's Payment and Review
 steps, and the account order's payment list are the shop's own, set in the admin app (Storefront settings
@@ -753,12 +755,24 @@ entries "Card" and "Crypto" no longer exist. On the account order page the fee w
 comes from the backend (its `feeLabel` and rate), not from Site text. A method sent with an empty name is shown by
 its id read as words.
 
-**Account order parts.** The `OrderBalance` part (the account order page's "Balance due") shows the
-balance and, when the order can still be paid, the payment section, fed
-through the order's access key, plus the cancel control (through the signed-in session). Without
-an access key (order links not configured, or an older backend) there is no payment section, but the
-cancel control still shows (through the signed-in session) whenever the order can be cancelled; only
-when nothing at all can be shown is it the figure alone, as it used to be.
+**Account order parts.** The `OrderDetail` container holds `OrderBackLink`, `OrderHeading`, `OrderBalance`,
+`OrderItems`, `OrderAddress`, `OrderParcels` and `OrderPayments`; only `OrderHeading` and `OrderItems` are
+required, and a stored arrangement does not gain `OrderAddress` until the owner adds it. The account's
+greeting and section tabs draw nothing on `/account/orders/:ref` (`isOrderDetailPath`).
+
+`OrderBalance` ("Payment needed") draws only while money is owed on an order that is not cancelled or refunded.
+It is one card: the amount due as the largest figure on the page, then the payment section (a method picker,
+the open hosted checkout, the crypto address, or "we're checking your payment"), then Cancel order under a
+rule. While the payment state loads the card shows a busy placeholder; if it fails it says so with a Try again
+button; if the order cannot be paid online it shows the help text and the shop's support links. Everything
+runs on the customer's session (no access key).
+
+The page sorts the container's items into three areas itself (`features/account/order-layout.ts`): `head`
+(back link, heading), `main` (payment, items) and `side` (address, parcels, payments), keeping their order
+within each. A content block goes to `side` only when every order part inside it is a side part. On the
+published site the areas become a header, a main column and, when something placed in the side column will
+draw, a side column from 62em (DOM order puts the side column last, so a phone reads payment, items, address,
+parcels, history). In the editor the slot stays one drop zone and is drawn as one column.
 
 `CheckoutFlow.steps` accepts only the five step parts (a content block between two steps would
 render inside every step's card); `CheckoutFlow.after` accepts content only. Each step part has

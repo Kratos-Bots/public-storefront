@@ -51,7 +51,7 @@ import { CHECKOUT_CONTAINER } from '@/builder/blocks/_shared/checkout-container.
 import { STEP_TYPE, type CheckoutSlots, type StepKind } from '@/builder/family-checkout.ts';
 import type { ComponentData, PuckDoc } from '@/builder/types.ts';
 import { effectivePreviewAs } from '@/builder/editor/fixture-mode.ts';
-import { fixtureOrderStates } from '@/builder/editor/fixtures.ts';
+import { fixtureOrderDetails, fixtureOrderStates } from '@/builder/editor/fixtures.ts';
 import { CheckoutNote } from '@/builder/editor/CheckoutNote.tsx';
 import { CheckoutPage } from '@/features/checkout/CheckoutPage.tsx';
 import { mountAt } from './helpers/stage4-golden.tsx';
@@ -228,11 +228,16 @@ describe('effectivePreviewAs', () => {
 });
 
 describe('order state fixtures', () => {
-  const ids = ['shipped', 'awaiting-payment', 'hosted-open', 'crypto-checking', 'two-parcels', 'cancelled'] as const;
+  const ids = ['awaiting-payment', 'hosted-open', 'crypto-waiting', 'shipped', 'collection', 'cancelled'] as const;
   const states = fixtureOrderStates(new Date());
-  it('has the six states, all for NB0977', () => {
+  const details = fixtureOrderDetails(new Date());
+  it('has the six states, all for NB0977, each with an order and a payment view', () => {
     expect(Object.keys(states).sort()).toEqual([...ids].sort());
-    for (const id of ids) expect(states[id].reference, id).toBe('NB0977');
+    expect(Object.keys(details).sort()).toEqual([...ids].sort());
+    for (const id of ids) {
+      expect(states[id].reference, id).toBe('NB0977');
+      expect(details[id].reference, id).toBe('NB0977');
+    }
   });
   it('each state carries what its variant needs', () => {
     const s = states;
@@ -242,18 +247,25 @@ describe('order state fixtures', () => {
     const hosted = s['hosted-open'].payment!.activePayment!;
     expect(hosted).toMatchObject({ kind: 'gateway', status: 'pending', canChange: true });
     expect(new URL(hosted.checkoutUrl!).host).toBe('shop.example');
-    const crypto = s['crypto-checking'];
-    expect(crypto.cryptoPayments![0]).toMatchObject({ verificationStatus: 'checking', txidMasked: '1a2b3c…d4e5f6' });
-    expect(crypto.payment!.activePayment).toMatchObject({ kind: 'crypto', canChange: false });
-    expect(s['two-parcels'].shipments).toHaveLength(2);
-    expect(s['two-parcels'].shipments[1]!.status).toBe('delivered');
+    const crypto = s['crypto-waiting'];
+    expect(crypto.cryptoPayments![0]).toMatchObject({ verificationStatus: 'pending', txidMasked: null });
+    expect(crypto.payment!.activePayment).toMatchObject({ kind: 'crypto', canChange: true });
+    expect(s.collection.shippingAddress!.servicePoint).toMatchObject({ carrier: 'DPD' });
+    expect(details.collection.servicePoint).toMatchObject({ carrier: 'DPD' });
     expect(s.cancelled.status).toBe('cancelled');
     expect(s.cancelled.payment!.canPay).toBe(false);
     expect(s.shipped.payment!.canPay).toBe(false);
   });
+  it('the order side agrees with the payment side: unpaid states owe money, paid ones owe none, cancelled keeps a balance it must not ask for', () => {
+    for (const id of ['awaiting-payment', 'hosted-open', 'crypto-waiting'] as const) {
+      expect(details[id], id).toMatchObject({ status: 'pending', outstandingBalance: 64.9, canCancel: true });
+    }
+    for (const id of ['shipped', 'collection'] as const) expect(details[id], id).toMatchObject({ outstandingBalance: 0, canCancel: false });
+    expect(details.cancelled).toMatchObject({ status: 'cancelled', outstandingBalance: 64.9 });
+  });
   it('invents everything: no email, and every URL is on shop.example', () => {
     for (const id of ids) {
-      const json = JSON.stringify(states[id]);
+      const json = JSON.stringify([states[id], details[id]]);
       expect(json, id).not.toContain('@');
       for (const url of json.match(/https?:\/\/[^"\s]+/g) ?? []) expect(new URL(url).host, `${id} ${url}`).toBe('shop.example');
     }

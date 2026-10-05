@@ -19,6 +19,7 @@ export const PREVIEW_STATE_IDS = {
   VerifyForm: ['form', 'authentic', 'expired', 'not-verified', 'error'],
   ResetPassword: ['form', 'set', 'expired', 'checking', 'unreachable'],
   VerifyEmail: ['verifying', 'done', 'invalid', 'otherAccount', 'error'],
+  OrderDetail: ['awaiting-payment', 'hosted-open', 'crypto-waiting', 'shipped', 'collection', 'cancelled'],
 } as const;
 
 const SHOPPER: BuilderMode = { editing: false, previewAs: null };

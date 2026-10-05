@@ -3,6 +3,7 @@ import { PREVIEW_STATE_IDS, type BuilderMode } from '@/builder/mode.ts';
 import type { LayoutKind, DocKey } from '@/builder/types.ts';
 import type { LoyaltyPreview } from '@/builder/family-loyalty.ts';
 import type { OrdersPreview } from '@/builder/family-orders.ts';
+import type { OrderPreview } from '@/builder/family-order.ts';
 import type { PaymentPreview } from '@/builder/family-payment.ts';
 import type { ProfilePreview } from '@/builder/family-profile.ts';
 import type { ReferralsPreview } from '@/builder/family-referrals.ts';
@@ -13,7 +14,8 @@ import type { VerifyEmailPreview } from '@/builder/family-verify-email.ts';
 import { useEditorStore } from '@/builder/editor/store.ts';
 import { effectivePreviewAs } from '@/builder/editor/fixture-mode.ts';
 import {
-  FIXTURE_CHAT_LINKS, FIXTURE_ORDERS, FIXTURE_ORDER_REF, FIXTURE_SIGN_IN, FIXTURE_REDEEM, FIXTURE_TRACKING, fixtureProfile, fixtureVerification,
+  FIXTURE_CHAT_LINKS, FIXTURE_ORDERS, FIXTURE_ORDER_REF, FIXTURE_SIGN_IN, FIXTURE_REDEEM, FIXTURE_TRACKING, fixtureOrderDetails, fixtureOrderStates,
+  fixtureProfile, fixtureVerification,
 } from '@/builder/editor/fixtures.ts';
 
 export type ContainerName = keyof typeof PREVIEW_STATE_IDS;
@@ -42,6 +44,11 @@ export const PREVIEW_STATE_LABELS: Record<ContainerName, Labelled> = {
   ResetPassword: [
     { id: 'form', label: 'Choose a new password' }, { id: 'set', label: 'Choose a password (no password yet)' },
     { id: 'expired', label: 'Expired link' }, { id: 'checking', label: 'Checking the link' }, { id: 'unreachable', label: 'Could not check' },
+  ],
+  OrderDetail: [
+    { id: 'awaiting-payment', label: 'Awaiting payment' }, { id: 'hosted-open', label: 'Card checkout open' },
+    { id: 'crypto-waiting', label: 'Waiting for crypto' }, { id: 'shipped', label: 'Shipped' },
+    { id: 'collection', label: 'Collection point' }, { id: 'cancelled', label: 'Cancelled' },
   ],
   VerifyEmail: [
     { id: 'verifying', label: 'Confirming' }, { id: 'done', label: 'Confirmed' }, { id: 'invalid', label: 'Expired link' },
@@ -110,6 +117,10 @@ const BUILDERS: { [C in ContainerName]: (state: string, now: Date) => unknown } 
     }
   },
   VerifyEmail: (state): VerifyEmailPreview => ({ phase: (['done', 'invalid', 'otherAccount', 'error'] as const).find((p) => p === state) ?? 'verifying' }),
+  OrderDetail: (state, now): OrderPreview => {
+    const id = (PREVIEW_STATE_IDS.OrderDetail as readonly string[]).includes(state) ? (state as keyof ReturnType<typeof fixtureOrderStates>) : 'awaiting-payment';
+    return { detail: fixtureOrderDetails(now)[id], payment: fixtureOrderStates(now)[id] };
+  },
   VerifyForm: (state, now): VerifyPreview => {
     const v = fixtureVerification(now);
     switch (state) {
@@ -136,6 +147,7 @@ export function previewStatesFor(states: Readonly<Record<string, string>>): Reco
 
 const DOC_CONTAINER: Partial<Record<DocKey, ContainerName>> = {
   'account.orders': 'OrdersList',
+  'account.order': 'OrderDetail',
   'account.loyalty': 'Loyalty',
   'account.referrals': 'Referrals',
   'account.profile': 'Profile',

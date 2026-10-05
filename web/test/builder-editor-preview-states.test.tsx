@@ -20,10 +20,13 @@ const settings = vi.hoisted(() => ({
 }));
 vi.mock('@/app/settings.ts', () => ({ useSettings: () => settings.value as StorefrontSettings }));
 vi.mock('@/app/layout.ts', () => ({ useEffectiveLayout: () => 'storefront' }));
-vi.mock('@/api/orders.ts', async (orig) => ({ ...(await orig<typeof import('@/api/orders.ts')>()), fetchOrders: vi.fn(), fetchOrder: vi.fn() }));
+vi.mock('@/api/orders.ts', async (orig) => ({
+  ...(await orig<typeof import('@/api/orders.ts')>()),
+  fetchOrders: vi.fn(), fetchOrder: vi.fn(), fetchOrderPayment: vi.fn(), fetchOrderPaymentOptions: vi.fn(() => new Promise(() => {})),
+}));
 vi.mock('@/api/profile.ts', async (orig) => ({ ...(await orig<typeof import('@/api/profile.ts')>()), fetchProfile: vi.fn(), fetchRedeemOptions: vi.fn() }));
 
-import { fetchOrders } from '@/api/orders.ts';
+import { fetchOrder, fetchOrderPayment, fetchOrders } from '@/api/orders.ts';
 import { fetchProfile, fetchRedeemOptions } from '@/api/profile.ts';
 import { BuilderModeProvider, PREVIEW_STATE_IDS, usePreviewFixture, usePreviewState } from '@/builder/mode.ts';
 import { useEditorStore } from '@/builder/editor/store.ts';
@@ -36,6 +39,7 @@ import { OrdersPage } from '@/features/account/OrdersPage.tsx';
 import { LoyaltyPage } from '@/features/account/LoyaltyPage.tsx';
 import { ReferralsPage } from '@/features/account/ReferralsPage.tsx';
 import { ProfilePage } from '@/features/account/ProfilePage.tsx';
+import { OrderDetailPage } from '@/features/account/OrderDetailPage.tsx';
 import { TrackingPage } from '@/features/tracking/TrackingPage.tsx';
 import { VerifyPage } from '@/features/verify/VerifyPage.tsx';
 import type { LoyaltyPreview } from '@/builder/family-loyalty.ts';
@@ -267,6 +271,25 @@ describe('previews draw from fixtures and never fetch', () => {
     await waitFor(() => expect(fetchOrders).toHaveBeenCalled());
     expect(fetchProfile).toHaveBeenCalled();
     expect(fetchRedeemOptions).toHaveBeenCalled();
+  });
+
+  it.each([
+    ['awaiting-payment', 'Payment needed'], ['hosted-open', 'Payment needed'], ['crypto-waiting', 'Payment needed'],
+    ['shipped', 'Parcels'], ['collection', 'Collect from'], ['cancelled', 'Items'],
+  ])('order detail: %s draws from its fixture without reading the order or its payment state', async (id, region) => {
+    render(<Shell mode={modeFor('OrderDetail', id)}><OrderDetailPage /></Shell>);
+    expect(await screen.findByRole('region', { name: region })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1, name: 'NB0977' })).toBeTruthy();
+    expect(screen.queryByRole('region', { name: 'Payment needed' }) !== null).toBe(region === 'Payment needed');
+    await act(async () => { await new Promise((r) => setTimeout(r, 30)); });
+    expect(fetchOrder).not.toHaveBeenCalled();
+    expect(fetchOrderPayment).not.toHaveBeenCalled();
+  });
+
+  it('order detail: the editor draws the slot as one column, so it stays one drop zone', async () => {
+    const { container } = render(<Shell mode={modeFor('OrderDetail', 'shipped')}><OrderDetailPage ctx={{ editing: true, docKey: 'account.order', layout: 'storefront' }} /></Shell>);
+    await screen.findByRole('heading', { level: 1, name: 'NB0977' });
+    expect(container.querySelector('[data-columns]')).toBeNull();
   });
 
   it('one preview rule: a state without a fixture is not a preview (queries stay live)', async () => {

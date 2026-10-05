@@ -100,6 +100,10 @@ export const FIXTURE_ORDER_DETAIL: OrderDetail = {
     status: 'in_transit', carrier: 'Royal Mail', trackingNumber: 'NB000977GB', trackingUrl: 'https://shop.example/track/NB000977GB',
     trackingStatusDescription: 'In transit', shippedAt: '2026-09-03T08:00:00.000Z', deliveredAt: null,
   }],
+  shippingAddress: {
+    firstName: 'Morgan', surname: 'Reed', addressLine1: '1 Harbour Row', addressLine2: null, addressLine3: null,
+    city: 'Northbound', county: null, zip: 'NB1 0AA', country: 'GB',
+  },
 };
 
 export const FIXTURE_PUBLIC_ORDER: PublicOrder = {
@@ -125,12 +129,13 @@ export const FIXTURE_PUBLIC_ORDER: PublicOrder = {
   payment: { canPay: false, payBy: null, activePayment: null },
 };
 
-// ── Order states: a PublicOrder in each state the order views preview ────────
+// ── Order states: the order page's preview states, each an order and its payment view ───────────
 
-type OrderStateId = 'shipped' | 'awaiting-payment' | 'hosted-open' | 'crypto-checking' | 'two-parcels' | 'cancelled';
+export type OrderStateId = 'awaiting-payment' | 'hosted-open' | 'crypto-waiting' | 'shipped' | 'collection' | 'cancelled';
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+const FIXTURE_POINT = { name: 'Harbour Row Newsagent', carrier: 'DPD' };
 
-/** The order page's preview states; an unpaid order's pay-by date is `now` + 3 days, so it never reads as past. */
+/** The payment view per state; an unpaid order's pay-by date is `now` + 3 days, so it never reads as past. */
 export function fixtureOrderStates(now: Date): Record<OrderStateId, PublicOrder> {
   const FIXTURE_PAY_BY = new Date(now.getTime() + THREE_DAYS_MS).toISOString();
   const FIXTURE_AWAITING: PublicOrder = {
@@ -140,41 +145,56 @@ export function fixtureOrderStates(now: Date): Record<OrderStateId, PublicOrder>
     payment: { canPay: true, payBy: FIXTURE_PAY_BY, activePayment: null },
   };
   return {
-  shipped: FIXTURE_PUBLIC_ORDER,
-  'awaiting-payment': FIXTURE_AWAITING,
-  'hosted-open': {
-    ...FIXTURE_AWAITING,
-    payment: {
-      canPay: true, payBy: FIXTURE_PAY_BY,
-      activePayment: {
-        paymentId: 900301, method: 'card', kind: 'gateway', status: 'pending',
-        checkoutUrl: `https://shop.example/pay/${FIXTURE_ORDER_REF}`, canChange: true, settlementAmount: null, settlementCurrency: null,
+    'awaiting-payment': FIXTURE_AWAITING,
+    'hosted-open': {
+      ...FIXTURE_AWAITING,
+      payment: {
+        canPay: true, payBy: FIXTURE_PAY_BY,
+        activePayment: {
+          paymentId: 900301, method: 'card', kind: 'gateway', status: 'pending',
+          checkoutUrl: `https://shop.example/pay/${FIXTURE_ORDER_REF}`, canChange: true, settlementAmount: null, settlementCurrency: null,
+        },
       },
     },
-  },
-  'crypto-checking': {
-    ...FIXTURE_AWAITING,
-    cryptoPayments: [{
-      paymentId: 900302, paymentStatus: 'pending', coin: 'usdt', network: 'polygon', coinLabel: 'USDT', networkLabel: 'Polygon',
-      address: '0xNB0977000000000000000000000000000000EXAMPLE', coinAmount: '64.90', fiatAmount: 64.9,
-      verificationStatus: 'checking', needsAttention: false, txidMasked: '1a2b3c…d4e5f6',
-    }],
-    payment: {
-      canPay: true, payBy: FIXTURE_PAY_BY,
-      activePayment: { paymentId: 900302, method: 'crypto', kind: 'crypto', status: 'pending', checkoutUrl: null, canChange: false },
-    },
-  },
-  'two-parcels': {
-    ...FIXTURE_PUBLIC_ORDER,
-    shipments: [
-      ...FIXTURE_PUBLIC_ORDER.shipments,
-      {
-        status: 'delivered', carrier: 'Royal Mail', trackingNumber: 'NB000978GB', trackingUrl: 'https://shop.example/track/NB000978GB',
-        trackingStatusDescription: 'Delivered', shippedAt: '2026-09-03T08:00:00.000Z', deliveredAt: '2026-09-05T12:30:00.000Z',
+    'crypto-waiting': {
+      ...FIXTURE_AWAITING,
+      cryptoPayments: [{
+        paymentId: 900302, paymentStatus: 'pending', coin: 'usdt', network: 'polygon', coinLabel: 'USDT', networkLabel: 'Polygon',
+        address: '0xNB0977000000000000000000000000000000EXAMPLE', coinAmount: '64.90', fiatAmount: 64.9,
+        verificationStatus: 'pending', needsAttention: false, txidMasked: null,
+      }],
+      payment: {
+        canPay: true, payBy: FIXTURE_PAY_BY,
+        activePayment: { paymentId: 900302, method: 'crypto', kind: 'crypto', status: 'pending', checkoutUrl: null, canChange: true },
       },
-    ],
-  },
-  cancelled: { ...FIXTURE_PUBLIC_ORDER, status: 'cancelled', shipments: [], payment: { canPay: false, payBy: null, activePayment: null } },
+    },
+    shipped: FIXTURE_PUBLIC_ORDER,
+    collection: { ...FIXTURE_PUBLIC_ORDER, shippingAddress: { ...FIXTURE_PUBLIC_ORDER.shippingAddress!, servicePoint: FIXTURE_POINT } },
+    cancelled: { ...FIXTURE_PUBLIC_ORDER, status: 'cancelled', shipments: [], payment: { canPay: false, payBy: null, activePayment: null } },
+  };
+}
+
+/** The account's own view of the order in each state: what the order page's parts read. */
+export function fixtureOrderDetails(now: Date): Record<OrderStateId, OrderDetail> {
+  const shippingAddress = FIXTURE_PUBLIC_ORDER.shippingAddress;
+  const unpaid: OrderDetail = {
+    ...FIXTURE_ORDER_DETAIL, status: 'pending', outstandingBalance: 64.9, payments: [], shipments: [], shippingAddress,
+    canCancel: true, cancelBlockedBy: null,
+  };
+  const attempt = (method: string, methodLabel: string): OrderDetail['payments'][number] => ({
+    method, methodLabel, amount: 64.9, status: 'pending', createdAt: new Date(now.getTime() - 5 * 60 * 1000).toISOString(),
+  });
+  return {
+    'awaiting-payment': unpaid,
+    'hosted-open': { ...unpaid, payments: [attempt('card', 'Card payment')] },
+    'crypto-waiting': { ...unpaid, payments: [attempt('crypto-usdt-polygon', 'USDT on Polygon')] },
+    shipped: { ...FIXTURE_ORDER_DETAIL, shippingAddress, canCancel: false, cancelBlockedBy: 'paid' },
+    collection: {
+      ...FIXTURE_ORDER_DETAIL, servicePoint: FIXTURE_POINT, canCancel: false, cancelBlockedBy: 'paid',
+      shippingAddress: { ...shippingAddress!, servicePoint: FIXTURE_POINT },
+    },
+    // A cancelled order keeps the balance it never paid: the page must not ask for it.
+    cancelled: { ...unpaid, status: 'cancelled', canCancel: false, cancelBlockedBy: null },
   };
 }
 
