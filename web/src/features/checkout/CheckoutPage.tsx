@@ -48,6 +48,7 @@ import { DIAL_CODES } from '@/lib/dial-codes.ts';
 import { formatMoney } from '@/lib/format.ts';
 import { haptic, isTelegramWebApp, openExternalLink } from '@/lib/telegram-webapp.ts';
 import { usePrimaryAction } from '@/stores/primary-action.ts';
+import { useBackAction } from '@/stores/back-action.ts';
 import { FADE } from '@/lib/motion.ts';
 import { Slot } from '@/templates/runtime.tsx';
 import { textKey, useText } from '@/text/runtime.tsx';
@@ -129,7 +130,7 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
   // The editor canvas stacks every step (spec section 10.3). The only thing here that reads builder mode.
   const stack = useBuilderMode().editing;
   const navigate = useNavigate();
-  // Inside Telegram the nav's primary button is Telegram's MainButton (Back stays in the page).
+  // Inside Telegram the primary button is Telegram's MainButton and Back is Telegram's own; the page draws neither.
   const inTelegram = isTelegramWebApp();
 
   const lines = useCartStore((s) => s.lines);
@@ -678,6 +679,16 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
       : null,
   );
 
+  // Telegram's Back steps back through the checkout. On the first step (and with every step on one page) nothing
+  // is claimed, so Back leaves the checkout as it always did; while the order is away it must not do either.
+  useBackAction(
+    inTelegram && showsForm && !stack && step > 0
+      ? () => {
+          if (!submitting) back();
+        }
+      : null,
+  );
+
   // Guest checkout is two switches, not one: the feature flag AND a configured
   // Turnstile site key. With the flag on and no key the widget can never mount,
   // so every quote would hang on a token that will never come — and the backend
@@ -764,9 +775,9 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
 
           {stack ? (
             <InertActionBand />
-          ) : /* Inside Telegram the first step has nothing left in the nav — the MainButton
-              is Continue — so the sticky band would be an empty strip over the form. */
-          inTelegram && step === 0 ? null : (
+          ) : /* Inside Telegram the nav has nothing left: Continue is the MainButton and Back is Telegram's
+              own, so the sticky band would be an empty strip over the form. */
+          inTelegram ? null : (
             <div className={classes.nav}>
               {step > 0 ? (
                 <button
@@ -779,7 +790,7 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
                   {t('checkout.actions.back')}
                 </button>
               ) : null}
-              {inTelegram ? null : onReview ? (
+              {onReview ? (
                 <button
                   type="button"
                   className={classes.next}

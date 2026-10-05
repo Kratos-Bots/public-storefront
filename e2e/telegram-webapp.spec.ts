@@ -137,6 +137,47 @@ test.describe('inside Telegram', () => {
     expect(await backHandlers(page)).toBe(0);
   });
 
+  test("inside the checkout Telegram's Back steps back through the steps, and the page draws no Back of its own", async ({ page }) => {
+    const mocks = await openInTelegram(page);
+    await expect.poll(() => mocks.state.webappLogins.length).toBe(1);
+    await openProduct(page, 'webapp', firstProductName(mocks));
+    await addFirstToCart(page, 'webapp', mocks);
+    await clickMain(page);
+    await expect(page).toHaveURL(/\/cart$/);
+    await expect.poll(() => mainText(page)).toMatch(/^Checkout · /);
+    await clickMain(page);
+    await expect(page).toHaveURL(/\/checkout$/);
+    await expect(page.getByRole('heading', { name: 'Your details' })).toBeVisible();
+
+    await page.getByRole('textbox', { name: 'First name' }).fill('Ada');
+    await page.getByRole('textbox', { name: 'Surname' }).fill('Sterling');
+    await page.getByRole('textbox', { name: 'Email' }).fill('ada@example.invalid');
+    await clickMain(page);
+    await expect(page.getByRole('heading', { name: 'Delivery address' })).toBeVisible();
+
+    // Step two: one Back, Telegram's. The page draws none, and each control has exactly one live handler.
+    await expect(page.getByRole('button', { name: 'Back' })).toHaveCount(0);
+    await expect.poll(() => backShowing(page)).toBe(true);
+    expect(await mainHandlers(page)).toBe(1);
+    expect(await secondaryHandlers(page)).toBe(1);
+    expect(await backHandlers(page)).toBe(0);
+
+    await clickBack(page);
+    await expect(page.getByRole('heading', { name: 'Your details' })).toBeVisible();
+    await expect(page).toHaveURL(/\/checkout$/);
+    await expect(page.getByRole('textbox', { name: 'First name' })).toHaveValue('Ada');
+    expect(await mainHandlers(page)).toBe(1);
+    expect(await secondaryHandlers(page)).toBe(1);
+    expect(await backHandlers(page)).toBe(0);
+
+    // First step: nothing is claimed, so Back leaves the checkout.
+    await clickBack(page);
+    await expect(page).toHaveURL(/\/cart$/);
+    expect(await mainHandlers(page)).toBe(1);
+    expect(await secondaryHandlers(page)).toBe(1);
+    expect(await backHandlers(page)).toBe(0);
+  });
+
   test('an external payment opens in the browser and returns to the account order', async ({ page }) => {
     const gateway = 'https://pay.example.invalid/session/e2e';
     const mocks = await openInTelegram(page, {

@@ -11,6 +11,7 @@ import { PrimaryActionBar, usePrimaryBarShowing } from '@/features/webapp/Primar
 import { useTelegramChrome } from '@/features/webapp/useTelegramChrome.ts';
 import { useModalOpen } from '@/lib/use-modal-open.ts';
 import { usePrimaryActionStore } from '@/stores/primary-action.ts';
+import { useBackActionStore } from '@/stores/back-action.ts';
 
 type Handlers = Array<() => void>;
 
@@ -86,6 +87,7 @@ const claim = (label = 'Checkout · £10.00') => usePrimaryActionStore.setState(
 beforeEach(() => {
   delete (window as unknown as { Telegram?: unknown }).Telegram;
   usePrimaryActionStore.setState({ override: null });
+  useBackActionStore.setState({ override: null });
 });
 afterEach(() => {
   cleanup();
@@ -292,5 +294,45 @@ describe('in a browser (the in-page bar)', () => {
     await waitFor(() => expect(document.querySelector('[data-sf-part="primary-bar"]')).toBeNull());
     act(() => { dialog.remove(); });
     await waitFor(() => expect(document.querySelector('[data-sf-part="primary-bar"]')).not.toBeNull());
+  });
+});
+
+describe('a page that claims Back', () => {
+  it('both Telegram controls call the page handler instead of going back, one live handler each', async () => {
+    const tg = installTelegram('8.0');
+    claim();
+    const handler = vi.fn();
+    useBackActionStore.setState({ override: handler });
+    render(<MemoryRouter initialEntries={['/', '/checkout']} initialIndex={1}><Harness /></MemoryRouter>);
+    await waitFor(() => expect(tg.secondary.isVisible).toBe(true));
+    expect(tg.handlers.secondary).toHaveLength(1);
+    act(() => tg.handlers.secondary.slice().forEach((h) => h()));
+    expect(handler).toHaveBeenCalledOnce();
+    expect(screen.getByTestId('where').textContent).toBe('/checkout');
+  });
+
+  it('the header arrow of an older client calls it too', async () => {
+    const tg = installTelegram('7.9');
+    claim();
+    const handler = vi.fn();
+    useBackActionStore.setState({ override: handler });
+    render(<MemoryRouter initialEntries={['/', '/checkout']} initialIndex={1}><Harness /></MemoryRouter>);
+    await waitFor(() => expect(tg.back.isVisible).toBe(true));
+    expect(tg.handlers.back).toHaveLength(1);
+    act(() => tg.handlers.back.slice().forEach((h) => h()));
+    expect(handler).toHaveBeenCalledOnce();
+    expect(screen.getByTestId('where').textContent).toBe('/checkout');
+  });
+
+  it('releasing the claim puts history Back behind the controls again', async () => {
+    const tg = installTelegram('8.0');
+    claim();
+    useBackActionStore.setState({ override: vi.fn() });
+    render(<MemoryRouter initialEntries={['/', '/checkout']} initialIndex={1}><Harness /></MemoryRouter>);
+    await waitFor(() => expect(tg.secondary.isVisible).toBe(true));
+    act(() => useBackActionStore.setState({ override: null }));
+    await waitFor(() => expect(tg.handlers.secondary).toHaveLength(1));
+    act(() => tg.handlers.secondary.slice().forEach((h) => h()));
+    expect(screen.getByTestId('where').textContent).toBe('/');
   });
 });
