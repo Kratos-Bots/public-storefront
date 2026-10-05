@@ -684,22 +684,40 @@
   color: var(--sf-muted);
 }
 
+/* Stacked and full width on a phone, side by side from 36em. Keep order comes first: it is the safe default. */
 .cancelButtons {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 0.6rem;
-  margin-top: 0.8rem;
+  margin-top: 1.25rem;
 }
 
-.cancelConfirm {
+.cancelButtons > button {
+  width: 100%;
+  min-height: 48px;
+}
+
+@media (min-width: 36em) {
+  .cancelButtons {
+    flex-direction: row;
+  }
+
+  .cancelButtons > button {
+    width: auto;
+    flex: 1 1 0;
+    min-height: 44px;
+  }
+}
+
+/* The stronger choice in this dialog: filled with the shop's primary, as the page's main buttons are. */
+.cancelKeep {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
   padding: 0 1rem;
   border: 0;
   border-radius: var(--sf-btn-radius);
-  background: var(--sf-danger);
+  background: var(--sf-primary);
   color: var(--sf-bg);
   font-family: var(--sf-font-mono);
   font-size: 11px;
@@ -710,8 +728,44 @@
   transition: opacity 120ms ease;
 }
 
-.cancelConfirm:hover {
+.cancelKeep:hover {
   opacity: 0.88;
+}
+
+.cancelKeep:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+.cancelKeep:disabled {
+  background: var(--sf-surface-2);
+  color: var(--sf-faint);
+  cursor: not-allowed;
+}
+
+/* Outlined, not filled: clearly the destructive choice without outshouting Keep order. */
+.cancelConfirm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 1rem;
+  border: 1px solid var(--sf-danger);
+  border-radius: var(--sf-btn-radius);
+  background: transparent;
+  color: var(--sf-danger);
+  font-family: var(--sf-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.cancelConfirm:hover:not([aria-disabled='true']) {
+  background: var(--sf-danger);
+  color: var(--sf-bg);
 }
 
 .cancelConfirm[aria-disabled='true'] {
@@ -759,6 +813,7 @@
   .copyButton,
   .cta,
   .ghost,
+  .cancelKeep,
   .cancelConfirm,
   .pickerRow,
   .disclosure {
