@@ -357,7 +357,7 @@ function ParcelsView({ styleAttrs }: PartViewProps) {
  * customer has been dealt with for this page load. Never on the first load of an order that was
  * already paid or cancelled: only a change seen on this page counts.
  */
-function OrderAnnouncements({ order }: { order: OrderDetail }) {
+function OrderAnnouncements({ order, previewing }: { order: OrderDetail; previewing: boolean }) {
   const { t } = useText();
   const owed = isOwed(order);
   const closed = order.status === 'cancelled' || order.status === 'refunded';
@@ -368,19 +368,20 @@ function OrderAnnouncements({ order }: { order: OrderDetail }) {
   // Looking at an unpaid order is being asked about it: the pop-up must not turn up over the shop afterwards to ask
   // about the order the customer has just been dealing with.
   useEffect(() => {
-    if (owed) dismissForThisLoad(customerId);
-  }, [owed, customerId]);
+    if (owed && !previewing) dismissForThisLoad(customerId);
+  }, [owed, customerId, previewing]);
 
   useEffect(() => {
     const prev = before.current;
     before.current = { reference: order.reference, owed };
     if (prev.reference !== order.reference) { setReceived(null); return; }
-    if (prev.owed && !owed && !closed) {
+    // The editor's preview flips between fixture states: that is the owner choosing a state, not a payment landing.
+    if (prev.owed && !owed && !closed && !previewing) {
       const message = t('account.order.paymentReceived');
       setReceived(message);
       notifications.show({ message });
     }
-  }, [order.reference, owed, closed, t]);
+  }, [order.reference, owed, closed, previewing, t]);
 
   useEffect(() => {
     if (order.status === 'cancelled' && takeTitleFocus(order.reference)) {
@@ -479,7 +480,7 @@ export function OrderDetailPage({ slots, ctx = STANDALONE }: { slots?: { content
   return (
     <OrderFamily.Provider value={value}>
       <div className={classes.page}>
-        <OrderAnnouncements order={detail} />
+        <OrderAnnouncements order={detail} previewing={!!preview} />
         <div className={classes.overview} data-columns={two ? 'two' : 'one'}>
           <div className={classes.head}>{draw(areas.head)}</div>
           <div className={classes.main}>

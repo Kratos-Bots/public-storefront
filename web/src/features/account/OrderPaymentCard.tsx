@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useId, useState, useSyncExternalStore } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Money } from '@/components/Money.tsx';
 import { CancelOrder } from '@/features/order-status/CancelOrder.tsx';
@@ -26,6 +26,20 @@ export interface PaymentRead {
 }
 
 /**
+ * The account order query's last success and whether it is being fetched, read from the cache without observing
+ * the query: a second observer would hand the query its own options, and the page's observer owns the fetch (and
+ * the editor's preview has no such query at all).
+ */
+function useAccountOrderRead(reference: string): { updatedAt: number; fetching: boolean } {
+  const cache = useQueryClient().getQueryCache();
+  const find = () => cache.find({ queryKey: ['order', reference], exact: true });
+  const subscribe = (notify: () => void) => cache.subscribe(notify);
+  const updatedAt = useSyncExternalStore(subscribe, () => find()?.state.dataUpdatedAt ?? 0);
+  const fetching = useSyncExternalStore(subscribe, () => find()?.state.fetchStatus === 'fetching');
+  return { updatedAt, fetching };
+}
+
+/**
  * What is owed and how to settle it: the strongest thing on the order page. The amount leads; the
  * body is whatever the payment state calls for (a placeholder while it loads, a retry when it could
  * not, the payment section when there is a way to pay, a pointer to the shop when there is not); and
@@ -48,7 +62,17 @@ export function OrderPaymentCard({ order, payment, styleAttrs }: { order: OrderD
   const cancelShows = cancelView(order.canCancel, order.cancelBlockedBy);
   // The payment view is the fresher read: when it says the order has moved on, the account order is about to say
   // the same, and until it does nothing here should claim the balance cannot be paid.
-  const updating = !payable && !!loaded && paymentMovedOn(loaded, order.status);
+  const moved = !payable && !!loaded && paymentMovedOn(loaded, order.status);
+  // The page refetches the account order when this happens. Once a read has landed after the disagreement was
+  // first seen, and nothing is in flight, the account order has had its say. If it still says money is owed,
+  // "updating" would never end, so the card falls back to what it says for any balance with nothing to pay it with.
+  // A refetch that failed leaves its last success where it was, so it never counts as having landed.
+  const accountRead = useAccountOrderRead(order.reference);
+  const [baseline, setBaseline] = useState<number | null>(null);
+  if (moved && baseline === null) setBaseline(accountRead.updatedAt);
+  if (!moved && baseline !== null) setBaseline(null);
+  const settled = moved && baseline !== null && accountRead.updatedAt > baseline && !accountRead.fetching;
+  const updating = moved && !settled;
   // Loaded, the view agrees the order is waiting, and there is nothing to pay with (cannot be paid online, or an
   // older backend sent no payment block): say so and point to the shop, unless the cancel control is already
   // showing its own contact line.
