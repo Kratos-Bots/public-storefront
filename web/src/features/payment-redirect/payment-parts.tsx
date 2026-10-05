@@ -96,12 +96,13 @@ function ActionsView({ styleAttrs }: PartViewProps) {
   if (kind === 'cancel') {
     return (
       <div className={classes.actions} {...styleAttrs}>
-        {loggedIn && orderRef ? (
+        {/* The family's data decides, so the editor's "signed out" preview shows the sign-in link whatever session the editor itself has. */}
+        {signIn ? (
+          signInCta
+        ) : loggedIn && orderRef ? (
           <Link to={accountOrderPath(orderRef)} className={classes.cta} data-sf-part="button" data-variant="filled">
             {t('payment.cancel.returnToOrder')}
           </Link>
-        ) : signIn ? (
-          signInCta
         ) : (
           <Link to="/" className={classes.cta} data-sf-part="button" data-variant="filled">
             {t('payment.cancel.backToShop')}

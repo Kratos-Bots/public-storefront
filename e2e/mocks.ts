@@ -136,11 +136,11 @@ export function orderFixture(name: OrderFixtureName, reference: string = ORDER_R
     case 'hosted': {
       const payment = withCancel(publicOrderVariant('choose'));
       payment.payment!.activePayment = { paymentId: 9003, method: 'sushipp', kind: 'gateway', status: 'pending', checkoutUrl: `https://pay.example.invalid/checkout/${reference}`, canChange: true };
-      detail.payments = [{ method: 'sushipp', amount: ORDER_TOTAL, status: 'pending', createdAt: '2026-08-24T09:10:00.000Z' }];
+      detail.payments = [{ method: 'sushipp', methodLabel: 'Card payment', amount: ORDER_TOTAL, status: 'pending', createdAt: '2026-08-24T09:10:00.000Z' }];
       return { detail, payment: { ...payment, reference } };
     }
     case 'crypto':
-      detail.payments = [{ method: 'crypto_static', amount: ORDER_TOTAL, status: 'pending', createdAt: '2026-08-24T09:10:00.000Z' }];
+      detail.payments = [{ method: 'crypto_static', methodLabel: 'Pay with crypto', amount: ORDER_TOTAL, status: 'pending', createdAt: '2026-08-24T09:10:00.000Z' }];
       return { detail, payment: { ...withCancel(base), reference } };
     case 'shipped':
       return {

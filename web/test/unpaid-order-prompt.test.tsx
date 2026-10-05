@@ -15,7 +15,7 @@ import { accessGate } from '@/app/access-gate.ts';
 import { isBuilderMode } from '@/app/builder-gate.ts';
 import { isPreviewMode } from '@/app/preview-listener.ts';
 import { UnpaidOrderPrompt } from '@/features/unpaid-prompt/UnpaidOrderPrompt.tsx';
-import { resetDismissalForTests } from '@/features/unpaid-prompt/useUnpaidOrder.ts';
+import { isDismissed, resetDismissalForTests } from '@/features/unpaid-prompt/useUnpaidOrder.ts';
 import { useSessionStore } from '@/stores/session.ts';
 import { useUiStore } from '@/stores/ui.ts';
 
@@ -90,6 +90,7 @@ describe('UnpaidOrderPrompt', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Review or cancel order' }));
     await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/account/orders/K4M2QP'));
     expect(dialog()).toBeNull();
+    expect(isDismissed()).toBe(true);
   });
 
   it('Not now hides it across route changes and remounts, without touching sessionStorage', async () => {

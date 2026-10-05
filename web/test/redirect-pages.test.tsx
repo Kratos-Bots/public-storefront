@@ -121,29 +121,33 @@ describe('PaymentSuccessPage', () => {
       import('@tanstack/react-query'),
       import('@/features/payment-redirect/PaymentSuccessPage.tsx'),
     ]);
-    const { createElement: h, useLayoutEffect } = react;
-    const snapshots: boolean[] = [];
-    const Probe = () => {
-      useLayoutEffect(() => {
-        snapshots.push(rtl.screen.queryByRole('link', { name: 'Sign in to view your order' }) !== null);
-      });
-      return null;
-    };
-    const Stub = () => h('p', null, `order page ${router.useParams().ref}`);
-    rtl.render(
-      h(query.QueryClientProvider, { client: new query.QueryClient() },
-        h(mantine.MantineProvider, { env: 'test' },
-          h(router.MemoryRouter, { initialEntries: ['/payment/success?order=REF1'] },
-            h(Probe),
-            h(router.Routes, null,
-              h(router.Route, { path: '/payment/success', element: h(FreshPage) }),
-              h(router.Route, { path: '/account/orders/:ref', element: h(Stub) }))))),
-    );
-    expect(snapshots.length).toBeGreaterThan(0);
-    expect(snapshots.every((seen) => !seen)).toBe(true);
-    expect(rtl.screen.getByText('order page REF1')).toBeInTheDocument();
-    expect(rtl.screen.queryByRole('link', { name: 'Sign in to view your order' })).toBeNull();
-    rtl.cleanup();
+    // Cleaned up even when an assertion fails, so a failure here cannot leave a mounted tree behind for the next test.
+    try {
+      const { createElement: h, useLayoutEffect } = react;
+      const snapshots: boolean[] = [];
+      const Probe = () => {
+        useLayoutEffect(() => {
+          snapshots.push(rtl.screen.queryByRole('link', { name: 'Sign in to view your order' }) !== null);
+        });
+        return null;
+      };
+      const Stub = () => h('p', null, `order page ${router.useParams().ref}`);
+      rtl.render(
+        h(query.QueryClientProvider, { client: new query.QueryClient() },
+          h(mantine.MantineProvider, { env: 'test' },
+            h(router.MemoryRouter, { initialEntries: ['/payment/success?order=REF1'] },
+              h(Probe),
+              h(router.Routes, null,
+                h(router.Route, { path: '/payment/success', element: h(FreshPage) }),
+                h(router.Route, { path: '/account/orders/:ref', element: h(Stub) }))))),
+      );
+      expect(snapshots.length).toBeGreaterThan(0);
+      expect(snapshots.every((seen) => !seen)).toBe(true);
+      expect(rtl.screen.getByText('order page REF1')).toBeInTheDocument();
+      expect(rtl.screen.queryByRole('link', { name: 'Sign in to view your order' })).toBeNull();
+    } finally {
+      rtl.cleanup();
+    }
   });
 
   it('renders a "thanks, being confirmed" screen with the copyable reference when signed out', () => {
@@ -162,6 +166,29 @@ describe('PaymentSuccessPage', () => {
     expect(href).toContain('REF2');
     expect(href).toContain('checking+in');
     expect(href).not.toContain('like+to+pay');
+  });
+});
+
+describe('the cancel page actions in the editor', () => {
+  it('follow the preview data, not the editor session: a signed-out preview shows the sign-in link', async () => {
+    signIn();
+    const [{ PaymentFamily }, { PAYMENT_VIEWS }] = await Promise.all([
+      import('@/builder/family-payment.ts'),
+      import('@/features/payment-redirect/payment-parts.tsx'),
+    ]);
+    const Actions = PAYMENT_VIEWS.PaymentActions!;
+    const data = { kind: 'cancel' as const, orderRef: 'REF3', signIn: SIGN_IN, warning: false, whatsapp: null, telegram: null };
+    render(
+      <QueryClientProvider client={client}>
+        <MantineProvider env="test">
+          <MemoryRouter>
+            <PaymentFamily.Provider value={{ data, views: PAYMENT_VIEWS }}><Actions props={{}} /></PaymentFamily.Provider>
+          </MemoryRouter>
+        </MantineProvider>
+      </QueryClientProvider>,
+    );
+    expect(signInLink()?.getAttribute('href')).toBe(SIGN_IN);
+    expect(screen.queryByRole('link', { name: 'Return to your order' })).toBeNull();
   });
 });
 

@@ -4,6 +4,7 @@ import { installMocks, installTelegramStub, type Layout, type OrderFixtureName }
 import { FIXED_NOW } from './flows.ts';
 import { presetTheme } from './template-theme.ts';
 import type { UnpaidOrder } from '../web/src/types/orders.ts';
+import type { PaymentMethod } from '../web/src/types/checkout.ts';
 
 /**
  * Screenshots of the account order page for a visual review: every template x layout x width x order state, plus the
@@ -28,6 +29,19 @@ const WIDTHS = [390, 1280] as const;
 const STATES: OrderFixtureName[] = ['unpaid', 'hosted', 'crypto', 'shipped', 'collection', 'cancelled'];
 const UNPAID_STATES: OrderFixtureName[] = ['unpaid', 'hosted', 'crypto'];
 
+const LONG_ITEM = 'Alpine Extract 10ml, Limited Winter Reserve Edition with presentation box and a hand-written card';
+
+/** The shop's ways to pay: a card with a fee, crypto with a discount, and a bank transfer under a long name. */
+const METHODS: PaymentMethod[] = [
+  { method: 'sushipp', displayName: 'Pay by card', type: 'gateway', details: null, feeType: 'percent', feeValue: 3, feeRateText: '+3%', feeLabel: 'Card fee', fee: 1.42, chargeTotal: 47.45 },
+  { method: 'crypto_static', displayName: 'Pay with crypto', type: 'crypto', details: null, feeType: 'percent', feeValue: -3, feeRateText: '−3%', feeLabel: 'Crypto discount', fee: -1.42, chargeTotal: 46.03,
+    cryptoOptions: [
+      { coin: 'btc', network: 'bitcoin', coinLabel: 'BTC', networkLabel: 'Bitcoin', feeType: 'percent', feeValue: -3, feeRateText: '−3%', feeLabel: 'Crypto discount', fee: -1.42, chargeTotal: 46.03 },
+      { coin: 'usdt', network: 'polygon', coinLabel: 'USDT', networkLabel: 'Polygon', feeType: 'percent', feeValue: -3, feeRateText: '−3%', feeLabel: 'Crypto discount', fee: -1.42, chargeTotal: 46.03 },
+    ] },
+  { method: 'uk_bank_transfer', displayName: 'Bank transfer from a UK account, settled the same day for orders placed before 3pm', type: 'offline', details: { 'Account Name': 'Example Shop Ltd', 'Sort Code': '00-00-00', 'Account Number': '00000000' }, feeType: null, feeValue: null, feeRateText: '', feeLabel: '', fee: 0, chargeTotal: 47.45 },
+];
+
 const unpaidRow = (): UnpaidOrder => ({
   reference: REF, createdAt: '2026-08-24T08:30:00.000Z', totalAmount: 46.03, outstandingBalance: 46.03,
   payBy: null, canCancel: true, cancelBlockedBy: null,
@@ -43,7 +57,13 @@ async function setup(page: Page, s: Setup, unpaidOrders?: UnpaidOrder[]): Promis
   if (s.layout === 'webapp') await installTelegramStub(page);
   const tweakSettings = await presetTheme(page, s.template, s.preset);
   await installMocks(page, {
-    layout: s.layout, session: true, orderFixture: s.fixture, orderReference: REF, tweakSettings, ...(unpaidOrders ? { unpaidOrders } : {}),
+    layout: s.layout, session: true, orderFixture: s.fixture, orderReference: REF, tweakSettings, paymentMethods: METHODS,
+    // Long names, so wrapping is exercised; an order with no method chosen yet is owed the undiscounted total.
+    tweakOrderDetail: (d) => {
+      d.items[0]!.name = LONG_ITEM;
+      if (s.fixture === 'unpaid') { d.totalAmount = 47.45; d.outstandingBalance = 47.45; }
+    },
+    ...(unpaidOrders ? { unpaidOrders } : {}),
   });
 }
 
