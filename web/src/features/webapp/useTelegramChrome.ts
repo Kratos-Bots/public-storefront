@@ -1,7 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { useSettings } from '@/app/settings.ts';
 import { useCartStore, selectCount } from '@/stores/cart.ts';
+import { useModalOpen } from '@/lib/use-modal-open.ts';
 import {
   haptic,
   isTelegramWebApp,
@@ -9,6 +10,7 @@ import {
   setChromeColors,
   setClosingConfirmation,
   setVerticalSwipes,
+  supportsSecondaryButton,
   tgExpand,
   tgReady,
   watchSafeAreas,
@@ -28,6 +30,19 @@ export function isFirstHistoryEntry(): boolean {
 }
 
 /**
+ * Where "back" goes from this page, or null on the catalogue home, where there is nothing to go back to. One
+ * rule for every back control: Telegram's header arrow, its bottom SecondaryButton and the in-page bar's button.
+ */
+export function useBackAction(): (() => void) | null {
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+  return useMemo(
+    () => (pathname === '/' ? null : () => (isFirstHistoryEntry() ? navigate('/', { replace: true }) : navigate(-1))),
+    [pathname, navigate],
+  );
+}
+
+/**
  * Everything the Mini App asks of Telegram's chrome. All of it is a no-op in a
  * browser (Task 1's adapter), so the shell calls this unconditionally.
  *
@@ -38,7 +53,8 @@ export function isFirstHistoryEntry(): boolean {
 export function useTelegramChrome(): void {
   const { theme } = useSettings();
   const { pathname } = useLocation();
-  const navigate = useNavigate();
+  const back = useBackAction();
+  const modalOpen = useModalOpen();
   const count = useCartStore(selectCount);
   const lastCount = useRef(count);
 
@@ -66,13 +82,12 @@ export function useTelegramChrome(): void {
     return () => window.clearTimeout(timer);
   }, [theme]);
 
+  // One back control, not two: a client with the SecondaryButton gets Back in the bottom row (PrimaryActionBar),
+  // so Telegram's header arrow is only for older clients. Neither shows under a dialog.
+  const headerBack = !modalOpen && !supportsSecondaryButton() ? back : null;
   useEffect(() => {
-    if (pathname === '/') {
-      setBackButton(null);
-      return;
-    }
-    setBackButton(() => (isFirstHistoryEntry() ? navigate('/', { replace: true }) : navigate(-1)));
-  }, [pathname, navigate]);
+    setBackButton(headerBack);
+  }, [headerBack]);
 
   useEffect(() => () => setBackButton(null), []);
 

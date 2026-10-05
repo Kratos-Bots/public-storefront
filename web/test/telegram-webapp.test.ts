@@ -11,6 +11,8 @@ import {
   setChromeColors,
   setClosingConfirmation,
   setMainButton,
+  setSecondaryButton,
+  supportsSecondaryButton,
   setVerticalSwipes,
   telegramInitData,
   watchSafeAreas,
@@ -42,6 +44,7 @@ function stubWebApp(version = '8.0', overrides: Record<string, unknown> = {}) {
     ready: vi.fn(), expand: vi.fn(), close: vi.fn(),
     setHeaderColor: vi.fn(), setBackgroundColor: vi.fn(), setBottomBarColor: vi.fn(),
     MainButton: bottomButton(),
+    SecondaryButton: bottomButton(),
     BackButton: { show: vi.fn(), hide: vi.fn(), onClick: vi.fn(), offClick: vi.fn() },
     HapticFeedback: { impactOccurred: vi.fn(), notificationOccurred: vi.fn() },
     enableClosingConfirmation: vi.fn(), disableClosingConfirmation: vi.fn(),
@@ -170,6 +173,66 @@ describe('MainButton', () => {
 
   it('is a no-op outside Telegram', () => {
     expect(() => setMainButton({ text: 'x', onClick: vi.fn(), color: '#000000', textColor: '#ffffff' })).not.toThrow();
+  });
+});
+
+describe('SecondaryButton', () => {
+  const quiet = { color: '#1a1a1a', textColor: '#ffffff' };
+
+  it('shows to the left of the main button, in the given colours, with one click handler', () => {
+    const wa = stubWebApp();
+    const first = vi.fn();
+    const second = vi.fn();
+    setSecondaryButton({ text: 'Back', onClick: first, ...quiet });
+    expect(wa.SecondaryButton.setParams).toHaveBeenCalledWith({
+      text: 'Back', color: '#1a1a1a', text_color: '#ffffff', is_active: true, is_visible: true, position: 'left',
+    });
+    expect(wa.SecondaryButton.onClick).toHaveBeenCalledWith(first);
+
+    setSecondaryButton({ text: 'Back', onClick: second, ...quiet });
+    expect(wa.SecondaryButton.offClick).toHaveBeenCalledWith(first);
+    expect(wa.SecondaryButton.onClick).toHaveBeenLastCalledWith(second);
+    expect(wa.SecondaryButton.onClick).toHaveBeenCalledTimes(2);
+    expect(wa.SecondaryButton.offClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('hides and drops its handler when cleared, and clearing twice unhooks nothing twice', () => {
+    const wa = stubWebApp();
+    const click = vi.fn();
+    setSecondaryButton({ text: 'Back', onClick: click, ...quiet });
+    // The module keeps the previous test's handler until the next call; start from a clean count.
+    wa.SecondaryButton.offClick.mockClear();
+    setSecondaryButton(null);
+    setSecondaryButton(null);
+    expect(wa.SecondaryButton.offClick).toHaveBeenCalledTimes(1);
+    expect(wa.SecondaryButton.offClick).toHaveBeenCalledWith(click);
+    expect(wa.SecondaryButton.hide).toHaveBeenCalled();
+  });
+
+  it('does not touch the main button', () => {
+    const wa = stubWebApp();
+    setSecondaryButton({ text: 'Back', onClick: vi.fn(), ...quiet });
+    expect(wa.MainButton.setParams).not.toHaveBeenCalled();
+    expect(wa.MainButton.onClick).not.toHaveBeenCalled();
+  });
+
+  it('is a no-op below 7.10 and outside Telegram', () => {
+    const old = stubWebApp('7.9');
+    expect(supportsSecondaryButton()).toBe(false);
+    setSecondaryButton({ text: 'Back', onClick: vi.fn(), ...quiet });
+    expect(old.SecondaryButton.setParams).not.toHaveBeenCalled();
+    expect(old.SecondaryButton.onClick).not.toHaveBeenCalled();
+
+    delete (window as unknown as { Telegram?: unknown }).Telegram;
+    expect(supportsSecondaryButton()).toBe(false);
+    expect(() => setSecondaryButton({ text: 'Back', onClick: vi.fn(), ...quiet })).not.toThrow();
+  });
+
+  it('reports support from 7.10 when the client has the button', () => {
+    stubWebApp('7.10');
+    expect(supportsSecondaryButton()).toBe(true);
+    stubWebApp('8.0', { SecondaryButton: undefined });
+    expect(supportsSecondaryButton()).toBe(false);
   });
 });
 

@@ -20,6 +20,14 @@
   cursor: not-allowed;
 }
 
+.back {
+  composes: back from '../cart/MobileCartBar.module.css';
+}
+
+.backAlone {
+  flex: 1;
+}
+
 /* Telegram's own bottom inset (home indicator) when a browser tab is a Mini App
    opened in an external browser — 0 everywhere else. */
 .safe {

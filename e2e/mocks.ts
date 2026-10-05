@@ -169,8 +169,8 @@ export const TELEGRAM_INIT_DATA =
 const TELEGRAM_STUB = readFileSync(fileUrl('./telegram-stub.js'), 'utf8');
 
 /** Makes the page a Telegram Mini App launch. Call before navigating. */
-export async function installTelegramStub(page: Page): Promise<void> {
-  await page.addInitScript(`window.__TG_INIT_DATA__ = ${JSON.stringify(TELEGRAM_INIT_DATA)};`);
+export async function installTelegramStub(page: Page, version = '8.0'): Promise<void> {
+  await page.addInitScript(`window.__TG_INIT_DATA__ = ${JSON.stringify(TELEGRAM_INIT_DATA)}; window.__TG_VERSION__ = ${JSON.stringify(version)};`);
   await page.addInitScript(TELEGRAM_STUB);
 }
 

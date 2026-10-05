@@ -17,7 +17,7 @@ export const TELEGRAM_SDK_SRC = 'https://telegram.org/js/telegram-web-app.js';
 type Insets = { top?: number; bottom?: number; left?: number; right?: number };
 
 interface TgBottomButton {
-  setParams(p: { text?: string; color?: string; text_color?: string; is_active?: boolean; is_visible?: boolean }): unknown;
+  setParams(p: { text?: string; color?: string; text_color?: string; is_active?: boolean; is_visible?: boolean; position?: 'left' | 'right' | 'top' | 'bottom' }): unknown;
   showProgress(leaveActive?: boolean): unknown;
   hideProgress(): unknown;
   hide(): unknown;
@@ -36,6 +36,8 @@ interface TgWebApp {
   setBackgroundColor(color: string): void;
   setBottomBarColor?(color: string): void;
   MainButton: TgBottomButton;
+  /** Bot API 7.10+: a second bottom button, beside or above the MainButton. */
+  SecondaryButton?: TgBottomButton;
   BackButton: { show(): unknown; hide(): unknown; onClick(cb: () => void): unknown; offClick(cb: () => void): unknown };
   HapticFeedback: {
     impactOccurred(style: 'light' | 'medium' | 'heavy'): unknown;
@@ -184,6 +186,48 @@ export function setMainButton(state: MainButtonState | null): void {
     else button.hideProgress();
     mainHandler = state.onClick;
     button.onClick(mainHandler);
+  });
+}
+
+export interface SecondaryButtonState {
+  text: string;
+  onClick: () => void;
+  color: string;
+  textColor: string;
+}
+
+// Same discipline as the MainButton: one live handler, the previous always unhooked first.
+let secondaryHandler: (() => void) | null = null;
+
+/** Whether this Telegram client has the SecondaryButton (Bot API 7.10+). */
+export function supportsSecondaryButton(): boolean {
+  const wa = webApp();
+  return !!wa && supports(wa, '7.10') && !!wa.SecondaryButton;
+}
+
+/** The second bottom button, kept to the left of the MainButton (alone when that is hidden). */
+export function setSecondaryButton(state: SecondaryButtonState | null): void {
+  run('7.10', (wa) => {
+    const button = wa.SecondaryButton;
+    if (!button) return;
+    if (secondaryHandler) {
+      button.offClick(secondaryHandler);
+      secondaryHandler = null;
+    }
+    if (!state) {
+      button.hide();
+      return;
+    }
+    button.setParams({
+      text: state.text,
+      color: state.color,
+      text_color: state.textColor,
+      is_active: true,
+      is_visible: true,
+      position: 'left',
+    });
+    secondaryHandler = state.onClick;
+    button.onClick(secondaryHandler);
   });
 }
 
