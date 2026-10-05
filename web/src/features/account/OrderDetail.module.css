@@ -231,9 +231,15 @@
   margin-top: 1rem;
   padding-top: 0.5rem;
   border-top: 1px solid var(--sf-line);
-  /* The trigger is a 44px tap target around a line of text: pull the card's edge in by the slack under that line,
-     so the space below "Cancel order" matches the card's own padding. */
-  margin-bottom: -0.7rem;
+}
+
+/* What ends the foot is a 44px tap target around a line of text (the Cancel order button, or a support link under
+   the contact line), so there is slack below the text: pull the card's edge in by most of it, so the space under the
+   words matches the card's own padding. Not all of it: the target's focus ring has to stay inside the card, which
+   clips. A refusal message ends the foot with no slack of its own, so the foot keeps its plain padding while one
+   shows, and in a browser without :has. */
+.payFoot:not(:has([aria-live]:not(:empty))) {
+  margin-bottom: -0.9rem;
 }
 
 /* Relies on CancelOrder rendering nothing at all (no wrapper) when it has nothing to offer. */

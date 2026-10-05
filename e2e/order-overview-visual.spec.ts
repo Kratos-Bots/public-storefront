@@ -3,7 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { installMocks, installTelegramStub, type Layout, type OrderFixtureName } from './mocks.ts';
 import { FIXED_NOW } from './flows.ts';
 import { presetTheme } from './template-theme.ts';
-import type { UnpaidOrder } from '../web/src/types/orders.ts';
+import type { OrderDetail, UnpaidOrder } from '../web/src/types/orders.ts';
 import type { PaymentMethod } from '../web/src/types/checkout.ts';
 
 /**
@@ -60,7 +60,7 @@ async function expectNoOverflow(page: Page): Promise<void> {
 
 interface Setup { template: string; preset: string; layout: Layout; width: number; fixture: OrderFixtureName }
 
-async function setup(page: Page, s: Setup, unpaidOrders?: UnpaidOrder[]): Promise<void> {
+async function setup(page: Page, s: Setup, unpaidOrders?: UnpaidOrder[], tweak?: (d: OrderDetail) => void): Promise<void> {
   await page.setViewportSize({ width: s.width, height: s.width < 768 ? 844 : 900 });
   await page.clock.setFixedTime(FIXED_NOW);
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -77,6 +77,7 @@ async function setup(page: Page, s: Setup, unpaidOrders?: UnpaidOrder[]): Promis
       d.totalAmount = total;
       if (d.outstandingBalance > 0) d.outstandingBalance = total;
       for (const p of d.payments) p.amount = total;
+      tweak?.(d);
     },
     ...(unpaidOrders ? { unpaidOrders } : {}),
   });
@@ -125,6 +126,40 @@ for (const t of TEMPLATES) {
           path: `${SHOTS}${t.template}/${t.template}-storefront-${width}-cancel-dialog.png`, animations: 'disabled', caret: 'hide',
         });
       });
+
+      // The payment card's foot: the Cancel order button, and (an order the customer cannot cancel) the contact line.
+      // The space under the foot's visible content should match the card's own padding in both.
+      for (const foot of ['button', 'contact'] as const) {
+        test(`storefront ${width} payment card foot (${foot})`, async ({ page }, info) => {
+          await setup(page, { ...t, layout: 'storefront', width, fixture: 'unpaid' }, undefined,
+            foot === 'contact' ? (d) => { d.canCancel = false; d.cancelBlockedBy = 'bank_transfer'; } : undefined);
+          await page.goto(`/account/orders/${REF}`);
+          await settle(page, 'unpaid');
+          const card = page.getByRole('region', { name: 'Payment needed' });
+          if (foot === 'contact') await expect(card.getByText(/To cancel this order, contact us/)).toBeVisible();
+          else await expect(card.getByRole('button', { name: 'Cancel order' })).toBeVisible();
+          const m = await card.evaluate((el) => {
+            const box = el.getBoundingClientRect();
+            const style = getComputedStyle(el);
+            const foot = el.querySelector('[data-sf-part="cancel"]')!;
+            // The visible content: the text of the button, or the last link / paragraph of the contact line.
+            const range = document.createRange();
+            const items = [...foot.querySelectorAll('button[aria-haspopup], a, p')].filter((n) => (n as HTMLElement).innerText.trim() !== '');
+            range.selectNodeContents(items[items.length - 1]!);
+            const text = range.getBoundingClientRect();
+            return {
+              underContent: Math.round((box.bottom - parseFloat(style.borderBottomWidth) - text.bottom) * 10) / 10,
+              sidePadding: parseFloat(style.paddingLeft),
+              bottomPadding: parseFloat(style.paddingBottom),
+            };
+          });
+          console.log(`MEASURE ${t.template} ${width} ${foot}: ${JSON.stringify(m)}`);
+          info.annotations.push({ type: 'measure', description: JSON.stringify(m) });
+          await card.screenshot({
+            path: `${SHOTS}${t.template}/${t.template}-storefront-${width}-foot-${foot}.png`, animations: 'disabled', caret: 'hide',
+          });
+        });
+      }
 
       test(`storefront ${width} popup`, async ({ page }) => {
         await setup(page, { ...t, layout: 'storefront', width, fixture: 'unpaid' }, [unpaidRow()]);
