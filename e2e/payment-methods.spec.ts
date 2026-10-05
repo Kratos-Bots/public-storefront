@@ -153,7 +153,7 @@ test.describe('payment methods · checkout', () => {
 test.describe('payment methods · the order page', () => {
   test('5 · the picker lists the same four names in the same order; a transfer creates no payment; card posts stripe', async ({ page }) => {
     const mocks = await open(page, { path: ORDER_PAGE, orderFixture: 'unpaid', paymentMethods: FOUR_METHODS });
-    await expect(page.getByRole('heading', { name: /^Choose how to pay/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /^Choose how you.d like to pay/ })).toBeVisible();
     await expect(pickerRows(page)).toHaveCount(4);
     const texts = await pickerRows(page).allTextContents();
     expect(texts.map((t, i) => t.startsWith(NAMES[i]!))).toEqual([true, true, true, true]);
@@ -182,11 +182,14 @@ test.describe('payment methods · the order page', () => {
     await expect(page.getByText('That payment method is not available for this order')).toBeVisible();
   });
 
-  test('9 · the fee wording reads with the shop’s name: a discount for crypto, a fee for PayPal', async ({ page }) => {
+  test('9 · what a method costs is said on its own button: a discount for crypto, a fee for PayPal', async ({ page }) => {
     await open(page, { path: ORDER_PAGE, orderFixture: 'unpaid', paymentMethods: FOUR_METHODS });
     await expect(pickerRows(page)).toHaveCount(4);
-    await expect(pickerRows(page).nth(0)).toContainText('Pay with crypto (3% discount)');
-    await expect(pickerRows(page).nth(2)).toContainText('PayPal balance (2% fee)');
+    // The name is the shop's own; what the method costs is said on a second line of the same button.
+    await expect(pickerRows(page).nth(0)).toContainText('Pay with crypto');
+    await expect(pickerRows(page).nth(0)).toContainText('3% discount');
+    await expect(pickerRows(page).nth(2)).toContainText('PayPal balance');
+    await expect(pickerRows(page).nth(2)).toContainText('Includes a £0.95 fee');
     // No fee, no wording: the card row is the bare name.
     await expect(pickerRows(page).nth(1)).not.toContainText('fee');
     await expect(pickerRows(page).nth(1)).not.toContainText('discount');

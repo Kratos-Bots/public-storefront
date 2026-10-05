@@ -68,7 +68,7 @@ const CRYPTO_PAYMENT_ID = 9001;
 /** The crypto card on the account order page, through to a submitted txid. */
 async function payWithCrypto(page: Page, mocks: MockHandle): Promise<void> {
   await expect(page).toHaveURL(new RegExp(`/account/orders/${ORDER_REF}$`));
-  await expect(page.getByRole('heading', { name: 'Send 46.03 USDT' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Pay with USDT' })).toBeVisible();
   await expect(page.getByText('0xE2E1a2b3c4d5e6f7089aabbccddeeff0011223344')).toBeVisible();
 
   // Padded on purpose: the client trims before it sends, and the backend rejects

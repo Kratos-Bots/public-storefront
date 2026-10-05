@@ -40,7 +40,7 @@ export default function UnpaidOrderDialog({ order, more, onLater, onReview }: Un
         <button type="button" data-autofocus className={orderClasses.cta} data-sf-part="button" data-variant="filled" onClick={onReview}>
           {t('order.prompt.review')}
         </button>
-        <button type="button" className={`${orderClasses.ghost} ${classes.later}`} onClick={onLater}>{t('order.prompt.later')}</button>
+        <button type="button" className={classes.later} data-sf-part="button" data-variant="text" onClick={onLater}>{t('order.prompt.later')}</button>
       </div>
       {more ? (
         <Link to="/account/orders" className={classes.more} onClick={onLater}>{t('order.prompt.more')}</Link>

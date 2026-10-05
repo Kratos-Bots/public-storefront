@@ -9,6 +9,8 @@ export interface CopyRowProps {
   value: string;
   /** What lands on the clipboard, when that differs from what is shown. */
   copyValue?: string;
+  /** Draws the row as that numbered step of a sequence. */
+  step?: number;
 }
 
 /**
@@ -17,7 +19,7 @@ export interface CopyRowProps {
  * the row, so the control is a 44 px target and the value is `user-select: all`
  * for the browsers where the clipboard is unavailable.
  */
-export function CopyRow({ label, value, copyValue }: CopyRowProps) {
+export function CopyRow({ label, value, copyValue, step }: CopyRowProps) {
   const { t } = useText();
   const [copied, setCopied] = useState(false);
   const timer = useRef<number | null>(null);
@@ -36,7 +38,8 @@ export function CopyRow({ label, value, copyValue }: CopyRowProps) {
   };
 
   return (
-    <div className={classes.copyRow}>
+    <div className={step ? `${classes.copyRow} ${classes.copyStep}` : classes.copyRow}>
+      {step ? <span className={classes.stepNum} aria-hidden>{step}</span> : null}
       <div className={classes.copyBody}>
         <p className={classes.copyLabel}>{label}</p>
         <p className={classes.copyValue}>{value}</p>

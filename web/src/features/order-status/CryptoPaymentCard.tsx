@@ -18,14 +18,14 @@ import type { StringKey } from '@/text/registry.ts';
 import { textKey, useText } from '@/text/runtime.tsx';
 import classes from '@/features/order-status/OrderStatus.module.css';
 
-const PILL: Record<CardState, { label: Extract<StringKey, 'order.payment.awaiting' | `order.crypto.pill${string}`>; tone: string | null }> = {
-  awaiting: { label: textKey('order.payment.awaiting'), tone: null },
+/** A card that is still asking for money needs no pill: the page's status and the card's own title say so. */
+const PILL: Record<Exclude<CardState, 'awaiting'>, { label: Extract<StringKey, `order.crypto.pill${string}`>; tone: string | null }> = {
   checking: { label: textKey('order.crypto.pillChecking'), tone: null },
   confirmed: { label: textKey('order.crypto.pillConfirmed'), tone: classes.pillSuccess },
   attention: { label: textKey('order.crypto.pillAttention'), tone: classes.pillWarn },
 };
 
-/** The heading once the card has left the form (the awaiting card names the amount instead). */
+/** The heading once the card has left the form (the awaiting card names the coin instead). */
 const TITLE: Record<Exclude<CardState, 'awaiting'>, Extract<StringKey, `order.crypto.title${string}`>> = {
   checking: textKey('order.crypto.titleChecking'),
   confirmed: textKey('order.crypto.titleConfirmed'),
@@ -40,21 +40,15 @@ export interface CryptoPaymentCardProps {
   payment: PublicCryptoPayment;
   reference: string;
   currency: string;
-  /**
-   * Drawn inside a card that already says payment is needed (the account order's payment card): the
-   * awaiting state's "Payment required" eyebrow is left out, and the card is not a card of its own
-   * (`data-embedded`, not `data-sf-part="card"`, so no template paints a card inside a card).
-   */
-  embedded?: boolean;
 }
 
 /**
- * A static-crypto payment: the exact amount, the address it goes to, and the
- * transaction id that lets us find it on-chain. The card leaves the form the
- * instant a txid is accepted — the order refetch then takes over as the source
+ * A static-crypto payment, as three steps in the order they are done: the exact amount, the address it goes
+ * to, and the transaction id that lets us find it on-chain. The amount is stated once, in the copyable row.
+ * The card leaves the form the instant a txid is accepted — the order refetch then takes over as the source
  * of truth.
  */
-export function CryptoPaymentCard({ payment, reference, currency, embedded = false }: CryptoPaymentCardProps) {
+export function CryptoPaymentCard({ payment, reference, currency }: CryptoPaymentCardProps) {
   const queryClient = useQueryClient();
   const [txid, setTxid] = useState('');
   const { t, tn } = useText();
@@ -74,7 +68,7 @@ export function CryptoPaymentCard({ payment, reference, currency, embedded = fal
   const masked = submittedTxidMask(payment, submission);
 
   const amount = formatCoinAmount(payment.coinAmount);
-  const pill = PILL[state];
+  const pill = state === 'awaiting' ? null : PILL[state];
   const trimmed = txid.trim();
   const valid = trimmed.length >= TXID_MIN && trimmed.length <= TXID_MAX;
 
@@ -85,30 +79,14 @@ export function CryptoPaymentCard({ payment, reference, currency, embedded = fal
   };
 
   return (
-    <section
-      className={`${state === 'awaiting' ? `${classes.card} ${classes.cardAction}` : classes.card} ${FADE}`}
-      aria-label={t('order.crypto.label')}
-      {...(embedded ? { 'data-embedded': '' } : { 'data-sf-part': 'card' })}
-    >
-      <div className={classes.cardHead}>
-        <div className={classes.cardHeadBody}>
-          {embedded && state === 'awaiting' ? null : (
-            <p
-              className={
-                state === 'awaiting'
-                  ? `${classes.cardEyebrow} ${classes.cardEyebrowAction}`
-                  : classes.cardEyebrow
-              }
-            >
-              {state === 'awaiting' ? t('order.payment.required') : t('order.crypto.label')}
-            </p>
-          )}
-          <h2 className={classes.cardTitle}>
-            {state === 'awaiting' ? t('order.crypto.sendTitle', { amount, coin: payment.coinLabel }) : t(TITLE[state])}
-          </h2>
-          <p className={classes.cardFigure}>
-            {tn('order.crypto.figure', {
-              coin: payment.coinLabel,
+    <section className={`${classes.face} ${FADE}`} aria-label={t('order.crypto.label')}>
+      <div className={classes.faceHead}>
+        <div className={classes.faceHeadBody}>
+          <h3 className={classes.faceTitle}>
+            {state === 'awaiting' ? t('order.crypto.payTitle', { coin: payment.coinLabel }) : t(TITLE[state])}
+          </h3>
+          <p className={classes.faceLead}>
+            {tn('order.crypto.network', {
               network: payment.networkLabel,
               // The sign belongs to the figure — a line break between them reads as
               // an orphaned symbol.
@@ -116,58 +94,65 @@ export function CryptoPaymentCard({ payment, reference, currency, embedded = fal
             })}
           </p>
         </div>
-        <span className={pill.tone ? `${classes.pill} ${pill.tone}` : classes.pill}>{t(pill.label)}</span>
+        {pill ? <span className={pill.tone ? `${classes.pill} ${pill.tone}` : classes.pill} data-sf-part="badge">{t(pill.label)}</span> : null}
       </div>
 
       {state === 'awaiting' ? (
-        <>
+        <div className={classes.steps}>
           <CopyRow
+            step={1}
             label={t('order.crypto.amountToSend')}
             value={`${amount} ${payment.coinLabel}`}
             copyValue={amount}
           />
           <CopyRow
+            step={2}
             label={t('order.crypto.addressLabel', { coin: payment.coinLabel, network: payment.networkLabel })}
             value={payment.address}
           />
 
           <p className={classes.note} data-tone="warn">
-            {t('order.crypto.sendExactly', { amount, coin: payment.coinLabel, network: payment.networkLabel })}
+            {t('order.crypto.warning', { network: payment.networkLabel })}
           </p>
 
           <form className={classes.txidForm} onSubmit={onSubmit}>
-            <label className={classes.txidLabel} htmlFor={`txid-${payment.paymentId}`}>
-              {t('order.crypto.txidLabel')}
-            </label>
-            <p className={classes.txidBlurb}>{t('order.crypto.txidBlurb')}</p>
-            <div className={classes.txidRow}>
-              <input
-                id={`txid-${payment.paymentId}`}
-                className={classes.txidInput}
-                type="text"
-                value={txid}
-                onChange={(e) => setTxid(e.currentTarget.value)}
-                placeholder={t('order.crypto.txidPlaceholder')}
-                autoComplete="off"
-                spellCheck={false}
-                maxLength={TXID_MAX}
-                aria-invalid={submit.isError || undefined}
-              />
-              <button
-                type="submit"
-                className={`${classes.ghost} ${classes.txidSubmit}`}
-                disabled={!valid || submit.isPending}
-              >
-                {submit.isPending ? t('order.crypto.sending') : t('order.crypto.submit')}
-              </button>
+            <div className={classes.stepHead}>
+              <span className={classes.stepNum} aria-hidden>3</span>
+              <div className={classes.stepBody}>
+                <label className={classes.stepLabel} htmlFor={`txid-${payment.paymentId}`}>
+                  {t('order.crypto.txidLabel')}
+                </label>
+                <p className={classes.txidBlurb}>{t('order.crypto.txidBlurb')}</p>
+              </div>
             </div>
+            <input
+              id={`txid-${payment.paymentId}`}
+              className={classes.txidInput}
+              type="text"
+              value={txid}
+              onChange={(e) => setTxid(e.currentTarget.value)}
+              placeholder={t('order.crypto.txidPlaceholder')}
+              autoComplete="off"
+              spellCheck={false}
+              maxLength={TXID_MAX}
+              aria-invalid={submit.isError || undefined}
+            />
+            <button
+              type="submit"
+              className={classes.txidSubmit}
+              disabled={!valid || submit.isPending}
+              data-sf-part="button"
+              data-variant={valid ? 'filled' : 'default'}
+            >
+              {submit.isPending ? t('order.crypto.sending') : t('order.crypto.submit')}
+            </button>
             {submit.isError ? (
               <p className={classes.note} data-tone="danger">
                 {errorMessage(submit.error, t('order.errors.txidRejected'))}
               </p>
             ) : null}
           </form>
-        </>
+        </div>
       ) : null}
 
       {state !== 'awaiting' && masked ? (
@@ -181,8 +166,8 @@ export function CryptoPaymentCard({ payment, reference, currency, embedded = fal
 
       {state === 'checking' ? (
         <>
-          <div className={classes.waiting} aria-hidden />
           <p className={classes.waitingNote}>{t('order.crypto.checkingNote')}</p>
+          <div className={classes.waiting} aria-hidden />
         </>
       ) : null}
 

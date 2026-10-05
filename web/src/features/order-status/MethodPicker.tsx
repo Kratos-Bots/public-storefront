@@ -7,7 +7,7 @@ import {
   type PaymentSelection,
 } from '@/api/orders.ts';
 import { isBuilderMode } from '@/app/builder-gate.ts';
-import { ArrowUpRightIcon } from '@/components/icons.tsx';
+import { ChevronIcon } from '@/components/icons.tsx';
 import { ContactLinks } from '@/components/ContactLinks.tsx';
 import { errorMessage } from '@/lib/errors.ts';
 import { methodName } from '@/lib/method-name.ts';
@@ -18,8 +18,8 @@ import { CopyRow } from '@/features/order-status/CopyRow.tsx';
 import { orderPaymentKey, paymentOptionsKey } from '@/features/order-status/queries.ts';
 import {
   isManual,
+  methodNote,
   settlementQuote,
-  slotLabel,
   type SettlementQuote,
 } from '@/features/order-status/payment-state.ts';
 import type { PaymentMethod } from '@/types/checkout.ts';
@@ -152,11 +152,10 @@ export function MethodPicker({ order, reference, onSelected }: MethodPickerProps
   return (
     <div className={classes.picker}>
       <div className={classes.pickerList}>
-        {methods.map((method) => {
+        {methods.map((method, index) => {
           const combos = method.cryptoOptions ?? [];
-          // A row either opens something on this page or leaves for a hosted
-          // checkout, and it says which before it is pressed: a square marker
-          // for the first, the shop's "opens elsewhere" arrow for the second.
+          // A row either opens something on this page or leaves for a hosted checkout. Either way it is one
+          // whole-width control; the first method the shop offers is the one to press, so it is the filled one.
           const opensHere = combos.length > 0 || isManual(method);
           const expanded = open === method.method;
           const inFlight = busy && select.variables?.method === method.method;
@@ -164,41 +163,37 @@ export function MethodPicker({ order, reference, onSelected }: MethodPickerProps
           // submit is in flight on the row too, but the drawer's own button is
           // already narrating it ("Preparing payment...") and no checkout opens.
           const opening = inFlight && !opensHere;
+          const note = methodNote(method, order.currency);
+          const rowClass = [
+            classes.method,
+            index === 0 ? classes.methodPrimary : '',
+            expanded ? classes.methodOpen : '',
+          ].filter(Boolean).join(' ');
 
           return (
-            <div key={method.method}>
+            <div key={method.method} className={classes.methodItem}>
               <button
                 type="button"
-                className={classes.pickerRow}
+                className={rowClass}
                 onClick={() => onPick(method)}
                 disabled={busy}
                 aria-expanded={opensHere ? expanded : undefined}
+                aria-busy={inFlight || undefined}
+                data-sf-part="button"
+                data-variant={index === 0 ? 'filled' : 'default'}
               >
-                {opensHere ? (
-                  <span
-                    className={expanded ? `${classes.pickerMark} ${classes.pickerMarkOn}` : classes.pickerMark}
-                    aria-hidden
-                  >
-                    {expanded ? <span className={classes.pickerMarkCore} /> : null}
-                  </span>
-                ) : (
-                  <span className={classes.pickerSpacer} aria-hidden />
-                )}
-                <span className={classes.pickerLabel}>
-                  {opening ? t('order.method.opening') : slotLabel(method)}
+                <span className={classes.methodText}>
+                  <span className={classes.methodName}>{opening ? t('order.method.opening') : methodName(method)}</span>
+                  {note ? <span className={classes.methodNote}>{note}</span> : null}
                 </span>
-                <span className={classes.pickerFigure}>
-                  {formatMoney(method.chargeTotal, order.currency)}
+                <span className={classes.methodFigure}>{formatMoney(method.chargeTotal, order.currency)}</span>
+                <span className={expanded ? `${classes.chevron} ${classes.chevronOpen}` : classes.chevron} aria-hidden>
+                  <ChevronIcon size={16} />
                 </span>
-                {opensHere ? null : (
-                  <span className={classes.pickerAway} aria-hidden>
-                    <ArrowUpRightIcon size={12} />
-                  </span>
-                )}
               </button>
 
               {expanded && combos.length > 0 ? (
-                <div className={classes.pickerDrawer}>
+                <div className={classes.methodDrawer}>
                   <CryptoComboPicker
                     options={combos}
                     value={combo}
@@ -231,7 +226,7 @@ export function MethodPicker({ order, reference, onSelected }: MethodPickerProps
               ) : null}
 
               {expanded && isManual(method) ? (
-                <div className={classes.pickerDrawer}>
+                <div className={classes.methodDrawer}>
                   <TransferDetails
                     method={method}
                     reference={order.reference}
@@ -281,10 +276,7 @@ function TransferDetails({
 
   return (
     <>
-      <p className={classes.pickerHead}>
-        {t('order.method.transferHead', { method: methodName(method) })}
-        <span className={classes.pickerHeadRule} aria-hidden />
-      </p>
+      <p className={classes.drawerHead}>{t('order.method.transferHead', { method: methodName(method) })}</p>
       {details.length > 0 ? (
         <>
           {details.map(([label, value]) => (

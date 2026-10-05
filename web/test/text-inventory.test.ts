@@ -20,6 +20,17 @@ const REWORDED_AFTER_V070: ReadonlyArray<{ file: string; text: string; now: stri
     now: 'State / Region',
     reason: 'checkout form fixes of 2026-10-04: the neutral fallback reads "State / Region"; country-specific wording comes from other keys',
   },
+  ...[
+    ['features/order-status/CryptoPaymentCard.tsx', 'Awaiting payment', 'the card no longer carries a status pill while it waits for money'],
+    ['features/order-status/CryptoPaymentCard.tsx', 'Payment required', 'the payment card above says "Payment needed"; the faces carry no eyebrow'],
+    ['features/order-status/CryptoPaymentCard.tsx', 'Paste transaction ID', 'the field takes the full row, so the placeholder is shorter: "Paste it here"'],
+    ['features/order-status/PaymentSection.tsx', 'Payment required', 'the payment card above says "Payment needed"; the faces carry no eyebrow'],
+    ['features/order-status/PaymentSection.tsx', 'Choose how to pay ', 'the amount is stated once, in the payment card: "Choose how you’d like to pay"'],
+    ['features/order-status/PaymentSection.tsx', ' · secure hosted checkout', 'the amount is stated once, in the payment card: "Secure hosted checkout"'],
+    ['features/order-status/PaymentSection.tsx', 'Awaiting payment', 'the card no longer carries a status pill while it waits for money'],
+    ['features/order-status/PaymentSection.tsx', 'Payment pending', 'the payment card above says "Payment needed"; the faces carry no eyebrow'],
+    ['features/order-status/PaymentSection.tsx', ' — after that the order cancels itself.', 'the pay-by notice reads "Pay by {when}. After that the order is cancelled automatically." in plain sentence case'],
+  ].map(([file, text, reason]) => ({ file: file!, text: text!, now: 'reworded', reason: `order page visual pass of 2026-10-05: ${reason!}` })),
 ];
 const isReworded = (file: string, t: string): boolean => REWORDED_AFTER_V070.some((e) => e.file === file && e.text === t);
 

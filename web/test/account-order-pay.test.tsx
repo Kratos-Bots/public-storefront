@@ -73,7 +73,7 @@ describe('account order: pay and cancel', () => {
     h.order = { ...base, canCancel: true, cancelBlockedBy: null };
     paymentMock.mockResolvedValue(publicOrder({ canPay: true, payBy: null, activePayment: null }));
     mount();
-    expect(await screen.findByText(/Choose how to pay/)).toBeTruthy();
+    expect(await screen.findByText(/Choose how you.d like to pay/)).toBeTruthy();
     expect(paymentMock).toHaveBeenCalledWith('K4M2QP');
     expect(screen.getByText('Balance due')).toBeTruthy();
   });
@@ -95,7 +95,7 @@ describe('account order: pay and cancel', () => {
     paymentMock.mockResolvedValue(publicOrder({ canPay: true, canCancel: true, payBy: null, activePayment: null }));
     cancelMock.mockResolvedValueOnce({ reference: 'K4M2QP', status: 'cancelled' });
     mount();
-    await screen.findByText(/Choose how to pay/);
+    await screen.findByText(/Choose how you.d like to pay/);
     const invalidate = vi.spyOn(client, 'invalidateQueries');
     fireEvent.click(screen.getByRole('button', { name: 'Cancel order' }));
     await act(async () => { fireEvent.click(await screen.findByRole('button', { name: 'Yes, cancel order' })); });
@@ -121,7 +121,7 @@ describe('account order: pay and cancel', () => {
     expect(paymentMock).not.toHaveBeenCalled();
     expect(screen.queryByText('Balance due')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Cancel order' })).toBeNull();
-    expect(screen.queryByText(/Choose how to pay/)).toBeNull();
+    expect(screen.queryByText(/Choose how you.d like to pay/)).toBeNull();
   });
 
   it('if the payment view cannot be loaded the balance still shows', async () => {
@@ -130,7 +130,7 @@ describe('account order: pay and cancel', () => {
     mount();
     await waitFor(() => expect(paymentMock).toHaveBeenCalled());
     expect(screen.getByText('Balance due')).toBeTruthy();
-    expect(screen.queryByText(/Choose how to pay/)).toBeNull();
+    expect(screen.queryByText(/Choose how you.d like to pay/)).toBeNull();
   });
 
   const orderKeys = (invalidate: { mock: { calls: unknown[][] } }) =>
@@ -164,7 +164,7 @@ describe('account order: pay and cancel', () => {
     paymentMock.mockResolvedValue(publicOrder({ canPay: true, payBy: null, activePayment: null }));
     const invalidate = vi.spyOn(client, 'invalidateQueries');
     mount();
-    await screen.findByText(/Choose how to pay/);
+    await screen.findByText(/Choose how you.d like to pay/);
     expect(orderKeys(invalidate)).toHaveLength(0);
   });
 
@@ -173,7 +173,7 @@ describe('account order: pay and cancel', () => {
     paymentMock.mockResolvedValue(publicOrder({ canPay: true, payBy: null, activePayment: null }));
     const invalidate = vi.spyOn(client, 'invalidateQueries');
     mount();
-    await screen.findByText(/Choose how to pay/);
+    await screen.findByText(/Choose how you.d like to pay/);
     await poll(); await poll(); await poll();
     expect(paymentMock.mock.calls.length).toBeGreaterThanOrEqual(4);
     expect(orderKeys(invalidate)).toHaveLength(0);
@@ -217,11 +217,11 @@ describe('account order: pay and cancel', () => {
     paymentMock.mockImplementation(async (ref: string) => ({ ...publicOrder({ canPay: true, payBy: null, activePayment: null }), reference: ref }));
     const invalidate = vi.spyOn(client, 'invalidateQueries');
     const view = mount();
-    await screen.findByText(/Choose how to pay/);
+    await screen.findByText(/Choose how you.d like to pay/);
     h.order = { ...base, reference: 'Z9Z9Z9', canCancel: true, cancelBlockedBy: null };
     view.rerender(at('Z9Z9Z9'));
     await waitFor(() => expect(paymentMock).toHaveBeenCalledWith('Z9Z9Z9'));
-    await screen.findByText(/Choose how to pay/);
+    await screen.findByText(/Choose how you.d like to pay/);
     expect(orderKeys(invalidate)).toHaveLength(0);
     // A's payment state moves on while B is showing (what its last poll would have stored).
     client.setQueryData(['order-payment', 'K4M2QP'], hostedOrder);
@@ -236,7 +236,7 @@ describe('account order: pay and cancel', () => {
     paymentMock.mockResolvedValue(publicOrder({ canPay: true, payBy: null, activePayment: null }));
     const invalidate = vi.spyOn(client, 'invalidateQueries');
     const view = mount();
-    await screen.findByText(/Choose how to pay/);
+    await screen.findByText(/Choose how you.d like to pay/);
     h.order = { ...base, reference: 'Z9Z9Z9', canCancel: true, cancelBlockedBy: null };
     paymentMock.mockResolvedValue({ ...hostedOrder, reference: 'Z9Z9Z9' });
     view.rerender(
@@ -269,7 +269,7 @@ describe('account order: pay and cancel', () => {
       h.order = { ...base, canCancel: true, cancelBlockedBy: null };
       paymentMock.mockResolvedValue(publicOrder({ canPay: true, payBy: null, activePayment: null }));
       mount();
-      await screen.findByText(/Choose how to pay/);
+      await screen.findByText(/Choose how you.d like to pay/);
       expect(screen.queryByText(help)).toBeNull();
     });
     it('is not shown before the payment view has loaded', async () => {

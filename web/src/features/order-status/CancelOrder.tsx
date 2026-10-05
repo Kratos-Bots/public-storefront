@@ -97,7 +97,7 @@ export function CancelOrder({ reference, canCancel, blockedBy, onCancelled, root
         onClose={() => { if (!working) close(); }}
         title={t('order.cancel.confirmTitle', { reference })}
         centered
-        size="sm"
+        size="md"
         radius="var(--mantine-radius-default)"
         withCloseButton={false}
         closeOnClickOutside={false}
@@ -108,7 +108,7 @@ export function CancelOrder({ reference, canCancel, blockedBy, onCancelled, root
         <p className={classes.cancelDialogText}>{t('order.cancel.confirmBody')}</p>
         {message === 'order.cancel.failed' ? <p className={classes.cancelError} role="alert">{t(message)}</p> : null}
         <div className={classes.cancelButtons}>
-          <button type="button" data-autofocus className={classes.cancelKeep} disabled={working} onClick={close}>
+          <button type="button" data-autofocus className={classes.cancelKeep} data-sf-part="button" data-variant="filled" disabled={working} onClick={close}>
             {t('order.cancel.keep')}
           </button>
           <button type="button" className={classes.cancelConfirm} aria-disabled={working} onClick={() => void confirm()}>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { ArrowUpRightIcon } from '@/components/icons.tsx';
-import { formatDateTime, formatMoney } from '@/lib/format.ts';
+import { ArrowUpRightIcon, ChevronIcon } from '@/components/icons.tsx';
+import { formatDateTime } from '@/lib/format.ts';
 import { CryptoPaymentCard } from '@/features/order-status/CryptoPaymentCard.tsx';
 import { MethodPicker } from '@/features/order-status/MethodPicker.tsx';
 import { visibleCryptoPayments } from '@/features/order-status/payment-state.ts';
@@ -9,27 +9,18 @@ import type { PublicOrder } from '@/types/public-order.ts';
 import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/order-status/OrderStatus.module.css';
 
-/** What tags a face as a card for the templates; an embedded face sits inside a card already and is flattened by it. */
-const cardAttrs = (embedded: boolean) => (embedded ? { 'data-embedded': '' } : { 'data-sf-part': 'card' });
-
 export interface PaymentSectionProps {
   order: PublicOrder;
   reference: string;
-  /**
-   * Drawn inside a card that already says payment is needed (the account order's payment card): the
-   * "Payment required" and "Payment pending" eyebrows are left out, and the faces are not cards of their
-   * own (`data-embedded`, not `data-sf-part="card"`, so no template paints a card inside a card).
-   */
-  embedded?: boolean;
 }
 
 /**
- * Everything about money owed on this order. Which of the four faces it wears —
- * choose a method, finish a hosted checkout, send crypto, or wait on us — is the
- * backend's call: `payment.canPay` and `payment.activePayment` say what state
- * the order is in, and this only renders it.
+ * Everything about money owed on this order, drawn inside the order page's payment card (which says
+ * "Payment needed" and states the amount, so none of the faces repeat either). Which of the four faces it
+ * wears — choose a method, finish a hosted checkout, send crypto, or wait on us — is the backend's call:
+ * `payment.canPay` and `payment.activePayment` say what state the order is in, and this only renders it.
  */
-export function PaymentSection({ order, reference, embedded = false }: PaymentSectionProps) {
+export function PaymentSection({ order, reference }: PaymentSectionProps) {
   const payment = order.payment;
   const crypto = visibleCryptoPayments(order);
   // While the change panel is open the current payment's card is hidden: showing
@@ -47,7 +38,6 @@ export function PaymentSection({ order, reference, embedded = false }: PaymentSe
           payment={p}
           reference={reference}
           currency={order.currency}
-          embedded={embedded}
         />
       ));
 
@@ -55,32 +45,23 @@ export function PaymentSection({ order, reference, embedded = false }: PaymentSe
   if (!payment) return <>{cards()}</>;
 
   const active = payment.activePayment;
-  const total = formatMoney(order.totals.totalAmount, order.currency);
 
   return (
     <>
-      {/* Stated once, above whichever card is showing: every way of paying is on
-          the same clock, and the crypto card is a card like any other. */}
+      {/* Stated once, above whichever face is showing: every way of paying is on the same clock. */}
       {payment.canPay ? <Deadline payBy={payment.payBy} /> : null}
 
       {payment.canPay && !active ? (
-        <section className={`${classes.card} ${classes.cardAction}`} aria-label={t('order.payment.ariaLabel')} {...cardAttrs(embedded)}>
-          {embedded ? null : <p className={`${classes.cardEyebrow} ${classes.cardEyebrowAction}`}>{t('order.payment.required')}</p>}
-          <h2 className={classes.cardTitle}>{t('order.payment.chooseHowToPay', { total })}</h2>
+        <section className={classes.face} aria-label={t('order.payment.ariaLabel')}>
+          <h3 className={classes.faceTitle}>{t('order.payment.chooseTitle')}</h3>
           <MethodPicker order={order} reference={reference} />
         </section>
       ) : null}
 
       {payment.canPay && active?.kind === 'gateway' && !changing ? (
-        <section className={`${classes.card} ${classes.cardAction}`} aria-label={t('order.payment.ariaLabel')} {...cardAttrs(embedded)}>
-          <div className={classes.cardHead}>
-            <div className={classes.cardHeadBody}>
-              {embedded ? null : <p className={`${classes.cardEyebrow} ${classes.cardEyebrowAction}`}>{t('order.payment.required')}</p>}
-              <h2 className={classes.cardTitle}>{t('order.payment.finishTitle')}</h2>
-              <p className={classes.cardFigure}>{t('order.payment.hostedFigure', { total })}</p>
-            </div>
-            <span className={classes.pill}>{t('order.payment.awaiting')}</span>
-          </div>
+        <section className={classes.face} aria-label={t('order.payment.ariaLabel')}>
+          <h3 className={classes.faceTitle}>{t('order.payment.finishTitle')}</h3>
+          <p className={classes.faceLead}>{t('order.payment.hostedLead')}</p>
           {active.checkoutUrl ? (
             <a
               className={classes.cta}
@@ -91,19 +72,17 @@ export function PaymentSection({ order, reference, embedded = false }: PaymentSe
               data-variant="filled"
             >
               {t('order.payment.openCheckout')}
-              <ArrowUpRightIcon size={12} />
+              <ArrowUpRightIcon size={14} />
             </a>
           ) : null}
-          <div className={classes.waiting} aria-hidden />
-          <p className={classes.waitingNote}>{t('order.payment.hostedNote')}</p>
+          <p className={classes.faceNote}>{t('order.payment.hostedNote')}</p>
         </section>
       ) : null}
 
       {payment.canPay && active?.kind === 'other' && !changing ? (
-        <section className={classes.card} aria-label={t('order.payment.ariaLabel')} {...cardAttrs(embedded)}>
-          {embedded ? null : <p className={classes.cardEyebrow}>{t('order.payment.pendingEyebrow')}</p>}
-          <h2 className={classes.cardTitle}>{t('order.payment.pendingTitle')}</h2>
-          <p className={classes.cardNote}>{t('order.payment.pendingNote')}</p>
+        <section className={classes.face} aria-label={t('order.payment.ariaLabel')}>
+          <h3 className={classes.faceTitle}>{t('order.payment.pendingTitle')}</h3>
+          <p className={classes.faceNote}>{t('order.payment.pendingNote')}</p>
         </section>
       ) : null}
 
@@ -116,14 +95,13 @@ export function PaymentSection({ order, reference, embedded = false }: PaymentSe
           open={changing}
           onToggle={() => setChanging((v) => !v)}
           onSelected={() => setChanging(false)}
-          embedded={embedded}
         />
       ) : null}
     </>
   );
 }
 
-/** The auto-cancel deadline, when the shop runs one. */
+/** The auto-cancel deadline, when the shop runs one. Only the date is emphasised. */
 function Deadline({ payBy }: { payBy: string | null }) {
   const { tn } = useText();
   if (!payBy) return null;
@@ -131,7 +109,7 @@ function Deadline({ payBy }: { payBy: string | null }) {
   if (!when) return null;
   return (
     <p className={classes.deadline}>
-      {tn('order.payment.deadline', { when: <span className={classes.deadlineWhen}>{when}</span> })}
+      {tn('order.payment.deadline', { when: <strong className={classes.deadlineWhen}>{when}</strong> })}
     </p>
   );
 }
@@ -143,19 +121,18 @@ function ChangeMethod({
   open,
   onToggle,
   onSelected,
-  embedded = false,
 }: PaymentSectionProps & { open: boolean; onToggle: () => void; onSelected: () => void }) {
   const { t } = useText();
   return (
     <section className={FADE} aria-label={t('order.payment.changeMethod')}>
       <button type="button" className={classes.disclosure} onClick={onToggle} aria-expanded={open}>
         <span>{open ? t('order.payment.keepMethod') : t('order.payment.changeMethod')}</span>
-        <span className={classes.disclosureSign} aria-hidden>
-          {open ? '−' : '+'}
+        <span className={open ? `${classes.chevron} ${classes.chevronOpen}` : classes.chevron} aria-hidden>
+          <ChevronIcon size={14} />
         </span>
       </button>
       {open ? (
-        <div className={`${classes.card} ${classes.disclosurePanel}`} {...cardAttrs(embedded)}>
+        <div className={classes.changePanel}>
           <MethodPicker
             order={order}
             reference={reference}

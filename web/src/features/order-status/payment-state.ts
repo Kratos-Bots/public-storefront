@@ -4,7 +4,7 @@ import type {
   PublicOrder,
 } from '@/types/public-order.ts';
 import type { PaymentMethod } from '@/types/checkout.ts';
-import { methodName } from '@/lib/method-name.ts';
+import { formatMoney } from '@/lib/format.ts';
 import { textSnapshot } from '@/text/snapshot.ts';
 
 // The order page's payment logic, kept out of the components that render it.
@@ -112,17 +112,18 @@ export function paymentSignature(order: PublicOrder): string {
 }
 
 /**
- * Button copy for a payment method: the name the shop gave it, plus the fee spelled
- * out. The backend signs every rate ('−3%' / '+2%'), and a bare '−3%' reads as
- * a fee at a glance, so the sign becomes a word.
+ * The second line of a method's row: what makes its charge differ from the amount due, so the figure on the
+ * row is never a surprise. The backend signs every rate ('−3%' / '+2%'); the sentence says discount or fee,
+ * so only the number stays. A method that costs the same as the amount due has nothing to say.
  */
-export function slotLabel(method: PaymentMethod): string {
+export function methodNote(method: PaymentMethod, currency: string): string | null {
   const { t } = textSnapshot();
-  const base = methodName(method);
-  const rate = method.feeRateText?.trim();
-  if (!rate) return base;
-  if (rate.startsWith('−') || rate.startsWith('-')) return t('order.method.withDiscount', { method: base, rate: rate.slice(1) });
-  return t('order.method.withFee', { method: base, rate: rate.replace(/^\+/, '') });
+  if (method.fee > 0.004) return t('order.method.feeNote', { fee: formatMoney(method.fee, currency) });
+  if (method.fee < -0.004) {
+    const rate = method.feeRateText?.trim().replace(/^[^\d.]+/, '');
+    return rate ? t('order.method.discountNote', { rate }) : t('order.method.savesNote', { amount: formatMoney(-method.fee, currency) });
+  }
+  return null;
 }
 
 /**

@@ -104,14 +104,22 @@ describe('parts', () => {
     expect(count(read(file), 'data-sf-part="card"')).toBe(n);
   });
 
-  // The order-status faces can sit inside another card (`embedded`): they tag through one switch, not a literal.
-  it('CryptoPaymentCard tags its one card root through the embedded switch', () => {
-    expect(count(read('../src/features/order-status/CryptoPaymentCard.tsx'), "{ 'data-sf-part': 'card' }")).toBe(1);
+  // The payment faces sit inside the order page's payment card, so none of them is a card of its own.
+  it.each(['CryptoPaymentCard', 'PaymentSection', 'MethodPicker'])('%s paints no card inside the payment card', (name) => {
+    expect(read(`../src/features/order-status/${name}.tsx`)).not.toContain('data-sf-part="card"');
   });
-  it('PaymentSection tags its four card roots through the embedded switch', () => {
-    const src = read('../src/features/order-status/PaymentSection.tsx');
-    expect(count(src, "{ 'data-sf-part': 'card' }")).toBe(1);
-    expect(count(src, '{...cardAttrs(embedded)}')).toBe(4);
+
+  // Every method is a template button (the first is the filled one), and so are the crypto pay and submit buttons.
+  it('MethodPicker tags its method rows and its crypto pay button as template buttons', () => {
+    const src = read('../src/features/order-status/MethodPicker.tsx');
+    expect(count(src, 'data-sf-part="button"')).toBe(2);
+    expect(src).toContain("data-variant={index === 0 ? 'filled' : 'default'}");
+    expect(count(src, 'data-variant="filled"')).toBe(1);
+  });
+  it('CryptoPaymentCard tags its submit as a template button, filled once there is an id to send', () => {
+    const src = read('../src/features/order-status/CryptoPaymentCard.tsx');
+    expect(count(src, 'data-sf-part="button"')).toBe(1);
+    expect(src).toContain("data-variant={valid ? 'filled' : 'default'}");
   });
 
   it('tags every checkout text field (input, select, textarea)', () => {
@@ -127,7 +135,6 @@ describe('parts', () => {
   it.each<[string, number]>([
     ['../src/features/account/LoyaltyPage.tsx', 1],
     ['../src/features/auth/WhatsappLogin.tsx', 3],
-    ['../src/features/order-status/MethodPicker.tsx', 1],
     ['../src/features/order-status/PaymentSection.tsx', 1],
     ['../src/features/tracking/LookupForm.tsx', 1],
     ['../src/features/verify/VerifyPage.tsx', 1],

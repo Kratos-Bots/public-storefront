@@ -45,7 +45,6 @@ describe('mantine.css reads the button/input tokens', () => {
 
 describe('cards', () => {
   it.each([
-    ['../src/features/order-status/OrderStatus.module.css'],
     ['../src/features/tracking/Tracking.module.css'],
   ])('%s uses the hairline + 40%% surface recipe with no shadow', (file) => {
     const block = read(file).match(/\.card\s*\{[^}]*\}/s)?.[0] ?? '';

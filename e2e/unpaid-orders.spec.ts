@@ -208,7 +208,7 @@ test.describe('unpaid orders · the order page', () => {
     await expect(page.getByText('Cancelled', { exact: true }).first()).toBeVisible();
     await expect(payCard(page)).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Cancel order' })).toHaveCount(0);
-    await expect(page.getByRole('heading', { name: /^Choose how to pay/ })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: /^Choose how you.d like to pay/ })).toHaveCount(0);
     expect(mocks.state.cancels).toEqual([REF]);
   });
 
@@ -230,7 +230,7 @@ test.describe('unpaid orders · the order page', () => {
   test('d · choosing a hosted method opens its checkout, and posts the choice', async ({ page }) => {
     const mocks = await open(page, { path: ORDER_PAGE });
     await expect(page.getByRole('heading', { name: REF, level: 1 })).toBeVisible();
-    await expect(payCard(page).getByRole('heading', { name: /^Choose how to pay/ })).toBeVisible();
+    await expect(payCard(page).getByRole('heading', { name: /^Choose how you.d like to pay/ })).toBeVisible();
     await payCard(page).getByRole('button', { name: /^Card/ }).click();
     await expect.poll(() => mocks.state.methods).toEqual([{ method: 'sushipp' }]);
     // The order now has a hosted payment open: the page moved on to it.
@@ -270,7 +270,7 @@ test.describe('unpaid orders · the old order link', () => {
 test.describe('the order page · what each order state shows', () => {
   test('unpaid crypto: the card carries the address and the txid form', async ({ page }) => {
     await open(page, { path: ORDER_PAGE, fixture: 'crypto' });
-    await expect(payCard(page).getByRole('heading', { name: 'Send 46.03 USDT' })).toBeVisible();
+    await expect(payCard(page).getByRole('heading', { name: 'Pay with USDT' })).toBeVisible();
     await expect(payCard(page).getByRole('textbox', { name: 'Transaction ID' })).toBeVisible();
     await expect(payCard(page).getByRole('button', { name: 'Cancel order' })).toBeVisible();
   });
