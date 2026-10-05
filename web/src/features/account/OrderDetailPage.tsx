@@ -24,6 +24,8 @@ import { countryName } from '@/features/checkout/CountrySelect.tsx';
 import { OrderPaymentCard, type PaymentRead } from '@/features/account/OrderPaymentCard.tsx';
 import { isOwed, silentParts, partitionOrderItems, sideDraws } from '@/features/account/order-layout.ts';
 import { takeTitleFocus } from '@/features/account/title-focus.ts';
+import { dismissForThisLoad } from '@/features/unpaid-prompt/useUnpaidOrder.ts';
+import { useSessionStore } from '@/stores/session.ts';
 import { StatusPill } from '@/features/account/StatusPill.tsx';
 import { useOrder, useOrderPayment } from '@/features/account/queries.ts';
 import { textKey, useText, type TextApi } from '@/text/runtime.tsx';
@@ -351,7 +353,8 @@ function ParcelsView({ styleAttrs }: PartViewProps) {
 /**
  * What the page says about the order changing under the customer, with nothing drawn: a payment that arrives while
  * they are looking is announced once (a notification, and a polite status region for screen readers), and after a
- * cancel the focus the cancel control held moves to the page heading. Never on the first load of an order that was
+ * cancel the focus the cancel control held moves to the page heading; and it tells the unpaid-order pop-up that this
+ * customer has been dealt with for this page load. Never on the first load of an order that was
  * already paid or cancelled: only a change seen on this page counts.
  */
 function OrderAnnouncements({ order }: { order: OrderDetail }) {
@@ -360,6 +363,13 @@ function OrderAnnouncements({ order }: { order: OrderDetail }) {
   const closed = order.status === 'cancelled' || order.status === 'refunded';
   const before = useRef({ reference: order.reference, owed });
   const [received, setReceived] = useState<string | null>(null);
+  const customerId = useSessionStore((s) => s.customer?.id ?? null);
+
+  // Looking at an unpaid order is being asked about it: the pop-up must not turn up over the shop afterwards to ask
+  // about the order the customer has just been dealing with.
+  useEffect(() => {
+    if (owed) dismissForThisLoad(customerId);
+  }, [owed, customerId]);
 
   useEffect(() => {
     const prev = before.current;

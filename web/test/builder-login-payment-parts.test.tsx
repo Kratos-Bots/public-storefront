@@ -331,6 +331,23 @@ describe('payment pages', () => {
     expect(slim.container.querySelectorAll('[class*="_cta_"]')).toHaveLength(2);
   });
 
+  it('placed: a signed-in customer gets a way to their order, with or without chat links; a guest does not', async () => {
+    useSessionStore.setState({ token: 'tok', customer: { id: 1, nickname: 'Ada' } });
+    const bare = await show('order-placed', stored('OrderPlaced'), '/order-placed?order=NB-1003');
+    const link = screen.getByRole('link', { name: 'View your order' });
+    expect(link.getAttribute('href')).toBe('/account/orders/NB-1003');
+    expect(bare.container.querySelector('[class*="_fallback_"]')).not.toBeNull();
+    cleanup();
+    useSettingsState(LINKS);
+    await show('order-placed', stored('OrderPlaced'), '/order-placed?order=NB-1003');
+    expect(screen.getByRole('link', { name: 'View your order' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: /Pay via WhatsApp/ })).toBeTruthy();
+    cleanup();
+    useSessionStore.setState({ token: null, customer: null });
+    await show('order-placed', stored('OrderPlaced'), '/order-placed?order=NB-1003');
+    expect(screen.queryByRole('link', { name: 'View your order' })).toBeNull();
+  });
+
   it('style attributes land on the part roots', async () => {
     const styled = (type: string, blockStyle: Record<string, string>) => ({ ...part(type, 'x'), props: { ...part(type, 'x').props, blockStyle } });
     const content = defaults('PaymentCancel').map((i) =>

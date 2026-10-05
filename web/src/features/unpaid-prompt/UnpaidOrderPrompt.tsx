@@ -2,6 +2,7 @@ import { lazy, Suspense, useState, type ComponentType } from 'react';
 import { useNavigate } from 'react-router';
 import type { UnpaidOrderDialogProps } from '@/features/unpaid-prompt/UnpaidOrderDialog.tsx';
 import { dismissForThisLoad, useUnpaidOrder } from '@/features/unpaid-prompt/useUnpaidOrder.ts';
+import { useSessionStore } from '@/stores/session.ts';
 
 // The dialog (Modal, order-page stylesheet) is a separate chunk, fetched only once there is an order to show.
 // A failed fetch (offline, or a deploy replaced the hashed chunk) means no pop-up this visit, never an error screen.
@@ -16,19 +17,21 @@ const UnpaidOrderDialog = lazy((): Promise<{ default: ComponentType<UnpaidOrderD
  */
 export function UnpaidOrderPrompt() {
   const { order, more } = useUnpaidOrder();
-  const [dismissed, setDismissed] = useState(false);
+  const customerId = useSessionStore((s) => s.customer?.id ?? null);
+  // Which customer said so: the dismissal belongs to them, not to whoever is signed in next.
+  const [dismissedFor, setDismissedFor] = useState<number | null>(null);
   const navigate = useNavigate();
 
-  if (!order || dismissed) return null;
+  if (!order || (customerId !== null && dismissedFor === customerId)) return null;
 
   const later = () => {
-    dismissForThisLoad();
-    setDismissed(true);
+    dismissForThisLoad(customerId);
+    setDismissedFor(customerId);
   };
   const review = () => {
     // Also flagged for the load, so reaching another page afterwards does not ask again.
-    dismissForThisLoad();
-    setDismissed(true);
+    dismissForThisLoad(customerId);
+    setDismissedFor(customerId);
     navigate(order.reviewPath);
   };
 

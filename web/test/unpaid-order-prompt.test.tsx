@@ -90,22 +90,46 @@ describe('UnpaidOrderPrompt', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Review or cancel order' }));
     await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/account/orders/K4M2QP'));
     expect(dialog()).toBeNull();
-    expect(isDismissed()).toBe(true);
+    expect(isDismissed(1)).toBe(true);
   });
 
-  it('Not now hides it across route changes and remounts, without touching sessionStorage', async () => {
+  it('Not now hides it across remounts of the prompt, and writes nothing to any storage', async () => {
     unpaidMock.mockResolvedValue([unpaid('K4M2QP')] as never);
+    const keysBefore = Object.keys(localStorage);
     const first = mount('/');
     await screen.findByRole('dialog');
     fireEvent.click(screen.getByRole('button', { name: 'Not now' }));
     await waitFor(() => expect(dialog()).toBeNull());
-    expect(sessionStorage.getItem('sf-unpaid-prompt-snoozed')).toBeNull();
+    expect(sessionStorage.length).toBe(0);
+    expect(Object.keys(localStorage).filter((k) => !keysBefore.includes(k))).toEqual([]);
     first.unmount();
     unpaidMock.mockClear();
     mount('/catalog');
     await settle();
     expect(dialog()).toBeNull();
     expect(unpaidMock).not.toHaveBeenCalled();
+  });
+
+  it('Not now is the customer who said it: a different customer signing in without a reload is asked', async () => {
+    unpaidMock.mockImplementation(async () => (useSessionStore.getState().customer?.id === 1 ? [unpaid('ADAORD')] : [unpaid('BOBORD')]) as never);
+    mount('/');
+    await screen.findByText('Order ADAORD is waiting for payment.');
+    fireEvent.click(screen.getByRole('button', { name: 'Not now' }));
+    await waitFor(() => expect(dialog()).toBeNull());
+    act(() => useSessionStore.setState({ token: 'tok2', customer: { id: 2, nickname: 'Bob' } }));
+    await screen.findByText('Order BOBORD is waiting for payment.');
+    // And the first customer, signing back in within the same load, is still not asked again.
+    act(() => useSessionStore.setState({ token: 'tok', customer: { id: 1, nickname: 'Ada' } }));
+    await waitFor(() => expect(dialog()).toBeNull());
+  });
+
+  it('an order the customer cannot cancel still gets the pop-up, with the same single button', async () => {
+    unpaidMock.mockResolvedValue([unpaid('K4M2QP', { canCancel: false, cancelBlockedBy: 'bank_transfer' })] as never);
+    mount('/');
+    await screen.findByRole('dialog', { name: 'You have an unpaid order' });
+    expect(screen.getByRole('button', { name: 'Review or cancel order' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Not now' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Cancel order' })).toBeNull();
   });
 
   it('a fresh page load asks again', async () => {
@@ -134,7 +158,8 @@ describe('UnpaidOrderPrompt', () => {
     await screen.findByRole('dialog');
     fireEvent.click(document.querySelector('.mantine-Modal-close') as HTMLElement);
     await waitFor(() => expect(dialog()).toBeNull());
-    expect(sessionStorage.getItem('sf-unpaid-prompt-snoozed')).toBeNull();
+    expect(isDismissed(1)).toBe(true);
+    expect(sessionStorage.length).toBe(0);
   });
 
   it.each(['/checkout', '/order/K4M2QP/abc', '/payment/success', '/account/orders/K4M2QP', '/login'])('never shows on %s, and asks nothing', async (path) => {

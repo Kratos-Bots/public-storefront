@@ -112,9 +112,18 @@ function ActionsView({ styleAttrs }: PartViewProps) {
     );
   }
 
+  // Placed with nothing to pay online: a signed-in customer has an order page, and this is the way to it.
+  const viewOrder =
+    !signIn && loggedIn && orderRef ? (
+      <Link to={accountOrderPath(orderRef)} className={classes.cta} data-sf-part="button" data-variant="filled">
+        {t('payment.placed.viewOrder')}
+      </Link>
+    ) : null;
+
   return whatsapp || telegram ? (
     <div className={classes.actions} {...styleAttrs}>
       {signInCta}
+      {viewOrder}
       {whatsapp ? (
         <a
           href={whatsapp}
@@ -142,9 +151,9 @@ function ActionsView({ styleAttrs }: PartViewProps) {
         </a>
       ) : null}
     </div>
-  ) : signIn ? (
+  ) : signIn || viewOrder ? (
     <div {...styleAttrs}>
-      <div className={classes.actions}>{signInCta}</div>
+      <div className={classes.actions}>{signInCta}{viewOrder}</div>
       <p className={classes.fallback}>{t('payment.placed.fallback')}</p>
     </div>
   ) : (

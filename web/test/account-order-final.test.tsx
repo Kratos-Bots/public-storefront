@@ -38,6 +38,8 @@ import {
 } from '@/api/orders.ts';
 import { OrderDetailPage } from '@/features/account/OrderDetailPage.tsx';
 import { ApiError } from '@/lib/errors.ts';
+import { isDismissed, resetDismissalForTests } from '@/features/unpaid-prompt/useUnpaidOrder.ts';
+import { useSessionStore } from '@/stores/session.ts';
 import type { PublicOrder } from '@/types/public-order.ts';
 
 const paymentMock = vi.mocked(fetchOrderPayment);
@@ -248,6 +250,30 @@ describe('A3: telling the customer that payment arrived', () => {
     await screen.findByText(/This order was cancelled\./);
     expect(show).not.toHaveBeenCalledWith(expect.objectContaining({ message: 'Payment received. Thank you.' }));
     expect(screen.getByRole('status').textContent).toBe('');
+  });
+});
+
+describe('B7: looking at an unpaid order is being asked about it', () => {
+  it('opening the page of an unpaid order silences the pop-up for that customer for this load', async () => {
+    resetDismissalForTests();
+    useSessionStore.setState({ token: 'tok', customer: { id: 7, nickname: 'Ada' } });
+    paymentMock.mockResolvedValue(choose());
+    render(tree());
+    await screen.findByText(/Choose how you.d like to pay/);
+    expect(isDismissed(7)).toBe(true);
+    expect(isDismissed(8)).toBe(false);
+    useSessionStore.setState({ token: null, customer: null });
+    resetDismissalForTests();
+  });
+
+  it('a paid order does not', async () => {
+    resetDismissalForTests();
+    useSessionStore.setState({ token: 'tok', customer: { id: 7, nickname: 'Ada' } });
+    h.order = { ...base, outstandingBalance: 0, status: 'confirmed' };
+    render(tree());
+    await screen.findByRole('heading', { level: 1, name: 'K4M2QP' });
+    expect(isDismissed(7)).toBe(false);
+    useSessionStore.setState({ token: null, customer: null });
   });
 });
 

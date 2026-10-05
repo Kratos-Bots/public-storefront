@@ -14,11 +14,13 @@ import { useUiStore } from '@/stores/ui.ts';
 
 // "Not now" lasts until the page is loaded again: a module variable dies with the document, so every fresh
 // arrival (a reload, a new tab, reopening the Telegram Mini App) asks again, and moving around the shop does not.
-let dismissed = false;
-export const isDismissed = () => dismissed;
-export const dismissForThisLoad = () => { dismissed = true; };
+// It is the customer who said it: another one signing in within the same load (a session that expired, a Telegram
+// account switch; neither reloads) is asked for themselves.
+let dismissedFor: number | null = null;
+export const isDismissed = (customerId: number | null) => customerId !== null && dismissedFor === customerId;
+export const dismissForThisLoad = (customerId: number | null) => { if (customerId !== null) dismissedFor = customerId; };
 /** Tests stand in for a page load. */
-export const resetDismissalForTests = () => { dismissed = false; };
+export const resetDismissalForTests = () => { dismissedFor = null; };
 
 const QUERY = { retry: false, staleTime: 60_000, refetchOnWindowFocus: false } as const;
 
@@ -45,7 +47,7 @@ export function useUnpaidOrder(): { order: PromptOrder | null; more: boolean } {
   // Disabled: this only subscribes to the cache entry the boundary / account layout fill; it never fetches.
   const profile = useQuery({ queryKey: PROFILE_KEY, queryFn: fetchProfile, enabled: false });
   const refused = denied || (restricted && loggedIn && profile.data?.shopAccess !== true);
-  const active = loggedIn && promptAllowedOn(pathname) && !isBuilderMode() && !isPreviewMode() && !isDismissed() && !otherDialogOpen && !refused;
+  const active = loggedIn && promptAllowedOn(pathname) && !isBuilderMode() && !isPreviewMode() && !isDismissed(customerId) && !otherDialogOpen && !refused;
 
   const signedIn = useQuery({
     // Keyed by customer: a different login without a reload never reads the previous one's list.
