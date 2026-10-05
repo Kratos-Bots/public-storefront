@@ -202,7 +202,7 @@ export interface InstallMocksOptions {
   refuseMethodSelection?: boolean;
   /** The order's `payment-method` route answers 409: another payment got there first (the page refetches and shows what is current). */
   conflictMethodSelection?: boolean;
-  /** Every pay route (`payment`, `payment-options`, `payment-method`, `crypto-txid`) answers 404 "Order not found", as for an order that has gone. */
+  /** Every pay route (`payment`, `payment-options`, `payment-method`, `crypto-txid`) answers 404 "Order not found" from the start; see `MockState.payGone` to flip it mid-test. */
   payRoutesGone?: boolean;
   order?: PublicOrder;
   profile?: Profile;
@@ -336,8 +336,35 @@ export interface MockState {
   denied: boolean;
   /** References cancelled through either cancel route, in order. */
   cancels: string[];
+  /** The pay routes answer 404 "Order not found". The first such answer also takes the order's own read with it (`orderGone`), as an order that has gone would. */
+  payGone: boolean;
+  /** `GET storefront/orders/:ref` answers 404. */
+  orderGone: boolean;
   /** How many times the anonymous catalogue (`catalog`, `catalog/products/:id`) was asked for. */
   anonymousCatalogHits: number;
+}
+
+/**
+ * The customer pays outside the app, as a hosted checkout does: the payment completes, the order is confirmed and
+ * nothing is owed. Both views of the order change together, so whichever the page reads next says so.
+ */
+export function markOrderPaid(state: MockState): void {
+  const detail = state.orderDetail;
+  if (detail.reference === state.order.reference) {
+    detail.status = 'confirmed';
+    detail.outstandingBalance = 0;
+    detail.canCancel = false;
+    detail.cancelBlockedBy = 'paid';
+    detail.payments = detail.payments.map((p) => ({ ...p, status: 'completed' }));
+  }
+  state.order.status = 'confirmed';
+  state.order.cryptoPayments = [];
+  if (state.order.payment) {
+    state.order.payment = {
+      canPay: false, canCancel: false, cancelBlockedBy: 'paid', payBy: null,
+      activePayment: state.order.payment.activePayment ? { ...state.order.payment.activePayment, status: 'completed', canChange: false } : null,
+    };
+  }
 }
 
 export interface MockHandle {
@@ -526,6 +553,8 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     denied: options.access?.denied ?? false,
     anonymousCatalogHits: 0,
     cancels: [],
+    payGone: options.payRoutesGone ?? false,
+    orderGone: false,
   };
   if (options.orderFixture) {
     const fixture = orderFixture(options.orderFixture, options.orderReference);
@@ -867,7 +896,8 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
         await fail(route, 401, 'Unauthorized');
         return;
       }
-      if (options.payRoutesGone || decodeURIComponent(askedRef!) !== state.order.reference) {
+      if (state.payGone || decodeURIComponent(askedRef!) !== state.order.reference) {
+        if (state.payGone) state.orderGone = true;
         await fail(route, 404, 'Order not found');
         return;
       }
@@ -960,7 +990,7 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
 
     const orderDetail = /^storefront\/orders\/([^/]+)$/.exec(path);
     if (orderDetail && method === 'GET') {
-      if (orderDetail[1] !== state.orderDetail.reference) {
+      if (state.orderGone || orderDetail[1] !== state.orderDetail.reference) {
         await fail(route, 404, 'Order not found');
         return;
       }

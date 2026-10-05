@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import {
-  installMocks, installTelegramStub, PASSWORD_ACCOUNT,
+  installMocks, installTelegramStub, markOrderPaid, ORIGIN, PASSWORD_ACCOUNT,
   type InstallMocksOptions, type MockHandle, type OrderFixtureName,
 } from './mocks.ts';
 import { FIXED_NOW, onlyVisible } from './flows.ts';
@@ -288,7 +288,7 @@ test.describe('the order page · what each order state shows', () => {
 
   test('a collection-point order says where to collect from', async ({ page }) => {
     await open(page, { path: ORDER_PAGE, fixture: 'collection' });
-    await expect(page.getByRole('region', { name: 'Collect from' }).getByText('Corner News')).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Collection point' }).getByText('Corner News')).toBeVisible();
     await expect(page.getByRole('region', { name: 'Delivery address' })).toHaveCount(0);
     await expect(payCard(page)).toHaveCount(0);
   });
@@ -299,5 +299,109 @@ test.describe('the order page · what each order state shows', () => {
     await expect(page.getByText('Cancelled', { exact: true }).first()).toBeVisible();
     await expect(payCard(page)).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Cancel order' })).toHaveCount(0);
+  });
+});
+
+test.describe('the old order link, with the shop closed or accounts off', () => {
+  test('accounts off: an old emailed link ends on the order-placed page with the reference, not a 404', async ({ page }) => {
+    await open(page, {
+      session: false, noGoto: true, tweakSettings: (s) => { s.features.accounts = false; s.features.guestCheckout = true; },
+    });
+    await page.goto(`/order/${REF}/${KEY}`);
+    await expect(page).toHaveURL(`${ORIGIN}/order-placed?order=${REF}`);
+    await expect(page.getByRole('heading', { name: 'Order placed' })).toBeVisible();
+    await expect(page.getByText(REF).first()).toBeVisible();
+  });
+
+  test('accounts off: a reference that needs encoding survives the redirect', async ({ page }) => {
+    await open(page, {
+      session: false, noGoto: true, tweakSettings: (s) => { s.features.accounts = false; s.features.guestCheckout = true; },
+    });
+    await page.goto(`/order/${encodeURIComponent('A B/1')}/${KEY}`);
+    await expect(page.getByRole('heading', { name: 'Order placed' })).toBeVisible();
+    expect(new URL(page.url()).pathname).toBe('/order-placed');
+    expect(new URL(page.url()).searchParams.get('order')).toBe('A B/1');
+  });
+
+  test('a closed shop shows the closed page on an old order link, which stays where it is', async ({ page }) => {
+    await open(page, { session: false, noGoto: true, tweakSettings: (s) => { s.enabled = false; } });
+    await page.goto(`/order/${REF}/${KEY}`);
+    await expect(page.getByText('Currently closed')).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/order/${REF}/${KEY}$`));
+    await expect(page.getByRole('heading', { name: /Order placed|couldn.t load/i })).toHaveCount(0);
+  });
+});
+
+test.describe('the pop-up and the order page', () => {
+  test('opening the order page counts as being asked: no pop-up for it on the way back, a reload asks again', async ({ page }) => {
+    const mocks = await open(page, { path: ORDER_PAGE, unpaidOrders: [unpaidRow()] });
+    await expect(payCard(page)).toBeVisible();
+    await expect(prompt(page)).toHaveCount(0);
+
+    // Back to the shop inside the app, with no reload: the order the shopper just looked at is not asked about.
+    await page.evaluate(() => {
+      window.history.pushState({}, '', '/');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    await expect(page.locator('[data-sf-part="product-card"]').first()).toBeVisible();
+    await page.waitForLoadState('networkidle');
+    await expect(prompt(page)).toHaveCount(0);
+    expect(unpaidAsks(mocks)).toBeLessThanOrEqual(1);
+
+    // A fresh page load is a fresh visit: the order is still unpaid, so it is asked about.
+    await page.reload();
+    await expect(prompt(page)).toBeVisible();
+  });
+});
+
+test.describe('/order-placed for a signed-in customer', () => {
+  test('offers a way to the order; a guest is not offered one', async ({ page }) => {
+    await open(page, { path: `/order-placed?order=${REF}` });
+    await expect(page.getByRole('heading', { name: 'Order placed' })).toBeVisible();
+    await onlyVisible(page.getByText('View your order', { exact: true })).click();
+    await expect(page).toHaveURL(new RegExp(`/account/orders/${REF}$`));
+    await expect(page.getByRole('heading', { name: REF, level: 1 })).toBeVisible();
+  });
+
+  test('a signed-out visitor sees the sign-in hint and no View your order', async ({ page }) => {
+    await open(page, { path: `/order-placed?order=${REF}`, session: false });
+    await expect(page.getByRole('heading', { name: 'Order placed' })).toBeVisible();
+    await expect(page.getByText('View your order', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('Use the email or phone number you gave at checkout.')).toBeVisible();
+  });
+});
+
+test.describe('the order page · a payment lands, or the order goes', () => {
+  test('a hosted payment completing: a thank-you, the card goes, and "can\'t be paid online" is never shown', async ({ page }) => {
+    // Watch every DOM change for the wrong sentence: it would flash by too fast to catch with an assertion.
+    await page.addInitScript(() => {
+      const w = window as unknown as { __sawHelp: boolean };
+      w.__sawHelp = false;
+      const look = () => { if (/can.t be paid online/.test(document.body?.textContent ?? '')) w.__sawHelp = true; };
+      new MutationObserver(look).observe(document, { subtree: true, childList: true, characterData: true });
+    });
+    const mocks = await open(page, { path: ORDER_PAGE, fixture: 'hosted' });
+    await expect(payCard(page).getByRole('link', { name: 'Open secure checkout' })).toBeVisible();
+
+    // The customer pays in the other tab and comes back: the page is asked again when it regains focus.
+    markOrderPaid(mocks.state);
+    await page.evaluate(() => {
+      window.dispatchEvent(new Event('focus'));
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    await expect(page.getByRole('status').filter({ hasText: 'Payment received. Thank you.' })).toBeAttached({ timeout: 20_000 });
+    await expect(page.getByRole('alert').filter({ hasText: 'Payment received. Thank you.' })).toBeVisible();
+    await expect(payCard(page)).toHaveCount(0);
+    expect(await page.evaluate(() => (window as unknown as { __sawHelp: boolean }).__sawHelp)).toBe(false);
+  });
+
+  test('a method choice answered 404 means the order has gone: the not-found screen, and no method error', async ({ page }) => {
+    const mocks = await open(page, { path: ORDER_PAGE });
+    await expect(payCard(page).getByRole('heading', { name: /^Choose how you.d like to pay/ })).toBeVisible();
+    mocks.state.payGone = true;
+    await payCard(page).getByRole('button', { name: /^Card/ }).click();
+    await expect(page.getByRole('heading', { name: "We can't find that order" })).toBeVisible();
+    await expect(page.getByRole('alert')).toHaveCount(0);
+    await expect(payCard(page)).toHaveCount(0);
   });
 });
