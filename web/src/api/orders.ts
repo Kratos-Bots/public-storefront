@@ -24,8 +24,12 @@ export class OrderNotCancellableError extends Error {
 
 const CANCEL_REASONS = ['not_pending', 'paid', 'bank_transfer', 'crypto_submitted'] as const;
 
-/** Maps the backend's `409 ORDER_NOT_CANCELLABLE:<reason>`; anything else (including any other 409) is rethrown. */
+/**
+ * Maps the backend's `409 ORDER_NOT_CANCELLABLE:<reason>`; a 404 (the order is not this customer's any more) reads as
+ * "no longer waiting for payment", which is what the customer needs to be told. Anything else is rethrown.
+ */
 export function asCancelError(err: unknown): never {
+  if (err instanceof ApiError && err.status === 404) throw new OrderNotCancellableError('not_pending');
   if (err instanceof ApiError && err.status === 409 && err.message.startsWith('ORDER_NOT_CANCELLABLE')) {
     const reason = err.message.split(':')[1];
     throw new OrderNotCancellableError(CANCEL_REASONS.find((r) => r === reason) ?? 'not_pending');
@@ -77,7 +81,8 @@ function asGone(err: unknown): never {
 
 /** What is owed on the order and how it stands: `payment.canPay`, the active payment, crypto payments, the address. */
 export const fetchOrderPayment = (reference: string) =>
-  unwrap<PublicOrder>(api.get(`${orderBase(reference)}/payment`)).catch(asGone);
+  // No transport retry: the route is rate limited, and a retry would hit the limit again straight away.
+  unwrap<PublicOrder>(api.get(`${orderBase(reference)}/payment`, { retry: 0 })).catch(asGone);
 
 /** The methods this order can be paid with right now; `[]` once it can no longer be paid. */
 export const fetchOrderPaymentOptions = (reference: string) =>

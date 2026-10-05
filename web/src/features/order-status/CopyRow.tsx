@@ -11,6 +11,17 @@ export interface CopyRowProps {
   copyValue?: string;
   /** Draws the row as that numbered step of a sequence. */
   step?: number;
+  /**
+   * Shows the value in fixed groups of this many characters, so a long run (a wallet address) wraps between groups
+   * into even lines instead of leaving a short tail. The clipboard and assistive technology still get the raw value.
+   */
+  groupBy?: number;
+}
+
+function groupsOf(value: string, size: number): string[] {
+  const groups: string[] = [];
+  for (let i = 0; i < value.length; i += size) groups.push(value.slice(i, i + size));
+  return groups;
 }
 
 /**
@@ -19,7 +30,7 @@ export interface CopyRowProps {
  * the row, so the control is a 44 px target and the value is `user-select: all`
  * for the browsers where the clipboard is unavailable.
  */
-export function CopyRow({ label, value, copyValue, step }: CopyRowProps) {
+export function CopyRow({ label, value, copyValue, step, groupBy }: CopyRowProps) {
   const { t } = useText();
   const [copied, setCopied] = useState(false);
   const timer = useRef<number | null>(null);
@@ -42,7 +53,16 @@ export function CopyRow({ label, value, copyValue, step }: CopyRowProps) {
       {step ? <span className={classes.stepNum} aria-hidden>{step}</span> : null}
       <div className={classes.copyBody}>
         <p className={classes.copyLabel}>{label}</p>
-        <p className={classes.copyValue}>{value}</p>
+        {groupBy ? (
+          <p className={`${classes.copyValue} ${classes.copyGrouped}`}>
+            <span className={classes.rawValue}>{value}</span>
+            <span aria-hidden>
+              {groupsOf(value, groupBy).map((group, i) => <span key={i} className={classes.copyGroup}>{group}</span>)}
+            </span>
+          </p>
+        ) : (
+          <p className={classes.copyValue}>{value}</p>
+        )}
       </div>
       <button
         type="button"

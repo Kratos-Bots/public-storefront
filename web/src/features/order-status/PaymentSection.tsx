@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ArrowUpRightIcon, ChevronIcon } from '@/components/icons.tsx';
 import { formatDateTime } from '@/lib/format.ts';
 import { CryptoPaymentCard } from '@/features/order-status/CryptoPaymentCard.tsx';
@@ -29,6 +29,26 @@ export function PaymentSection({ order, reference }: PaymentSectionProps) {
   const [changing, setChanging] = useState(false);
   const { t } = useText();
 
+  const active = payment?.activePayment ?? null;
+  // Which payment the face is about. A new one (created, or switched to) closes the change panel, and only then:
+  // closing it when the request succeeds would bring the old payment's address back for one round trip.
+  const faceId = active?.paymentId ?? crypto[0]?.paymentId ?? null;
+  const [panelFor, setPanelFor] = useState(active?.paymentId ?? null);
+  if (panelFor !== (active?.paymentId ?? null)) {
+    setPanelFor(active?.paymentId ?? null);
+    setChanging(false);
+  }
+
+  // A different payment replaces the face the customer was looking at (or was never there): its heading takes the
+  // focus, so a keyboard or screen reader user is not left on a control that has just disappeared. Not on first draw.
+  const root = useRef<HTMLDivElement>(null);
+  const lastFace = useRef(faceId);
+  useEffect(() => {
+    if (lastFace.current === faceId) return;
+    lastFace.current = faceId;
+    if (faceId !== null) root.current?.querySelector<HTMLElement>('[data-face-title]')?.focus();
+  }, [faceId]);
+
   const cards = (skip?: number) =>
     crypto
       .filter((p) => p.paymentId !== skip)
@@ -44,60 +64,59 @@ export function PaymentSection({ order, reference }: PaymentSectionProps) {
   // A backend from before the payment block: crypto cards and nothing else.
   if (!payment) return <>{cards()}</>;
 
-  const active = payment.activePayment;
+  // A hosted checkout is only a face when there is something to open and it is still waiting.
+  const hostedUsable = active?.kind === 'gateway' && active.status === 'pending' && !!active.checkoutUrl;
+  const picking = payment.canPay && (!active || (active.kind === 'gateway' && !hostedUsable));
 
   return (
-    <>
+    <div ref={root} className={classes.faces}>
       {/* Stated once, above whichever face is showing: every way of paying is on the same clock. */}
       {payment.canPay ? <Deadline payBy={payment.payBy} /> : null}
 
-      {payment.canPay && !active ? (
+      {picking ? (
         <section className={classes.face} aria-label={t('order.payment.ariaLabel')}>
-          <h3 className={classes.faceTitle}>{t('order.payment.chooseTitle')}</h3>
+          <h3 className={classes.faceTitle} tabIndex={-1} data-face-title>{t('order.payment.chooseTitle')}</h3>
           <MethodPicker order={order} reference={reference} />
         </section>
       ) : null}
 
-      {payment.canPay && active?.kind === 'gateway' && !changing ? (
+      {payment.canPay && hostedUsable && !changing ? (
         <section className={classes.face} aria-label={t('order.payment.ariaLabel')}>
-          <h3 className={classes.faceTitle}>{t('order.payment.finishTitle')}</h3>
+          <h3 className={classes.faceTitle} tabIndex={-1} data-face-title>{t('order.payment.finishTitle')}</h3>
           <p className={classes.faceLead}>{t('order.payment.hostedLead')}</p>
-          {active.checkoutUrl ? (
-            <a
-              className={classes.cta}
-              href={active.checkoutUrl}
-              target="_blank"
-              rel="noopener"
-              data-sf-part="button"
-              data-variant="filled"
-            >
-              {t('order.payment.openCheckout')}
-              <ArrowUpRightIcon size={14} />
-            </a>
-          ) : null}
+          <a
+            className={classes.cta}
+            href={active.checkoutUrl!}
+            target="_blank"
+            rel="noopener"
+            data-sf-part="button"
+            data-variant="filled"
+          >
+            {t('order.payment.openCheckout')}
+            <ArrowUpRightIcon size={14} />
+          </a>
           <p className={classes.faceNote}>{t('order.payment.hostedNote')}</p>
         </section>
       ) : null}
 
       {payment.canPay && active?.kind === 'other' && !changing ? (
         <section className={classes.face} aria-label={t('order.payment.ariaLabel')}>
-          <h3 className={classes.faceTitle}>{t('order.payment.pendingTitle')}</h3>
+          <h3 className={classes.faceTitle} tabIndex={-1} data-face-title>{t('order.payment.pendingTitle')}</h3>
           <p className={classes.faceNote}>{t('order.payment.pendingNote')}</p>
         </section>
       ) : null}
 
       {cards(changing ? active?.paymentId : undefined)}
 
-      {payment.canPay && active?.canChange ? (
+      {payment.canPay && active?.canChange && !picking ? (
         <ChangeMethod
           order={order}
           reference={reference}
           open={changing}
           onToggle={() => setChanging((v) => !v)}
-          onSelected={() => setChanging(false)}
         />
       ) : null}
-    </>
+    </div>
   );
 }
 
@@ -120,8 +139,7 @@ function ChangeMethod({
   reference,
   open,
   onToggle,
-  onSelected,
-}: PaymentSectionProps & { open: boolean; onToggle: () => void; onSelected: () => void }) {
+}: PaymentSectionProps & { open: boolean; onToggle: () => void }) {
   const { t } = useText();
   return (
     <section className={FADE} aria-label={t('order.payment.changeMethod')}>
@@ -133,11 +151,7 @@ function ChangeMethod({
       </button>
       {open ? (
         <div className={classes.changePanel}>
-          <MethodPicker
-            order={order}
-            reference={reference}
-            onSelected={onSelected}
-          />
+          <MethodPicker order={order} reference={reference} />
         </div>
       ) : null}
     </section>

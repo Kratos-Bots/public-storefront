@@ -31,13 +31,13 @@ export default function UnpaidOrderDialog({ order, more, onLater, onReview }: Un
       closeButtonProps={{ 'aria-label': t('common.actions.close') }}
       classNames={{ content: classes.content, header: classes.header, title: classes.title }}
     >
-      <p className={classes.lede}>{t('order.prompt.body', { reference: order.reference })}</p>
+      <p className={classes.lede} tabIndex={-1} data-autofocus>{t('order.prompt.body', { reference: order.reference })}</p>
       <p className={classes.amount}>
         <span className={classes.amountLabel}>{t('order.prompt.amount')}</span>
         <span className={classes.amountValue}><Money amount={order.amount} /></span>
       </p>
       <div className={classes.actions}>
-        <button type="button" data-autofocus className={orderClasses.cta} data-sf-part="button" data-variant="filled" onClick={onReview}>
+        <button type="button" className={orderClasses.cta} data-sf-part="button" data-variant="filled" onClick={onReview}>
           {t('order.prompt.review')}
         </button>
         <button type="button" className={classes.later} data-sf-part="button" data-variant="text" onClick={onLater}>{t('order.prompt.later')}</button>

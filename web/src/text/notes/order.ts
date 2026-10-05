@@ -49,6 +49,7 @@ export default {
   'method.discountNote': 'Second line of a payment option that is cheaper than the amount due; {rate} is the percentage',
   'method.savesNote': 'Second line of a cheaper payment option when the shop gives no percentage; {amount} is the saving',
   'method.feeNote': "Second line of a payment option that adds a fee; {fee} is the fee in the shop's currency",
+  'method.feeLabelNote': "Second line of a payment option that adds a fee the shop has named (for example 'Card fee'); {label} is that name, {fee} the amount",
   'method.preparing': 'Crypto pay button while the payment is created',
   'method.payWith': 'Crypto pay button; {coin} is the coin and network',
   'method.chooseCoin': 'Crypto pay button before a coin is picked',

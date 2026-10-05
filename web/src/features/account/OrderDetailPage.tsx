@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@mantine/core';
+import { notifications } from '@mantine/notifications';
 import { Link, useParams } from 'react-router';
 import { EmptyState } from '@/components/EmptyState.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { Money } from '@/components/Money.tsx';
 import { ArrowLeftIcon } from '@/components/icons.tsx';
+import { OrderGoneError } from '@/api/orders.ts';
 import { ApiError } from '@/lib/errors.ts';
 import { formatDate, formatDateTime } from '@/lib/format.ts';
 import { lineFigures, otherDiscount } from '@/lib/promotions.ts';
@@ -16,10 +18,12 @@ import {
   orderStatusTone,
   type Tone,
 } from '@/features/order-status/status.ts';
-import { paymentSignature } from '@/features/order-status/payment-state.ts';
+import { invalidateOrderGone } from '@/features/order-status/order-gone.ts';
+import { paymentMovedOn, paymentSignature } from '@/features/order-status/payment-state.ts';
 import { countryName } from '@/features/checkout/CountrySelect.tsx';
 import { OrderPaymentCard, type PaymentRead } from '@/features/account/OrderPaymentCard.tsx';
-import { silentParts, partitionOrderItems, sideDraws } from '@/features/account/order-layout.ts';
+import { isOwed, silentParts, partitionOrderItems, sideDraws } from '@/features/account/order-layout.ts';
+import { takeTitleFocus } from '@/features/account/title-focus.ts';
 import { StatusPill } from '@/features/account/StatusPill.tsx';
 import { useOrder, useOrderPayment } from '@/features/account/queries.ts';
 import { textKey, useText, type TextApi } from '@/text/runtime.tsx';
@@ -28,7 +32,7 @@ import { usePreviewFixture } from '@/builder/mode.ts';
 import type { FamilyValue, PartViewProps } from '@/builder/parts.ts';
 import { defaultSlotRenders, renderComponent } from '@/builder/render.tsx';
 import type { BlockRenderContext, SlotRender } from '@/builder/define.ts';
-import type { OrderShipment } from '@/types/orders.ts';
+import type { OrderDetail, OrderShipment } from '@/types/orders.ts';
 import type { ShipmentStatus } from '@/types/public-order.ts';
 import classes from '@/features/account/OrderDetail.module.css';
 
@@ -38,6 +42,16 @@ function methodLabel(method: string): string {
     .replace(/[_-]+/g, ' ')
     .trim()
     .replace(/(^|\s)\p{L}/gu, (c) => c.toUpperCase());
+}
+
+/**
+ * A collection point's carrier arrives as the carrier's slug ('evri'), where a parcel's carrier arrives named
+ * ('Evri'). Anything already cased is left alone; a short lowercase slug is an acronym (dpd, ups), a longer one a name.
+ */
+function carrierLabel(carrier: string): string {
+  const c = carrier.trim();
+  if (c !== c.toLowerCase()) return c;
+  return c.length <= 3 ? c.toUpperCase() : methodLabel(c);
 }
 
 function paymentTone(status: string): Tone {
@@ -95,7 +109,7 @@ function HeadingView({ styleAttrs }: PartViewProps) {
   return (
     <header className={classes.heading} {...styleAttrs}>
       <div className={classes.titleRow}>
-        <h1 className={classes.title}>{data.reference}</h1>
+        <h1 className={classes.title} tabIndex={-1} data-order-title>{data.reference}</h1>
         <StatusPill tone={orderStatusTone(data.status)}>{orderStatusLabel(data.status, t)}</StatusPill>
       </div>
       <p className={classes.meta}>{t('account.order.placed', { date: formatDate(data.createdAt) })}</p>
@@ -114,34 +128,44 @@ function BalanceView({ styleAttrs }: PartViewProps) {
   const { order: data, payment: previewed } = OrderFamily.useData();
   const queryClient = useQueryClient();
   // A closed order can carry a balance on paper; there is nothing to pay on it.
-  const closed = data.status === 'cancelled' || data.status === 'refunded';
-  const owed = data.outstandingBalance > 0 && !closed;
+  const owed = isOwed(data);
 
   // Polled while a payment is open; the payment section refetches the same cache entry after any change.
   // In the editor's preview the state is the fixture's, and nothing is fetched.
   const query = useOrderPayment(data.reference, owed && !previewed);
 
   // The payment section refreshes the payment view itself; the account order (its payments list,
-  // balance and cancel flags) has to follow when something it shows changed. Polling re-reads the
-  // same order every few seconds, so only a changed signature counts, and the first one seen for a
-  // reference is the initial load, which the account order already agrees with. Invalidating
-  // ['order', ref] never touches the payment query, so this cannot feed itself.
+  // balance and cancel flags) and the orders list have to follow when something they show changed.
+  // Polling re-reads the same order every few seconds, so only a changed signature counts, and the
+  // first one seen for a reference is the initial load, which the account order normally agrees with:
+  // unless the view already says the order has moved on (the payment view is the fresher read), in
+  // which case the account order is refetched at once. Invalidating ['order', ref] never touches the
+  // payment query, so this cannot feed itself.
   const signature = query.data ? paymentSignature(query.data) : null;
+  const movedOn = query.data ? paymentMovedOn(query.data, data.status) : false;
   // Per reference, so going A, B, A still notices a change to A made while B was showing.
   const seen = useRef(new Map<string, string>());
   useEffect(() => {
     if (!signature) return;
     const last = seen.current.get(data.reference);
     seen.current.set(data.reference, signature);
-    if (last === undefined || last === signature) return;
+    if ((last === undefined || last === signature) && !movedOn) return;
     void queryClient.invalidateQueries({ queryKey: ['order', data.reference] });
-  }, [signature, queryClient, data.reference]);
+    void queryClient.invalidateQueries({ queryKey: ['orders'] });
+  }, [signature, movedOn, queryClient, data.reference]);
+
+  // The payment read answering 404 means the order is not this customer's any more; once is enough, the
+  // order read then says so itself.
+  const gone = query.error instanceof OrderGoneError;
+  useEffect(() => {
+    if (gone) invalidateOrderGone(queryClient, data.reference);
+  }, [gone, queryClient, data.reference]);
 
   if (!owed) return null;
 
   const read: PaymentRead = previewed
     ? { data: previewed, isError: false, isFetching: false, refetch: () => undefined }
-    : { data: query.data, isError: query.isError, isFetching: query.isFetching, refetch: query.refetch };
+    : { data: query.data, isError: query.isError, error: query.error, isFetching: query.isFetching, refetch: query.refetch };
   // Keyed on the reference: the card remembers that its last read failed, which belongs to one order only.
   return <OrderPaymentCard key={data.reference} order={data} payment={read} styleAttrs={styleAttrs} />;
 }
@@ -242,7 +266,7 @@ function AddressView({ styleAttrs }: PartViewProps) {
         {point ? (
           <>
             <span className={classes.pointName} data-address-line>{point.name}</span>
-            <span className={classes.pointCarrier} data-address-line>{t('account.order.address.viaCarrier', { carrier: point.carrier })}</span>
+            <span className={classes.pointCarrier} data-address-line>{t('account.order.address.viaCarrier', { carrier: carrierLabel(point.carrier) })}</span>
           </>
         ) : null}
         {lines.map((line, i) => (
@@ -324,6 +348,39 @@ function ParcelsView({ styleAttrs }: PartViewProps) {
   );
 }
 
+/**
+ * What the page says about the order changing under the customer, with nothing drawn: a payment that arrives while
+ * they are looking is announced once (a notification, and a polite status region for screen readers), and after a
+ * cancel the focus the cancel control held moves to the page heading. Never on the first load of an order that was
+ * already paid or cancelled: only a change seen on this page counts.
+ */
+function OrderAnnouncements({ order }: { order: OrderDetail }) {
+  const { t } = useText();
+  const owed = isOwed(order);
+  const closed = order.status === 'cancelled' || order.status === 'refunded';
+  const before = useRef({ reference: order.reference, owed });
+  const [received, setReceived] = useState<string | null>(null);
+
+  useEffect(() => {
+    const prev = before.current;
+    before.current = { reference: order.reference, owed };
+    if (prev.reference !== order.reference) { setReceived(null); return; }
+    if (prev.owed && !owed && !closed) {
+      const message = t('account.order.paymentReceived');
+      setReceived(message);
+      notifications.show({ message });
+    }
+  }, [order.reference, owed, closed, t]);
+
+  useEffect(() => {
+    if (order.status === 'cancelled' && takeTitleFocus(order.reference)) {
+      document.querySelector<HTMLElement>('[data-order-title]')?.focus();
+    }
+  }, [order.status, order.reference]);
+
+  return <p className={classes.srOnly} role="status">{received}</p>;
+}
+
 /** The order's views (spec §5.4). */
 export const ORDER_VIEWS: FamilyValue<OrderData>['views'] = {
   OrderBackLink: BackLinkView, OrderHeading: HeadingView, OrderBalance: BalanceView, OrderItems: ItemsView,
@@ -356,12 +413,24 @@ export function OrderDetailPage({ slots, ctx = STANDALONE }: { slots?: { content
     [detail, preview],
   );
 
-  if (!preview && order.isPending) return <PageSkeleton inline />;
+  // The screens that stand in for the page carry the page's one h1 themselves: the account greeting that usually
+  // provides it is hidden on an order page.
+  if (!preview && order.isPending) {
+    return (
+      <>
+        <h1 className={classes.srOnly}>{t('account.order.title')}</h1>
+        <PageSkeleton inline />
+      </>
+    );
+  }
 
-  if ((!preview && order.isError) || !value || !detail) {
-    const missing = order.error instanceof ApiError && order.error.status === 404;
+  // A failed background refetch with the order still cached keeps the page (a focus refetch on a flaky connection
+  // must not destroy an open dialog); a 404 does not, since the order is gone for this customer.
+  const missing = !preview && order.error instanceof ApiError && order.error.status === 404;
+  if ((!preview && order.isError && (!order.data || missing)) || !value || !detail || missing) {
     return (
       <EmptyState
+        as="h1"
         eyebrow={t('account.order.title')}
         title={missing ? t('account.order.notFoundTitle') : t('account.order.loadFailedTitle')}
         description={
@@ -400,6 +469,7 @@ export function OrderDetailPage({ slots, ctx = STANDALONE }: { slots?: { content
   return (
     <OrderFamily.Provider value={value}>
       <div className={classes.page}>
+        <OrderAnnouncements order={detail} />
         <div className={classes.overview} data-columns={two ? 'two' : 'one'}>
           <div className={classes.head}>{draw(areas.head)}</div>
           <div className={classes.main}>

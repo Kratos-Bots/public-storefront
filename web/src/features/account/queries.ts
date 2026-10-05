@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { fetchOrder, fetchOrderPayment, fetchOrders } from '@/api/orders.ts';
 import { orderPaymentKey } from '@/features/order-status/queries.ts';
@@ -54,13 +55,16 @@ export function useOrder(reference: string | undefined) {
  * in another tab is not looking at this one, and that is when it most needs to keep up.
  */
 export function useOrderPayment(reference: string, enabled: boolean) {
+  // When this page started watching this order: the poll slows down the longer a tab sits on it.
+  const watching = useRef({ reference, since: Date.now() });
+  if (watching.current.reference !== reference) watching.current = { reference, since: Date.now() };
   return useQuery({
     queryKey: orderPaymentKey(reference),
     queryFn: () => fetchOrderPayment(reference),
     enabled,
     retry: false,
     staleTime: 30_000,
-    refetchInterval: (query) => paymentPollInterval(query.state),
+    refetchInterval: (query) => paymentPollInterval(query.state, Date.now() - watching.current.since),
     refetchIntervalInBackground: true,
   });
 }

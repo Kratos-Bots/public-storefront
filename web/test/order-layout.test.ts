@@ -12,9 +12,9 @@ describe('order page areas', () => {
     expect(areas.side.map((i) => i.type)).toEqual(['OrderPayments', 'OrderAddress']);
   });
   it('a content block goes to the side only when every order part inside it is a side part', () => {
-    const areas = partitionOrderItems([b('Section', { content: [b('OrderParcels')] }), b('Section', { content: [b('OrderParcels'), b('OrderItems')] }), b('RichText')]);
+    const areas = partitionOrderItems([b('OrderBalance'), b('Section', { content: [b('OrderParcels')] }), b('Section', { content: [b('OrderParcels'), b('OrderItems')] }), b('RichText')]);
     expect(areas.side).toHaveLength(1);
-    expect(areas.main).toHaveLength(2);
+    expect(areas.main).toHaveLength(3);
   });
   it('parcels join the items in the main column when the payment card is silent, and stay in the side when it is not', () => {
     const items = [b('OrderHeading'), b('OrderBalance'), b('OrderItems'), b('OrderAddress'), b('OrderParcels'), b('OrderPayments')];
@@ -26,9 +26,22 @@ describe('order page areas', () => {
     expect(owed.side.map((i) => i.type)).toEqual(['OrderAddress', 'OrderParcels', 'OrderPayments']);
   });
   it('a block holding only parcels follows them into the main column', () => {
-    const items = [b('Section', { content: [b('OrderParcels')] })];
+    const items = [b('OrderBalance'), b('Section', { content: [b('OrderParcels')] })];
     expect(partitionOrderItems(items).side).toHaveLength(1);
-    expect(partitionOrderItems(items, silentParts(order)).main).toHaveLength(1);
+    expect(partitionOrderItems(items, silentParts(order)).main).toHaveLength(2);
+  });
+  it('a balance part that is not placed draws nothing, so the parcels sit under the items even on an unpaid order', () => {
+    const owed = silentParts({ ...(order as object), outstandingBalance: 5, status: 'pending' } as never);
+    const without = partitionOrderItems([b('OrderItems'), b('OrderAddress'), b('OrderParcels')], owed);
+    expect(without.main.map((i) => i.type)).toEqual(['OrderItems', 'OrderParcels']);
+    const nested = partitionOrderItems([b('OrderItems'), b('Section', { content: [b('OrderBalance')] }), b('OrderParcels')], owed);
+    expect(nested.side.map((i) => i.type)).toEqual(['OrderParcels']);
+  });
+  it('a block holding both the address and the parcels goes wholly to main on a paid order and to the side on an unpaid one', () => {
+    const items = [b('OrderBalance'), b('Section', { content: [b('OrderAddress'), b('OrderParcels')] })];
+    expect(partitionOrderItems(items, silentParts(order)).main).toHaveLength(2);
+    const owed = silentParts({ ...(order as object), outstandingBalance: 5, status: 'pending' } as never);
+    expect(partitionOrderItems(items, owed).side).toHaveLength(1);
   });
   it('a stored arrangement that dropped the parcels part opens no empty side column', () => {
     expect(sideDraws([b('OrderAddress'), b('OrderPayments')], silentParts(order))).toBe(false);

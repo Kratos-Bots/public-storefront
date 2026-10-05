@@ -254,12 +254,26 @@ describe('details', () => {
     expect(card.querySelectorAll('[data-address-line]')).toHaveLength(4); // name, line 1, city + postcode, country
   });
 
-  it('a collection order says Collect from with the point name and carrier', async () => {
+  it('a collection order says Collection point, with the point name and carrier', async () => {
     h.order = { ...base, outstandingBalance: 0, status: 'confirmed', shippingAddress: { ...address, servicePoint: { name: 'Corner Shop', carrier: 'DPD' } } };
     mount();
-    const card = await screen.findByRole('region', { name: 'Collect from' });
+    const card = await screen.findByRole('region', { name: 'Collection point' });
     expect(card.textContent).toContain('Corner Shop');
     expect(card.textContent).toContain('DPD');
+  });
+
+  it('shows the collection carrier in its display form, as the parcels card does', async () => {
+    const via = async (carrier: string) => {
+      h.order = { ...base, outstandingBalance: 0, status: 'confirmed', shippingAddress: { ...address, servicePoint: { name: 'Corner Shop', carrier } } };
+      const view = mount();
+      const card = await screen.findByRole('region', { name: 'Collection point' });
+      const text = card.textContent ?? '';
+      view.unmount();
+      return text;
+    };
+    expect(await via('evri')).toContain('Via Evri');
+    expect(await via('dpd')).toContain('Via DPD');
+    expect(await via('Royal Mail')).toContain('Via Royal Mail');
   });
 
   it('no address: the address part draws nothing', async () => {
@@ -267,7 +281,7 @@ describe('details', () => {
     mount();
     await screen.findByRole('heading', { level: 1, name: 'K4M2QP' });
     expect(screen.queryByRole('region', { name: 'Delivery address' })).toBeNull();
-    expect(screen.queryByRole('region', { name: 'Collect from' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Collection point' })).toBeNull();
   });
 
   it('payment history says the status in plain words, and an unknown status as it came', async () => {
@@ -471,7 +485,7 @@ describe('the visual pass', () => {
   it('a collection address leads with the point, then its address, then who is collecting; no card inside the card', async () => {
     h.order = { ...base, outstandingBalance: 0, status: 'confirmed', shippingAddress: { ...address, servicePoint: { name: 'Corner Shop', carrier: 'DPD' } } };
     mount();
-    const card = await screen.findByRole('region', { name: 'Collect from' });
+    const card = await screen.findByRole('region', { name: 'Collection point' });
     const lines = [...card.querySelectorAll('[data-address-line]')].map((l) => l.textContent);
     expect(lines).toEqual(['Corner Shop', 'Via DPD', '1 Mill Lane', 'Leeds LS1 1AA', 'United Kingdom', 'Collecting: Ada Byron']);
     expect(card.querySelectorAll('[data-sf-part="card"]')).toHaveLength(0);

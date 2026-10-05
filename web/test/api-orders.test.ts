@@ -108,6 +108,18 @@ describe('cancelOrder', () => {
     expect(req.url).toContain('storefront/orders/AB12CD/cancel');
   });
 
+  it('a 404 reads as "no longer waiting for payment"', async () => {
+    mockFetch(404, { success: false, data: null, error: 'Order not found' });
+    const err = await cancelOrder('AB12CD').catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(OrderNotCancellableError);
+    expect((err as OrderNotCancellableError).reason).toBe('not_pending');
+  });
+
+  it('any other failure is rethrown as it came', async () => {
+    mockFetch(500, { success: false, data: null, error: 'Boom' });
+    await expect(cancelOrder('AB12CD')).rejects.toMatchObject({ status: 500 });
+  });
+
   it('maps 409 ORDER_NOT_CANCELLABLE:<reason> to OrderNotCancellableError', async () => {
     mockFetch(409, { success: false, data: null, error: 'ORDER_NOT_CANCELLABLE:bank_transfer' });
     const err = await cancelOrder('AB12CD').catch((e: unknown) => e);
@@ -143,12 +155,20 @@ describe('order payment through the session', () => {
     const spy = mockFetch(200, { success: true, data: { reference: 'A/1' }, error: null });
     await fetchOrderPayment('A/1');
     expect((spy.mock.calls[0]![0] as Request).url).toContain('storefront/orders/A%2F1/payment');
+    expect((spy.mock.calls[0]![0] as Request).method).toBe('GET');
+  });
+
+  it('does not retry a failed payment read at the transport level (the route is rate limited)', async () => {
+    const spy = mockFetch(500, { success: false, data: null, error: 'Boom' });
+    await expect(fetchOrderPayment('K4M2QP')).rejects.toMatchObject({ status: 500 });
+    expect(spy).toHaveBeenCalledTimes(1);
   });
 
   it('reads payment options', async () => {
     const spy = mockFetch(200, { success: true, data: [], error: null });
     expect(await fetchOrderPaymentOptions('K4M2QP')).toEqual([]);
     expect((spy.mock.calls[0]![0] as Request).url).toContain('storefront/orders/K4M2QP/payment-options');
+    expect((spy.mock.calls[0]![0] as Request).method).toBe('GET');
   });
 
   it('posts a selection, and a 409 becomes PaymentConflictError', async () => {
@@ -170,6 +190,20 @@ describe('order payment through the session', () => {
   it('a 404 on any pay route is OrderGoneError', async () => {
     mockFetch(404, { success: false, data: null, error: 'Order not found' });
     await expect(fetchOrderPayment('K4M2QP')).rejects.toBeInstanceOf(OrderGoneError);
+  });
+
+  it.each([
+    ['payment-options', () => fetchOrderPaymentOptions('K4M2QP')],
+    ['payment-method', () => selectOrderPaymentMethod('K4M2QP', { method: 'stripe' })],
+    ['crypto-txid', () => submitOrderCryptoTxid('K4M2QP', 9, 'abc1234567')],
+  ])('a 404 on %s is OrderGoneError too', async (_name, call) => {
+    mockFetch(404, { success: false, data: null, error: 'Order not found' });
+    await expect(call()).rejects.toBeInstanceOf(OrderGoneError);
+  });
+
+  it.each(['confirmed', 'needs_review'])('passes a %s txid result through verbatim', async (status) => {
+    mockPost(200, { success: true, data: { verificationStatus: status }, error: null });
+    expect(await submitOrderCryptoTxid('K4M2QP', 9, 'abc1234567')).toBe(status);
   });
 
   it('a 503 stays an ApiError so the page can offer a retry', async () => {

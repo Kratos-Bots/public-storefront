@@ -2,10 +2,12 @@ import { useId, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Money } from '@/components/Money.tsx';
 import { CancelOrder } from '@/features/order-status/CancelOrder.tsx';
+import { ApiError } from '@/lib/errors.ts';
+import { wantTitleFocus } from '@/features/account/title-focus.ts';
 import { cancelView } from '@/features/order-status/cancel-state.ts';
 import { invalidateAfterCancel } from '@/features/order-status/invalidate-after-cancel.ts';
 import { PaymentSection } from '@/features/order-status/PaymentSection.tsx';
-import { visibleCryptoPayments } from '@/features/order-status/payment-state.ts';
+import { paymentMovedOn, visibleCryptoPayments } from '@/features/order-status/payment-state.ts';
 import { SupportLinks } from '@/features/order-status/SupportLinks.tsx';
 import { useText } from '@/text/runtime.tsx';
 import type { StyleAttrs } from '@/builder/define.ts';
@@ -17,6 +19,8 @@ import classes from '@/features/account/OrderDetail.module.css';
 export interface PaymentRead {
   data: PublicOrder | undefined;
   isError: boolean;
+  /** What the failed read threw; a 429 is told apart from any other failure. */
+  error?: unknown;
   isFetching: boolean;
   refetch: () => unknown;
 }
@@ -36,15 +40,19 @@ export function OrderPaymentCard({ order, payment, styleAttrs }: { order: OrderD
   // With no data, a retry resets the query to pending and clears its error; this remembers that the last
   // read failed until one succeeds, so the message stays up while Try again is in flight.
   const [lastFailed, setLastFailed] = useState(false);
-  if (!loaded && payment.isError && !lastFailed) setLastFailed(true);
-  if (loaded && lastFailed) setLastFailed(false);
+  const [lastError, setLastError] = useState<unknown>(null);
+  if (!loaded && payment.isError && !lastFailed) { setLastFailed(true); setLastError(payment.error ?? null); }
+  if (loaded && lastFailed) { setLastFailed(false); setLastError(null); }
   // What PaymentSection would draw: a way to pay, or crypto payments to show.
   const payable = loaded && (loaded.payment?.canPay || visibleCryptoPayments(loaded).length > 0) ? loaded : null;
   const cancelShows = cancelView(order.canCancel, order.cancelBlockedBy);
-  // Loaded and nothing to pay with (cannot be paid online, or an older backend sent no payment block): say so and
-  // point to the shop, unless the cancel control is already showing its own contact line.
-  const payHelp =
-    !payable && !!loaded && cancelShows !== 'contact' && loaded.status !== 'cancelled' && loaded.status !== 'refunded';
+  // The payment view is the fresher read: when it says the order has moved on, the account order is about to say
+  // the same, and until it does nothing here should claim the balance cannot be paid.
+  const updating = !payable && !!loaded && paymentMovedOn(loaded, order.status);
+  // Loaded, the view agrees the order is waiting, and there is nothing to pay with (cannot be paid online, or an
+  // older backend sent no payment block): say so and point to the shop, unless the cancel control is already
+  // showing its own contact line.
+  const payHelp = !payable && !!loaded && !updating && cancelShows !== 'contact';
   const failed = !loaded && (payment.isError || lastFailed);
   const loading = !loaded && !failed;
 
@@ -68,7 +76,11 @@ export function OrderPaymentCard({ order, payment, styleAttrs }: { order: OrderD
       ) : null}
       {failed ? (
         <div className={`${classes.payBody} ${classes.failed}`} role="alert">
-          <p className={classes.failedText}>{t('account.order.pay.loadFailed')}</p>
+          <p className={classes.failedText}>
+            {(payment.error ?? lastError) instanceof ApiError && ((payment.error ?? lastError) as ApiError).status === 429
+              ? t('account.order.pay.rateLimited')
+              : t('account.order.pay.loadFailed')}
+          </p>
           <button type="button" className={classes.retry} data-sf-part="button" data-variant="default" aria-disabled={payment.isFetching} onClick={() => { if (!payment.isFetching) void payment.refetch(); }}>
             {payment.isFetching ? t('common.status.loading') : t('common.actions.tryAgain')}
           </button>
@@ -77,6 +89,11 @@ export function OrderPaymentCard({ order, payment, styleAttrs }: { order: OrderD
       {payable ? (
         <div className={classes.payBody}>
           <PaymentSection order={payable} reference={order.reference} />
+        </div>
+      ) : null}
+      {updating ? (
+        <div className={classes.payBody}>
+          <p className={classes.payHelp}>{t('account.order.pay.updating')}</p>
         </div>
       ) : null}
       {payHelp ? (
@@ -88,11 +105,13 @@ export function OrderPaymentCard({ order, payment, styleAttrs }: { order: OrderD
 
       <div className={classes.payFoot}>
         <CancelOrder
-          key={order.reference}
           reference={order.reference}
           canCancel={order.canCancel}
           blockedBy={order.cancelBlockedBy}
-          onCancelled={() => invalidateAfterCancel(queryClient, order.reference)}
+          onCancelled={(outcome) => {
+            if (outcome === 'cancelled') wantTitleFocus(order.reference);
+            invalidateAfterCancel(queryClient, order.reference);
+          }}
         />
       </div>
     </section>

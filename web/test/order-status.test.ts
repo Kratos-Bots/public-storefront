@@ -261,6 +261,15 @@ describe('paymentPollInterval', () => {
   it('stops when there is nothing left to wait for', () => {
     expect(paymentPollInterval({ data: order({ status: 'delivered' }), status: 'success' })).toBe(false);
   });
+
+  it('slows to at least once a minute after ten minutes of watching, and never speeds a slower poll up', () => {
+    const TEN = 10 * 60_000;
+    expect(paymentPollInterval({ data: hosted, status: 'success' }, TEN - 1)).toBe(10_000);
+    expect(paymentPollInterval({ data: hosted, status: 'success' }, TEN)).toBe(60_000);
+    const choosing = order({ payment: { canPay: true, payBy: null, activePayment: null } });
+    expect(paymentPollInterval({ data: choosing, status: 'success' }, TEN)).toBe(60_000);
+    expect(paymentPollInterval({ data: order({ status: 'delivered' }), status: 'success' }, TEN)).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------- methodNote
@@ -281,6 +290,11 @@ describe('methodNote', () => {
 
   it('says what a surcharge comes to', () => {
     expect(methodNote(method({ fee: 1.42, feeRateText: '+3%' }), 'GBP')).toBe('Includes a £1.42 fee');
+  });
+
+  it('uses the fee label the shop gave the method, when there is one', () => {
+    expect(methodNote(method({ fee: 1.42, feeRateText: '+3%', feeLabel: 'Card fee' }), 'GBP')).toBe('Card fee of £1.42 included');
+    expect(methodNote(method({ fee: 1.42, feeLabel: '  ' }), 'GBP')).toBe('Includes a £1.42 fee');
   });
 });
 

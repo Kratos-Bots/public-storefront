@@ -80,18 +80,37 @@ export function pollInterval(order: PublicOrder): number | false {
 
 // The payment read is rate limited, and a failed read is usually the limit or an outage: back right off.
 const FAILED_READ_POLL_MS = 60_000;
+// After this long on one order the poll is never faster than once a minute.
+const LONG_WATCH_MS = 10 * 60_000;
+const LONG_WATCH_POLL_MS = 60_000;
+
+/**
+ * The payment view is the fresher read: it says the order has moved on (paid, confirmed, cancelled) before the
+ * account order, which is read separately, has caught up. True when its status differs from the account order's,
+ * is no longer `pending`, or a crypto payment on it has completed.
+ */
+export function paymentMovedOn(payment: PublicOrder, accountStatus: string): boolean {
+  return (
+    payment.status !== 'pending' ||
+    payment.status !== accountStatus ||
+    (payment.cryptoPayments ?? []).some((p) => p.paymentStatus === 'completed')
+  );
+}
 
 /**
  * `pollInterval` for a query: React Query keeps the last good data after a failed refetch, so data alone cannot
  * say the last read failed. After a failure we keep polling, slowly, so a customer who finishes a hosted checkout
  * in another tab still catches up once the route answers again.
  */
-export function paymentPollInterval(state: {
-  data: PublicOrder | undefined;
-  status: 'pending' | 'error' | 'success';
-}): number | false {
+export function paymentPollInterval(
+  state: { data: PublicOrder | undefined; status: 'pending' | 'error' | 'success' },
+  watchedMs = 0,
+): number | false {
   if (!state.data) return false;
-  return state.status === 'error' ? FAILED_READ_POLL_MS : pollInterval(state.data);
+  if (state.status === 'error') return FAILED_READ_POLL_MS;
+  const interval = pollInterval(state.data);
+  // A tab left open on an unpaid order is not being watched any more: stop asking every ten seconds.
+  return interval !== false && watchedMs >= LONG_WATCH_MS ? Math.max(interval, LONG_WATCH_POLL_MS) : interval;
 }
 
 /**
@@ -118,7 +137,11 @@ export function paymentSignature(order: PublicOrder): string {
  */
 export function methodNote(method: PaymentMethod, currency: string): string | null {
   const { t } = textSnapshot();
-  if (method.fee > 0.004) return t('order.method.feeNote', { fee: formatMoney(method.fee, currency) });
+  if (method.fee > 0.004) {
+    const fee = formatMoney(method.fee, currency);
+    const label = method.feeLabel?.trim();
+    return label ? t('order.method.feeLabelNote', { label, fee }) : t('order.method.feeNote', { fee });
+  }
   if (method.fee < -0.004) {
     const rate = method.feeRateText?.trim().replace(/^[^\d.]+/, '');
     return rate ? t('order.method.discountNote', { rate }) : t('order.method.savesNote', { amount: formatMoney(-method.fee, currency) });
@@ -128,7 +151,7 @@ export function methodNote(method: PaymentMethod, currency: string): string | nu
 
 /**
  * A manual bank transfer can't be started from this page: the backend refuses
- * every manual gateway on the public payment-method route, so the
+ * every manual gateway on the payment-method route, so the
  * picker shows the transfer details instead of creating a payment.
  */
 export function isManual(method: PaymentMethod): boolean {

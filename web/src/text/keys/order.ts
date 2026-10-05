@@ -64,6 +64,7 @@ export default defineTextArea('order', {
   'method.discountNote': { en: '{rate} discount', max: 60 },
   'method.savesNote': { en: 'Saves {amount}', max: 60 },
   'method.feeNote': { en: 'Includes a {fee} fee', max: 60 },
+  'method.feeLabelNote': { en: '{label} of {fee} included', max: 80 },
   'method.preparing': { en: 'Preparing payment…', max: 60 },
   'method.payWith': { en: 'Pay with {coin}', max: 80 },
   'method.chooseCoin': { en: 'Choose a coin above', max: 60 },

@@ -18,11 +18,16 @@ function areaOf(type: string, silent: ReadonlySet<string>): OrderArea | undefine
   return type === 'OrderParcels' && silent.has('OrderBalance') ? 'main' : AREA[type];
 }
 
+/** An order is owed when money is outstanding and it is not closed: a cancelled or refunded order can carry a balance on paper. */
+export function isOwed(order: Pick<OrderDetail, 'status' | 'outstandingBalance'>): boolean {
+  const closed = order.status === 'cancelled' || order.status === 'refunded';
+  return order.outstandingBalance > 0 && !closed;
+}
+
 /** Which order parts draw nothing for this order. */
 export function silentParts(order: OrderDetail): Set<string> {
   const silent = new Set<string>();
-  const closed = order.status === 'cancelled' || order.status === 'refunded';
-  if (!(order.outstandingBalance > 0) || closed) silent.add('OrderBalance');
+  if (!isOwed(order)) silent.add('OrderBalance');
   if (!order.shippingAddress) silent.add('OrderAddress');
   if (order.shipments.length === 0) silent.add('OrderParcels');
   if (order.payments.length === 0) silent.add('OrderPayments');
@@ -31,10 +36,13 @@ export function silentParts(order: OrderDetail): Set<string> {
 
 /**
  * Sorts a slot's items into the page's areas, keeping their order within each. An order part goes to its own
- * area. Any other block (a Section, a text block) goes by the order parts inside it: `side` when every one of
- * them is a side part, else `main`; with no order parts inside, `main`.
+ * area. Any other block (a Section, a text block) goes by the order parts inside it, each placed where it would
+ * go on its own: `side` when every one of them goes to the side, else `main` (so a block holding both the
+ * address and the parcels moves wholly to main on a paid order, where the parcels do); with no order parts
+ * inside, `main`. A balance part that is not placed anywhere in the slot draws nothing, so it counts as silent.
  */
-export function partitionOrderItems(items: readonly ComponentData[], silent: ReadonlySet<string> = new Set()): Record<OrderArea, ComponentData[]> {
+export function partitionOrderItems(items: readonly ComponentData[], silentIn: ReadonlySet<string> = new Set()): Record<OrderArea, ComponentData[]> {
+  const silent = flattenTypes(items).includes('OrderBalance') ? silentIn : new Set([...silentIn, 'OrderBalance']);
   const out: Record<OrderArea, ComponentData[]> = { head: [], main: [], side: [] };
   for (const item of items) {
     const own = areaOf(item.type, silent);

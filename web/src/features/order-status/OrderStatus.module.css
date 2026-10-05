@@ -9,6 +9,11 @@
 
 /* ------------------------------------------------------------------ the faces */
 
+/* The wrapper PaymentSection keeps its faces in (to find the heading to focus); it takes no part in layout. */
+.faces {
+  display: contents;
+}
+
 .face {
   display: flex;
   flex-direction: column;
@@ -154,6 +159,32 @@
   display: flex;
   flex-direction: column;
   gap: 1.1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* One step of the list: its figure or form, and the notice that belongs to it. */
+.stepItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+/* The warning that a wrong amount or network loses the money. It must not read as the pay-by notice above it,
+   so it leads with a mark and carries the warning colour down its left edge. */
+.sendWarning {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  border-left: 4px solid var(--sf-warn);
+}
+
+.sendWarning > svg {
+  flex: none;
+  margin-top: 0.15rem;
+  color: var(--sf-warn);
 }
 
 .stepNum {
@@ -242,6 +273,30 @@
   color: var(--sf-text);
   overflow-wrap: anywhere;
   user-select: all;
+}
+
+/* A long address in groups that wrap between themselves, so no line ends on a stray character or two. The raw
+   value is there for assistive technology and is not selectable, so a selection copies the address once. */
+.copyGrouped {
+  overflow-wrap: normal;
+  word-break: normal;
+  letter-spacing: 0.02em;
+}
+
+.copyGroup {
+  display: inline-block;
+  margin-right: 0.6ch;
+}
+
+.rawValue {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  user-select: none;
 }
 
 .copyButton {

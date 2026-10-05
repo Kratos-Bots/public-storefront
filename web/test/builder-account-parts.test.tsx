@@ -282,12 +282,12 @@ describe('arrangement and state ownership', () => {
     expect(refetch).toHaveBeenCalled();
   });
 
-  it('order detail: the page sorts parcels after items whatever the arrangement, and a removed part is absent', async () => {
+  it('order detail: with no balance part placed the parcels join the items in the arrangement order, and a removed part is absent', async () => {
     s.order = { data: DETAIL, isPending: false, isError: false, refetch: noop };
     const d = settled(accountDoc(undefined, [c('OrderDetail', 'od', { content: [p('od', 'OrderHeading'), p('od', 'OrderParcels'), p('od', 'OrderItems')] })]), 'account.order');
     const { container } = await ready(renderOrder(d));
     await waitFor(() => expect(container.querySelectorAll('section').length).toBe(2));
-    expect([...container.querySelectorAll('section')].map((e) => e.getAttribute('aria-label'))).toEqual(['Items', 'Parcels']);
+    expect([...container.querySelectorAll('section')].map((e) => e.getAttribute('aria-label'))).toEqual(['Parcels', 'Items']);
     expect(container.querySelector(`.${orderClasses.back}`)).toBeNull();
     expect(container.querySelector(`.${orderClasses.overview}`)).not.toBeNull();
   });

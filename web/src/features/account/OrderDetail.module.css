@@ -231,6 +231,9 @@
   margin-top: 1rem;
   padding-top: 0.5rem;
   border-top: 1px solid var(--sf-line);
+  /* The trigger is a 44px tap target around a line of text: pull the card's edge in by the slack under that line,
+     so the space below "Cancel order" matches the card's own padding. */
+  margin-bottom: -0.7rem;
 }
 
 /* Relies on CancelOrder rendering nothing at all (no wrapper) when it has nothing to offer. */

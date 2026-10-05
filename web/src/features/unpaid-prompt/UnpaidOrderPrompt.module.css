@@ -17,6 +17,12 @@
   color: var(--sf-text);
 }
 
+/* Takes the dialog's first focus (so the order is read out before any control, and no button wears a ring it was
+   not tabbed to); it is not a control, so it draws none. */
+.lede:focus {
+  outline: none;
+}
+
 .lede {
   margin: 0;
   font-size: 1rem;

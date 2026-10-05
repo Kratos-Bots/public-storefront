@@ -112,6 +112,16 @@ export function CopyIcon({ size = 13 }: GlyphProps) {
   );
 }
 
+/** A triangle with a mark: the notice that is not just information. */
+export function AlertIcon({ size = 16 }: GlyphProps) {
+  return (
+    <svg {...stroke(size)}>
+      <path d="M12 4 3 20h18L12 4Z" />
+      <path d="M12 10v4.5M12 17.2v.1" />
+    </svg>
+  );
+}
+
 export function ClockIcon({ size = 13 }: GlyphProps) {
   return (
     <svg {...stroke(size)}>

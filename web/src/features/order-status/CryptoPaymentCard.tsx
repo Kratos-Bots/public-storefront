@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { submitOrderCryptoTxid } from '@/api/orders.ts';
-import { CheckIcon, ClockIcon } from '@/components/icons.tsx';
+import { OrderGoneError, submitOrderCryptoTxid } from '@/api/orders.ts';
+import { AlertIcon, CheckIcon, ClockIcon } from '@/components/icons.tsx';
 import { errorMessage } from '@/lib/errors.ts';
 import { formatCoinAmount, formatMoney } from '@/lib/format.ts';
 import { CopyRow } from '@/features/order-status/CopyRow.tsx';
+import { invalidateOrderGone } from '@/features/order-status/order-gone.ts';
 import { orderPaymentKey } from '@/features/order-status/queries.ts';
 import {
   cardState,
@@ -58,6 +59,10 @@ export function CryptoPaymentCard({ payment, reference, currency }: CryptoPaymen
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: orderPaymentKey(reference) });
     },
+    // 404: the order is gone for this customer; the page says so, and "not accepted" would be wrong.
+    onError: (err: Error) => {
+      if (err instanceof OrderGoneError) invalidateOrderGone(queryClient, reference);
+    },
   });
 
   const submission: TxidSubmission | null =
@@ -82,7 +87,7 @@ export function CryptoPaymentCard({ payment, reference, currency }: CryptoPaymen
     <section className={`${classes.face} ${FADE}`} aria-label={t('order.crypto.label')}>
       <div className={classes.faceHead}>
         <div className={classes.faceHeadBody}>
-          <h3 className={classes.faceTitle}>
+          <h3 className={classes.faceTitle} tabIndex={-1} data-face-title>
             {state === 'awaiting' ? t('order.crypto.payTitle', { coin: payment.coinLabel }) : t(TITLE[state])}
           </h3>
           <p className={classes.faceLead}>
@@ -98,61 +103,69 @@ export function CryptoPaymentCard({ payment, reference, currency }: CryptoPaymen
       </div>
 
       {state === 'awaiting' ? (
-        <div className={classes.steps}>
-          <CopyRow
-            step={1}
-            label={t('order.crypto.amountToSend')}
-            value={`${amount} ${payment.coinLabel}`}
-            copyValue={amount}
-          />
-          <CopyRow
-            step={2}
-            label={t('order.crypto.addressLabel', { coin: payment.coinLabel, network: payment.networkLabel })}
-            value={payment.address}
-          />
-
-          <p className={classes.note} data-tone="warn">
-            {t('order.crypto.warning', { network: payment.networkLabel })}
-          </p>
-
-          <form className={classes.txidForm} onSubmit={onSubmit}>
-            <div className={classes.stepHead}>
-              <span className={classes.stepNum} aria-hidden>3</span>
-              <div className={classes.stepBody}>
-                <label className={classes.stepLabel} htmlFor={`txid-${payment.paymentId}`}>
-                  {t('order.crypto.txidLabel')}
-                </label>
-                <p className={classes.txidBlurb}>{t('order.crypto.txidBlurb')}</p>
-              </div>
-            </div>
-            <input
-              id={`txid-${payment.paymentId}`}
-              className={classes.txidInput}
-              type="text"
-              value={txid}
-              onChange={(e) => setTxid(e.currentTarget.value)}
-              placeholder={t('order.crypto.txidPlaceholder')}
-              autoComplete="off"
-              spellCheck={false}
-              maxLength={TXID_MAX}
-              aria-invalid={submit.isError || undefined}
+        <ol className={classes.steps} role="list">
+          <li className={classes.stepItem}>
+            <CopyRow
+              step={1}
+              label={t('order.crypto.amountToSend')}
+              value={`${amount} ${payment.coinLabel}`}
+              copyValue={amount}
             />
-            <button
-              type="submit"
-              className={classes.txidSubmit}
-              disabled={!valid || submit.isPending}
-              data-sf-part="button"
-              data-variant={valid ? 'filled' : 'default'}
-            >
-              {submit.isPending ? t('order.crypto.sending') : t('order.crypto.submit')}
-            </button>
-            {submit.isError ? (
-              <p className={classes.note} data-tone="danger">
-                {errorMessage(submit.error, t('order.errors.txidRejected'))}
-              </p>
-            ) : null}
-          </form>
-        </div>
+          </li>
+          <li className={classes.stepItem}>
+            <CopyRow
+              step={2}
+              label={t('order.crypto.addressLabel', { coin: payment.coinLabel, network: payment.networkLabel })}
+              value={payment.address}
+              groupBy={4}
+            />
+            <p className={`${classes.note} ${classes.sendWarning}`} data-tone="warn">
+              <AlertIcon size={18} />
+              <span>{t('order.crypto.warning', { network: payment.networkLabel })}</span>
+            </p>
+          </li>
+
+          <li className={classes.stepItem}>
+            <form className={classes.txidForm} onSubmit={onSubmit}>
+              <div className={classes.stepHead}>
+                <span className={classes.stepNum} aria-hidden>3</span>
+                <div className={classes.stepBody}>
+                  <label className={classes.stepLabel} htmlFor={`txid-${payment.paymentId}`}>
+                    {t('order.crypto.txidLabel')}
+                  </label>
+                  <p className={classes.txidBlurb}>{t('order.crypto.txidBlurb')}</p>
+                </div>
+              </div>
+              <input
+                id={`txid-${payment.paymentId}`}
+                className={classes.txidInput}
+                type="text"
+                value={txid}
+                onChange={(e) => setTxid(e.currentTarget.value)}
+                placeholder={t('order.crypto.txidPlaceholder')}
+                autoComplete="off"
+                spellCheck={false}
+                maxLength={TXID_MAX}
+                aria-invalid={submit.isError || undefined}
+                aria-describedby={submit.isError && !(submit.error instanceof OrderGoneError) ? `txid-error-${payment.paymentId}` : undefined}
+              />
+              <button
+                type="submit"
+                className={classes.txidSubmit}
+                disabled={!valid || submit.isPending}
+                data-sf-part="button"
+                data-variant={valid ? 'filled' : 'default'}
+              >
+                {submit.isPending ? t('order.crypto.sending') : t('order.crypto.submit')}
+              </button>
+              {submit.isError && !(submit.error instanceof OrderGoneError) ? (
+                <p id={`txid-error-${payment.paymentId}`} className={classes.note} data-tone="danger" role="alert">
+                  {errorMessage(submit.error, t('order.errors.txidRejected'))}
+                </p>
+              ) : null}
+            </form>
+          </li>
+        </ol>
       ) : null}
 
       {state !== 'awaiting' && masked ? (

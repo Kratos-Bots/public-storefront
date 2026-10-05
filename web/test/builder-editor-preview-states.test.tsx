@@ -276,7 +276,7 @@ describe('previews draw from fixtures and never fetch', () => {
 
   it.each([
     ['awaiting-payment', 'Payment needed'], ['hosted-open', 'Payment needed'], ['crypto-waiting', 'Payment needed'],
-    ['shipped', 'Parcels'], ['collection', 'Collect from'], ['cancelled', 'Items'],
+    ['shipped', 'Parcels'], ['collection', 'Collection point'], ['cancelled', 'Items'],
   ])('order detail: %s draws from its fixture without reading the order or its payment state', async (id, region) => {
     render(<Shell mode={modeFor('OrderDetail', id)}><OrderDetailPage /></Shell>);
     expect(await screen.findByRole('region', { name: region })).toBeTruthy();

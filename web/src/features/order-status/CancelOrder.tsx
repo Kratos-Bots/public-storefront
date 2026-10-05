@@ -1,8 +1,7 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Modal } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { cancelOrder, OrderNotCancellableError } from '@/api/orders.ts';
-import type { StyleAttrs } from '@/builder/define.ts';
 import { cancelView } from '@/features/order-status/cancel-state.ts';
 import { SupportLinks } from '@/features/order-status/SupportLinks.tsx';
 import { useText } from '@/text/runtime.tsx';
@@ -14,9 +13,8 @@ export interface CancelOrderProps {
   /** Both flags are absent on a backend that predates customer cancel: the control then renders nothing. */
   canCancel: boolean | undefined;
   blockedBy: CancelBlockedBy | null | undefined;
-  /** Called after a cancel and after a refusal, so the caller refetches the order. */
-  onCancelled?: () => void;
-  rootAttrs?: StyleAttrs;
+  /** Called after a cancel and after a refusal, so the caller refetches the order; says which of the two it was. */
+  onCancelled?: (outcome: 'cancelled' | 'refused') => void;
 }
 
 type Refusal = 'order.cancel.refusedPaid' | 'order.cancel.refusedInFlight' | 'order.cancel.refusedGone' | 'order.cancel.failed';
@@ -32,7 +30,7 @@ const REFUSAL: Record<OrderNotCancellableError['reason'], Refusal> = {
  * "Cancel order" for an unpaid order: a confirmation dialog that only its two buttons can close,
  * or, when money may already be on its way, a pointer to the shop instead.
  */
-export function CancelOrder({ reference, canCancel, blockedBy, onCancelled, rootAttrs }: CancelOrderProps) {
+export function CancelOrder({ reference, canCancel, blockedBy, onCancelled }: CancelOrderProps) {
   const { t } = useText();
   const [open, setOpen] = useState(false);
   const [working, setWorking] = useState(false);
@@ -41,8 +39,18 @@ export function CancelOrder({ reference, canCancel, blockedBy, onCancelled, root
   const busy = useRef(false);
 
   const view = cancelView(canCancel, blockedBy);
-  // A refusal or failure outlives the props that change under it (the refetch after a refusal usually hides the control).
-  if (view === 'none' && !message) return null;
+
+  // The flags can flip under an open dialog (paid in another tab, a transfer or txid now on its way). The dialog
+  // closes rather than offering a cancel the backend would refuse, and the page says why.
+  useEffect(() => {
+    if (!open || view === 'button') return;
+    setOpen(false);
+    if (view === 'none') setMessage(blockedBy === 'paid' ? 'order.cancel.refusedPaid' : 'order.cancel.refusedGone');
+  }, [open, view, blockedBy]);
+
+  // Stays mounted while the dialog is open, and while a refusal or failure is still being said: the refetch after
+  // a refusal usually hides the control, and this component is what carries the message.
+  if (view === 'none' && !message && !open) return null;
 
   const close = () => setOpen(false);
 
@@ -56,15 +64,15 @@ export function CancelOrder({ reference, canCancel, blockedBy, onCancelled, root
       setDone(true);
       setOpen(false);
       notifications.show({ message: t('order.cancel.done', { reference }) });
-      onCancelled?.();
+      onCancelled?.('cancelled');
     } catch (err) {
       if (err instanceof OrderNotCancellableError) {
         const refusal = REFUSAL[err.reason];
         setMessage(refusal);
-        // Also a notification: it survives the control unmounting (the pop-up closes itself after a refusal).
+        // Also a notification: it survives the control unmounting when the refetch that follows hides it.
         notifications.show({ message: t(refusal) });
         close();
-        onCancelled?.();
+        onCancelled?.('refused');
       } else {
         setMessage('order.cancel.failed');
       }
@@ -75,7 +83,7 @@ export function CancelOrder({ reference, canCancel, blockedBy, onCancelled, root
   };
 
   return (
-    <div className={classes.cancelBox} data-sf-part="cancel" {...rootAttrs}>
+    <div className={classes.cancelBox} data-sf-part="cancel">
       {view === 'contact' ? (
         <>
           <p className={classes.cancelText}>{t('order.cancel.contact')}</p>
@@ -93,7 +101,7 @@ export function CancelOrder({ reference, canCancel, blockedBy, onCancelled, root
         </button>
       ) : null}
       <Modal
-        opened={open}
+        opened={open && view === 'button'}
         onClose={() => { if (!working) close(); }}
         title={t('order.cancel.confirmTitle', { reference })}
         centered
