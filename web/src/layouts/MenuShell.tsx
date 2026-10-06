@@ -20,6 +20,9 @@ import classes from '@/layouts/MenuShell.module.css';
 
 const onCatalogPath = (pathname: string) => pathname === '/' || pathname.startsWith('/c/');
 
+/** The checkout is a form beside a docket, not a list: it takes the storefront's wide rail even here (MenuShell.module.css). */
+export const onCheckoutPath = (pathname: string) => pathname === '/checkout' || pathname.startsWith('/checkout/');
+
 /** TopBar slot + the one compact bar: the Header container's default arrangement (v0.7.0 markup). */
 export function MenuHeader({ topBar = true, search: withSearch = true, sticky = true, nav, styleAttrs }: ShellHeaderProps) {
   const slots = useMemo(() => legacyHeaderSlots('menu', withSearch, nav), [withSearch, nav]);
@@ -57,8 +60,9 @@ export function MenuContactStrip({ catalogOnly = true, styleAttrs }: { catalogOn
 export function MenuFrame({ children, cartBar = true }: { children: ReactNode; cartBar?: boolean }) {
   const { features } = useSettings();
   const barShowing = useMobileCartBar();
+  const { pathname } = useLocation();
   return (
-    <div className={barShowing ? `${classes.shell} ${classes.withBar}` : classes.shell}>
+    <div className={barShowing ? `${classes.shell} ${classes.withBar}` : classes.shell} data-sf-wide={onCheckoutPath(pathname) ? '' : undefined}>
       {children}
 
       {features.ordering ? (

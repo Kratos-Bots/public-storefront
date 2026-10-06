@@ -1,7 +1,7 @@
 title: Northbound Supply
 
     <div id="root">
-<div class="_shell_H">
+<div class="_shell_H" data-sf-wide="">
 <header class="_bar_H glass" data-sf-part="header">
 <div class="_barInner_H">
 <a class="_home_H" aria-label="Northbound Supply — home" href="/" data-discover="true">

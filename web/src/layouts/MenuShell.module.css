@@ -158,6 +158,12 @@
     --sf-bar-h: 60px;
     --sf-main-pad: 1rem;
   }
+  /* The checkout is a form beside a docket, and 48rem leaves the form about 375px. It takes the storefront's rail
+     (StorefrontShell.module.css) on the whole shell, so the bar, notices and footer line up with it. Only a frame
+     that sets `data-sf-wide` gets this: the web app's frame never does, and keeps its phone column. */
+  .shell[data-sf-wide] {
+    --sf-rail-max: 1200px;
+  }
   .barInner {
     height: 60px;
     gap: 1rem;

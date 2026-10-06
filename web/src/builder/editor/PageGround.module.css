@@ -40,6 +40,10 @@
     --sf-bar-h: 60px;
     --sf-main-pad: 1rem;
   }
+  /* The menu layout's checkout takes the storefront's rail (MenuShell.module.css `data-sf-wide`). */
+  .ground[data-layout='menu'][data-sf-wide] {
+    --sf-rail-max: 1200px;
+  }
 }
 
 /* The shell's <main> column (every shell's `.main`), for page docs. */
