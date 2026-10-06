@@ -25,7 +25,8 @@ import {
 } from '@/features/order-status/payment-state.ts';
 import type { PaymentMethod } from '@/types/checkout.ts';
 import type { PublicOrder } from '@/types/public-order.ts';
-import { useText } from '@/text/runtime.tsx';
+import { useText, type TextApi } from '@/text/runtime.tsx';
+import { comboPhrase } from '@/features/checkout/crypto-groups.ts';
 import classes from '@/features/order-status/OrderStatus.module.css';
 
 export interface MethodPickerProps {
@@ -217,7 +218,7 @@ export function MethodPicker({ order, reference }: MethodPickerProps) {
                     {busy
                       ? t('order.method.preparing')
                       : combo
-                        ? t('order.method.payWith', { coin: comboLabel(combos, combo) })
+                        ? t('order.method.payWith', { coin: comboLabel(t, combos, combo) })
                         : t('order.method.chooseCoin')}
                   </button>
                   <p className={classes.txidBlurb}>{t('order.method.coinBlurb')}</p>
@@ -248,9 +249,9 @@ export function MethodPicker({ order, reference }: MethodPickerProps) {
 }
 
 /** The chosen combo, named the way the picker rows name it. */
-function comboLabel(options: PaymentMethod['cryptoOptions'], combo: CryptoCombo): string {
+function comboLabel(t: TextApi['t'], options: PaymentMethod['cryptoOptions'], combo: CryptoCombo): string {
   const match = (options ?? []).find((o) => o.coin === combo.coin && o.network === combo.network);
-  return match ? `${match.coinLabel} · ${match.networkLabel}` : combo.coin.toUpperCase();
+  return match ? comboPhrase(t, match) : combo.coin.toUpperCase();
 }
 
 /**
