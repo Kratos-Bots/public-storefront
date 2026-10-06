@@ -37,7 +37,7 @@ export function PageGround({ docKey, layout, children }: { docKey: DocKey; layou
     );
   }
   return (
-    <div data-sf-builder-canvas="" className={styles.ground} data-layout={layout}>
+    <div data-sf-builder-canvas="" className={styles.ground} data-layout={layout} data-sf-wide={docKey === 'checkout' && layout === 'menu' ? '' : undefined}>
       {docKey === 'shell' ? children : <div className={styles.column} data-sf-builder-column="">{docKey === 'checkout' ? <CheckoutNote /> : null}{children}</div>}
     </div>
   );
