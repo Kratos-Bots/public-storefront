@@ -69,7 +69,7 @@ export async function fillCheckout(
 
   await expect(page.getByRole('heading', { name: 'Review your order' })).toBeVisible();
   await expect(page.getByText('ada@example.invalid')).toBeVisible();
-  await expect(page.getByText('USDT · Polygon')).toBeVisible();
+  await expect(page.getByText('USDT on Polygon')).toBeVisible();
 }
 
 /** Add the open product once and wait until the line is on the server and the button has settled. */

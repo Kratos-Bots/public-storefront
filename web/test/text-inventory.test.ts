@@ -20,6 +20,10 @@ const REWORDED_AFTER_V070: ReadonlyArray<{ file: string; text: string; now: stri
     now: 'State / Region',
     reason: 'checkout form fixes of 2026-10-04: the neutral fallback reads "State / Region"; country-specific wording comes from other keys',
   },
+  ...[['Coins', 'Stablecoins']].flat().map((text) => ({
+    file: 'features/checkout/CryptoComboPicker.tsx', text, now: 'reworded',
+    reason: 'crypto network grouping of 2026-10-06: the picker groups by network ("{network} network"), no longer by coin kind',
+  })),
   ...[
     ['features/order-status/CryptoPaymentCard.tsx', 'Awaiting payment', 'the card no longer carries a status pill while it waits for money'],
     ['features/order-status/CryptoPaymentCard.tsx', 'Payment required', 'the payment card above says "Payment needed"; the faces carry no eyebrow'],

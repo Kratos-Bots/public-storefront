@@ -165,7 +165,7 @@ async function walk(page: Page, w: Walk): Promise<void> {
   }
   await expect(page.getByRole('heading', { name: 'Review your order' })).toBeVisible();
   await expect(page.getByText('ada@example.invalid')).toBeVisible();
-  await expect(page.getByText('USDT · Polygon')).toBeVisible();
+  await expect(page.getByText('USDT on Polygon')).toBeVisible();
 }
 
 /** Where placing an order leaves a shopper: the account order page when signed in, the thank-you page for a guest. */

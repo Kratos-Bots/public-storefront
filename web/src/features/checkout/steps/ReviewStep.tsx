@@ -6,6 +6,7 @@ import type { CheckoutForm } from '@/features/checkout/form-state.ts';
 import { collectionAddress } from '@/features/checkout/collection-mode.ts';
 import { countryName } from '@/features/checkout/CountrySelect.tsx';
 import { displayPhoneNumber } from '@/lib/dial-codes.ts';
+import { comboPhrase } from '@/features/checkout/crypto-groups.ts';
 import { methodName } from '@/lib/method-name.ts';
 import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/checkout/steps/Steps.module.css';
@@ -90,7 +91,7 @@ export function ReviewStep({ form, quote, method, combo, order, onEdit, before, 
           {method ? methodName(method) : quote?.amountDue === 0 ? t('common.totals.storeCredit') : t('checkout.review.notChosen')}
           {combo ? (
             <span>
-              {combo.coinLabel} · {combo.networkLabel}
+              {comboPhrase(t, combo)}
             </span>
           ) : null}
         </>

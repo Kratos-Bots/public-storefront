@@ -121,11 +121,11 @@ test.describe('payment methods · checkout', () => {
     const mocks = await open(page, { path: '/checkout', cart: true, paymentMethods: FOUR_METHODS });
     await toPayment(page, mocks);
     await chooseMethod(page, 'Pay with crypto');
-    await expect(page.getByText('Stablecoins', { exact: true })).toBeVisible();
+    await expect(page.getByText('Polygon network', { exact: true })).toBeVisible();
     await chooseMethod(page, 'USDT');
     await page.getByRole('button', { name: 'Continue' }).click();
     // The shop's name for the method, then the combo, in the one line the Review step gives the payment.
-    await expect(page.getByText(/^Pay with crypto\s*USDT · Polygon$/)).toBeVisible();
+    await expect(page.getByText(/^Pay with crypto\s*USDT on Polygon$/)).toBeVisible();
     await placeOrder(page, mocks);
     expect(mocks.state.checkouts[0]).toMatchObject({ paymentMethod: 'crypto', coin: 'usdt', network: 'polygon' });
   });
