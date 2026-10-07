@@ -97,7 +97,9 @@ title: Alpine Extract 10ml — Northbound Supply
 <button type="button" class="_button_H _lg_H " data-sf-part="button" data-variant="filled">
 <span class="_label_H" aria-live="polite">Add · £42.50</span>
 </button>
-<p class="_description_H">A cold-pressed alpine extract, bottled in amber glass.</p>
+<div class="_prose_H _description_H" data-sf-prose="">
+<p>A cold-pressed alpine extract, bottled in amber glass.</p>
+</div>
 <section class="_section_H" aria-labelledby="bulk-heading">
 <h2 id="bulk-heading" class="_sectionHead_H">Buy more, pay less</h2>
 <table class="_table_H">
