@@ -2,9 +2,10 @@
    so the values line up, one plain link out, earlier reports folded under a disclosure.
    Everything comes from the template's tokens, so it takes each template's voice by itself. */
 .root {
-  /* Labels and secondary figures: the quiet ink, a step softer than the values. With a block text colour
-     set, that colour at 72% strength, so labels and values stay tellable apart. */
-  --coa-quiet: color-mix(in srgb, var(--sf-block-fg, var(--sf-muted)) 72%, transparent);
+  /* Labels and secondary figures: the muted ink. With a block text colour set, that colour at 72% strength
+     instead, so labels and values stay tellable apart. Unset, --coa-mix is invalid and the fallback applies. */
+  --coa-mix: color-mix(in srgb, var(--sf-block-fg) 72%, transparent);
+  --coa-quiet: var(--coa-mix, var(--sf-muted));
   display: grid;
   gap: 1rem;
   max-width: 34rem;
