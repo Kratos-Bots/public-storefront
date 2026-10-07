@@ -58,7 +58,7 @@ for (const surface of SURFACES) {
       const card = scope.locator('[data-sf-part="card"]');
       await expect(card).toHaveCount(1);
       await expect(card.getByRole('link', { name: /View report/ })).toBeVisible();
-      expect((await card.boundingBox())!.height).toBeLessThan(180);
+      expect((await card.boundingBox())!.height).toBeLessThan(140);
     });
 
     test('a sparse report (only a purity) is a deliberate card with no empty slots', async ({ page }) => {
