@@ -28,7 +28,6 @@ export default defineTextArea('product', {
   'provenance.heading': { en: 'Provenance', max: 40 },
   'coa.heading': { en: 'Certificate of analysis', max: 60 },
   'coa.lab': { en: 'Lab', max: 30 },
-  'coa.sample': { en: 'Sample', max: 30 },
   'coa.amount': { en: 'Amount', max: 30 },
   'coa.purity': { en: 'Purity', max: 30 },
   'coa.batch': { en: 'Batch', max: 30 },

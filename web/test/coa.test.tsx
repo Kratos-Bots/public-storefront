@@ -50,12 +50,15 @@ describe('Coa', () => {
     expect(container.firstElementChild).toHaveAttribute('data-sf-part', 'card');
     const facts = screen.getAllByRole('term').map((t) => t.textContent);
     // The lab is named on the button, not repeated as a fact.
-    expect(facts).toEqual(['Purity', 'Amount', 'Sample', 'Batch', 'Tested']);
-    expect(screen.getAllByRole('definition').map((d) => d.textContent)).toEqual(['99.957%', '10 mg', 'Example Peptide', 'B-100', '12 March 2026']);
+    expect(facts).toEqual(['Purity', 'Amount', 'Batch', 'Tested']);
+    expect(screen.getAllByRole('definition').map((d) => d.textContent)).toEqual(['99.957%', '10 mg', 'B-100', '12 March 2026']);
+    // The sample name is data only: it is drawn nowhere on the card.
+    expect(screen.queryByText('Example Peptide')).toBeNull();
+    expect(screen.queryByText('Sample')).toBeNull();
     // The headline figures are the two before the supporting facts.
     const [figures, supporting] = [...container.querySelectorAll('dl')];
     expect(figures!.querySelectorAll('dd')).toHaveLength(2);
-    expect(supporting!.querySelectorAll('dd')).toHaveLength(3);
+    expect(supporting!.querySelectorAll('dd')).toHaveLength(2);
     const link = screen.getByRole('link', { name: /View report from Example Labs/ });
     expect(link).toHaveTextContent('View report from Example Labs');
     expect(link).toHaveAttribute('href', 'https://example.com/report/1');
@@ -100,7 +103,7 @@ describe('Coa', () => {
   it('shows the facts without a link when the report has no address', () => {
     render(<Coa coas={[coa({ reportUrl: null, fileKey: null })]} />);
     // No button to name the lab on, so the lab stays a fact.
-    expect(screen.getAllByRole('term').map((t) => t.textContent)).toEqual(['Purity', 'Amount', 'Lab', 'Sample', 'Batch', 'Tested']);
+    expect(screen.getAllByRole('term').map((t) => t.textContent)).toEqual(['Purity', 'Amount', 'Lab', 'Batch', 'Tested']);
     expect(screen.getByText('Example Labs')).toBeTruthy();
     expect(screen.queryByRole('link')).toBeNull();
   });
@@ -167,12 +170,24 @@ describe('Coa', () => {
     expect(document.querySelector('details')).toBeNull();
   });
 
-  it('names an earlier report without date or lab by its sample, else a plain "Report"', () => {
-    render(<Coa coas={[coa(), coa({ id: 4, lab: null, testDate: null, sampleName: 'Sample Z', purity: null, mgAmount: null, batch: null }),
+  it('names an earlier report without date or lab a plain "Report", never by its sample', () => {
+    render(<Coa coas={[coa(), coa({ id: 4, lab: null, testDate: null, sampleName: 'Sample Z', purity: null, mgAmount: null, batch: null, reportUrl: 'https://example.com/r/4' }),
       coa({ id: 5, lab: null, testDate: null, sampleName: null, purity: null, mgAmount: null, batch: null, reportUrl: 'https://example.com/r/5' })]} />);
     const rows = screen.getAllByRole('listitem');
-    expect(rows[0]).toHaveTextContent('Sample Z');
+    expect(rows[0]).toHaveTextContent('Report');
+    expect(rows[0]).not.toHaveTextContent('Sample Z');
     expect(rows[1]).toHaveTextContent('Report');
+  });
+
+  it('a sample name alone draws nothing; with a link it is just the button', () => {
+    const only = { lab: null, mgAmount: null, purity: null, batch: null, testDate: null, reportUrl: null, fileKey: null, sampleName: 'Sample Z' };
+    const { container, unmount } = render(<Coa coas={[coa(only)]} />);
+    expect(container.innerHTML).toBe('');
+    unmount();
+    const again = render(<Coa coas={[coa({ ...only, reportUrl: 'https://example.com/r/1' })]} />);
+    expect(screen.queryByText('Sample Z')).toBeNull();
+    expect(again.container.querySelectorAll('dl')).toHaveLength(0);
+    expect(screen.getByRole('link', { name: /View report/ })).toBeTruthy();
   });
 
   it.each([[undefined], [null], [[]], [[coa({ lab: null, sampleName: null, mgAmount: null, purity: null, batch: null, testDate: null, reportUrl: null })]]])(

@@ -1,7 +1,7 @@
 import type { ProductCoa } from '@/types/catalog.ts';
 
 /** The labelled values a certificate can show, in the order a shopper reads them. */
-export type CoaRowKey = 'lab' | 'sample' | 'amount' | 'purity' | 'batch' | 'tested';
+export type CoaRowKey = 'lab' | 'amount' | 'purity' | 'batch' | 'tested';
 export interface CoaRow { key: CoaRowKey; value: string }
 
 const text = (v: string | null | undefined): string | null => {
@@ -41,7 +41,6 @@ export function coaHref(coa: ProductCoa): string | null {
 export function coaRows(coa: ProductCoa): CoaRow[] {
   const pairs: Array<[CoaRowKey, string | null]> = [
     ['lab', text(coa.lab)],
-    ['sample', text(coa.sampleName)],
     ['amount', formatMg(coa.mgAmount)],
     ['purity', formatPurity(coa.purity)],
     ['batch', text(coa.batch)],
@@ -50,7 +49,7 @@ export function coaRows(coa: ProductCoa): CoaRow[] {
   return pairs.flatMap(([key, value]) => (value === null ? [] : [{ key, value }]));
 }
 
-/** Something to show: at least one value or a link to the report. */
+/** Something to show: at least one value or a link to the report. The sample name is never drawn, so alone it is nothing. */
 export function hasDisplayableCoa(coa: ProductCoa): boolean {
   return coaRows(coa).length > 0 || coaHref(coa) !== null;
 }

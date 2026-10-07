@@ -26,7 +26,6 @@ export default {
   'provenance.heading': "Heading above a product's provenance note",
   'coa.heading': "Heading above a product's lab report (certificate of analysis)",
   'coa.lab': 'Label for the lab that tested the product, in the lab report block',
-  'coa.sample': 'Label for the name of the tested sample, in the lab report block',
   'coa.amount': 'Label for the tested amount in mg, in the lab report block',
   'coa.purity': 'Label for the purity percentage, in the lab report block',
   'coa.batch': 'Label for the batch number, in the lab report block',

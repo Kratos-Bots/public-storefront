@@ -50,6 +50,9 @@ for (const surface of SURFACES) {
       }
       // The lab is on the button, not a fact of its own.
       await expect(scope.getByText('Lab', { exact: true })).toHaveCount(0);
+      // The sample name is never shown.
+      await expect(scope.getByText('Example Extract')).toHaveCount(0);
+      await expect(scope.getByText('Sample', { exact: true })).toHaveCount(0);
       const link = scope.getByRole('link', { name: /View report from Example Labs/ });
       await expect(link).toHaveText(/View report from Example Labs/);
       await expect(link).toHaveAttribute('data-variant', 'filled');
@@ -64,11 +67,11 @@ for (const surface of SURFACES) {
       expect(lb.width).toBeGreaterThan(cb0.width - 48);
       expect(lb.y + lb.height).toBeGreaterThan(cb0.y + cb0.height - 24);
       await expect(scope.getByText(/Previous reports/)).toHaveCount(0);
-      // One card, and a compact one: the whole latest report fits well inside what six rows used to take.
+      // One card, and a compact one: the whole latest report (figures, one line of facts, the button) is under 170px.
       const card = scope.locator('[data-sf-part="card"]');
       await expect(card).toHaveCount(1);
       await expect(card.getByRole('link', { name: /View report/ })).toBeVisible();
-      expect((await card.boundingBox())!.height).toBeLessThan(200);
+      expect((await card.boundingBox())!.height).toBeLessThan(170);
     });
 
     test('a link but no lab: the button reads just "View report"', async ({ page }) => {

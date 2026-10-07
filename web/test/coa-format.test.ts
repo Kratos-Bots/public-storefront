@@ -80,8 +80,8 @@ describe('coaRows', () => {
     const rows = coaRows(coa({
       batch: 'B-12', testDate: '12 March 2026', purity: 99.5, mgAmount: 10, sampleName: 'Example Peptide', lab: 'Example Labs',
     }));
-    expect(rows.map((r) => r.key)).toEqual(['lab', 'sample', 'amount', 'purity', 'batch', 'tested']);
-    expect(rows.map((r) => r.value)).toEqual(['Example Labs', 'Example Peptide', '10 mg', '99.5%', 'B-12', '12 March 2026']);
+    expect(rows.map((r) => r.key)).toEqual(['lab', 'amount', 'purity', 'batch', 'tested']);
+    expect(rows.map((r) => r.value)).toEqual(['Example Labs', '10 mg', '99.5%', 'B-12', '12 March 2026']);
   });
   it('skips null and blank values', () => {
     const rows = coaRows(coa({ lab: '   ', sampleName: null, purity: 98, batch: '', testDate: ' 1 Jan 2026 ' }));
@@ -89,6 +89,9 @@ describe('coaRows', () => {
   });
   it('is empty when nothing is displayable', () => {
     expect(coaRows(coa())).toEqual([]);
+  });
+  it('never lists the sample name', () => {
+    expect(coaRows(coa({ sampleName: 'Example Peptide' }))).toEqual([]);
   });
 });
 
@@ -99,6 +102,11 @@ describe('hasDisplayableCoa', () => {
     expect(hasDisplayableCoa(coa({ lab: 'Example Labs' }))).toBe(true);
     expect(hasDisplayableCoa(coa({ fileKey: FILE_KEY }))).toBe(true);
     expect(hasDisplayableCoa(coa({ reportUrl: 'https://example.com/r' }))).toBe(true);
+  });
+  it('a sample name alone is not displayable; with a link it is', () => {
+    expect(hasDisplayableCoa(coa({ sampleName: 'Example Peptide' }))).toBe(false);
+    expect(hasDisplayableCoa(coa({ sampleName: 'Example Peptide', fileKey: FILE_KEY }))).toBe(true);
+    expect(displayableCoas([coa({ sampleName: 'Example Peptide' })])).toEqual([]);
   });
 });
 

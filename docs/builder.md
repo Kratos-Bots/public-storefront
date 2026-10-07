@@ -954,8 +954,8 @@ contact links or curated upsells). Defaults — *storefront*: `top` [Breadcrumbs
 [Title, Stock], Gallery], Price, Description, BulkPricing, Provenance, Ask] · `below` [Upsells].
 
 `ProductCoa` is deliberately **not** in those defaults. It draws the product's latest lab report (certificate
-of analysis, `Product.coas`) as one compact `data-sf-part="card"` (purity and amount as headline figures, the other facts as small
-stacked label-value pairs, then one full-width filled button, "View report from <lab>", or just "View report" when
+of analysis, `Product.coas`) as one compact `data-sf-part="card"` (purity and amount as centred headline figures, batch and test date as small label-value pairs
+on one centred line beneath them, no divider and no sample name, then one full-width filled button, "View report from <lab>", or just "View report" when
 no lab is named; a lab with no link stays a fact) with its earlier ones in a "Previous reports" disclosure
 at the card's foot, and nothing when the
 product has none. When the product document holds no `ProductCoa` anywhere in the container's slots, the
