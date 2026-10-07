@@ -45,11 +45,16 @@ beforeEach(() => { state.telegram = false; state.opened = []; });
 afterEach(cleanup);
 
 describe('Coa', () => {
-  it('draws the latest report as a list of facts with a link out', () => {
-    render(<Coa coas={[coa()]} />);
+  it('draws the latest report as one card: purity and amount first, then the supporting facts, and a link out', () => {
+    const { container } = render(<Coa coas={[coa()]} />);
+    expect(container.firstElementChild).toHaveAttribute('data-sf-part', 'card');
     const facts = screen.getAllByRole('term').map((t) => t.textContent);
-    expect(facts).toEqual(['Lab', 'Sample', 'Amount', 'Purity', 'Batch', 'Tested']);
-    expect(screen.getAllByRole('definition').map((d) => d.textContent)).toEqual(['Example Labs', 'Example Peptide', '10 mg', '99.957%', 'B-100', '12 March 2026']);
+    expect(facts).toEqual(['Purity', 'Amount', 'Lab', 'Sample', 'Batch', 'Tested']);
+    expect(screen.getAllByRole('definition').map((d) => d.textContent)).toEqual(['99.957%', '10 mg', 'Example Labs', 'Example Peptide', 'B-100', '12 March 2026']);
+    // The headline figures are the two before the supporting facts.
+    const [figures, supporting] = [...container.querySelectorAll('dl')];
+    expect(figures!.querySelectorAll('dd')).toHaveLength(2);
+    expect(supporting!.querySelectorAll('dd')).toHaveLength(4);
     const link = screen.getByRole('link', { name: /View report/ });
     expect(link).toHaveAttribute('href', 'https://example.com/report/1');
     expect(link).toHaveAttribute('target', '_blank');
@@ -90,6 +95,26 @@ describe('Coa', () => {
     render(<Coa coas={[coa({ reportUrl: null, fileKey: null })]} />);
     expect(screen.getAllByRole('term')).toHaveLength(6);
     expect(screen.queryByRole('link')).toBeNull();
+  });
+
+  it('a sparse report with only a purity is a card with one figure: no facts list, no link, nothing empty', () => {
+    const { container } = render(<Coa coas={[coa({ lab: null, sampleName: null, mgAmount: null, batch: null, testDate: null, reportUrl: null, purity: 99.4 })]} />);
+    expect(screen.getAllByRole('term').map((t) => t.textContent)).toEqual(['Purity']);
+    expect(container.querySelectorAll('dl')).toHaveLength(1);
+    expect(screen.queryByRole('link')).toBeNull();
+    expect([...container.querySelectorAll('dd')].every((d) => (d.textContent ?? '').trim() !== '')).toBe(true);
+  });
+
+  it('a sparse report with only a lab and a link has the link and one fact, and no figures list', () => {
+    const { container } = render(<Coa coas={[coa({ sampleName: null, mgAmount: null, purity: null, batch: null, testDate: null })]} />);
+    expect(screen.getAllByRole('term').map((t) => t.textContent)).toEqual(['Lab']);
+    expect(container.querySelectorAll('dl')).toHaveLength(1);
+    expect(screen.getByRole('link', { name: /View report/ })).toHaveAttribute('href', 'https://example.com/report/1');
+  });
+
+  it('puts purity before amount in the headline figures', () => {
+    render(<Coa coas={[coa({ lab: null, sampleName: null, batch: null, testDate: null })]} />);
+    expect(screen.getAllByRole('term').map((t) => t.textContent)).toEqual(['Purity', 'Amount']);
   });
 
   it('shows a link without facts when only the address is known', () => {

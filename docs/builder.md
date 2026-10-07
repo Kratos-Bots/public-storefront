@@ -954,7 +954,9 @@ contact links or curated upsells). Defaults — *storefront*: `top` [Breadcrumbs
 [Title, Stock], Gallery], Price, Description, BulkPricing, Provenance, Ask] · `below` [Upsells].
 
 `ProductCoa` is deliberately **not** in those defaults. It draws the product's latest lab report (certificate
-of analysis, `Product.coas`) and its earlier ones under a "Previous reports" disclosure, and nothing when the
+of analysis, `Product.coas`) as one compact `data-sf-part="card"` (purity and amount as headline figures beside the
+"View report" link, the other facts as small label-value pairs) with its earlier ones in a "Previous reports" disclosure
+at the card's foot, and nothing when the
 product has none. When the product document holds no `ProductCoa` anywhere in the container's slots, the
 container draws the same view itself: on the page, last inside the `main` column; in the sheet, between
 `main` and `below` (so before the upsells). When the owner has placed the part, only that one draws. A placed part counts even when it is hidden (its block style hides it on mobile or desktop), so hiding the part is how an owner turns the report off on those screens without the automatic one coming back. The
