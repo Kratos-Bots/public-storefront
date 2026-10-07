@@ -10,6 +10,7 @@ import { PromoBadge } from '@/features/catalog/PromoBadge.tsx';
 import { AddToCart } from '@/features/catalog/AddToCart.tsx';
 import { BulkPricing } from '@/features/catalog/BulkPricing.tsx';
 import { Provenance } from '@/features/catalog/Provenance.tsx';
+import { Description } from '@/features/catalog/Description.tsx';
 import { Coa } from '@/features/catalog/Coa.tsx';
 import { displayableCoas } from '@/features/catalog/coa-format.ts';
 import { Upsells } from '@/features/catalog/Upsells.tsx';
@@ -225,9 +226,9 @@ function SheetStock({ styleAttrs }: PartViewProps) {
 function SheetDescription({ styleAttrs }: PartViewProps) {
   const { product } = ProductFamily.useData();
   const { t } = useText();
-  return product.description ? (
+  return product.description?.trim() ? (
     <Block label={t('product.sheet.description')} attrs={styleAttrs}>
-      <p className={classes.description}>{product.description}</p>
+      <Description markdown={product.description} className={classes.description} />
     </Block>
   ) : null;
 }
