@@ -14,17 +14,21 @@ const RULES: Rule[] = [
   [/^\/media\/coas\/(\d+)\/([a-f0-9]{32})$/, (m) => `api/v1/public/catalog/coas/${m[1]}/${m[2]}/file`, { private: true }],
 ];
 
+const COA_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/png', 'image/webp']);
+
 function ruleFor(pathname: string): Rule | undefined {
   return RULES.find(([re]) => re.test(pathname));
 }
 
 export function mediaTarget(pathname: string, search: string, backendUrl: string): URL | null {
   if (pathname.includes('..')) return null;
-  for (const [re, build] of RULES) {
+  for (const rule of RULES) {
+    const [re, build] = rule;
     const m = pathname.match(re);
     if (m) {
       const base = backendUrl.endsWith('/') ? backendUrl : backendUrl + '/';
-      return new URL(base + build(m) + search);
+      // A private (credentialed) file is addressed by its path alone: no query string goes upstream.
+      return new URL(base + build(m) + (rule[2]?.private ? '' : search));
     }
   }
   return null;
@@ -95,12 +99,20 @@ async function proxyPrivate(request: Request, target: URL): Promise<Response> {
     await upstream.body?.cancel();
     return new Response(null, { status: upstream.status === 404 ? 404 : 502 });
   }
+  // Only what a lab report can be: anything else is not served from the shop's origin.
+  const mediaType = (upstream.headers.get('content-type') ?? '').split(';')[0]!.trim().toLowerCase();
+  if (!COA_TYPES.has(mediaType)) {
+    await upstream.body?.cancel();
+    return new Response(null, { status: 502 });
+  }
   const headers = new Headers();
-  headers.set('content-type', upstream.headers.get('content-type') ?? 'application/octet-stream');
+  headers.set('content-type', upstream.headers.get('content-type')!);
   const disposition = upstream.headers.get('content-disposition');
   if (disposition) headers.set('content-disposition', disposition);
   headers.set('cache-control', upstream.headers.get('cache-control') ?? 'private, max-age=300');
   headers.set('x-content-type-options', 'nosniff');
+  // An inline PDF or image must never run script with this origin's privileges.
+  headers.set('content-security-policy', 'sandbox');
   if (request.method === 'HEAD') {
     await upstream.body?.cancel();
     return new Response(null, { status: 200, headers });

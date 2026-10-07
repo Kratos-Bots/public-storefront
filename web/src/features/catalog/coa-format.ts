@@ -31,8 +31,10 @@ export function formatMg(n: number | null | undefined): string | null {
 export function coaHref(coa: ProductCoa): string | null {
   const url = text(coa.reportUrl);
   if (url && /^https?:\/\//i.test(url)) return url;
+  // The Worker's route takes exactly a positive integer id and a 32-hex key; build nothing it would not accept
+  // (the key is the credential, so a path-ish or odd value is never spliced into a URL).
   const key = text(coa.fileKey);
-  return key ? `/media/coas/${coa.id}/${key}` : null;
+  return key && Number.isInteger(coa.id) && coa.id > 0 && /^[a-f0-9]{32}$/.test(key) ? `/media/coas/${coa.id}/${key}` : null;
 }
 
 /** The values the certificate has, as label key + display value; empty when it has none. */
@@ -53,8 +55,16 @@ export function hasDisplayableCoa(coa: ProductCoa): boolean {
   return coaRows(coa).length > 0 || coaHref(coa) !== null;
 }
 
-/** The entries worth drawing, newest first as the backend sent them. Tolerates an absent or malformed list (older backend). */
+/**
+ * The entries worth drawing, newest first as the backend sent them. Tolerates an absent or malformed list (older backend).
+ * An entry needs an integer id (it is the React key) and the first of any repeated id wins.
+ */
 export function displayableCoas(coas: readonly ProductCoa[] | null | undefined): ProductCoa[] {
   if (!Array.isArray(coas)) return [];
-  return coas.filter((c) => typeof c === 'object' && c !== null && hasDisplayableCoa(c));
+  const seen = new Set<number>();
+  return coas.filter((c) => {
+    if (typeof c !== 'object' || c === null || !Number.isInteger(c.id) || seen.has(c.id) || !hasDisplayableCoa(c)) return false;
+    seen.add(c.id);
+    return true;
+  });
 }

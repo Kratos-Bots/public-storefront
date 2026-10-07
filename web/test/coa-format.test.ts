@@ -7,6 +7,29 @@ const coa = (over: Partial<ProductCoa> = {}): ProductCoa => ({
   id: 7, lab: null, sampleName: null, mgAmount: null, purity: null, batch: null, testDate: null, reportUrl: null, fileKey: null, ...over,
 });
 
+describe('coaHref · file links', () => {
+  it.each([
+    ['../../account'], ['abc?x=1'], [`${FILE_KEY.slice(0, 31)}#`], [`${FILE_KEY.slice(0, 16)} ${FILE_KEY.slice(17)}`], [FILE_KEY.toUpperCase()], [`${FILE_KEY}0`], [FILE_KEY.slice(1)],
+  ])('builds no link for the file key %j', (fileKey) => {
+    expect(coaHref(coa({ fileKey }))).toBeNull();
+  });
+  it.each([[0], [-3], [1.5], [Number.NaN], [undefined], [null], ['7']])('builds no file link for the id %j', (id) => {
+    expect(coaHref(coa({ id: id as unknown as number, fileKey: FILE_KEY }))).toBeNull();
+  });
+  it('still prefers a lab page when the file key is unusable', () => {
+    expect(coaHref(coa({ reportUrl: 'https://example.com/r', fileKey: '../x' }))).toBe('https://example.com/r');
+  });
+});
+
+describe('displayableCoas · ids', () => {
+  it('drops entries without an integer id and keeps the first of a repeated id', () => {
+    const a = coa({ id: 1, lab: 'First' });
+    const out = displayableCoas([a, coa({ id: 1, lab: 'Dup' }), coa({ id: undefined as unknown as number, lab: 'NoId' }), coa({ id: 2.5, lab: 'Frac' }), coa({ id: 3, lab: 'Third' })]);
+    expect(out.map((c) => c.lab)).toEqual(['First', 'Third']);
+    expect(out[0]).toBe(a);
+  });
+});
+
 describe('coaHref', () => {
   it('prefers the lab page', () => {
     expect(coaHref(coa({ reportUrl: 'https://example.com/report/1', fileKey: FILE_KEY }))).toBe('https://example.com/report/1');

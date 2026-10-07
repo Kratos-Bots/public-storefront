@@ -207,9 +207,11 @@ export function ProductDetailPage({ sections, slots }: { sections?: Partial<Prod
         <div className={mediaShows ? classes.layout : `${classes.layout} ${classes.layoutNoImage}`}>
           {mediaShows ? s.media({ className: classes.media }) : null}
           {autoCoa ? (
-            // The same element `s.main({ className })` draws, with the report after what the owner arranged.
+            // The owner's parts keep the exact element `s.main({ className })` draws (in the editor that is the
+            // DropZone itself, so they stay its direct children), and the report follows in an outer column with
+            // the same gap. Only a product that has a report gets this wrapper.
             <div className={classes.detail}>
-              {s.main()}
+              {s.main({ className: classes.detail })}
               <PageCoa props={{}} />
             </div>
           ) : (

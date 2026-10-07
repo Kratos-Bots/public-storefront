@@ -62,6 +62,10 @@ describe('mediaTarget · COA files', () => {
     expect(mediaTarget(`/media/coas/17/${key}`, '', 'https://b.test/')?.toString())
       .toBe(`https://b.test/api/v1/public/catalog/coas/17/${key}/file`);
   });
+  it('never forwards a query string upstream', () => {
+    expect(mediaTarget(`/media/coas/17/${key}`, '?token=x&download=1', 'https://b.test/')?.toString())
+      .toBe(`https://b.test/api/v1/public/catalog/coas/17/${key}/file`);
+  });
   it('rejects malformed ids and keys', () => {
     for (const bad of [`/media/coas/x/${key}`, `/media/coas/17/${key.toUpperCase()}`, `/media/coas/17/${key.slice(1)}`, `/media/coas/17/${key}0`,
       `/media/coas/17/${key}/file`, '/media/coas/17', `/media/coas/17/${'g'.repeat(32)}`, `/media/coas/../${key}`]) {
@@ -98,6 +102,31 @@ describe('fetch /media/coas/*', () => {
     expect(second.status).toBe(200);
     expect(fetchSpy).toHaveBeenCalledTimes(2);
     expect(await caches.default.match(new Request(`https://backend.test/api/v1/public/catalog/coas/31/${key}/file`))).toBeUndefined();
+  });
+
+  it('sandboxes the response and drops the query string', async () => {
+    const fetchSpy = stubFetch(() => pdf());
+    const res = await worker.fetch(new Request(`https://shop.test/media/coas/31/${key}?x=1`), env, createExecutionContext());
+    expect(res.headers.get('content-security-policy')).toBe('sandbox');
+    expect(String(fetchSpy.mock.calls[0]![0])).toBe(`https://backend.test/api/v1/public/catalog/coas/31/${key}/file`);
+    await res.body?.cancel();
+  });
+
+  it.each([['application/pdf'], ['application/pdf; charset=binary'], ['IMAGE/JPEG'], ['image/png'], ['image/webp']])('serves %s', async (type) => {
+    stubFetch(() => new Response('x', { status: 200, headers: { 'content-type': type } }));
+    const res = await worker.fetch(new Request(`https://shop.test/media/coas/31/${key}`), env, createExecutionContext());
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toBe(type);
+    await res.body?.cancel();
+  });
+
+  it.each([['text/html'], ['text/html; charset=utf-8'], ['image/svg+xml'], ['application/octet-stream'], ['image/gif'], [null]])('answers 502 for upstream type %s and cancels the body', async (type) => {
+    let cancelled = false;
+    const body = new ReadableStream({ cancel() { cancelled = true; } });
+    stubFetch(() => new Response(body, { status: 200, headers: type ? { 'content-type': type } : {} }));
+    const res = await worker.fetch(new Request(`https://shop.test/media/coas/31/${key}`), env, createExecutionContext());
+    expect(res.status).toBe(502);
+    expect(cancelled).toBe(true);
   });
 
   it('answers HEAD from a GET with an empty body', async () => {

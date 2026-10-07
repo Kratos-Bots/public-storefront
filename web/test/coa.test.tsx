@@ -29,6 +29,10 @@ import { group, part } from '@/builder/parts.ts';
 import type { ComponentData, LayoutKind, PuckDoc } from '@/builder/types.ts';
 import { PageSetContext } from '@/builder/page-set-context.ts';
 import { EMPTY_ROOT } from '@/builder/types.ts';
+import { defaultDoc } from '@/builder/defaults/index.ts';
+import { blockDef } from '@/builder/rules.ts';
+import { EditorBlock } from '@/builder/editor/EditorBlock.tsx';
+import detailClasses from '@/features/catalog/ProductDetailPage.module.css';
 
 const KEY = '0123456789abcdef'.repeat(2);
 const coa = (over: Partial<ProductCoa> = {}): ProductCoa => ({
@@ -116,6 +120,17 @@ describe('Coa', () => {
     },
   );
 
+  it.each([['a string'], [['x', null, 7, coa()]], [{ 0: coa() }], [42]])('tolerates a malformed list: %j', (coas) => {
+    const { container } = render(<Coa coas={coas as unknown as ProductCoa[]} />);
+    if (Array.isArray(coas)) expect(screen.getByText('Example Labs')).toBeTruthy();
+    else expect(container.innerHTML).toBe('');
+  });
+
+  it('tolerates a list of only nulls and strings', () => {
+    const { container } = render(<Coa coas={[null, 'x', undefined] as unknown as ProductCoa[]} />);
+    expect(container.innerHTML).toBe('');
+  });
+
   it('opens links through Telegram with an absolute address', () => {
     state.telegram = true;
     render(<Coa coas={[coa({ reportUrl: null, fileKey: KEY })]} />);
@@ -193,6 +208,28 @@ describe('ProductDetail page placement', () => {
     expect(coaSections(container)).toHaveLength(1);
   });
 
+  it('a placed but hidden part still suppresses the automatic one', async () => {
+    setup(withCoas([coa()]));
+    const hidden = { ...p('ProductCoa'), props: { ...p('ProductCoa').props, blockStyle: { hide: 'mobile' } } };
+    const { container } = renderPage(slotDoc({ main: [p('ProductTitle', 'pd'), p('ProductAddToCart', 'pd'), hidden] }));
+    await screen.findByRole('heading', { level: 1 });
+    expect(coaSections(container)).toHaveLength(1);
+    expect(coaSections(container)[0]!.closest('section')).toHaveAttribute('data-sfs-hide', 'mobile');
+  });
+
+  it('keeps the parts the owner arranged as direct children of the .detail column, and the report after it', async () => {
+    setup(withCoas([coa()]));
+    const { container } = renderPage(slotDoc({ main: main('pd', false) }));
+    await screen.findByRole('heading', { level: 1 });
+    const outer = coaSections(container)[0]!.closest('section')!.parentElement!;
+    const inner = outer.firstElementChild!;
+    expect(outer.className).toBe(detailClasses.detail);
+    expect(inner.className).toBe(detailClasses.detail);
+    expect(inner.querySelector('h1')!.closest('.' + detailClasses.detail)).toBe(inner);
+    expect(inner.children.length).toBeGreaterThan(2);
+    expect(inner.nextElementSibling).toBe(coaSections(container)[0]!.closest('section'));
+  });
+
   it('a placed part in another slot also stops the automatic one', async () => {
     setup(withCoas([coa()]));
     const { container } = renderPage(slotDoc({ main: main('pd', false), below: [p('ProductCoa')] }));
@@ -229,13 +266,11 @@ describe('ProductDetail page placement', () => {
     expect(container.querySelector('[class*="Coa"]')).toBeNull();
   });
 
-  it('the default document gets the automatic report too', async () => {
+  it('the real default product document gets the automatic report too', async () => {
     setup(withCoas([coa(), OLDER]));
-    const { container } = render(
-      <QueryClientProvider client={new QueryClient()}><MantineProvider env="test"><MemoryRouter initialEntries={['/p/1']}><Routes>
-        <Route path="/p/:id" element={<Suspense fallback={null}><RenderDoc doc={slotDoc({ main: main('pd', false) })} docKey="product" layout="storefront" /></Suspense>} />
-      </Routes></MemoryRouter></MantineProvider></QueryClientProvider>,
-    );
+    const doc = defaultDoc('product', 'storefront')!;
+    expect(JSON.stringify(doc)).not.toContain('ProductCoa');
+    const { container } = renderPage(doc);
     await screen.findByRole('heading', { level: 1 });
     expect(coaSections(container)).toHaveLength(1);
     expect(screen.getByText('Previous reports (1)')).toBeTruthy();
@@ -282,3 +317,47 @@ describe('ProductDetail sheet placement', () => {
     expect(sheetCoas()).toHaveLength(0);
   });
 });
+
+/* ------------------------------------------------------------------ editor canvas */
+
+describe('ProductDetail in the editor canvas', () => {
+  // Puck's slot function: with a className the DropZone element itself carries it, without one it has none.
+  const dropZone = (name: string) => ({ className }: { className?: string } = {}) => <div data-dz={name} className={className} />;
+  const renderEditor = () => render(
+    <QueryClientProvider client={new QueryClient()}><MantineProvider env="test"><MemoryRouter initialEntries={['/p/1']}><Routes>
+      <Route path="/p/:id" element={<Suspense fallback={null}>
+        <EditorBlock def={blockDef('ProductDetail')!} docKey="product" layout="storefront"
+          props={{ id: 'pd', sku: 'inherit', top: dropZone('top'), media: dropZone('media'), main: dropZone('main'), below: dropZone('below') }} />
+      </Suspense>} />
+    </Routes></MemoryRouter></MantineProvider></QueryClientProvider>,
+  );
+
+  it('keeps the main DropZone as the .detail layout when a report is placed automatically', async () => {
+    setup(withCoas([coa()]));
+    const { container } = renderEditor();
+    const zone = await waitForZone(container);
+    expect(zone.className).toBe(detailClasses.detail);
+    const section = coaSections(container)[0]!.closest('section')!;
+    expect(zone.nextElementSibling).toBe(section);
+    expect(section.parentElement!.className).toBe(detailClasses.detail);
+    expect(section.parentElement).toBe(zone.parentElement);
+  });
+
+  it('draws the DropZone with the same class and no wrapper for a product without a report', async () => {
+    setup(withCoas(undefined));
+    const { container } = renderEditor();
+    const zone = await waitForZone(container);
+    expect(zone.className).toBe(detailClasses.detail);
+    expect(coaSections(container)).toHaveLength(0);
+    expect(zone.parentElement!.className).not.toBe(detailClasses.detail);
+  });
+});
+
+async function waitForZone(container: HTMLElement): Promise<HTMLElement> {
+  await screen.findByRole('heading', { level: 2 }).catch(() => null);
+  return await vi.waitFor(() => {
+    const zone = container.querySelector<HTMLElement>('[data-dz="main"]');
+    if (!zone) throw new Error('main zone not drawn yet');
+    return zone;
+  });
+}

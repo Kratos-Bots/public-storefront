@@ -957,7 +957,7 @@ contact links or curated upsells). Defaults — *storefront*: `top` [Breadcrumbs
 of analysis, `Product.coas`) and its earlier ones under a "Previous reports" disclosure, and nothing when the
 product has none. When the product document holds no `ProductCoa` anywhere in the container's slots, the
 container draws the same view itself: on the page, last inside the `main` column; in the sheet, between
-`main` and `below` (so before the upsells). When the owner has placed the part, only that one draws. The
+`main` and `below` (so before the upsells). When the owner has placed the part, only that one draws. A placed part counts even when it is hidden (its block style hides it on mobile or desktop), so hiding the part is how an owner turns the report off on those screens without the automatic one coming back. The
 editor canvas follows the same rule. A product without a displayable report adds no markup at all,
 so the goldens and DOM baselines are untouched. The report link is the lab's own page, else the uploaded file
 at `/media/coas/<id>/<key>`; inside Telegram it opens through `openExternalLink`. Its labels and values read
