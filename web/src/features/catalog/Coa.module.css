@@ -58,6 +58,7 @@
 }
 
 .cta {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -161,6 +162,7 @@
 
 /* A quiet link, but its box is still a full-size tap target. */
 .textLink {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;

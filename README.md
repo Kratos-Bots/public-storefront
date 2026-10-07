@@ -125,7 +125,8 @@ The build emits `web/dist/blocks.json`, the list of blocks this release can rend
   bypasses the cache.
 - **`/media/*`** — a second, narrower proxy for public images (product photos, storefront/settings
   branding, page-builder uploads under `/media/storefront-pages/media/<key>`) with a 1-day edge
-  cache and `Set-Cookie` stripped.
+  cache and `Set-Cookie` stripped. Product lab-report files (`/media/coas/<id>/<32 hex>`) are the one
+  exception: passed straight through with the backend's `private, max-age=300`, never edge-cached.
 - Everything else falls through to `env.ASSETS.fetch(request)` — the SPA's static build, served
   with single-page-application fallback.
 

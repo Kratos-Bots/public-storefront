@@ -4,7 +4,6 @@ import { categoryPath } from '@/features/catalog/CategoryNav.tsx';
 import { ancestorChain } from '@/features/catalog/category-tree.ts';
 import { ProductFamily, type ProductData, type ProductSlots } from '@/builder/families.ts';
 import { containsType, type PartViewProps } from '@/builder/parts.ts';
-import { useBuilderMode } from '@/builder/mode.ts';
 import { displayableCoas } from '@/features/catalog/coa-format.ts';
 import type { SlotRender } from '@/builder/define.ts';
 import type { Category, Product } from '@/types/catalog.ts';
@@ -23,13 +22,11 @@ export function productData(product: Product, categories: Category[], onSelect?:
 
 /**
  * Should the container draw the COA itself? Only when the product has something to show and the owner's
- * document has no ProductCoa part anywhere in its slots: a placed part is the only one that draws. Never in
- * the editor, whose canvas draws its own parts. With nothing to show the container adds nothing at all, so
- * the markup is exactly what it was before COAs existed.
+ * document has no ProductCoa part anywhere in its slots: a placed part is the only one that draws.
+ * With nothing to show the container adds nothing at all, so the markup is exactly what it was before COAs existed.
  */
 export function useAutoCoa(product: Product | undefined, slots: ProductSlots): boolean {
-  const { editing } = useBuilderMode();
-  if (editing || !product || displayableCoas(product.coas).length === 0) return false;
+  if (!product || displayableCoas(product.coas).length === 0) return false;
   return !Object.values(slots).some((slot) => containsType(slot.items, 'ProductCoa'));
 }
 

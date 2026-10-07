@@ -942,6 +942,7 @@ then. On the sheet the four slots render bare, in order, after the sheet's loadi
 | `ProductDescription` | `<p class="description">` | `<section class="block">` | all |
 | `ProductBulkPricing` | `<section aria-labelledby="bulk-heading">` | `<section class="block">` | all |
 | `ProductProvenance` | `<section aria-labelledby="provenance-heading">` | `<section class="block">` | all |
+| `ProductCoa` ("Lab report") | `<section aria-labelledby="coa-heading">` | `<section class="block">` | all |
 | `ProductAsk` | `<section class="ask">` + contact links | `<section class="block">` | all |
 | `ProductUpsells` | `Upsells` (cards) | `Upsells onSelect` (rows, swap in place) | all |
 | `ProductGroup` | `kind` `priceRow` ("Side by side"), `identity` ("Text beside thumbnail"), `identityText` ("Text column"); one slot `items` | same classes | all |
@@ -951,6 +952,16 @@ contact links or curated upsells). Defaults — *storefront*: `top` [Breadcrumbs
 · `main` [Title, Group(priceRow)[Price, Stock], AddToCart, Description, BulkPricing, Provenance, Ask]
 · `below` [Upsells]. *menu, webapp*: `top` [] · `media` [] · `main` [Group(identity)[Group(identityText)
 [Title, Stock], Gallery], Price, Description, BulkPricing, Provenance, Ask] · `below` [Upsells].
+
+`ProductCoa` is deliberately **not** in those defaults. It draws the product's latest lab report (certificate
+of analysis, `Product.coas`) and its earlier ones under a "Previous reports" disclosure, and nothing when the
+product has none. When the product document holds no `ProductCoa` anywhere in the container's slots, the
+container draws the same view itself: on the page, last inside the `main` column; in the sheet, between
+`main` and `below` (so before the upsells). When the owner has placed the part, only that one draws. The
+editor canvas follows the same rule. A product without a displayable report adds no markup at all,
+so the goldens and DOM baselines are untouched. The report link is the lab's own page, else the uploaded file
+at `/media/coas/<id>/<key>`; inside Telegram it opens through `openExternalLink`. Its labels and values read
+`--sf-block-fg` and `--sf-text-scale` (`Coa.module.css`); the links keep the template's colours.
 
 ### Catalogue grid and list (`family: 'catalogue'`)
 
@@ -1199,7 +1210,9 @@ built-in catalogue intro when it adds a custom `CatalogHero`.
 
 Owners upload images in the editor (admin → backend). The stored form is
 `/media/storefront-pages/media/<32 hex>.<png|jpg|webp|gif>`; the Worker's `/media/*` proxy maps it
-to `api/v1/storefront-pages/media/<key>` with a one-day edge cache. `storefront/pages/:layout` is
+to `api/v1/storefront-pages/media/<key>` with a one-day edge cache. Product lab-report files are the
+exception: `/media/coas/<id>/<32 hex>` maps to `api/v1/public/catalog/coas/<id>/<key>/file`, is credentialed
+by the key, and is never stored at the edge (the backend's `private, max-age=300` is passed through). `storefront/pages/:layout` is
 proxied under the `/api` allowlist and edge-cached for 30 s (unauthenticated GETs only). Uploaded
 images are **never garbage-collected**: removing an `Image` block leaves the file in storage.
 

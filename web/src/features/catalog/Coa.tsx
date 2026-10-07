@@ -34,7 +34,7 @@ function ReportLink({ href, className, name, children, button }: {
     >
       <span aria-hidden={name ? true : undefined}>{children}</span>
       <ArrowUpRightIcon size={14} />
-      <span className={classes.hint}>{name ? `${t('product.coa.viewNamed', { name })}. ` : '. '}{t('product.coa.newTab')}</span>
+      <span className={classes.hint}>{name ? `${t('product.coa.viewNamed', { name })}. ` : ' '}{t('product.coa.newTab')}</span>
     </a>
   );
 }

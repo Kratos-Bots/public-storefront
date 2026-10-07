@@ -728,6 +728,11 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
       await route.fulfill({ status: 404, contentType: 'text/plain', body: 'not found' });
       return;
     }
+    // A product's lab report file (the Worker's private, key-credentialed route).
+    if (path.startsWith('/media/coas/')) {
+      await route.fulfill({ status: 200, contentType: 'application/pdf', headers: { 'cache-control': 'private, max-age=300' }, body: '%PDF-1.4 e2e' });
+      return;
+    }
     await route.fulfill({ status: 200, contentType: 'image/png', body: PIXEL_PNG });
   });
 
