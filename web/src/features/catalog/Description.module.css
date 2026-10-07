@@ -1,0 +1,141 @@
+/* Formatted product description. The call site's own class sets the measure, size and colour (so the prose
+   inherits today's body copy); everything here is structure, spacing and the few marks Markdown adds.
+   Only --sf-* tokens, so every template and colour mode restyles it without a rule knowing about it. */
+.prose {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.prose > :first-child { margin-top: 0; }
+.prose > :last-child { margin-bottom: 0; }
+
+.prose p,
+.prose ul,
+.prose ol,
+.prose blockquote,
+.prose pre {
+  margin: 0 0 0.85em;
+}
+
+.prose strong,
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6,
+.prose th {
+  color: var(--sf-block-fg, var(--sf-text));
+}
+
+.prose strong { font-weight: 600; }
+
+/* Section headings, not page titles: the product name above is the only large type. */
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6 {
+  margin: 1.5em 0 0.5em;
+  font-family: var(--sf-font-heading, inherit);
+  font-weight: 600;
+  line-height: 1.3;
+  text-wrap: balance;
+}
+
+.prose h1,
+.prose h2 { font-size: calc(1.0625rem * var(--sf-text-scale, 1)); }
+.prose h3 { font-size: calc(1rem * var(--sf-text-scale, 1)); }
+.prose h4,
+.prose h5,
+.prose h6 { font-size: calc(0.9375rem * var(--sf-text-scale, 1)); }
+
+.prose a {
+  color: var(--sf-primary);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  text-decoration-thickness: 1px;
+}
+
+.prose ul,
+.prose ol { padding-left: 1.4em; }
+.prose li { margin: 0.2em 0; padding-left: 0.2em; }
+.prose li::marker { color: var(--sf-muted); font-variant-numeric: tabular-nums; }
+.prose li > ul,
+.prose li > ol { margin: 0.2em 0 0; }
+
+.prose blockquote {
+  padding: 0.1em 0 0.1em 1rem;
+  border-left: 2px solid var(--sf-line-strong, var(--sf-line));
+}
+
+.prose code {
+  padding: 0.1em 0.35em;
+  border: 1px solid var(--sf-line);
+  border-radius: 0.3em;
+  background: var(--sf-surface);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.88em;
+}
+
+.prose pre {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--sf-line);
+  border-radius: var(--sf-card-radius);
+  background: var(--sf-surface);
+  overflow-x: auto;
+  line-height: 1.55;
+}
+
+.prose pre code {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 0.85em;
+}
+
+.prose hr {
+  margin: 1.5em 0;
+  border: 0;
+  border-top: 1px solid var(--sf-line);
+}
+
+/* Each table sits in a bare div (added after sanitising) and scrolls sideways inside it when it is wider than
+   the column. The table takes its natural width; a long cell wraps at a readable measure, not word by word. */
+.prose div {
+  max-width: 100%;
+  margin: 0 0 0.85em;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.prose table {
+  width: max-content;
+  margin: 0;
+  border-collapse: collapse;
+  font-size: 0.93em;
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+}
+
+.prose th,
+.prose td {
+  padding: 0.5rem 1rem 0.5rem 0;
+  border-bottom: 1px solid var(--sf-line);
+  text-align: left;
+  vertical-align: top;
+  max-width: 16rem;
+  overflow-wrap: normal;
+}
+
+.prose th:last-child,
+.prose td:last-child { padding-right: 0.25rem; }
+
+.prose th {
+  border-bottom-color: var(--sf-line-strong, var(--sf-line));
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.prose tbody tr:last-child td { border-bottom: 0; }

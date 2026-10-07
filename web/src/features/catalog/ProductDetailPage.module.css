@@ -148,7 +148,6 @@ a.crumb:hover {
   font-size: calc(0.9375rem * var(--sf-text-scale, 1));
   line-height: 1.7;
   color: var(--sf-block-fg, var(--sf-muted));
-  white-space: pre-line;
 }
 
 .section,

@@ -9,6 +9,7 @@ import { PromoBadge } from '@/features/catalog/PromoBadge.tsx';
 import { AddToCart } from '@/features/catalog/AddToCart.tsx';
 import { BulkPricing } from '@/features/catalog/BulkPricing.tsx';
 import { Provenance } from '@/features/catalog/Provenance.tsx';
+import { Description } from '@/features/catalog/Description.tsx';
 import { Coa } from '@/features/catalog/Coa.tsx';
 import { displayableCoas } from '@/features/catalog/coa-format.ts';
 import { Upsells } from '@/features/catalog/Upsells.tsx';
@@ -81,7 +82,7 @@ function PageAddToCart({ styleAttrs }: PartViewProps) {
 
 function PageDescription({ styleAttrs }: PartViewProps) {
   const { product } = ProductFamily.useData();
-  return product.description ? <p className={classes.description} {...styleAttrs}>{product.description}</p> : null;
+  return <Description markdown={product.description} className={classes.description} styleAttrs={styleAttrs} />;
 }
 
 function PageBulkPricing({ styleAttrs }: PartViewProps) {

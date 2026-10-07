@@ -344,7 +344,9 @@ title: Alpine Extract 10ml — Northbound Supply
 </div>
 <section class="_block_H">
 <h3 class="_blockHead_H">Description</h3>
-<p class="_description_H">A cold-pressed alpine extract, bottled in amber glass.</p>
+<div class="_prose_H _description_H" data-sf-prose="">
+<p>A cold-pressed alpine extract, bottled in amber glass.</p>
+</div>
 </section>
 <section class="_block_H">
 <h3 class="_blockHead_H">Buy more, pay less</h3>

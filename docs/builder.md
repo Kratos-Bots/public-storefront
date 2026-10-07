@@ -939,13 +939,15 @@ then. On the sheet the four slots render bare, in order, after the sheet's loadi
 | `ProductPrice` *(req.)* | `<p class="price" data-sf-part="price">` | `<div class="priceBand">` | all |
 | `ProductStock` | `<div class="flags">` chip, pre-order, minimum | `<p class="flags">` SKU, chip, pre-order, minimum | all |
 | `ProductAddToCart` *(req.)* | `AddToCart size="lg"` | — (pinned in the sheet footer) | storefront |
-| `ProductDescription` | `<p class="description">` | `<section class="block">` | all |
+| `ProductDescription` | `<div class="description" data-sf-prose>` (Markdown, rendered) | `<section class="block">` | all |
 | `ProductBulkPricing` | `<section aria-labelledby="bulk-heading">` | `<section class="block">` | all |
 | `ProductProvenance` | `<section aria-labelledby="provenance-heading">` | `<section class="block">` | all |
 | `ProductCoa` ("Lab report") | `<section aria-labelledby="coa-heading">` | `<section class="block">` | all |
 | `ProductAsk` | `<section class="ask">` + contact links | `<section class="block">` | all |
 | `ProductUpsells` | `Upsells` (cards) | `Upsells onSelect` (rows, swap in place) | all |
 | `ProductGroup` | `kind` `priceRow` ("Side by side"), `identity` ("Text beside thumbnail"), `identityText` ("Text column"); one slot `items` | same classes | all |
+
+Product descriptions are Markdown (GFM: headings, lists, tables, links, `breaks` so single newlines stay line breaks). The result is sanitised (`sanitizeMarkdown`): no images, no raw HTML, `href` the only attribute, https links open in a new tab. Wide tables scroll inside their own box.
 
 Each view renders `null` exactly when v0.7.0 omitted the piece (no description, tiers, provenance,
 contact links or curated upsells). Defaults — *storefront*: `top` [Breadcrumbs] · `media` [Gallery]
