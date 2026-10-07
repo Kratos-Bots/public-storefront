@@ -8,7 +8,7 @@ import classes from '@/features/catalog/Coa.module.css';
 
 /** Literal keys, so the text registry can see every one of them in use. */
 const LABEL_KEYS = {
-  lab: 'product.coa.lab', sample: 'product.coa.sample', amount: 'product.coa.amount',
+  lab: 'product.coa.lab', amount: 'product.coa.amount',
   purity: 'product.coa.purity', batch: 'product.coa.batch', tested: 'product.coa.tested',
 } as const satisfies Record<CoaRowKey, string>;
 
@@ -62,7 +62,7 @@ function Figures({ rows }: { rows: CoaRow[] }) {
   );
 }
 
-/** Who tested what, when: small label-value pairs that run together and wrap. */
+/** Batch and test date: small label-value pairs on one centred line that wraps when it must. */
 function Facts({ rows }: { rows: CoaRow[] }) {
   const { t } = useText();
   if (rows.length === 0) return null;
@@ -83,7 +83,7 @@ function EarlierRow({ coa }: { coa: ProductCoa }) {
   const { t } = useText();
   const rows = coaRows(coa);
   const get = (key: CoaRowKey) => rows.find((r) => r.key === key)?.value;
-  const titleKey: CoaRowKey | null = (['tested', 'lab', 'sample'] as const).find((k) => get(k) !== undefined) ?? null;
+  const titleKey: CoaRowKey | null = (['tested', 'lab'] as const).find((k) => get(k) !== undefined) ?? null;
   const title = titleKey ? get(titleKey)! : t('product.coa.report');
   const href = coaHref(coa);
   const lab = titleKey === 'lab' ? undefined : get('lab');
