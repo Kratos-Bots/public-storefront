@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { render } from '@testing-library/react';
-import { Description } from '@/features/catalog/Description.tsx';
+import { Description, descriptionHtml } from '@/features/catalog/Description.tsx';
 
 const SAMPLE = `This pen holds several doses.
 
@@ -33,6 +33,12 @@ function root(md: string): HTMLElement {
 }
 
 describe('Description', () => {
+  it('keeps an indented line as prose, not a code block', () => {
+    const html = descriptionHtml('Store cold.\n\n    Keep away from light.');
+    expect(html).not.toContain('<pre');
+    expect(html).toContain('Keep away from light.');
+  });
+
   it('renders headings, an ordered list and a table from the sample', () => {
     const el = root(SAMPLE);
     expect(el.hasAttribute('data-sf-prose')).toBe(true);

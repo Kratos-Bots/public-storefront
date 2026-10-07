@@ -103,7 +103,7 @@
 
 /* Each table sits in a bare div (added after sanitising) and scrolls sideways inside it when it is wider than
    the column. The table takes its natural width; a long cell wraps at a readable measure, not word by word. */
-.prose > div {
+.prose div {
   max-width: 100%;
   margin: 0 0 0.85em;
   overflow-x: auto;

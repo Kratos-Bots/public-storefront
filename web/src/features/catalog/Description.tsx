@@ -6,6 +6,8 @@ import classes from '@/features/catalog/Description.module.css';
 
 // GFM, and a single newline is a line break — plain-text descriptions written before Markdown keep their shape.
 const md = new Marked({ gfm: true, breaks: true, async: false });
+// No indented code blocks: a plain description with an indented line is prose, not code. Fenced blocks still work.
+md.use({ tokenizer: { code: () => undefined } });
 
 /** Parses a product description (Markdown) and sanitises the result; the output is never trusted raw. */
 export function descriptionHtml(source: string): string {
