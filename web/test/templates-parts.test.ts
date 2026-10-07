@@ -100,6 +100,7 @@ describe('parts', () => {
   it.each<[string, number]>([
     ['../src/features/tracking/ParcelCard.tsx', 1],
     ['../src/features/checkout/CheckoutPage.tsx', 1],
+    ['../src/features/catalog/Coa.tsx', 1],
   ])('%s tags exactly its %i card root(s)', (file, n) => {
     expect(count(read(file), 'data-sf-part="card"')).toBe(n);
   });

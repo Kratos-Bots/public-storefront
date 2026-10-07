@@ -23,17 +23,31 @@ const SCHEMES = ['light', 'dark'] as const;
 const LAYOUTS: Layout[] = ['storefront', 'menu', 'webapp'];
 const WIDTHS = [390, 1280] as const;
 
-const COAS: ProductCoa[] = [
-  { id: 1, lab: 'Example Labs', sampleName: 'Alpine Extract', mgAmount: 10, purity: 99.957, batch: 'B-2409', testDate: '12 March 2026', reportUrl: 'https://example.com/report/1', fileKey: null },
+const FULL: ProductCoa = { id: 1, lab: 'Example Labs', sampleName: 'Alpine Extract', mgAmount: 10, purity: 99.957, batch: 'B-2409', testDate: '12 March 2026', reportUrl: 'https://example.com/report/1', fileKey: null };
+const OLDER: ProductCoa[] = [
   { id: 2, lab: 'Second Labs', sampleName: 'Alpine Extract', mgAmount: 10, purity: 98.5, batch: 'B-2311', testDate: '1 January 2026', reportUrl: null, fileKey: '00ff00ff00ff00ff00ff00ff00ff00ff' },
   { id: 3, lab: null, sampleName: null, mgAmount: 5, purity: 99.1, batch: null, testDate: '3 October 2025', reportUrl: 'https://example.com/report/3', fileKey: null },
+];
+const NONE = { lab: null, sampleName: null, mgAmount: null, purity: null, batch: null, testDate: null, reportUrl: null, fileKey: null };
+
+/** What the shopper meets first is the card collapsed, so that is the default; `open` also unfolds the history. */
+const VARIANTS: Array<{ name: string; coas: ProductCoa[]; open: boolean }> = [
+  { name: 'collapsed', coas: [FULL, ...OLDER], open: false },
+  { name: 'open', coas: [FULL, ...OLDER], open: true },
+  { name: 'purity-only', coas: [{ ...FULL, ...NONE, purity: 99.4 }], open: false },
+  { name: 'lab-link', coas: [{ ...FULL, ...NONE, lab: 'Example Labs', reportUrl: 'https://example.com/report/1' }], open: false },
+  {
+    name: 'long',
+    coas: [{ ...FULL, sampleName: 'PepetidesVB- T30 30mg Clear Blue Cap', batch: 'CU100-2607-001', lab: 'Example Analytical Laboratories Europe', testDate: 'September 2, 2026', mgAmount: 1000 }, ...OLDER.slice(0, 1).map((c) => ({ ...c, testDate: 'September 2, 2026', batch: 'CU100-2607-001' }))],
+    open: true,
+  },
 ];
 
 interface CatalogJson { templates: Array<{ id: string; presets: Array<{ id: string; scheme: 'dark' | 'light' }> }> }
 
-function catalog(): Catalog {
+function catalog(coas: ProductCoa[]): Catalog {
   const c = JSON.parse(readFileSync(new URL('./fixtures/catalog.json', import.meta.url), 'utf8')) as Catalog;
-  c.products.find((p) => p.id === P)!.coas = COAS;
+  c.products.find((p) => p.id === P)!.coas = coas;
   return c;
 }
 
@@ -46,36 +60,53 @@ for (const template of TEMPLATES) {
   for (const scheme of SCHEMES) {
     for (const layout of LAYOUTS) {
       for (const width of WIDTHS) {
-        test(`${template} · ${scheme} · ${layout} · ${width}`, async ({ page }) => {
-          const res = await page.request.get('/templates.json');
-          const presets = ((await res.json()) as CatalogJson).templates.find((t) => t.id === template)?.presets ?? [];
-          const preset = presets.find((p) => p.scheme === scheme);
-          test.skip(!preset, `${template} has no ${scheme} preset`);
+        for (const variant of VARIANTS) {
+          test(`${template} · ${scheme} · ${layout} · ${width} · ${variant.name}`, async ({ page }) => {
+            const res = await page.request.get('/templates.json');
+            const presets = ((await res.json()) as CatalogJson).templates.find((t) => t.id === template)?.presets ?? [];
+            const preset = presets.find((p) => p.scheme === scheme);
+            test.skip(!preset, `${template} has no ${scheme} preset`);
 
-          await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
-          await page.clock.setFixedTime(FIXED_NOW);
-          await page.emulateMedia({ reducedMotion: 'reduce' });
-          const tweakSettings = await presetTheme(page, template, preset!.id);
-          await installMocks(page, { layout, session: true, tweakSettings, catalog: catalog() });
-          await page.goto(layout === 'storefront' ? `/p/${P}` : `/?p=${P}`);
+            await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
+            await page.clock.setFixedTime(FIXED_NOW);
+            await page.emulateMedia({ reducedMotion: 'reduce' });
+            const tweakSettings = await presetTheme(page, template, preset!.id);
+            await installMocks(page, { layout, session: true, tweakSettings, catalog: catalog(variant.coas) });
+            await page.goto(layout === 'storefront' ? `/p/${P}` : `/?p=${P}`);
 
-          const heading = page.getByRole('heading', { name: 'Certificate of analysis' });
-          await expect(heading).toBeVisible();
-          await page.locator('summary').click();
-          await expect(page.getByRole('listitem').filter({ hasText: '1 January 2026' })).toBeVisible();
-          await page.evaluate(() => document.fonts.ready);
+            const heading = page.getByRole('heading', { name: 'Certificate of analysis' });
+            await expect(heading).toBeVisible();
+            if (variant.open) {
+              await page.locator('summary').click();
+              await expect(page.getByRole('listitem').filter({ hasText: /1 January 2026|September 2, 2026/ })).toBeVisible();
+            }
+            await page.evaluate(() => document.fonts.ready);
 
-          const o = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, inner: window.innerWidth }));
-          expect(o.scroll, 'horizontal overflow').toBeLessThanOrEqual(o.inner);
+            const o = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, inner: window.innerWidth }));
+            expect(o.scroll, 'horizontal overflow').toBeLessThanOrEqual(o.inner);
 
-          const name = `${template}-${preset!.id}-${layout}-${width}.png`;
-          if (layout === 'storefront') {
-            await shot(page, name, true);
-          } else {
-            await heading.scrollIntoViewIfNeeded();
-            await shot(page, name, false);
-          }
-        });
+            const card = page.locator('[data-sf-part="card"]').first();
+            const box = (await card.boundingBox())!;
+            if (variant.name === 'collapsed') console.log(`HEIGHT ${template} ${preset!.id} ${layout} ${width} ${Math.round(box.height)}`);
+
+            const name = `${template}-${preset!.id}-${layout}-${width}-${variant.name}.png`;
+            if (variant.name === 'open' && layout === 'storefront') {
+              await shot(page, name, true);
+            } else {
+              // The heading and the card together, with a little air around them.
+              await heading.scrollIntoViewIfNeeded();
+              const h = (await heading.boundingBox())!;
+              const c = (await card.boundingBox())!;
+              const x = Math.max(0, Math.min(h.x, c.x) - 12);
+              const y = Math.max(0, h.y - 12);
+              mkdirSync(OUT, { recursive: true });
+              await page.screenshot({
+                path: resolve(OUT, name), animations: 'disabled', caret: 'hide',
+                clip: { x, y, width: Math.min(width - x, c.width + 24 + (c.x - x - 12)), height: c.y + c.height - y + 12 },
+              });
+            }
+          });
+        }
       }
     }
   }

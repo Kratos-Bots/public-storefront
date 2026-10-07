@@ -40,7 +40,7 @@ const SURFACES = [
 
 for (const surface of SURFACES) {
   test.describe(`product COA · ${surface.name}`, () => {
-    test('the latest report: facts, a clear link, no history', async ({ page }) => {
+    test('the latest report: one compact card with the figures, the facts and a clear link, no history', async ({ page }) => {
       await open(page, surface.layout, [LATEST]);
       const scope = surface.scope(page);
       await expect(scope.getByRole('heading', { name: 'Certificate of analysis' })).toBeVisible();
@@ -54,6 +54,19 @@ for (const surface of SURFACES) {
       await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
       expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
       await expect(scope.getByText(/Previous reports/)).toHaveCount(0);
+      // One card, and a compact one: the whole latest report fits well inside what six rows used to take.
+      const card = scope.locator('[data-sf-part="card"]');
+      await expect(card).toHaveCount(1);
+      await expect(card.getByRole('link', { name: /View report/ })).toBeVisible();
+      expect((await card.boundingBox())!.height).toBeLessThan(180);
+    });
+
+    test('a sparse report (only a purity) is a deliberate card with no empty slots', async ({ page }) => {
+      await open(page, surface.layout, [{ ...LATEST, lab: null, sampleName: null, mgAmount: null, batch: null, testDate: null, reportUrl: null, purity: 99.4 }]);
+      const card = surface.scope(page).locator('[data-sf-part="card"]');
+      await expect(card.getByText('99.4%')).toBeVisible();
+      await expect(card.getByRole('link')).toHaveCount(0);
+      expect((await card.boundingBox())!.height).toBeLessThan(110);
     });
 
     test('earlier reports sit in a closed disclosure, each with its own link to the uploaded file', async ({ page }) => {
@@ -68,6 +81,7 @@ for (const surface of SURFACES) {
       await expect(row).toBeVisible();
       await expect(row).toContainText('Second Labs');
       await expect(row).toContainText('Purity 98.5%');
+      await expect(row).toContainText('Batch B-90');
       const link = row.getByRole('link');
       await expect(link).toHaveAttribute('href', `/media/coas/2/${KEY}`);
       const [popup] = await Promise.all([page.waitForEvent('popup'), link.click()]);

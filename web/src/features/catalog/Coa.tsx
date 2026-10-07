@@ -39,6 +39,30 @@ function ReportLink({ href, className, name, children, button }: {
   );
 }
 
+/** "99.957%" -> the number large, its unit small, so the figure reads as a measurement rather than a price. */
+function Figure({ value }: { value: string }) {
+  const match = /^([\d.,]+)(.*)$/.exec(value);
+  if (!match || !match[2]) return <>{value}</>;
+  return <>{match[1]}<span className={classes.unit}>{match[2]}</span></>;
+}
+
+/** Purity and amount: the two numbers a shopper checks first, set large. */
+function Figures({ rows }: { rows: CoaRow[] }) {
+  const { t } = useText();
+  if (rows.length === 0) return null;
+  return (
+    <dl className={classes.figures}>
+      {rows.map((row) => (
+        <div key={row.key} className={classes.figure}>
+          <dt className={classes.term}>{t(LABEL_KEYS[row.key])}</dt>
+          <dd className={classes.big}><Figure value={row.value} /></dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/** Who tested what, when: small label-value pairs that run together and wrap. */
 function Facts({ rows }: { rows: CoaRow[] }) {
   const { t } = useText();
   if (rows.length === 0) return null;
@@ -47,7 +71,7 @@ function Facts({ rows }: { rows: CoaRow[] }) {
       {rows.map((row) => (
         <div key={row.key} className={classes.fact}>
           <dt className={classes.term}>{t(LABEL_KEYS[row.key])}</dt>
-          <dd className={row.key === 'purity' ? classes.purity : classes.value}>{row.value}</dd>
+          <dd className={row.key === 'batch' ? classes.code : classes.value}>{row.value}</dd>
         </div>
       ))}
     </dl>
@@ -70,14 +94,10 @@ function EarlierRow({ coa }: { coa: ProductCoa }) {
     <li className={classes.earlier}>
       <div className={classes.what}>
         <span className={classes.when}>{title}</span>
-        {lab || purity || amount || batch ? (
-          <span className={classes.meta}>
-            {lab ? <span>{lab}</span> : null}
-            {purity ? <span><span className={classes.k}>{t('product.coa.purity')}</span> {purity}</span> : null}
-            {amount ? <span>{amount}</span> : null}
-            {batch ? <span><span className={classes.k}>{t('product.coa.batch')}</span> {batch}</span> : null}
-          </span>
-        ) : null}
+        {purity ? <span className={classes.meta}><span className={classes.k}>{t('product.coa.purity')}</span> {purity}</span> : null}
+        {amount ? <span className={classes.meta}>{amount}</span> : null}
+        {batch ? <span className={classes.meta}><span className={classes.k}>{t('product.coa.batch')}</span> {batch}</span> : null}
+        {lab ? <span className={classes.meta}>{lab}</span> : null}
       </div>
       {href ? <ReportLink href={href} className={classes.textLink} name={title}>{t('product.coa.view')}</ReportLink> : null}
     </li>
@@ -85,8 +105,9 @@ function EarlierRow({ coa }: { coa: ProductCoa }) {
 }
 
 /**
- * A product's lab report: the newest one as a plain list of facts with one clear link to the full
- * report, and any earlier ones folded away. Draws nothing when no entry has anything to show.
+ * A product's lab report as one compact card: purity and amount as the headline figures with the link
+ * out beside them, the supporting facts underneath, and any earlier reports folded into the card's foot.
+ * Draws nothing when no entry has anything to show.
  */
 export function Coa({ coas }: { coas: readonly ProductCoa[] | null | undefined }) {
   const { t } = useText();
@@ -94,10 +115,22 @@ export function Coa({ coas }: { coas: readonly ProductCoa[] | null | undefined }
   if (list.length === 0) return null;
   const [latest, ...earlier] = list as [ProductCoa, ...ProductCoa[]];
   const href = coaHref(latest);
+  const rows = coaRows(latest);
+  const figures = rows.filter((r) => r.key === 'purity' || r.key === 'amount');
+  // Purity leads the amount whatever order the rows come in.
+  figures.sort((a, b) => (a.key === 'purity' ? -1 : 1) - (b.key === 'purity' ? -1 : 1));
+  const facts = rows.filter((r) => r.key !== 'purity' && r.key !== 'amount');
   return (
-    <div className={classes.root}>
-      <Facts rows={coaRows(latest)} />
-      {href ? <ReportLink href={href} className={classes.cta} button>{t('product.coa.view')}</ReportLink> : null}
+    <div className={classes.root} data-sf-part="card">
+      <div className={classes.body}>
+        {figures.length > 0 || href ? (
+          <div className={classes.top}>
+            <Figures rows={figures} />
+            {href ? <ReportLink href={href} className={classes.cta} button>{t('product.coa.view')}</ReportLink> : null}
+          </div>
+        ) : null}
+        <Facts rows={facts} />
+      </div>
       {earlier.length > 0 ? (
         <details className={classes.history}>
           <summary className={classes.summary}>
