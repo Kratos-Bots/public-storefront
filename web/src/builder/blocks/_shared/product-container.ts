@@ -2,7 +2,7 @@ import { group, part, type ContainerSpec } from '@/builder/parts.ts';
 import type { ComponentData, LayoutKind } from '@/builder/types.ts';
 
 const PARTS = ['ProductBreadcrumbs', 'ProductGallery', 'ProductTitle', 'ProductPrice', 'ProductStock', 'ProductAddToCart',
-  'ProductDescription', 'ProductBulkPricing', 'ProductProvenance', 'ProductAsk', 'ProductUpsells'] as const;
+  'ProductDescription', 'ProductBulkPricing', 'ProductProvenance', 'ProductCoa', 'ProductAsk', 'ProductUpsells'] as const;
 
 /** Spec §5.1 default arrangement; the storefront one honours the v0.7.0 toggles (§8), the sheet ignores them. */
 function defaultSlots(props: Record<string, unknown>, { layout, id }: { layout: LayoutKind; id: string }): Record<string, ComponentData[]> {

@@ -32,7 +32,7 @@ export const SPEC_BLOCKS = [
 /** Product-parts spec §9: the stage-3 parts. The editor's Parts panel is keyed by these names. */
 export const PART_BLOCKS = [
   'ProductBreadcrumbs', 'ProductGallery', 'ProductTitle', 'ProductPrice', 'ProductStock', 'ProductAddToCart', 'ProductDescription',
-  'ProductBulkPricing', 'ProductProvenance', 'ProductAsk', 'ProductUpsells', 'ProductGroup',
+  'ProductBulkPricing', 'ProductProvenance', 'ProductCoa', 'ProductAsk', 'ProductUpsells', 'ProductGroup',
   'CatalogIntro', 'CatalogSearch', 'CatalogCategories', 'CatalogTitle', 'CatalogResults', 'CatalogEmpty',
   'CardTileImage', 'CardTileGroup', 'CardTileName', 'CardTileFlags', 'CardTilePrice', 'CardTileAdd',
   'CardRowGroup', 'CardRowName', 'CardRowMeta', 'CardRowPrice', 'CardRowAdd',

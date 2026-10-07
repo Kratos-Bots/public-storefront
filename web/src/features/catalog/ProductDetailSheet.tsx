@@ -10,8 +10,10 @@ import { PromoBadge } from '@/features/catalog/PromoBadge.tsx';
 import { AddToCart } from '@/features/catalog/AddToCart.tsx';
 import { BulkPricing } from '@/features/catalog/BulkPricing.tsx';
 import { Provenance } from '@/features/catalog/Provenance.tsx';
+import { Coa } from '@/features/catalog/Coa.tsx';
+import { displayableCoas } from '@/features/catalog/coa-format.ts';
 import { Upsells } from '@/features/catalog/Upsells.tsx';
-import { BreadcrumbsView, groupClassMap, makeGroupView, productData } from '@/features/catalog/product-parts.tsx';
+import { BreadcrumbsView, groupClassMap, makeGroupView, productData, useAutoCoa } from '@/features/catalog/product-parts.tsx';
 import { ContactLinks } from '@/components/ContactLinks.tsx';
 import { CloseIcon } from '@/components/icons.tsx';
 import { ProductFamily, ProductHostContext, type ProductData, type ProductHost, type ProductSlots } from '@/builder/families.ts';
@@ -132,6 +134,7 @@ export function ProductSheetBody({ slots }: { slots: ProductSlots }) {
     [product, catalog.data, host.onSelect],
   );
   const value = useMemo(() => (data ? { data, views: SHEET_VIEWS } : null), [data]);
+  const autoCoa = useAutoCoa(product, slots);
   return (
     <>
       {query.isPending ? <SheetLoading /> : null}
@@ -148,6 +151,7 @@ export function ProductSheetBody({ slots }: { slots: ProductSlots }) {
           {slots.top()}
           {slots.media()}
           {slots.main()}
+          {autoCoa ? <SheetCoa props={{}} /> : null}
           {slots.below()}
         </ProductFamily.Provider>
       ) : null}
@@ -248,6 +252,16 @@ function SheetProvenance({ styleAttrs }: PartViewProps) {
   ) : null;
 }
 
+function SheetCoa({ styleAttrs }: PartViewProps) {
+  const { product } = ProductFamily.useData();
+  const { t } = useText();
+  return displayableCoas(product.coas).length > 0 ? (
+    <Block label={t('product.coa.heading')} attrs={styleAttrs}>
+      <Coa coas={product.coas} />
+    </Block>
+  ) : null;
+}
+
 function SheetAsk({ styleAttrs }: PartViewProps) {
   const { product } = ProductFamily.useData();
   const { brand } = useSettings();
@@ -274,7 +288,7 @@ const SheetAddToCart = () => null;
 export const SHEET_VIEWS: FamilyValue<ProductData>['views'] = {
   ProductBreadcrumbs: BreadcrumbsView, ProductGallery: SheetGallery, ProductTitle: SheetTitle, ProductPrice: SheetPrice,
   ProductStock: SheetStock, ProductAddToCart: SheetAddToCart, ProductDescription: SheetDescription,
-  ProductBulkPricing: SheetBulkPricing, ProductProvenance: SheetProvenance, ProductAsk: SheetAsk,
+  ProductBulkPricing: SheetBulkPricing, ProductProvenance: SheetProvenance, ProductCoa: SheetCoa, ProductAsk: SheetAsk,
   ProductUpsells: SheetUpsells, ProductGroup: makeGroupView(groupClassMap(FADE)),
 };
 

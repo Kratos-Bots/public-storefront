@@ -23,6 +23,7 @@ const PARTS: Record<string, { family: PartFamily; style: { target: StyleTarget; 
   ProductDescription: { family: 'product', style: T('root', BOX, TEXT, VIS) },
   ProductBulkPricing: { family: 'product', style: T('root', BOX, TEXT, VIS) },
   ProductProvenance: { family: 'product', style: T('root', BOX, TEXT, VIS) },
+  ProductCoa: { family: 'product', style: T('root', BOX, TEXT, VIS) },
   ProductAsk: { family: 'product', style: T('root', BOX, TEXT, VIS) },
   ProductUpsells: { family: 'product', style: T('root', BOX, VIS) },
   ProductGroup: { family: 'product', style: T('root', BOX, ['align'], VIS) },
@@ -49,7 +50,7 @@ const CONTAINERS = ['ProductDetail', 'ProductGrid', 'ProductList', 'CardTile', '
 const PART_CSS: Record<string, string[]> = {
   ProductBreadcrumbs: ['ProductDetailPage'], ProductTitle: ['ProductDetailPage', 'ProductDetailSheet'], ProductPrice: ['ProductDetailPage', 'ProductDetailSheet'],
   ProductStock: ['ProductDetailPage', 'ProductDetailSheet'], ProductDescription: ['ProductDetailPage', 'ProductDetailSheet'],
-  ProductBulkPricing: ['ProductDetailPage', 'ProductDetailSheet'], ProductProvenance: ['ProductDetailPage', 'ProductDetailSheet'], ProductAsk: ['ProductDetailPage', 'ProductDetailSheet'],
+  ProductBulkPricing: ['ProductDetailPage', 'ProductDetailSheet'], ProductProvenance: ['ProductDetailPage', 'ProductDetailSheet'], ProductCoa: ['Coa'], ProductAsk: ['ProductDetailPage', 'ProductDetailSheet'],
   CatalogTitle: ['ProductGrid', 'ProductList'], CatalogEmpty: ['../../components/EmptyState'],
   CardTileName: ['ProductCard'], CardTileFlags: ['ProductCard'], CardTilePrice: ['ProductCard'],
   CardRowName: ['ProductRow'], CardRowMeta: ['ProductRow'], CardRowPrice: ['ProductRow'],

@@ -1,0 +1,188 @@
+/* A lab report, read like a spec sheet: hairline-ruled facts with the labels in a fixed column
+   so the values line up, one plain link out, earlier reports folded under a disclosure.
+   Everything comes from the template's tokens, so it takes each template's voice by itself. */
+.root {
+  display: grid;
+  gap: 1rem;
+  max-width: 34rem;
+  min-width: 0;
+}
+
+.facts {
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--sf-line-strong);
+}
+
+.fact {
+  display: grid;
+  grid-template-columns: 6.25rem minmax(0, 1fr);
+  gap: 0.25rem 1rem;
+  align-items: baseline;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--sf-line);
+}
+
+.term {
+  margin: 0;
+  font-size: calc(0.8125rem * var(--sf-text-scale, 1));
+  color: var(--sf-block-fg, var(--sf-muted));
+}
+
+.value,
+.purity {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: calc(0.9375rem * var(--sf-text-scale, 1));
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+  color: var(--sf-block-fg, var(--sf-text));
+}
+
+/* The one figure a shopper checks first. */
+.purity {
+  font-weight: 650;
+}
+
+/* "Opens in a new tab", for screen readers only. */
+.hint {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  justify-self: start;
+  min-height: 44px;
+  padding: 0 1.1rem;
+  border: 1px solid var(--sf-line-strong);
+  border-radius: var(--sf-btn-radius);
+  background: transparent;
+  color: var(--sf-text);
+  font-family: var(--sf-btn-font, inherit);
+  font-size: calc(0.9375rem * var(--sf-text-scale, 1));
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.cta:hover {
+  border-color: var(--sf-primary);
+}
+
+.cta:focus-visible,
+.textLink:focus-visible,
+.summary:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+.history {
+  border-top: 1px solid var(--sf-line);
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 44px;
+  cursor: pointer;
+  list-style: none;
+  font-size: calc(0.875rem * var(--sf-text-scale, 1));
+  font-weight: 600;
+  color: var(--sf-block-fg, var(--sf-text));
+}
+
+.summary::-webkit-details-marker {
+  display: none;
+}
+
+.summary svg {
+  flex: none;
+  color: var(--sf-muted);
+  transition: transform 0.15s ease;
+}
+
+.history[open] .summary svg {
+  transform: rotate(180deg);
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.earlier {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.25rem 1rem;
+  padding: 0.35rem 0;
+  border-top: 1px solid var(--sf-line);
+}
+
+.what {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.when {
+  overflow-wrap: anywhere;
+  font-size: calc(0.9375rem * var(--sf-text-scale, 1));
+  font-weight: 600;
+  color: var(--sf-block-fg, var(--sf-text));
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.1rem 0.9rem;
+  font-size: calc(0.8125rem * var(--sf-text-scale, 1));
+  font-variant-numeric: tabular-nums;
+  color: var(--sf-block-fg, var(--sf-muted));
+}
+
+.k {
+  color: var(--sf-faint);
+}
+
+/* A quiet link, but its box is still a full-size tap target. */
+.textLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 44px;
+  padding: 0 0.15rem;
+  color: var(--sf-primary);
+  font-size: calc(0.875rem * var(--sf-text-scale, 1));
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+}
+
+@media (max-width: 380px) {
+  .fact {
+    grid-template-columns: 5.25rem minmax(0, 1fr);
+    gap: 0.25rem 0.75rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .summary svg {
+    transition: none;
+  }
+}
