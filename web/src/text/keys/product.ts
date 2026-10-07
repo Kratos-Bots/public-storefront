@@ -34,6 +34,7 @@ export default defineTextArea('product', {
   'coa.batch': { en: 'Batch', max: 30 },
   'coa.tested': { en: 'Tested', max: 30 },
   'coa.view': { en: 'View report', max: 30 },
+  'coa.viewFrom': { en: 'View report from {lab}', max: 80 },
   'coa.viewNamed': { en: 'View report: {name}', max: 80 },
   'coa.report': { en: 'Report', max: 30 },
   'coa.previous': { en: 'Previous reports ({count})', max: 50 },

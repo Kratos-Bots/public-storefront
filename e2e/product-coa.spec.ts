@@ -40,25 +40,51 @@ const SURFACES = [
 
 for (const surface of SURFACES) {
   test.describe(`product COA · ${surface.name}`, () => {
-    test('the latest report: one compact card with the figures, the facts and a clear link, no history', async ({ page }) => {
+    test('the latest report: one compact card with the figures, the facts and a large button naming the lab, no history', async ({ page }) => {
       await open(page, surface.layout, [LATEST]);
       const scope = surface.scope(page);
       await expect(scope.getByRole('heading', { name: 'Certificate of analysis' })).toBeVisible();
-      for (const [label, value] of [['Lab', 'Example Labs'], ['Amount', '10 mg'], ['Purity', '99.957%'], ['Batch', 'B-100'], ['Tested', '12 March 2026']]) {
+      for (const [label, value] of [['Amount', '10 mg'], ['Purity', '99.957%'], ['Batch', 'B-100'], ['Tested', '12 March 2026']]) {
         await expect(scope.getByText(label, { exact: true })).toBeVisible();
         await expect(scope.getByText(value, { exact: true })).toBeVisible();
       }
-      const link = scope.getByRole('link', { name: /View report/ });
+      // The lab is on the button, not a fact of its own.
+      await expect(scope.getByText('Lab', { exact: true })).toHaveCount(0);
+      const link = scope.getByRole('link', { name: /View report from Example Labs/ });
+      await expect(link).toHaveText(/View report from Example Labs/);
+      await expect(link).toHaveAttribute('data-variant', 'filled');
       await expect(link).toHaveAttribute('href', 'https://example.com/report/1');
       await expect(link).toHaveAttribute('target', '_blank');
       await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
-      expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+      const card0 = scope.locator('[data-sf-part="card"]');
+      const lb = (await link.boundingBox())!;
+      const cb0 = (await card0.boundingBox())!;
+      expect(lb.height).toBeGreaterThanOrEqual(44);
+      // Full width of the card's content box, and the last thing in the latest report.
+      expect(lb.width).toBeGreaterThan(cb0.width - 48);
+      expect(lb.y + lb.height).toBeGreaterThan(cb0.y + cb0.height - 24);
       await expect(scope.getByText(/Previous reports/)).toHaveCount(0);
       // One card, and a compact one: the whole latest report fits well inside what six rows used to take.
       const card = scope.locator('[data-sf-part="card"]');
       await expect(card).toHaveCount(1);
       await expect(card.getByRole('link', { name: /View report/ })).toBeVisible();
-      expect((await card.boundingBox())!.height).toBeLessThan(140);
+      expect((await card.boundingBox())!.height).toBeLessThan(200);
+    });
+
+    test('a link but no lab: the button reads just "View report"', async ({ page }) => {
+      await open(page, surface.layout, [{ ...LATEST, lab: null }]);
+      const link = surface.scope(page).getByRole('link', { name: /View report/ });
+      await expect(link).toHaveText(/^View report/);
+      expect(await link.innerText()).not.toMatch(/from/);
+      await expect(surface.scope(page).getByText('Lab', { exact: true })).toHaveCount(0);
+    });
+
+    test('a lab but no link: no button, and the lab is still shown as a fact', async ({ page }) => {
+      await open(page, surface.layout, [{ ...LATEST, reportUrl: null, fileKey: null }]);
+      const scope = surface.scope(page);
+      await expect(scope.getByText('Lab', { exact: true })).toBeVisible();
+      await expect(scope.getByText('Example Labs', { exact: true })).toBeVisible();
+      await expect(scope.locator('[data-sf-part="card"]').getByRole('link')).toHaveCount(0);
     });
 
     test('a sparse report (only a purity) is a deliberate card with no empty slots', async ({ page }) => {
@@ -105,6 +131,20 @@ for (const surface of SURFACES) {
       const scope = surface.scope(page);
       await scope.getByText('Previous reports (1)').click();
       await expect(scope.getByRole('link', { name: /View report: 1 January 2026/ })).toBeVisible();
+      const o = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, inner: window.innerWidth }));
+      expect(o.scroll).toBeLessThanOrEqual(o.inner);
+    });
+
+    test('a long lab name wraps inside the button at 360px', async ({ page }) => {
+      await open(page, surface.layout, [{ ...LATEST, lab: 'Example Analytical Laboratories Europe' }], 360);
+      const scope = surface.scope(page);
+      const link = scope.getByRole('link', { name: /View report from Example Analytical Laboratories Europe/ });
+      await expect(link).toBeVisible();
+      const [lb, cb] = [(await link.boundingBox())!, (await scope.locator('[data-sf-part="card"]').boundingBox())!];
+      expect(lb.x).toBeGreaterThanOrEqual(cb.x);
+      expect(lb.x + lb.width).toBeLessThanOrEqual(cb.x + cb.width);
+      const clipped = await link.evaluate((el) => el.scrollWidth > el.clientWidth + 1);
+      expect(clipped, 'button text clipped').toBe(false);
       const o = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, inner: window.innerWidth }));
       expect(o.scroll).toBeLessThanOrEqual(o.inner);
     });

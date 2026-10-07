@@ -954,8 +954,9 @@ contact links or curated upsells). Defaults — *storefront*: `top` [Breadcrumbs
 [Title, Stock], Gallery], Price, Description, BulkPricing, Provenance, Ask] · `below` [Upsells].
 
 `ProductCoa` is deliberately **not** in those defaults. It draws the product's latest lab report (certificate
-of analysis, `Product.coas`) as one compact `data-sf-part="card"` (purity and amount as headline figures beside the
-"View report" link, the other facts as small label-value pairs) with its earlier ones in a "Previous reports" disclosure
+of analysis, `Product.coas`) as one compact `data-sf-part="card"` (purity and amount as headline figures, the other facts as small
+stacked label-value pairs, then one full-width filled button, "View report from <lab>", or just "View report" when
+no lab is named; a lab with no link stays a fact) with its earlier ones in a "Previous reports" disclosure
 at the card's foot, and nothing when the
 product has none. When the product document holds no `ProductCoa` anywhere in the container's slots, the
 container draws the same view itself: on the page, last inside the `main` column; in the sheet, between
@@ -963,7 +964,7 @@ container draws the same view itself: on the page, last inside the `main` column
 editor canvas follows the same rule. A product without a displayable report adds no markup at all,
 so the goldens and DOM baselines are untouched. The report link is the lab's own page, else the uploaded file
 at `/media/coas/<id>/<key>`; inside Telegram it opens through `openExternalLink`. Its labels and values read
-`--sf-block-fg` and `--sf-text-scale` (`Coa.module.css`); the links keep the template's colours.
+`--sf-block-fg` and `--sf-text-scale` (`Coa.module.css`); the button is a `data-sf-part="button"` with `data-variant="filled"`, so it keeps the template's own button colours.
 
 ### Catalogue grid and list (`family: 'catalogue'`)
 

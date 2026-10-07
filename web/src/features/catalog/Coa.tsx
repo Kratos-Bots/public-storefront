@@ -30,9 +30,9 @@ function ReportLink({ href, className, name, children, button }: {
       target="_blank"
       rel="noopener noreferrer"
       onClick={(event) => openInTelegram(event, href)}
-      {...(button ? { 'data-sf-part': 'button', 'data-variant': 'default' } : {})}
+      {...(button ? { 'data-sf-part': 'button', 'data-variant': 'filled' } : {})}
     >
-      <span aria-hidden={name ? true : undefined}>{children}</span>
+      <span className={button ? classes.ctaText : undefined} aria-hidden={name ? true : undefined}>{children}</span>
       <ArrowUpRightIcon size={14} />
       <span className={classes.hint}>{name ? `${t('product.coa.viewNamed', { name })}. ` : ' '}{t('product.coa.newTab')}</span>
     </a>
@@ -105,8 +105,8 @@ function EarlierRow({ coa }: { coa: ProductCoa }) {
 }
 
 /**
- * A product's lab report as one compact card: purity and amount as the headline figures with the link
- * out beside them, the supporting facts underneath, and any earlier reports folded into the card's foot.
+ * A product's lab report as one compact card: purity and amount as the headline figures, the supporting facts
+ * underneath, one full-width button out to the report, and any earlier reports folded into the card's foot.
  * Draws nothing when no entry has anything to show.
  */
 export function Coa({ coas }: { coas: readonly ProductCoa[] | null | undefined }) {
@@ -119,17 +119,19 @@ export function Coa({ coas }: { coas: readonly ProductCoa[] | null | undefined }
   const figures = rows.filter((r) => r.key === 'purity' || r.key === 'amount');
   // Purity leads the amount whatever order the rows come in.
   figures.sort((a, b) => (a.key === 'purity' ? -1 : 1) - (b.key === 'purity' ? -1 : 1));
-  const facts = rows.filter((r) => r.key !== 'purity' && r.key !== 'amount');
+  const lab = rows.find((r) => r.key === 'lab')?.value;
+  // The lab is named on the button when there is one; with no link to put it on, it stays a fact.
+  const facts = rows.filter((r) => r.key !== 'purity' && r.key !== 'amount' && !(r.key === 'lab' && href));
   return (
     <div className={classes.root} data-sf-part="card">
       <div className={classes.body}>
-        {figures.length > 0 || href ? (
-          <div className={classes.top}>
-            <Figures rows={figures} />
-            {href ? <ReportLink href={href} className={classes.cta} button>{t('product.coa.view')}</ReportLink> : null}
-          </div>
-        ) : null}
+        <Figures rows={figures} />
         <Facts rows={facts} />
+        {href ? (
+          <ReportLink href={href} className={classes.cta} button>
+            {lab ? t('product.coa.viewFrom', { lab }) : t('product.coa.view')}
+          </ReportLink>
+        ) : null}
       </div>
       {earlier.length > 0 ? (
         <details className={classes.history}>

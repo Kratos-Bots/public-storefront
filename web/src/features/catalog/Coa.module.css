@@ -1,6 +1,6 @@
-/* A lab report as one compact card. Purity and amount are the headline figures with the link out
-   beside them; lab, sample, batch and date run together underneath as small label-value pairs;
-   earlier reports fold into the card's foot, one dense line each.
+/* A lab report as one compact card. Purity and amount are the headline figures; sample, batch and date
+   sit underneath as small stacked label-value pairs; one full-width button names the lab and opens the
+   report; earlier reports fold into the card's foot, one dense line each.
    The card is `data-sf-part="card"` and everything else is a `--sf-*` token, so each template gives it
    its own radius, border, fill and type without a rule here knowing about it. */
 .root {
@@ -8,7 +8,6 @@
      instead, so labels and values stay tellable apart. Unset, --coa-mix is invalid and the fallback applies. */
   --coa-mix: color-mix(in srgb, var(--sf-block-fg) 72%, transparent);
   --coa-quiet: var(--coa-mix, var(--sf-muted));
-  container-type: inline-size;
   display: flex;
   flex-direction: column;
   max-width: 34rem;
@@ -23,25 +22,15 @@
 
 .body {
   display: grid;
-  gap: 0.3rem;
+  gap: 0.45rem;
   min-width: 0;
-  padding: 0.5rem 0.75rem 0.65rem 1rem;
-}
-
-/* The link sits on the figures' row, pushed right; when the row is too narrow it drops under them. */
-.top {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.25rem 0.75rem;
-  min-width: 0;
+  padding: 0.7rem 1rem 0.75rem;
 }
 
 .figures {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem 1.5rem;
+  gap: 0.25rem 2.25rem;
   margin: 0;
   padding: 0;
   min-width: 0;
@@ -64,7 +53,7 @@
 .big {
   margin: 0;
   font-family: var(--sf-font-heading);
-  font-size: calc(1.625rem * var(--sf-text-scale, 1));
+  font-size: calc(1.75rem * var(--sf-text-scale, 1));
   font-weight: 600;
   line-height: 1.15;
   letter-spacing: -0.01em;
@@ -85,23 +74,18 @@
 .facts {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.2rem 1.25rem;
+  gap: 0.35rem 1.5rem;
   margin: 0;
-  padding: 0.4rem 0 0;
+  padding: 0.55rem 0 0.2rem;
   border-top: 1px solid var(--sf-line);
   min-width: 0;
 }
 
 .fact {
   display: flex;
-  align-items: baseline;
-  gap: 0.4rem;
+  flex-direction: column;
   min-width: 0;
   max-width: 100%;
-}
-
-.fact .term {
-  flex: none;
 }
 
 .value,
@@ -132,30 +116,37 @@
   white-space: nowrap;
 }
 
-/* The template's button treatment, at a size that suits a card; the box is still a full tap target. */
+/* The card's one main action, full width. The template restyles it through its filled-button hooks; this is the
+   base look they start from: the primary fill, with the page background as its ink. */
 .cta {
   position: relative;
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.35rem;
-  flex: none;
-  margin-left: auto;
-  min-height: 44px;
-  padding: 0 0.85rem;
-  border: 1px solid var(--sf-line-strong);
+  gap: 0.5rem;
+  min-height: 48px;
+  margin-top: 0.2rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--sf-primary);
   border-radius: var(--sf-btn-radius);
-  background: transparent;
-  color: var(--sf-text);
+  background: var(--sf-primary);
+  color: var(--sf-bg);
   font-family: var(--sf-btn-font, inherit);
-  font-size: calc(0.8125rem * var(--sf-text-scale, 1));
+  font-size: calc(0.9375rem * var(--sf-text-scale, 1));
   font-weight: 600;
+  line-height: 1.25;
+  text-align: center;
   text-decoration: none;
   cursor: pointer;
 }
 
-.cta:hover {
-  border-color: var(--sf-primary);
+.cta svg {
+  flex: none;
+}
+
+.ctaText {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .cta:focus-visible,
@@ -255,27 +246,6 @@
   text-decoration: underline;
   text-underline-offset: 3px;
   white-space: nowrap;
-}
-
-/* A phone-width card: figures a little smaller and the link without its arrow, so the link can stay
-   beside them even in a template that sets button text in wide capitals. */
-@container (max-width: 23rem) {
-  .figures {
-    gap: 0.25rem 1.1rem;
-  }
-
-  .big {
-    font-size: calc(1.5rem * var(--sf-text-scale, 1));
-  }
-
-  .cta {
-    padding: 0 0.7rem;
-    font-size: calc(0.75rem * var(--sf-text-scale, 1));
-  }
-
-  .cta svg {
-    display: none;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
