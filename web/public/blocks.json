@@ -3342,6 +3342,40 @@
       }
     },
     {
+      "name": "ProductCoa",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "product"
+      }
+    },
+    {
       "name": "ProductDescription",
       "category": "part",
       "layouts": [
@@ -3424,6 +3458,7 @@
           "ProductDescription",
           "ProductBulkPricing",
           "ProductProvenance",
+          "ProductCoa",
           "ProductAsk",
           "ProductUpsells"
         ],

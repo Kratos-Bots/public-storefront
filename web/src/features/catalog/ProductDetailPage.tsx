@@ -9,8 +9,10 @@ import { PromoBadge } from '@/features/catalog/PromoBadge.tsx';
 import { AddToCart } from '@/features/catalog/AddToCart.tsx';
 import { BulkPricing } from '@/features/catalog/BulkPricing.tsx';
 import { Provenance } from '@/features/catalog/Provenance.tsx';
+import { Coa } from '@/features/catalog/Coa.tsx';
+import { displayableCoas } from '@/features/catalog/coa-format.ts';
 import { Upsells } from '@/features/catalog/Upsells.tsx';
-import { BreadcrumbsView, groupClassMap, makeGroupView, productData } from '@/features/catalog/product-parts.tsx';
+import { BreadcrumbsView, groupClassMap, makeGroupView, productData, useAutoCoa } from '@/features/catalog/product-parts.tsx';
 import { ContactLinks } from '@/components/ContactLinks.tsx';
 import { EmptyState } from '@/components/EmptyState.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
@@ -110,6 +112,20 @@ function PageProvenance({ styleAttrs }: PartViewProps) {
   );
 }
 
+function PageCoa({ styleAttrs }: PartViewProps) {
+  const { product } = ProductFamily.useData();
+  const { t } = useText();
+  if (displayableCoas(product.coas).length === 0) return null;
+  return (
+    <section className={classes.section} aria-labelledby="coa-heading" {...styleAttrs}>
+      <h2 id="coa-heading" className={classes.sectionHead}>
+        {t('product.coa.heading')}
+      </h2>
+      <Coa coas={product.coas} />
+    </section>
+  );
+}
+
 function PageAsk({ styleAttrs }: PartViewProps) {
   const { product } = ProductFamily.useData();
   const { brand } = useSettings();
@@ -137,7 +153,7 @@ function PageUpsells({ styleAttrs }: PartViewProps) {
 export const PAGE_VIEWS: FamilyValue<ProductData>['views'] = {
   ProductBreadcrumbs: BreadcrumbsView, ProductGallery: PageGallery, ProductTitle: PageTitle, ProductPrice: PagePrice,
   ProductStock: PageStock, ProductAddToCart: PageAddToCart, ProductDescription: PageDescription,
-  ProductBulkPricing: PageBulkPricing, ProductProvenance: PageProvenance, ProductAsk: PageAsk,
+  ProductBulkPricing: PageBulkPricing, ProductProvenance: PageProvenance, ProductCoa: PageCoa, ProductAsk: PageAsk,
   ProductUpsells: PageUpsells, ProductGroup: GroupView,
 };
 
@@ -166,6 +182,7 @@ export function ProductDetailPage({ sections, slots }: { sections?: Partial<Prod
   const product = query.data;
   const data = useMemo(() => (product ? productData(product, catalog.data?.categories ?? []) : null), [product, catalog.data]);
   const value = useMemo(() => (data ? { data, views: PAGE_VIEWS } : null), [data]);
+  const autoCoa = useAutoCoa(product, s);
 
   // The tab is part of the page: name it after what the shopper is looking at,
   // and hand the shop's own title back when they leave.
@@ -189,7 +206,17 @@ export function ProductDetailPage({ sections, slots }: { sections?: Partial<Prod
         {s.top()}
         <div className={mediaShows ? classes.layout : `${classes.layout} ${classes.layoutNoImage}`}>
           {mediaShows ? s.media({ className: classes.media }) : null}
-          {s.main({ className: classes.detail })}
+          {autoCoa ? (
+            // The owner's parts keep the exact element `s.main({ className })` draws (in the editor that is the
+            // DropZone itself, so they stay its direct children), and the report follows in an outer column with
+            // the same gap. Only a product that has a report gets this wrapper.
+            <div className={classes.detail}>
+              {s.main({ className: classes.detail })}
+              <PageCoa props={{}} />
+            </div>
+          ) : (
+            s.main({ className: classes.detail })
+          )}
         </div>
         {s.below()}
       </article>

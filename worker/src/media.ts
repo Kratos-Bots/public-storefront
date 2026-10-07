@@ -1,20 +1,34 @@
 import type { Env } from './index';
 
-const RULES: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
+/** `private` rules are credentialed files: never read from or written to the shared edge cache. */
+type Rule = [RegExp, (m: RegExpMatchArray) => string, { private?: true }?];
+
+const RULES: Rule[] = [
   [/^\/media\/products\/(\d+)\/image$/, (m) => `api/v1/products/${m[1]}/image`],
   [/^\/media\/settings\/branding\/(logo|favicon)$/, (m) => `api/v1/settings/branding/${m[1]}`],
   [/^\/media\/storefront-settings\/branding\/(logo|favicon)$/, (m) => `api/v1/storefront-settings/branding/${m[1]}`],
   // Page-builder uploads (spec 13 A3): a random 32-hex key, never a user-chosen name.
   [/^\/media\/storefront-pages\/media\/([a-f0-9]{32}\.(?:png|jpg|webp|gif))$/, (m) => `api/v1/storefront-pages/media/${m[1]}`],
+  // Product COA files: the 32-hex key is the credential, so the response is passed through with the
+  // backend's own `private, max-age=300` and never stored at the edge.
+  [/^\/media\/coas\/(\d+)\/([a-f0-9]{32})$/, (m) => `api/v1/public/catalog/coas/${m[1]}/${m[2]}/file`, { private: true }],
 ];
+
+const COA_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/png', 'image/webp']);
+
+function ruleFor(pathname: string): Rule | undefined {
+  return RULES.find(([re]) => re.test(pathname));
+}
 
 export function mediaTarget(pathname: string, search: string, backendUrl: string): URL | null {
   if (pathname.includes('..')) return null;
-  for (const [re, build] of RULES) {
+  for (const rule of RULES) {
+    const [re, build] = rule;
     const m = pathname.match(re);
     if (m) {
       const base = backendUrl.endsWith('/') ? backendUrl : backendUrl + '/';
-      return new URL(base + build(m) + search);
+      // A private (credentialed) file is addressed by its path alone: no query string goes upstream.
+      return new URL(base + build(m) + (rule[2]?.private ? '' : search));
     }
   }
   return null;
@@ -28,6 +42,7 @@ export async function proxyMedia(request: Request, env: Env, ctx: ExecutionConte
   const url = new URL(request.url);
   const target = mediaTarget(url.pathname, url.search, env.BACKEND_URL);
   if (!target) return new Response('Not found', { status: 404 });
+  if (ruleFor(url.pathname)?.[2]?.private) return proxyPrivate(request, target);
 
   const cache = caches.default;
   // Cache key and upstream fetch are always GET — HEAD reads/warms the same
@@ -70,4 +85,37 @@ export async function proxyMedia(request: Request, env: Env, ctx: ExecutionConte
   const res = new Response(upstream.body, { status: 200, headers });
   ctx.waitUntil(cache.put(key, res.clone()));
   return res;
+}
+
+/** Streams a credentialed file straight through: no edge cache, the backend's cache header, a HEAD answered from a GET. */
+async function proxyPrivate(request: Request, target: URL): Promise<Response> {
+  let upstream: Response;
+  try {
+    upstream = await fetch(target.toString(), { method: 'GET', headers: { accept: request.headers.get('accept') ?? '*/*' } });
+  } catch {
+    return new Response('Upstream unavailable', { status: 502 });
+  }
+  if (!upstream.ok) {
+    await upstream.body?.cancel();
+    return new Response(null, { status: upstream.status === 404 ? 404 : 502 });
+  }
+  // Only what a lab report can be: anything else is not served from the shop's origin.
+  const mediaType = (upstream.headers.get('content-type') ?? '').split(';')[0]!.trim().toLowerCase();
+  if (!COA_TYPES.has(mediaType)) {
+    await upstream.body?.cancel();
+    return new Response(null, { status: 502 });
+  }
+  const headers = new Headers();
+  headers.set('content-type', upstream.headers.get('content-type')!);
+  const disposition = upstream.headers.get('content-disposition');
+  if (disposition) headers.set('content-disposition', disposition);
+  headers.set('cache-control', upstream.headers.get('cache-control') ?? 'private, max-age=300');
+  headers.set('x-content-type-options', 'nosniff');
+  // An inline PDF or image must never run script with this origin's privileges.
+  headers.set('content-security-policy', 'sandbox');
+  if (request.method === 'HEAD') {
+    await upstream.body?.cancel();
+    return new Response(null, { status: 200, headers });
+  }
+  return new Response(upstream.body, { status: 200, headers });
 }

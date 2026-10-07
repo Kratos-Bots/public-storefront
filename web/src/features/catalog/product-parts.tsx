@@ -2,8 +2,9 @@ import type { ComponentType } from 'react';
 import { Link } from 'react-router';
 import { categoryPath } from '@/features/catalog/CategoryNav.tsx';
 import { ancestorChain } from '@/features/catalog/category-tree.ts';
-import { ProductFamily, type ProductData } from '@/builder/families.ts';
-import type { PartViewProps } from '@/builder/parts.ts';
+import { ProductFamily, type ProductData, type ProductSlots } from '@/builder/families.ts';
+import { containsType, type PartViewProps } from '@/builder/parts.ts';
+import { displayableCoas } from '@/features/catalog/coa-format.ts';
 import type { SlotRender } from '@/builder/define.ts';
 import type { Category, Product } from '@/types/catalog.ts';
 import { useText } from '@/text/runtime.tsx';
@@ -17,6 +18,16 @@ export function productData(product: Product, categories: Category[], onSelect?:
   // the flattened path the product itself came with, as plain text.
   const fallbackTrail = trail.length === 0 && product.categoryName ? product.categoryName.split('>').map((s) => s.trim()) : [];
   return onSelect ? { product, trail, fallbackTrail, onSelect } : { product, trail, fallbackTrail };
+}
+
+/**
+ * Should the container draw the COA itself? Only when the product has something to show and the owner's
+ * document has no ProductCoa part anywhere in its slots: a placed part is the only one that draws.
+ * With nothing to show the container adds nothing at all, so the markup is exactly what it was before COAs existed.
+ */
+export function useAutoCoa(product: Product | undefined, slots: ProductSlots): boolean {
+  if (!product || displayableCoas(product.coas).length === 0) return false;
+  return !Object.values(slots).some((slot) => containsType(slot.items, 'ProductCoa'));
 }
 
 /** ProductBreadcrumbs — the same nav on both surfaces (spec §5.1). */

@@ -57,10 +57,12 @@ describe('container parts (pure)', () => {
     const item = trimmed();
     const states = partStates(item, 'storefront');
     expect(states.map((s) => s.type)).toEqual(['ProductBreadcrumbs', 'ProductGallery', 'ProductTitle', 'ProductPrice', 'ProductStock',
-      'ProductAddToCart', 'ProductDescription', 'ProductBulkPricing', 'ProductProvenance', 'ProductAsk', 'ProductUpsells']);
+      'ProductAddToCart', 'ProductDescription', 'ProductBulkPricing', 'ProductProvenance', 'ProductAsk', 'ProductUpsells', 'ProductCoa']);
     const by = Object.fromEntries(states.map((s) => [s.type, s]));
     expect(by.ProductDescription!.present).toBe(false);
     expect(by.ProductBulkPricing!.present).toBe(false);
+    // Drawn by the container itself until the owner places it, so no default arrangement holds it.
+    expect(by.ProductCoa).toMatchObject({ present: false, required: false });
     expect(by.ProductTitle).toMatchObject({ present: true, required: true, label: 'Title' });
     expect(by.ProductAsk).toMatchObject({ present: true, required: false });
     expect(states.some((s) => s.type === 'ProductGroup')).toBe(false);
@@ -69,7 +71,7 @@ describe('container parts (pure)', () => {
   it('partStates in the menu layout leaves out the add to cart button', () => {
     const states = partStates(productDetail('menu'), 'menu');
     expect(states.map((s) => s.type)).not.toContain('ProductAddToCart');
-    expect(states.every((s) => s.present || s.type === 'ProductBreadcrumbs')).toBe(true);
+    expect(states.every((s) => s.present || s.type === 'ProductBreadcrumbs' || s.type === 'ProductCoa')).toBe(true);
   });
 
   it('partStates of a non-container is empty', () => {
@@ -171,7 +173,7 @@ describe('<ContainerPanel />', () => {
     expect(screen.getByRole('region', { name: 'Parts' })).toBeInTheDocument();
     const list = screen.getByRole('list', { name: 'Parts' });
     const rows = within(list).getAllByRole('listitem');
-    expect(rows).toHaveLength(11);
+    expect(rows).toHaveLength(12);
     const row = (label: string) => rows.find((r) => within(r).queryByText(label))!;
     expect(within(row('Description')).getByText('Removed')).toBeInTheDocument();
     expect(within(row('Ask a question')).getByText('On the page')).toBeInTheDocument();
