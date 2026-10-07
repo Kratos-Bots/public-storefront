@@ -13,8 +13,7 @@
 .prose ul,
 .prose ol,
 .prose blockquote,
-.prose pre,
-.prose table {
+.prose pre {
   margin: 0 0 0.85em;
 }
 
@@ -102,18 +101,22 @@
   border-top: 1px solid var(--sf-line);
 }
 
-/* A table cannot be wrapped from sanitised HTML, so it scrolls itself: shrink-wrapped to its content,
-   capped at the column, and scrolling sideways inside its own box when a row is wider than a phone. */
-.prose table {
-  display: block;
-  width: max-content;
+/* Each table sits in a bare div (added after sanitising) and scrolls sideways inside it when it is wider than
+   the column. The table takes its natural width; a long cell wraps at a readable measure, not word by word. */
+.prose > div {
   max-width: 100%;
+  margin: 0 0 0.85em;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.prose table {
+  width: max-content;
+  margin: 0;
   border-collapse: collapse;
   font-size: 0.93em;
   line-height: 1.45;
   font-variant-numeric: tabular-nums;
-  -webkit-overflow-scrolling: touch;
 }
 
 .prose th,
@@ -122,6 +125,8 @@
   border-bottom: 1px solid var(--sf-line);
   text-align: left;
   vertical-align: top;
+  max-width: 16rem;
+  overflow-wrap: normal;
 }
 
 .prose th:last-child,

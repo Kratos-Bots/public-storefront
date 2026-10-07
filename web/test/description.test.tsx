@@ -39,6 +39,10 @@ describe('Description', () => {
     expect(Array.from(el.querySelectorAll('h2')).map((h) => h.textContent)).toEqual(['How to use', 'Conversion reference']);
     expect(el.querySelectorAll('ol > li')).toHaveLength(3);
     expect(Array.from(el.querySelectorAll('thead th')).map((h) => h.textContent)).toEqual(['Dose (mg)', 'Dial setting (units)']);
+    // The table's scroll wrapper: a bare div, the only kind the sanitised output can contain.
+    const scroller = el.querySelector('table')?.parentElement;
+    expect(scroller?.tagName).toBe('DIV');
+    expect(scroller?.attributes.length).toBe(0);
     expect(el.querySelectorAll('tbody tr')).toHaveLength(3);
     expect(el.querySelector('tbody tr:last-child td:last-child')?.textContent).toBe('26');
   });

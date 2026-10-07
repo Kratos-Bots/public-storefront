@@ -56,6 +56,13 @@ export function sanitizeMarkdown(html: string): string {
       a.setAttribute('rel', 'noopener noreferrer');
     }
   }
+  // A table gets a bare wrapper to scroll in, so a wide one never widens the page. `div` is not an allowed tag,
+  // so the only divs in the result are these.
+  for (const table of Array.from(fragment.querySelectorAll('table'))) {
+    const scroller = document.createElement('div');
+    table.replaceWith(scroller);
+    scroller.appendChild(table);
+  }
   const holder = document.createElement('div');
   holder.appendChild(fragment);
   return holder.innerHTML;
