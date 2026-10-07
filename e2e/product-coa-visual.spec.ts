@@ -35,9 +35,16 @@ const VARIANTS: Array<{ name: string; coas: ProductCoa[]; open: boolean }> = [
   { name: 'collapsed', coas: [FULL, ...OLDER], open: false },
   { name: 'open', coas: [FULL, ...OLDER], open: true },
   { name: 'purity-only', coas: [{ ...FULL, ...NONE, purity: 99.4 }], open: false },
+  { name: 'lab-no-link', coas: [{ ...FULL, reportUrl: null }], open: false },
+  { name: 'no-lab', coas: [{ ...FULL, lab: null }], open: false },
   { name: 'lab-link', coas: [{ ...FULL, ...NONE, lab: 'Example Labs', reportUrl: 'https://example.com/report/1' }], open: false },
   {
     name: 'long',
+    coas: [{ ...FULL, sampleName: 'PepetidesVB- T30 30mg Clear Blue Cap', batch: 'CU100-2607-001', lab: 'Example Analytical Laboratories Europe', testDate: 'September 2, 2026', mgAmount: 1000 }, ...OLDER.slice(0, 1).map((c) => ({ ...c, testDate: 'September 2, 2026', batch: 'CU100-2607-001' }))],
+    open: false,
+  },
+  {
+    name: 'long-open',
     coas: [{ ...FULL, sampleName: 'PepetidesVB- T30 30mg Clear Blue Cap', batch: 'CU100-2607-001', lab: 'Example Analytical Laboratories Europe', testDate: 'September 2, 2026', mgAmount: 1000 }, ...OLDER.slice(0, 1).map((c) => ({ ...c, testDate: 'September 2, 2026', batch: 'CU100-2607-001' }))],
     open: true,
   },

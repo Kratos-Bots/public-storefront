@@ -49,17 +49,23 @@ describe('Coa', () => {
     const { container } = render(<Coa coas={[coa()]} />);
     expect(container.firstElementChild).toHaveAttribute('data-sf-part', 'card');
     const facts = screen.getAllByRole('term').map((t) => t.textContent);
-    expect(facts).toEqual(['Purity', 'Amount', 'Lab', 'Sample', 'Batch', 'Tested']);
-    expect(screen.getAllByRole('definition').map((d) => d.textContent)).toEqual(['99.957%', '10 mg', 'Example Labs', 'Example Peptide', 'B-100', '12 March 2026']);
+    // The lab is named on the button, not repeated as a fact.
+    expect(facts).toEqual(['Purity', 'Amount', 'Sample', 'Batch', 'Tested']);
+    expect(screen.getAllByRole('definition').map((d) => d.textContent)).toEqual(['99.957%', '10 mg', 'Example Peptide', 'B-100', '12 March 2026']);
     // The headline figures are the two before the supporting facts.
     const [figures, supporting] = [...container.querySelectorAll('dl')];
     expect(figures!.querySelectorAll('dd')).toHaveLength(2);
-    expect(supporting!.querySelectorAll('dd')).toHaveLength(4);
-    const link = screen.getByRole('link', { name: /View report/ });
+    expect(supporting!.querySelectorAll('dd')).toHaveLength(3);
+    const link = screen.getByRole('link', { name: /View report from Example Labs/ });
+    expect(link).toHaveTextContent('View report from Example Labs');
     expect(link).toHaveAttribute('href', 'https://example.com/report/1');
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
     expect(link).toHaveAttribute('data-sf-part', 'button');
+    expect(link).toHaveAttribute('data-variant', 'filled');
+    expect(link).toHaveTextContent('Opens in a new tab');
+    // The button is the last thing in the latest report, after the facts.
+    expect(container.querySelector('[data-sf-part="card"] > div')!.lastElementChild).toBe(link);
     expect(screen.queryByText(/Previous reports/)).toBeNull();
   });
 
@@ -93,8 +99,38 @@ describe('Coa', () => {
 
   it('shows the facts without a link when the report has no address', () => {
     render(<Coa coas={[coa({ reportUrl: null, fileKey: null })]} />);
-    expect(screen.getAllByRole('term')).toHaveLength(6);
+    // No button to name the lab on, so the lab stays a fact.
+    expect(screen.getAllByRole('term').map((t) => t.textContent)).toEqual(['Purity', 'Amount', 'Lab', 'Sample', 'Batch', 'Tested']);
+    expect(screen.getByText('Example Labs')).toBeTruthy();
     expect(screen.queryByRole('link')).toBeNull();
+  });
+
+  it('a lab but no link: no button, and the lab is still shown', () => {
+    render(<Coa coas={[coa({ reportUrl: null, fileKey: null, purity: null, mgAmount: null, sampleName: null, batch: null, testDate: null })]} />);
+    expect(screen.getAllByRole('term').map((t) => t.textContent)).toEqual(['Lab']);
+    expect(screen.queryByRole('link')).toBeNull();
+    expect(screen.queryByText(/View report/)).toBeNull();
+  });
+
+  it('a link but no lab: the button just says "View report"', () => {
+    render(<Coa coas={[coa({ lab: null })]} />);
+    const link = screen.getByRole('link', { name: /View report/ });
+    expect(link).toHaveTextContent('View report');
+    expect(link.textContent).not.toMatch(/from/);
+    expect(link).toHaveAttribute('data-variant', 'filled');
+    expect(screen.queryByText('Lab')).toBeNull();
+  });
+
+  it('neither a lab nor a link adds nothing beyond the figures and facts', () => {
+    const { container } = render(<Coa coas={[coa({ lab: ' ', reportUrl: null, fileKey: null })]} />);
+    expect(screen.queryByRole('link')).toBeNull();
+    expect(screen.queryByText('Lab')).toBeNull();
+    expect(container.querySelectorAll('dl')).toHaveLength(2);
+  });
+
+  it('a long lab name goes on the button whole, as text, with the new-tab hint', () => {
+    render(<Coa coas={[coa({ lab: 'Example Analytical Laboratories Europe' })]} />);
+    expect(screen.getByRole('link', { name: /View report from Example Analytical Laboratories Europe/ })).toBeTruthy();
   });
 
   it('a sparse report with only a purity is a card with one figure: no facts list, no link, nothing empty', () => {
@@ -105,11 +141,12 @@ describe('Coa', () => {
     expect([...container.querySelectorAll('dd')].every((d) => (d.textContent ?? '').trim() !== '')).toBe(true);
   });
 
-  it('a sparse report with only a lab and a link has the link and one fact, and no figures list', () => {
+  it('a sparse report with only a lab and a link is just the button, naming the lab', () => {
     const { container } = render(<Coa coas={[coa({ sampleName: null, mgAmount: null, purity: null, batch: null, testDate: null })]} />);
-    expect(screen.getAllByRole('term').map((t) => t.textContent)).toEqual(['Lab']);
-    expect(container.querySelectorAll('dl')).toHaveLength(1);
-    expect(screen.getByRole('link', { name: /View report/ })).toHaveAttribute('href', 'https://example.com/report/1');
+    // The lab moves onto the button, so there is no facts list at all.
+    expect(screen.queryByRole('term')).toBeNull();
+    expect(container.querySelectorAll('dl')).toHaveLength(0);
+    expect(screen.getByRole('link', { name: /View report from Example Labs/ })).toHaveAttribute('href', 'https://example.com/report/1');
   });
 
   it('puts purity before amount in the headline figures', () => {
@@ -126,7 +163,7 @@ describe('Coa', () => {
   it('drops entries with nothing displayable before choosing the latest', () => {
     const empty = coa({ id: 9, lab: null, sampleName: null, mgAmount: null, purity: null, batch: null, testDate: null, reportUrl: null, fileKey: null });
     render(<Coa coas={[empty, coa({ id: 3, lab: 'Third Labs' })]} />);
-    expect(screen.getByText('Third Labs')).toBeTruthy();
+    expect(screen.getByRole('link', { name: /View report from Third Labs/ })).toBeTruthy();
     expect(document.querySelector('details')).toBeNull();
   });
 
@@ -147,7 +184,7 @@ describe('Coa', () => {
 
   it.each([['a string'], [['x', null, 7, coa()]], [{ 0: coa() }], [42]])('tolerates a malformed list: %j', (coas) => {
     const { container } = render(<Coa coas={coas as unknown as ProductCoa[]} />);
-    if (Array.isArray(coas)) expect(screen.getByText('Example Labs')).toBeTruthy();
+    if (Array.isArray(coas)) expect(screen.getByRole('link', { name: /View report from Example Labs/ })).toBeTruthy();
     else expect(container.innerHTML).toBe('');
   });
 
@@ -159,7 +196,7 @@ describe('Coa', () => {
   it('opens links through Telegram with an absolute address', () => {
     state.telegram = true;
     render(<Coa coas={[coa({ reportUrl: null, fileKey: KEY })]} />);
-    const link = screen.getByRole('link', { name: /View report/ });
+    const link = screen.getByRole('link', { name: /View report from Example Labs/ });
     expect(fireEvent.click(link)).toBe(false); // default prevented: the page does not navigate
     expect(state.opened).toEqual([`${window.location.origin}/media/coas/1/${KEY}`]);
   });
