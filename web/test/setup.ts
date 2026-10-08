@@ -6,3 +6,5 @@ Object.defineProperty(window, 'matchMedia', {
 });
 // Puck's drag-and-drop layer needs ResizeObserver at import time (EditorBlock reads Puck's store); jsdom has none.
 globalThis.ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} } as unknown as typeof ResizeObserver;
+// jsdom logs "not implemented" for scrollTo; react-router's <ScrollRestoration /> calls it on every navigation.
+window.scrollTo = (() => undefined) as typeof window.scrollTo;

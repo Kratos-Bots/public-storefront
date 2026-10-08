@@ -83,9 +83,38 @@ describe('Description', () => {
     for (const a of Array.from(el.querySelectorAll('a'))) expect(a.hasAttribute('target')).toBe(false);
   });
 
-  it('drops attributes other than href', () => {
-    const el = root('| a |\n|:-:|\n| b |\n\n<p style="color:red" class="x" id="y">hi</p>');
+  it('drops attributes other than href, and align on anything but a table cell', () => {
+    const el = root('<p style="color:red" class="x" id="y" align="center">hi</p>\n\n<td style="color:red" class="x" id="y">c</td>');
     expect(el.querySelector('[align], [style], [class], [id]')).toBeNull();
+    const table = root('| a |\n|:-:|\n| b |');
+    expect(table.querySelector('[style], [class], [id]')).toBeNull();
+    expect(Array.from(table.querySelectorAll('th, td')).every((c) => c.getAttributeNames().join() === 'align')).toBe(true);
+  });
+
+  it('keeps left, center and right column alignment on header and body cells', () => {
+    const el = root('| a | b | c | d |\n|:--|:-:|--:|---|\n| 1 | 2 | 3 | 4 |');
+    const aligns = (sel: string) => Array.from(el.querySelectorAll(sel)).map((c) => c.getAttribute('align'));
+    expect(aligns('thead th')).toEqual(['left', 'center', 'right', null]);
+    expect(aligns('tbody td')).toEqual(['left', 'center', 'right', null]);
+  });
+
+  it('centres all four columns of a dose table', () => {
+    const el = root(
+      '| Dose (mg) | Dial setting (units) | Dose (mg) | Dial setting (units) |\n|:---------:|:--------------------:|:---------:|:--------------------:|\n| 1 | 9 | 2 | 17 |',
+    );
+    const cells = Array.from(el.querySelectorAll('th, td'));
+    expect(cells).toHaveLength(8);
+    expect(cells.every((c) => c.getAttribute('align') === 'center')).toBe(true);
+  });
+
+  it('drops align values other than left, center and right, even on a cell', () => {
+    const el = root('<table><tr><td align="justify">a</td><td align="center; color:red">b</td><td align="javascript:x">c</td><td align="CENTER">d</td></tr></table>');
+    expect(Array.from(el.querySelectorAll('td')).map((c) => c.getAttribute('align'))).toEqual([null, null, null, 'center']);
+  });
+
+  it('drops align on a paragraph or heading written as raw HTML', () => {
+    const el = root('<p align="center">p</p>\n\n<h2 align="right">h</h2>\n\n<div align="left">d</div>');
+    expect(el.querySelector('[align]')).toBeNull();
   });
 
   it('renders nothing for empty, blank or missing text', () => {

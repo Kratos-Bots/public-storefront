@@ -947,7 +947,7 @@ then. On the sheet the four slots render bare, in order, after the sheet's loadi
 | `ProductUpsells` | `Upsells` (cards) | `Upsells onSelect` (rows, swap in place) | all |
 | `ProductGroup` | `kind` `priceRow` ("Side by side"), `identity` ("Text beside thumbnail"), `identityText` ("Text column"); one slot `items` | same classes | all |
 
-Product descriptions are Markdown (GFM: headings, lists, tables, links, `breaks` so single newlines stay line breaks). The result is sanitised (`sanitizeMarkdown`): no images, no raw HTML, `href` the only attribute, https links open in a new tab. Wide tables scroll inside their own box.
+Product descriptions are Markdown (GFM: headings, lists, tables, links, `breaks` so single newlines stay line breaks). The result is sanitised (`sanitizeMarkdown`): no images, no raw HTML, `href` the only attribute (one exception: table column alignment, `:--` / `:-:` / `--:`, survives as `align="left|center|right"` on `th`/`td` only; any other `align` value or tag loses it), https links open in a new tab. Wide tables scroll inside their own box.
 
 Each view renders `null` exactly when v0.7.0 omitted the piece (no description, tiers, provenance,
 contact links or curated upsells). Defaults — *storefront*: `top` [Breadcrumbs] · `media` [Gallery]

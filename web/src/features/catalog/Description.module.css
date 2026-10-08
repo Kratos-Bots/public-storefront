@@ -138,6 +138,22 @@
   white-space: nowrap;
 }
 
+/* Column alignment from the Markdown (`:--:`) arrives as `align` on the cells; the sanitiser keeps only
+   left / center / right. Written out here because the `text-align: left` above outranks the attribute's
+   presentational hint. A centred cell gets equal padding either side, so the text sits in the middle of
+   the column rather than half the padding off it. Unaligned columns stay left. */
+.prose th[align='left'],
+.prose td[align='left'] { text-align: left; }
+
+.prose th[align='center'],
+.prose td[align='center'] {
+  text-align: center;
+  padding-inline: 0.5rem;
+}
+
+.prose th[align='right'],
+.prose td[align='right'] { text-align: right; }
+
 .prose tbody tr:last-child td { border-bottom: 0; }
 
 /* Phones: the description shares the screen with the lab report below it, so the prose runs a little

@@ -139,15 +139,16 @@ export function ProductList({ slots }: { slots?: ListSlots } = {}) {
   const raw = params.get('p');
   const selectedId = raw !== null && /^\d+$/.test(raw) ? Number(raw) : null;
 
+  // The sheet floats over the list, so opening and closing it must not send the list back to the top.
   const showProduct = (product: Product, replace = false) => {
     const next = new URLSearchParams(params);
     next.set('p', String(product.id));
-    setParams(next, { replace });
+    setParams(next, { replace, preventScrollReset: true });
   };
   const closeProduct = () => {
     const next = new URLSearchParams(params);
     next.delete('p');
-    setParams(next, { replace: true });
+    setParams(next, { replace: true, preventScrollReset: true });
   };
 
   if (catalog.isPending) return <PageSkeleton inline />;
