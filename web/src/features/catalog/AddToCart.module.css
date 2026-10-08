@@ -1,5 +1,5 @@
 /* The shop's one loud control. Solid primary block, mono micro-caps like every
-   other label in the chassis, and the confirmation is a state swap rather than a
+   other label in the chassis (the large size takes the button voice instead, see .lg), and the confirmation is a state swap rather than a
    toast — the button hollows out to a primary outline while it says "Added". */
 .button {
   display: inline-flex;
@@ -55,11 +55,23 @@
   text-overflow: ellipsis;
 }
 
+/* The large button is the shop's call-to-action: its type and height are the shared --sf-cta-* spec in global.css,
+   the same one the lab report's View report button reads, so the two always match (stepper and disabled states
+   included — they are this same element). The small card button keeps the micro-caps above. */
 .lg {
   width: 100%;
-  min-height: 52px;
+  min-height: var(--sf-cta-height);
   padding: 0 1.25rem;
-  font-size: 11px;
+  font-family: var(--sf-cta-font);
+  font-size: calc(var(--sf-cta-size) * var(--sf-text-scale, 1));
+  font-weight: var(--sf-cta-weight);
+  letter-spacing: var(--sf-cta-tracking);
+  text-transform: var(--sf-cta-transform);
+  line-height: 1.25;
+}
+
+.lg .step {
+  min-width: var(--sf-cta-height);
 }
 
 .sm {

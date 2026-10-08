@@ -10,7 +10,7 @@
   --coa-quiet: var(--coa-mix, var(--sf-muted));
   display: flex;
   flex-direction: column;
-  max-width: 34rem;
+  max-width: var(--sf-coa-max, 34rem);
   min-width: 0;
   padding: 0;
   border: var(--sf-card-border);
@@ -131,16 +131,20 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  min-height: 48px;
+  min-height: var(--sf-cta-height);
   margin-top: 0.15rem;
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 1.25rem;
   border: 1px solid var(--sf-primary);
   border-radius: var(--sf-btn-radius);
   background: var(--sf-primary);
   color: var(--sf-bg);
-  font-family: var(--sf-btn-font, inherit);
-  font-size: calc(0.9375rem * var(--sf-text-scale, 1));
-  font-weight: 600;
+  /* The shared call-to-action spec (global.css), also read by the large Add to cart button. This one may wrap
+     onto a second line for a long lab name, so it is taller then; on one line the two are the same height. */
+  font-family: var(--sf-cta-font);
+  font-size: calc(var(--sf-cta-size) * var(--sf-text-scale, 1));
+  font-weight: var(--sf-cta-weight);
+  letter-spacing: var(--sf-cta-tracking);
+  text-transform: var(--sf-cta-transform);
   line-height: 1.25;
   text-align: center;
   text-decoration: none;

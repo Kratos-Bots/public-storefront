@@ -1,3 +1,10 @@
 /* Modern is the base look: every rule it needs lives in the shared styles and
    the default slots. This file exists so modern loads through the same path as
    every other template. Scope any future rule under :root[data-sf-template="modern"]. */
+
+/* The call-to-action buttons (Add to cart, View report) read the shared --sf-cta-* spec. Modern's button voice is
+   wide-tracked caps, which read larger than sentence case, so it steps the size down to the 13px its Mantine
+   large buttons use; the other templates keep the 15px default. */
+:root[data-sf-template="modern"] {
+  --sf-cta-size: 0.8125rem;
+}

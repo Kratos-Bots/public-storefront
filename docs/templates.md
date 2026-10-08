@@ -244,6 +244,18 @@ Token variables (set by `tokenVariables()` in `web/src/templates/tokens.ts`): `-
 turns a `RadiusToken` into `var(--mantine-radius-default)` / `999px` / `<n>px`; `--sf-btn-font`
 points at whichever `--sf-font-*` the token names.)
 
+**Call-to-action spec.** The large Add to cart button (`AddToCart` `size="lg"`: product page and sheet,
+including its "n in cart" stepper and disabled states) and the lab report's "View report" button
+(`Coa` `.cta`) read one shared set of variables, declared in `web/src/styles/global.css`, so they always
+match in family, size, weight, tracking, case and height: `--sf-cta-font`, `--sf-cta-transform`,
+`--sf-cta-weight` and `--sf-cta-tracking` (the template's own `--sf-btn-font`, `--sf-btn-transform`,
+`--sf-btn-weight`, `--sf-btn-tracking-md`), plus `--sf-cta-size` (default `0.9375rem`, multiplied by a block's
+`--sf-text-scale`) and `--sf-cta-height` (`48px`). A template changes the voice through its button tokens as
+before; only `modern`, whose voice is wide-tracked caps, sets `--sf-cta-size: 0.8125rem` (the size its Mantine
+large buttons use) in its `template.css`. The small card button (`AddToCart` `size="sm"`) is not part of
+this and keeps its own micro-caps (bento's card override included). A "View report" with a long lab name can
+wrap onto two lines, so it is taller then; on one line both buttons are 48px.
+
 ### Root attributes
 
 Set on `<html>` by `applyDocumentTheme()` (`web/src/app/theme-bridge.ts`, via `rootAttributes()` in
