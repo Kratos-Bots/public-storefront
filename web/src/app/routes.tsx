@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Navigate, Outlet, useParams, type RouteObject } from 'react-router';
+import { Navigate, Outlet, ScrollRestoration, useParams, type RouteObject } from 'react-router';
 import { useMediaQuery } from '@mantine/hooks';
 import { useEffectiveLayout } from '@/app/layout.ts';
 import { Guard } from '@/app/guards.tsx';
@@ -73,9 +73,16 @@ export const routes: RouteObject[] = [
   {
     path: '/',
     element: (
-      <AccessBoundary>
-        <PuckShell />
-      </AccessBoundary>
+      <>
+        {/* The window is what scrolls (every shell is min-height, none is a scroll container). A new page
+            starts at the top, Back/Forward returns to where the shopper was. Mounted here, not in a shell,
+            because the page builder's preview renders shells under plain <Routes>, where this would throw.
+            In-page query changes (the product sheet's `?p=`) opt out with `preventScrollReset`. */}
+        <ScrollRestoration />
+        <AccessBoundary>
+          <PuckShell />
+        </AccessBoundary>
+      </>
     ),
     children: [
       { index: true, ...page('catalog') },
