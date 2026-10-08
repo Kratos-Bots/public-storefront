@@ -106,34 +106,15 @@
   width: 84px;
 }
 
-/* The price is the one figure the shopper opened this for — it gets its own band
-   and the largest type on the sheet. */
-.priceBand {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-top: 1.25rem;
-  padding: 1rem 0;
-  border-top: 1px solid var(--sf-line);
-  border-bottom: 1px solid var(--sf-line);
-}
-
-.priceLabel {
-  font-family: var(--sf-font-mono);
-  font-size: calc(10px * var(--sf-text-scale, 1));
-  font-weight: 500;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-  color: var(--sf-block-fg, var(--sf-faint));
-}
-
+/* The price sits directly under the name, the stock line directly under it: name, price,
+   "SKU · status" read as one tight header. No band, no label. */
 .price {
+  margin: 0.4rem 0 0;
   font-family: var(--sf-font-mono);
-  font-size: calc(1.75rem * var(--sf-text-scale, 1));
+  font-size: calc(1.3rem * var(--sf-text-scale, 1));
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  line-height: 1;
+  line-height: 1.1;
   color: var(--sf-block-fg, var(--sf-text));
 }
 

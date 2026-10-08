@@ -10,6 +10,10 @@ export default {
   'add.another': 'Add-to-cart button label once a product has been added',
   'add.labelWithName': 'Screen-reader label of an icon-only add button: its label, then the product name',
   'add.ariaLabel': "Screen-reader label of a product row's quick-add button",
+  'add.group': "Screen-reader name of the quantity stepper that replaces a product's add button once it is in the cart",
+  'add.fewer': "Screen-reader label of the stepper's minus button (removes the product at the minimum)",
+  'add.more': "Screen-reader label of the stepper's plus button",
+  'add.inCart': 'Count shown between the stepper buttons on a product page, and announced on a card',
   'row.unavailable': "Screen-reader label of a product row's add button when the product can't be ordered",
   'row.outOfStock': "Screen-reader label of a product row's add button when sold out",
   'detail.breadcrumb': 'Screen-reader name of the trail above a product page',
@@ -41,7 +45,6 @@ export default {
   'ask.prefill': 'Text pre-filled in the chat when a shopper taps WhatsApp or Telegram on a product',
   'sheet.ships': 'Pre-order flag in the product sheet when a ship date is set',
   'sheet.loadFailed': 'Message in the product sheet when loading fails',
-  'sheet.unit': 'Label beside the price in the product sheet',
   'sheet.description': "Heading of a product's description in the sheet",
   'upsells.heading': 'Heading above suggested products on a product page',
 } as const satisfies Record<string, string>;

@@ -80,6 +80,6 @@ export async function addFirstToCart(page: Page, layout: Layout, mocks: MockHand
     await page.getByRole('button', { name: 'Close' }).first().click();
     await expect(page.getByRole('dialog')).toBeHidden();
   } else {
-    await expect(page.getByRole('button', { name: /^Add another/ }).first()).toBeVisible();
+    await expect(page.getByRole('group', { name: /in your cart/ }).first()).toBeVisible();
   }
 }

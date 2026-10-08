@@ -42,14 +42,14 @@ function product(overrides: Partial<Product> = {}): Product {
   };
 }
 
-function mount(p: Product, features: Partial<Features> = {}) {
+function mount(p: Product, features: Partial<Features> = {}, size: 'sm' | 'lg' = 'lg') {
   state.settings = {
     currency: 'GBP',
     features: { layout: 'storefront', ordering: true, guestCheckout: false, accounts: true, verify: true, tracking: false, wholesale: false, upsell: true, ...features },
   } as StorefrontSettings;
   return render(
     <MantineProvider env="test">
-      <AddToCart product={p} />
+      <AddToCart product={p} size={size} showPrice={size === 'lg'} />
     </MantineProvider>,
   );
 }
@@ -129,19 +129,91 @@ describe('AddToCart', () => {
     expect(button()).toHaveTextContent('Add · £29.00');
   });
 
-  it('cycles Add → Added → Add another', () => {
-    vi.useFakeTimers();
+  it('lg: after a tap the button becomes a stepper showing the count', () => {
     mount(product());
     fireEvent.click(button()!);
-    expect(button()).toHaveTextContent('Added');
+    expect(screen.getByRole('group')).toHaveAccessibleName('Quantity of BPC-157 5mg in your cart');
+    expect(screen.getByRole('group')).toHaveAttribute('data-sf-part', 'button');
+    expect(screen.getByRole('group')).toHaveAttribute('data-variant', 'filled');
+    expect(screen.getByRole('group')).toHaveTextContent('1 in cart');
+    expect(screen.getByRole('button', { name: 'One fewer BPC-157 5mg' })).toBeEnabled();
+  });
 
+  it('lg: a product already in the cart renders the stepper at once', () => {
+    useCartStore.setState({ lines: [{ productId: 7, displayName: 'BPC-157 5mg', sku: 'X', unitPrice: 29, basePrice: 29, pricingTiers: [], quantity: 3, isPreorder: false, excludedFromFreeShipping: false, imageProductId: null }], mode: 'local' });
+    mount(product());
+    expect(screen.getByRole('group')).toHaveTextContent('3 in cart');
+  });
+
+  it('+ and − change the quantity in the store', () => {
+    mount(product());
+    fireEvent.click(button()!);
+    fireEvent.click(screen.getByRole('button', { name: 'One more BPC-157 5mg' }));
+    fireEvent.click(screen.getByRole('button', { name: 'One more BPC-157 5mg' }));
+    expect(useCartStore.getState().lines[0]!.quantity).toBe(3);
+    expect(screen.getByRole('group')).toHaveTextContent('3 in cart');
+    fireEvent.click(screen.getByRole('button', { name: 'One fewer BPC-157 5mg' }));
+    expect(useCartStore.getState().lines[0]!.quantity).toBe(2);
+  });
+
+  it('− at 1 removes the line and the Add button returns', () => {
+    mount(product());
+    fireEvent.click(button()!);
+    fireEvent.click(screen.getByRole('button', { name: 'One fewer BPC-157 5mg' }));
+    expect(useCartStore.getState().lines).toEqual([]);
+    expect(screen.queryByRole('group')).toBeNull();
+    expect(button()).toHaveTextContent('Add · £29.00');
+  });
+
+  it('− at the minimum order quantity removes the line', () => {
+    mount(product({ minOrderQuantity: 10 }));
+    fireEvent.click(button()!);
+    expect(screen.getByRole('group')).toHaveTextContent('10 in cart');
+    fireEvent.click(screen.getByRole('button', { name: 'One fewer BPC-157 5mg' }));
+    expect(useCartStore.getState().lines).toEqual([]);
+  });
+
+  it('+ is disabled at the maximum order quantity', () => {
+    mount(product({ maxOrderQuantity: 2 }));
+    fireEvent.click(button()!);
+    fireEvent.click(screen.getByRole('button', { name: 'One more BPC-157 5mg' }));
+    expect(screen.getByRole('button', { name: 'One more BPC-157 5mg' })).toBeDisabled();
+    expect(useCartStore.getState().lines[0]!.quantity).toBe(2);
+  });
+
+  it('sm with the flag off keeps the Add → Added → Add another cycle', () => {
+    vi.useFakeTimers();
+    mount(product(), {}, 'sm');
+    fireEvent.click(button()!);
+    expect(screen.queryByRole('group')).toBeNull();
+    expect(button()).toHaveTextContent('Added');
     act(() => {
       vi.advanceTimersByTime(1600);
     });
     expect(button()).toHaveTextContent('Add another');
-
     fireEvent.click(button()!);
-    expect(button()).toHaveTextContent('Added');
     expect(useCartStore.getState().lines[0]!.quantity).toBe(2);
+  });
+
+  it('sm with the flag on shows a compact stepper', () => {
+    mount(product(), { cardStepper: true }, 'sm');
+    fireEvent.click(button()!);
+    const group = screen.getByRole('group');
+    expect(group).toHaveTextContent('1');
+    fireEvent.click(screen.getByRole('button', { name: 'One more BPC-157 5mg' }));
+    expect(useCartStore.getState().lines[0]!.quantity).toBe(2);
+  });
+
+  it('renders nothing for ordering off, even with the product in the cart', () => {
+    useCartStore.setState({ lines: [{ productId: 7, displayName: 'BPC-157 5mg', sku: 'X', unitPrice: 29, basePrice: 29, pricingTiers: [], quantity: 1, isPreorder: false, excludedFromFreeShipping: false, imageProductId: null }], mode: 'local' });
+    const { container } = mount(product(), { ordering: false });
+    expect(container.querySelector('button, [role="group"]')).toBeNull();
+  });
+
+  it('an unavailable product keeps its disabled button even if it is in the cart', () => {
+    useCartStore.setState({ lines: [{ productId: 7, displayName: 'BPC-157 5mg', sku: 'X', unitPrice: 29, basePrice: 29, pricingTiers: [], quantity: 1, isPreorder: false, excludedFromFreeShipping: false, imageProductId: null }], mode: 'local' });
+    mount(product({ inStock: false }));
+    expect(screen.queryByRole('group')).toBeNull();
+    expect(button()).toBeDisabled();
   });
 });

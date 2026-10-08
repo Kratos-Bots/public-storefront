@@ -1,7 +1,9 @@
 import type { StyleAttrs } from '@/builder/define.ts';
 import { useEffect, useRef, useState } from 'react';
 import { useSettings } from '@/app/settings.ts';
-import { addToCart } from '@/features/cart/useServerCart.ts';
+import { MinusIcon, PlusIcon } from '@/components/icons.tsx';
+import { addToCart, removeFromCart, setCartQuantity } from '@/features/cart/useServerCart.ts';
+import { useCartStore } from '@/stores/cart.ts';
 import { deriveStockStatus, formatMoney, resolveUnitPrice } from '@/lib/format.ts';
 import { Slot } from '@/templates/runtime.tsx';
 import { useText } from '@/text/runtime.tsx';
@@ -37,6 +39,10 @@ export function AddToCart({ product, size = 'lg', showPrice = true, rootAttrs }:
 
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
+  // How many of this product the cart already holds (0 when none). Read here, before the early
+  // returns, so the hook order never changes.
+  const inCart = useCartStore((s) => s.lines.find((l) => l.productId === product.id)?.quantity ?? 0);
+
   if (!features.ordering) return null;
 
   const status = deriveStockStatus(product.inStock, product.lowStockAlert);
@@ -53,6 +59,10 @@ export function AddToCart({ product, size = 'lg', showPrice = true, rootAttrs }:
   const quantity = Math.max(1, product.minOrderQuantity ?? 1);
   const totalPrice = resolveUnitPrice(product, quantity) * quantity;
 
+  // Where the stepper takes over, the "Added" / "Add another" cycle never shows: the stepper is the confirmation.
+  const steppable = size === 'lg' || (features.cardStepper ?? false);
+  const shown = steppable ? 'idle' : phase;
+
   const verb = product.isPreorder ? t('common.product.preorder') : t('product.add.verb');
   const qty = quantity > 1 ? ` ${quantity}` : '';
   const price = showPrice ? ` · ${formatMoney(totalPrice, currency)}` : '';
@@ -60,11 +70,62 @@ export function AddToCart({ product, size = 'lg', showPrice = true, rootAttrs }:
     ? t('product.add.unavailable')
     : outOfStock
       ? t('common.product.outOfStock')
-      : phase === 'added'
+      : shown === 'added'
         ? t('product.add.added')
-        : phase === 'again'
+        : shown === 'again'
           ? t('product.add.another')
           : `${verb}${qty}${price}`;
+
+  // The page / sheet control (lg) always becomes a stepper once the product is in the cart; the
+  // card quick-add (sm) only when the shop turned `cardStepper` on. A product that can't be bought
+  // keeps its disabled button.
+  const stepper = !disabled && inCart > 0 && steppable;
+  if (stepper) {
+    const floor = Math.max(1, product.minOrderQuantity ?? 1);
+    const ceiling = product.maxOrderQuantity ?? null;
+    const sizeClass = size === 'sm' ? classes.sm : classes.lg;
+    return (
+      <div
+        role="group"
+        className={`${classes.button} ${classes.stepper} ${sizeClass}`}
+        aria-label={t('product.add.group', { name: product.displayName })}
+        data-sf-part="button"
+        data-variant="filled"
+        {...rootAttrs}
+      >
+        <button
+          type="button"
+          className={classes.step}
+          onClick={() => {
+            if (inCart > floor) return setCartQuantity(product.id, inCart - 1);
+            removeFromCart(product.id);
+          }}
+          aria-label={t('product.add.fewer', { name: product.displayName })}
+        >
+          <MinusIcon size={size === 'sm' ? 14 : 16} />
+        </button>
+        <span className={classes.count} aria-live="polite">
+          {size === 'sm' ? (
+            <>
+              <span aria-hidden="true">{inCart}</span>
+              <span className="sf-visually-hidden">{t('product.add.inCart', { count: inCart })}</span>
+            </>
+          ) : (
+            t('product.add.inCart', { count: inCart })
+          )}
+        </span>
+        <button
+          type="button"
+          className={classes.step}
+          disabled={ceiling !== null && inCart >= ceiling}
+          onClick={() => setCartQuantity(product.id, inCart + 1)}
+          aria-label={t('product.add.more', { name: product.displayName })}
+        >
+          <PlusIcon size={size === 'sm' ? 14 : 16} />
+        </button>
+      </div>
+    );
+  }
 
   const onClick = () => {
     addToCart(product, quantity);
@@ -76,7 +137,7 @@ export function AddToCart({ product, size = 'lg', showPrice = true, rootAttrs }:
   return (
     <button
       type="button"
-      className={`${classes.button} ${size === 'sm' ? classes.sm : classes.lg} ${phase === 'added' ? classes.done : ''}`}
+      className={`${classes.button} ${size === 'sm' ? classes.sm : classes.lg} ${shown === 'added' ? classes.done : ''}`}
       disabled={disabled}
       onClick={onClick}
       aria-label={showPrice ? undefined : t('product.add.labelWithName', { label, name: product.displayName })}

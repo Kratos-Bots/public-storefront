@@ -139,3 +139,40 @@
 }
 
 .prose tbody tr:last-child td { border-bottom: 0; }
+
+/* Phones: the description shares the screen with the lab report below it, so the prose runs a little
+   tighter — smaller table text, cells and block gaps. Legibility floors stay (13px text, 1.4 leading). */
+@media (max-width: 47.99em) {
+  .prose p,
+  .prose ul,
+  .prose ol,
+  .prose blockquote,
+  .prose pre,
+  .prose div {
+    margin-bottom: 0.6em;
+  }
+
+  .prose h1,
+  .prose h2,
+  .prose h3,
+  .prose h4,
+  .prose h5,
+  .prose h6 {
+    margin: 1.05em 0 0.35em;
+    line-height: 1.25;
+  }
+
+  .prose li { margin: 0.1em 0; }
+
+  .prose table {
+    font-size: 0.85em;
+    line-height: 1.35;
+  }
+
+  .prose th,
+  .prose td {
+    padding: 0.3rem 0.7rem 0.3rem 0;
+  }
+
+  .prose hr { margin: 1em 0; }
+}

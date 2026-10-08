@@ -111,7 +111,7 @@ for (const layout of LAYOUTS) {
     const mocks = await installMocks(page, { layout, session: true, pages: { [layout]: checkoutWithoutFlowSet(layout) } });
     await page.goto('/');
     // Let the personalised catalogue settle first: a late catalogue swap re-mounts the detail
-    // page and resets the add button's "Added" phase that addFirstToCart waits for (seen under load).
+    // page and resets the add button (now a stepper) that addFirstToCart waits for (seen under load).
     await page.waitForLoadState('networkidle');
     await openProduct(page, layout, 'Alpine Extract 10ml');
     await addFirstToCart(page, layout, mocks);

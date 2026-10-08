@@ -129,7 +129,7 @@ for (const layout of LAYOUTS) {
         await shot(page, `2-detail-${layout}-${size}`);
 
         await page.getByRole('button', { name: /^Add · / }).first().click();
-        await expect(page.getByRole('button', { name: /^(Added|Add another)/ })).toBeVisible();
+        await expect(page.getByRole('group', { name: /in your cart/ })).toBeVisible();
         if (layout === 'menu') {
           await page.getByRole('button', { name: 'Close' }).first().click();
           await expect(page.getByRole('dialog', { name: 'Alpine Extract 10ml' })).toBeHidden();
@@ -201,7 +201,7 @@ test.describe('guest checkout', () => {
     await expect(page.getByRole('heading', { name: 'All products', level: 1 })).toBeVisible();
     await openProduct(page, 'storefront', 'Alpine Extract 10ml');
     await page.getByRole('button', { name: /^Add · / }).first().click();
-    await expect(page.getByRole('button', { name: /^(Added|Add another)/ })).toBeVisible();
+    await expect(page.getByRole('group', { name: /in your cart/ })).toBeVisible();
 
     // A guest has no server cart: the lines ride along inside the guest calls.
     await page.goto('/checkout');
