@@ -45,7 +45,6 @@ export default {
   'ask.prefill': 'Text pre-filled in the chat when a shopper taps WhatsApp or Telegram on a product',
   'sheet.ships': 'Pre-order flag in the product sheet when a ship date is set',
   'sheet.loadFailed': 'Message in the product sheet when loading fails',
-  'sheet.unit': 'Label beside the price in the product sheet',
   'sheet.description': "Heading of a product's description in the sheet",
   'upsells.heading': 'Heading above suggested products on a product page',
 } as const satisfies Record<string, string>;

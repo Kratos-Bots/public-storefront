@@ -3,12 +3,12 @@ import { defineBlock } from '@/builder/define.ts';
 import { ProductFamily } from '@/builder/families.ts';
 import { BOX, TEXT, styleSupport } from '@/builder/style/model.ts';
 
-/** The product's price: the page's big figure, the sheet's price band. */
+/** The product's price: the page's big figure, the sheet's price under the name. */
 export const block = defineBlock<{ id: string }>({
   name: 'ProductPrice', label: 'Price', category: 'part', part: { family: 'product' },
   layouts: 'all', routeBound: false, slots: [],
   style: styleSupport('root', [...BOX, ...TEXT]),
-  text: ['product.sheet.unit'],
+  text: [],
   schema: z.object({}), defaultProps: {},
   render: (p) => <ProductFamily.PartHost name="ProductPrice" props={p as Record<string, unknown>} styleAttrs={p.puck.style} />,
 });

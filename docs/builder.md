@@ -936,7 +936,7 @@ then. On the sheet the four slots render bare, in order, after the sheet's loadi
 | `ProductBreadcrumbs` | `<nav class="crumbs">` trail | the same | all |
 | `ProductGallery` | `ProductImage variant="web" eager` | `ProductImage class="thumb"` | all |
 | `ProductTitle` *(req.)* | `<header class="head"><h1 data-sf-part="page-title">` + SKU | `<h2 data-sf-part="sheet-title">` | all |
-| `ProductPrice` *(req.)* | `<p class="price" data-sf-part="price">` | `<div class="priceBand">` | all |
+| `ProductPrice` *(req.)* | `<p class="price" data-sf-part="price">` | `<p class="price" data-sf-part="price">`, under the name | all |
 | `ProductStock` | `<div class="flags">` chip, pre-order, minimum | `<p class="flags">` SKU, chip, pre-order, minimum | all |
 | `ProductAddToCart` *(req.)* | `AddToCart size="lg"` | — (pinned in the sheet footer) | storefront |
 | `ProductDescription` | `<div class="description" data-sf-prose>` (Markdown, rendered) | `<section class="block">` | all |
@@ -953,7 +953,7 @@ Each view renders `null` exactly when v0.7.0 omitted the piece (no description, 
 contact links or curated upsells). Defaults — *storefront*: `top` [Breadcrumbs] · `media` [Gallery]
 · `main` [Title, Group(priceRow)[Price, Stock], AddToCart, Description, BulkPricing, Provenance, Ask]
 · `below` [Upsells]. *menu, webapp*: `top` [] · `media` [] · `main` [Group(identity)[Group(identityText)
-[Title, Stock], Gallery], Price, Description, BulkPricing, Provenance, Ask] · `below` [Upsells].
+[Title, Price, Stock], Gallery], Description, BulkPricing, Provenance, Ask] · `below` [Upsells].
 
 `ProductCoa` is deliberately **not** in those defaults. It draws the product's latest lab report (certificate
 of analysis, `Product.coas`) as one compact `data-sf-part="card"` (purity and amount as centred headline figures, batch and test date as small label-value pairs

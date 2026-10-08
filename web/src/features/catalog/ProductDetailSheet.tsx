@@ -192,13 +192,9 @@ function SheetTitle({ styleAttrs }: PartViewProps) {
 function SheetPrice({ styleAttrs }: PartViewProps) {
   const { product } = ProductFamily.useData();
   const { currency } = useSettings();
-  const { t } = useText();
-  // The one number the shopper came for, on its own rule.
+  // The one number the shopper came for: set directly under the name, no band, no label.
   return (
-    <div className={classes.priceBand} {...styleAttrs}>
-      <span className={classes.priceLabel}>{t('product.sheet.unit')}</span>
-      <span className={classes.price} data-sf-part="price">{formatMoney(product.price, currency)}</span>
-    </div>
+    <p className={classes.price} data-sf-part="price" {...styleAttrs}>{formatMoney(product.price, currency)}</p>
   );
 }
 

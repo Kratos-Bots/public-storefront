@@ -117,7 +117,7 @@ describe('upgrade of legacy toggles (spec §8)', () => {
     for (const s of ['top', 'media', 'main', 'below']) expect(off[s]).toEqual(on[s]);
     expect(off.top).toEqual([]);
     expect(off.media).toEqual([]);
-    expect(types(off.main)).toEqual(['ProductGroup', 'ProductPrice', 'ProductDescription', 'ProductBulkPricing', 'ProductProvenance', 'ProductAsk']);
+    expect(types(off.main)).toEqual(['ProductGroup', 'ProductDescription', 'ProductBulkPricing', 'ProductProvenance', 'ProductAsk']);
     expect(types(off.below)).toEqual(['ProductUpsells']);
   });
   it('never mutates a frozen input', () => {

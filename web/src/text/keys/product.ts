@@ -47,7 +47,6 @@ export default defineTextArea('product', {
   'ask.prefill': { en: 'Hi — a question about {name} ({sku})', max: 120 },
   'sheet.ships': { en: 'Ships {eta}', max: 60 },
   'sheet.loadFailed': { en: "We couldn't load this product.", max: 80 },
-  'sheet.unit': { en: 'Unit', max: 30 },
   'sheet.description': { en: 'Description', max: 40 },
   'upsells.heading': { en: 'Often bought with this', max: 60 },
 });

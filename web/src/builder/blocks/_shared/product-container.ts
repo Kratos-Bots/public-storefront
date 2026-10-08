@@ -11,8 +11,8 @@ function defaultSlots(props: Record<string, unknown>, { layout, id }: { layout: 
   if (layout !== 'storefront') {
     return {
       top: [], media: [],
-      main: [g('identity', [g('identityText', [p('ProductTitle'), p('ProductStock')]), p('ProductGallery')]),
-        p('ProductPrice'), p('ProductDescription'), p('ProductBulkPricing'), p('ProductProvenance'), p('ProductAsk')],
+      main: [g('identity', [g('identityText', [p('ProductTitle'), p('ProductPrice'), p('ProductStock')]), p('ProductGallery')]),
+        p('ProductDescription'), p('ProductBulkPricing'), p('ProductProvenance'), p('ProductAsk')],
       below: [p('ProductUpsells')],
     };
   }

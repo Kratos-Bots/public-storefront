@@ -80,7 +80,7 @@ describe('parts contract (spec §9, §13)', () => {
   });
   it('every part whose spec declares TEXT reach declares the site-text keys it renders', () => {
     // These render product data only (a name, a price): no useText call, so no site-text keys to declare.
-    const DATA_ONLY = new Set(['ProductTitle', 'CardTileName', 'CardTilePrice', 'CardRowName', 'CardRowPrice']);
+    const DATA_ONLY = new Set(['ProductTitle', 'ProductPrice', 'CardTileName', 'CardTilePrice', 'CardRowName', 'CardRowPrice']);
     const missing = Object.entries(PARTS)
       .filter(([, spec]) => TEXT.every((k) => spec.style.keys.includes(k)))
       .filter(([name]) => !DATA_ONLY.has(name))
