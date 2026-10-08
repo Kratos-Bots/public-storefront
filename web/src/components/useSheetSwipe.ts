@@ -66,6 +66,8 @@ export function useSheetSwipe({ panel, enabled, onClose, zoneOf }: SheetSwipeOpt
     let samples: { y: number; t: number }[] = [];
     let spring: Animation | null = null;
     let declinedTimer: number | undefined;
+    // Set once a release asked the parent to close: the offset must then outlive this effect (see cleanup).
+    let closing = false;
 
     const reduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const setOffset = (px: number) => {
@@ -129,9 +131,11 @@ export function useSheetSwipe({ panel, enabled, onClose, zoneOf }: SheetSwipeOpt
       const close = e.type === 'touchend' && (offset >= far || (speed > FLICK_SPEED && offset >= FLICK_MIN));
       reset();
       if (!close) { springBack(); return; }
+      closing = true;
       latest.current.onClose();
       // A parent that refuses to close (a guard) must not leave the panel stranded half-way down.
       declinedTimer = window.setTimeout(() => {
+        closing = false;
         if (el.isConnected && latest.current.enabled) springBack();
       }, DECLINED_AFTER_MS);
     };
@@ -147,7 +151,10 @@ export function useSheetSwipe({ panel, enabled, onClose, zoneOf }: SheetSwipeOpt
       el.removeEventListener('touchcancel', onEnd);
       window.clearTimeout(declinedTimer);
       spring?.cancel();
-      el.style.translate = '';
+      // Closing after a swipe: the sheet is sliding out from where the finger left it, so the offset stays
+      // until that slide is over. Clearing it here would snap the panel back up before it leaves.
+      if (closing && offset > 0) window.setTimeout(() => { el.style.translate = ''; }, DECLINED_AFTER_MS);
+      else el.style.translate = '';
     };
   }, [panel, enabled]);
 }
