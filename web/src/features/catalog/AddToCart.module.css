@@ -156,3 +156,9 @@
     transition: none;
   }
 }
+
+/* The card's count has no words around it, so it earns a little more size than the 10px label type. */
+.sm .count {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
