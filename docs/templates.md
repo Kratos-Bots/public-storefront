@@ -299,7 +299,7 @@ template that wants one consistent heading look across every page styles the par
 | `product-grid` | the storefront catalogue's card grid `<div>` in `ProductGrid` (not the upsell row) — its direct children are the `product-card`s, so a template can promote `:first-child` |
 | `price` | the main price element in `ProductCard`, `ProductRow`, `ProductDetailPage`, `ProductDetailSheet` |
 | `badge` | `StockChip` root, `StatusPill` root, header cart count `<span>` in both shells |
-| `sheet` | `Drawer.Content` in `components/Sheet.tsx` (every sheet except the cart) |
+| `sheet` | `Drawer.Content` in `components/Sheet.tsx` (every sheet except the cart). Below 62em it is a bottom sheet that closes with a swipe down (`components/useSheetSwipe.ts`): from the handle or the pinned header at once, from the body only when it is scrolled to the very top; the action foot and the desktop side panel ignore the gesture. A template styling the sheet must not set `transform` or `translate` on it, or the drag will fight the style |
 | `drawer` | the same `Drawer.Content` when `CartDrawer.tsx` opens it (`<Sheet part="drawer">`) |
 | `cart-bar` | `MobileCartBar` root `<div>` |
 | `notice` | each notice root in `NoticeBanners.tsx` |

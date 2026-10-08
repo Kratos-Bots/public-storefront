@@ -1,7 +1,18 @@
-import type { ReactNode, Ref } from 'react';
+import { useState, type ReactNode, type Ref } from 'react';
 import { Drawer } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import classes from '@/components/Sheet.module.css';
+import { useSheetSwipe, type SheetZone } from '@/components/useSheetSwipe.ts';
+
+/**
+ * Who owns a touch. The handle and the pinned header are the grab zone; the body hands its touches
+ * over only when it is scrolled to the very top (the hook checks that); the action foot is left alone.
+ */
+function zoneOf(target: Element, panel: HTMLElement): SheetZone {
+  if (target.closest(`.${classes.footer}`)) return 'none';
+  if (target.closest(`.${classes.body}`)) return 'body';
+  return panel.contains(target) ? 'grab' : 'none';
+}
 
 /** Mantine's `md` breakpoint — where a bottom sheet becomes a right-hand panel. */
 const DESKTOP = '(min-width: 62em)';
@@ -34,6 +45,10 @@ export function Sheet({ opened, onClose, label, header, footer, children, part =
   // it to the side panel a frame later.
   const desktop = useMediaQuery(DESKTOP, false, { getInitialValueInEffect: false });
 
+  // The panel mounts with the open transition, so it is tracked as state, not a plain ref.
+  const [panel, setPanel] = useState<HTMLDivElement | null>(null);
+  useSheetSwipe({ panel, enabled: opened && !desktop, onClose, zoneOf });
+
   return (
     <Drawer.Root
       ref={rootRef}
@@ -54,7 +69,7 @@ export function Sheet({ opened, onClose, label, header, footer, children, part =
       transitionProps={{ duration: 300, timingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)' }}
     >
       <Drawer.Overlay backgroundOpacity={0.7} blur={2} />
-      <Drawer.Content aria-label={label} data-sf-part={part}>
+      <Drawer.Content ref={setPanel} aria-label={label} data-sf-part={part}>
         <span className={classes.handle} aria-hidden />
         {header}
         <div className={classes.body}>{children}</div>
