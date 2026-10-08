@@ -21,6 +21,8 @@ export type LayoutKind = 'storefront' | 'menu' | 'webapp';
 export interface Features {
   layout: LayoutKind; ordering: boolean; guestCheckout: boolean; accounts: boolean;
   verify: boolean; tracking: boolean; wholesale: boolean; upsell: boolean;
+  /** Quantity stepper on catalogue cards, rows and upsell cards. Absent on an older backend — read as false. */
+  cardStepper?: boolean;
 }
 export type TemplateOptionValue = boolean | string;
 export interface Theme {

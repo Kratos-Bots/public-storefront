@@ -80,3 +80,79 @@
     transition: none;
   }
 }
+
+/* ── Stepper: the button once the product is in the cart ─────────────────
+   Same footprint, same filled skin (the root keeps data-sf-part="button" so every template paints
+   it as it paints the Add button) — the interior becomes  −  n in cart  +.  The two step buttons
+   are bare: they inherit the root's colour and radius, so a template's outline-glow or square
+   corners carry through without a rule of their own. */
+.stepper {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  cursor: default;
+}
+
+.stepper:active:not(:disabled) {
+  transform: none;
+}
+
+.step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  min-width: 52px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  border-radius: 0;
+  cursor: pointer;
+  transition: background-color 140ms ease, opacity 140ms ease;
+}
+
+.sm .step {
+  min-width: 44px;
+}
+
+.step:hover:not(:disabled) {
+  background: color-mix(in srgb, currentColor 16%, transparent);
+}
+
+.step:active:not(:disabled) {
+  background: color-mix(in srgb, currentColor 26%, transparent);
+}
+
+.step:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: -5px;
+}
+
+.step:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.count {
+  display: block;
+  padding: 0 0.25rem;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (min-width: 62em) {
+  .sm .step {
+    min-width: 36px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step {
+    transition: none;
+  }
+}

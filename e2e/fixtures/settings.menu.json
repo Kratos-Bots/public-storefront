@@ -58,7 +58,8 @@
     "verify": true,
     "tracking": true,
     "wholesale": false,
-    "upsell": true
+    "upsell": true,
+    "cardStepper": false
   },
   "access": { "storefront": "public", "registration": true, "deniedMessage": "This shop is private. Get in touch if you'd like access.", "deniedButtons": [] },
   "theme": {
