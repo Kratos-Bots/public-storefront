@@ -37,19 +37,29 @@ const MARKDOWN_ALLOWED_TAGS: readonly string[] = [
   ...RICHTEXT_ALLOWED_TAGS, 'h1', 'h5', 'h6', 'pre', 'hr', 'del', 'table', 'thead', 'tbody', 'tr', 'th', 'td',
 ];
 
+/** The column alignments a Markdown table (`:--`, `:-:`, `--:`) can carry; marked emits them as `align` on th/td. */
+const CELL_ALIGNMENTS: readonly string[] = ['left', 'center', 'right'];
+
 /**
  * For HTML rendered from Markdown (product descriptions). Same purifier and href rules as `sanitizeRichtext`,
- * a wider tag list, `href` the only attribute. Safe https links are then opened in a new tab; that is added
- * to the already-clean DOM afterwards, so the sanitiser's own allowlist stays untouched.
+ * a wider tag list, `href` the only attribute — plus `align`, which survives only on th/td and only as
+ * left, center or right (a second pass below; the purifier alone cannot scope an attribute to a tag).
+ * Safe https links are then opened in a new tab; that is added to the already-clean DOM afterwards, so the
+ * sanitiser's own allowlist stays untouched.
  */
 export function sanitizeMarkdown(html: string): string {
   const fragment = instance().sanitize(html, {
     ALLOWED_TAGS: [...MARKDOWN_ALLOWED_TAGS],
-    ALLOWED_ATTR: ['href'],
+    ALLOWED_ATTR: ['href', 'align'],
     ALLOW_DATA_ATTR: false,
     ALLOW_ARIA_ATTR: false,
     RETURN_DOM_FRAGMENT: true,
   });
+  for (const el of Array.from(fragment.querySelectorAll('[align]'))) {
+    const value = (el.getAttribute('align') ?? '').trim().toLowerCase();
+    if (/^(th|td)$/i.test(el.tagName) && CELL_ALIGNMENTS.includes(value)) el.setAttribute('align', value);
+    else el.removeAttribute('align');
+  }
   for (const a of Array.from(fragment.querySelectorAll('a[href]'))) {
     if (/^https:/i.test(a.getAttribute('href') ?? '')) {
       a.setAttribute('target', '_blank');
