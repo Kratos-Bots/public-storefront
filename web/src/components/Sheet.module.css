@@ -12,12 +12,21 @@
 /* The grab handle is the promise that the sheet can be pushed back down — it is
    only true of the bottom sheet, so it leaves with it at 62em. */
 .handle {
+  position: relative; /* anchors the touch area below; does not move the handle */
   flex: none;
   width: 2.25rem;
   height: 3px;
   margin: 0.5rem auto 0;
   border-radius: 999px;
   background: var(--sf-line-strong);
+}
+
+/* The handle is 3px tall, which no thumb can find. Its touch area reaches to the sheet's top edge and
+   well to each side; it stops 0.25rem below, so it never covers a control in the header. */
+.handle::before {
+  content: '';
+  position: absolute;
+  inset: -0.5rem -3rem -0.25rem;
 }
 
 .body {
@@ -33,6 +42,15 @@
   flex: none;
   border-top: 1px solid var(--sf-line-strong);
   padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* Swipe down to close (useSheetSwipe). The handle and the pinned header are the grab zone: the browser must
+   not scroll or pull-to-refresh under a finger that is moving the sheet. The body keeps its own scrolling;
+   the hook takes a touch from it only when it starts at the very top. */
+@media (max-width: 61.99em) {
+  .content > :not(.body, .footer) {
+    touch-action: none;
+  }
 }
 
 @media (min-width: 62em) {
