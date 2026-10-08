@@ -962,7 +962,15 @@ no lab is named; a lab with no link stays a fact) with its earlier ones in a "Pr
 at the card's foot, and nothing when the
 product has none. When the product document holds no `ProductCoa` anywhere in the container's slots, the
 container draws the same view itself: on the page, last inside the `main` column; in the sheet, between
-`main` and `below` (so before the upsells). When the owner has placed the part, only that one draws. A placed part counts even when it is hidden (its block style hides it on mobile or desktop), so hiding the part is how an owner turns the report off on those screens without the automatic one coming back. The
+`main` and `below` (so before the upsells). On the page, from 48em up (the two-column layout) and when the
+product has a photo, the automatic report instead sits in the left column under the photo, so it is in view
+without scrolling: `ProductDetailPage` reads `(min-width: 48em)` with a synchronous `useMediaQuery` (no flash on
+first paint) and renders the report in exactly one place, in a `.mediaStack` that is the sticky unit (photo plus
+report). To make room the photo's well keeps the column's width but is capped in height
+(`--sf-well-max`, `max(15rem, 100svh - 29rem)`, read by `ProductImage.module.css`): a tall window leaves it square, a
+768px-high one letterboxes it (`object-fit: contain`, nothing is cropped). If the report's history is unfolded the stack
+may be taller than the window, so it stops being sticky then (`:has(details[open])`). Below 48em, without a photo, or
+with a placed `ProductCoa`, nothing changes. When the owner has placed the part, only that one draws. A placed part counts even when it is hidden (its block style hides it on mobile or desktop), so hiding the part is how an owner turns the report off on those screens without the automatic one coming back. The
 editor canvas follows the same rule. A product without a displayable report adds no markup at all,
 so the goldens and DOM baselines are untouched. The report link is the lab's own page, else the uploaded file
 at `/media/coas/<id>/<key>`; inside Telegram it opens through `openExternalLink`. Its labels and values read

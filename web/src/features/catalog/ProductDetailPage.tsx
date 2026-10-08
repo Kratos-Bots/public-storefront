@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { Button } from '@mantine/core';
+import { useMediaQuery } from '@mantine/hooks';
 import { Link, useParams } from 'react-router';
 import { useSettings } from '@/app/settings.ts';
 import { useCatalog, useProduct } from '@/features/catalog/use-catalog.ts';
@@ -29,6 +30,9 @@ import classes from '@/features/catalog/ProductDetailPage.module.css';
 /** Which optional parts the page shows — the ProductDetail block's toggles. All on by default. */
 export interface ProductDetailSections { gallery: boolean; bulkPricing: boolean; provenance: boolean; upsells: boolean }
 const ALL_SECTIONS: ProductDetailSections = { gallery: true, bulkPricing: true, provenance: true, upsells: true };
+
+/** Where ProductDetailPage.module.css turns the layout into photo and details side by side (48em). */
+const TWO_COLUMNS = '(min-width: 48em)';
 
 const GroupView = makeGroupView(groupClassMap(FADE));
 const GALLERY_SILENT: ReadonlySet<string> = new Set(['ProductGallery']);
@@ -184,6 +188,9 @@ export function ProductDetailPage({ sections, slots }: { sections?: Partial<Prod
   const data = useMemo(() => (product ? productData(product, catalog.data?.categories ?? []) : null), [product, catalog.data]);
   const value = useMemo(() => (data ? { data, views: PAGE_VIEWS } : null), [data]);
   const autoCoa = useAutoCoa(product, s);
+  // The layout's two columns start at 48em. Resolved synchronously (as CartRoute does) so a desktop visitor never
+  // sees the report at the foot of the page for a frame before it moves under the photo.
+  const twoColumns = useMediaQuery(TWO_COLUMNS, false, { getInitialValueInEffect: false });
 
   // The tab is part of the page: name it after what the shopper is looking at,
   // and hand the shop's own title back when they leave.
@@ -201,13 +208,26 @@ export function ProductDetailPage({ sections, slots }: { sections?: Partial<Prod
 
   // Today's hasImage rule, read from the slot: no media column when nothing in it would render.
   const mediaShows = slotShows(s.media.items, product.imageProductId === null ? GALLERY_SILENT : NO_SILENT);
+  // Side by side, an automatically placed report goes under the photo so it is in view without scrolling; stacked
+  // (a phone) it stays after the details. Either way it renders in exactly one place.
+  const coaUnderImage = twoColumns && mediaShows && autoCoa;
   return (
     <ProductFamily.Provider value={value}>
       <article className={`${classes.page} ${FADE}`}>
         {s.top()}
         <div className={mediaShows ? classes.layout : `${classes.layout} ${classes.layoutNoImage}`}>
-          {mediaShows ? s.media({ className: classes.media }) : null}
-          {autoCoa ? (
+          {coaUnderImage ? (
+            // The whole stack is the sticky unit (not the photo alone, which the report would scroll under).
+            <div className={classes.mediaStack}>
+              {s.media({ className: classes.mediaShort })}
+              <PageCoa props={{}} />
+            </div>
+          ) : mediaShows ? (
+            s.media({ className: classes.media })
+          ) : null}
+          {coaUnderImage ? (
+            s.main({ className: classes.detail })
+          ) : autoCoa ? (
             // The owner's parts keep the exact element `s.main({ className })` draws (in the editor that is the
             // DropZone itself, so they stay its direct children), and the report follows in an outer column with
             // the same gap. Only a product that has a report gets this wrapper.
