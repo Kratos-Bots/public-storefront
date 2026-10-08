@@ -7,6 +7,11 @@
   align-items: center;
   justify-content: center;
   aspect-ratio: 1;
+  /* A host may cap the height (the product page's photo above the lab report) and, with it, pin the width: an
+     auto width would shrink with the capped height to keep the ratio. Unset, the well is square and as wide as
+     its container. */
+  width: var(--sf-well-width, auto);
+  max-height: var(--sf-well-max, none);
   overflow: hidden;
   background: var(--sf-surface-2);
   border-radius: var(--sf-card-radius);

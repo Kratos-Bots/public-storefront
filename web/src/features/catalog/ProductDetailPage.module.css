@@ -53,8 +53,36 @@ a.crumb:hover {
   gap: 1.5rem;
 }
 
-.media {
+.media,
+.mediaShort {
   min-width: 0;
+}
+
+/* The photo with the lab report under it (two columns only; see ProductDetailPage). */
+.mediaStack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+/* The report's own border is its edge here, so the section's divider and top padding go. */
+.mediaStack .section {
+  padding-top: 0;
+  border-top: 0;
+}
+
+/* The photo's well stays as wide as the column but gives up height so the report fits the first screen:
+   what a viewport leaves after the page chrome, the report card and the gaps (ProductImage.module.css reads it).
+   A tall window leaves the well square. */
+.mediaShort {
+  --sf-well-width: 100%;
+  --sf-well-max: max(15rem, calc(100svh - 29rem));
+}
+
+/* The report card is as wide as the photo above it (it is otherwise capped at 34rem). */
+.mediaStack {
+  --sf-coa-max: none;
 }
 
 .detail {
@@ -103,11 +131,18 @@ a.crumb:hover {
   border-bottom: 1px solid var(--sf-line);
 }
 
+/* Name, price and availability read as one header: when the title is directly followed by the price row, the
+   column's 1.25rem gap closes up to 0.5rem. The step before the Add button below stays as it was. */
+.head + .priceRow {
+  margin-top: -0.75rem;
+}
+
 .price {
   margin: 0;
   font-family: var(--sf-font-mono);
   font-size: calc(1.75rem * var(--sf-text-scale, 1));
   font-weight: 600;
+  line-height: 1.1;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
   color: var(--sf-block-fg, var(--sf-text));
@@ -194,6 +229,15 @@ a.crumb:hover {
   .media {
     position: sticky;
     top: 5.5rem;
+  }
+  /* With the report under it the sticky unit is the whole stack; unfolding the report's history can make it
+     taller than the window, and a sticky box that tall hides its bottom, so it scrolls normally then. */
+  .mediaStack {
+    position: sticky;
+    top: 5.5rem;
+  }
+  .mediaStack:has(details[open]) {
+    position: static;
   }
   /* No photo: one column, not an empty half — `.layout.layoutNoImage`'s two
      classes outrank `.layout`'s one at any width, including the 62em block
