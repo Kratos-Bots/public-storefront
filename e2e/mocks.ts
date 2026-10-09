@@ -280,7 +280,12 @@ export interface InstallMocksOptions {
    * uncarried cart lines `inactive`; an unknown or default id is the default catalogue. Omitted: the
    * feature is off and every answer is exactly what it always was.
    */
-  warehouses?: { list: Array<{ id: number; name: string; country: string | null; isDefault: boolean }>; carries: Record<number, number[]> };
+  warehouses?: {
+    list: Array<{ id: number; name: string; country: string | null; isDefault: boolean; orderingEnabled?: boolean; orderingMessage?: string | null }>;
+    carries: Record<number, number[]>;
+    /** `features.warehousePrompt`: ask which warehouse before showing the catalogue. Default off. */
+    prompt?: boolean;
+  };
 }
 
 /** The published site text the pages route serves (spec §4.6), active locale only. */
@@ -568,7 +573,7 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     payGone: options.payRoutesGone ?? false,
     orderGone: false,
   };
-  if (options.warehouses) state.settings = { ...state.settings, features: { ...state.settings.features, warehouseSelect: true } };
+  if (options.warehouses) state.settings = { ...state.settings, features: { ...state.settings.features, warehouseSelect: true, warehousePrompt: options.warehouses.prompt === true } };
   if (options.orderFixture) {
     const fixture = orderFixture(options.orderFixture, options.orderReference);
     state.orderDetail = fixture.detail;

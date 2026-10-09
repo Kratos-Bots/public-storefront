@@ -2,6 +2,7 @@ import { useId } from 'react';
 import { useLocation } from 'react-router';
 import { useText } from '@/text/runtime.tsx';
 import { useSelectedWarehouse } from '@/features/warehouses/use-warehouse.ts';
+import { markChosenThisVisit } from '@/features/warehouses/visit.ts';
 import type { Warehouse } from '@/types/warehouses.ts';
 import classes from '@/features/warehouses/WarehouseStrip.module.css';
 
@@ -23,7 +24,15 @@ export function WarehouseStrip() {
   const id = useId();
   if (warehouses.length < 2 || warehousePickerHidden(pathname)) return null;
 
-  const optionLabel = (w: Warehouse) => (w.country ? t('shell.warehouse.option', { name: w.name, country: w.country }) : w.name);
+  const optionLabel = (w: Warehouse) => {
+    const label = w.country ? t('shell.warehouse.option', { name: w.name, country: w.country }) : w.name;
+    return w.orderingEnabled === false ? `${label} (${t('shell.warehouse.paused.badge')})` : label;
+  };
+  // A shopper who switches from the header has chosen, so the pick-first prompt does not ask again.
+  const choose = (value: string) => {
+    select(Number(value));
+    markChosenThisVisit();
+  };
   return (
     <div className={classes.strip} data-warehouse-picker="">
       <div className={classes.inner}>
@@ -34,7 +43,7 @@ export function WarehouseStrip() {
               id={id}
               className={classes.select}
               value={selectedId ?? current?.id ?? ''}
-              onChange={(e) => select(Number(e.target.value))}
+              onChange={(e) => choose(e.target.value)}
             >
               {warehouses.map((w) => (
                 <option key={w.id} value={w.id}>{optionLabel(w)}</option>

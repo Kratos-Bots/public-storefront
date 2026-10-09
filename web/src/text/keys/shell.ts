@@ -17,4 +17,10 @@ export default defineTextArea('shell', {
   'warehouse.shippingFrom': { en: 'Shipping from {warehouse}', max: 80 },
   'warehouse.unavailable': { en: "This product isn't available from {warehouse}.", max: 120 },
   'warehouse.switchBack': { en: 'Ship from {warehouse} instead', max: 60 },
+  'warehouse.prompt.title': { en: 'Where should we ship from?', max: 60 },
+  'warehouse.prompt.lede': { en: 'Prices, stock and delivery depend on the warehouse. You can change this at any time.', max: 160 },
+  'warehouse.prompt.choose': { en: 'Shop from {warehouse}', max: 60 },
+  'warehouse.prompt.lastTime': { en: 'Your last choice', max: 40 },
+  'warehouse.paused.badge': { en: 'Not taking orders', max: 40 },
+  'warehouse.paused.notice': { en: '{warehouse} is not taking orders right now. You can browse, or choose another warehouse.', max: 160 },
 });

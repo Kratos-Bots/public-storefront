@@ -14,5 +14,11 @@ export default {
   'warehouse.shippingFrom': 'Line on the checkout review saying which warehouse the order ships from; {warehouse} is its name',
   'warehouse.unavailable': 'Line on a product page the chosen warehouse does not carry; {warehouse} is the chosen warehouse',
   'warehouse.switchBack': 'Button on that product page that switches back to the shop\'s main warehouse; {warehouse} is its name',
+  'warehouse.prompt.title': 'Heading of the full-page "choose a warehouse" screen shown once per visit when the shop asks first',
+  'warehouse.prompt.lede': 'Short explanation under that heading',
+  'warehouse.prompt.choose': 'Screen-reader name of each warehouse button on that screen; {warehouse} is the warehouse',
+  'warehouse.prompt.lastTime': 'Small tag on the warehouse the shopper picked on an earlier visit',
+  'warehouse.paused.badge': 'Tag on a warehouse that is not taking orders, on the choose screen and in the header picker',
+  'warehouse.paused.notice': 'Notice on a warehouse that is not taking orders and has no message of its own; {warehouse} is its name',
   'notFound.backToShop': 'Button on the "page isn\'t here" page that goes to the catalogue',
 } as const satisfies Record<string, string>;
