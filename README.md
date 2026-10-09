@@ -95,6 +95,28 @@ per-warehouse shipping rules or prices yet, only which products are on offer and
   on, and the backend falls back to the default for an id it does not offer), so the catalogue is
   fetched once. Only if the list then shows the id is stale, or there is no real choice, is it fetched
   again without the parameter, and a stale id is forgotten.
+- **Pick-first prompt.** With `features.warehousePrompt` on (and `features.warehouseSelect` on, with
+  two or more warehouses listed) a "choose a warehouse" screen comes before the shop. Nothing is
+  pre-selected; a warehouse remembered from an earlier visit is tagged as the last choice. It is asked
+  once per visit: the marker is sessionStorage `sf-warehouse-visit-v1`, separate from the remembered
+  warehouse (`sf-warehouse-v1`, localStorage), and when sessionStorage is unavailable the answer is
+  held in memory for the page. Choosing from the header's "Shipping from" select counts as having
+  chosen. It appears only on catalogue routes (`/`, `/c/:slug`, `/p/:id`, `/cart`, `/pages/:slug`),
+  never on checkout, payment, order-placed, account, sign-in, tracking, verify, referral links or the
+  Telegram callback, and the page builder bypasses it. It fails open: if the list fails to load or has
+  fewer than two entries the shop is shown as normal.
+- **Ordering paused.** Each entry of `GET storefront/warehouses` carries `orderingEnabled` and
+  `orderingMessage`. When the warehouse in force has `orderingEnabled: false` the shop is browse-only:
+  add-to-basket and checkout controls are not offered, a notice shows the owner's message (or a default
+  line), the basket stays readable and editable, and `/checkout` redirects to `/cart`. If the backend
+  refuses a quote or an order with `503 WAREHOUSE_ORDERING_PAUSED` (the switch was flipped mid-session),
+  the storefront refetches the list and shows the same notice; the sentinel text is never shown. Note
+  the lag: the Worker caches `storefront/warehouses` for anonymous shoppers for 30 seconds
+  (`worker/src/proxy.ts`), so after such a refusal the refetched list can still say "open" for up to
+  that long. In that window the shopper sees the notice from the refused call and the redirect follows
+  once the list catches up. The mocked browser tests flip instantly and do not exercise this.
+- **Hidden products.** No storefront logic: the backend omits them from the catalogue, answers 404 on
+  the product page, and returns a hidden basket line flagged `inactive`.
 - **Where it lives.** `web/src/features/warehouses/` (store, `WarehouseSync` mounted above the router,
   the strip, the not-carried helper); the strip is drawn by the shared header bar. Wording is
   `shell.warehouse.*` site text. The page builder's editor does not use it.
