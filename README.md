@@ -64,6 +64,41 @@ Browser and desktop only; the Telegram Mini App keeps using the bot's own referr
   `account.referrals.yourLink` / `copyLinkAria`. The share wording (`account.referrals.shareText`)
   is unchanged: the link is appended on its own line, so owner-edited wording keeps working.
 
+## Warehouse selection
+
+Lets a shopper choose which warehouse their order ships from. A foundation: there are no
+per-warehouse shipping rules or prices yet, only which products are on offer and the stock shown.
+
+- **Switching it on.** The admin sets `features.warehouseSelect` and, per warehouse, marks it
+  customer-selectable (the default warehouse is always offered). With the flag off, or fewer than
+  two warehouses on offer, the storefront behaves - and sends requests - exactly as it did before.
+  Deploy order: backend, then admin, then storefront (an older backend ignores everything here).
+- **What the shopper sees.** A slim "Shipping from" strip under the header (all three layouts, light
+  and dark, every template). Choosing one keeps them on the page and refetches the catalogue, the
+  product and, for a signed-in shopper, the cart. The choice is remembered (`sf-warehouse-v1`). It is
+  hidden on `/checkout`, `/order-placed` and `/payment/*`: the choice is made while browsing, checkout
+  still sends it, and the review step shows "Shipping from <name>" when it is not the default.
+- **Hidden when not carried.** A non-default warehouse lists only the products it stocks. A product
+  page it does not carry is the ordinary not-found view plus a line and a button to switch back to the
+  shop's own warehouse. A basket line it cannot supply is never removed: a signed-in cart comes back
+  from the backend flagged `inactive`, and a guest basket line missing from the warehouse's catalogue is
+  flagged the same way here. Either shows "No longer available" and blocks checkout. Upsells that
+  point at hidden products are dropped, as for a deleted product.
+- **How it is sent.** `?warehouse=<id>` on the catalogue and product reads and on cart GET/PUT;
+  `warehouseId` in the four quote and checkout bodies. It must be a query parameter, never a header
+  or cookie: the Worker edge-caches the anonymous catalogue keyed on the full URL (query included), so
+  each warehouse gets its own entry and shoppers never see each other's. Nothing is sent unless a
+  non-default warehouse is chosen, which keeps every URL, query key and cache key unchanged for shops
+  without the feature. The list (`GET storefront/warehouses`) is only asked for when the flag is on and,
+  in a private shop, the shopper is signed in.
+- **While the list loads.** A returning shopper's stored warehouse is used straight away (the flag is
+  on, and the backend falls back to the default for an id it does not offer), so the catalogue is
+  fetched once. Only if the list then shows the id is stale, or there is no real choice, is it fetched
+  again without the parameter, and a stale id is forgotten.
+- **Where it lives.** `web/src/features/warehouses/` (store, `WarehouseSync` mounted above the router,
+  the strip, the not-carried helper); the strip is drawn by the shared header bar. Wording is
+  `shell.warehouse.*` site text. The page builder's editor does not use it.
+
 ## Local development
 
 Three terminals:
@@ -146,9 +181,11 @@ The build emits `web/dist/blocks.json`, the list of blocks this release can rend
   `{ success:false, error:"Not found" }`). Forwards method, body, `Content-Type`, `Authorization`,
   `Accept`; strips `Cookie`/`Host`/`X-Real-Ip` and any inbound `X-Forwarded-*`/`Cf-*`, then sets its
   own `X-Forwarded-For` (from `Cf-Connecting-Ip`) and `X-Forwarded-Proto: https`. GET responses are
-  edge-cached via the Cache API when the request is unauthenticated: `storefront/settings` and
-  `storefront/pages/:layout` for 30s, `catalog` and `catalog/products/:id` for 60s; everything else
-  bypasses the cache.
+  edge-cached via the Cache API when the request is unauthenticated: `storefront/settings`,
+  `storefront/warehouses` and `storefront/pages/:layout` for 30s, `catalog` and
+  `catalog/products/:id` for 60s; everything else bypasses the cache. Only a `200` is ever stored
+  (a private shop's `401` on the warehouse list is not), the rules match the path alone, and the
+  cache key is the full backend URL, so `catalog?warehouse=2` is its own entry.
 - **`/media/*`** — a second, narrower proxy for public images (product photos, storefront/settings
   branding, page-builder uploads under `/media/storefront-pages/media/<key>`) with a 1-day edge
   cache and `Set-Cookie` stripped. Product lab-report files (`/media/coas/<id>/<32 hex>`) are the one
