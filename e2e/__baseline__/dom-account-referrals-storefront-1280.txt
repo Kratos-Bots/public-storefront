@@ -87,9 +87,14 @@ title: Northbound Supply
 <span class="_code_H">NB-ADA-7788</span>
 <button type="button" class="_copy_H" aria-label="Copy your referral code NB-ADA-7788">Copy</button>
 </div>
+<span class="_plateLabel_H _plateLinkLabel_H">Your referral link</span>
+<div class="_plateRow_H">
+<span class="_linkText_H">http://ORIGIN/ref/NB-ADA-7788</span>
+<button type="button" class="_copy_H" aria-label="Copy your referral link">Copy</button>
+</div>
 </div>
 <div class="_share_H">
-<a class="_ghost_H" href="https://wa.me/447700900123?text=Shopping+with+Northbound+Supply%3F+Use+my+referral+code+NB-ADA-7788+on+your+first+order." target="_blank" rel="noopener noreferrer">WhatsApp</a>
+<a class="_ghost_H" href="https://wa.me/447700900123?text=Shopping+with+Northbound+Supply%3F+Use+my+referral+code+NB-ADA-7788+on+your+first+order.%0Ahttp%3A%2F%2Flocalhost%3A5199%2Fref%2FNB-ADA-7788" target="_blank" rel="noopener noreferrer">WhatsApp</a>
 </div>
 <p class="_note_H">The invite goes out with your code already in it — send it to whoever you want to bring in.</p>
 <section class="_section_H" aria-label="Your referrals">

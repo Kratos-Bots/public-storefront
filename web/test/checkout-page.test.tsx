@@ -864,3 +864,114 @@ describe('CheckoutPage — Back', () => {
     await act(async () => { release(); });
   });
 });
+
+// Web referrals: a stored link or a typed code rides along on the order, never on a quote.
+describe('CheckoutPage — referral code', () => {
+  const REFERRAL = /^referral code$/i;
+  const saved = () => localStorage.setItem('sf-referral-v1', JSON.stringify({ code: 'LINKCODE1', savedAt: Date.now() }));
+
+  /** A restored, complete form: Contact, Address, then the Shipping step where the coupon lives. */
+  async function toShipping() {
+    localStorage.setItem('sf-checkout-v1', persistedForm());
+    mount();
+    fireEvent.click(continueButton());
+    fireEvent.click(continueButton());
+    await settle();
+  }
+  async function placeFromShipping() {
+    fireEvent.click(screen.getByRole('radio', { name: /Royal Mail Tracked 24/ }));
+    await settle();
+    pressContinue();
+    await settle();
+    fireEvent.click(screen.getByRole('radio', { name: /Stripe/ }));
+    pressContinue();
+    await settle();
+    fireEvent.click(placeButton());
+    await settle();
+  }
+
+  describe('guest', () => {
+    beforeEach(() => {
+      state.settings = settings(true);
+      useCartStore.setState({ lines: [line()], mode: 'local' });
+    });
+
+    it('shows the field directly under the coupon field when nothing is stored', async () => {
+      await toShipping();
+      const coupon = screen.getByLabelText('Coupon code');
+      const field = screen.getByLabelText(REFERRAL);
+      expect(coupon.compareDocumentPosition(field) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(field).toHaveAttribute('maxlength', '32');
+      expect(field).toHaveAttribute('autocapitalize', 'characters');
+      expect(field).toHaveAttribute('autocomplete', 'off');
+      expect(screen.getByText(/if a friend referred you, enter their code/i)).toBeInTheDocument();
+    });
+
+    it('hides the field while a link is remembered, sends that code, then forgets it', async () => {
+      saved();
+      await toShipping();
+      expect(screen.queryByLabelText(REFERRAL)).toBeNull();
+      await placeFromShipping();
+      expect(placeGuestOrderMock.mock.calls[0]![0].referralCode).toBe('LINKCODE1');
+      expect(localStorage.getItem('sf-referral-v1')).toBeNull();
+    });
+
+    it('sends a typed code trimmed and uppercased', async () => {
+      await toShipping();
+      type(REFERRAL, '  ab12cd34 ');
+      await placeFromShipping();
+      expect(placeGuestOrderMock.mock.calls[0]![0].referralCode).toBe('AB12CD34');
+    });
+
+    it('omits referralCode when nothing was stored or typed', async () => {
+      await toShipping();
+      await placeFromShipping();
+      expect(placeGuestOrderMock).toHaveBeenCalledTimes(1);
+      expect(placeGuestOrderMock.mock.calls[0]![0].referralCode).toBeUndefined();
+    });
+
+    it('never puts a referral code on a quote', async () => {
+      saved();
+      await toShipping();
+      type('Coupon code', 'save10');
+      const all = [...guestQuoteMock.mock.calls, ...quoteMock.mock.calls].map((c) => c[0]);
+      expect(all.length).toBeGreaterThan(0);
+      for (const input of all) expect(input).not.toHaveProperty('referralCode');
+    });
+
+    it('keeps the remembered code when the order fails', async () => {
+      saved();
+      placeGuestOrderMock.mockRejectedValue(new ApiError(500, 'boom'));
+      await toShipping();
+      await placeFromShipping();
+      expect(placeGuestOrderMock).toHaveBeenCalledTimes(1);
+      expect(localStorage.getItem('sf-referral-v1')).not.toBeNull();
+    });
+  });
+
+  describe('signed in', () => {
+    beforeEach(() => {
+      state.settings = settings(false);
+      useSessionStore.setState({ token: 'sess-1', customer: { id: 5, nickname: 'ada' } });
+    });
+
+    it('never shows the field', async () => {
+      await toShipping();
+      expect(screen.queryByLabelText(REFERRAL)).toBeNull();
+    });
+
+    it('sends a remembered code and forgets it afterwards', async () => {
+      saved();
+      await toShipping();
+      await placeFromShipping();
+      expect(placeOrderMock.mock.calls[0]![0].referralCode).toBe('LINKCODE1');
+      expect(localStorage.getItem('sf-referral-v1')).toBeNull();
+    });
+
+    it('omits referralCode with nothing remembered', async () => {
+      await toShipping();
+      await placeFromShipping();
+      expect(placeOrderMock.mock.calls[0]![0].referralCode).toBeUndefined();
+    });
+  });
+});
