@@ -55,10 +55,13 @@ function mount(p: Product) {
 afterEach(() => cleanup());
 
 describe('ProductDetailPage', () => {
-  it('drops the media column entirely for an image-less product, so .layout does not split into a blank half', () => {
+  it('keeps the media column for an image-less product and fills it with the no-photo plate', () => {
     const { container } = mount(product({ imageProductId: null }));
-    expect(container.querySelector('[class*="media"]')).toBeNull();
-    expect(container.querySelector('[class*="layoutNoImage"]')).not.toBeNull();
+    const media = container.querySelector('[class*="media"]')!;
+    expect(media).not.toBeNull();
+    expect(media.querySelector('img')).toBeNull();
+    expect(media.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
+    expect(container.querySelector('[class*="layoutNoImage"]')).toBeNull();
   });
 
   it('keeps the media column and the two-up layout for a product with an image', () => {
@@ -107,11 +110,17 @@ describe('ProductDetailPage lab report placement', () => {
     expect(container.querySelector('[class*="media"]')!.compareDocumentPosition(container.querySelector('#coa-heading')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it('leaves it with the details when the product has no photo, even on a wide window', () => {
+  it('puts it under the no-photo plate when the product has no photo, on a wide window', () => {
     setWide(true);
     const { container } = mount(product({ imageProductId: null, coas: [COA] }));
     expect(heading(container)).toHaveLength(1);
-    expect(mediaStack(container)).toBeNull();
+    const stack = mediaStack(container)!;
+    expect(stack).not.toBeNull();
+    expect(stack.contains(container.querySelector('#coa-heading'))).toBe(true);
+    expect(stack.querySelector('img')).toBeNull();
+    const plate = stack.querySelector('svg[aria-hidden="true"]')!;
+    expect(plate).not.toBeNull();
+    expect(plate.compareDocumentPosition(container.querySelector('#coa-heading')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('adds nothing for a product without a report', () => {

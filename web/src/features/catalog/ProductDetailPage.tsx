@@ -35,12 +35,10 @@ const ALL_SECTIONS: ProductDetailSections = { gallery: true, bulkPricing: true, 
 const TWO_COLUMNS = '(min-width: 48em)';
 
 const GroupView = makeGroupView(groupClassMap(FADE));
-const GALLERY_SILENT: ReadonlySet<string> = new Set(['ProductGallery']);
 
 function PageGallery({ styleAttrs }: PartViewProps) {
   const { product } = ProductFamily.useData();
-  if (product.imageProductId === null) return null;
-  return <ProductImage productId={product.imageProductId} variant="web" alt={product.displayName} eager rootAttrs={styleAttrs} />;
+  return <ProductImage productId={product.imageProductId} variant="web" alt={product.displayName} eager plate rootAttrs={styleAttrs} />;
 }
 
 function PageTitle({ styleAttrs }: PartViewProps) {
@@ -206,8 +204,8 @@ export function ProductDetailPage({ sections, slots }: { sections?: Partial<Prod
   if (query.isPending) return <PageSkeleton inline />;
   if (query.isError || !product || !value) return <NotFound retry={() => void query.refetch()} />;
 
-  // Today's hasImage rule, read from the slot: no media column when nothing in it would render.
-  const mediaShows = slotShows(s.media.items, product.imageProductId === null ? GALLERY_SILENT : NO_SILENT);
+  // No media column only when the owner left nothing in the slot: an image-less product still shows the gallery's plate.
+  const mediaShows = slotShows(s.media.items, NO_SILENT);
   // Side by side, an automatically placed report goes under the photo so it is in view without scrolling; stacked
   // (a phone) it stays after the details. Either way it renders in exactly one place.
   const coaUnderImage = twoColumns && mediaShows && autoCoa;

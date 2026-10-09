@@ -31,3 +31,11 @@
   height: 1px;
   background: var(--sf-line-strong);
 }
+
+/* The product page's empty plate: a quiet "no photo" mark, sized to the well so it
+   stays modest on the small phone square and the large desktop one alike. */
+.plate {
+  display: block;
+  width: clamp(2.5rem, 22%, 4.5rem);
+  color: var(--sf-line-strong);
+}

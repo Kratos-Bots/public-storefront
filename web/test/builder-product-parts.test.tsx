@@ -230,9 +230,18 @@ describe('arrangement', () => {
     expect(container.querySelector(`.${classes.media}`)).not.toBeNull();
     expect(container.querySelector(`.${classes.layout}`)!.className).not.toContain(classes.layoutNoImage);
   });
-  it('a gallery without a photo hides the media column', async () => {
+  it('a gallery without a photo keeps the media column and shows the no-photo plate', async () => {
     setup(false);
     const { container } = renderDoc(guarded(slotDoc({ ...base, media: [p('ProductGallery')] })));
+    await screen.findByRole('heading', { level: 1 });
+    expect(container.querySelector(`.${classes.media}`)).not.toBeNull();
+    expect(container.querySelector(`.${classes.media} svg[aria-hidden]`)).not.toBeNull();
+    expect(container.querySelector(`.${classes.media} img`)).toBeNull();
+    expect(container.querySelector(`.${classes.layout}`)!.className).not.toContain(classes.layoutNoImage);
+  });
+  it('an empty media slot still drops the media column', async () => {
+    setup(false);
+    const { container } = renderDoc(guarded(slotDoc({ ...base, media: [] })));
     await screen.findByRole('heading', { level: 1 });
     expect(container.querySelector(`.${classes.media}`)).toBeNull();
     expect(container.querySelector(`.${classes.layout}`)!.className).toContain(classes.layoutNoImage);

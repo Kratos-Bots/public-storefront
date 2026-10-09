@@ -1,11 +1,14 @@
 import type { StyleAttrs } from '@/builder/define.ts';
 import { useEffect, useState } from 'react';
+import { PhotoIcon } from '@/components/icons.tsx';
 import { productImageUrl } from '@/lib/media-url.ts';
 import classes from '@/features/catalog/ProductImage.module.css';
 
 export interface ProductImageProps {
   /** Pass `product.imageProductId` — callers render this component only when it is non-null, so an image-less product never fetches. */
-  productId: number;
+  productId: number | null;
+  /** The product page's plate: a missing or failed photo shows the "no photo" glyph instead of the bare rule. Null `productId` never fetches. */
+  plate?: boolean;
   variant?: 'web' | 'thumbnail';
   alt: string;
   className?: string;
@@ -20,14 +23,20 @@ export interface ProductImageProps {
  * not others, so a miss is a normal state, not an error: the image removes itself
  * and the well keeps the grid's rhythm with the chassis' "nothing here" rule.
  */
-export function ProductImage({ productId, variant = 'web', alt, className, eager = false, rootAttrs }: ProductImageProps) {
+export function ProductImage({ productId, variant = 'web', alt, className, eager = false, plate = false, rootAttrs }: ProductImageProps) {
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [productId, variant]);
 
   return (
     <span className={className ? `${classes.well} ${className}` : classes.well} {...rootAttrs}>
-      {failed ? (
-        <span className={classes.rule} aria-hidden />
+      {productId === null || failed ? (
+        plate ? (
+          <span className={classes.plate} aria-hidden>
+            <PhotoIcon size="100%" />
+          </span>
+        ) : (
+          <span className={classes.rule} aria-hidden />
+        )
       ) : (
         <img
           className={classes.image}

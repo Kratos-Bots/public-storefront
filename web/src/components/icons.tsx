@@ -200,3 +200,14 @@ export function SmsIcon({ size = 16 }: GlyphProps) {
     </svg>
   );
 }
+
+/** "No photo" — a framed landscape, the empty plate on a product page without an image. */
+export function PhotoIcon({ size = 16 }: GlyphProps) {
+  return (
+    <svg {...stroke(size)}>
+      <rect x="3" y="4.5" width="18" height="15" />
+      <path d="M3 16.5l5-5 4 4 3-3 6 6" />
+      <circle cx="16.5" cy="9" r="1.4" />
+    </svg>
+  );
+}
