@@ -1,0 +1,91 @@
+/* A quiet line under the header: the label in the muted voice of the chrome around it, the chosen warehouse
+   in the text colour with a caret, no box until it is focused. It sits on the same rail as the page content
+   (--sf-main-pad / --sf-rail-max are set by the shell), so it lines up with what it governs. Every colour,
+   radius and font is a token, which is what lets all four templates and both schemes restyle it. */
+.strip {
+  border-bottom: 1px solid var(--sf-line);
+}
+
+.inner {
+  max-width: var(--sf-rail-max, 1200px);
+  margin: 0 auto;
+  padding: 0 var(--sf-main-pad, 1rem);
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.5rem;
+  font-family: var(--sf-font-body);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.label {
+  flex: none;
+  color: var(--sf-muted);
+}
+
+.control {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  color: var(--sf-text);
+}
+
+.select {
+  appearance: none;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  /* Room on the right for the caret; the vertical padding is the touch target. */
+  padding: 0.6rem 1.35rem 0.6rem 0.4rem;
+  border: 1px solid transparent;
+  border-radius: var(--sf-btn-radius, var(--sf-card-radius, 0.375rem));
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.select:hover {
+  border-color: var(--sf-line-strong, var(--sf-line));
+}
+
+.select:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 1px;
+}
+
+/* The popup list is drawn by the OS; keep it legible on the page's own scheme. */
+.select option {
+  background: var(--sf-surface, var(--sf-bg));
+  color: var(--sf-text);
+}
+
+.caret {
+  position: absolute;
+  right: 0.45rem;
+  top: 50%;
+  translate: 0 -50%;
+  color: var(--sf-muted);
+  pointer-events: none;
+}
+
+@media (min-width: 62em) {
+  .inner {
+    padding-inline: var(--sf-main-pad, 1.5rem);
+  }
+
+  .field {
+    min-height: 2.25rem;
+  }
+
+  .select {
+    padding-block: 0.3rem;
+  }
+}

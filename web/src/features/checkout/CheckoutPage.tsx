@@ -31,6 +31,8 @@ import {
 import { applyShipCountries } from '@/features/checkout/ship-countries.ts';
 import { collectionAddress, modeForCountry, pickerCountries, quoteDeliveryFields, reconcileDelivery, shipListsOf } from '@/features/checkout/collection-mode.ts';
 import { useQuote } from '@/features/checkout/useQuote.ts';
+import { warehouseBody } from '@/api/warehouse-param.ts';
+import { useWarehouseId } from '@/features/warehouses/use-warehouse.ts';
 import { accountOrderPath, resolveCheckoutOutcome } from '@/features/checkout/outcome.ts';
 import { GuestTurnstile, type GuestTurnstileHandle } from '@/features/checkout/GuestTurnstile.tsx';
 import { CHECKOUT_VIEWS, InertActionBand } from '@/features/checkout/checkout-parts.tsx';
@@ -90,6 +92,9 @@ export function classifyQuoteError(err: ApiError | null, form: CheckoutForm): Qu
   // the top of the page, not against the coupon field.
   if (err.status === 404) return form.couponCode.trim() ? 'coupon' : null;
   if (err.status !== 422) return null;
+  // "Product(s) 7 are no longer available - remove them from your cart": about the basket (a product gone, or one the
+  // chosen warehouse does not carry), not about any step's field - it belongs at the top of the page, readable.
+  if (/^Product\(s\)/i.test(err.message)) return null;
   if (form.couponCode.trim()) return 'coupon';
   if (form.shippingOptionId !== null) return 'shipping';
   return 'address';
@@ -137,6 +142,7 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
   const inTelegram = isTelegramWebApp();
 
   const lines = useCartStore((s) => s.lines);
+  const warehouse = useWarehouseId();
   const clearCart = useCartStore((s) => s.clear);
   const { sync } = useServerCart();
 
@@ -274,9 +280,10 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
         couponCode: effective.couponCode.trim().toUpperCase(),
         shippingOptionId: form.shippingOptionId,
         ...quoteDeliveryFields(form),
+        ...warehouseBody(warehouse),
         lines: lines.map((l) => ({ productId: l.productId, quantity: l.quantity })),
       }),
-    [form.country, effective.couponCode, form.shippingOptionId, form.deliveryMethod, form.servicePoint, lines],
+    [form.country, effective.couponCode, form.shippingOptionId, form.deliveryMethod, form.servicePoint, lines, warehouse],
   );
   const [debouncedGuestKey] = useDebouncedValue(guestQuoteKey, GUEST_QUOTE_DEBOUNCE_MS);
   const quotedKey = useRef<string | null>(null);

@@ -273,6 +273,14 @@ export interface InstallMocksOptions {
   /** Shop access. `denied` answers ACCESS_DENIED on catalogue, cart and checkout for the seeded session. */
   access?: { storefront?: 'public' | 'login' | 'restricted'; registration?: boolean; deniedMessage?: string;
     deniedButtons?: { label: string; url: string }[]; denied?: boolean };
+  /**
+   * Warehouse selection (STOREFRONT.md 3.8b). Given, the mocked shop has `features.warehouseSelect` on and
+   * `storefront/warehouses` lists `list`; `carries` maps a NON-default warehouse id to the product ids it
+   * stocks. `?warehouse=<id>` then narrows the catalogue and product reads to those products and flags
+   * uncarried cart lines `inactive`; an unknown or default id is the default catalogue. Omitted: the
+   * feature is off and every answer is exactly what it always was.
+   */
+  warehouses?: { list: Array<{ id: number; name: string; country: string | null; isDefault: boolean }>; carries: Record<number, number[]> };
 }
 
 /** The published site text the pages route serves (spec §4.6), active locale only. */
@@ -302,6 +310,8 @@ export interface MockState {
   attemptPolls: number;
   /** Every API path the page has asked for, in order. */
   requests: string[];
+  /** The same requests with their query string (`GET catalog?warehouse=2`), for asserting what was sent. */
+  urls: string[];
   /** Bodies posted to the checkout routes, for assertions. */
   checkouts: Array<Record<string, unknown>>;
   /** Bodies posted to the guest quote route, for assertions. */
@@ -402,7 +412,7 @@ function unitPriceFor(product: Product, quantity: number): number {
   return tier ? tier.price : product.price;
 }
 
-function buildCart(items: CartLineInput[], catalog: Catalog): ServerCart {
+function buildCart(items: CartLineInput[], catalog: Catalog, carried?: ReadonlySet<number>): ServerCart {
   const lines: ServerCartLine[] = [];
   for (const item of items) {
     const product = catalog.products.find((p) => p.id === item.productId);
@@ -424,7 +434,8 @@ function buildCart(items: CartLineInput[], catalog: Catalog): ServerCart {
       isPreorder: product.isPreorder,
       outOfStock: !product.inStock && !product.isPreorder,
       priceChanged: false,
-      inactive: !product.isActive,
+      // A line the chosen warehouse does not carry comes back flagged, never dropped (STOREFRONT.md 3.8b).
+      inactive: !product.isActive || (carried !== undefined && !carried.has(product.id)),
       belowMin: min != null && item.quantity < min,
       aboveMax: max != null && item.quantity > max,
       minOrderQuantity: min,
@@ -535,6 +546,7 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     disabled: false,
     attemptPolls: 0,
     requests: [],
+    urls: [],
     checkouts: [],
     guestQuotes: [],
     quotes: [],
@@ -556,6 +568,7 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     payGone: options.payRoutesGone ?? false,
     orderGone: false,
   };
+  if (options.warehouses) state.settings = { ...state.settings, features: { ...state.settings.features, warehouseSelect: true } };
   if (options.orderFixture) {
     const fixture = orderFixture(options.orderFixture, options.orderReference);
     state.orderDetail = fixture.detail;
@@ -741,6 +754,18 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     const path = url.pathname.replace(/^\/api\//, '');
     const method = route.request().method();
     state.requests.push(`${method} ${path}`);
+    state.urls.push(`${method} ${path}${url.search}`);
+
+    // The products the asked-for warehouse carries, or `undefined` for the default catalogue (no/unknown/default id).
+    const carriedAt = ((): Set<number> | undefined => {
+      const asked = Number(url.searchParams.get('warehouse'));
+      const w = options.warehouses;
+      if (!w || !Number.isInteger(asked) || asked <= 0) return undefined;
+      const listed = w.list.find((x) => x.id === asked && !x.isDefault);
+      return listed ? new Set(w.carries[asked] ?? []) : undefined;
+    })();
+    const catalogAt = (): Catalog =>
+      carriedAt ? { ...state.catalog, products: state.catalog.products.filter((p) => carriedAt.has(p.id)) } : state.catalog;
 
     // The kill switch: everything but the settings 503s.
     if (state.disabled && path !== 'storefront/settings') {
@@ -800,13 +825,24 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     // call these first whenever a session is seeded) share the anonymous
     // endpoints' payload shape, so they're served from the same fixture state.
     if ((path === 'catalog' || path === 'storefront/catalog') && method === 'GET') {
-      await envelope(route, state.catalog);
+      await envelope(route, catalogAt());
+      return;
+    }
+
+    // The warehouses a shopper may choose between; empty while the feature is off. A private shop
+    // answers an anonymous visitor 401, as the backend does.
+    if (path === 'storefront/warehouses' && method === 'GET') {
+      if (state.settings.access?.storefront && state.settings.access.storefront !== 'public' && !route.request().headers()['authorization']) {
+        await fail(route, 401, 'LOGIN_REQUIRED');
+        return;
+      }
+      await envelope(route, { warehouses: options.warehouses?.list ?? [] });
       return;
     }
 
     const product = /^(?:storefront\/)?catalog\/products\/(\d+)$/.exec(path);
     if (product && method === 'GET') {
-      const found = state.catalog.products.find((p) => p.id === Number(product[1]));
+      const found = catalogAt().products.find((p) => p.id === Number(product[1]));
       if (!found) {
         await fail(route, 404, 'Product not found');
         return;
@@ -817,13 +853,14 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
 
     if (path === 'storefront/cart') {
       if (method === 'GET') {
-        await envelope(route, state.cart);
+        // At a chosen warehouse the same lines are re-read there, uncarried ones flagged.
+        await envelope(route, carriedAt ? buildCart(state.cart.items.map((i) => ({ productId: i.productId, quantity: i.quantity })), state.catalog, carriedAt) : state.cart);
         return;
       }
       if (method === 'PUT') {
         const items = (body(route).items ?? []) as CartLineInput[];
         state.cart = buildCart(items, state.catalog);
-        await envelope(route, state.cart);
+        await envelope(route, carriedAt ? buildCart(items, state.catalog, carriedAt) : state.cart);
         return;
       }
       if (method === 'DELETE') {

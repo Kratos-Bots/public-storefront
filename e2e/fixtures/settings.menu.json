@@ -59,7 +59,8 @@
     "tracking": true,
     "wholesale": false,
     "upsell": true,
-    "cardStepper": false
+    "cardStepper": false,
+    "warehouseSelect": false
   },
   "access": { "storefront": "public", "registration": true, "deniedMessage": "This shop is private. Get in touch if you'd like access.", "deniedButtons": [] },
   "theme": {

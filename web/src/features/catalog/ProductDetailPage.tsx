@@ -25,6 +25,7 @@ import { deriveStockStatus, formatDate, formatMoney } from '@/lib/format.ts';
 import { FADE } from '@/lib/motion.ts';
 import { useCoreOptions } from '@/templates/hooks.ts';
 import { useText } from '@/text/runtime.tsx';
+import { SwitchBackButton, useNotCarried } from '@/features/warehouses/NotCarried.tsx';
 import classes from '@/features/catalog/ProductDetailPage.module.css';
 
 /** Which optional parts the page shows — the ProductDetail block's toggles. All on by default. */
@@ -202,7 +203,7 @@ export function ProductDetailPage({ sections, slots }: { sections?: Partial<Prod
 
   if (Number.isNaN(productId)) return <NotFound />;
   if (query.isPending) return <PageSkeleton inline />;
-  if (query.isError || !product || !value) return <NotFound retry={() => void query.refetch()} />;
+  if (query.isError || !product || !value) return <NotFound retry={() => void query.refetch()} error={query.error} />;
 
   // No media column only when the owner left nothing in the slot: an image-less product still shows the gallery's plate.
   const mediaShows = slotShows(s.media.items, NO_SILENT);
@@ -243,16 +244,19 @@ export function ProductDetailPage({ sections, slots }: { sections?: Partial<Prod
   );
 }
 
-function NotFound({ retry }: { retry?: () => void }) {
+function NotFound({ retry, error }: { retry?: () => void; error?: unknown }) {
   const { t } = useText();
+  // Only with a non-default warehouse chosen: the product may simply not be stocked there.
+  const notCarried = useNotCarried(error);
   return (
     <EmptyState
       eyebrow={t('product.detail.product')}
       title={t('product.detail.notFoundTitle')}
-      description={t('product.detail.notFoundDetail')}
+      description={notCarried ? notCarried.message : t('product.detail.notFoundDetail')}
       action={
         retry ? (
           <div className={classes.notFoundActions}>
+            {notCarried ? <SwitchBackButton label={notCarried.switchLabel} onClick={notCarried.switchBack} /> : null}
             <Button variant="default" size="sm" onClick={retry}>
               {t('common.actions.tryAgain')}
             </Button>

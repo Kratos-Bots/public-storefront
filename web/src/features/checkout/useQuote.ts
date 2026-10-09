@@ -7,6 +7,8 @@ import { useCartStore } from '@/stores/cart.ts';
 import type { CheckoutForm } from '@/features/checkout/form-state.ts';
 import type { Quote, QuoteInput } from '@/types/checkout.ts';
 import { quoteDeliveryFields } from '@/features/checkout/collection-mode.ts';
+import { warehouseBody } from '@/api/warehouse-param.ts';
+import { useWarehouseId } from '@/features/warehouses/use-warehouse.ts';
 
 const DEBOUNCE_MS = 300;
 
@@ -52,6 +54,7 @@ interface HashInput {
   useStoreCredit: boolean;
   deliveryMethod?: QuoteInput['deliveryMethod'];
   servicePointCarrier?: string;
+  warehouseId?: number;
   lines?: { productId: number; quantity: number }[];
 }
 
@@ -81,6 +84,9 @@ export function useQuote(form: CheckoutForm, { guest, turnstileToken }: UseQuote
   // make an *earlier* spent token look reusable again once it's no longer the newest one.
   const consumedTokensRef = useRef<Set<string>>(new Set());
 
+  // Part of the key so choosing another warehouse re-quotes; absent (not `null`) when none is chosen, which keeps the key
+  // - and with it every cached quote - exactly what it was before warehouses existed. The request carries it via the API layer.
+  const warehouse = useWarehouseId();
   const hashInput: HashInput = useMemo(() => {
     const base = {
       country: form.country,
@@ -88,11 +94,12 @@ export function useQuote(form: CheckoutForm, { guest, turnstileToken }: UseQuote
       shippingOptionId: form.shippingOptionId,
       useStoreCredit: form.useStoreCredit,
       ...quoteDeliveryFields(form),
+      ...warehouseBody(warehouse),
     };
     return guest
       ? { ...base, lines: lines.map((l) => ({ productId: l.productId, quantity: l.quantity })) }
       : base;
-  }, [form.country, form.couponCode, form.shippingOptionId, form.useStoreCredit, form.deliveryMethod, form.servicePoint, guest, lines]);
+  }, [form.country, form.couponCode, form.shippingOptionId, form.useStoreCredit, form.deliveryMethod, form.servicePoint, guest, lines, warehouse]);
 
   const [debounced] = useDebouncedValue(hashInput, DEBOUNCE_MS);
   const hash = useMemo(() => JSON.stringify(debounced), [debounced]);

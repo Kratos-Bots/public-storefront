@@ -5,6 +5,12 @@ const CACHE_RULES: Array<[RegExp, number]> = [
   [/^storefront\/settings$/, 30],
   // The published page set - same 30 s as settings, so a publish shows within half a minute.
   [/^storefront\/pages\/(?:storefront|menu|webapp)$/, 30],
+  // The warehouse list a shopper may pick from. Anonymous reads only (the cache is skipped when an
+  // Authorization header is present), and only a 200 is stored: a private shop answers an anonymous
+  // visitor 401 LOGIN_REQUIRED, which is never cached. Same 30 s as settings, so a flag flip shows as fast.
+  [/^storefront\/warehouses$/, 30],
+  // Rules match the path only; the query string stays out of them but IS part of the cache key
+  // (the key is the full backend URL), so `catalog?warehouse=2` is cached separately from `catalog`.
   [/^catalog$/, 60],
   [/^catalog\/products\/\d+$/, 60],
 ];
