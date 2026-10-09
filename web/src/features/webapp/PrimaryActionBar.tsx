@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useSettings } from '@/app/settings.ts';
 import { useBackControls } from '@/features/webapp/useBackControls.ts';
-import { useResolvedPrimaryAction } from '@/features/webapp/useResolvedPrimaryAction.ts';
+import { useResolvedPrimaryAction, useWebAppCartBar } from '@/features/webapp/useResolvedPrimaryAction.ts';
 import { useModalOpen } from '@/lib/use-modal-open.ts';
 import { isTelegramWebApp, readableTextOn, setMainButton, setSecondaryButton, supportsSecondaryButton } from '@/lib/telegram-webapp.ts';
 import { Slot } from '@/templates/runtime.tsx';
@@ -9,13 +9,15 @@ import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/webapp/PrimaryActionBar.module.css';
 
 /**
- * Whether the in-page bar is on the page, so the shell can leave room under the content. The bar exists only for
- * a primary action (Back rides inside it); a dialog hides the bar but not this, so the reserved space stays and
- * the page does not shift behind the dialog.
+ * Whether an in-page bar is on the page, so the shell can leave room under the content: the single-button bar of
+ * a browser tab (it exists only for a primary action, Back rides inside it), or the running-tab bar, which is in the
+ * page inside Telegram too. A dialog hides the bar but not this, so the reserved space stays and the page does not
+ * shift behind the dialog.
  */
 export function usePrimaryBarShowing(): boolean {
   const action = useResolvedPrimaryAction();
-  return !isTelegramWebApp() && action !== null;
+  const cartBar = useWebAppCartBar();
+  return cartBar || (!isTelegramWebApp() && action !== null);
 }
 
 function primaryColor(): string {

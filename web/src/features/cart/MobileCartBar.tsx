@@ -4,6 +4,7 @@ import { useSettings } from '@/app/settings.ts';
 import { useSessionStore, selectIsLoggedIn } from '@/stores/session.ts';
 import { useCartStore, selectCount, selectSubtotal } from '@/stores/cart.ts';
 import { formatMoney } from '@/lib/format.ts';
+import { haptic } from '@/lib/telegram-webapp.ts';
 import { basketPromotions } from '@/lib/promotions.ts';
 import { checkoutTarget } from '@/features/cart/checkout-target.ts';
 import { useServerCart } from '@/features/cart/useServerCart.ts';
@@ -46,15 +47,29 @@ export function useMobileCartBar(): boolean {
  * jobs, two targets, both a thumb's width.
  */
 export function MobileCartBar() {
+  const showing = useMobileCartBar();
+  return showing ? <CartBar /> : null;
+}
+
+/**
+ * Where the band sits: `page` clears the browser's own home-indicator inset; `webapp` is the Mini App's browser
+ * stand-in (that inset plus Telegram's); `telegram` is inside Telegram, where only `--tg-safe-bottom` counts —
+ * the browser's inset would count the notch twice.
+ */
+export type CartBarInset = 'page' | 'webapp' | 'telegram';
+
+/**
+ * The band itself, with no opinion on when it shows: the mobile storefront gates it on the viewport and the route
+ * (`MobileCartBar`), the Mini App on its primary-action rules (`WebAppCartBar`). One body, so the checkout
+ * target, the blocking rule and the promotion strike-through cannot drift apart between them.
+ */
+export function CartBar({ inset = 'page' }: { inset?: CartBarInset }) {
   const { t, tp } = useText();
   const { currency, features } = useSettings();
   const loggedIn = useSessionStore(selectIsLoggedIn);
   const count = useCartStore(selectCount);
   const subtotal = useCartStore((s) => selectSubtotal(s.lines));
   const { issues, server } = useServerCart();
-  const showing = useMobileCartBar();
-
-  if (!showing) return null;
 
   const blocked = issues.some((i) => i.inactive || i.belowMin || i.aboveMax);
   const items = tp('cart.summary.items', count);
@@ -63,13 +78,16 @@ export function MobileCartBar() {
   const promo = basketPromotions(server);
   const applied = promo !== null && promo.discount > 0;
   const shown = applied ? promo.total : subtotal;
+  // Telegram's own buttons tick when pressed; the in-page band stands in for them there.
+  const tap = inset === 'telegram' ? () => haptic.impact('light') : undefined;
 
   return (
-    <div className={classes.bar} data-sf-part="cart-bar">
+    <div className={inset === 'page' ? classes.bar : `${classes.bar} ${classes[inset]}`} data-sf-part="cart-bar">
       <div className={classes.inner}>
         <Link
           to="/cart"
           className={classes.view}
+          onClick={tap}
           aria-label={t('cart.bar.viewCartLabel', { items, subtotal: formatMoney(shown, currency) })}
         >
           <span className={classes.subtotal}>
@@ -97,6 +115,7 @@ export function MobileCartBar() {
         ) : (
           <Link
             to={checkoutTarget(loggedIn, features.guestCheckout)}
+            onClick={tap}
             className={classes.checkout}
             data-sf-part="button"
             data-variant="filled"

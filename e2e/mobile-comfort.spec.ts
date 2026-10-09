@@ -146,10 +146,22 @@ test.describe('a focused field stays clear of the bottom bar', () => {
     expect(field.y + field.height).toBeLessThanOrEqual((await box(page.getByRole('button', { name: 'Continue' }))).y);
   });
 
-  test('webapp layout in a browser: the shell reserves the action bar as the bottom inset of the page', async ({ page }) => {
+  test('webapp layout in a browser: the shell reserves the running-tab bar as the bottom inset of the page', async ({ page }) => {
     await openGuest(page, 'webapp', '/');
+    // Browsing, the running tab (not the single-button primary bar) is the web app's foot.
+    const bar = page.locator('[data-sf-part="cart-bar"]');
+    await expect(bar).toBeVisible();
+    await expect(page.locator('[data-sf-part="primary-bar"]')).toHaveCount(0);
+    const barHeight = (await box(bar)).height;
+    const inset = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).scrollPaddingBottom));
+    expect(inset).toBeGreaterThanOrEqual(barHeight);
+  });
+
+  test('webapp layout in a browser: the cart page keeps the single-button bar and reserves it too', async ({ page }) => {
+    await openGuest(page, 'webapp', '/cart');
     const bar = page.locator('[data-sf-part="primary-bar"]');
     await expect(bar).toBeVisible();
+    await expect(page.locator('[data-sf-part="cart-bar"]')).toHaveCount(0);
     const barHeight = (await box(bar)).height;
     const inset = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).scrollPaddingBottom));
     expect(inset).toBeGreaterThanOrEqual(barHeight);

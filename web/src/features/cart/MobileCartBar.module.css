@@ -11,6 +11,17 @@
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* The Mini App's two homes for the same band. In a browser tab it adds Telegram's own bottom inset (0 outside a
+   Mini App) to the browser's; inside Telegram only that inset counts, because env(safe-area-inset-bottom) would
+   count the notch twice. */
+.webapp {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--tg-safe-bottom, 0px));
+}
+
+.telegram {
+  padding-bottom: var(--tg-safe-bottom, 0px);
+}
+
 .inner {
   display: flex;
   align-items: center;

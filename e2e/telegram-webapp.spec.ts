@@ -22,6 +22,10 @@ const mainHandlers = (page: Page) => page.evaluate(() => (window as unknown as {
 const secondaryHandlers = (page: Page) => page.evaluate(() => (window as unknown as { __tg: { secondaryHandlerCount(): number } }).__tg.secondaryHandlerCount());
 const backHandlers = (page: Page) => page.evaluate(() => (window as unknown as { __tg: { backHandlerCount(): number } }).__tg.backHandlerCount());
 const clickSecondary = (page: Page) => page.evaluate(() => (window as unknown as { __tg: { clickSecondary(): void } }).__tg.clickSecondary());
+// The running-tab bar the web app draws in the page while the shopper browses (Telegram's MainButton stands down).
+const cartBar = (page: Page) => page.locator('[data-sf-part="cart-bar"]');
+const goToCart = (page: Page) => cartBar(page).getByRole('link', { name: /^View cart/ }).click();
+const mainVisible = (page: Page) => tg(page).then((t) => t.main.isVisible);
 const callsNamed = async (page: Page, name: string) => (await tg(page)).calls.filter((c) => c[0] === name);
 
 async function openInTelegram(page: Page, opts: InstallMocksOptions = {}, path = '/', version = '8.0') {
@@ -71,12 +75,15 @@ test.describe('inside Telegram', () => {
 
     await openProduct(page, 'webapp', firstProductName(mocks));
     await addFirstToCart(page, 'webapp', mocks);
-    await expect.poll(() => mainText(page)).toMatch(/^View cart · /);
+    // Browsing, the running tab in the page is the way on and the native button stays hidden.
+    await expect(cartBar(page)).toBeVisible();
+    expect(await mainVisible(page)).toBe(false);
     // A haptic tick for the add.
     expect((await callsNamed(page, 'haptic.impact')).length).toBeGreaterThan(0);
 
-    await clickMain(page);
+    await goToCart(page);
     await expect(page).toHaveURL(/\/cart$/);
+    await expect(cartBar(page)).toHaveCount(0);
     await expect.poll(() => mainText(page)).toMatch(/^Checkout · /);
     // The summary's own Checkout button stands down in favour of the MainButton.
     await expect(page.getByRole('link', { name: 'Checkout' })).toHaveCount(0);
@@ -99,12 +106,13 @@ test.describe('inside Telegram', () => {
     await expect.poll(() => mocks.state.webappLogins.length).toBe(1);
     await openProduct(page, 'webapp', firstProductName(mocks));
     await addFirstToCart(page, 'webapp', mocks);
-    await expect.poll(() => mainText(page)).toMatch(/^View cart · /);
-    expect(await mainHandlers(page)).toBe(1);
+    await expect(cartBar(page)).toBeVisible();
+    await expect.poll(() => mainVisible(page)).toBe(false);
+    expect(await mainHandlers(page)).toBe(0);
     expect(await secondaryHandlers(page)).toBe(0);
     expect(await backHandlers(page)).toBe(0);
 
-    await clickMain(page);
+    await goToCart(page);
     await expect(page).toHaveURL(/\/cart$/);
     await expect.poll(() => mainText(page)).toMatch(/^Checkout · /);
     expect(await mainHandlers(page)).toBe(1);
@@ -123,12 +131,13 @@ test.describe('inside Telegram', () => {
     await expect(page).toHaveURL(/\/cart$/);
     await clickBack(page);
     await expect(page).toHaveURL(/\/$/);
-    await expect.poll(() => mainText(page)).toMatch(/^View cart · /);
-    expect(await mainHandlers(page)).toBe(1);
+    await expect(cartBar(page)).toBeVisible();
+    await expect.poll(() => mainVisible(page)).toBe(false);
+    expect(await mainHandlers(page)).toBe(0);
     expect(await secondaryHandlers(page)).toBe(0);
     expect(await backHandlers(page)).toBe(0);
     const checkoutsBefore = mocks.state.checkouts.length;
-    await clickMain(page);
+    await goToCart(page);
     await expect(page).toHaveURL(/\/cart$/);
     expect(mocks.state.checkouts.length).toBe(checkoutsBefore);
     await expect.poll(() => mainText(page)).toMatch(/^Checkout · /);
@@ -142,7 +151,7 @@ test.describe('inside Telegram', () => {
     await expect.poll(() => mocks.state.webappLogins.length).toBe(1);
     await openProduct(page, 'webapp', firstProductName(mocks));
     await addFirstToCart(page, 'webapp', mocks);
-    await clickMain(page);
+    await goToCart(page);
     await expect(page).toHaveURL(/\/cart$/);
     await expect.poll(() => mainText(page)).toMatch(/^Checkout · /);
     await clickMain(page);
@@ -187,8 +196,8 @@ test.describe('inside Telegram', () => {
     await expect.poll(() => mocks.state.webappLogins.length).toBe(1);
     await openProduct(page, 'webapp', firstProductName(mocks));
     await addFirstToCart(page, 'webapp', mocks);
-    await expect.poll(() => mainText(page)).toMatch(/^View cart · /);
-    await clickMain(page);
+    await expect(cartBar(page)).toBeVisible();
+    await goToCart(page);
     await expect(page).toHaveURL(/\/cart$/);
     await expect.poll(() => mainText(page)).toMatch(/^Checkout · /);
     await clickMain(page);
@@ -243,7 +252,7 @@ test.describe('inside Telegram', () => {
     await expect.poll(() => backShowing(page)).toBe(false);
   });
 
-  test('with a primary action, Back joins the bottom row beside it and the header arrow stands down', async ({ page }) => {
+  test('on /cart (a primary action), Back joins the bottom row beside it and the header arrow stands down', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.clock.setFixedTime(FIXED_NOW);
     await installTelegramStub(page);
@@ -253,8 +262,8 @@ test.describe('inside Telegram', () => {
     await expect.poll(() => tg(page).then((t) => t.secondary.isVisible)).toBe(false);
     await openProduct(page, 'webapp', firstProductName(mocks));
     await addFirstToCart(page, 'webapp', mocks);
-    await expect.poll(() => mainText(page)).toMatch(/^View cart · /);
-    await clickMain(page);
+    await expect(cartBar(page)).toBeVisible();
+    await goToCart(page);
     await expect(page).toHaveURL(/\/cart$/);
     await expect.poll(() => tg(page).then((t) => t.secondary.isVisible)).toBe(true);
     const t = await tg(page);
@@ -389,17 +398,20 @@ test.describe('webapp layout in a plain browser', () => {
 
     await openProduct(page, 'webapp', firstProductName(mocks));
     await addFirstToCart(page, 'webapp', mocks);
+    // Browsing: the running tab, not a View cart button; the single-button bar is for the cart and the steps.
     const bar = page.locator('[data-sf-part="primary-bar"]');
-    await expect(bar.getByRole('button', { name: /^View cart · / })).toBeVisible();
-    await bar.getByRole('button', { name: /^View cart · / }).click();
+    await expect(cartBar(page)).toBeVisible();
+    await expect(bar).toHaveCount(0);
+    await goToCart(page);
     await expect(page).toHaveURL(/\/cart$/);
+    await expect(cartBar(page)).toHaveCount(0);
     await expect(bar.getByRole('button', { name: /^Checkout · / })).toBeVisible();
     // In a browser the header carries a back chevron instead of Telegram's BackButton.
     await page.locator('[data-sf-part="header"]').getByRole('button', { name: 'Back' }).click();
     await expect(page).toHaveURL(/\/$/);
   });
 
-  test('Back sits beside the primary action in the bar', async ({ page }) => {
+  test('on /cart, Back sits beside the primary action in the bar', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.clock.setFixedTime(FIXED_NOW);
     const mocks = await installMocks(page, { layout: 'webapp', session: true });
@@ -408,7 +420,7 @@ test.describe('webapp layout in a plain browser', () => {
     await openProduct(page, 'webapp', firstProductName(mocks));
     await addFirstToCart(page, 'webapp', mocks);
     const bar = page.locator('[data-sf-part="primary-bar"]');
-    await bar.getByRole('button', { name: /^View cart · / }).click();
+    await goToCart(page);
     await expect(page).toHaveURL(/\/cart$/);
     const back = bar.getByRole('button', { name: 'Back' });
     await expect(back).toBeVisible();
@@ -473,5 +485,60 @@ test.describe('inside Telegram: room at the foot', () => {
     // Telegram's own buttons sit outside the page, so there is no fixed bar of ours to clear.
     await expect(page.locator('[data-sf-part="primary-bar"]')).toHaveCount(0);
     await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement).scrollPaddingBottom)).toBe('34px');
+  });
+
+  test('with something in the cart the running tab is in the page, clears the home indicator by Telegram\'s inset alone, and the shell reserves it', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.clock.setFixedTime(FIXED_NOW);
+    await installTelegramStub(page);
+    await page.addInitScript(() => { (window as unknown as { Telegram: { WebApp: { safeAreaInset: { bottom: number } } } }).Telegram.WebApp.safeAreaInset.bottom = 34; });
+    const mocks = await installMocks(page, { layout: 'storefront' });
+    await page.goto('/');
+    await expect.poll(() => mocks.state.webappLogins.length).toBe(1);
+    await openProduct(page, 'webapp', firstProductName(mocks));
+    await addFirstToCart(page, 'webapp', mocks);
+    const bar = cartBar(page);
+    await expect(bar).toBeVisible();
+    // The bar's own foot is Telegram's inset (the browser's env() would count the notch twice), and it sits flush at the bottom.
+    expect(await bar.evaluate((el) => getComputedStyle(el).paddingBottom)).toBe('34px');
+    const box = (await bar.boundingBox())!;
+    expect(Math.round(box.y + box.height)).toBe(844);
+    const shell = page.locator('[data-sf-layout="webapp"]');
+    expect(await shell.evaluate((el) => getComputedStyle(el).paddingBottom)).toBe('110px');
+    await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement).scrollPaddingBottom)).toBe('110px');
+    expect(await mainVisible(page)).toBe(false);
+  });
+
+  test('the running tab\'s Checkout goes straight to checkout and its figures go to the cart', async ({ page }) => {
+    const mocks = await openInTelegram(page);
+    await expect.poll(() => mocks.state.webappLogins.length).toBe(1);
+    await openProduct(page, 'webapp', firstProductName(mocks));
+    await addFirstToCart(page, 'webapp', mocks);
+    const bar = cartBar(page);
+    await expect(bar).toBeVisible();
+
+    await bar.getByRole('link', { name: /^View cart/ }).click();
+    await expect(page).toHaveURL(/\/cart$/);
+    await page.goBack();
+    await expect(page).toHaveURL(/\/$/);
+
+    await bar.getByRole('link', { name: 'Checkout' }).click();
+    await expect(page).toHaveURL(/\/checkout$/);
+    await expect(page.getByRole('heading', { name: 'Your details' })).toBeVisible();
+    await expect(cartBar(page)).toHaveCount(0);
+    await expect.poll(() => mainText(page)).toBe('Continue');
+    expect((await callsNamed(page, 'haptic.impact')).length).toBeGreaterThan(1);
+  });
+
+  test('the product sheet hides the running tab and its Add to cart is the only footer', async ({ page }) => {
+    const mocks = await openInTelegram(page);
+    await expect.poll(() => mocks.state.webappLogins.length).toBe(1);
+    await openProduct(page, 'webapp', firstProductName(mocks));
+    await addFirstToCart(page, 'webapp', mocks);
+    await expect(cartBar(page)).toBeVisible();
+    await openProduct(page, 'webapp', firstProductName(mocks));
+    await expect(cartBar(page)).toHaveCount(0);
+    await page.getByRole('button', { name: 'Close' }).first().click();
+    await expect(cartBar(page)).toBeVisible();
   });
 });

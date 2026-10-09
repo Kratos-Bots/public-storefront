@@ -10,8 +10,18 @@ import { defaultPrimaryAction } from '@/features/webapp/default-action.ts';
 import { formatMoney } from '@/lib/format.ts';
 import { useText } from '@/text/runtime.tsx';
 
-/** A page's own action if it claimed one, else the cart default for this route. */
-export function useResolvedPrimaryAction(): PrimaryAction | null {
+interface ActionParts {
+  override: PrimaryAction | null;
+  /** The cart default for this route, as a button for Telegram's MainButton or the in-page bar. */
+  defaultAction: PrimaryAction | null;
+  /**
+   * The default is the browsing one ("View cart"), no page has claimed an action of its own, and the shop is not in
+   * wholesale mode (whose sheet is its own tab): the running-tab bar stands in for it, so no native button shows.
+   */
+  cartBar: boolean;
+}
+
+function useActionParts(): ActionParts {
   const override = usePrimaryActionStore((s) => s.override);
   const { currency, features } = useSettings();
   const loggedIn = useSessionStore(selectIsLoggedIn);
@@ -41,5 +51,21 @@ export function useResolvedPrimaryAction(): PrimaryAction | null {
     [label, to, disabled, navigate],
   );
 
-  return override ?? defaultAction;
+  // On /cart the default is "Checkout", which stays a single button; anywhere else it is "View cart".
+  const cartBar = override === null && fallback !== null && pathname !== '/cart' && !features.wholesale;
+  return { override, defaultAction, cartBar };
+}
+
+/**
+ * A page's own action if it claimed one, else the cart default for this route — except while the running-tab bar
+ * (see `useWebAppCartBar`) stands in for the browsing default, when there is no single-button action at all.
+ */
+export function useResolvedPrimaryAction(): PrimaryAction | null {
+  const { override, defaultAction, cartBar } = useActionParts();
+  return override ?? (cartBar ? null : defaultAction);
+}
+
+/** Whether the web app shows the running-tab bar (subtotal, items, Checkout) in place of a "View cart" button. */
+export function useWebAppCartBar(): boolean {
+  return useActionParts().cartBar;
 }

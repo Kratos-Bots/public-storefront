@@ -116,9 +116,10 @@ for (const layout of LAYOUTS) {
     await openProduct(page, layout, 'Alpine Extract 10ml');
     await addFirstToCart(page, layout, mocks);
     if (layout === 'webapp') {
-      // In a plain browser the web app drives the flow from its in-page primary bar.
+      // In a plain browser the web app drives the flow from its in-page bars: the running tab on the way to the
+      // cart, then the single-button primary bar.
+      await page.locator('[data-sf-part="cart-bar"]').getByRole('link', { name: /^View cart/ }).click();
       const bar = page.locator('[data-sf-part="primary-bar"]');
-      await bar.getByRole('button', { name: /^View cart · / }).click();
       await expect(page).toHaveURL(/\/cart$/);
       await bar.getByRole('button', { name: /^Checkout · / }).click();
       await expect(page).toHaveURL(/\/checkout$/);
