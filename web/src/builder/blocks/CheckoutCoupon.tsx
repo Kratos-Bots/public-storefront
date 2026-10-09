@@ -8,7 +8,7 @@ export const block = defineBlock<{ id: string }>({
   name: 'CheckoutCoupon', label: 'Discount code', category: 'part', part: { family: 'checkout' },
   layouts: 'all', routeBound: false, slots: [],
   style: styleSupport('root', [...BOX]),
-  text: ['checkout.coupon.*', 'common.status.*'],
+  text: ['checkout.coupon.*', 'checkout.referral.*','common.status.*'],
   schema: z.object({}), defaultProps: {},
   render: (p) => <CheckoutFamily.PartHost name="CheckoutCoupon" props={p as Record<string, unknown>} styleAttrs={p.puck.style} />,
 });

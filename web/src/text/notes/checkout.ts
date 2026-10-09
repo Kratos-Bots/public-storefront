@@ -95,6 +95,8 @@ export default {
   'coupon.notApplied': 'Beside a coupon code the shop turned down without a reason',
   'coupon.remove': 'Button that takes a coupon code off the order',
   'coupon.autoApplied': 'Beside a discount the shop applied on its own',
+  'referral.label': 'Label of the referral code field under the coupon field (signed-out shoppers only)',
+  'referral.hint': 'Helper line under the referral code field',
   'coupon.useAnother': 'Button to enter a different code over an automatic discount',
   'crypto.networkHeading': 'Group heading in the crypto picker, one per network; {network} is the network name. Also the tag on a row whose coin and network share a name',
   'crypto.onNetwork': 'Tag beside a coin in the crypto picker; {network} is the network it is sent on',

@@ -28,6 +28,8 @@ export interface CheckoutForm {
   pointPostcode: string;
   shippingOptionId: number | null;
   couponCode: string;
+  /** A friend's referral code typed at checkout (signed-out shoppers with no stored link only). */
+  referralCode: string;
   useStoreCredit: boolean;
   paymentMethod: string;
   coin: string;
@@ -54,6 +56,7 @@ export const DEFAULT_FORM: CheckoutForm = {
   pointPostcode: '',
   shippingOptionId: null,
   couponCode: '',
+  referralCode: '',
   useStoreCredit: false,
   paymentMethod: '',
   coin: '',

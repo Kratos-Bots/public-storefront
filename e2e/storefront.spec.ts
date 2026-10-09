@@ -276,7 +276,7 @@ for (const [size, viewport] of VIEWPORTS) {
       await shot(page, `4-account-loyalty-${size}`);
 
       await page.getByRole('link', { name: 'Referrals', exact: true }).click();
-      await expect(page.getByText('NB-ADA-7788')).toBeVisible();
+      await expect(page.getByText('NB-ADA-7788', { exact: true })).toBeVisible();
       await expect(page.getByText('People referred')).toBeVisible();
       await shot(page, `4-account-referrals-${size}`);
 

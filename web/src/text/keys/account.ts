@@ -105,6 +105,8 @@ export default defineTextArea('account', {
   'referrals.loadFailedBody': { en: "Your code hasn't gone anywhere — this was a hiccup between your browser and us." },
   'referrals.yourCode': { en: 'Your referral code', max: 40 },
   'referrals.copyAria': { en: 'Copy your referral code {code}', max: 100 },
+  'referrals.yourLink': { en: 'Your referral link', max: 40 },
+  'referrals.copyLinkAria': { en: 'Copy your referral link', max: 100 },
   'referrals.share': { en: 'Share', max: 30 },
   'referrals.shareNote': { en: 'The invite goes out with your code already in it — send it to whoever you want to bring in.' },
   'referrals.shareText': { en: 'Shopping with {shop}? Use my referral code {code} on your first order.', max: 200 },

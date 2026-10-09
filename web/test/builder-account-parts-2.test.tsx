@@ -274,6 +274,24 @@ describe('referrals', () => {
     const { container } = await ready(view(defaultOf('Referrals'), 'account.referrals'));
     expect(container.querySelector(`.${classes.share} a`)).toHaveAttribute('href', expect.stringContaining('wa.me'));
   });
+  it('shows the shareable link under the code in a browser, with its own copy button', async () => {
+    s.profile = ok(PROFILE);
+    const writeText = vi.fn(async () => undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    const { container } = await ready(view(defaultOf('Referrals'), 'account.referrals'));
+    const plate = container.querySelector(`.${classes.plate}`)!;
+    expect(plate).toHaveTextContent(`${window.location.origin}/ref/${PROFILE.referralCode}`);
+    fireEvent.click(screen.getByRole('button', { name: 'Copy your referral link' }));
+    expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/ref/${PROFILE.referralCode}`);
+    Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
+  });
+  it('shows no link inside the Telegram Mini App', async () => {
+    s.profile = ok(PROFILE); s.inTelegram = true;
+    const { container } = await ready(view(defaultOf('Referrals'), 'account.referrals'));
+    expect(container.querySelector(`.${classes.plate}`)!.textContent).not.toContain('/ref/');
+    expect(screen.queryByRole('button', { name: 'Copy your referral link' })).toBeNull();
+    s.inTelegram = false;
+  });
   it('preview states render from the fixture with the query pending', async () => {
     const fixture: ReferralsPreview = { info: PROFILE };
     const mode = (state: string): Partial<BuilderMode> => ({ previewStates: { Referrals: state }, previewFixtures: { Referrals: fixture } });

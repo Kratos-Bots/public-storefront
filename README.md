@@ -38,6 +38,32 @@ Plus one Telegram- and one order-link prerequisite, both outside `storefront-set
   *this* site, not `ecommerce-order`, once a client is running the storefront — it's what the
   backend uses to build the `publicUrl` on order records and in notification links.
 
+## Referrals on the web
+
+Browser and desktop only; the Telegram Mini App keeps using the bot's own referral deep link.
+
+- **The link.** Account → Referrals shows `https://<shop>/ref/CODE` next to the code, with a copy
+  button, and the share text (native share, WhatsApp, Telegram) carries it. The hash form
+  `https://<shop>/#/ref/CODE` is also accepted on arrival.
+- **Arrival.** `captureReferralFromLocation()` runs at boot, before the first render and before any
+  access redirect, so a private shop that sends the visitor to sign-in has already kept the code. The
+  top-level `/ref/:code` route (outside the access boundary) does the same and redirects to `/`.
+  A matching hash is stripped from the address bar; any other hash is left alone.
+- **Memory.** The code is kept in `localStorage` (`sf-referral-v1`) for 14 days. A newer valid link
+  replaces it and restarts the 14 days (last link wins). Codes are trimmed, a leading `ref_` is
+  dropped, and they are uppercased; only `A-Z0-9`, 4 to 32 characters, is accepted. Storage errors
+  are swallowed.
+- **Checkout.** Signed-out shoppers with no remembered link see an optional "Referral code" field
+  under the coupon field (no Apply key, no validation). The order body carries `referralCode`: the
+  remembered code if there is one, otherwise the typed one. Quotes never carry it. Signed-in
+  shoppers never see the field but a remembered code is still sent. After a successful order the
+  remembered code is cleared.
+- **One referrer only.** The backend applies the code after the order is placed and silently
+  ignores it if it is unknown, the shopper's own, or the customer already has a referrer.
+- **Site text.** The field's wording is `checkout.referral.*`; the link row is
+  `account.referrals.yourLink` / `copyLinkAria`. The share wording (`account.referrals.shareText`)
+  is unchanged: the link is appended on its own line, so owner-edited wording keeps working.
+
 ## Local development
 
 Three terminals:

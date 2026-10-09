@@ -5,6 +5,7 @@ import { useEffectiveLayout } from '@/app/layout.ts';
 import { Guard } from '@/app/guards.tsx';
 import { AccessBoundary, AuthOnlyFrame } from '@/app/AccessBoundary.tsx';
 import { TelegramCallbackPage } from '@/features/auth/TelegramCallbackPage.tsx';
+import { ReferralLinkRoute } from '@/features/referrals/capture.tsx';
 import { OrderLinkRedirect } from '@/app/OrderLinkRedirect.tsx';
 import { BuilderRoute } from '@/app/builder-route.tsx';
 import { PuckPage, PuckShell } from '@/builder/runtime.tsx';
@@ -58,6 +59,8 @@ const page = (routeKey: FixedRouteKey) => ({ handle: { routeKey }, element: <Puc
 export const routes: RouteObject[] = [
   // The page builder (spec §6): outside the shell — it renders its own canvas.
   { path: '/__builder/*', element: <BuilderRoute /> },
+  // A shopper's referral link: top level, outside the access boundary, so a private shop's redirect cannot run first.
+  { path: '/ref/:code', element: <ReferralLinkRoute /> },
   // Telegram sign-in's return page: a bare frame, never a builder page, and an auth path so a private shop shows it.
   {
     path: '/auth/telegram/callback',

@@ -10,6 +10,10 @@ export interface ReferralsData {
   canShare: boolean;
   copied: boolean;
   copy(): void;
+  /** The shareable `/ref/CODE` address; `null` inside the Telegram Mini App (the bot's deep link covers it). */
+  link: string | null;
+  linkCopied: boolean;
+  copyLink(): void;
   share(): void;
   /** The claim form. */
   draft: string;

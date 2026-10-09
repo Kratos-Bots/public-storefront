@@ -817,6 +817,10 @@ shopper cannot see or clear. Nothing in the guest path reads the arrangement oth
 key, the Turnstile token per quote and the retry are container code, and a token is never spent
 on a coupon the shopper cannot see.
 
+**The referral code field** lives inside the `CheckoutCoupon` part, under the coupon field (it is
+not a part of its own). It follows the coupon's visibility: where the coupon part is absent the
+referral field is absent and its typed value is not sent. See "Referrals on the web" in the README.
+
 **Contract additions** (`ContainerSpec` and `part`, all optional; a container or part without them
 behaves exactly as in stages 3 and 4):
 

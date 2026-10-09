@@ -16,6 +16,7 @@ import { readStoredTemplateId } from '@/app/theme-bridge.ts';
 import { bootTelegramSession } from '@/app/telegram-session.ts';
 import { keepFocusedFieldClear } from '@/lib/keep-field-clear.ts';
 import { disablePinchZoom } from '@/lib/no-pinch-zoom.ts';
+import { captureReferralFromLocation } from '@/features/referrals/capture.tsx';
 import { loadTelegramSdk } from '@/lib/telegram-webapp.ts';
 
 disablePinchZoom();
@@ -39,6 +40,8 @@ function render() {
 // shell and the sign-in read it synchronously). Anywhere else this resolves at
 // once without touching the network.
 void loadTelegramSdk().then(() => {
+  // After the SDK (so "inside Telegram" is known) and before the router can redirect anywhere.
+  captureReferralFromLocation();
   // Not awaited: it flips the Telegram status to `pending` synchronously, and the
   // app renders its skeleton until the exchange settles.
   void bootTelegramSession();

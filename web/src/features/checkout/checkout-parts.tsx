@@ -4,6 +4,10 @@ import { CheckoutFamily, type CheckoutData, type StepKind } from '@/builder/fami
 import type { SlotRender } from '@/builder/define.ts';
 import type { FamilyValue, PartViewProps } from '@/builder/parts.ts';
 import { CouponField } from '@/features/checkout/CouponField.tsx';
+import { isTelegramWebApp } from '@/lib/telegram-webapp.ts';
+import { ReferralField } from '@/features/checkout/ReferralField.tsx';
+import { useStoredReferral } from '@/features/referrals/stored-referral.ts';
+import { selectIsLoggedIn, useSessionStore } from '@/stores/session.ts';
 import { TextareaField } from '@/features/checkout/Field.tsx';
 import { QuoteSummary } from '@/features/checkout/QuoteSummary.tsx';
 import { STEP_META } from '@/features/checkout/step-meta.ts';
@@ -156,6 +160,11 @@ function Review({ props, styleAttrs }: PartViewProps) {
 
 function Coupon({ styleAttrs }: PartViewProps) {
   const d = CheckoutFamily.useData();
+  const loggedIn = useSessionStore(selectIsLoggedIn);
+  const stored = useStoredReferral();
+  // Underneath the coupon, for a shopper nobody has referred yet: signed out, with no link remembered.
+  // Web only: the Telegram Mini App has the bot's own referral deep link.
+  const askReferral = !loggedIn && !stored && !isTelegramWebApp();
   return (
     <div className={stepClasses.section} {...styleAttrs}>
       <CouponField
@@ -166,6 +175,7 @@ function Coupon({ styleAttrs }: PartViewProps) {
         onApply={(code) => d.patch({ couponCode: code })}
         onRemove={() => d.patch({ couponCode: '' })}
       />
+      {askReferral ? <ReferralField value={d.form.referralCode} onChange={(v) => d.patch({ referralCode: v })} /> : null}
     </div>
   );
 }
