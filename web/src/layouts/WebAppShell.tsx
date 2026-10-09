@@ -7,6 +7,7 @@ import { CutoffBar } from '@/features/notices/CutoffBar.tsx';
 import { LoginModal } from '@/features/auth/LoginModal.tsx';
 import { UnpaidOrderPrompt } from '@/features/unpaid-prompt/UnpaidOrderPrompt.tsx';
 import { PrimaryActionBar, usePrimaryBarShowing } from '@/features/webapp/PrimaryActionBar.tsx';
+import { WebAppCartBar } from '@/features/webapp/WebAppCartBar.tsx';
 import { useTelegramChrome } from '@/features/webapp/useTelegramChrome.ts';
 import { HeaderBar, legacyHeaderSlots } from '@/layouts/header-parts.tsx';
 import type { ShellHeaderProps } from '@/layouts/StorefrontShell.tsx';
@@ -35,7 +36,8 @@ export function WebAppMain() {
 
 /**
  * The web app's root: Telegram chrome wiring, the primary action at the foot (it is
- * this layout's cart bar, so `cartBar` is accepted and ignored), the login modal
+ * this layout's cart bar, so `cartBar` is accepted and ignored; while browsing, the running-tab bar stands in for
+ * its "View cart" button), the login modal
  * outside Telegram, and the Overlay slot.
  */
 export function WebAppFrame({ children }: { children: ReactNode; cartBar?: boolean }) {
@@ -54,6 +56,7 @@ export function WebAppFrame({ children }: { children: ReactNode; cartBar?: boole
       {children}
 
       <PrimaryActionBar />
+      <WebAppCartBar />
 
       {features.accounts && !native ? <LoginModal /> : null}
       <UnpaidOrderPrompt />

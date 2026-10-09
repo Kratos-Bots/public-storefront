@@ -29,8 +29,26 @@ describe('bottom inset', () => {
     },
   );
 
-  it('the Mini App shell keeps clear of the home indicator inside Telegram, whose buttons are outside the WebView', () => {
-    expect(block(read('layouts/WebAppShell.module.css'), ':global(:root):has(.native)')).toMatch(/--sf-bottom-inset:\s*var\(--tg-safe-bottom/);
+  it('the Mini App shell keeps clear of the home indicator inside Telegram when no bar is in the page', () => {
+    const css = read('layouts/WebAppShell.module.css');
+    expect(block(css, ':global(:root):has(.native:not(.withBar))')).toMatch(/--sf-bottom-inset:\s*var\(--tg-safe-bottom/);
+    expect(block(css, '\n.native:not(.withBar) {')).toMatch(/padding-bottom:\s*var\(--tg-safe-bottom/);
+  });
+
+  it('inside Telegram the running-tab bar is in the page: 76px plus the Telegram inset is reserved and published, never env()', () => {
+    const css = read('layouts/WebAppShell.module.css');
+    const inset = block(css, ':global(:root):has(.native.withBar)');
+    expect(inset).toMatch(/--sf-bottom-inset:\s*calc\(76px \+ var\(--tg-safe-bottom/);
+    expect(inset).not.toContain('env(');
+    const pad = block(css, '\n.native.withBar {');
+    expect(pad).toMatch(/padding-bottom:\s*calc\(76px \+ var\(--tg-safe-bottom/);
+    expect(pad).not.toContain('env(');
+  });
+
+  it('the running-tab bar inside Telegram pads its own foot with the Telegram inset only', () => {
+    const tg = block(read('features/cart/MobileCartBar.module.css'), '\n.telegram {');
+    expect(tg).toMatch(/padding-bottom:\s*var\(--tg-safe-bottom/);
+    expect(tg).not.toContain('env(');
   });
 
   it("the checkout's sticky Continue band publishes its height on phones only", () => {
