@@ -3,6 +3,7 @@ import { useMediaQuery } from '@mantine/hooks';
 import { useSettings } from '@/app/settings.ts';
 import { useSessionStore, selectIsLoggedIn } from '@/stores/session.ts';
 import { useCartStore, selectCount, selectSubtotal } from '@/stores/cart.ts';
+import { useWarehouseOrdering } from '@/features/warehouses/use-warehouse.ts';
 import { formatMoney } from '@/lib/format.ts';
 import { haptic } from '@/lib/telegram-webapp.ts';
 import { basketPromotions } from '@/lib/promotions.ts';
@@ -26,6 +27,7 @@ const DESKTOP = '(min-width: 62em)';
  */
 export function useMobileCartBar(): boolean {
   const { features } = useSettings();
+  const { paused } = useWarehouseOrdering();
   const count = useCartStore(selectCount);
   const { pathname } = useLocation();
   // Read synchronously: a deferred match flashes the band on a desktop first paint.
@@ -33,6 +35,7 @@ export function useMobileCartBar(): boolean {
 
   return (
     features.ordering &&
+    !paused &&
     !features.wholesale &&
     !desktop &&
     count > 0 &&

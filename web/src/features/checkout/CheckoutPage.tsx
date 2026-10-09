@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAutofillAdvance } from '@/lib/use-autofill-advance.ts';
 import { useAutofillDiag } from '@/lib/use-autofill-diag.tsx';
-import { Link, useNavigate } from 'react-router';
+import { Link, Navigate, useNavigate } from 'react-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@mantine/core';
 import { useDebouncedValue } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
@@ -32,7 +33,7 @@ import { applyShipCountries } from '@/features/checkout/ship-countries.ts';
 import { collectionAddress, modeForCountry, pickerCountries, quoteDeliveryFields, reconcileDelivery, shipListsOf } from '@/features/checkout/collection-mode.ts';
 import { useQuote } from '@/features/checkout/useQuote.ts';
 import { warehouseBody } from '@/api/warehouse-param.ts';
-import { useWarehouseId } from '@/features/warehouses/use-warehouse.ts';
+import { useWarehouseId, useWarehouseOrdering } from '@/features/warehouses/use-warehouse.ts';
 import { accountOrderPath, resolveCheckoutOutcome } from '@/features/checkout/outcome.ts';
 import { GuestTurnstile, type GuestTurnstileHandle } from '@/features/checkout/GuestTurnstile.tsx';
 import { CHECKOUT_VIEWS, InertActionBand } from '@/features/checkout/checkout-parts.tsx';
@@ -125,9 +126,21 @@ export interface CheckoutPageProps {
   slots?: CheckoutSlots;
 }
 
-export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
+/**
+ * A warehouse that is not taking orders has no checkout: send the shopper back to the cart, which keeps their
+ * basket and says why. Decided before the flow mounts, so none of its hooks, quotes or persisted state run.
+ */
+export function CheckoutPage(props: CheckoutPageProps = {}) {
+  const { paused } = useWarehouseOrdering();
+  if (paused) return <Navigate to="/cart" replace />;
+  return <CheckoutFlow {...props} />;
+}
+
+function CheckoutFlow({ slots }: CheckoutPageProps) {
   const { t, tn } = useText();
   const settings = useSettings();
+  const queryClient = useQueryClient();
+  const { name: warehouseName } = useWarehouseOrdering();
   const { contactModes, currency, features } = settings;
   const rawShipping = settings.shipping;
   const shipLists = useMemo(() => shipListsOf({ shipping: rawShipping }), [rawShipping]);
@@ -389,14 +402,25 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
     ? null
     : (combo?.chargeTotal ?? method?.chargeTotal ?? shownQuote?.amountDue ?? null);
 
+  // The warehouse stopped taking orders while the shopper was on this page (the list the redirect reads can be
+  // up to half a minute behind): say so in words, never the backend's sentinel.
+  const failureText = (err: unknown, fallback?: string): string =>
+    err instanceof ApiError && err.isWarehouseOrderingPaused
+      ? t('shell.warehouse.paused.notice', { warehouse: warehouseName ?? settings.brand.name })
+      : errorMessage(err, fallback);
   const errorTarget = classifyQuoteError(quoteError, effective);
   const quoteMessage = quoteError
     ? quoteError.status === 404
       ? t('checkout.errors.unknownCode')
-      : errorMessage(quoteError)
+      : failureText(quoteError)
     : undefined;
   // Anything the steps can't own (429, 502, a timeout) belongs at the top of the page.
-  const pageQuoteError = quoteError && !errorTarget ? errorMessage(quoteError) : null;
+  const pageQuoteError = quoteError && !errorTarget ? failureText(quoteError) : null;
+  // Re-read the warehouse list: it then reports the pause and the page above redirects to the cart.
+  const quotePaused = Boolean(quoteError?.isWarehouseOrderingPaused);
+  useEffect(() => {
+    if (quotePaused) void queryClient.invalidateQueries({ queryKey: ['warehouses'] });
+  }, [quotePaused, queryClient]);
 
   function contactValues(): { email?: string; phone?: string } {
     const parsed = contactSchema.safeParse({
@@ -646,7 +670,8 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
         if (lockTimer.current) clearTimeout(lockTimer.current);
         lockTimer.current = setTimeout(() => setLocked(false), LOCK_MS);
       } else {
-        setSubmitError(errorMessage(err, t('checkout.errors.placeFailed')));
+        if (err instanceof ApiError && err.isWarehouseOrderingPaused) void queryClient.invalidateQueries({ queryKey: ['warehouses'] });
+        setSubmitError(failureText(err, t('checkout.errors.placeFailed')));
       }
     } finally {
       submitLatch.current = false;

@@ -103,15 +103,19 @@ describe('WarehouseGate', () => {
     const eu = screen.getByRole('button', { name: 'Shop from Test EU' }) as HTMLButtonElement;
     expect(eu.textContent).toContain('Not taking orders');
     expect(eu.textContent).toContain('Back Monday');
+    // The generic sentence belongs to the in-shop notice, not the card: a message replaces nothing, so it is never doubled.
+    expect(eu.textContent).not.toContain('is not taking orders right now');
     expect(eu.disabled).toBe(false);
     fireEvent.click(eu);
     expect(screen.getByText('catalogue')).toBeTruthy();
   });
 
-  it('falls back to the shop-wide notice for a paused warehouse with no message of its own', () => {
+  it('shows only the badge on a paused warehouse with no message of its own', () => {
     setStore({ list: [MAIN, { ...EU, orderingEnabled: false }] });
     mount();
-    expect(screen.getByRole('button', { name: 'Shop from Test EU' }).textContent).toContain('Test EU is not taking orders right now.');
+    const text = screen.getByRole('button', { name: 'Shop from Test EU' }).textContent;
+    expect(text).toContain('Not taking orders');
+    expect(text).not.toContain('is not taking orders right now');
   });
 
   it('never interrupts a route outside the catalogue', () => {

@@ -64,7 +64,7 @@ function Chooser({ list, stored, onPick }: { list: Warehouse[]; stored: number |
             const paused = w.orderingEnabled === false;
             // Only a non-default choice is remembered, so the default never carries the tag.
             const last = !w.isDefault && w.id === stored;
-            const note = paused ? (w.orderingMessage?.trim() || t('shell.warehouse.paused.notice', { warehouse: w.name })) : null;
+            const note = paused ? w.orderingMessage?.trim() || null : null;
             const detail = `${uid}-${w.id}`;
             return (
               <li key={w.id}>

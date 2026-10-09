@@ -5,6 +5,8 @@ import { formatMoney } from '@/lib/format.ts';
 import { nudgeSentence } from '@/lib/promotions.ts';
 import { Slot } from '@/templates/runtime.tsx';
 import { useText } from '@/text/runtime.tsx';
+import { OrderingPausedNotice } from '@/features/warehouses/OrderingPausedNotice.tsx';
+import { useWarehouseOrdering } from '@/features/warehouses/use-warehouse.ts';
 import classes from '@/features/cart/CartSummary.module.css';
 
 /** The mixed pre-order notice; nothing otherwise. */
@@ -76,10 +78,16 @@ function TermsView({ styleAttrs }: PartViewProps) {
   return <p className={classes.terms} {...styleAttrs}>{t('cart.summary.terms')}</p>;
 }
 
-/** The checkout link, or the disabled button and its held note; in the web app only the held note when blocked. */
+/**
+ * The checkout link, or the disabled button and its held note; in the web app only the held note when blocked.
+ * While the warehouse in force is not taking orders there is nothing to check out to: the notice stands in for the
+ * button, and the basket above it stays as editable as ever.
+ */
 function CheckoutView() {
   const { t } = useText();
   const { blocked, onNavigate, primaryElsewhere, checkoutTo } = CartSummaryFamily.useData();
+  const { paused } = useWarehouseOrdering();
+  if (paused) return <OrderingPausedNotice variant="inline" />;
   if (primaryElsewhere) return blocked ? <p className={classes.held}>{t('cart.summary.held')}</p> : null;
   if (blocked) {
     return (

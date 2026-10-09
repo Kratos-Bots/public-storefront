@@ -19,6 +19,6 @@ export default {
   'warehouse.prompt.choose': 'Screen-reader name of each warehouse button on that screen; {warehouse} is the warehouse',
   'warehouse.prompt.lastTime': 'Small tag on the warehouse the shopper picked on an earlier visit',
   'warehouse.paused.badge': 'Tag on a warehouse that is not taking orders, on the choose screen and in the header picker',
-  'warehouse.paused.notice': 'Notice on a warehouse that is not taking orders and has no message of its own; {warehouse} is its name',
+  'warehouse.paused.notice': 'Notice under the header on catalogue pages, and in the cart, when the selected warehouse is not taking orders and has no message of its own; {warehouse} is its name',
   'notFound.backToShop': 'Button on the "page isn\'t here" page that goes to the catalogue',
 } as const satisfies Record<string, string>;

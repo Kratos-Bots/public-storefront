@@ -4,6 +4,7 @@ import { useSettings } from '@/app/settings.ts';
 import { MinusIcon, PlusIcon } from '@/components/icons.tsx';
 import { addToCart, removeFromCart, setCartQuantity } from '@/features/cart/useServerCart.ts';
 import { useCartStore } from '@/stores/cart.ts';
+import { useWarehouseOrdering } from '@/features/warehouses/use-warehouse.ts';
 import { deriveStockStatus, formatMoney, resolveUnitPrice } from '@/lib/format.ts';
 import { Slot } from '@/templates/runtime.tsx';
 import { useText } from '@/text/runtime.tsx';
@@ -43,7 +44,9 @@ export function AddToCart({ product, size = 'lg', showPrice = true, rootAttrs }:
   // returns, so the hook order never changes.
   const inCart = useCartStore((s) => s.lines.find((l) => l.productId === product.id)?.quantity ?? 0);
 
-  if (!features.ordering) return null;
+  // The warehouse the shopper ships from has stopped taking orders: browse only, like `ordering: false`.
+  const { paused } = useWarehouseOrdering();
+  if (!features.ordering || paused) return null;
 
   const status = deriveStockStatus(product.inStock, product.lowStockAlert);
   // A product with fewer units in stock than its own minimum can never actually

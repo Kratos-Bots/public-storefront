@@ -8,6 +8,7 @@ import { Brand } from '@/components/Brand.tsx';
 import { BagIcon, ChevronIcon, FilterIcon, UserIcon } from '@/components/icons.tsx';
 import { NoticeBanners } from '@/features/notices/NoticeBanners.tsx';
 import { WarehouseStrip } from '@/features/warehouses/WarehouseStrip.tsx';
+import { WarehouseNotice } from '@/features/warehouses/WarehouseNotice.tsx';
 import { isFirstHistoryEntry } from '@/features/webapp/useTelegramChrome.ts';
 import { SearchField } from '@/layouts/SearchField.tsx';
 import { useShellState } from '@/layouts/shell-context.ts';
@@ -215,6 +216,7 @@ export function HeaderBar({ variant, topBar, sticky, slots, styleAttrs }: Header
         </div>
       </header>
       <WarehouseStrip />
+      <WarehouseNotice />
     </HeaderFamily.Provider>
   );
 }
