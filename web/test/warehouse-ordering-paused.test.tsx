@@ -12,6 +12,7 @@ import { useCartStore } from '@/stores/cart.ts';
 import { resetCartSync } from '@/features/cart/useServerCart.ts';
 import { resetWarehouseStore, useWarehouseStore } from '@/features/warehouses/store.ts';
 import { OrderingPausedNotice } from '@/features/warehouses/OrderingPausedNotice.tsx';
+import { WarehouseNotice } from '@/features/warehouses/WarehouseNotice.tsx';
 import { AddToCart } from '@/features/catalog/AddToCart.tsx';
 import { CartSummary } from '@/features/cart/CartSummary.tsx';
 import { classifyQuoteError } from '@/features/checkout/CheckoutPage.tsx';
@@ -140,5 +141,54 @@ describe('the cart while ordering is paused', () => {
 describe('classifyQuoteError', () => {
   it('treats the paused-warehouse 503 as a page-level error, not a field error', () => {
     expect(classifyQuoteError(new ApiError(503, 'WAREHOUSE_ORDERING_PAUSED'), DEFAULT_FORM)).toBeNull();
+  });
+});
+
+describe('header notice and cart notice together', () => {
+  const header = () => (
+    <>
+      <WarehouseNotice />
+    </>
+  );
+  const notices = () => document.querySelectorAll('[data-warehouse-paused]');
+
+  it('shows in the header when no cart notice is mounted (a cart with its checkout part hidden)', () => {
+    setStore(LIST, 2);
+    wrap(header());
+    expect(notices()).toHaveLength(1);
+  });
+
+  it('shows exactly one notice, the cart\'s, when both are mounted, and the header returns when the cart notice goes', () => {
+    setStore(LIST, 2);
+    const ui = (cart: boolean) => (
+      <>
+        <WarehouseNotice />
+        {cart ? <OrderingPausedNotice variant="inline" /> : null}
+      </>
+    );
+    const { rerender } = wrap(ui(true));
+    expect(notices()).toHaveLength(1);
+    expect(notices()[0]!.className).toMatch(/inline/);
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <MantineProvider env="test">
+          <MemoryRouter>{ui(false)}</MemoryRouter>
+        </MantineProvider>
+      </QueryClientProvider>,
+    );
+    expect(notices()).toHaveLength(1);
+    expect(notices()[0]!.className).toMatch(/bar/);
+  });
+
+  it('renders neither, and no wrapper, when ordering is not paused', () => {
+    setStore(LIST, null);
+    const { container } = wrap(
+      <>
+        <WarehouseNotice />
+        <OrderingPausedNotice variant="inline" />
+      </>,
+    );
+    expect(notices()).toHaveLength(0);
+    expect(container.querySelector('[role="status"]')).toBeNull();
   });
 });

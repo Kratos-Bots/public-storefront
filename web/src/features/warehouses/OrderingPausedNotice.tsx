@@ -1,6 +1,22 @@
+import { useEffect, useSyncExternalStore } from 'react';
 import { useWarehouseOrdering } from '@/features/warehouses/use-warehouse.ts';
 import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/warehouses/OrderingPausedNotice.module.css';
+
+/**
+ * How many cart-side (`inline`) notices are on screen right now. Each registers while it renders, so the
+ * header's notice can stand down only when the cart really is saying it - the header knows nothing about
+ * the cart's structure, and a cart that omits or hides its notice leaves the header's in place.
+ */
+let cartNotices = 0;
+const listeners = new Set<() => void>();
+const subscribe = (notify: () => void) => { listeners.add(notify); return () => { listeners.delete(notify); }; };
+const change = (by: number) => { cartNotices += by; for (const notify of listeners) notify(); };
+
+/** Is a cart-side paused notice mounted and showing? */
+export function useCartNoticeShowing(): boolean {
+  return useSyncExternalStore(subscribe, () => cartNotices > 0, () => false);
+}
 
 /**
  * Says that the warehouse the shopper is shipping from is not taking orders: the owner's own message when
@@ -12,6 +28,12 @@ import classes from '@/features/warehouses/OrderingPausedNotice.module.css';
 export function OrderingPausedNotice({ variant = 'bar' }: { variant?: 'bar' | 'inline' }) {
   const { paused, message, name } = useWarehouseOrdering();
   const { t } = useText();
+  const registers = variant === 'inline' && paused;
+  useEffect(() => {
+    if (!registers) return undefined;
+    change(1);
+    return () => change(-1);
+  }, [registers]);
   if (!paused) return null;
   const text = message ?? t('shell.warehouse.paused.notice', { warehouse: name ?? '' });
   return (
