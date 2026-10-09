@@ -2,7 +2,8 @@ import { useEffect, useMemo } from 'react';
 import { create } from 'zustand';
 import { notifications } from '@mantine/notifications';
 import { fetchCart, putCart } from '@/api/cart.ts';
-import { useCartStore } from '@/stores/cart.ts';
+import { useCartStore, type LocalLine } from '@/stores/cart.ts';
+import { selectedWarehouseId, useWarehouseStore } from '@/features/warehouses/store.ts';
 import { ApiError, errorMessage } from '@/lib/errors.ts';
 import { textSnapshot } from '@/text/snapshot.ts';
 import { snapshotMatchesLines } from '@/lib/promotions.ts';
@@ -207,6 +208,24 @@ export function removeFromCart(productId: number) {
   schedule();
 }
 
+const NO_ISSUES: ServerCartLine[] = [];
+
+/** Re-read the signed-in cart because the warehouse in force changed (a no-op outside server mode). */
+export const refreshCartForWarehouse = refreshCart;
+
+/**
+ * A guest basket line the chosen warehouse does not carry, in the shape the server flags a withdrawn
+ * line: `inactive` - which the cart already renders as "no longer available" and which blocks
+ * checkout everywhere `blocked` is read. The line itself stays in the basket.
+ */
+function unavailableAtWarehouse(l: LocalLine): ServerCartLine {
+  return {
+    productId: l.productId, name: l.displayName, quantity: l.quantity, unitPrice: l.unitPrice, lineTotal: l.unitPrice * l.quantity,
+    imageUrl: null, isPreorder: l.isPreorder, outOfStock: false, priceChanged: false, inactive: true,
+    belowMin: false, aboveMax: false, minOrderQuantity: null, maxOrderQuantity: null,
+  };
+}
+
 /** Drop the pending write and the server snapshot — for logout, and for tests. */
 export function resetCartSync() {
   if (timer) clearTimeout(timer);
@@ -270,7 +289,10 @@ export function useServerCart(): ServerCartControls {
     if (mode === 'local' && syncStore.getState().cart) syncStore.setState({ cart: null });
   }, [mode]);
 
-  const issues = useMemo(
+  // The products the chosen warehouse carries, once its catalogue is in (null = no warehouse chosen, or not known yet).
+  const carried = useWarehouseStore((s) => (selectedWarehouseId(s) !== null ? s.ctx.carried : null));
+
+  const serverIssues = useMemo(
     () =>
       mode === 'server'
         ? (cart?.items ?? []).filter(
@@ -279,6 +301,13 @@ export function useServerCart(): ServerCartControls {
         : [],
     [mode, cart],
   );
+  // A guest basket has no server to flag a line, so a line the chosen warehouse does not carry is flagged here.
+  // Its own memo: the server-mode issues above keep the identity they always had on every quantity tap.
+  const unavailableIssues = useMemo(
+    () => (mode === 'local' && carried ? lines.filter((l) => !carried.has(l.productId)).map(unavailableAtWarehouse) : NO_ISSUES),
+    [mode, carried, lines],
+  );
+  const issues = mode === 'local' ? unavailableIssues : serverIssues;
 
   const candidate = preview ?? (mode === 'server' ? cart : null);
   const server = snapshotMatchesLines(candidate, lines) ? candidate : null;

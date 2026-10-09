@@ -304,3 +304,77 @@ describe('personalised catalog proxying', () => {
     expect(cacheTtlFor('catalog/products/42')).toBe(60);
   });
 });
+
+describe('warehouse choice (?warehouse=<id>)', () => {
+  const ok = (body: unknown) => new Response(JSON.stringify({ success: true, data: body }), { status: 200, headers: { 'content-type': 'application/json' } });
+
+  it('matches the catalogue cache rules on the path alone, whatever the query', () => {
+    // cacheTtlFor is given the path without its query (proxyApi passes url.pathname), and the rules are anchored.
+    expect(cacheTtlFor('catalog')).toBe(60);
+    expect(cacheTtlFor('catalog/products/42')).toBe(60);
+    expect(cacheTtlFor('catalog?warehouse=2')).toBe(0);
+  });
+
+  it('keys each warehouse separately from the default and from each other', async () => {
+    const fetchSpy = stubFetch((url) => ok({ url }));
+    const get = async (qs: string) => {
+      const ctx = createExecutionContext();
+      const res = await worker.fetch(new Request(`https://shop.test/api/catalog${qs}`), env, ctx);
+      await waitOnExecutionContext(ctx);
+      return res;
+    };
+    const base = await get('');
+    const two = await get('?warehouse=2');
+    const three = await get('?warehouse=3');
+    expect([base, two, three].map((r) => r.headers.get('X-SF-Cache'))).toEqual(['MISS', 'MISS', 'MISS']);
+    expect(fetchSpy.mock.calls.map((c) => String(c[0]))).toEqual([
+      'https://backend.test/api/v1/public/catalog',
+      'https://backend.test/api/v1/public/catalog?warehouse=2',
+      'https://backend.test/api/v1/public/catalog?warehouse=3',
+    ]);
+    // Each is now served from its own entry, with its own body.
+    const [b2, t2, h2] = await Promise.all([get(''), get('?warehouse=2'), get('?warehouse=3')]);
+    expect([b2, t2, h2].map((r) => r.headers.get('X-SF-Cache'))).toEqual(['HIT', 'HIT', 'HIT']);
+    expect(await t2.json()).toEqual({ success: true, data: { url: 'https://backend.test/api/v1/public/catalog?warehouse=2' } });
+    expect(await b2.json()).toEqual({ success: true, data: { url: 'https://backend.test/api/v1/public/catalog' } });
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+  });
+
+  it('keys a product read per warehouse too', async () => {
+    const fetchSpy = stubFetch((url) => ok({ url }));
+    for (const qs of ['', '?warehouse=2', '?warehouse=2']) {
+      const ctx = createExecutionContext();
+      await worker.fetch(new Request(`https://shop.test/api/catalog/products/7${qs}`), env, ctx);
+      await waitOnExecutionContext(ctx);
+    }
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('caches the warehouse list for anonymous visitors only on a 200, never a 401', async () => {
+    expect(cacheTtlFor('storefront/warehouses')).toBe(30);
+    let status = 401;
+    const fetchSpy = stubFetch(() => (status === 200
+      ? ok({ warehouses: [] })
+      : new Response('{"success":false,"data":null,"error":"LOGIN_REQUIRED"}', { status: 401, headers: { 'content-type': 'application/json' } })));
+    const ask = async (headers: HeadersInit = {}) => {
+      const ctx = createExecutionContext();
+      const res = await worker.fetch(new Request('https://shop.test/api/storefront/warehouses', { headers }), env, ctx);
+      await waitOnExecutionContext(ctx);
+      return res;
+    };
+    const refused = await ask();
+    expect(refused.status).toBe(401);
+    expect(refused.headers.get('X-SF-Cache')).toBe('BYPASS');
+    expect(refused.headers.get('cache-control')).toBe('no-store');
+    // The shop turns public: the earlier 401 must not be what the next visitor gets.
+    status = 200;
+    const first = await ask();
+    expect(first.status).toBe(200);
+    expect(first.headers.get('X-SF-Cache')).toBe('MISS');
+    expect((await ask()).headers.get('X-SF-Cache')).toBe('HIT');
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    // A signed-in read is never served from, or written to, the anonymous entry.
+    const signedIn = await ask({ authorization: 'Bearer tok' });
+    expect(signedIn.headers.get('X-SF-Cache')).toBe('BYPASS');
+  });
+});

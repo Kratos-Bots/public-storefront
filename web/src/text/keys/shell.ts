@@ -12,4 +12,9 @@ export default defineTextArea('shell', {
   'notFound.title': { en: "This page isn't here", max: 80 },
   'notFound.description': { en: 'The link may be out of date, or this part of the shop is switched off.', max: 200 },
   'notFound.backToShop': { en: 'Back to the shop', max: 40 },
+  'warehouse.label': { en: 'Shipping from', max: 40 },
+  'warehouse.option': { en: '{name} · {country}', max: 80 },
+  'warehouse.shippingFrom': { en: 'Shipping from {warehouse}', max: 80 },
+  'warehouse.unavailable': { en: "This product isn't available from {warehouse}.", max: 120 },
+  'warehouse.switchBack': { en: 'Ship from {warehouse} instead', max: 60 },
 });

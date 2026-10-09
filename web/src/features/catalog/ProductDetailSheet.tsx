@@ -30,6 +30,7 @@ import { FADE } from '@/lib/motion.ts';
 import type { Category, Product } from '@/types/catalog.ts';
 import { useCoreOptions } from '@/templates/hooks.ts';
 import { useText } from '@/text/runtime.tsx';
+import { SwitchBackButton, useNotCarried } from '@/features/warehouses/NotCarried.tsx';
 import classes from '@/features/catalog/ProductDetailSheet.module.css';
 
 /**
@@ -129,6 +130,7 @@ export function ProductSheetBody({ slots }: { slots: ProductSlots }) {
   const { t } = useText();
   const query = useProduct(host.productId);
   const catalog = useCatalog();
+  const notCarried = useNotCarried(query.error);
   const product = query.data;
   const data = useMemo(
     () => (product ? productData(product, catalog.data?.categories ?? [], host.onSelect) : null),
@@ -141,7 +143,8 @@ export function ProductSheetBody({ slots }: { slots: ProductSlots }) {
       {query.isPending ? <SheetLoading /> : null}
       {query.isError ? (
         <div className={classes.failed}>
-          <p className={classes.failedText}>{t('product.sheet.loadFailed')}</p>
+          <p className={classes.failedText}>{notCarried ? notCarried.message : t('product.sheet.loadFailed')}</p>
+          {notCarried ? <SwitchBackButton label={notCarried.switchLabel} onClick={notCarried.switchBack} /> : null}
           <Button variant="default" size="sm" onClick={() => void query.refetch()}>
             {t('common.actions.tryAgain')}
           </Button>

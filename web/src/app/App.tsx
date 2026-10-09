@@ -19,6 +19,7 @@ import { EmptyState } from '@/components/EmptyState.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { ClosedPage } from '@/features/closed/ClosedPage.tsx';
 import { fetchCart } from '@/api/cart.ts';
+import { WarehouseSync } from '@/features/warehouses/WarehouseSync.tsx';
 import { useCartStore } from '@/stores/cart.ts';
 import { useSessionStore } from '@/stores/session.ts';
 import { useTelegramAuthStore } from '@/stores/telegram.ts';
@@ -131,6 +132,7 @@ function ThemedApp({ settings }: { settings: StorefrontSettings }) {
         <Notifications position="top-center" />
         <TextProvider>
           <ClosedGate>
+            <WarehouseSync />
             <RouterProvider router={router} />
           </ClosedGate>
         </TextProvider>

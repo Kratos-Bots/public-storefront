@@ -9,6 +9,7 @@ import { displayPhoneNumber } from '@/lib/dial-codes.ts';
 import { comboPhrase } from '@/features/checkout/crypto-groups.ts';
 import { methodName } from '@/lib/method-name.ts';
 import { useText } from '@/text/runtime.tsx';
+import { useSelectedWarehouse } from '@/features/warehouses/use-warehouse.ts';
 import classes from '@/features/checkout/steps/Steps.module.css';
 
 export const NOTES_MAX = 500;
@@ -35,6 +36,7 @@ export interface ReviewStepProps {
  */
 export function ReviewStep({ form, quote, method, combo, order, onEdit, before, after, rootAttrs }: ReviewStepProps) {
   const { t } = useText();
+  const selected = useSelectedWarehouse();
   const shipping = quote?.shippingOptions.find((o) => o.id === form.shippingOptionId);
   const phone = displayPhoneNumber(form.phonePrefix, form.phone);
   const collect = collectionAddress(form);
@@ -119,6 +121,10 @@ export function ReviewStep({ form, quote, method, combo, order, onEdit, before, 
             </div>
           ))}
       </div>
+      {/* Only when a non-default warehouse is chosen: the order will ship from there (read-only; the choice is made while browsing). */}
+      {selected.selectedId !== null && selected.current ? (
+        <p className={classes.blurb} data-sf-part="review-warehouse">{t('shell.warehouse.shippingFrom',{ warehouse: selected.current.name })}</p>
+      ) : null}
       {after}
     </div>
   );

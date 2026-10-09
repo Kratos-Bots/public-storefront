@@ -23,6 +23,8 @@ export interface Features {
   verify: boolean; tracking: boolean; wholesale: boolean; upsell: boolean;
   /** Quantity stepper on catalogue cards, rows and upsell cards. Absent on an older backend — read as false. */
   cardStepper?: boolean;
+  /** The shopper may choose which warehouse to order from. Absent on an older backend — read as false. */
+  warehouseSelect?: boolean;
 }
 export type TemplateOptionValue = boolean | string;
 export interface Theme {
