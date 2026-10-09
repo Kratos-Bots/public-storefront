@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Button } from '@mantine/core';
 import { Link, useParams } from 'react-router';
 import { useSettings } from '@/app/settings.ts';
+import { useWarehouseOrdering } from '@/features/warehouses/use-warehouse.ts';
 import { effectiveLayout } from '@/app/layout.ts';
 import { isTelegramWebApp } from '@/lib/telegram-webapp.ts';
 import { useCatalog } from '@/features/catalog/use-catalog.ts';
@@ -33,6 +34,9 @@ import { useText } from '@/text/runtime.tsx';
 export function WholesaleCatalogPage() {
   const { t, tp } = useText();
   const { brand, features, welcomeMessage } = useSettings();
+  // Quantity inputs and the running tab are ordering controls; a paused warehouse is browse-only.
+  const { paused } = useWarehouseOrdering();
+  const ordering = features.ordering && !paused;
   const { search, setSearch } = useShellSearch();
   const { categorySlug } = useParams();
   const catalog = useCatalog();
@@ -189,7 +193,7 @@ export function WholesaleCatalogPage() {
               <th className={classes.hBulk} scope="col" role="columnheader">
                 {t('wholesale.table.bulk')}
               </th>
-              {features.ordering ? (
+              {ordering ? (
                 <>
                   <th className={classes.hLine} scope="col" role="columnheader">
                     {t('wholesale.table.line')}
@@ -208,7 +212,7 @@ export function WholesaleCatalogPage() {
               product={product}
               band={band}
               groupEnd={groupEnd}
-              ordering={features.ordering}
+              ordering={ordering}
               index={i}
             />
           ))}
@@ -216,7 +220,7 @@ export function WholesaleCatalogPage() {
       )}
 
       {/* The web app's primary action is its cart button, on this sheet as everywhere else. */}
-      {features.ordering && layout !== 'webapp' ? <WholesaleBar /> : null}
+      {ordering && layout !== 'webapp' ? <WholesaleBar /> : null}
     </div>
   );
 }

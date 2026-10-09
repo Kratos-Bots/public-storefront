@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { selectedWarehouseId, useWarehouseStore, warehouseEnabled } from '@/features/warehouses/store.ts';
+import { warehouseInForce, warehouseOrdering } from '@/features/warehouses/prompt.ts';
 import type { Warehouse } from '@/types/warehouses.ts';
 
 /** The warehouse id every request should carry (`null` = send nothing). The cheap hook: query keys and the cart read it. */
@@ -42,4 +43,15 @@ export function useSelectedWarehouse(): SelectedWarehouse {
     [choose, warehouses],
   );
   return { enabled, warehouses, selectedId, current, defaultWarehouse, select };
+}
+
+/**
+ * Is ordering paused at the warehouse in force, and what is it called? `paused: false` whenever the
+ * feature does not apply or the list is not (or could not be) loaded.
+ */
+export function useWarehouseOrdering(): { paused: boolean; message: string | null; name: string | null } {
+  const selectedId = useWarehouseStore(selectedWarehouseId);
+  const ctx = useWarehouseStore((s) => s.ctx);
+  const inForce = warehouseEnabled(ctx) && !ctx.failed ? warehouseInForce(ctx.list, selectedId) : null;
+  return useMemo(() => ({ ...warehouseOrdering(inForce), name: inForce?.name ?? null }), [inForce]);
 }

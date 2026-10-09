@@ -1,5 +1,6 @@
 import { useSettings } from '@/app/settings.ts';
 import { useCartStore } from '@/stores/cart.ts';
+import { useWarehouseOrdering } from '@/features/warehouses/use-warehouse.ts';
 import { addToCart, setCartQuantity } from '@/features/cart/useServerCart.ts';
 import { deriveStockStatus, formatMoney } from '@/lib/format.ts';
 import { StockChip } from '@/features/catalog/StockChip.tsx';
@@ -110,6 +111,7 @@ function RowPrice({ styleAttrs }: PartViewProps) {
 function RowAdd({ styleAttrs }: PartViewProps) {
   const { product } = CardRowFamily.useData();
   const { features } = useSettings();
+  const { paused } = useWarehouseOrdering();
   const { t } = useText();
   const quantity = useCartStore((s) => s.lines.find((l) => l.productId === product.id)?.quantity ?? 0);
   // Written through the cart's sync path, not the store: a signed-in shopper's
@@ -123,7 +125,7 @@ function RowAdd({ styleAttrs }: PartViewProps) {
   const floor = Math.max(1, product.minOrderQuantity ?? 1);
   const atCeiling = product.maxOrderQuantity != null && quantity >= product.maxOrderQuantity;
 
-  return features.ordering ? (
+  return features.ordering && !paused ? (
     <div className={classes.gutter} {...styleAttrs}>
       {quantity > 0 ? (
         <>

@@ -25,6 +25,8 @@ export interface Features {
   cardStepper?: boolean;
   /** The shopper may choose which warehouse to order from. Absent on an older backend — read as false. */
   warehouseSelect?: boolean;
+  /** Ask the shopper to choose a warehouse before any catalogue page, once per visit. Absent — read as false. */
+  warehousePrompt?: boolean;
 }
 export type TemplateOptionValue = boolean | string;
 export interface Theme {

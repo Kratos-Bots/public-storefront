@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router';
 import { useSettings } from '@/app/settings.ts';
 import { useSessionStore, selectIsLoggedIn } from '@/stores/session.ts';
 import { useCartStore, selectCount, selectSubtotal } from '@/stores/cart.ts';
+import { useWarehouseOrdering } from '@/features/warehouses/use-warehouse.ts';
 import { usePrimaryActionStore, type PrimaryAction } from '@/stores/primary-action.ts';
 import { useServerCart } from '@/features/cart/useServerCart.ts';
 import { checkoutTarget } from '@/features/cart/checkout-target.ts';
@@ -28,6 +29,7 @@ function useActionParts(): ActionParts {
   const count = useCartStore(selectCount);
   const subtotal = useCartStore((s) => selectSubtotal(s.lines));
   const { issues } = useServerCart();
+  const { paused } = useWarehouseOrdering();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { t } = useText();
@@ -37,7 +39,8 @@ function useActionParts(): ActionParts {
     count,
     subtotalLabel: formatMoney(subtotal, currency),
     checkoutTo: checkoutTarget(loggedIn, features.guestCheckout),
-    ordering: features.ordering,
+    // A paused warehouse takes no orders: no "View cart", no "Checkout" (the header's cart button still opens the basket).
+    ordering: features.ordering && !paused,
     blocked: issues.some((i) => i.inactive || i.belowMin || i.aboveMax),
   }, t);
   const label = fallback?.label ?? null;

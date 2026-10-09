@@ -4,6 +4,7 @@ import { useMediaQuery } from '@mantine/hooks';
 import { useEffectiveLayout } from '@/app/layout.ts';
 import { Guard } from '@/app/guards.tsx';
 import { AccessBoundary, AuthOnlyFrame } from '@/app/AccessBoundary.tsx';
+import { WarehouseGate } from '@/features/warehouses/WarehouseGate.tsx';
 import { TelegramCallbackPage } from '@/features/auth/TelegramCallbackPage.tsx';
 import { ReferralLinkRoute } from '@/features/referrals/capture.tsx';
 import { OrderLinkRedirect } from '@/app/OrderLinkRedirect.tsx';
@@ -83,7 +84,10 @@ export const routes: RouteObject[] = [
             In-page query changes (the product sheet's `?p=`) opt out with `preventScrollReset`. */}
         <ScrollRestoration />
         <AccessBoundary>
-          <PuckShell />
+          {/* Inside the access boundary: a private shop signs the shopper in before it can list warehouses. */}
+          <WarehouseGate>
+            <PuckShell />
+          </WarehouseGate>
         </AccessBoundary>
       </>
     ),

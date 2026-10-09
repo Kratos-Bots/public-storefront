@@ -1,0 +1,53 @@
+/* "This warehouse is not taking orders": information, not an error, so the info tone (--sf-primary) and
+   the quiet body voice, never the warning or danger colours. Only theme tokens, so every template and
+   both schemes restyle it. `bar` sits under the header on the same rail as the "Shipping from" strip
+   (--sf-main-pad / --sf-rail-max come from the shell); `inline` is the boxed form inside the cart. */
+.bar {
+  border-bottom: 1px solid var(--sf-line);
+  background: color-mix(in srgb, var(--sf-primary) 7%, var(--sf-bg-deep, var(--sf-bg)));
+}
+
+.inline {
+  border: var(--sf-card-border, 1px solid var(--sf-line));
+  border-left: 2px solid var(--sf-primary);
+  border-radius: var(--sf-card-radius, 0.5rem);
+  background: color-mix(in srgb, var(--sf-primary) 7%, var(--sf-surface, var(--sf-bg)));
+}
+
+.inner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.6rem 0.75rem;
+}
+
+.bar .inner {
+  max-width: var(--sf-rail-max, 1200px);
+  margin: 0 auto;
+  padding-inline: var(--sf-main-pad, 1rem);
+}
+
+.glyph {
+  flex: none;
+  /* Centred on the first line of text, which is 1.5 x 0.8125rem tall. */
+  margin-top: calc((0.8125rem * var(--sf-text-scale, 1) * 1.5 - 16px) / 2);
+  color: var(--sf-primary);
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-family: var(--sf-font-body);
+  font-size: calc(0.8125rem * var(--sf-text-scale, 1));
+  line-height: 1.5;
+  color: var(--sf-text);
+  /* The owner's message can be 300 characters with no spaces in it. */
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 62em) {
+  .bar .inner {
+    padding-inline: var(--sf-main-pad, 1.5rem);
+  }
+}
