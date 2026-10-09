@@ -113,6 +113,26 @@ describe('WarehouseSync', () => {
     expect(queryClient.getQueryData(catalogKey(null))).toEqual(catalogOf([1, 2, 3, 4]));
   });
 
+  it('re-reads the cart once the server cart is adopted with a warehouse already chosen (the boot read may predate the choice)', async () => {
+    queryClient.setQueryData(SETTINGS_KEY, settings(true));
+    useSessionStore.getState().setSession('tok', { id: 1, nickname: 'A' });
+    useWarehouseStore.setState({ warehouseId: 2 });
+    mount();
+    await waitFor(() => expect(useWarehouseStore.getState().ctx.list).toEqual(LIST));
+    expect(fetchCart).not.toHaveBeenCalled();
+    act(() => useCartStore.setState({ mode: 'server' }));
+    await waitFor(() => expect(fetchCart).toHaveBeenCalledTimes(1));
+  });
+
+  it('adopting the server cart with no warehouse chosen reads nothing extra', async () => {
+    queryClient.setQueryData(SETTINGS_KEY, settings(true));
+    mount();
+    await waitFor(() => expect(useWarehouseStore.getState().ctx.list).toEqual(LIST));
+    act(() => useCartStore.setState({ mode: 'server' }));
+    await new Promise((r) => setTimeout(r, 30));
+    expect(fetchCart).not.toHaveBeenCalled();
+  });
+
   it('re-reads a signed-in cart when the warehouse changes, and never edits its lines', async () => {
     queryClient.setQueryData(SETTINGS_KEY, settings(true));
     useSessionStore.getState().setSession('tok', { id: 1, nickname: 'A' });

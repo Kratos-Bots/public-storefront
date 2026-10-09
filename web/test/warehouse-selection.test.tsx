@@ -80,6 +80,16 @@ describe('the store and the derived hook', () => {
     expect(JSON.parse(localStorage.getItem('sf-warehouse-v1')!).state).toEqual({ warehouseId: 2 });
   });
 
+  it('never writes localStorage until there is a choice to keep (a shop without the feature gains no key)', () => {
+    useWarehouseStore.getState().setContext({ enabled: false, list: null });
+    useWarehouseStore.getState().setContext({ enabled: true, list: LIST });
+    expect(localStorage.getItem('sf-warehouse-v1')).toBeNull();
+    useWarehouseStore.getState().choose(2);
+    expect(JSON.parse(localStorage.getItem('sf-warehouse-v1')!).state).toEqual({ warehouseId: 2 });
+    useWarehouseStore.getState().choose(null);
+    expect(JSON.parse(localStorage.getItem('sf-warehouse-v1')!).state).toEqual({ warehouseId: null });
+  });
+
   it('feature off: nothing is selected even with a stored id, and the picker list is empty', () => {
     setCtx({ enabled: false }, 2);
     const { result } = renderHook(() => useSelectedWarehouse());

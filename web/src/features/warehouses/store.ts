@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
 import { queryClient, SETTINGS_KEY } from '@/lib/query-client.ts';
 import { accessOf } from '@/app/access.ts';
 import { useSessionStore } from '@/stores/session.ts';
@@ -40,6 +40,28 @@ interface WarehouseState {
   setContext: (ctx: Partial<WarehouseContext>) => void;
 }
 
+/**
+ * localStorage that never writes the "no choice" default into an empty slot. `persist` rewrites the key on
+ * EVERY state change, and `ctx` changes on every page load; without this a shop that does not use warehouses at
+ * all would still gain an `sf-warehouse-v1` key (and the page builder, which must never touch real storage, would
+ * trip over it). A real choice - and clearing one - still writes.
+ */
+const choiceStorage = createJSONStorage<{ warehouseId: number | null }>(() => ({
+  getItem: (name) => {
+    try { return localStorage.getItem(name); } catch { return null; }
+  },
+  setItem: (name, value) => {
+    try {
+      const empty = (JSON.parse(value) as { state?: { warehouseId?: unknown } }).state?.warehouseId == null;
+      if (empty && localStorage.getItem(name) === null) return;
+      localStorage.setItem(name, value);
+    } catch { /* private mode: the choice then lasts the session only */ }
+  },
+  removeItem: (name) => {
+    try { localStorage.removeItem(name); } catch { /* ignore */ }
+  },
+}));
+
 export const useWarehouseStore = create<WarehouseState>()(
   persist(
     (set) => ({
@@ -50,6 +72,7 @@ export const useWarehouseStore = create<WarehouseState>()(
     }),
     {
       name: 'sf-warehouse-v1',
+      storage: choiceStorage,
       partialize: (s) => ({ warehouseId: s.warehouseId }),
       // A hand-edited or corrupt value must not become a query parameter.
       merge: (persisted, current) => {

@@ -62,13 +62,19 @@ export function WarehouseSync() {
     setContext({ carried: products ? new Set(products.map((p) => p.id)) : null });
   }, [setContext, products]);
 
-  const previous = useRef<number | null | undefined>(undefined);
+  // The signed-in cart is read at the warehouse in force. Re-read it when that changes while the cart is the
+  // server's, and when the server's cart is first adopted with a warehouse already chosen (the boot read can
+  // go out before the settings - and so the choice - are known, and would otherwise leave its flags stale).
+  const mode = useCartStore((s) => s.mode);
+  const read = useRef<string | null>(null);
   useEffect(() => {
-    const before = previous.current;
-    previous.current = selectedId;
-    if (before === selectedId || (before === undefined && selectedId === null)) return;
-    if (useCartStore.getState().mode === 'server') void refreshCartForWarehouse();
-  }, [selectedId]);
+    const key = mode === 'server' ? String(selectedId) : null;
+    const before = read.current;
+    read.current = key;
+    if (key === null || key === before) return;
+    if (selectedId === null && before === null) return; // first adoption, no warehouse: nothing differs
+    void refreshCartForWarehouse();
+  }, [selectedId, mode]);
 
   return null;
 }
