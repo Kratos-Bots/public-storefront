@@ -9,7 +9,7 @@ import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { errorMessage } from '@/lib/errors.ts';
 import { setReferralCode } from '@/api/profile.ts';
 import { PROFILE_KEY, useProfile } from '@/features/account/queries.ts';
-import { referralShareLinks, referralShareText } from '@/features/account/referral-share.ts';
+import { referralLink, referralShareLinks, referralShareText } from '@/features/account/referral-share.ts';
 import { useText } from '@/text/runtime.tsx';
 import { ReferralsFamily, type ReferralsData, type ReferralsPreview } from '@/builder/family-referrals.ts';
 import { usePreviewFixture, usePreviewState } from '@/builder/mode.ts';
@@ -34,7 +34,7 @@ function canShare(): boolean {
 
 function CodeView({ styleAttrs }: PartViewProps) {
   const { t } = useText();
-  const { profile, canCopy: copyable, copied, copy } = ReferralsFamily.useData();
+  const { profile, canCopy: copyable, copied, copy, link, linkCopied, copyLink } = ReferralsFamily.useData();
   return (
     <div className={classes.plate} {...styleAttrs}>
       <span className={classes.plateLabel}>{t('account.referrals.yourCode')}</span>
@@ -51,6 +51,19 @@ function CodeView({ styleAttrs }: PartViewProps) {
           </button>
         ) : null}
       </div>
+      {link ? (
+        <>
+          <span className={`${classes.plateLabel} ${classes.plateLinkLabel}`}>{t('account.referrals.yourLink')}</span>
+          <div className={classes.plateRow}>
+            <span className={classes.linkText}>{link}</span>
+            {copyable ? (
+              <button type="button" className={classes.copy} onClick={copyLink} aria-label={t('account.referrals.copyLinkAria')}>
+                {linkCopied ? t('common.actions.copied') : t('common.actions.copy')}
+              </button>
+            ) : null}
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }
@@ -198,6 +211,7 @@ export function ReferralsPage({ slots }: { slots?: { content: SlotRender } } = {
   const profile = useProfile(!preview);
   const client = useQueryClient();
   const clipboard = useClipboard({ timeout: 1600 });
+  const linkClipboard = useClipboard({ timeout: 1600 });
   const [draft, setDraft] = useState('');
   const legacy = useMemo(() => (slots ? null : defaultSlotRenders('Referrals', 'storefront', {}, 'account.referrals')), [slots]);
   const content = slots?.content ?? legacy!.content!;
@@ -221,14 +235,17 @@ export function ReferralsPage({ slots }: { slots?: { content: SlotRender } } = {
   );
   const copied = clipboard.copied;
   const copy = clipboard.copy;
+  const linkCopied = linkClipboard.copied;
+  const linkCopy = linkClipboard.copy;
   const claimPending = claim.isPending;
   const claimError = claim.error;
   const claimIsError = claim.isError;
   const claimMutate = claim.mutate;
   const value = useMemo<FamilyValue<ReferralsData> | null>(() => {
     if (!data) return null;
-    const links = referralShareLinks(data.referralCode, brand);
-    const text = referralShareText(data.referralCode, brand.name);
+    const link = referralLink(data.referralCode);
+    const links = referralShareLinks(data.referralCode, brand, link);
+    const text = referralShareText(data.referralCode, brand.name, link);
     return {
       data: {
         profile: data,
@@ -237,6 +254,11 @@ export function ReferralsPage({ slots }: { slots?: { content: SlotRender } } = {
         canShare: canShare(),
         copied,
         copy: () => copy(data.referralCode),
+        link,
+        linkCopied,
+        copyLink: () => {
+          if (link) linkCopy(link);
+        },
         share: () => {
           void navigator.share({ text }).catch(() => undefined);
         },
@@ -246,7 +268,7 @@ export function ReferralsPage({ slots }: { slots?: { content: SlotRender } } = {
       },
       views: REFERRALS_VIEWS,
     };
-  }, [data, brand, t, copied, copy, draft, claimPending, claimError, claimIsError, claimMutate]);
+  }, [data, brand, t, copied, copy, linkCopied, linkCopy, draft, claimPending, claimError, claimIsError, claimMutate]);
 
   if (!preview) {
     if (profile.isPending) return <PageSkeleton inline />;

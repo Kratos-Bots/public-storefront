@@ -8,7 +8,7 @@ export const block = defineBlock<{ id: string }>({
   name: 'ReferralCode', label: 'Your code', category: 'part', part: { family: 'referrals' },
   layouts: 'all', routeBound: false, slots: [],
   style: styleSupport('root', [...BOX, ...TEXT]),
-  text: ['account.referrals.yourCode', 'account.referrals.copyAria', 'common.actions.copy', 'common.actions.copied'],
+  text: ['account.referrals.yourCode', 'account.referrals.copyAria', 'account.referrals.yourLink', 'account.referrals.copyLinkAria','common.actions.copy', 'common.actions.copied'],
   schema: z.object({}), defaultProps: {},
   render: (p) => <ReferralsFamily.PartHost name="ReferralCode" props={p as Record<string, unknown>} styleAttrs={p.puck.style} />,
 });

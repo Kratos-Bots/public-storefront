@@ -7,6 +7,7 @@ import { useDebouncedValue } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { useSettings } from '@/app/settings.ts';
 import { useSessionStore, selectIsLoggedIn } from '@/stores/session.ts';
+import { clearStoredReferral, readStoredReferral } from '@/features/referrals/stored-referral.ts';
 import { useCartStore } from '@/stores/cart.ts';
 import { useServerCart } from '@/features/cart/useServerCart.ts';
 import { placeGuestOrder, placeOrder } from '@/api/checkout.ts';
@@ -230,7 +231,13 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
   }, [shipLists, phoneMode]);
 
   const effective = useMemo<CheckoutForm>(
-    () => ({ ...form, couponCode: couponShown ? form.couponCode : '', notes: notesShown ? form.notes : '' }),
+    () => ({
+      ...form,
+      couponCode: couponShown ? form.couponCode : '',
+      // The referral field lives inside the coupon part: hide one and the other goes with it.
+      referralCode: couponShown ? form.referralCode : '',
+      notes: notesShown ? form.notes : '',
+    }),
     [form, couponShown, notesShown],
   );
 
@@ -545,6 +552,9 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
       // the quote means the body can never carry one even if it ever didn't.
       shippingOptionId: shippingOption?.id ?? form.shippingOptionId ?? 0,
       couponCode: effective.couponCode.trim().toUpperCase() || undefined,
+      // A remembered link beats a typed code (the field is hidden while one is stored); a signed-in
+      // shopper never sees the field, so only a stored link can reach the body for them.
+      referralCode: readStoredReferral() ?? (loggedIn ? undefined : effective.referralCode.trim().toUpperCase() || undefined),
       paymentMethod: method?.method || undefined,
       coin: combo?.coin || undefined,
       network: combo?.network || undefined,
@@ -598,6 +608,8 @@ export function CheckoutPage({ slots }: CheckoutPageProps = {}) {
       // The backend clears the server cart itself; this is the local mirror.
       clearCart();
       clearPersistedCheckout();
+      // The code has been sent with this order; a later order must not carry it again.
+      clearStoredReferral();
 
       if (inTelegram) haptic.notify('success');
       const outcome = resolveCheckoutOutcome(result, loggedIn);

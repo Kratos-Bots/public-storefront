@@ -103,6 +103,8 @@ export default {
   'referrals.loadFailedBody': 'Text under the heading when the referrals page fails to load',
   'referrals.yourCode': "Label above the shopper's own referral code",
   'referrals.copyAria': 'Screen-reader name of the Copy button; {code} is the referral code',
+  'referrals.yourLink': "Label above the shopper's own referral link (browser only, not in the Telegram Mini App)",
+  'referrals.copyLinkAria': 'Screen-reader name of the Copy button beside the referral link',
   'referrals.share': 'Button that opens the device share sheet with the invite',
   'referrals.shareNote': 'Text under the share buttons',
   'referrals.shareText': 'The invite message sent to a friend; {shop} is the shop name, {code} the referral code',

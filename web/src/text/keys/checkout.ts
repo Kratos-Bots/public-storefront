@@ -107,6 +107,9 @@ export default defineTextArea('checkout', {
   'coupon.autoApplied': { en: 'Applied automatically', max: 60 },
   'coupon.useAnother': { en: 'Use another', max: 40 },
 
+  'referral.label': { en: 'Referral code', max: 40 },
+  'referral.hint': { en: 'Optional. If a friend referred you, enter their code.', max: 100 },
+
   'crypto.networkHeading': { en: '{network} network', max: 40 },
   'crypto.onNetwork': { en: 'on {network}', max: 40 },
   'crypto.coinOnNetwork': { en: '{coin} on {network}', max: 60 },

@@ -32,6 +32,8 @@ export interface ShippingAddressInput {
 }
 export interface CheckoutInput {
   shippingAddress: ShippingAddressInput; email?: string; phone?: string; shippingOptionId: number; couponCode?: string;
+  /** A friend's referral code. Applied after the order is placed; silently ignored if unknown, the shopper's own, or they already have a referrer. */
+  referralCode?: string;
   paymentMethod?: string; coin?: string; network?: string; useStoreCredit?: boolean; notes?: string;
 }
 export type CheckoutPayment =

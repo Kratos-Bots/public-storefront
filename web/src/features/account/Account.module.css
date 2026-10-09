@@ -607,6 +607,21 @@
   outline-offset: 2px;
 }
 
+/* The link sits in the same plate, under the code: the code is the headline, the link the longer way to send it. */
+.plateLinkLabel {
+  margin-top: 0.35rem;
+}
+
+.linkText {
+  min-width: 0;
+  font-family: var(--sf-font-mono);
+  font-size: calc(0.8125rem * var(--sf-text-scale, 1));
+  line-height: 1.4;
+  color: var(--sf-block-fg, var(--sf-muted));
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
 .share {
   display: flex;
   flex-wrap: wrap;

@@ -171,6 +171,13 @@
   color: var(--sf-danger);
 }
 
+/* The referral field's helper line — quieter than the label, never an error. */
+.hint {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--sf-faint);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .apply {
     transition: none;
