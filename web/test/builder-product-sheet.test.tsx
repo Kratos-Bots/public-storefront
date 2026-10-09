@@ -101,6 +101,14 @@ describe('product sheet renders the layout product document (spec §7.2)', () =>
     expectGolden('product-sheet-plain-nosku', sheetRoot(plain.baseElement).outerHTML);
   });
 
+  it('a product without a photo gets no thumb and no no-photo plate on the sheet', () => {
+    const { baseElement } = mount({ ...FULL, imageProductId: null });
+    const root = sheetRoot(baseElement);
+    expect(root.querySelector(`.${sheetClasses.thumb}`)).toBeNull();
+    expect(root.querySelector('img')).toBeNull();
+    expect(root.querySelector('[class*="plate"]')).toBeNull();
+  });
+
   it('a published menu product doc rearranges the body; the add button stays in the footer', () => {
     const { baseElement } = mount(FULL, { pageSet: setOf(docOf([detail(REARRANGED())])), layout: 'menu' });
     const b = body(baseElement);

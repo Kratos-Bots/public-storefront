@@ -928,8 +928,9 @@ part holding an input (`CatalogSearch`, `ProductAddToCart`, `CardTileAdd`, `Card
 
 Slots `top`, `media`, `main`, `below`. On the page, `top` and `below` render bare, and
 `media` / `main` sit in the `layout` grid; `media` renders only when it shows something
-(`ProductGallery` is silent for a product without a photo), and `layoutNoImage` is added exactly
-then. On the sheet the four slots render bare, in order, after the sheet's loading / failed states.
+(an empty slot shows nothing; `ProductGallery` always shows: for a product without a photo, or a photo
+that fails to load, it draws the "no photo" plate), and `layoutNoImage` is added exactly then. The
+sheet's `ProductGallery` still renders nothing without a photo. On the sheet the four slots render bare, in order, after the sheet's loading / failed states.
 
 | Part | Page view | Sheet view | Layouts |
 |---|---|---|---|
