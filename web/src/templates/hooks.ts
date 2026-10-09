@@ -4,6 +4,7 @@ import { useCatalog } from '@/features/catalog/use-catalog.ts';
 import { buildCategoryTree } from '@/features/catalog/category-tree.ts';
 import { categoryCounts } from '@/features/catalog/filter.ts';
 import { BASE_TOKENS, type HeaderIconMode, type OptionValues, type Scheme, type TemplateTokens } from '@/templates/define.ts';
+import { useWarehouseOrdering } from '@/features/warehouses/use-warehouse.ts';
 import { useTemplateContext } from '@/templates/runtime.tsx';
 import { CoreOptionsScopeContext, definedScope } from '@/templates/core-scope.ts';
 import type { Brand, Features, SupportLink } from '@/types/settings.ts';
@@ -84,7 +85,8 @@ export function useCatalogStats(): CatalogStats {
 export interface OrderingState { enabled: boolean; ordering: boolean; accepting: boolean }
 export function useOrderingState(): OrderingState {
   const s = useSettings();
-  return { enabled: s.enabled, ordering: s.features.ordering, accepting: s.enabled && s.features.ordering };
+  const { paused } = useWarehouseOrdering();
+  return { enabled: s.enabled, ordering: s.features.ordering, accepting: s.enabled && s.features.ordering && !paused };
 }
 
 function safeZone(timeZone: string): string {

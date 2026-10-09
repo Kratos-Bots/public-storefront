@@ -18,6 +18,7 @@ import { CartSummary } from '@/features/cart/CartSummary.tsx';
 import { classifyQuoteError } from '@/features/checkout/CheckoutPage.tsx';
 import { DEFAULT_FORM } from '@/features/checkout/form-state.ts';
 import { baseProduct } from './helpers/product-fixtures.ts';
+import { useOrderingState } from '@/templates/hooks.ts';
 import type { Warehouse } from '@/types/warehouses.ts';
 import type { StorefrontSettings } from '@/types/settings.ts';
 import type { LocalLine } from '@/stores/cart.ts';
@@ -190,5 +191,31 @@ describe('header notice and cart notice together', () => {
     );
     expect(notices()).toHaveLength(0);
     expect(container.querySelector('[role="status"]')).toBeNull();
+  });
+});
+
+describe('useOrderingState().accepting', () => {
+  function Probe() {
+    const { ordering, accepting } = useOrderingState();
+    return <p data-testid="ordering-state">{`ordering=${ordering} accepting=${accepting}`}</p>;
+  }
+  const state = () => screen.getByTestId('ordering-state').textContent;
+
+  it('is true with the open default warehouse selected', () => {
+    setStore(LIST, null);
+    wrap(<Probe />);
+    expect(state()).toBe('ordering=true accepting=true');
+  });
+
+  it('is false with the paused warehouse selected, while ordering stays true', () => {
+    setStore(LIST, 2);
+    wrap(<Probe />);
+    expect(state()).toBe('ordering=true accepting=false');
+  });
+
+  it('is true with the warehouse feature off, even if the list holds a paused warehouse', () => {
+    useWarehouseStore.setState({ warehouseId: 2, ctx: { enabled: false, list: LIST, failed: false, carried: null } });
+    wrap(<Probe />);
+    expect(state()).toBe('ordering=true accepting=true');
   });
 });
