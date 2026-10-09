@@ -7,6 +7,8 @@ export class ApiError extends Error {
   get isUnauthorized(): boolean { return this.status === 401; }
   /** `403 ACCOUNT_BANNED`, the backend's sentinel for a banned customer (session creation, sign-in, reset). */
   get isBanned(): boolean { return this.status === 403 && this.message === 'ACCOUNT_BANNED'; }
+  /** `503 WAREHOUSE_ORDERING_PAUSED`: the chosen warehouse stopped taking storefront orders. */
+  get isWarehouseOrderingPaused(): boolean { return this.status === 503 && this.message === 'WAREHOUSE_ORDERING_PAUSED'; }
   /** `400 RESET_LINK_INVALID`: the reset token is unknown, expired or already used. */
   get isResetLinkInvalid(): boolean { return this.status === 400 && this.message === 'RESET_LINK_INVALID'; }
   /** `400 VERIFY_LINK_INVALID`: the verification token is unknown, expired or already used. */
