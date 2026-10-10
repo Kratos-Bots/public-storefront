@@ -1,9 +1,9 @@
 import { createElement, Fragment, type ReactNode } from 'react';
 import { validateDoc } from '@/builder/guard.ts';
-import { blockDef } from '@/builder/rules.ts';
+import { blockDef, containsVisibleType } from '@/builder/rules.ts';
 import { renderBlock } from '@/builder/style/apply.tsx';
 import { CardRowFamily, CardTileFamily, type CardData } from '@/builder/families.ts';
-import { fixedSlot, flattenTypes, type FamilyValue } from '@/builder/parts.ts';
+import { fixedSlot, type FamilyValue } from '@/builder/parts.ts';
 import type { BlockRenderContext } from '@/builder/define.ts';
 import { cardKey, isRecord, type CardKind, type ComponentData, type LayoutKind } from '@/builder/types.ts';
 
@@ -54,7 +54,8 @@ export function compileCard(doc: unknown, kind: CardKind, layout: LayoutKind): C
       const element = build(clean.content, { editing: false, docKey, layout });
       const Family = kind === 'tile' ? CardTileFamily : CardRowFamily;
       const addPart = kind === 'tile' ? 'CardTileAdd' : 'CardRowAdd';
-      const hasAddPart = flattenTypes(clean.content).includes(addPart);
+      // Visible only: an Add part parked in a hidden column never renders, so it cannot carry the price.
+      const hasAddPart = containsVisibleType(clean.content, addPart);
       design = { kind, element, render: (data, views) => createElement(Family.Provider, { value: { data: { ...data, hasAddPart }, views } }, element) };
     } catch (error) {
       // A block render that throws on odd props: the built-in card, never a crashed list.

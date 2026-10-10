@@ -84,6 +84,17 @@ describe('compileCard (spec §6.3)', () => {
     expect(texts(withAdd)).toBe('true');
     cleanup();
     expect(texts(tileDoc())).toBe('false');
+    cleanup();
+    // An Add part parked in a hidden column never renders, so it cannot carry the price: the Price part must stay.
+    const inColumns = (slot: string): PuckDoc => ({ root: { props: { title: '', description: '', chrome: 'shell' } }, content: [
+      { type: 'TestFrame', props: { id: 'f', content: [
+        { type: 'TestName', props: { id: 'n' } },
+        { type: 'Columns', props: { id: 'c', columns: '2', col1: [], col2: [], col3: [], col4: [], [slot]: [{ type: 'CardTileAdd', props: { id: 'a' } }] } },
+      ] } },
+    ] });
+    expect(texts(inColumns('col3'))).toBe('false');
+    cleanup();
+    expect(texts(inColumns('col2'))).toBe('true');
   });
   it('a new document object compiles again; a guard failure is null', () => {
     compileCard(tileDoc(), 'tile', 'storefront');
