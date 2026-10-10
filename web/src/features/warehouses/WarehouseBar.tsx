@@ -9,7 +9,7 @@ import classes from '@/features/warehouses/WarehouseBar.module.css';
 
 /**
  * Publishes the bar's height as `--sf-wh-h` on the root, next to `--sf-pin-h`, so everything that sticks
- * under the header (`top: bar + pin + wh`) comes to rest under the bar too. The shells zero it with the
+ * under the header (`top: bar + pin + wh`; the fractional height, a wrapped notice is not a whole number of pixels) comes to rest under the bar too. The shells zero it with the
  * other two whenever the header itself is not pinned.
  */
 function usePublishedHeight(ref: React.RefObject<HTMLElement | null>) {
@@ -17,7 +17,7 @@ function usePublishedHeight(ref: React.RefObject<HTMLElement | null>) {
     const el = ref.current;
     const root = document.documentElement;
     if (!el) return undefined;
-    const publish = () => root.style.setProperty('--sf-wh-h', `${el.offsetHeight}px`);
+    const publish = () => root.style.setProperty('--sf-wh-h', `${el.getBoundingClientRect().height}px`);
     publish();
     const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(publish);
     observer?.observe(el);

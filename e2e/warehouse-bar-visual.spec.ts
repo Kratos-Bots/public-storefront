@@ -22,12 +22,12 @@ const PAUSED: NonNullable<InstallMocksOptions['warehouses']> = {
   list: [LIST[0]!, { ...LIST[1]!, orderingEnabled: false, orderingMessage: 'Test EU Warehouse is taking a short break while we restock. You can keep browsing, and orders open again on Monday morning.' }],
 };
 
-interface Case { name: string; layout: Layout; width: number; height: number; warehouses: NonNullable<InstallMocksOptions['warehouses']>; paused: boolean; path: string }
+interface Case { name: string; layout: Layout; width: number; height: number; warehouses: NonNullable<InstallMocksOptions['warehouses']>; paused: boolean; path: string; atTop?: boolean }
 const CASES: Case[] = [
   { name: 'storefront-desktop-selector', layout: 'storefront', width: 1280, height: 520, warehouses: OPEN, paused: false, path: '/' },
   { name: 'storefront-phone-selector', layout: 'storefront', width: 390, height: 640, warehouses: OPEN, paused: false, path: '/' },
   { name: 'storefront-desktop-paused', layout: 'storefront', width: 1280, height: 520, warehouses: PAUSED, paused: true, path: '/' },
-  { name: 'storefront-phone-paused', layout: 'storefront', width: 390, height: 640, warehouses: PAUSED, paused: true, path: '/' },
+  { name: 'storefront-phone-paused', layout: 'storefront', width: 390, height: 640, warehouses: PAUSED, paused: true, path: '/', atTop: true },
   { name: 'storefront-product-paused', layout: 'storefront', width: 1280, height: 640, warehouses: PAUSED, paused: true, path: '/p/102' },
   { name: 'menu-phone-paused', layout: 'menu', width: 390, height: 640, warehouses: PAUSED, paused: true, path: '/' },
   { name: 'webapp-phone-selector', layout: 'webapp', width: 390, height: 640, warehouses: OPEN, paused: false, path: '/' },
@@ -51,7 +51,9 @@ for (const c of CASES) {
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     }
     await page.evaluate(() => document.fonts.ready);
-    await page.evaluate(() => window.scrollTo(0, Math.floor((document.documentElement.scrollHeight - window.innerHeight) / 2)));
+    // The storefront phone catalogue has no sticky page element (its category chips scroll with the page), so its
+    // resting state is the top of the page; the others are shown mid-scroll.
+    await page.evaluate((top) => window.scrollTo(0, top ? 0 : Math.floor((document.documentElement.scrollHeight - window.innerHeight) / 2)), c.atTop === true);
     await page.waitForTimeout(200);
     mkdirSync(OUT, { recursive: true });
     await page.screenshot({ path: resolve(OUT, `${c.name}.png`), animations: 'disabled', caret: 'hide' });

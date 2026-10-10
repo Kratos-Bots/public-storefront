@@ -23,16 +23,19 @@ const NOTICE = '[data-warehouse-paused]';
 
 const box = async (l: Locator) => (await l.boundingBox())!;
 
-
 /**
- * The pinned bar is at the top of the viewport after scrolling, and every sticky element of the page sits at
- * or below its bottom edge (never under it).  of them must be resting exactly there.
+ * The pinned bar stays at the top of the viewport at every scroll position, and no sticky element of the page
+ * ever overlaps it (one pushed out by the end of its own section sits wholly under the bar, which is fine).
+ * `rests` says what has to be seen sticking: at some scroll position at least one sticky element has its top
+ * within `gap` px below the bar's bottom edge (a sticky group head: gap 2; the desktop category rail keeps its
+ * own 5.5rem rhythm: gap 30). `rests: null` is for layouts and widths that have no sticky element (the
+ * storefront catalogue on a phone: its category chips scroll with the page).
  */
-async function expectPinned(page: Page, selector: string, restingHeads = 0) {
+async function expectPinned(page: Page, selector: string, rests: { gap: number } | null) {
   const header = page.locator('[data-sf-part="header"]');
   const probe = async (y: number) => {
     await page.evaluate((to) => window.scrollTo(0, to), y);
-    await page.waitForTimeout(150);
+    await page.waitForTimeout(60);
     const h = await box(header);
     const bar = await box(page.locator(selector).first());
     expect(h.y).toBeLessThanOrEqual(1);
@@ -42,37 +45,51 @@ async function expectPinned(page: Page, selector: string, restingHeads = 0) {
     const sticky = await page.evaluate(() =>
       [...document.querySelectorAll<HTMLElement>('body *')]
         .filter((e) => getComputedStyle(e).position === 'sticky' && !e.closest('[data-sf-part="header"]'))
-        .map((e) => e.getBoundingClientRect())
-        .filter((r) => r.width > 0 && r.bottom > 0 && r.top < 600)
-        .map((r) => r.top),
+        .map((e) => ({ rect: e.getBoundingClientRect(), cssTop: Number.parseFloat(getComputedStyle(e).top) }))
+        // Page-top sticky elements only: the running-tab strip sticks to the foot.
+        .filter(({ rect }) => rect.width > 0 && rect.bottom > 0 && rect.top < 300)
+        .map(({ rect, cssTop }) => ({ top: rect.top, bottom: rect.bottom, cssTop })),
     );
-    for (const top of sticky) expect(top, 'sticky element overlaps the pinned bar').toBeGreaterThanOrEqual(barBottom - 1.5);
-    return { barBottom, sticky };
+    // Where a page element is told to stick (its resolved `top`) must clear the bar: a head that is merely being
+    // shoved up by the end of its own section passes under the bar on its way out, which is not an offset error.
+    for (const r of sticky) {
+      if (Number.isFinite(r.cssTop)) expect(r.cssTop, `a sticky element's offset clears the pinned bar (${r.cssTop} vs ${barBottom})`).toBeGreaterThanOrEqual(barBottom - 1.5);
+    }
+    return { barBottom, tops: sticky.map((r) => r.top) };
   };
   const doc = await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight);
   expect(doc, 'the page is tall enough to scroll').toBeGreaterThan(60);
-  let resting = 0;
-  for (const y of [Math.floor(doc / 3), Math.floor((2 * doc) / 3), doc]) {
-    const { barBottom, sticky } = await probe(y);
-    resting = Math.max(resting, sticky.filter((t) => Math.abs(t - barBottom) < 2).length);
+  let resting = false;
+  for (let y = 0; y <= doc; y += Math.max(20, Math.ceil(doc / 40))) {
+    const { barBottom, tops } = await probe(y);
+    if (tops.some((t) => t >= barBottom - 1.5 && t - barBottom <= (rests?.gap ?? 0))) resting = true;
   }
-  expect(resting, 'sticky heads resting directly under the bar').toBeGreaterThanOrEqual(restingHeads);
+  if (rests) expect(resting, 'a sticky element rests directly under the bar').toBe(true);
 }
+
+type Rest = { gap: number } | null;
+// What sticks under the bar where: storefront desktop has the category rail; menu has sticky group heads; the
+// storefront phone catalogue and the webapp have no sticky page element in the mocked catalogue.
+const REST: Record<Layout, { desktop: Rest; phone: Rest }> = {
+  storefront: { desktop: { gap: 30 }, phone: null },
+  menu: { desktop: { gap: 2 }, phone: { gap: 2 } },
+  webapp: { desktop: { gap: 2 }, phone: { gap: 2 } },
+};
 
 for (const layout of ['storefront', 'menu', 'webapp'] as Layout[]) {
   test.describe(`${layout} layout`, () => {
     test('selector stays pinned while the catalogue scrolls (desktop)', async ({ page }) => {
-      await page.setViewportSize({ width: 1280, height: 420 });
+      await page.setViewportSize({ width: 1280, height: 260 });
       await installMocks(page, { layout, warehouses: TWO });
       await page.goto('/');
       await expect(page.locator(PICKER)).toBeVisible();
-      await expectPinned(page, PICKER);
+      await expectPinned(page, PICKER, REST[layout].desktop);
       const pick = await box(page.locator(`${PICKER} select`));
       expect(pick.height).toBeGreaterThanOrEqual(28);
     });
 
     test('selector and a wrapping notice stay pinned on a phone', async ({ page }) => {
-      await page.setViewportSize({ width: 390, height: 460 });
+      await page.setViewportSize({ width: 390, height: 280 });
       await installMocks(page, { layout, warehouses: PAUSED });
       await page.goto('/');
       await page.locator(`${PICKER} select`).selectOption('2');
@@ -81,7 +98,7 @@ for (const layout of ['storefront', 'menu', 'webapp'] as Layout[]) {
       expect(notice.height).toBeGreaterThan(50); // wrapped onto two or more lines
       const touch = await box(page.locator(`${PICKER} select`));
       expect(touch.height).toBeGreaterThanOrEqual(40);
-      await expectPinned(page, NOTICE);
+      await expectPinned(page, NOTICE, REST[layout].phone);
       await expect(page.locator(PICKER)).toBeInViewport();
     });
   });
@@ -115,7 +132,7 @@ test('cart page: no header bar, the cart keeps its own notice', async ({ page })
   await expect(page.locator('[data-warehouse-bar]')).toHaveCount(0);
 });
 
-test('feature off: no bar, no variable, the header is what it was', async ({ page }) => {
+test('feature off or a single open warehouse: no bar, no variable, same header height', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await installMocks(page, { layout: 'storefront' });
   await page.goto('/');
