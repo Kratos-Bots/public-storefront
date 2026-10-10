@@ -152,4 +152,82 @@ describe('WarehouseSync', () => {
     await waitFor(() => expect(fetchCart).toHaveBeenCalledTimes(1));
     expect(useCartStore.getState().lines.map((l) => l.productId)).toEqual([9]);
   });
+
+  describe('guest basket prices', () => {
+    const priced = (price: number, tier: number) => ({ id: 4, price, pricingTiers: [{ id: 10, minQuantity: 10, price: tier }] });
+    const guestLine = { productId: 4, displayName: 'N', sku: 's', unitPrice: 130, basePrice: 150, pricingTiers: [{ id: 10, minQuantity: 10, price: 130 }], quantity: 10, isPreorder: false, excludedFromFreeShipping: false, imageProductId: null };
+    beforeEach(() => {
+      vi.mocked(fetchCatalog).mockImplementation(async (_p, w) => ({ products: [w ? priced(200, 180) : priced(150, 130)], categories: [] }) as unknown as Catalog);
+    });
+
+    it('follows the chosen warehouse, and back to the default', async () => {
+      queryClient.setQueryData(SETTINGS_KEY, settings(true));
+      useCartStore.setState({ lines: [guestLine], mode: 'local' });
+      mount();
+      await waitFor(() => expect(useWarehouseStore.getState().ctx.list).toEqual(LIST));
+      act(() => useWarehouseStore.getState().choose(2));
+      await waitFor(() => expect(useCartStore.getState().lines[0]).toMatchObject({ basePrice: 200, unitPrice: 180, quantity: 10 }));
+      act(() => useWarehouseStore.getState().choose(null));
+      await waitFor(() => expect(useCartStore.getState().lines[0]).toMatchObject({ basePrice: 150, unitPrice: 130 }));
+    });
+
+    it('corrects a basket persisted under another warehouse on first load', async () => {
+      queryClient.setQueryData(SETTINGS_KEY, settings(true));
+      useWarehouseStore.setState({ warehouseId: 2 });
+      useCartStore.setState({ lines: [guestLine], mode: 'local' });
+      mount();
+      await waitFor(() => expect(useCartStore.getState().lines[0]).toMatchObject({ basePrice: 200, unitPrice: 180 }));
+    });
+
+    const serverItem = (unitPrice: number) => ({ productId: 4, name: 'N', quantity: 10, unitPrice, lineTotal: unitPrice * 10, imageUrl: null, isPreorder: false, outOfStock: false, priceChanged: false, inactive: false, belowMin: false, aboveMax: false, minOrderQuantity: null, maxOrderQuantity: null });
+
+    it('re-bases a signed-in cart from the catalogue but never touches the server\'s unit price', async () => {
+      queryClient.setQueryData(SETTINGS_KEY, settings(true));
+      useSessionStore.getState().setSession('tok', { id: 1, nickname: 'A' });
+      useWarehouseStore.setState({ warehouseId: 2 });
+      useCartStore.setState({ lines: [guestLine], mode: 'server' });
+      vi.mocked(fetchCart).mockResolvedValue({ items: [serverItem(130)], subtotal: 1300, itemCount: 10 });
+      mount();
+      await waitFor(() => expect(fetchCatalog).toHaveBeenCalledWith(true, 2));
+      await waitFor(() => expect(useCartStore.getState().lines[0]).toMatchObject({ basePrice: 200, unitPrice: 130, quantity: 10 }));
+      expect(useCartStore.getState().lines[0]!.pricingTiers).toEqual([{ id: 10, minQuantity: 10, price: 180 }]);
+    });
+
+    it('a server refresh that brings the lines back does not restore the previous warehouse\'s metadata', async () => {
+      queryClient.setQueryData(SETTINGS_KEY, settings(true));
+      useSessionStore.getState().setSession('tok', { id: 1, nickname: 'A' });
+      useWarehouseStore.setState({ warehouseId: 2 });
+      useCartStore.setState({ lines: [guestLine], mode: 'server' });
+      vi.mocked(fetchCart).mockResolvedValue({ items: [serverItem(180)], subtotal: 1800, itemCount: 10 });
+      mount();
+      await waitFor(() => expect(useCartStore.getState().lines[0]).toMatchObject({ basePrice: 200 }));
+      // The server's answer lands after the catalogue's: a line this browser never held falls back to basePrice = unitPrice.
+      act(() => useCartStore.getState().replaceFromServer({ items: [serverItem(180)], subtotal: 1800, itemCount: 10 }));
+      await waitFor(() => expect(useCartStore.getState().lines[0]).toMatchObject({ basePrice: 200, unitPrice: 180 }));
+      act(() => useCartStore.setState({ lines: [] }));
+      act(() => useCartStore.getState().replaceFromServer({ items: [serverItem(180)], subtotal: 1800, itemCount: 10 }));
+      await waitFor(() => expect(useCartStore.getState().lines[0]).toMatchObject({ basePrice: 200, unitPrice: 180 }));
+      expect(useCartStore.getState().lines[0]!.pricingTiers).toEqual([{ id: 10, minQuantity: 10, price: 180 }]);
+    });
+
+    it('feature off: a signed-in shopper\'s basket triggers no catalogue read and keeps its lines', async () => {
+      queryClient.setQueryData(SETTINGS_KEY, settings(false));
+      useSessionStore.getState().setSession('tok', { id: 1, nickname: 'A' });
+      useCartStore.setState({ lines: [guestLine], mode: 'server' });
+      render(<QueryClientProvider client={queryClient}><WarehouseSync /></QueryClientProvider>);
+      await new Promise((r) => setTimeout(r, 30));
+      expect(fetchCatalog).not.toHaveBeenCalled();
+      expect(fetchWarehouses).not.toHaveBeenCalled();
+      expect(useCartStore.getState().lines[0]).toMatchObject({ basePrice: 150, unitPrice: 130 });
+    });
+
+    it('feature off: no catalogue read on account of the basket, lines untouched', async () => {
+      queryClient.setQueryData(SETTINGS_KEY, settings(false));
+      useCartStore.setState({ lines: [guestLine], mode: 'local' });
+      render(<QueryClientProvider client={queryClient}><WarehouseSync /></QueryClientProvider>);
+      await new Promise((r) => setTimeout(r, 30));
+      expect(fetchCatalog).not.toHaveBeenCalled();
+      expect(useCartStore.getState().lines[0]).toMatchObject({ basePrice: 150, unitPrice: 130 });
+    });
+  });
 });
