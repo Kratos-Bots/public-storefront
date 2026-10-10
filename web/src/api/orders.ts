@@ -1,6 +1,6 @@
 import { api, unwrap, unwrapWithMeta } from '@/api/client.ts';
 import { ApiError } from '@/lib/errors.ts';
-import type { PaymentMethod } from '@/types/checkout.ts';
+import type { LastCheckoutDetails, PaymentMethod } from '@/types/checkout.ts';
 import type { OrderDetail, OrderSummary, PageMeta, UnpaidOrder } from '@/types/orders.ts';
 import type { CryptoTxidVerification, PublicOrder, SelectPaymentResult } from '@/types/public-order.ts';
 
@@ -101,4 +101,18 @@ export async function submitOrderCryptoTxid(reference: string, paymentId: number
     api.post(`${orderBase(reference)}/crypto-txid`, { json: { paymentId, txid: txid.trim() } }),
   ).catch(asGone);
   return data.verificationStatus === 'confirmed' || data.verificationStatus === 'needs_review' ? data.verificationStatus : 'checking';
+}
+
+/**
+ * `GET storefront/checkout/last-details`: what the signed-in customer's last order shipped to, or null. An older backend
+ * has no such route (404) and a failed lookup is not worth an error: the offer it feeds is a courtesy, so every failure
+ * reads as "no details".
+ */
+export async function fetchLastCheckoutDetails(): Promise<LastCheckoutDetails | null> {
+  try {
+    const res = await unwrap<{ details: LastCheckoutDetails | null }>(api.get('storefront/checkout/last-details', { retry: 0 }));
+    return res?.details ?? null;
+  } catch {
+    return null;
+  }
 }

@@ -5,6 +5,7 @@ import type { SlotRender } from '@/builder/define.ts';
 import type { FamilyValue, PartViewProps } from '@/builder/parts.ts';
 import { CouponField } from '@/features/checkout/CouponField.tsx';
 import { isTelegramWebApp } from '@/lib/telegram-webapp.ts';
+import { LastDetailsOffer } from '@/features/checkout/LastDetailsOffer.tsx';
 import { ReferralField } from '@/features/checkout/ReferralField.tsx';
 import { useStoredReferral } from '@/features/referrals/stored-referral.ts';
 import { selectIsLoggedIn, useSessionStore } from '@/stores/session.ts';
@@ -108,7 +109,16 @@ function Contact({ props, styleAttrs }: PartViewProps) {
   return framed(d, 'contact', (
     <ContactStep
       form={d.form} patch={d.patch} errors={d.errors} contactModes={d.contactModes} guest={d.guest}
-      before={slotOf(props, 'before')} after={slotOf(props, 'after')} rootAttrs={styleAttrs} countries={d.shipCountries}
+      before={(
+        <>
+          {/* The shopper's own page only: the editor canvas never fetches an order. */}
+          {d.stack ? null : (
+            <LastDetailsOffer form={d.form} patch={d.patch} contactModes={d.contactModes} shipCountries={d.shipCountries} shipsNowhere={d.shipsNowhere} />
+          )}
+          {slotOf(props, 'before')}
+        </>
+      )}
+      after={slotOf(props, 'after')} rootAttrs={styleAttrs} countries={d.shipCountries}
     />
   ));
 }

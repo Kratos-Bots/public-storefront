@@ -89,6 +89,11 @@ export default defineTextArea('checkout', {
   'contact.surname': { en: 'Surname', max: 40 },
   'contact.email': { en: 'Email', max: 40 },
   'contact.haveAccount': { en: 'Have an account? {signIn} to use your saved details and store credit.' },
+  'contact.autofillTitle': { en: 'Use the details from your last order?', max: 60 },
+  'contact.autofillUse': { en: 'Use these details', max: 30 },
+  'contact.autofillDismiss': { en: 'No thanks', max: 30 },
+  'contact.autofillDone': { en: 'Details filled in from your last order. Check each step before you place the order.', max: 120 },
+  'contact.autofillCollectionPoint': { en: 'Name and contact details only', max: 60 },
 
   'field.optional': { en: 'Optional', max: 30 },
 
