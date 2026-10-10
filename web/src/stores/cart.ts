@@ -26,6 +26,7 @@ interface CartState {
   clear: () => void;
   replaceFromServer: (cart: ServerCart) => void;
   repriceFromCatalogue: (products: Product[]) => void;
+  rebaseFromCatalogue: (products: Product[]) => void;
   mergeForLogin: () => CartLineInput[];
   setMode: (mode: 'local' | 'server') => void;
 }
@@ -34,7 +35,7 @@ function sameTiers(a: PricingTier[], b: PricingTier[]): boolean {
   return a.length === b.length && a.every((t, i) => t.id === b[i]!.id && t.minQuantity === b[i]!.minQuantity && t.price === b[i]!.price);
 }
 
-export const useCartStore =create<CartState>()(
+export const useCartStore = create<CartState>()(
   persist(
     (set, get) => ({
       lines: [],
@@ -148,6 +149,26 @@ export const useCartStore =create<CartState>()(
           if (p.price === l.basePrice && unitPrice === l.unitPrice && sameTiers(p.pricingTiers, l.pricingTiers)) return l;
           changed = true;
           return { ...l, basePrice: p.price, pricingTiers: p.pricingTiers, unitPrice };
+        });
+        if (changed) set({ lines });
+      },
+
+      /**
+       * The signed-in counterpart of `repriceFromCatalogue`: the server prices the basket, so `unitPrice` and
+       * `quantity` stay exactly as it sent them, but the metadata a line is struck against (base price, tiers)
+       * is taken from the catalogue at the warehouse in force. Without it a line added at warehouse A keeps A's
+       * base price after a switch and reads as a discount ("was 200, now 150"). Absent products are untouched
+       * and nothing is written when nothing differs.
+       */
+      rebaseFromCatalogue: (products) => {
+        const byId = new Map(products.map((p) => [p.id, p]));
+        let changed = false;
+        const lines = get().lines.map((l) => {
+          const p = byId.get(l.productId);
+          if (!p) return l;
+          if (p.price === l.basePrice && sameTiers(p.pricingTiers, l.pricingTiers)) return l;
+          changed = true;
+          return { ...l, basePrice: p.price, pricingTiers: p.pricingTiers };
         });
         if (changed) set({ lines });
       },

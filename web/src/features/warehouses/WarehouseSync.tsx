@@ -62,7 +62,10 @@ export function WarehouseSync() {
   const mode = useCartStore((s) => s.mode);
   const guestLines = useCartStore((s) => s.lines.length > 0);
   const repricing = enabled && !signedIn && mode === 'local' && guestLines;
-  const catalog = useCatalog({ enabled: selectedId !== null || repricing });
+  // A signed-in basket is priced by the server, but the base price and tiers its lines are struck against come
+  // from the catalogue, so it is read for them too (same query the pages use).
+  const rebasing = enabled && signedIn && mode === 'server' && guestLines;
+  const catalog = useCatalog({ enabled: selectedId !== null || repricing || rebasing });
   const loaded = catalog.data?.products;
   const products = selectedId !== null ? loaded : undefined;
   useEffect(() => {
@@ -72,11 +75,20 @@ export function WarehouseSync() {
   // A guest basket stores each line's price at add time, so a switch of warehouse (or a price change, or a basket
   // left over from another warehouse) would leave it quoting the old prices. Re-strike it from the catalogue the
   // chosen warehouse just served; the store leaves its state alone when nothing differs. The signed-in cart is
-  // priced by the server and is never touched here.
+  // priced by the server: its unit prices are never touched here (see the re-base below).
   const reprice = useCartStore((s) => s.repriceFromCatalogue);
   useEffect(() => {
     if (repricing && loaded) reprice(loaded);
   }, [repricing, loaded, reprice]);
+
+  // The same for a signed-in basket, but only its metadata (base price, tiers): the server's unit price stands.
+  // Depends on the lines too, because a server refresh replaces them and keeps whatever metadata the store held
+  // (or none, for a line this browser never saw); the store writes nothing when nothing differs, so this settles.
+  const rebase = useCartStore((s) => s.rebaseFromCatalogue);
+  const lines = useCartStore((s) => (rebasing ? s.lines : null));
+  useEffect(() => {
+    if (rebasing && loaded) rebase(loaded);
+  }, [rebasing, loaded, lines, rebase]);
 
   // The signed-in cart is read at the warehouse in force. Re-read it when that changes while the cart is the
   // server's, and when the server's cart is first adopted with a warehouse already chosen (the boot read can

@@ -81,3 +81,19 @@ test('switching back to the default warehouse brings the default price back', as
   await expect(page.getByText('£55.00')).toHaveCount(0);
   await expect(onlyVisible(page.getByText('Price updated'))).toHaveCount(0);
 });
+
+test('a signed-in basket drops the previous warehouse\'s base price: no struck-through "was" price after a switch', async ({ page }) => {
+  await installMocks(page, { layout: 'storefront', warehouses: WAREHOUSES, session: true });
+  await page.addInitScript(() => window.localStorage.setItem('sf-warehouse-v1', JSON.stringify({ state: { warehouseId: 2 }, version: 0 })));
+  await page.goto('/');
+  await openProduct(page, 'storefront', 'Alpine Extract 10ml');
+  await expect(page.getByText('£55.00').first()).toBeVisible();
+  await page.getByRole('button', { name: /^Add · / }).first().click();
+  await expect(page.getByRole('group', { name: /in your cart/ }).first()).toBeVisible();
+
+  // Back to Main: the server now prices the line at 42.50. It must not read as "was 55.00, now 42.50".
+  await page.getByLabel('Shipping from').selectOption({ label: 'Main · GB' });
+  await openCart(page, 'mobile');
+  await expect(page.getByText('£42.50').first()).toBeVisible();
+  await expect(page.getByText('£55.00')).toHaveCount(0);
+});

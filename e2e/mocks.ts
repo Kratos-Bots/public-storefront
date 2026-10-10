@@ -897,13 +897,13 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     if (path === 'storefront/cart') {
       if (method === 'GET') {
         // At a chosen warehouse the same lines are re-read there, uncarried ones flagged.
-        await envelope(route, carriedAt ? buildCart(state.cart.items.map((i) => ({ productId: i.productId, quantity: i.quantity })), state.catalog, carriedAt) : state.cart);
+        await envelope(route, carriedAt ? buildCart(state.cart.items.map((i) => ({ productId: i.productId, quantity: i.quantity })), pricedAt(askedWarehouse, state.catalog), carriedAt) : state.cart);
         return;
       }
       if (method === 'PUT') {
         const items = (body(route).items ?? []) as CartLineInput[];
         state.cart = buildCart(items, state.catalog);
-        await envelope(route, carriedAt ? buildCart(items, state.catalog, carriedAt) : state.cart);
+        await envelope(route, carriedAt ? buildCart(items, pricedAt(askedWarehouse, state.catalog), carriedAt) : state.cart);
         return;
       }
       if (method === 'DELETE') {
