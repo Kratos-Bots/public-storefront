@@ -998,11 +998,24 @@ describe('CheckoutPage — warehouse shipping', () => {
     await settle(0);
   };
   const complete = { firstName: 'Ada', surname: 'Lovelace', email: 'ada@example.com' };
+  const WAREHOUSE_METHODS: Record<number, Array<{ id: number; name: string; courier: string; price: number; freeShipping: boolean }>> = {
+    0: [{ id: 3, name: 'Royal Mail Tracked 24', courier: 'Royal Mail', price: 4.99, freeShipping: false }],
+    2: [{ id: 8, name: 'North Standard', courier: 'North Post', price: 5, freeShipping: false }],
+    3: [{ id: 8, name: 'North Standard', courier: 'North Post', price: 5, freeShipping: false }],
+  };
 
   beforeEach(() => {
     resetWarehouseStore();
     state.settings = { ...settings(false), shipping: { countries: ['GB', 'IE'], collectionCountries: ['GB'] } };
     useSessionStore.setState({ token: 'sess-1', customer: { id: 5, nickname: 'ada' } });
+    // Like the backend: a method outside the active warehouse's own list is refused (422), never silently accepted.
+    quoteMock.mockImplementation(async (input) => {
+      const list = WAREHOUSE_METHODS[currentWarehouseId() ?? 0] ?? WAREHOUSE_METHODS[0]!;
+      if (input.shippingOptionId !== undefined && !list.some((o) => o.id === input.shippingOptionId)) {
+        throw new ApiError(422, 'The selected shipping option is not available for this order');
+      }
+      return makeQuote({ shippingOptions: list });
+    });
   });
   afterEach(() => resetWarehouseStore());
 
@@ -1055,6 +1068,41 @@ describe('CheckoutPage — warehouse shipping', () => {
     expect(JSON.parse(localStorage.getItem('sf-checkout-v1')!)).toMatchObject({ deliveryMethod: 'home' });
   });
 
+  describe('a warehouse that ships nowhere', () => {
+    const NOWHERE = { id: 9, name: 'Nowhere warehouse', country: null, isDefault: false, shipping: { countries: [], collectionCountries: [] } };
+    const MESSAGE = /We can.t ship to that country yet/;
+    beforeEach(() => {
+      localStorage.setItem('sf-checkout-v1', JSON.stringify({ ...DEFAULT_FORM, ...complete, country: 'GB' }));
+    });
+
+    it('lists no country, says so before the form is filled in, and keeps Continue on the address step', async () => {
+      choose(9, true, [MAIN, NORTH, SOLO, NOWHERE]);
+      await toAddress();
+      expect(offered()).toEqual([]);
+      expect(country().value).toBe('');
+      expect(screen.getByText(MESSAGE)).toBeInTheDocument();
+      pressContinue();
+      await settle();
+      expect(screen.getByLabelText('Country')).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: /Delivery and discounts/ })).toBeNull();
+    });
+
+    it('a shop whose own list is empty (unknown) still lists every country and shows no message', async () => {
+      state.settings = { ...settings(false), shipping: { countries: [], collectionCountries: [] } };
+      choose(null);
+      await toAddress();
+      expect(offered().length).toBeGreaterThan(100);
+      expect(screen.queryByText(MESSAGE)).toBeNull();
+    });
+
+    it('is inert while the warehouse feature is off', async () => {
+      choose(9, false, [MAIN, NORTH, SOLO, NOWHERE]);
+      await toAddress();
+      expect(offered()).toEqual(['GB', 'IE']);
+      expect(screen.queryByText(MESSAGE)).toBeNull();
+    });
+  });
+
   it('ignores the warehouse\'s lists while the warehouse feature is off', async () => {
     localStorage.setItem('sf-checkout-v1', JSON.stringify({ ...DEFAULT_FORM, ...complete, country: '' }));
     choose(2, false);
@@ -1067,12 +1115,7 @@ describe('CheckoutPage — warehouse shipping', () => {
     choose(null);
     mount();
     await settle();
-    // The shop's quote offers method 3; the north warehouse's offers a different method, 8.
-    quoteMock.mockImplementation(async () => makeQuote({
-      shippingOptions: currentWarehouseId() === 2
-        ? [{ id: 8, name: 'North Standard', courier: 'North Post', price: 5, freeShipping: false }]
-        : [{ id: 3, name: 'Royal Mail Tracked 24', courier: 'Royal Mail', price: 4.99, freeShipping: false }],
-    }));
+    // The shop's quote offers method 3; the north warehouse's offers a different method, 8 (WAREHOUSE_METHODS).
     choose(2);
     await settle();
     pressContinue(); // contact -> address

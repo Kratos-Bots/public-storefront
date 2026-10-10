@@ -26,8 +26,9 @@ export function reconcileCountry(country: string, allowed: readonly string[]): s
 }
 
 /** `reconcileCountry` applied to a form. Returns the same object when nothing changes, so it is safe in a state updater. */
-export function applyShipCountries(form: CheckoutForm, allowed: readonly string[]): CheckoutForm {
-  const country = reconcileCountry(form.country, allowed);
+export function applyShipCountries(form: CheckoutForm, allowed: readonly string[], none = false): CheckoutForm {
+  // A warehouse that delivers nowhere holds no country; an empty list alone would mean "unknown" and keep it.
+  const country = none ? '' : reconcileCountry(form.country, allowed);
   if (country === form.country) return form;
   // A country chosen for the shopper carries the dial code with it, like one they pick themselves.
   const followPrefix = country && !form.phonePrefixTouched && !form.phonePrefix && DIAL_CODES[country];

@@ -162,3 +162,46 @@ test('with the feature off the checkout lists the shop\'s countries whatever a w
   await expect(country(page).locator('option:not([value=""])')).toHaveText(['Ireland', 'United Kingdom']);
   expect(mocks.state.urls.filter((u) => /warehouse/.test(u))).toEqual([]);
 });
+
+test('a warehouse that ships nowhere offers no country, says so on the address step and stops there', async ({ page }) => {
+  const mocks = await installMocks(page, {
+    layout: 'storefront',
+    warehouses: {
+      list: [
+        ...WAREHOUSES.list,
+        { id: 3, name: 'Quiet warehouse', country: 'FR', isDefault: false, shipping: { countries: [], collectionCountries: [] } },
+      ],
+      carries: { 2: [101], 3: [101] },
+      // Like the backend: a warehouse with nothing to ship with quotes an empty method list.
+      quoteShipping: { ...WAREHOUSES.quoteShipping, 3: [] },
+    },
+    tweakSettings: (s) => {
+      s.features.guestCheckout = true;
+      s.shipping = { countries: ['GB', 'IE'], collectionCountries: [] };
+    },
+  });
+  await addToBasket(page);
+  await page.goto('/');
+  await page.getByLabel('Shipping from').selectOption({ label: 'Quiet warehouse · FR' });
+  await expect.poll(() => mocks.state.urls).toContain('GET catalog?warehouse=3');
+  await page.goto('/checkout');
+  await toAddress(page);
+
+  // Not every country: none, and the shopper is told before filling the form in.
+  await expect(country(page).locator('option:not([value=""])')).toHaveCount(0);
+  await expect(page.getByText(/We can.t ship to that country yet/)).toBeVisible();
+
+  // Continue stays on the address step.
+  await next(page);
+  await expect(page.getByRole('heading', { name: 'Delivery address' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Delivery and discounts' })).toHaveCount(0);
+
+  // Back at a warehouse that ships, the pickers return.
+  await page.goto('/');
+  await page.getByLabel('Shipping from').selectOption({ label: 'North warehouse · DE' });
+  await expect.poll(() => mocks.state.urls).toContain('GET catalog?warehouse=2');
+  await page.goto('/checkout');
+  await toAddress(page);
+  await expect(country(page).locator('option:not([value=""])')).toHaveText(['Germany', 'Ireland']);
+  await expect(page.getByText(/We can.t ship to that country yet/)).toHaveCount(0);
+});

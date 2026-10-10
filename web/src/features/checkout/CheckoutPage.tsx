@@ -143,7 +143,7 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
   const queryClient = useQueryClient();
   const { name: warehouseName } = useWarehouseOrdering();
   const { contactModes, currency, features } = settings;
-  const rawShipping = useShipSource(settings);
+  const { lists: rawShipping, none: shipsNowhere } = useShipSource(settings);
   const shipLists = useMemo(() => shipListsOf({ shipping: rawShipping }), [rawShipping]);
   const shipCountries = useMemo(() => pickerCountries(shipLists), [shipLists]);
   const phoneMode = contactModes.phoneMode;
@@ -185,7 +185,7 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
   const notesShown = containsVisibleType(allItems, 'CheckoutNotes');
 
   const [form, setForm] = useState<CheckoutForm>(() => {
-    const seeded = applyShipCountries(seedForm(loadPersistedForm() ?? DEFAULT_FORM, contactModes.defaultPhoneCountry), shipCountries);
+    const seeded = applyShipCountries(seedForm(loadPersistedForm() ?? DEFAULT_FORM, contactModes.defaultPhoneCountry), shipCountries, shipsNowhere);
     return reconcileWarehouse(reconcileDelivery(seeded, seeded, shipLists, phoneMode), warehouse);
   });
   const [step, setStep] = useState(0);
@@ -218,10 +218,10 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
   // Settings refetch on window focus, so the shop's countries can change under an open checkout.
   useEffect(() => {
     setForm((f) => {
-      const next = applyShipCountries(f, shipCountries);
+      const next = applyShipCountries(f, shipCountries, shipsNowhere);
       return reconcileWarehouse(reconcileDelivery(f, next, shipLists, phoneMode), warehouse);
     });
-  }, [shipCountries, shipLists, phoneMode, warehouse]);
+  }, [shipCountries, shipsNowhere, shipLists, phoneMode, warehouse]);
 
   useEffect(() => {
     persistForm(form);
@@ -448,6 +448,8 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
       return false;
     }
     if (kind === 'address') {
+      // A warehouse that ships nowhere has no Delivery step worth reaching; the step already says why.
+      if (shipsNowhere) return false;
       if (form.deliveryMethod === 'collection') {
         if (form.country.length !== 2) {
           setErrors({ country: textKey('checkout.errors.countryMissing') });
@@ -688,6 +690,7 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
       errors,
       contactModes: effectiveContactModes,
       shipCountries,
+      shipsNowhere,
       countryMode: modeForCountry(form.country, shipLists, phoneMode),
       guest,
       currency,
@@ -707,7 +710,7 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
       stack,
       goTo,
     }),
-    [form, patch, errors, effectiveContactModes, shipCountries, shipLists, phoneMode, guest, currency, shownQuote, optionsPending, method, combo, isFetching, verifying, quoteError, errorTarget, quoteMessage, order, step, kind, stack, goTo],
+    [form, patch, errors, effectiveContactModes, shipCountries, shipsNowhere, shipLists, phoneMode, guest, currency, shownQuote, optionsPending, method, combo, isFetching, verifying, quoteError, errorTarget, quoteMessage, order, step, kind, stack, goTo],
   );
   const value = useMemo(() => ({ data, views: CHECKOUT_VIEWS }), [data]);
 
