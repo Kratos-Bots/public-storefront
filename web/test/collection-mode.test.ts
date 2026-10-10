@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_FORM, type CheckoutForm } from '@/features/checkout/form-state.ts';
 import {
-  collectionAddress, modeForCountry, pickerCountries, quoteDeliveryFields, reconcileDelivery, shipListsOf,
+  collectionAddress, modeForCountry, pickerCountries, quoteDeliveryFields, reconcileDelivery, reconcileWarehouse, shipListsOf,
 } from '@/features/checkout/collection-mode.ts';
 import type { ServicePoint } from '@/types/service-points.ts';
 
@@ -137,5 +137,25 @@ describe('what a collection form sends', () => {
 
   it('is null when the form is not a collection', () => {
     expect(collectionAddress(form({ country: 'GB' }))).toBeNull();
+  });
+});
+
+describe('reconcileWarehouse', () => {
+  it('clears the chosen method when the warehouse changes', () => {
+    const f = form({ shippingOptionId: 11, shippingWarehouse: null });
+    expect(reconcileWarehouse(f, 2)).toEqual({ ...f, shippingOptionId: null, shippingWarehouse: 2 });
+    expect(reconcileWarehouse(form({ shippingOptionId: 41, shippingWarehouse: 2 }), null)).toMatchObject({ shippingOptionId: null, shippingWarehouse: null });
+  });
+  it('returns the same form for the same warehouse (a reload, a re-render)', () => {
+    const f = form({ shippingOptionId: 41, shippingWarehouse: 2 });
+    expect(reconcileWarehouse(f, 2)).toBe(f);
+    const shop = form({ shippingOptionId: 11 });
+    expect(reconcileWarehouse(shop, null)).toBe(shop);
+  });
+  it('drops the collection point when the form is no longer a collection, keeps it when it still is', () => {
+    const home = form({ deliveryMethod: 'home', servicePoint: point(), shippingOptionId: 5 });
+    expect(reconcileWarehouse(home, 2).servicePoint).toBeNull();
+    const coll = form({ deliveryMethod: 'collection', servicePoint: point(), shippingOptionId: 5 });
+    expect(reconcileWarehouse(coll, 2)).toMatchObject({ servicePoint: point(), shippingOptionId: null });
   });
 });

@@ -27,6 +27,8 @@ export interface CheckoutForm {
   /** What the shopper last searched for in the point picker. */
   pointPostcode: string;
   shippingOptionId: number | null;
+  /** The warehouse `shippingOptionId` was chosen for (`null` = the shop's own). Each warehouse has its own methods, so another one voids the choice. */
+  shippingWarehouse: number | null;
   couponCode: string;
   /** A friend's referral code typed at checkout (signed-out shoppers with no stored link only). */
   referralCode: string;
@@ -55,6 +57,7 @@ export const DEFAULT_FORM: CheckoutForm = {
   servicePoint: null,
   pointPostcode: '',
   shippingOptionId: null,
+  shippingWarehouse: null,
   couponCode: '',
   referralCode: '',
   useStoreCredit: false,
@@ -107,6 +110,7 @@ export function loadPersistedForm(): CheckoutForm | null {
       deliveryMethod: merged.deliveryMethod === 'collection' ? 'collection' : 'home',
       servicePoint: sanitiseServicePoint(merged.servicePoint),
       pointPostcode: typeof merged.pointPostcode === 'string' ? merged.pointPostcode : '',
+      shippingWarehouse: typeof merged.shippingWarehouse === 'number' && Number.isInteger(merged.shippingWarehouse) ? merged.shippingWarehouse : null,
     };
   } catch {
     return null;

@@ -1081,7 +1081,74 @@ describe('CheckoutPage — warehouse shipping', () => {
     expect(screen.getByRole('radio', { name: /North Standard/ })).not.toBeChecked();
     expect(screen.queryByRole('radio', { name: /Royal Mail Tracked 24/ })).toBeNull();
     pressContinue();
-    expect(screen.getByText(/delivery option is no longer available/i)).toBeInTheDocument();
+    expect(screen.getByText('Choose a shipping method')).toBeInTheDocument();
     expect(JSON.parse(localStorage.getItem('sf-checkout-v1')!).shippingOptionId).toBeNull();
+  });
+});
+
+// A warehouse only accepts a method of its own list, as the backend does (422); the stale id of another warehouse is the trap.
+describe('CheckoutPage — a method chosen at another warehouse', () => {
+  const OTHER = { id: 4, name: 'North warehouse', country: null, isDefault: false, shipping: { countries: ['GB', 'IE'], collectionCountries: [] } };
+  const SHOP = { id: 1, name: 'Main', country: null, isDefault: true, shipping: { countries: ['GB', 'IE'], collectionCountries: [] } };
+  const LISTS: Record<number, Array<{ id: number; name: string; courier: string; price: number; freeShipping: boolean }>> = {
+    0: [{ id: 3, name: 'Royal Mail Tracked 24', courier: 'Royal Mail', price: 4.99, freeShipping: false }],
+    4: [{ id: 8, name: 'North Standard', courier: 'North Post', price: 5, freeShipping: false }],
+  };
+  const choose = (warehouseId: number | null) =>
+    act(() => useWarehouseStore.setState({ warehouseId, ctx: { enabled: true, list: [SHOP, OTHER], failed: false, carried: null } }));
+
+  beforeEach(() => {
+    resetWarehouseStore();
+    state.settings = { ...settings(false), shipping: { countries: ['GB', 'IE'], collectionCountries: [] } };
+    useSessionStore.setState({ token: 'sess-1', customer: { id: 5, nickname: 'ada' } });
+    quoteMock.mockImplementation(async (input) => {
+      const list = LISTS[currentWarehouseId() ?? 0]!;
+      if (input.shippingOptionId !== undefined && !list.some((o) => o.id === input.shippingOptionId)) {
+        throw new ApiError(422, 'The selected shipping option is not available for this order');
+      }
+      return makeQuote({ shippingOptions: list });
+    });
+  });
+  afterEach(() => resetWarehouseStore());
+
+  it('a switch to a warehouse that serves the same country sends no stale method and shows its list', async () => {
+    localStorage.setItem('sf-checkout-v1', persistedForm({ country: 'IE', zip: 'D02 X285', shippingOptionId: 3 }));
+    choose(null);
+    mount();
+    await settle();
+    expect(quoteMock.mock.calls.at(-1)![0]).toMatchObject({ shippingOptionId: 3 });
+    choose(4);
+    await settle();
+    expect(quoteMock.mock.calls.at(-1)![0].shippingOptionId).toBeUndefined();
+    pressContinue(); // contact -> address
+    pressContinue(); // address -> shipping
+    await settle();
+    expect(screen.getByRole('radio', { name: /North Standard/ })).not.toBeChecked();
+    expect(screen.queryByRole('radio', { name: /Royal Mail Tracked 24/ })).toBeNull();
+    fireEvent.click(screen.getByRole('radio', { name: /North Standard/ }));
+    await settle();
+    pressContinue();
+    await settle();
+    expect(screen.getByRole('heading', { name: /How you.ll pay/ })).toBeInTheDocument();
+  });
+
+  it('a method chosen for another warehouse before this page opened is not sent', async () => {
+    localStorage.setItem('sf-checkout-v1', persistedForm({ country: 'IE', zip: 'D02 X285', shippingOptionId: 3 }));
+    choose(4); // switched on the shop front while checkout was closed
+    mount();
+    await settle();
+    expect(quoteMock.mock.calls.every(([input]) => input.shippingOptionId === undefined)).toBe(true);
+    pressContinue();
+    pressContinue();
+    await settle();
+    expect(screen.getByRole('radio', { name: /North Standard/ })).toBeInTheDocument();
+  });
+
+  it('keeps the method across a reload at the same warehouse', async () => {
+    localStorage.setItem('sf-checkout-v1', persistedForm({ country: 'IE', zip: 'D02 X285', shippingOptionId: 8, shippingWarehouse: 4 }));
+    choose(4);
+    mount();
+    await settle();
+    expect(quoteMock.mock.calls.at(-1)![0]).toMatchObject({ shippingOptionId: 8 });
   });
 });

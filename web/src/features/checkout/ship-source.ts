@@ -11,7 +11,7 @@ type ShipLists = StorefrontSettings['shipping'];
  * settings. With the warehouse feature off nothing here differs from before it existed.
  */
 export function shipSource(settings: Pick<StorefrontSettings, 'shipping'>, warehouse: Warehouse | null | undefined, enabled: boolean): ShipLists {
-  if (!enabled || !warehouse || warehouse.isDefault || !warehouse.shipping) return settings.shipping;
+  if (!enabled || !warehouse || !warehouse.shipping) return settings.shipping;
   return warehouse.shipping;
 }
 

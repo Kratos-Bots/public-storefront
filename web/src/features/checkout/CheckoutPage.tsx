@@ -31,7 +31,7 @@ import {
 } from '@/features/checkout/schemas.ts';
 import { applyShipCountries } from '@/features/checkout/ship-countries.ts';
 import { useShipSource } from '@/features/checkout/ship-source.ts';
-import { collectionAddress, modeForCountry, pickerCountries, quoteDeliveryFields, reconcileDelivery, shipListsOf } from '@/features/checkout/collection-mode.ts';
+import { collectionAddress, modeForCountry, pickerCountries, quoteDeliveryFields, reconcileDelivery, reconcileWarehouse, shipListsOf } from '@/features/checkout/collection-mode.ts';
 import { useQuote } from '@/features/checkout/useQuote.ts';
 import { warehouseBody } from '@/api/warehouse-param.ts';
 import { useWarehouseId, useWarehouseOrdering } from '@/features/warehouses/use-warehouse.ts';
@@ -186,7 +186,7 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
 
   const [form, setForm] = useState<CheckoutForm>(() => {
     const seeded = applyShipCountries(seedForm(loadPersistedForm() ?? DEFAULT_FORM, contactModes.defaultPhoneCountry), shipCountries);
-    return reconcileDelivery(seeded, seeded, shipLists, phoneMode);
+    return reconcileWarehouse(reconcileDelivery(seeded, seeded, shipLists, phoneMode), warehouse);
   });
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -219,9 +219,9 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
   useEffect(() => {
     setForm((f) => {
       const next = applyShipCountries(f, shipCountries);
-      return reconcileDelivery(f, next, shipLists, phoneMode);
+      return reconcileWarehouse(reconcileDelivery(f, next, shipLists, phoneMode), warehouse);
     });
-  }, [shipCountries, shipLists, phoneMode]);
+  }, [shipCountries, shipLists, phoneMode, warehouse]);
 
   useEffect(() => {
     persistForm(form);

@@ -291,8 +291,9 @@ export interface InstallMocksOptions {
      * a warehouse or product not listed keeps the fixture's figures.
      */
     /**
-     * Per-warehouse shipping methods: warehouse id -> the `shippingOptions` its checkout quote offers instead of the fixture's
-     * (and a zero shipping amount). A warehouse not listed keeps the fixture's. The countries come from `list[].shipping`.
+     * Per-warehouse shipping methods: warehouse id -> the `shippingOptions` its checkout quote offers instead of the fixture's.
+     * A warehouse not listed (the default) keeps the fixture's. The quote refuses (422) a `shippingOptionId` outside the asked
+     * warehouse's list, and its shipping amount is the chosen method's price. The countries come from `list[].shipping`.
      */
     quoteShipping?: Record<number, ShippingOption[]>;
     prices?: Record<number, Record<number, { price: number; pricingTiers?: Array<{ id: number; minQuantity: number; price: number }> }>>;
@@ -939,8 +940,22 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
       if (path.includes('guest')) state.guestQuotes.push(asked);
       else state.quotes.push(asked);
       const lined = options.warehouses?.prices ? requoteLines(state.quote, asked, pricedAt(Number(asked.warehouseId), state.catalog)) : state.quote;
-      const own = options.warehouses?.quoteShipping?.[Number(asked.warehouseId)];
-      await envelope(route, quoteFor(own ? { ...lined, shippingOptions: own, shippingAmount: 0 } : lined, asked));
+      const perWarehouse = options.warehouses?.quoteShipping;
+      if (perWarehouse) {
+        // Like the backend: only the asked warehouse's own methods (the fixture's at one that lists none), and a method of
+        // another list is refused. The shipping amount and the totals follow the method chosen.
+        const list = perWarehouse[Number(asked.warehouseId)] ?? lined.shippingOptions;
+        const chosen = asked.shippingOptionId == null ? undefined : list.find((o) => o.id === asked.shippingOptionId);
+        if (asked.shippingOptionId != null && !chosen) {
+          await fail(route, 422, 'The selected shipping option is not available for this order');
+          return;
+        }
+        const shippingAmount = chosen?.price ?? 0;
+        const total = Math.round((lined.subtotal + shippingAmount) * 100) / 100;
+        await envelope(route, quoteFor({ ...lined, shippingOptions: list, selectedShippingOptionId: chosen?.id ?? null, shippingAmount, grandTotal: total, amountDue: total }, asked));
+        return;
+      }
+      await envelope(route, quoteFor(lined, asked));
       return;
     }
 

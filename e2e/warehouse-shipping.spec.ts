@@ -36,21 +36,39 @@ async function fillAddress(page: Page): Promise<void> {
   await page.getByRole('textbox', { name: /Postcode|Eircode/ }).fill('LS1 6BY');
 }
 
-test('switching warehouse changes the countries, the methods and the price, and drops the chosen method', async ({ page }) => {
-  const mocks = await installMocks(page, {
-    layout: 'storefront',
-    warehouses: WAREHOUSES,
-    tweakSettings: (s) => {
-      s.features.guestCheckout = true;
-      s.shipping = { countries: ['GB', 'IE'], collectionCountries: [] };
-    },
-  });
+/** The price on a method's own row of the Delivery step. */
+const rowPrice = (page: Page, name: string) => page.locator('label').filter({ hasText: name });
+/** The shipping figure of the order summary (shown once a method is chosen). */
+const summaryShipping = (page: Page) => page.getByText('Shipping', { exact: true }).locator('xpath=following-sibling::span').first();
 
-  // At the shop's own warehouse: its countries, its two methods, Tracked 24 chosen.
+async function addToBasket(page: Page): Promise<void> {
   await page.goto('/');
   await openProduct(page, 'storefront', 'Alpine Extract 10ml');
   await page.getByRole('button', { name: /^Add · / }).first().click();
   await expect(page.getByRole('group', { name: /in your cart/ }).first()).toBeVisible();
+}
+
+async function switchToNorth(page: Page, mocks: { state: { urls: string[] } }): Promise<void> {
+  // The picker is hidden on /checkout, so the switch is made on the shop front.
+  await page.goto('/');
+  await page.getByLabel('Shipping from').selectOption({ label: 'North warehouse · DE' });
+  await expect.poll(() => mocks.state.urls).toContain('GET catalog?warehouse=2');
+}
+
+const shopMocks = (page: Page) => installMocks(page, {
+  layout: 'storefront',
+  warehouses: WAREHOUSES,
+  tweakSettings: (s) => {
+    s.features.guestCheckout = true;
+    s.shipping = { countries: ['GB', 'IE'], collectionCountries: [] };
+  },
+});
+
+test('switching to a warehouse that does not serve the country changes countries, methods and price, and drops the method', async ({ page }) => {
+  const mocks = await shopMocks(page);
+
+  // At the shop's own warehouse: its countries, its two methods and their prices, Tracked 24 chosen.
+  await addToBasket(page);
   await page.goto('/checkout');
   await toAddress(page);
   await expect(country(page).locator('option:not([value=""])')).toHaveText(['Ireland', 'United Kingdom']);
@@ -58,14 +76,13 @@ test('switching warehouse changes the countries, the methods and the price, and 
   await fillAddress(page);
   await next(page);
   await expect(page.getByRole('heading', { name: 'Delivery and discounts' })).toBeVisible();
-  await expect(page.getByText('Tracked 48')).toBeVisible();
+  await expect(rowPrice(page, 'Tracked 24')).toContainText('£4.95');
+  await expect(rowPrice(page, 'Tracked 48')).toContainText('£2.95');
   await page.getByText('Tracked 24').click();
   await expect(page.getByRole('radio', { name: /Tracked 24/ })).toBeChecked();
+  await expect(summaryShipping(page)).toHaveText('£4.95');
 
-  // Switch to the north warehouse (the picker is hidden on /checkout, so on the shop front).
-  await page.goto('/');
-  await page.getByLabel('Shipping from').selectOption({ label: 'North warehouse · DE' });
-  await expect.poll(() => mocks.state.urls).toContain('GET catalog?warehouse=2');
+  await switchToNorth(page, mocks);
   await page.goto('/checkout');
 
   // Its own countries: the shop's United Kingdom is gone and the chosen country with it.
@@ -78,15 +95,53 @@ test('switching warehouse changes the countries, the methods and the price, and 
 
   // Its own method and price; the previously chosen Tracked 24 is neither offered nor kept.
   await expect(page.getByRole('heading', { name: 'Delivery and discounts' })).toBeVisible();
-  await expect(page.getByText('Standard')).toBeVisible();
-  await expect(page.getByText('£5.00').first()).toBeVisible();
+  await expect(rowPrice(page, 'Standard')).toContainText('£5.00');
   await expect(page.getByText('Tracked 24')).toHaveCount(0);
   await expect(page.getByText('Tracked 48')).toHaveCount(0);
   await expect(page.getByRole('radio', { name: /Standard/ })).not.toBeChecked();
   await expect.poll(() => mocks.state.guestQuotes.at(-1)).toMatchObject({ warehouseId: 2, country: 'IE' });
+  expect(mocks.state.guestQuotes.at(-1)).not.toHaveProperty('shippingOptionId');
   await next(page);
   await expect(page.getByText('Choose a shipping method')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Delivery and discounts' })).toBeVisible();
+});
+
+test('switching to a warehouse that serves the same country does not carry the old method over', async ({ page }) => {
+  const mocks = await shopMocks(page);
+
+  // Ireland is served by both warehouses; Tracked 24 is chosen at the shop's own.
+  await addToBasket(page);
+  await page.goto('/checkout');
+  await toAddress(page);
+  await country(page).selectOption('IE');
+  await fillAddress(page);
+  await next(page);
+  await expect(rowPrice(page, 'Tracked 24')).toContainText('£4.95');
+  await page.getByText('Tracked 24').click();
+  await expect(summaryShipping(page)).toHaveText('£4.95');
+
+  await switchToNorth(page, mocks);
+  const before = mocks.state.guestQuotes.length;
+  await page.goto('/checkout');
+  await toAddress(page);
+  await expect(country(page)).toHaveValue('IE');
+  await fillAddress(page);
+  await next(page);
+
+  // The new warehouse's list is shown and current (no "still pricing"), and the old method id was never sent to it.
+  await expect(page.getByRole('heading', { name: 'Delivery and discounts' })).toBeVisible();
+  await expect(rowPrice(page, 'Standard')).toContainText('£5.00');
+  await expect(page.getByText('Tracked 24')).toHaveCount(0);
+  await expect(page.getByRole('radio', { name: /Standard/ })).not.toBeChecked();
+  const sent = mocks.state.guestQuotes.slice(before);
+  expect(sent.length).toBeGreaterThan(0);
+  for (const q of sent) expect(q).not.toHaveProperty('shippingOptionId');
+
+  // The shopper can choose a method and carry on.
+  await page.getByText('Standard').click();
+  await expect(summaryShipping(page)).toHaveText('£5.00');
+  await next(page);
+  await expect(page.getByRole('heading', { name: /How you.ll pay/ })).toBeVisible();
 });
 
 test('with the feature off the checkout lists the shop\'s countries whatever a warehouse says', async ({ page }) => {

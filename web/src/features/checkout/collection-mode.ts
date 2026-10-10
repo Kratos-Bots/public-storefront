@@ -61,6 +61,22 @@ export function reconcileDelivery(prev: CheckoutForm, next: CheckoutForm, lists:
   return { ...next, servicePoint, deliveryMethod, shippingOptionId };
 }
 
+/**
+ * A warehouse sells on its own shipping methods, so a method chosen for another warehouse is void. Applied to a form that
+ * `reconcileDelivery` has already settled: a change of warehouse clears the method and, when the form is no longer a
+ * collection, the collection point (its carrier belonged to the other list). The same warehouse, or the feature off on a form
+ * that never had one, returns `form` itself, so it is safe in a state updater and on a reload.
+ */
+export function reconcileWarehouse(form: CheckoutForm, warehouseId: number | null): CheckoutForm {
+  if (form.shippingWarehouse === warehouseId) return form;
+  return {
+    ...form,
+    shippingWarehouse: warehouseId,
+    shippingOptionId: null,
+    servicePoint: form.deliveryMethod === 'collection' ? form.servicePoint : null,
+  };
+}
+
 /** The delivery part of a quote request. Nothing for home, so a home quote is byte-identical to the one sent before collection points. */
 export function quoteDeliveryFields(form: CheckoutForm): Pick<QuoteInput, 'deliveryMethod' | 'servicePointCarrier'> {
   if (form.deliveryMethod !== 'collection') return {};

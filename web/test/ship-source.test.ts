@@ -20,8 +20,8 @@ describe('shipSource', () => {
   it('is the selected warehouse\'s own lists when it carries them', () => {
     expect(shipSource(SHOP, NORTH, true)).toEqual({ countries: ['FR'], collectionCountries: [] });
   });
-  it('is the settings lists at the default warehouse', () => {
-    expect(shipSource(SHOP, MAIN, true)).toBe(SHOP.shipping);
+  it('is the shop lists at the default warehouse, which repeats them', () => {
+    expect(shipSource(SHOP, MAIN, true)).toEqual(SHOP.shipping);
   });
   it('passes an absent settings.shipping through when nothing applies', () => {
     expect(shipSource({}, null, true)).toBeUndefined();
