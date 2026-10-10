@@ -1,6 +1,6 @@
 import { useLocation } from 'react-router';
 import { OrderingPausedNotice, useCartNoticeShowing } from '@/features/warehouses/OrderingPausedNotice.tsx';
-import { warehousePickerHidden } from '@/features/warehouses/WarehouseStrip.tsx';
+import { isWarehouseBarRoute } from '@/features/warehouses/bar-route.ts';
 
 /**
  * The paused-ordering notice as the shared header bar mounts it: under the "Shipping from" strip, on every
@@ -10,6 +10,6 @@ import { warehousePickerHidden } from '@/features/warehouses/WarehouseStrip.tsx'
 export function WarehouseNotice() {
   const { pathname } = useLocation();
   const cartSaysIt = useCartNoticeShowing();
-  if (warehousePickerHidden(pathname) || cartSaysIt) return null;
+  if (!isWarehouseBarRoute(pathname) || cartSaysIt) return null;
   return <OrderingPausedNotice />;
 }

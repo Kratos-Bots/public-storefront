@@ -228,13 +228,13 @@ a.crumb:hover {
   /* The photo holds its place while the facts scroll past it. */
   .media {
     position: sticky;
-    top: 5.5rem;
+    top: calc(5.5rem + var(--sf-wh-h, 0px));
   }
   /* With the report under it the sticky unit is the whole stack; unfolding the report's history can make it
      taller than the window, and a sticky box that tall hides its bottom, so it scrolls normally then. */
   .mediaStack {
     position: sticky;
-    top: 5.5rem;
+    top: calc(5.5rem + var(--sf-wh-h, 0px));
   }
   .mediaStack:has(details[open]) {
     position: static;

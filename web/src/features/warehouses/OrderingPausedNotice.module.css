@@ -3,7 +3,6 @@
    both schemes restyle it. `bar` sits under the header on the same rail as the "Shipping from" strip
    (--sf-main-pad / --sf-rail-max come from the shell); `inline` is the boxed form inside the cart. */
 .bar {
-  border-bottom: 1px solid var(--sf-line);
   background: color-mix(in srgb, var(--sf-primary) 7%, var(--sf-bg-deep, var(--sf-bg)));
 }
 
@@ -22,6 +21,7 @@
 }
 
 .bar .inner {
+  padding-block: 0.4rem;
   max-width: var(--sf-rail-max, 1200px);
   margin: 0 auto;
   padding-inline: var(--sf-main-pad, 1rem);

@@ -20,7 +20,7 @@ input:autofill { animation: sf-autofill 1ms; }
    publishes its height as --sf-bottom-inset on :root; scrolling a field into view then stops short of it. */
 html { scroll-padding-bottom: var(--sf-bottom-inset, 0px); }
 /* A field scrolled to sits clear of the sticky header (its offsets come from the shell) and of the screen's edge. */
-input, select, textarea { scroll-margin-top: calc(var(--sf-bar-h, 0px) + var(--sf-pin-h, 0px) + 1rem); scroll-margin-bottom: 1rem; }
+input, select, textarea { scroll-margin-top: calc(var(--sf-bar-h, 0px) + var(--sf-pin-h, 0px) + var(--sf-wh-h, 0px) + 1rem); scroll-margin-bottom: 1rem; }
 .pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 1rem); }
 .pt-safe { padding-top: env(safe-area-inset-top); }
 /* Off screen, still in the accessibility tree (e.g. a page title the store owner hid). !important so a
