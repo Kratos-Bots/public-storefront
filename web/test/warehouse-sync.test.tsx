@@ -152,4 +152,55 @@ describe('WarehouseSync', () => {
     await waitFor(() => expect(fetchCart).toHaveBeenCalledTimes(1));
     expect(useCartStore.getState().lines.map((l) => l.productId)).toEqual([9]);
   });
+
+  describe('guest basket prices', () => {
+    const priced = (price: number, tier: number) => ({ id: 4, price, pricingTiers: [{ id: 10, minQuantity: 10, price: tier }] });
+    const guestLine = { productId: 4, displayName: 'N', sku: 's', unitPrice: 130, basePrice: 150, pricingTiers: [{ id: 10, minQuantity: 10, price: 130 }], quantity: 10, isPreorder: false, excludedFromFreeShipping: false, imageProductId: null };
+    beforeEach(() => {
+      vi.mocked(fetchCatalog).mockImplementation(async (_p, w) => ({ products: [w ? priced(200, 180) : priced(150, 130)], categories: [] }) as unknown as Catalog);
+    });
+
+    it('follows the chosen warehouse, and back to the default', async () => {
+      queryClient.setQueryData(SETTINGS_KEY, settings(true));
+      useCartStore.setState({ lines: [guestLine], mode: 'local' });
+      mount();
+      await waitFor(() => expect(useWarehouseStore.getState().ctx.list).toEqual(LIST));
+      act(() => useWarehouseStore.getState().choose(2));
+      await waitFor(() => expect(useCartStore.getState().lines[0]).toMatchObject({ basePrice: 200, unitPrice: 180, quantity: 10 }));
+      act(() => useWarehouseStore.getState().choose(null));
+      await waitFor(() => expect(useCartStore.getState().lines[0]).toMatchObject({ basePrice: 150, unitPrice: 130 }));
+    });
+
+    it('corrects a basket persisted under another warehouse on first load', async () => {
+      queryClient.setQueryData(SETTINGS_KEY, settings(true));
+      useWarehouseStore.setState({ warehouseId: 2 });
+      useCartStore.setState({ lines: [guestLine], mode: 'local' });
+      mount();
+      await waitFor(() => expect(useCartStore.getState().lines[0]).toMatchObject({ basePrice: 200, unitPrice: 180 }));
+    });
+
+    it('leaves a signed-in cart alone', async () => {
+      queryClient.setQueryData(SETTINGS_KEY, settings(true));
+      useSessionStore.getState().setSession('tok', { id: 1, nickname: 'A' });
+      useWarehouseStore.setState({ warehouseId: 2 });
+      useCartStore.setState({ lines: [guestLine], mode: 'server' });
+      vi.mocked(fetchCart).mockResolvedValue({
+        items: [{ productId: 4, name: 'N', quantity: 10, unitPrice: 130, lineTotal: 1300, imageUrl: null, isPreorder: false, outOfStock: false, priceChanged: false, inactive: false, belowMin: false, aboveMax: false, minOrderQuantity: null, maxOrderQuantity: null }],
+        subtotal: 1300, itemCount: 10,
+      });
+      mount();
+      await waitFor(() => expect(fetchCatalog).toHaveBeenCalledWith(true, 2));
+      await new Promise((r) => setTimeout(r, 30));
+      expect(useCartStore.getState().lines[0]).toMatchObject({ basePrice: 150, unitPrice: 130 });
+    });
+
+    it('feature off: no catalogue read on account of the basket, lines untouched', async () => {
+      queryClient.setQueryData(SETTINGS_KEY, settings(false));
+      useCartStore.setState({ lines: [guestLine], mode: 'local' });
+      render(<QueryClientProvider client={queryClient}><WarehouseSync /></QueryClientProvider>);
+      await new Promise((r) => setTimeout(r, 30));
+      expect(fetchCatalog).not.toHaveBeenCalled();
+      expect(useCartStore.getState().lines[0]).toMatchObject({ basePrice: 150, unitPrice: 130 });
+    });
+  });
 });

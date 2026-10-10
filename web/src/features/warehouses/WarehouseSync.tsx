@@ -18,10 +18,11 @@ import { selectedWarehouseId, useWarehouseStore, warehouseFeatureOn } from '@/fe
  *  - forgets a stored choice the list no longer offers (the owner switched that warehouse off);
  *  - once the chosen warehouse's catalogue is in, publishes which products it carries, which is how a
  *    guest basket learns that a line is not available there;
+ *  - re-prices a guest basket from that same catalogue, so its lines follow the warehouse's prices;
  *  - re-reads a signed-in shopper's server cart when the warehouse in force changes, so the lines
  *    the new warehouse cannot supply come back flagged.
  *
- * Nothing here ever edits the cart's lines: choosing a warehouse never silently removes anything.
+ * Nothing here ever removes a cart line: choosing a warehouse only re-prices a guest basket, never drops anything.
  */
 export function WarehouseSync() {
   const settings = useSettingsQuery().data;
@@ -56,16 +57,30 @@ export function WarehouseSync() {
 
   // The catalogue at the chosen warehouse tells which cart lines it can supply. Same query (and key)
   // the pages use, so this adds no request.
-  const catalog = useCatalog({ enabled: selectedId !== null });
-  const products = selectedId !== null ? catalog.data?.products : undefined;
+  // A guest basket also has to be priced against it (below), at the default warehouse too, so it is read for a
+  // guest with lines whenever the feature applies; with the feature off nothing is asked that was not before.
+  const mode = useCartStore((s) => s.mode);
+  const guestLines = useCartStore((s) => s.lines.length > 0);
+  const repricing = enabled && !signedIn && mode === 'local' && guestLines;
+  const catalog = useCatalog({ enabled: selectedId !== null || repricing });
+  const loaded = catalog.data?.products;
+  const products = selectedId !== null ? loaded : undefined;
   useEffect(() => {
     setContext({ carried: products ? new Set(products.map((p) => p.id)) : null });
   }, [setContext, products]);
 
+  // A guest basket stores each line's price at add time, so a switch of warehouse (or a price change, or a basket
+  // left over from another warehouse) would leave it quoting the old prices. Re-strike it from the catalogue the
+  // chosen warehouse just served; the store leaves its state alone when nothing differs. The signed-in cart is
+  // priced by the server and is never touched here.
+  const reprice = useCartStore((s) => s.repriceFromCatalogue);
+  useEffect(() => {
+    if (repricing && loaded) reprice(loaded);
+  }, [repricing, loaded, reprice]);
+
   // The signed-in cart is read at the warehouse in force. Re-read it when that changes while the cart is the
   // server's, and when the server's cart is first adopted with a warehouse already chosen (the boot read can
   // go out before the settings - and so the choice - are known, and would otherwise leave its flags stale).
-  const mode = useCartStore((s) => s.mode);
   const read = useRef<string | null>(null);
   useEffect(() => {
     const key = mode === 'server' ? String(selectedId) : null;

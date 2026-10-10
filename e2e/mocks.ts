@@ -285,6 +285,12 @@ export interface InstallMocksOptions {
     carries: Record<number, number[]>;
     /** `features.warehousePrompt`: ask which warehouse before showing the catalogue. Default off. */
     prompt?: boolean;
+    /**
+     * Per-warehouse prices: warehouse id -> product id -> the `price` and `pricingTiers` that warehouse serves instead of the
+     * fixture's. Catalogue and product reads (`?warehouse=`) and checkout quotes (`warehouseId` in the body) answer from it;
+     * a warehouse or product not listed keeps the fixture's figures.
+     */
+    prices?: Record<number, Record<number, { price: number; pricingTiers?: Array<{ id: number; minQuantity: number; price: number }> }>>;
   };
 }
 
@@ -477,6 +483,29 @@ function quoteFor(base: Quote, asked: Record<string, unknown>): Quote {
   for (const m of q.paymentMethods) {
     m.chargeTotal = take(m.chargeTotal);
     for (const o of m.cryptoOptions ?? []) o.chargeTotal = take(o.chargeTotal);
+  }
+  return q;
+}
+
+/** A quote whose lines are the asked items priced from `catalog`: subtotal, grand total and every charge move by the same difference. */
+function requoteLines(base: Quote, asked: Record<string, unknown>, catalog: Catalog): Quote {
+  const q = clone(base);
+  const lines = (asked.items ?? []) as CartLineInput[];
+  q.items = lines.flatMap((l) => {
+    const p = catalog.products.find((x) => x.id === l.productId);
+    if (!p) return [];
+    const tier = p.pricingTiers.filter((t) => t.minQuantity <= l.quantity).sort((a, b) => b.minQuantity - a.minQuantity)[0];
+    const unitPrice = tier ? tier.price : p.price;
+    return [{ productId: p.id, name: p.displayName, sku: p.sku, quantity: l.quantity, unitPrice, lineTotal: Math.round(unitPrice * l.quantity * 100) / 100, tierApplied: tier !== undefined, isPreorder: p.isPreorder }];
+  });
+  q.subtotal = Math.round(q.items.reduce((n, i) => n + i.lineTotal, 0) * 100) / 100;
+  const shift = Math.round((q.subtotal - base.subtotal) * 100) / 100;
+  const move = (n: number) => Math.round((n + shift) * 100) / 100;
+  q.grandTotal = move(q.grandTotal);
+  q.amountDue = move(q.amountDue);
+  for (const m of q.paymentMethods) {
+    m.chargeTotal = move(m.chargeTotal);
+    for (const o of m.cryptoOptions ?? []) o.chargeTotal = move(o.chargeTotal);
   }
   return q;
 }
@@ -769,8 +798,17 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
       const listed = w.list.find((x) => x.id === asked && !x.isDefault);
       return listed ? new Set(w.carries[asked] ?? []) : undefined;
     })();
-    const catalogAt = (): Catalog =>
-      carriedAt ? { ...state.catalog, products: state.catalog.products.filter((p) => carriedAt.has(p.id)) } : state.catalog;
+    // The catalogue with a warehouse's own prices laid over it (the fixture's, where it lists none).
+    const pricedAt = (warehouse: number, catalog: Catalog): Catalog => {
+      const own = options.warehouses?.prices?.[warehouse];
+      if (!own) return catalog;
+      return { ...catalog, products: catalog.products.map((p) => (own[p.id] ? { ...p, price: own[p.id]!.price, pricingTiers: own[p.id]!.pricingTiers ?? [] } : p)) };
+    };
+    const askedWarehouse = Number(url.searchParams.get('warehouse'));
+    const catalogAt = (): Catalog => {
+      const narrowed = carriedAt ? { ...state.catalog, products: state.catalog.products.filter((p) => carriedAt.has(p.id)) } : state.catalog;
+      return carriedAt ? pricedAt(askedWarehouse, narrowed) : narrowed;
+    };
 
     // The kill switch: everything but the settings 503s.
     if (state.disabled && path !== 'storefront/settings') {
@@ -895,7 +933,8 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
       const asked = body(route);
       if (path.includes('guest')) state.guestQuotes.push(asked);
       else state.quotes.push(asked);
-      await envelope(route, quoteFor(state.quote, asked));
+      const lined = options.warehouses?.prices ? requoteLines(state.quote, asked, pricedAt(Number(asked.warehouseId), state.catalog)) : state.quote;
+      await envelope(route, quoteFor(lined, asked));
       return;
     }
 

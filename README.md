@@ -66,8 +66,8 @@ Browser and desktop only; the Telegram Mini App keeps using the bot's own referr
 
 ## Warehouse selection
 
-Lets a shopper choose which warehouse their order ships from. A foundation: there are no
-per-warehouse shipping rules or prices yet, only which products are on offer and the stock shown.
+Lets a shopper choose which warehouse their order ships from. There are no
+per-warehouse shipping rules yet; a warehouse decides which products are on offer, the stock shown and the prices.
 
 - **Switching it on.** The admin sets `features.warehouseSelect` and, per warehouse, marks it
   customer-selectable (the default warehouse is always offered). With the flag off, or fewer than
@@ -91,6 +91,13 @@ per-warehouse shipping rules or prices yet, only which products are on offer and
   non-default warehouse is chosen, which keeps every URL, query key and cache key unchanged for shops
   without the feature. The list (`GET storefront/warehouses`) is only asked for when the flag is on and,
   in a private shop, the shopper is signed in.
+- **Prices follow the warehouse.** The backend serves each warehouse's own `price` and `pricingTiers`
+  on the catalogue and product reads, and prices a signed-in cart and the quote at the warehouse sent.
+  A guest basket stores its prices on the device, so `WarehouseSync` re-prices every line from the
+  selected warehouse's catalogue (the same query the pages use) whenever it arrives or changes, on first
+  load too: base price, tiers and the unit price for the line's quantity. A line the catalogue does not
+  list is left as it is, and nothing is written when no price differs. A guest with lines on a
+  feature-on shop reads the catalogue even on pages that would not, such as the cart.
 - **While the list loads.** A returning shopper's stored warehouse is used straight away (the flag is
   on, and the backend falls back to the default for an id it does not offer), so the catalogue is
   fetched once. Only if the list then shows the id is stale, or there is no real choice, is it fetched

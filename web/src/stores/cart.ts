@@ -25,11 +25,16 @@ interface CartState {
   remove: (productId: number) => void;
   clear: () => void;
   replaceFromServer: (cart: ServerCart) => void;
+  repriceFromCatalogue: (products: Product[]) => void;
   mergeForLogin: () => CartLineInput[];
   setMode: (mode: 'local' | 'server') => void;
 }
 
-export const useCartStore = create<CartState>()(
+function sameTiers(a: PricingTier[], b: PricingTier[]): boolean {
+  return a.length === b.length && a.every((t, i) => t.id === b[i]!.id && t.minQuantity === b[i]!.minQuantity && t.price === b[i]!.price);
+}
+
+export const useCartStore =create<CartState>()(
   persist(
     (set, get) => ({
       lines: [],
@@ -124,6 +129,27 @@ export const useCartStore = create<CartState>()(
             };
           }),
         });
+      },
+
+      /**
+       * Re-strike the local lines against a catalogue read at the warehouse in force: base price, tiers and the
+       * unit price for the line's own quantity. A line whose product is not in that catalogue is left alone (the
+       * warehouse notice already says it is unavailable), and when nothing differs the state is not touched at
+       * all, so there is no re-render and no storage write. Only meaningful for a guest basket; a signed-in cart
+       * is priced by the server.
+       */
+      repriceFromCatalogue: (products) => {
+        const byId = new Map(products.map((p) => [p.id, p]));
+        let changed = false;
+        const lines = get().lines.map((l) => {
+          const p = byId.get(l.productId);
+          if (!p) return l;
+          const unitPrice = resolveUnitPrice(p, l.quantity);
+          if (p.price === l.basePrice && unitPrice === l.unitPrice && sameTiers(p.pricingTiers, l.pricingTiers)) return l;
+          changed = true;
+          return { ...l, basePrice: p.price, pricingTiers: p.pricingTiers, unitPrice };
+        });
+        if (changed) set({ lines });
       },
 
       mergeForLogin: () => get().lines.map((l) => ({ productId: l.productId, quantity: l.quantity })),
