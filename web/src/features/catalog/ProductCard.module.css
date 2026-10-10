@@ -159,3 +159,29 @@
   flex: none;
   margin-left: auto;
 }
+
+/* Ordering paused: the price stands where the button would, right-aligned on the same
+   44px axis, so the foot keeps the height it has with an Add button and nothing is left
+   as a hole. With a fine pointer (wider tiles, 36px button) it goes back to the foot's
+   left edge, where the price sits when the button is there. */
+.addPrice {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  text-align: right;
+}
+
+.addPrice .prices {
+  align-items: flex-end;
+}
+
+@media (min-width: 62em) {
+  .addPrice {
+    min-height: 36px;
+    margin-left: 0;
+    text-align: left;
+  }
+  .addPrice .prices {
+    align-items: flex-start;
+  }
+}

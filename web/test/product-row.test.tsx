@@ -9,7 +9,10 @@ vi.mock('@/app/settings.ts', () => ({ useSettings: () => state.settings }));
 const putCart = vi.hoisted(() => vi.fn(() => new Promise<never>(() => {})));
 vi.mock('@/api/cart.ts', () => ({ putCart, fetchCart: vi.fn(() => new Promise<never>(() => {})) }));
 
-import { ProductRow } from '@/features/catalog/ProductRow.tsx';
+import { ProductRow, ROW_VIEWS } from '@/features/catalog/ProductRow.tsx';
+import { CardRowFamily } from '@/builder/families.ts';
+import { resetWarehouseStore, useWarehouseStore } from '@/features/warehouses/store.ts';
+import type { Warehouse } from '@/types/warehouses.ts';
 import { useCartStore, type LocalLine } from '@/stores/cart.ts';
 import { resetCartSync, SYNC_DEBOUNCE_MS } from '@/features/cart/useServerCart.ts';
 import { TemplateProvider } from '@/templates/runtime.tsx';
@@ -184,5 +187,79 @@ describe('ProductRow showSku', () => {
     expect(meta(container)).not.toBeNull();
     expect(screen.queryByText('BPC-157-5MG')).toBeNull();
     if (text) expect(screen.getByText(text)).toBeInTheDocument();
+  });
+});
+
+// Ordering paused at the selected warehouse: the price takes the picker's slot.
+describe('ProductRow while ordering is paused', () => {
+  const MAIN: Warehouse = { id: 1, name: 'Main', country: 'GB', isDefault: true };
+  const UK: Warehouse = { id: 2, name: 'UK', country: 'GB', isDefault: false, orderingEnabled: false, orderingMessage: 'Back Monday' };
+  const pause = (selected: number | null = 2) =>
+    useWarehouseStore.setState({ warehouseId: selected, ctx: { enabled: true, list: [MAIN, UK], failed: false, carried: null } });
+  const prices = (container: HTMLElement) => container.querySelectorAll('[data-sf-part="price"]');
+
+  beforeEach(() => resetWarehouseStore());
+  afterEach(() => resetWarehouseStore());
+
+  it('draws the price once, inside the gutter slot where the picker would be, with no add or step control', () => {
+    pause();
+    const { container } = mount(product());
+    expect(prices(container)).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: /^(Add|One more|One fewer) / })).toBeNull(); // the name button remains
+    expect(prices(container)[0]!.parentElement!.className).toMatch(/gutter/);
+    expect(screen.getByText('£29.00')).toBeInTheDocument();
+  });
+
+  it('is exactly as before with the open warehouse selected: price in its own column, the picker in the gutter', () => {
+    pause(null);
+    const { container } = mount(product());
+    expect(prices(container)).toHaveLength(1);
+    expect(prices(container)[0]!.parentElement!.className).not.toMatch(/gutter/);
+    expect(screen.getByRole('button', { name: 'Add BPC-157 5mg' })).toBeInTheDocument();
+  });
+
+  it('keeps the out-of-stock reading in the slot when the price slot says so', () => {
+    pause();
+    const { container } = mount(product({ inStock: false }), {}, { showOutOfStockPrice: false });
+    expect(prices(container)).toHaveLength(1);
+    expect(prices(container)[0]!.parentElement!.className).toMatch(/gutter/);
+    expect(prices(container)[0]!.textContent).toMatch(/out of stock/i);
+  });
+
+  it('a browse-only shop (ordering off) keeps the price where it was and adds no slot', () => {
+    pause();
+    const { container } = mount(product(), { ordering: false });
+    expect(prices(container)).toHaveLength(1);
+    expect(prices(container)[0]!.parentElement!.className).not.toMatch(/gutter/);
+  });
+
+  function view(name: 'CardRowPrice' | 'CardRowAdd', hasAddPart?: boolean) {
+    state.settings = { currency: 'GBP', features: { layout: 'menu', ordering: true } } as unknown as StorefrontSettings;
+    const View = ROW_VIEWS[name]!;
+    return render(
+      <MantineProvider env="test">
+        <CardRowFamily.Provider value={{ data: { product: product(), eager: false, hasSiblingImages: true, hasAddPart }, views: ROW_VIEWS }}>
+          <View props={{}} />
+        </CardRowFamily.Provider>
+      </MantineProvider>,
+    );
+  }
+
+  it('a design with an Add part but no Price part still shows the price when paused', () => {
+    pause();
+    expect(prices(view('CardRowAdd', true).container)).toHaveLength(1);
+  });
+
+  it('a design with a Price part but no Add part keeps the price in place when paused', () => {
+    pause();
+    expect(prices(view('CardRowPrice', false).container)).toHaveLength(1);
+  });
+
+  it('with both parts, the Price part steps aside when paused and returns when it is not', () => {
+    pause();
+    expect(prices(view('CardRowPrice', true).container)).toHaveLength(0);
+    cleanup();
+    pause(null);
+    expect(prices(view('CardRowPrice', true).container)).toHaveLength(1);
   });
 });

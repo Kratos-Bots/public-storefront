@@ -10,6 +10,7 @@ import { rowAnim } from '@/lib/motion.ts';
 import type { Product } from '@/types/catalog.ts';
 import { useOutOfStockInPriceSlot } from '@/features/catalog/stock-price.ts';
 import { bestTier } from '@/features/catalog/best-tier.ts';
+import { usePriceInAddSlot } from '@/features/catalog/paused-price.ts';
 import { useCoreOptions } from '@/templates/hooks.ts';
 import { useText } from '@/text/runtime.tsx';
 import { useCardDesign } from '@/builder/card-design.tsx';
@@ -97,8 +98,8 @@ function RowMeta({ styleAttrs }: PartViewProps) {
   ) : null;
 }
 
-function RowPrice({ styleAttrs }: PartViewProps) {
-  const { product } = CardRowFamily.useData();
+/** The price itself: in its own column, or (ordering paused) inside the Add slot. */
+function PriceText({ product, styleAttrs }: { product: Product; styleAttrs?: PartViewProps['styleAttrs'] }) {
   const { currency } = useSettings();
   const outInPrice = useOutOfStockInPriceSlot(product);
   return (
@@ -106,6 +107,12 @@ function RowPrice({ styleAttrs }: PartViewProps) {
       {outInPrice ? <StockChip status="out" /> : formatMoney(product.price, currency)}
     </p>
   );
+}
+
+function RowPrice({ styleAttrs }: PartViewProps) {
+  const { product, hasAddPart } = CardRowFamily.useData();
+  // Ordering paused: the Add part carries the price, so it is not drawn twice.
+  return usePriceInAddSlot(hasAddPart) ? null : <PriceText product={product} styleAttrs={styleAttrs} />;
 }
 
 function RowAdd({ styleAttrs }: PartViewProps) {
@@ -167,6 +174,11 @@ function RowAdd({ styleAttrs }: PartViewProps) {
           <PlusIcon size={16} />
         </button>
       )}
+    </div>
+  ) : features.ordering ? (
+    // Paused: the price stands where the picker would, same slot, same edge, same height.
+    <div className={`${classes.gutter} ${classes.gutterPrice}`} {...styleAttrs}>
+      <PriceText product={product} />
     </div>
   ) : null;
 }

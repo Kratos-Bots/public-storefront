@@ -3,7 +3,7 @@ import { validateDoc } from '@/builder/guard.ts';
 import { blockDef } from '@/builder/rules.ts';
 import { renderBlock } from '@/builder/style/apply.tsx';
 import { CardRowFamily, CardTileFamily, type CardData } from '@/builder/families.ts';
-import { fixedSlot, type FamilyValue } from '@/builder/parts.ts';
+import { fixedSlot, flattenTypes, type FamilyValue } from '@/builder/parts.ts';
 import type { BlockRenderContext } from '@/builder/define.ts';
 import { cardKey, isRecord, type CardKind, type ComponentData, type LayoutKind } from '@/builder/types.ts';
 
@@ -53,7 +53,9 @@ export function compileCard(doc: unknown, kind: CardKind, layout: LayoutKind): C
     try {
       const element = build(clean.content, { editing: false, docKey, layout });
       const Family = kind === 'tile' ? CardTileFamily : CardRowFamily;
-      design = { kind, element, render: (data, views) => createElement(Family.Provider, { value: { data, views } }, element) };
+      const addPart = kind === 'tile' ? 'CardTileAdd' : 'CardRowAdd';
+      const hasAddPart = flattenTypes(clean.content).includes(addPart);
+      design = { kind, element, render: (data, views) => createElement(Family.Provider, { value: { data: { ...data, hasAddPart }, views } }, element) };
     } catch (error) {
       // A block render that throws on odd props: the built-in card, never a crashed list.
       console.error(`[builder] card design "${kind}" (${layout}) failed to compile — showing the built-in card`, error);

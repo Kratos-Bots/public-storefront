@@ -46,7 +46,12 @@ export interface GridSlots { top: SlotRender; rail: SlotRender; main: SlotRender
 export interface ListSlots { content: SlotRender }
 
 /** Exactly the props ProductCard / ProductRow take today (spec §5.3). Tiles always carry an index (default 0). */
-export interface CardData { product: Product; index?: number; eager: boolean; hasSiblingImages: boolean; onSelect?: (product: Product) => void }
+export interface CardData {
+  product: Product; index?: number; eager: boolean; hasSiblingImages: boolean; onSelect?: (product: Product) => void;
+  /** Set by a compiled design: does it hold an Add part? While ordering is paused the Add part carries the price, so
+   *  the Price part steps aside only when there is one. Absent (the built-in card) means yes. */
+  hasAddPart?: boolean;
+}
 export const CardTileFamily = createFamily<CardData>('card-tile');
 export const CardRowFamily = createFamily<CardData>('card-row');
 

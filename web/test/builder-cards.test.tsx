@@ -75,6 +75,16 @@ describe('compileCard (spec §6.3)', () => {
     const { container } = render(<>{design.render(data(1, 'Oats'), VIEWS)}{design.render(data(2, 'Tin'), VIEWS)}</>);
     expect([...container.querySelectorAll('h3')].map((h) => h.textContent)).toEqual(['Oats', 'Tin']);
   });
+  it('tells each card whether its design holds an Add part (so a paused price knows where to go)', () => {
+    const flag = { ...VIEWS, TestName: () => <h3>{String(CardTileFamily.useData().hasAddPart)}</h3> };
+    const withAdd: PuckDoc = { root: { props: { title: '', description: '', chrome: 'shell' } }, content: [
+      { type: 'TestFrame', props: { id: 'f', content: [{ type: 'TestName', props: { id: 'n' } }, { type: 'CardTileAdd', props: { id: 'a' } }] } },
+    ] };
+    const texts = (doc: PuckDoc) => render(<>{compileCard(doc, 'tile', 'storefront')!.render(data(1, 'Oats'), flag)}</>).container.textContent;
+    expect(texts(withAdd)).toBe('true');
+    cleanup();
+    expect(texts(tileDoc())).toBe('false');
+  });
   it('a new document object compiles again; a guard failure is null', () => {
     compileCard(tileDoc(), 'tile', 'storefront');
     compileCard(tileDoc(), 'tile', 'storefront');

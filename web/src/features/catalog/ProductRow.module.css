@@ -154,6 +154,12 @@
   width: 116px;
 }
 
+/* Ordering paused: the price rides in the gutter where the picker would, centred on the same
+   44px (34px with a fine pointer) axis, so the row keeps the height it has with the picker. */
+.gutterPrice {
+  min-height: 44px;
+}
+
 .quickAdd,
 .step {
   display: inline-flex;
@@ -225,6 +231,9 @@
   /* Fine pointer — the gutter can tighten below the touch minimum. */
   .gutter {
     width: 94px;
+  }
+  .gutterPrice {
+    min-height: 34px;
   }
   .quickAdd,
   .step {
