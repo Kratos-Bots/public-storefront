@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import type { Page, Route } from '@playwright/test';
 import type { Catalog, Product } from '../web/src/types/catalog.ts';
-import type { CheckoutPayment, CheckoutResult, PaymentMethod, Quote } from '../web/src/types/checkout.ts';
+import type { CheckoutPayment, CheckoutResult, PaymentMethod, Quote, ShippingOption } from '../web/src/types/checkout.ts';
 import type { ServerCart, ServerCartLine, CartLineInput } from '../web/src/types/cart.ts';
 import type { OrderDetail, OrderSummary, PageMeta, UnpaidOrder } from '../web/src/types/orders.ts';
 import type { Profile, RedeemOptions } from '../web/src/types/profile.ts';
@@ -281,7 +281,7 @@ export interface InstallMocksOptions {
    * feature is off and every answer is exactly what it always was.
    */
   warehouses?: {
-    list: Array<{ id: number; name: string; country: string | null; isDefault: boolean; orderingEnabled?: boolean; orderingMessage?: string | null }>;
+    list: Array<{ id: number; name: string; country: string | null; isDefault: boolean; orderingEnabled?: boolean; orderingMessage?: string | null; shipping?: { countries: string[]; collectionCountries: string[] } }>;
     carries: Record<number, number[]>;
     /** `features.warehousePrompt`: ask which warehouse before showing the catalogue. Default off. */
     prompt?: boolean;
@@ -290,6 +290,11 @@ export interface InstallMocksOptions {
      * fixture's. Catalogue and product reads (`?warehouse=`) and checkout quotes (`warehouseId` in the body) answer from it;
      * a warehouse or product not listed keeps the fixture's figures.
      */
+    /**
+     * Per-warehouse shipping methods: warehouse id -> the `shippingOptions` its checkout quote offers instead of the fixture's
+     * (and a zero shipping amount). A warehouse not listed keeps the fixture's. The countries come from `list[].shipping`.
+     */
+    quoteShipping?: Record<number, ShippingOption[]>;
     prices?: Record<number, Record<number, { price: number; pricingTiers?: Array<{ id: number; minQuantity: number; price: number }> }>>;
   };
 }
@@ -934,7 +939,8 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
       if (path.includes('guest')) state.guestQuotes.push(asked);
       else state.quotes.push(asked);
       const lined = options.warehouses?.prices ? requoteLines(state.quote, asked, pricedAt(Number(asked.warehouseId), state.catalog)) : state.quote;
-      await envelope(route, quoteFor(lined, asked));
+      const own = options.warehouses?.quoteShipping?.[Number(asked.warehouseId)];
+      await envelope(route, quoteFor(own ? { ...lined, shippingOptions: own, shippingAmount: 0 } : lined, asked));
       return;
     }
 

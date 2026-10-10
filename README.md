@@ -66,8 +66,8 @@ Browser and desktop only; the Telegram Mini App keeps using the bot's own referr
 
 ## Warehouse selection
 
-Lets a shopper choose which warehouse their order ships from. There are no
-per-warehouse shipping rules yet; a warehouse decides which products are on offer, the stock shown and the prices.
+Lets a shopper choose which warehouse their order ships from. A warehouse decides which products are on offer,
+the stock shown, the prices and, when it has its own shipping, the countries and delivery methods.
 
 - **Switching it on.** The admin sets `features.warehouseSelect` and, per warehouse, marks it
   customer-selectable (the default warehouse is always offered). With the flag off, or fewer than
@@ -91,6 +91,14 @@ per-warehouse shipping rules yet; a warehouse decides which products are on offe
   non-default warehouse is chosen, which keeps every URL, query key and cache key unchanged for shops
   without the feature. The list (`GET storefront/warehouses`) is only asked for when the flag is on and,
   in a private shop, the shopper is signed in.
+- **Shipping follows the warehouse.** `GET storefront/warehouses` gives each warehouse `shipping: { countries,
+  collectionCountries }` (absent on an older backend). The checkout lists the selected warehouse's countries in
+  place of `settings.shipping` (`shipSource`), so a switch clears a country the new warehouse does not serve (or
+  selects its only one) and leaves collection mode when it has no collection countries. The quote already
+  carries `warehouseId`, so the methods, prices and free-shipping flags are that warehouse's; the warehouse is part
+  of the options key, and a chosen method the fresh list no longer offers is dropped at the Delivery step. Nothing
+  changes while the feature is off. A free-shipping promotion belongs to the shop's own warehouse; the backend
+  simply does not return one elsewhere.
 - **Prices follow the warehouse.** The backend serves each warehouse's own `price` and `pricingTiers`
   on the catalogue and product reads, and prices a signed-in cart and the quote at the warehouse sent.
   A guest basket stores its prices on the device, so `WarehouseSync` re-prices every line from the

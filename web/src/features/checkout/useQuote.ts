@@ -39,12 +39,15 @@ export interface UseQuoteResult {
 }
 
 /**
- * What the list of shipping options depends on: the delivery country, the method (home
+ * What the list of shipping options depends on: the warehouse, the delivery country, the method (home
  * or collection point) and, for a collection, the chosen point's carrier. A coupon, store
  * credit, the chosen option or the cart lines re-quote but never change the list.
  */
-export function optionsKey(input: Pick<HashInput, 'country' | 'deliveryMethod' | 'servicePointCarrier'>): string {
-  return JSON.stringify([input.country, input.deliveryMethod ?? null, input.servicePointCarrier ?? null]);
+export function optionsKey(input: Pick<HashInput, 'country' | 'deliveryMethod' | 'servicePointCarrier' | 'warehouseId'>): string {
+  const key: unknown[] = [input.country, input.deliveryMethod ?? null, input.servicePointCarrier ?? null];
+  // Each warehouse sells on its own shipping list. Appended only when one is chosen, so a shop without the feature keeps today's key.
+  if (input.warehouseId !== undefined) key.push(input.warehouseId);
+  return JSON.stringify(key);
 }
 
 interface HashInput {

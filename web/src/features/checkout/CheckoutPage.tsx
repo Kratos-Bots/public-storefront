@@ -30,6 +30,7 @@ import {
   shippingSchema,
 } from '@/features/checkout/schemas.ts';
 import { applyShipCountries } from '@/features/checkout/ship-countries.ts';
+import { useShipSource } from '@/features/checkout/ship-source.ts';
 import { collectionAddress, modeForCountry, pickerCountries, quoteDeliveryFields, reconcileDelivery, shipListsOf } from '@/features/checkout/collection-mode.ts';
 import { useQuote } from '@/features/checkout/useQuote.ts';
 import { warehouseBody } from '@/api/warehouse-param.ts';
@@ -142,7 +143,7 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
   const queryClient = useQueryClient();
   const { name: warehouseName } = useWarehouseOrdering();
   const { contactModes, currency, features } = settings;
-  const rawShipping = settings.shipping;
+  const rawShipping = useShipSource(settings);
   const shipLists = useMemo(() => shipListsOf({ shipping: rawShipping }), [rawShipping]);
   const shipCountries = useMemo(() => pickerCountries(shipLists), [shipLists]);
   const phoneMode = contactModes.phoneMode;
