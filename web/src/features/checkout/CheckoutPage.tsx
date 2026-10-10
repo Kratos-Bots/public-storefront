@@ -30,7 +30,8 @@ import {
   shippingSchema,
 } from '@/features/checkout/schemas.ts';
 import { applyShipCountries } from '@/features/checkout/ship-countries.ts';
-import { collectionAddress, modeForCountry, pickerCountries, quoteDeliveryFields, reconcileDelivery, shipListsOf } from '@/features/checkout/collection-mode.ts';
+import { useShipSource } from '@/features/checkout/ship-source.ts';
+import { collectionAddress, modeForCountry, pickerCountries, quoteDeliveryFields, reconcileDelivery, reconcileWarehouse, shipListsOf } from '@/features/checkout/collection-mode.ts';
 import { useQuote } from '@/features/checkout/useQuote.ts';
 import { warehouseBody } from '@/api/warehouse-param.ts';
 import { useWarehouseId, useWarehouseOrdering } from '@/features/warehouses/use-warehouse.ts';
@@ -142,7 +143,7 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
   const queryClient = useQueryClient();
   const { name: warehouseName } = useWarehouseOrdering();
   const { contactModes, currency, features } = settings;
-  const rawShipping = settings.shipping;
+  const { lists: rawShipping, none: shipsNowhere } = useShipSource(settings);
   const shipLists = useMemo(() => shipListsOf({ shipping: rawShipping }), [rawShipping]);
   const shipCountries = useMemo(() => pickerCountries(shipLists), [shipLists]);
   const phoneMode = contactModes.phoneMode;
@@ -184,8 +185,8 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
   const notesShown = containsVisibleType(allItems, 'CheckoutNotes');
 
   const [form, setForm] = useState<CheckoutForm>(() => {
-    const seeded = applyShipCountries(seedForm(loadPersistedForm() ?? DEFAULT_FORM, contactModes.defaultPhoneCountry), shipCountries);
-    return reconcileDelivery(seeded, seeded, shipLists, phoneMode);
+    const seeded = applyShipCountries(seedForm(loadPersistedForm() ?? DEFAULT_FORM, contactModes.defaultPhoneCountry), shipCountries, shipsNowhere);
+    return reconcileWarehouse(reconcileDelivery(seeded, seeded, shipLists, phoneMode), warehouse);
   });
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -217,10 +218,10 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
   // Settings refetch on window focus, so the shop's countries can change under an open checkout.
   useEffect(() => {
     setForm((f) => {
-      const next = applyShipCountries(f, shipCountries);
-      return reconcileDelivery(f, next, shipLists, phoneMode);
+      const next = applyShipCountries(f, shipCountries, shipsNowhere);
+      return reconcileWarehouse(reconcileDelivery(f, next, shipLists, phoneMode), warehouse);
     });
-  }, [shipCountries, shipLists, phoneMode]);
+  }, [shipCountries, shipsNowhere, shipLists, phoneMode, warehouse]);
 
   useEffect(() => {
     persistForm(form);
@@ -447,6 +448,8 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
       return false;
     }
     if (kind === 'address') {
+      // A warehouse that ships nowhere has no Delivery step worth reaching; the step already says why.
+      if (shipsNowhere) return false;
       if (form.deliveryMethod === 'collection') {
         if (form.country.length !== 2) {
           setErrors({ country: textKey('checkout.errors.countryMissing') });
@@ -687,6 +690,7 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
       errors,
       contactModes: effectiveContactModes,
       shipCountries,
+      shipsNowhere,
       countryMode: modeForCountry(form.country, shipLists, phoneMode),
       guest,
       currency,
@@ -706,7 +710,7 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
       stack,
       goTo,
     }),
-    [form, patch, errors, effectiveContactModes, shipCountries, shipLists, phoneMode, guest, currency, shownQuote, optionsPending, method, combo, isFetching, verifying, quoteError, errorTarget, quoteMessage, order, step, kind, stack, goTo],
+    [form, patch, errors, effectiveContactModes, shipCountries, shipsNowhere, shipLists, phoneMode, guest, currency, shownQuote, optionsPending, method, combo, isFetching, verifying, quoteError, errorTarget, quoteMessage, order, step, kind, stack, goTo],
   );
   const value = useMemo(() => ({ data, views: CHECKOUT_VIEWS }), [data]);
 

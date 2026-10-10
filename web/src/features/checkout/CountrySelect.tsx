@@ -43,9 +43,11 @@ export interface CountrySelectProps {
   label?: string;
   /** The shop's deliverable countries; empty or missing = every country. */
   allowed?: readonly string[];
+  /** The warehouse delivers nowhere: offer no country at all (an empty `allowed` would mean every country). */
+  none?: boolean;
 }
 
-export function CountrySelect({ value, onChange, error, label, allowed }: CountrySelectProps) {
+export function CountrySelect({ value, onChange, error, label, allowed, none }: CountrySelectProps) {
   const { t } = useText();
   return (
     <SelectField
@@ -58,7 +60,7 @@ export function CountrySelect({ value, onChange, error, label, allowed }: Countr
       <option value="" disabled>
         {t('checkout.address.chooseCountry')}
       </option>
-      {allowedCountryOptions(allowed).map((c) => (
+      {(none ? [] : allowedCountryOptions(allowed)).map((c) => (
         <option key={c.iso} value={c.iso}>
           {c.name}
         </option>

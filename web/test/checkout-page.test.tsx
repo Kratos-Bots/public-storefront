@@ -88,6 +88,7 @@ import { useCartStore } from '@/stores/cart.ts';
 import { usePrimaryActionStore } from '@/stores/primary-action.ts';
 import { useBackActionStore } from '@/stores/back-action.ts';
 import { useSessionStore } from '@/stores/session.ts';
+import { currentWarehouseId, resetWarehouseStore, useWarehouseStore } from '@/features/warehouses/store.ts';
 import { CheckoutPage } from '@/features/checkout/CheckoutPage.tsx';
 import { DEFAULT_FORM } from '@/features/checkout/form-state.ts';
 
@@ -973,5 +974,224 @@ describe('CheckoutPage — referral code', () => {
       await placeFromShipping();
       expect(placeOrderMock.mock.calls[0]![0].referralCode).toBeUndefined();
     });
+  });
+});
+
+// Shipping follows the selected warehouse: the country list, the delivery mode and the methods on offer.
+describe('CheckoutPage — warehouse shipping', () => {
+  const NORTH = { id: 2, name: 'North warehouse', country: null, isDefault: false, shipping: { countries: ['IE', 'FR'], collectionCountries: [] } };
+  const SOLO = { id: 3, name: 'Solo warehouse', country: null, isDefault: false, shipping: { countries: ['IE'], collectionCountries: [] } };
+  const MAIN = { id: 1, name: 'Main', country: null, isDefault: true, shipping: { countries: ['GB', 'IE'], collectionCountries: ['GB'] } };
+  const POINT = {
+    id: '12345', carrier: 'inpost', name: 'Tesco Express', street: 'Kirkgate', houseNumber: '14', postalCode: 'LS1 6BY',
+    city: 'Leeds', country: 'GB', latitude: null, longitude: null, distance: 300,
+  };
+
+  const choose = (warehouseId: number | null, enabled = true, list = [MAIN, NORTH, SOLO]) =>
+    act(() => useWarehouseStore.setState({ warehouseId, ctx: { enabled, list, failed: false, carried: null } }));
+  const country = () => screen.getByLabelText('Country') as HTMLSelectElement;
+  const offered = () => Array.from(country().options).map((o) => o.value).filter(Boolean).sort();
+  const toAddress = async () => {
+    mount();
+    await settle();
+    pressContinue(); // a restored, complete contact step
+    await settle(0);
+  };
+  const complete = { firstName: 'Ada', surname: 'Lovelace', email: 'ada@example.com' };
+  const WAREHOUSE_METHODS: Record<number, Array<{ id: number; name: string; courier: string; price: number; freeShipping: boolean }>> = {
+    0: [{ id: 3, name: 'Royal Mail Tracked 24', courier: 'Royal Mail', price: 4.99, freeShipping: false }],
+    2: [{ id: 8, name: 'North Standard', courier: 'North Post', price: 5, freeShipping: false }],
+    3: [{ id: 8, name: 'North Standard', courier: 'North Post', price: 5, freeShipping: false }],
+  };
+
+  beforeEach(() => {
+    resetWarehouseStore();
+    state.settings = { ...settings(false), shipping: { countries: ['GB', 'IE'], collectionCountries: ['GB'] } };
+    useSessionStore.setState({ token: 'sess-1', customer: { id: 5, nickname: 'ada' } });
+    // Like the backend: a method outside the active warehouse's own list is refused (422), never silently accepted.
+    quoteMock.mockImplementation(async (input) => {
+      const list = WAREHOUSE_METHODS[currentWarehouseId() ?? 0] ?? WAREHOUSE_METHODS[0]!;
+      if (input.shippingOptionId !== undefined && !list.some((o) => o.id === input.shippingOptionId)) {
+        throw new ApiError(422, 'The selected shipping option is not available for this order');
+      }
+      return makeQuote({ shippingOptions: list });
+    });
+  });
+  afterEach(() => resetWarehouseStore());
+
+  it('lists the selected warehouse\'s countries, not the shop\'s', async () => {
+    localStorage.setItem('sf-checkout-v1', JSON.stringify({ ...DEFAULT_FORM, ...complete, country: '' }));
+    choose(2);
+    await toAddress();
+    expect(offered()).toEqual(['FR', 'IE']);
+  });
+
+  it('a switch to a warehouse that does not serve the chosen country clears it', async () => {
+    localStorage.setItem('sf-checkout-v1', JSON.stringify({ ...DEFAULT_FORM, ...complete, country: 'GB' }));
+    choose(null);
+    await toAddress();
+    expect(country().value).toBe('GB');
+    choose(2);
+    await settle();
+    expect(country().value).toBe('');
+    expect(offered()).toEqual(['FR', 'IE']);
+  });
+
+  it('a warehouse that serves one country has it chosen', async () => {
+    localStorage.setItem('sf-checkout-v1', JSON.stringify({ ...DEFAULT_FORM, ...complete, country: 'GB' }));
+    choose(null);
+    await toAddress();
+    choose(3);
+    await settle();
+    expect(country().value).toBe('IE');
+  });
+
+  it('a switch back to the shop\'s own warehouse offers the shop\'s countries again', async () => {
+    localStorage.setItem('sf-checkout-v1', JSON.stringify({ ...DEFAULT_FORM, ...complete, country: '' }));
+    choose(2);
+    await toAddress();
+    choose(null);
+    await settle();
+    expect(offered()).toEqual(['GB', 'IE']);
+  });
+
+  it('leaves collection mode when the new warehouse has no collection countries', async () => {
+    localStorage.setItem('sf-checkout-v1', JSON.stringify({ ...DEFAULT_FORM, ...complete, phone: '07801 123456', country: 'IE', deliveryMethod: 'collection', servicePoint: { ...POINT, country: 'IE' } }));
+    state.settings = { ...settings(false), shipping: { countries: ['GB', 'IE'], collectionCountries: ['GB', 'IE'] } };
+    choose(null);
+    mount();
+    await settle();
+    expect(quoteMock.mock.calls.at(-1)![0]).toMatchObject({ deliveryMethod: 'collection' });
+    choose(2);
+    await settle();
+    expect(Object.keys(quoteMock.mock.calls.at(-1)![0])).not.toContain('deliveryMethod');
+    expect(JSON.parse(localStorage.getItem('sf-checkout-v1')!)).toMatchObject({ deliveryMethod: 'home' });
+  });
+
+  describe('a warehouse that ships nowhere', () => {
+    const NOWHERE = { id: 9, name: 'Nowhere warehouse', country: null, isDefault: false, shipping: { countries: [], collectionCountries: [] } };
+    const MESSAGE = /We can.t ship to that country yet/;
+    beforeEach(() => {
+      localStorage.setItem('sf-checkout-v1', JSON.stringify({ ...DEFAULT_FORM, ...complete, country: 'GB' }));
+    });
+
+    it('lists no country, says so before the form is filled in, and keeps Continue on the address step', async () => {
+      choose(9, true, [MAIN, NORTH, SOLO, NOWHERE]);
+      await toAddress();
+      expect(offered()).toEqual([]);
+      expect(country().value).toBe('');
+      expect(screen.getByText(MESSAGE)).toBeInTheDocument();
+      pressContinue();
+      await settle();
+      expect(screen.getByLabelText('Country')).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: /Delivery and discounts/ })).toBeNull();
+    });
+
+    it('a shop whose own list is empty (unknown) still lists every country and shows no message', async () => {
+      state.settings = { ...settings(false), shipping: { countries: [], collectionCountries: [] } };
+      choose(null);
+      await toAddress();
+      expect(offered().length).toBeGreaterThan(100);
+      expect(screen.queryByText(MESSAGE)).toBeNull();
+    });
+
+    it('is inert while the warehouse feature is off', async () => {
+      choose(9, false, [MAIN, NORTH, SOLO, NOWHERE]);
+      await toAddress();
+      expect(offered()).toEqual(['GB', 'IE']);
+      expect(screen.queryByText(MESSAGE)).toBeNull();
+    });
+  });
+
+  it('ignores the warehouse\'s lists while the warehouse feature is off', async () => {
+    localStorage.setItem('sf-checkout-v1', JSON.stringify({ ...DEFAULT_FORM, ...complete, country: '' }));
+    choose(2, false);
+    await toAddress();
+    expect(offered()).toEqual(['GB', 'IE']);
+  });
+
+  it('a method the new warehouse does not offer is dropped, and the shopper must choose again', async () => {
+    localStorage.setItem('sf-checkout-v1', persistedForm({ country: 'IE', zip: 'D02 X285', shippingOptionId: 3 }));
+    choose(null);
+    mount();
+    await settle();
+    // The shop's quote offers method 3; the north warehouse's offers a different method, 8 (WAREHOUSE_METHODS).
+    choose(2);
+    await settle();
+    pressContinue(); // contact -> address
+    pressContinue(); // address -> shipping
+    await settle();
+    expect(screen.getByRole('radio', { name: /North Standard/ })).not.toBeChecked();
+    expect(screen.queryByRole('radio', { name: /Royal Mail Tracked 24/ })).toBeNull();
+    pressContinue();
+    expect(screen.getByText('Choose a shipping method')).toBeInTheDocument();
+    expect(JSON.parse(localStorage.getItem('sf-checkout-v1')!).shippingOptionId).toBeNull();
+  });
+});
+
+// A warehouse only accepts a method of its own list, as the backend does (422); the stale id of another warehouse is the trap.
+describe('CheckoutPage — a method chosen at another warehouse', () => {
+  const OTHER = { id: 4, name: 'North warehouse', country: null, isDefault: false, shipping: { countries: ['GB', 'IE'], collectionCountries: [] } };
+  const SHOP = { id: 1, name: 'Main', country: null, isDefault: true, shipping: { countries: ['GB', 'IE'], collectionCountries: [] } };
+  const LISTS: Record<number, Array<{ id: number; name: string; courier: string; price: number; freeShipping: boolean }>> = {
+    0: [{ id: 3, name: 'Royal Mail Tracked 24', courier: 'Royal Mail', price: 4.99, freeShipping: false }],
+    4: [{ id: 8, name: 'North Standard', courier: 'North Post', price: 5, freeShipping: false }],
+  };
+  const choose = (warehouseId: number | null) =>
+    act(() => useWarehouseStore.setState({ warehouseId, ctx: { enabled: true, list: [SHOP, OTHER], failed: false, carried: null } }));
+
+  beforeEach(() => {
+    resetWarehouseStore();
+    state.settings = { ...settings(false), shipping: { countries: ['GB', 'IE'], collectionCountries: [] } };
+    useSessionStore.setState({ token: 'sess-1', customer: { id: 5, nickname: 'ada' } });
+    quoteMock.mockImplementation(async (input) => {
+      const list = LISTS[currentWarehouseId() ?? 0]!;
+      if (input.shippingOptionId !== undefined && !list.some((o) => o.id === input.shippingOptionId)) {
+        throw new ApiError(422, 'The selected shipping option is not available for this order');
+      }
+      return makeQuote({ shippingOptions: list });
+    });
+  });
+  afterEach(() => resetWarehouseStore());
+
+  it('a switch to a warehouse that serves the same country sends no stale method and shows its list', async () => {
+    localStorage.setItem('sf-checkout-v1', persistedForm({ country: 'IE', zip: 'D02 X285', shippingOptionId: 3 }));
+    choose(null);
+    mount();
+    await settle();
+    expect(quoteMock.mock.calls.at(-1)![0]).toMatchObject({ shippingOptionId: 3 });
+    choose(4);
+    await settle();
+    expect(quoteMock.mock.calls.at(-1)![0].shippingOptionId).toBeUndefined();
+    pressContinue(); // contact -> address
+    pressContinue(); // address -> shipping
+    await settle();
+    expect(screen.getByRole('radio', { name: /North Standard/ })).not.toBeChecked();
+    expect(screen.queryByRole('radio', { name: /Royal Mail Tracked 24/ })).toBeNull();
+    fireEvent.click(screen.getByRole('radio', { name: /North Standard/ }));
+    await settle();
+    pressContinue();
+    await settle();
+    expect(screen.getByRole('heading', { name: /How you.ll pay/ })).toBeInTheDocument();
+  });
+
+  it('a method chosen for another warehouse before this page opened is not sent', async () => {
+    localStorage.setItem('sf-checkout-v1', persistedForm({ country: 'IE', zip: 'D02 X285', shippingOptionId: 3 }));
+    choose(4); // switched on the shop front while checkout was closed
+    mount();
+    await settle();
+    expect(quoteMock.mock.calls.every(([input]) => input.shippingOptionId === undefined)).toBe(true);
+    pressContinue();
+    pressContinue();
+    await settle();
+    expect(screen.getByRole('radio', { name: /North Standard/ })).toBeInTheDocument();
+  });
+
+  it('keeps the method across a reload at the same warehouse', async () => {
+    localStorage.setItem('sf-checkout-v1', persistedForm({ country: 'IE', zip: 'D02 X285', shippingOptionId: 8, shippingWarehouse: 4 }));
+    choose(4);
+    mount();
+    await settle();
+    expect(quoteMock.mock.calls.at(-1)![0]).toMatchObject({ shippingOptionId: 8 });
   });
 });

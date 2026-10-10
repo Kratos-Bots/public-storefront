@@ -52,6 +52,8 @@ export interface CheckoutData {
   contactModes: ContactModes;
   /** Where the shop delivers (clean ISO codes). Empty = unknown: the pickers list every country. */
   shipCountries: readonly string[];
+  /** The warehouse in force delivers nowhere: the pickers list no country (not every one) and the address step says so. Absent = false. */
+  shipsNowhere?: boolean;
   /** What the chosen country offers: home delivery, a collection point, or the shopper's choice. */
   countryMode: import('@/features/checkout/collection-mode.ts').CountryMode;
   guest: boolean;

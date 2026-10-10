@@ -14,6 +14,7 @@ vi.mock('@/api/checkout.ts', () => ({
 import { guestQuote, quote } from '@/api/checkout.ts';
 import { ApiError } from '@/lib/errors.ts';
 import { useCartStore, type LocalLine } from '@/stores/cart.ts';
+import { resetWarehouseStore, useWarehouseStore } from '@/features/warehouses/store.ts';
 import { DEFAULT_FORM, type CheckoutForm } from '@/features/checkout/form-state.ts';
 import { optionsKey, useQuote } from '@/features/checkout/useQuote.ts';
 
@@ -223,6 +224,18 @@ describe('optionsKey', () => {
     expect(inpost).not.toBe(home);
     expect(optionsKey({ country: 'GB', deliveryMethod: 'collection', servicePointCarrier: 'evri' })).not.toBe(inpost);
     expect(optionsKey({ country: 'GB', deliveryMethod: 'collection' })).not.toBe(inpost);
+  });
+
+  it('differs by warehouse, and from no warehouse at all', () => {
+    expect(optionsKey({ country: 'GB', warehouseId: 3 })).not.toBe(optionsKey({ country: 'GB', warehouseId: 2 }));
+    expect(optionsKey({ country: 'GB', warehouseId: 3 })).not.toBe(optionsKey({ country: 'GB' }));
+  });
+
+  it('is exactly the string it was before warehouses for an input without one', () => {
+    // Hard-coded on purpose: a cached quote and the "is this the current list" check key on it.
+    expect(optionsKey({ country: 'GB' })).toBe('["GB",null,null]');
+    expect(optionsKey({ country: 'GB', deliveryMethod: 'collection', servicePointCarrier: 'inpost' })).toBe('["GB","collection","inpost"]');
+    expect(optionsKey({ country: 'GB', warehouseId: undefined })).toBe('["GB",null,null]');
   });
 });
 
@@ -503,5 +516,22 @@ describe('useQuote (guest)', () => {
     expect(guestQuoteMock).toHaveBeenCalledTimes(2);
     expect(guestQuoteMock).toHaveBeenLastCalledWith(expect.objectContaining({ turnstileToken: 'tok-2' }));
     expect(result.current.quote?.grandTotal).toBe(55);
+  });
+});
+
+describe('useQuote with the warehouse feature off', () => {
+  afterEach(() => resetWarehouseStore());
+
+  it('puts nothing about a warehouse in the query key, even with a stale stored choice', async () => {
+    resetWarehouseStore();
+    useWarehouseStore.setState({ warehouseId: 2, ctx: { enabled: false, list: null, failed: false, carried: null } });
+    const { result } = renderHook(() => useQuote(form({ country: 'GB' }), { guest: false }), { wrapper });
+    await settle();
+    const keys = client.getQueryCache().getAll().map((q) => JSON.stringify(q.queryKey));
+    expect(keys).toHaveLength(1);
+    expect(keys[0]).not.toMatch(/warehouse/i);
+    expect(keys[0]).toBe(JSON.stringify(['quote', false, JSON.stringify({ country: 'GB', couponCode: '', shippingOptionId: null, useStoreCredit: false })]));
+    expect(quoteMock).toHaveBeenCalledTimes(1);
+    expect(result.current.optionsCurrent).toBe(true);
   });
 });

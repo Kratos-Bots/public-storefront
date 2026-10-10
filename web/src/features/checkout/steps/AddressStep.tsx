@@ -22,6 +22,8 @@ export interface AddressStepProps {
   rootAttrs?: StyleAttrs;
   /** Where the shop delivers; empty = every country. */
   countries?: readonly string[];
+  /** The warehouse delivers nowhere: no country is offered and the step says so. */
+  shipsNowhere?: boolean;
   /** What the country offers; omitted = home. */
   mode?: import('@/features/checkout/collection-mode.ts').CountryMode;
 }
@@ -34,7 +36,7 @@ export interface AddressStepProps {
  * address fields give way to a postcode search and a list (PointPicker). The home
  * fields are kept in the form, so switching back restores them.
  */
-export function AddressStep({ form, patch, errors, notice, before, after, rootAttrs, countries, mode }: AddressStepProps) {
+export function AddressStep({ form, patch, errors, notice, before, after, rootAttrs, countries, shipsNowhere, mode }: AddressStepProps) {
   const { t } = useText();
   const deliverToId = useId();
   const methodName = useId();
@@ -48,6 +50,7 @@ export function AddressStep({ form, patch, errors, notice, before, after, rootAt
 
       <CountrySelect
         allowed={countries}
+        none={shipsNowhere}
         value={form.country}
         error={errors.country}
         onChange={(iso) =>
@@ -59,6 +62,12 @@ export function AddressStep({ form, patch, errors, notice, before, after, rootAt
           })
         }
       />
+
+      {shipsNowhere ? (
+        <p className={classes.note} data-tone="warn">
+          {t('checkout.shipping.unserviceable', { country: t('checkout.shipping.thatCountry') })}
+        </p>
+      ) : null}
 
       {mode === 'choice' ? (
         <div className={fields.field}>

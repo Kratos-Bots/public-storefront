@@ -10,5 +10,10 @@ export interface Warehouse {
   orderingEnabled?: boolean;
   /** The owner's note while ordering is off; null while it is on. */
   orderingMessage?: string | null;
+  /**
+   * Where this warehouse ships (ISO alpha-2, upper-case). A warehouse on the shop's shipping repeats the shop's lists;
+   * one with its own lists only its own countries and no collection countries. Absent on an older backend.
+   */
+  shipping?: { countries: string[]; collectionCountries: string[] };
 }
 export interface WarehouseList { warehouses: Warehouse[] }
