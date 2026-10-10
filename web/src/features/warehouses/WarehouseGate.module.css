@@ -101,6 +101,16 @@
   overflow-wrap: anywhere;
 }
 
+/* The owner's one-line pitch for the warehouse: plain sentence-case body text under the name, wrapping on
+   word boundaries (the owner caps it at 160 characters, so it is never clipped). */
+.description {
+  margin-top: -0.125rem;
+  font-size: calc(0.9375rem * var(--sf-text-scale, 1));
+  line-height: 1.5;
+  color: var(--sf-muted);
+  overflow-wrap: break-word;
+}
+
 .meta {
   display: flex;
   flex-wrap: wrap;

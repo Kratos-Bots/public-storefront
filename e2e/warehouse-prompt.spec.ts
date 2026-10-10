@@ -11,7 +11,7 @@ test.use({ viewport: { width: 390, height: 844 } });
 const WAREHOUSES: NonNullable<InstallMocksOptions['warehouses']> = {
   list: [
     { id: 1, name: 'Main', country: 'GB', isDefault: true },
-    { id: 2, name: 'Test EU', country: 'DE', isDefault: false },
+    { id: 2, name: 'Test EU', country: 'DE', isDefault: false, description: 'Ships from Berlin in 2 to 4 working days. Tracked and insured.' },
   ],
   carries: { 2: [102, 104] },
   prompt: true,
@@ -30,6 +30,22 @@ test('prompt on: the chooser comes first, choosing a warehouse shows its catalog
   await expect(opener(page, 'Borealis Drops 25ml')).toBeVisible();
   await expect(opener(page, 'Alpine Extract 10ml')).toHaveCount(0);
   expect(mocks.state.urls).toContain('GET catalog?warehouse=2');
+});
+
+test('a warehouse description shows on its card, under the name, and only there', async ({ page }) => {
+  await installMocks(page, { layout: 'storefront', warehouses: WAREHOUSES });
+  await page.goto('/');
+  const eu = page.getByRole('button', { name: 'Shop from Test EU' });
+  const main = page.getByRole('button', { name: 'Shop from Main' });
+  await expect(eu).toContainText('Ships from Berlin in 2 to 4 working days. Tracked and insured.');
+  await expect(main).not.toContainText('Ships from');
+  const name = await eu.getByText('Test EU').first().boundingBox();
+  const text = await eu.getByText('Ships from Berlin').boundingBox();
+  expect(text!.y).toBeGreaterThanOrEqual(name!.y + name!.height - 1);
+  // Not in the pinned bar once a warehouse is chosen: its height feeds every sticky offset.
+  await eu.click();
+  await expect(page.locator('[data-warehouse-picker]')).toBeVisible();
+  await expect(page.locator('[data-warehouse-picker]')).not.toContainText('Ships from Berlin');
 });
 
 test('asked once per visit', async ({ page }) => {

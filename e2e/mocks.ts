@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import type { Page, Route } from '@playwright/test';
 import type { Catalog, Product } from '../web/src/types/catalog.ts';
-import type { CheckoutPayment, CheckoutResult, PaymentMethod, Quote, ShippingOption } from '../web/src/types/checkout.ts';
+import type { CheckoutPayment, CheckoutResult, LastCheckoutDetails, PaymentMethod, Quote, ShippingOption } from '../web/src/types/checkout.ts';
 import type { ServerCart, ServerCartLine, CartLineInput } from '../web/src/types/cart.ts';
 import type { OrderDetail, OrderSummary, PageMeta, UnpaidOrder } from '../web/src/types/orders.ts';
 import type { Profile, RedeemOptions } from '../web/src/types/profile.ts';
@@ -245,6 +245,8 @@ export interface InstallMocksOptions {
   tweakOrder?: (order: PublicOrder) => void;
   /** `GET storefront/orders/unpaid` answers these (a signed-in customer only; at most five), minus any order already cancelled. Default: none. */
   unpaidOrders?: UnpaidOrder[];
+  /** `GET storefront/checkout/last-details` (signed in only) answers `{ details }` with this; `null` answers no details. Omitted: the route is not there (404), as on an older backend. */
+  lastDetails?: LastCheckoutDetails | null;
   /** What both cancel routes answer. `'ok'` (default) cancels; a number answers that status with 409 `ORDER_NOT_CANCELLABLE:bank_transfer` (any other status answers a plain error) and marks the order as blocked. */
   cancelAnswers?: number | 'ok';
   /** What `GET storefront/service-points` answers with a postcode (default: three synthetic GB points). A number answers with that HTTP status instead. */
@@ -281,7 +283,7 @@ export interface InstallMocksOptions {
    * feature is off and every answer is exactly what it always was.
    */
   warehouses?: {
-    list: Array<{ id: number; name: string; country: string | null; isDefault: boolean; orderingEnabled?: boolean; orderingMessage?: string | null; shipping?: { countries: string[]; collectionCountries: string[] } }>;
+    list: Array<{ id: number; name: string; country: string | null; isDefault: boolean; description?: string | null; orderingEnabled?: boolean; orderingMessage?: string | null; shipping?: { countries: string[]; collectionCountries: string[] } }>;
     carries: Record<number, number[]>;
     /** `features.warehousePrompt`: ask which warehouse before showing the catalogue. Default off. */
     prompt?: boolean;
@@ -982,6 +984,19 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
         },
       };
       await envelope(route, result);
+      return;
+    }
+
+    if (path === 'storefront/checkout/last-details' && method === 'GET') {
+      if (!route.request().headers()['authorization']) {
+        await fail(route, 401, 'Unauthorized');
+        return;
+      }
+      if (options.lastDetails === undefined) {
+        await fail(route, 404, 'Not found');
+        return;
+      }
+      await envelope(route, { details: options.lastDetails });
       return;
     }
 

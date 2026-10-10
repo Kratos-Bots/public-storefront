@@ -6,6 +6,8 @@ export interface Warehouse {
   country: string | null;
   /** The shop's own warehouse: choosing it is the same as choosing nothing. */
   isDefault: boolean;
+  /** A short line the owner wrote about this warehouse (up to 160 characters), shown on the choose-a-warehouse card. Null or absent: none (an older backend sends no such field). */
+  description?: string | null;
   /** False = browsable, but the shop refuses checkout here. Absent on an older backend — read as true. */
   orderingEnabled?: boolean;
   /** The owner's note while ordering is off; null while it is on. */

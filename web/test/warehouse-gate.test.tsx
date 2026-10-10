@@ -97,6 +97,34 @@ describe('WarehouseGate', () => {
     expect(screen.getByRole('button', { name: 'Shop from Main' }).textContent).not.toContain('Your last choice');
   });
 
+  it('shows a warehouse description under its name, only on the cards that have one', () => {
+    setStore({ list: [MAIN, { ...EU, description: 'Ships from Berlin in 2 to 4 working days.' }] });
+    mount();
+    const eu = screen.getByRole('button', { name: 'Shop from Test EU' });
+    expect(eu.textContent).toContain('Ships from Berlin in 2 to 4 working days.');
+    expect(screen.getByRole('button', { name: 'Shop from Main' }).textContent).toBe('Main · GB');
+    // The sentence is the card's description for assistive tech; the accessible name stays the action.
+    const about = document.getElementById(eu.getAttribute('aria-describedby')!)!;
+    expect(about.textContent).toBe('Ships from Berlin in 2 to 4 working days.');
+  });
+
+  it.each([null, undefined, '', '   '])('draws nothing for a description of %j', (description) => {
+    setStore({ list: [MAIN, { ...EU, description }] });
+    mount();
+    const eu = screen.getByRole('button', { name: 'Shop from Test EU' });
+    expect(eu.textContent).toBe('Test EU · DE');
+    expect(eu.getAttribute('aria-describedby')).toBeNull();
+  });
+
+  it('keeps the paused note beside a description, and describes the card by both', () => {
+    setStore({ list: [MAIN, { ...EU, description: 'Ships from Berlin.', orderingEnabled: false, orderingMessage: 'Back Monday' }] });
+    mount();
+    const eu = screen.getByRole('button', { name: 'Shop from Test EU' });
+    expect(eu.textContent).toContain('Ships from Berlin.');
+    expect(eu.textContent).toContain('Back Monday');
+    expect(eu.getAttribute('aria-describedby')!.split(' ')).toHaveLength(2);
+  });
+
   it('labels a paused warehouse with its badge and message and keeps it selectable', () => {
     setStore({ list: [MAIN, { ...EU, orderingEnabled: false, orderingMessage: 'Back Monday' }] });
     mount();
