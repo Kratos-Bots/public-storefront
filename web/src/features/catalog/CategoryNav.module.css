@@ -178,7 +178,7 @@
   .rail {
     display: block;
     position: sticky;
-    top: 5.5rem;
+    top: calc(5.5rem + var(--sf-wh-h, 0px));
     align-self: start;
   }
   /* Fine pointer, so the rows can tighten below the touch minimum. */

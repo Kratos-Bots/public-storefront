@@ -367,7 +367,7 @@ describe('cyber-brutalism template.css', () => {
   it('starts the viewport crosshair frame below the header bar and any pinned notices, clear of the system bar', () => {
     const frame = find(`${ROOT} .cb-frame`)!.body;
     expect(frame).toContain('inset: 12px');
-    expect(frame).toContain('top: calc(var(--sf-bar-h, 56px) + var(--sf-pin-h, 0px) + env(safe-area-inset-top, 0px) + 12px)');
+    expect(frame).toContain('top: calc(var(--sf-bar-h, 56px) + var(--sf-pin-h, 0px) + var(--sf-wh-h, 0px) + env(safe-area-inset-top, 0px) + 12px)');
   });
 
   it('hides generated decoration text from screen readers (empty alt text)', () => {

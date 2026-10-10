@@ -125,7 +125,7 @@
 /* ── The step card ────────────────────────────────────────────────────────*/
 .card {
   /* focusCard() scrolls the step to the top on every step change: stop below the sticky header, not under it. */
-  scroll-margin-top: calc(var(--sf-bar-h, 0px) + var(--sf-pin-h, 0px) + 0.75rem);
+  scroll-margin-top: calc(var(--sf-bar-h, 0px) + var(--sf-pin-h, 0px) + var(--sf-wh-h, 0px) + 0.75rem);
   padding: 1rem;
   border: 1px solid var(--sf-line-strong);
   border-radius: var(--sf-card-radius);
@@ -341,7 +341,7 @@
   .aside {
     order: 0;
     position: sticky;
-    top: calc(var(--sf-bar-h, 56px) + var(--sf-pin-h, 0px) + 1rem);
+    top: calc(var(--sf-bar-h, 56px) + var(--sf-pin-h, 0px) + var(--sf-wh-h, 0px) + 1rem);
   }
 
   .nav {

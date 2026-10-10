@@ -41,12 +41,12 @@ function setStore(list: Warehouse[], selected: number | null) {
   useWarehouseStore.setState({ warehouseId: selected, ctx: { enabled: true, list, failed: false, carried: null } });
 }
 
-const wrap = (ui: ReactNode) => {
+const wrap = (ui: ReactNode, at = '/') => {
   queryClient.setQueryData(SETTINGS_KEY, settings());
   return render(
     <QueryClientProvider client={queryClient}>
       <MantineProvider env="test">
-        <MemoryRouter>{ui}</MemoryRouter>
+        <MemoryRouter initialEntries={[at]}>{ui}</MemoryRouter>
       </MantineProvider>
     </QueryClientProvider>,
   );
@@ -179,6 +179,24 @@ describe('header notice and cart notice together', () => {
     );
     expect(notices()).toHaveLength(1);
     expect(notices()[0]!.className).toMatch(/bar/);
+  });
+
+  it('shows on the catalogue and product pages, also for a single paused warehouse with no selector', () => {
+    setStore([{ ...MAIN, orderingEnabled: false, orderingMessage: 'Closed' }], null);
+    for (const path of ['/', '/c/x', '/p/3']) {
+      wrap(header(), path);
+      expect(notices(), path).toHaveLength(1);
+      cleanup();
+    }
+  });
+
+  it('is hidden everywhere that is not browsing products', () => {
+    setStore(LIST, 2);
+    for (const path of ['/account/orders', '/cart', '/checkout', '/pages/about', '/login', '/tracking/XYZ']) {
+      wrap(header(), path);
+      expect(notices(), path).toHaveLength(0);
+      cleanup();
+    }
   });
 
   it('renders neither, and no wrapper, when ordering is not paused', () => {

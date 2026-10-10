@@ -1,0 +1,6 @@
+/* One bar for the selector and the notice, inside the sticky header under its row. The header's own bottom
+   border closes it, so the only line here is the one that separates it from the header row; the strip and
+   the notice inside draw none of their own. */
+.bar {
+  border-top: 1px solid var(--sf-line);
+}

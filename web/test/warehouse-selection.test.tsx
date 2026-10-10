@@ -22,7 +22,7 @@ import {
   currentWarehouseId, resetWarehouseStore, resolveWarehouse, selectedWarehouseId, useWarehouseStore,
 } from '@/features/warehouses/store.ts';
 import { useSelectedWarehouse } from '@/features/warehouses/use-warehouse.ts';
-import { WarehouseStrip, warehousePickerHidden } from '@/features/warehouses/WarehouseStrip.tsx';
+import { WarehouseStrip } from '@/features/warehouses/WarehouseStrip.tsx';
 import { useNotCarried } from '@/features/warehouses/NotCarried.tsx';
 import type { Warehouse } from '@/types/warehouses.ts';
 import type { StorefrontSettings } from '@/types/settings.ts';
@@ -275,14 +275,17 @@ describe('WarehouseStrip', () => {
     expect(useWarehouseStore.getState().warehouseId).toBeNull();
   });
 
-  it('is hidden on the checkout, order-placed and payment routes only', () => {
-    for (const path of ['/checkout', '/order-placed', '/payment/success', '/payment/cancel']) expect(warehousePickerHidden(path), path).toBe(true);
-    for (const path of ['/', '/c/peptides', '/p/4', '/cart', '/account/orders', '/checkout-help']) expect(warehousePickerHidden(path), path).toBe(false);
-    setCtx();
-    expect(wrap(<WarehouseStrip />, '/checkout').container.querySelector('[data-warehouse-picker]')).toBeNull();
-    cleanup();
-    setCtx();
-    expect(wrap(<WarehouseStrip />, '/c/peptides').container.querySelector('select')).not.toBeNull();
+  it('shows only while browsing products: the catalogue and the product page', () => {
+    for (const path of ['/', '/c/peptides', '/p/4']) {
+      setCtx();
+      expect(wrap(<WarehouseStrip />, path).container.querySelector('select'), path).not.toBeNull();
+      cleanup();
+    }
+    for (const path of ['/cart', '/pages/about', '/checkout', '/order-placed', '/payment/success', '/account/orders', '/login', '/tracking/XYZ']) {
+      setCtx();
+      expect(wrap(<WarehouseStrip />, path).container.querySelector('[data-warehouse-picker]'), path).toBeNull();
+      cleanup();
+    }
   });
 });
 
