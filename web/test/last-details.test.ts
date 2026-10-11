@@ -2,11 +2,16 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { DEFAULT_FORM, type CheckoutForm } from '@/features/checkout/form-state.ts';
 import {
   DISMISS_KEY,
+  acceptLastDetails,
   addressHasTyping,
+  clearAcceptedLastDetails,
+  dismissLastDetails,
+  isHiddenFor,
   isShippable,
   lastDetailsPatch,
   offerSummary,
   readDismissed,
+  resetDismissed,
   shouldOfferLastDetails,
   splitPhone,
   writeDismissed,
@@ -91,6 +96,38 @@ describe('dismissal storage', () => {
       Storage.prototype.getItem = real;
       Storage.prototype.setItem = set;
     }
+  });
+});
+
+describe('hidden for a customer', () => {
+  afterEach(() => resetDismissed());
+
+  it('is hidden for the customer who dismissed, and only for them', () => {
+    dismissLastDetails(1);
+    expect(isHiddenFor(1)).toBe(true);
+    expect(isHiddenFor(2)).toBe(false);
+  });
+  it('is hidden for the customer who accepted, and only for them', () => {
+    acceptLastDetails(2);
+    expect(isHiddenFor(2)).toBe(true);
+    expect(isHiddenFor(1)).toBe(false);
+  });
+  it('A dismisses and signs out; B signs in and accepts: the card is hidden for B (and for A again)', () => {
+    dismissLastDetails(1);
+    acceptLastDetails(2);
+    expect(isHiddenFor(2)).toBe(true);
+    expect(isHiddenFor(1)).toBe(true);
+    clearAcceptedLastDetails();
+    expect(isHiddenFor(2)).toBe(false);
+    expect(isHiddenFor(1)).toBe(true);
+  });
+  it('a dismissal survives a reload (sessionStorage) for that customer only', () => {
+    writeDismissed(1);
+    expect(isHiddenFor(1)).toBe(true);
+    expect(isHiddenFor(2)).toBe(false);
+  });
+  it('nobody is hidden when nobody has dismissed or accepted', () => {
+    expect(isHiddenFor(1)).toBe(false);
   });
 });
 

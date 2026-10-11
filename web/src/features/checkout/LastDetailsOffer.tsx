@@ -5,7 +5,7 @@ import { selectIsLoggedIn, useSessionStore } from '@/stores/session.ts';
 import type { CheckoutForm } from '@/features/checkout/form-state.ts';
 import {
   acceptLastDetails,
-  currentDismissed,
+  isHiddenFor,
   dismissLastDetails,
   lastDetailsPatch,
   offerSummary,
@@ -36,7 +36,7 @@ export function LastDetailsOffer({ form, patch, contactModes, shipCountries, shi
   const loggedIn = useSessionStore(selectIsLoggedIn);
   const customerId = useSessionStore((s) => s.customer?.id ?? null);
   // One dismissal shared by every mount (see `dismissLastDetails`): it holds across the steps even with storage blocked.
-  const dismissedFor = useSyncExternalStore(subscribeDismissed, currentDismissed, () => null);
+  const dismissedFor = useSyncExternalStore(subscribeDismissed, () => (isHiddenFor(customerId) ? customerId : null), () => null);
   const [filled, setFilled] = useState(false);
 
   const { data: details } = useQuery({

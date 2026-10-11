@@ -34,9 +34,14 @@ let dismissedInMemory: number | null = null;
 let acceptedInMemory: number | null = null;
 const dismissListeners = new Set<() => void>();
 
-/** Who said "No thanks" in this tab: this page's memory first, then sessionStorage (which survives a reload). */
-export function currentDismissed(): number | null {
-  return dismissedInMemory ?? acceptedInMemory ?? readDismissed();
+/**
+ * Is the card done for this customer: did they say "No thanks" (this page's memory, or sessionStorage, which survives a
+ * reload) or accept it in this checkout? Asked per customer, because the two slots are separate: one customer's
+ * dismissal must not stand in for the next customer's acceptance on the same device.
+ */
+export function isHiddenFor(customerId: number | null): boolean {
+  if (customerId === null) return false;
+  return dismissedInMemory === customerId || acceptedInMemory === customerId || readDismissed() === customerId;
 }
 
 export function subscribeDismissed(listener: () => void): () => void {
