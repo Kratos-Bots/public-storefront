@@ -1,3 +1,5 @@
+import type { ReviewSettings } from '@/types/reviews.ts';
+
 export type NoticeStyle = 'info' | 'warning' | 'promo';
 export interface Notice {
   id: string; style: NoticeStyle; title: string | null; body: string; startsAt: string | null; endsAt: string | null; active: boolean;
@@ -92,4 +94,6 @@ export interface StorefrontSettings {
   telegramWebApp?: { mode: 'off' | 'beta' | 'forced' };
   /** Absent on backends older than shop access. */
   access?: AccessSettings;
+  /** Absent on backends older than storefront reviews: reviews are off. */
+  reviews?: ReviewSettings;
 }

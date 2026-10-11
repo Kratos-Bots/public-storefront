@@ -1,0 +1,95 @@
+/* "Use the details from your last order?" A slip in the step's own idiom: the deep surface and strong line the
+   toggles and the chosen collection point already use, the template's card radius, and nothing animated. The
+   heading is body type, a step above the field labels; the two actions are the shop's filled button and a quiet
+   text button, both at a thumb-sized 44px. Only tokens, so every template restyles it. */
+.offer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--sf-line-strong);
+  border-radius: var(--sf-card-radius);
+  background: var(--sf-bg-deep);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--sf-font-heading);
+  font-size: calc(0.9375rem * var(--sf-text-scale, 1));
+  font-weight: var(--sf-heading-weight, 600);
+  line-height: 1.35;
+  color: var(--sf-text);
+}
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin: 0;
+  min-width: 0;
+  font-size: calc(0.8125rem * var(--sf-text-scale, 1));
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.name {
+  color: var(--sf-text);
+}
+
+.address {
+  color: var(--sf-muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+}
+
+.use {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 1.1rem;
+  border: 1px solid var(--sf-primary);
+  border-radius: var(--sf-btn-radius, var(--sf-card-radius));
+  background: var(--sf-primary);
+  color: var(--sf-bg);
+  font-family: var(--sf-btn-font, var(--sf-font-mono));
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: var(--sf-btn-transform, uppercase);
+  cursor: pointer;
+}
+
+.use:hover {
+  background: var(--sf-filled-hover-bg, var(--sf-primary-soft));
+  border-color: var(--sf-filled-hover-bg, var(--sf-primary-soft));
+}
+
+.dismiss {
+  min-height: 44px;
+  padding: 0 0.25rem;
+  border: 0;
+  background: transparent;
+  color: var(--sf-muted);
+  font-family: var(--sf-btn-font, var(--sf-font-mono));
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: var(--sf-btn-transform, uppercase);
+  cursor: pointer;
+}
+
+.dismiss:hover {
+  color: var(--sf-text);
+}
+
+.use:focus-visible,
+.dismiss:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}

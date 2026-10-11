@@ -1,0 +1,9 @@
+/* Everything else is the unpaid-order pop-up's own styling; the reminder adds a row of stars and a quiet close button. */
+.stars {
+  margin: 0 0 0.75rem;
+  line-height: 0;
+}
+
+.close {
+  color: var(--sf-muted);
+}

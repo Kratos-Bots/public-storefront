@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  cancelOrder, fetchOrder, fetchOrderPayment, fetchOrderPaymentOptions, fetchOrders, fetchUnpaidOrders,
+  cancelOrder, fetchLastCheckoutDetails, fetchOrder, fetchOrderPayment, fetchOrderPaymentOptions, fetchOrders, fetchUnpaidOrders,
   OrderGoneError, OrderNotCancellableError, PaymentConflictError, selectOrderPaymentMethod, submitOrderCryptoTxid,
 } from '@/api/orders.ts';
 import { fetchRedeemOptions } from '@/api/profile.ts';
 import { useSessionStore } from '@/stores/session.ts';
+import { ApiError } from '@/lib/errors.ts';
 
 function mockFetch(status: number, body: unknown) {
   return vi.spyOn(globalThis, 'fetch').mockResolvedValue(
@@ -216,5 +217,39 @@ describe('order payment through the session', () => {
     expect(await submitOrderCryptoTxid('K4M2QP', 9, '  abc1234567  ')).toBe('checking');
     expect(sent[0]!.url).toContain('storefront/orders/K4M2QP/crypto-txid');
     expect(sent[0]!.body).toEqual({ paymentId: 9, txid: 'abc1234567' });
+  });
+});
+
+describe('fetchLastCheckoutDetails', () => {
+  beforeEach(() => useSessionStore.getState().clear());
+  afterEach(() => vi.restoreAllMocks());
+
+  const details = { orderReference: 'ORD-0001', placedAt: '2026-09-01T10:00:00.000Z', firstName: 'Alex', surname: 'Rowan', addressLine1: '14 Test Lane', addressLine2: null, addressLine3: null, city: 'Leeds', county: null, zip: 'LS1 4AB', country: 'GB', email: null, phone: null, servicePoint: null };
+
+  it('GETs storefront/checkout/last-details and unwraps the details', async () => {
+    const spy = mockFetch(200, { success: true, data: { details }, error: null });
+    await expect(fetchLastCheckoutDetails()).resolves.toEqual(details);
+    const req = spy.mock.calls[0]![0] as Request;
+    expect(req.method).toBe('GET');
+    expect(req.url).toContain('storefront/checkout/last-details');
+  });
+
+  it('reads a details of null as null', async () => {
+    mockFetch(200, { success: true, data: { details: null }, error: null });
+    await expect(fetchLastCheckoutDetails()).resolves.toBeNull();
+  });
+
+  it('reads a 404 (an older backend) as null, without retrying', async () => {
+    const spy = mockFetch(404, { success: false, data: null, error: 'Not found' });
+    await expect(fetchLastCheckoutDetails()).resolves.toBeNull();
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it('throws any other failure, so it is not cached as "no details"', async () => {
+    const spy = mockFetch(500, { success: false, data: null, error: 'Boom' });
+    await expect(fetchLastCheckoutDetails()).rejects.toMatchObject({ status: 500 });
+    expect(spy).toHaveBeenCalledTimes(1);
+    spy.mockRejectedValue(new TypeError('network down'));
+    await expect(fetchLastCheckoutDetails()).rejects.toBeInstanceOf(ApiError);
   });
 });

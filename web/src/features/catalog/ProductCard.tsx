@@ -14,6 +14,8 @@ import type { SlotRender } from '@/builder/define.ts';
 import type { Product } from '@/types/catalog.ts';
 import { useOutOfStockInPriceSlot } from '@/features/catalog/stock-price.ts';
 import { bestTier } from '@/features/catalog/best-tier.ts';
+import { usePriceInAddSlot } from '@/features/catalog/paused-price.ts';
+import { useWarehouseOrdering } from '@/features/warehouses/use-warehouse.ts';
 import classes from '@/features/catalog/ProductCard.module.css';
 import imageClasses from '@/features/catalog/ProductImage.module.css';
 
@@ -103,13 +105,13 @@ function TileFlags({ styleAttrs }: PartViewProps) {
   );
 }
 
-function TilePrice({ styleAttrs }: PartViewProps) {
-  const { product } = CardTileFamily.useData();
+/** The price and its bulk rung: in the foot's own column, or (ordering paused) inside the Add slot. */
+function PriceStack({ product, className, styleAttrs }: { product: Product; className: string; styleAttrs?: PartViewProps['styleAttrs'] }) {
   const { currency } = useSettings();
   const best = bestTier(product);
   const outInPrice = useOutOfStockInPriceSlot(product);
   return (
-    <p className={classes.prices} {...styleAttrs}>
+    <p className={className} {...styleAttrs}>
       <span className={classes.price} data-sf-part="price">{outInPrice ? <StockChip status="out" /> : formatMoney(product.price, currency)}</span>
       {best && !outInPrice ? (
         <span className={classes.tier}>
@@ -120,8 +122,28 @@ function TilePrice({ styleAttrs }: PartViewProps) {
   );
 }
 
+function TilePrice({ styleAttrs }: PartViewProps) {
+  const { product, addCarriesPrice } = CardTileFamily.useData();
+  // Ordering paused: the Add part carries the price, so it is not drawn twice.
+  return usePriceInAddSlot(addCarriesPrice) ? null : <PriceStack product={product} className={classes.prices} styleAttrs={styleAttrs} />;
+}
+
 function TileAdd({ styleAttrs }: PartViewProps) {
-  const { product } = CardTileFamily.useData();
+  const { product, addCarriesPrice } = CardTileFamily.useData();
+  // Paused: the Add part carries the price only when it is drawn on every viewport (`addCarriesPrice`); otherwise the Price
+  // part stays and this part draws nothing, so there is one price at every width.
+  const priceHere = usePriceInAddSlot(addCarriesPrice);
+  const { features } = useSettings();
+  const { paused } = useWarehouseOrdering();
+  // Paused: no empty box and no hole in the foot. The price takes the slot the button would.
+  if (features.ordering && paused) {
+    if (!priceHere) return null;
+    return (
+      <div className={`${classes.add} ${classes.addPrice}`} {...styleAttrs}>
+        <PriceStack product={product} className={classes.prices} />
+      </div>
+    );
+  }
   return (
     <div className={classes.add} {...styleAttrs}>
       <AddToCart product={product} size="sm" showPrice={false} />

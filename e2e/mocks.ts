@@ -1,9 +1,10 @@
 import { readFileSync } from 'node:fs';
 import type { Page, Route } from '@playwright/test';
 import type { Catalog, Product } from '../web/src/types/catalog.ts';
-import type { CheckoutPayment, CheckoutResult, PaymentMethod, Quote, ShippingOption } from '../web/src/types/checkout.ts';
+import type { CheckoutPayment, CheckoutResult, LastCheckoutDetails, PaymentMethod, Quote, ShippingOption } from '../web/src/types/checkout.ts';
 import type { ServerCart, ServerCartLine, CartLineInput } from '../web/src/types/cart.ts';
 import type { OrderDetail, OrderSummary, PageMeta, UnpaidOrder } from '../web/src/types/orders.ts';
+import type { OrderReviewRecord, PublicReview, ReviewableOrder } from '../web/src/types/reviews.ts';
 import type { Profile, RedeemOptions } from '../web/src/types/profile.ts';
 import type { PublicOrder, SelectPaymentResult, Shipment } from '../web/src/types/public-order.ts';
 import type { ServicePoint } from '../web/src/types/service-points.ts';
@@ -245,6 +246,24 @@ export interface InstallMocksOptions {
   tweakOrder?: (order: PublicOrder) => void;
   /** `GET storefront/orders/unpaid` answers these (a signed-in customer only; at most five), minus any order already cancelled. Default: none. */
   unpaidOrders?: UnpaidOrder[];
+  /**
+   * Storefront reviews on. `settings.reviews` is `{ enabled: true, maxLength }`; `reviewable` is what `GET storefront/orders/reviewable`
+   * answers (a number answers that status instead, as an older backend's 404); `list` the approved reviews `GET storefront/reviews`
+   * pages through; `submit` what `POST storefront/orders/:ref/review` answers: `'ok'` (201, a pending review that the order then
+   * carries as `existing`) or an HTTP status with `submitError` as its message. The account order carries
+   * `review: { canReview: true, existing: null }` unless `canReview` is false or an `existing` review is given. Omitted: reviews are off.
+   */
+  reviews?: {
+    maxLength?: number;
+    reviewable?: ReviewableOrder[] | number;
+    list?: PublicReview[];
+    submit?: 'ok' | number;
+    submitError?: string;
+    canReview?: boolean;
+    existing?: OrderReviewRecord;
+  };
+  /** `GET storefront/checkout/last-details` (signed in only) answers `{ details }` with this; `null` answers no details. Omitted: the route is not there (404), as on an older backend. */
+  lastDetails?: LastCheckoutDetails | null;
   /** What both cancel routes answer. `'ok'` (default) cancels; a number answers that status with 409 `ORDER_NOT_CANCELLABLE:bank_transfer` (any other status answers a plain error) and marks the order as blocked. */
   cancelAnswers?: number | 'ok';
   /** What `GET storefront/service-points` answers with a postcode (default: three synthetic GB points). A number answers with that HTTP status instead. */
@@ -281,7 +300,7 @@ export interface InstallMocksOptions {
    * feature is off and every answer is exactly what it always was.
    */
   warehouses?: {
-    list: Array<{ id: number; name: string; country: string | null; isDefault: boolean; orderingEnabled?: boolean; orderingMessage?: string | null; shipping?: { countries: string[]; collectionCountries: string[] } }>;
+    list: Array<{ id: number; name: string; country: string | null; isDefault: boolean; description?: string | null; orderingEnabled?: boolean; orderingMessage?: string | null; shipping?: { countries: string[]; collectionCountries: string[] } }>;
     carries: Record<number, number[]>;
     /** `features.warehousePrompt`: ask which warehouse before showing the catalogue. Default off. */
     prompt?: boolean;
@@ -363,6 +382,8 @@ export interface MockState {
   denied: boolean;
   /** References cancelled through either cancel route, in order. */
   cancels: string[];
+  /** Bodies of the review submissions the page has sent. */
+  reviewPosts: Array<Record<string, unknown>>;
   /** The pay routes answer 404 "Order not found". The first such answer also takes the order's own read with it (`orderGone`), as an order that has gone would. */
   payGone: boolean;
   /** `GET storefront/orders/:ref` answers 404. */
@@ -605,6 +626,7 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     denied: options.access?.denied ?? false,
     anonymousCatalogHits: 0,
     cancels: [],
+    reviewPosts: [],
     payGone: options.payRoutesGone ?? false,
     orderGone: false,
   };
@@ -615,6 +637,10 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     if (!options.order) state.order = fixture.payment;
   }
   options.tweakOrder?.(state.order);
+  if (options.reviews) {
+    state.settings = { ...state.settings, reviews: { enabled: true, maxLength: options.reviews.maxLength ?? 500 } };
+    state.orderDetail.review = { canReview: options.reviews.canReview ?? !options.reviews.existing, existing: options.reviews.existing ?? null };
+  }
 
   options.tweakSettings?.(state.settings);
   options.tweakProfile?.(state.profile);
@@ -985,6 +1011,19 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
       return;
     }
 
+    if (path === 'storefront/checkout/last-details' && method === 'GET') {
+      if (!route.request().headers()['authorization']) {
+        await fail(route, 401, 'Unauthorized');
+        return;
+      }
+      if (options.lastDetails === undefined) {
+        await fail(route, 404, 'Not found');
+        return;
+      }
+      await envelope(route, { details: options.lastDetails });
+      return;
+    }
+
     // Declared before `storefront/orders/:ref`, which would read "unpaid" as a reference.
     if (path === 'storefront/orders/unpaid' && method === 'GET') {
       if (!route.request().headers()['authorization']) {
@@ -1092,6 +1131,54 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
         hasPrevPage: false,
       };
       await envelope(route, state.orders, meta);
+      return;
+    }
+
+    // Declared before `storefront/orders/:ref`, which would read "reviewable" as a reference.
+    if (path === 'storefront/orders/reviewable' && method === 'GET') {
+      if (!route.request().headers()['authorization']) {
+        await fail(route, 401, 'Unauthorized');
+        return;
+      }
+      const asked = options.reviews?.reviewable;
+      if (typeof asked === 'number') {
+        await fail(route, asked, 'Not found');
+        return;
+      }
+      await envelope(route, { orders: asked ?? [] });
+      return;
+    }
+
+    if (path === 'storefront/reviews' && method === 'GET') {
+      const all = options.reviews?.list ?? [];
+      const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
+      const limit = Math.min(50, Math.max(1, Number(url.searchParams.get('limit')) || 20));
+      const average = all.length ? all.reduce((sum, r) => sum + r.rating, 0) / all.length : null;
+      const totalPages = Math.ceil(all.length / limit);
+      await envelope(
+        route,
+        { stats: { average, count: all.length }, reviews: all.slice((page - 1) * limit, page * limit) },
+        { page, limit, totalItems: all.length, totalPages, hasNextPage: page < totalPages, hasPrevPage: page > 1 },
+      );
+      return;
+    }
+
+    const reviewPost = /^storefront\/orders\/([^/]+)\/review$/.exec(path);
+    if (reviewPost && method === 'POST') {
+      if (!route.request().headers()['authorization']) {
+        await fail(route, 401, 'Unauthorized');
+        return;
+      }
+      const sent = body(route);
+      state.reviewPosts.push(sent);
+      const answer = options.reviews?.submit ?? 'ok';
+      if (answer !== 'ok') {
+        await fail(route, answer, options.reviews?.submitError ?? 'The review could not be saved');
+        return;
+      }
+      const review: OrderReviewRecord = { rating: Number(sent.rating), comment: typeof sent.comment === 'string' ? sent.comment : null, status: 'pending', createdAt: '2026-08-30T10:00:00.000Z' };
+      state.orderDetail.review = { canReview: false, existing: review };
+      await envelope(route, { review }, undefined, 201);
       return;
     }
 

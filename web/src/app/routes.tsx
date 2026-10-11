@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { Navigate, Outlet, ScrollRestoration, useParams, type RouteObject } from 'react-router';
 import { useMediaQuery } from '@mantine/hooks';
 import { useEffectiveLayout } from '@/app/layout.ts';
@@ -11,7 +11,10 @@ import { OrderLinkRedirect } from '@/app/OrderLinkRedirect.tsx';
 import { BuilderRoute } from '@/app/builder-route.tsx';
 import { PuckPage, PuckShell } from '@/builder/runtime.tsx';
 import { customPageKey, type FixedRouteKey } from '@/builder/types.ts';
+import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { useUiStore } from '@/stores/ui.ts';
+
+const ReviewsPage = lazy(() => import('@/features/reviews/ReviewsPage.tsx').then((m) => ({ default: m.ReviewsPage })));
 
 /** Mantine's `md` breakpoint — the point at which the cart becomes a drawer instead of a page. */
 const DESKTOP = '(min-width: 62em)';
@@ -186,6 +189,15 @@ export const routes: RouteObject[] = [
           <Guard spec={{ feature: 'tracking' }}>
             <PuckPage routeKey="tracking" />
           </Guard>
+        ),
+      },
+      // Not a page-builder document: a route key needs the backend's page-set rules to know it. Off, the page is the not-found page.
+      {
+        path: 'reviews',
+        element: (
+          <Suspense fallback={<PageSkeleton inline />}>
+            <ReviewsPage />
+          </Suspense>
         ),
       },
       { path: 'pages/:slug', handle: { routeKey: 'page' }, element: <CustomPageRoute /> },

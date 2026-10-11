@@ -1,0 +1,150 @@
+/* One column, set like a statement: the average is the one large thing, the reviews are ruled entries rather than cards.
+   Tokens only, so every template restyles it. */
+.page {
+  max-width: 40rem;
+  margin-inline: auto;
+  padding: 1.25rem 0 3rem;
+}
+
+.masthead {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding-bottom: 1.1rem;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--sf-font-heading);
+  font-size: calc(1.75rem * var(--sf-text-scale, 1));
+  font-weight: var(--sf-heading-weight, 700);
+  letter-spacing: var(--sf-heading-tracking, -0.02em);
+  text-transform: var(--sf-heading-transform, none);
+  line-height: 1.1;
+  color: var(--sf-text);
+}
+
+.lede {
+  margin: 0;
+  max-width: 32rem;
+  font-size: calc(0.9375rem * var(--sf-text-scale, 1));
+  line-height: 1.5;
+  color: var(--sf-muted);
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1rem 0;
+  border-top: 1px solid var(--sf-line-strong);
+  border-bottom: 1px solid var(--sf-line-strong);
+}
+
+.figure {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  margin: 0;
+}
+
+.average {
+  font-family: var(--sf-font-heading);
+  font-size: calc(3rem * var(--sf-text-scale, 1));
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  color: var(--sf-text);
+}
+
+.outOf {
+  font-size: calc(1rem * var(--sf-text-scale, 1));
+  color: var(--sf-muted);
+}
+
+.summaryRest {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.count {
+  font-size: calc(0.875rem * var(--sf-text-scale, 1));
+  color: var(--sf-muted);
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1.1rem 0;
+  border-bottom: 1px solid var(--sf-line);
+}
+
+.itemHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.date {
+  font-size: calc(0.8125rem * var(--sf-text-scale, 1));
+  color: var(--sf-faint);
+  white-space: nowrap;
+}
+
+.comment {
+  margin: 0;
+  font-size: calc(1rem * var(--sf-text-scale, 1));
+  line-height: 1.6;
+  color: var(--sf-text);
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+.noComment {
+  composes: comment;
+  color: var(--sf-faint);
+}
+
+.more {
+  display: flex;
+  justify-content: center;
+  padding-top: 1.25rem;
+}
+
+.moreError {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding-top: 1.25rem;
+  text-align: center;
+  font-size: calc(0.875rem * var(--sf-text-scale, 1));
+  color: var(--sf-danger);
+}
+
+.moreError p {
+  margin: 0;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}

@@ -3,6 +3,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { Suspense, type ReactNode } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 vi.mock('@/features/account/queries.ts', () => ({
   useProfile: () => ({ data: undefined, isPending: true, isError: false }),
@@ -19,11 +20,15 @@ vi.mock('@/features/account/ProfilePage.tsx', () => ({ ProfilePage: () => <p>pro
 import { RenderDoc } from '@/builder/render.tsx';
 import { defaultDoc } from '@/builder/defaults/index.ts';
 import { AccountLayout } from '@/features/account/AccountLayout.tsx';
+import { SETTINGS_KEY } from '@/lib/query-client.ts';
 import type { FixedRouteKey } from '@/builder/types.ts';
 
 function mountAt(element: ReactNode, path = '/account/orders') {
   const router = createMemoryRouter([{ path: '/account', element, children: [{ path: '*', element: <p>body</p> }] }], { initialEntries: [path] });
-  return render(<MantineProvider env="test"><Suspense fallback={null}><RouterProvider router={router} /></Suspense></MantineProvider>);
+  // The account rail asks the settings whether the shop has reviews (a link appears only then).
+  const client = new QueryClient();
+  client.setQueryData(SETTINGS_KEY, {});
+  return render(<QueryClientProvider client={client}><MantineProvider env="test"><Suspense fallback={null}><RouterProvider router={router} /></Suspense></MantineProvider></QueryClientProvider>);
 }
 const normalize = (html: string) => html.replace(/(mantine-)[a-z0-9]{5,}/gi, '$1ID');
 

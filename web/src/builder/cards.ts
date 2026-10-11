@@ -1,6 +1,6 @@
 import { createElement, Fragment, type ReactNode } from 'react';
 import { validateDoc } from '@/builder/guard.ts';
-import { blockDef } from '@/builder/rules.ts';
+import { blockDef, containsAlwaysVisibleType, containsVisibleType } from '@/builder/rules.ts';
 import { renderBlock } from '@/builder/style/apply.tsx';
 import { CardRowFamily, CardTileFamily, type CardData } from '@/builder/families.ts';
 import { fixedSlot, type FamilyValue } from '@/builder/parts.ts';
@@ -53,7 +53,13 @@ export function compileCard(doc: unknown, kind: CardKind, layout: LayoutKind): C
     try {
       const element = build(clean.content, { editing: false, docKey, layout });
       const Family = kind === 'tile' ? CardTileFamily : CardRowFamily;
-      design = { kind, element, render: (data, views) => createElement(Family.Provider, { value: { data, views } }, element) };
+      const addPart = kind === 'tile' ? 'CardTileAdd' : 'CardRowAdd';
+      // While ordering is paused, who draws the price (see usePriceInAddSlot): the Add part when it is drawn on every viewport
+      // (not in a hidden column, not hidden on phones or desktops by its block style), or when there is no Price part that
+      // could carry it instead; otherwise the Price part, and the Add part draws nothing.
+      const priceCarrier = kind === 'tile' ? 'CardTilePrice' : 'CardRowPrice';
+      const addCarriesPrice = containsAlwaysVisibleType(clean.content, addPart) || !containsVisibleType(clean.content, priceCarrier);
+      design = { kind, element, render: (data, views) => createElement(Family.Provider, { value: { data: { ...data, addCarriesPrice }, views } }, element) };
     } catch (error) {
       // A block render that throws on odd props: the built-in card, never a crashed list.
       console.error(`[builder] card design "${kind}" (${layout}) failed to compile — showing the built-in card`, error);

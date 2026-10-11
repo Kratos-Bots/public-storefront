@@ -66,19 +66,23 @@ function Chooser({ list, stored, onPick }: { list: Warehouse[]; stored: number |
             const last = !w.isDefault && w.id === stored;
             const note = paused ? w.orderingMessage?.trim() || null : null;
             const detail = `${uid}-${w.id}`;
+            const about = `${detail}-about`;
+            const description = w.description?.trim() || null;
+            const describedBy = [description ? about : null, last || paused ? detail : null].filter(Boolean).join(' ') || undefined;
             return (
               <li key={w.id}>
                 <button
                   type="button"
                   className={classes.card}
                   aria-label={t('shell.warehouse.prompt.choose', { warehouse: w.name })}
-                  aria-describedby={last || paused ? detail : undefined}
+                  aria-describedby={describedBy}
                   onClick={() => onPick(w)}
                 >
                   <span className={classes.body}>
                     <span className={classes.name}>
                       {w.country ? t('shell.warehouse.option', { name: w.name, country: w.country }) : w.name}
                     </span>
+                    {description ? <span id={about} className={classes.description}>{description}</span> : null}
                     {last || paused ? (
                       <span id={detail} className={classes.meta}>
                         {last ? <span className={classes.tag}>{t('shell.warehouse.prompt.lastTime')}</span> : null}

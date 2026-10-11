@@ -154,6 +154,23 @@
   width: 116px;
 }
 
+/* Ordering paused: the price rides in the gutter where the picker would, centred on the same
+   44px (34px with a fine pointer) axis, so the row keeps the height it has with the picker. */
+.gutterPrice {
+  min-height: 44px;
+  /* 116px is the picker's width; a long price (CHF 12,999.99) may need more, so the slot grows to it, up to half
+     the row, and the name gives way as it does for any other row. */
+  width: auto;
+  min-width: 116px;
+  max-width: 55%;
+}
+
+/* A price wider than the slot's cap wraps ("CHF" over the figure) rather than spilling over the name. */
+.gutterPrice .price {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .quickAdd,
 .step {
   display: inline-flex;
@@ -225,6 +242,9 @@
   /* Fine pointer — the gutter can tighten below the touch minimum. */
   .gutter {
     width: 94px;
+  }
+  .gutterPrice {
+    min-height: 34px;
   }
   .quickAdd,
   .step {

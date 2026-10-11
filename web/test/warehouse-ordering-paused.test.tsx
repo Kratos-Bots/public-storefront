@@ -18,6 +18,7 @@ import { CartSummary } from '@/features/cart/CartSummary.tsx';
 import { classifyQuoteError } from '@/features/checkout/CheckoutPage.tsx';
 import { DEFAULT_FORM } from '@/features/checkout/form-state.ts';
 import { baseProduct } from './helpers/product-fixtures.ts';
+import { usePriceInAddSlot } from '@/features/catalog/paused-price.ts';
 import { useOrderingState } from '@/templates/hooks.ts';
 import type { Warehouse } from '@/types/warehouses.ts';
 import type { StorefrontSettings } from '@/types/settings.ts';
@@ -209,6 +210,32 @@ describe('header notice and cart notice together', () => {
     );
     expect(notices()).toHaveLength(0);
     expect(container.querySelector('[role="status"]')).toBeNull();
+  });
+});
+
+describe('usePriceInAddSlot', () => {
+  function Probe({ addCarriesPrice }: { addCarriesPrice?: boolean }) {
+    return <p data-testid="slot">{String(usePriceInAddSlot(addCarriesPrice))}</p>;
+  }
+  const slot = () => screen.getByTestId('slot').textContent;
+
+  it('is true only with the paused warehouse selected and an Add part to carry the price', () => {
+    setStore(LIST, 2);
+    wrap(<Probe />);
+    expect(slot()).toBe('true');
+    cleanup();
+    wrap(<Probe addCarriesPrice={false} />);
+    expect(slot()).toBe('false');
+  });
+
+  it('is false with the open warehouse selected, or the warehouse feature off', () => {
+    setStore(LIST, null);
+    wrap(<Probe />);
+    expect(slot()).toBe('false');
+    cleanup();
+    useWarehouseStore.setState({ warehouseId: 2, ctx: { enabled: false, list: LIST, failed: false, carried: null } });
+    wrap(<Probe />);
+    expect(slot()).toBe('false');
   });
 });
 

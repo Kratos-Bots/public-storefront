@@ -2477,6 +2477,7 @@
           "OrderHeading",
           "OrderBalance",
           "OrderItems",
+          "OrderReview",
           "OrderAddress",
           "OrderParcels",
           "OrderPayments"
@@ -2665,6 +2666,40 @@
           "PaymentBack"
         ],
         "insertSlot": "content"
+      }
+    },
+    {
+      "name": "OrderReview",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "order"
       }
     },
     {

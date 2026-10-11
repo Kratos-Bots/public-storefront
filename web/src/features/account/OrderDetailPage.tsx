@@ -30,9 +30,10 @@ import { useSessionStore } from '@/stores/session.ts';
 import { StatusPill } from '@/features/account/StatusPill.tsx';
 import { useOrder, useOrderPayment } from '@/features/account/queries.ts';
 import { textKey, useText, type TextApi } from '@/text/runtime.tsx';
+import { OrderFreshContext, ReviewView } from '@/features/account/OrderReview.tsx';
 import { OrderFamily, type OrderData, type OrderPreview } from '@/builder/family-order.ts';
 import { usePreviewFixture } from '@/builder/mode.ts';
-import type { FamilyValue, PartViewProps } from '@/builder/parts.ts';
+import { flattenTypes, part, type FamilyValue, type PartViewProps } from '@/builder/parts.ts';
 import { defaultSlotRenders, renderComponent } from '@/builder/render.tsx';
 import type { BlockRenderContext, SlotRender } from '@/builder/define.ts';
 import type { OrderDetail, OrderShipment } from '@/types/orders.ts';
@@ -392,7 +393,7 @@ function OrderAnnouncements({ order, previewing }: { order: OrderDetail; preview
 /** The order's views (spec §5.4). */
 export const ORDER_VIEWS: FamilyValue<OrderData>['views'] = {
   OrderBackLink: BackLinkView, OrderHeading: HeadingView, OrderBalance: BalanceView, OrderItems: ItemsView,
-  OrderAddress: AddressView, OrderPayments: PaymentsView, OrderParcels: ParcelsView,
+  OrderAddress: AddressView, OrderPayments: PaymentsView, OrderParcels: ParcelsView, OrderReview: ReviewView,
 };
 
 /** What an order page renders under when nothing hands it a context (tests, the no-argument entry point). */
@@ -469,13 +470,21 @@ export function OrderDetailPage({ slots, ctx = STANDALONE }: { slots?: { content
 
   // The renderer emits a slot's blocks as bare children, and one grid cannot stack two columns
   // independently (rows couple their heights), so the page sorts the items into its areas itself.
+  // A copy from the cache that is being refreshed is not yet the order as it is: the review link waits for the refresh.
+  // Fresh: nothing is being fetched and the copy is either one this visit fetched, or one still within its stale time (a
+  // quick second visit gets no mount fetch, so waiting for `isFetchedAfterMount` alone would wait forever).
+  const fresh = !order.isFetching && (order.isFetchedAfterMount !== false || order.isStale !== true);
   const base: BlockRenderContext = { editing: ctx.editing, docKey: ctx.docKey, layout: ctx.layout };
   const silent = silentParts(detail);
-  const areas = partitionOrderItems(content.items, silent);
+  // An owner's published arrangement can predate the review part: it is added under the items, so the form is
+  // there by default. It draws nothing unless the order can be reviewed or already has a review.
+  const items = flattenTypes(content.items).includes('OrderReview') ? content.items : [...content.items, part('OrderReview', 'order-detail')];
+  const areas = partitionOrderItems(items, silent);
   const two = sideDraws(areas.side, silent);
   const draw = (items: typeof areas.main) => items.map((item) => renderComponent(item, base));
   return (
     <OrderFamily.Provider value={value}>
+      <OrderFreshContext.Provider value={fresh}>
       <div className={classes.page}>
         <OrderAnnouncements order={detail} previewing={!!preview} />
         <div className={classes.overview} data-columns={two ? 'two' : 'one'}>
@@ -487,6 +496,7 @@ export function OrderDetailPage({ slots, ctx = STANDALONE }: { slots?: { content
           {two ? <div className={classes.side}>{draw(areas.side)}</div> : null}
         </div>
       </div>
+      </OrderFreshContext.Provider>
     </OrderFamily.Provider>
   );
 }

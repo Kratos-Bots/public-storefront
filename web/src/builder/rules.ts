@@ -191,6 +191,26 @@ export function containsVisibleType(items: readonly ComponentData[], type: strin
   return hit;
 }
 
+/**
+ * Does the subtree hold a block of `type` that is drawn on every viewport? Beyond `containsVisibleType` (hidden columns), a
+ * block, or any block around it, whose style hides it on phones or on desktops (`blockStyle.hide`) is drawn on one viewport
+ * only, so it does not count: something that must always be on screen (a price standing in for it) cannot rely on it.
+ */
+export function containsAlwaysVisibleType(items: readonly ComponentData[], type: string): boolean {
+  for (const item of items) {
+    const hidden = typeof (item.props?.blockStyle as { hide?: unknown } | undefined)?.hide === 'string';
+    if (hidden) continue;
+    if (item.type === type) return true;
+    const def = blockDef(item.type);
+    if (!def) continue;
+    for (const s of shownSlots(def, item.props)) {
+      const children = item.props[s];
+      if (Array.isArray(children) && containsAlwaysVisibleType(children as ComponentData[], type)) return true;
+    }
+  }
+  return false;
+}
+
 /** The first required block inside `item`'s visible slots, at any depth. */
 function requiredInside(item: ComponentData, required: ReadonlySet<string>): string | null {
   const def = blockDef(item.type);

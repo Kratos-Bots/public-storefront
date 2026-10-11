@@ -46,3 +46,24 @@ export type CheckoutPayment =
 export interface CheckoutResult { reference: string; publicUrl: string | null; status: string; total: number; payment: CheckoutPayment; warning?: string }
 export interface GuestQuoteInput extends Omit<QuoteInput, 'useStoreCredit'> { turnstileToken: string; items: import('./cart.ts').CartLineInput[] }
 export interface GuestCheckoutInput extends Omit<CheckoutInput, 'useStoreCredit'> { turnstileToken: string; items: import('./cart.ts').CartLineInput[] }
+
+/**
+ * `GET storefront/checkout/last-details`: what the signed-in customer's most recent order (any status, not archived) shipped to.
+ * `servicePoint` is set when that order was a collection: the address lines are then the point's, not the shopper's.
+ */
+export interface LastCheckoutDetails {
+  orderReference: string;
+  placedAt: string;
+  firstName: string;
+  surname: string;
+  addressLine1: string;
+  addressLine2: string | null;
+  addressLine3: string | null;
+  city: string;
+  county: string | null;
+  zip: string;
+  country: string;
+  email: string | null;
+  phone: string | null;
+  servicePoint: { id: string; carrier: string; name: string } | null;
+}

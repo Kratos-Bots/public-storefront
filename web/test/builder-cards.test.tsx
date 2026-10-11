@@ -75,6 +75,59 @@ describe('compileCard (spec §6.3)', () => {
     const { container } = render(<>{design.render(data(1, 'Oats'), VIEWS)}{design.render(data(2, 'Tin'), VIEWS)}</>);
     expect([...container.querySelectorAll('h3')].map((h) => h.textContent)).toEqual(['Oats', 'Tin']);
   });
+  it('tells each card whether its design holds an Add part (so a paused price knows where to go)', () => {
+    const flag = { ...VIEWS, TestName: () => <h3>{String(CardTileFamily.useData().addCarriesPrice)}</h3> };
+    const withAdd: PuckDoc = { root: { props: { title: '', description: '', chrome: 'shell' } }, content: [
+      { type: 'TestFrame', props: { id: 'f', content: [{ type: 'TestName', props: { id: 'n' } }, { type: 'CardTilePrice', props: { id: 'pr' } }, { type: 'CardTileAdd', props: { id: 'a' } }] } },
+    ] };
+    const texts = (doc: PuckDoc) => render(<>{compileCard(doc, 'tile', 'storefront')!.render(data(1, 'Oats'), flag)}</>).container.textContent;
+    expect(texts(withAdd)).toBe('true');
+    cleanup();
+    // A Price part and no Add part: the Price part keeps the price. Neither part: nothing to place (the Add part, absent, would).
+    expect(texts({ ...tileDoc(), content: [{ type: 'TestFrame', props: { id: 'f', content: [{ type: 'TestName', props: { id: 'n' } }, { type: 'CardTilePrice', props: { id: 'pr' } }] } }] })).toBe('false');
+    cleanup();
+    expect(texts(tileDoc())).toBe('true');
+    cleanup();
+    // An Add part parked in a hidden column never renders, so it cannot carry the price: the Price part must stay.
+    const inColumns = (slot: string): PuckDoc => ({ root: { props: { title: '', description: '', chrome: 'shell' } }, content: [
+      { type: 'TestFrame', props: { id: 'f', content: [
+        { type: 'TestName', props: { id: 'n' } },
+        { type: 'CardTilePrice', props: { id: 'pr' } },
+        { type: 'Columns', props: { id: 'c', columns: '2', col1: [], col2: [], col3: [], col4: [], [slot]: [{ type: 'CardTileAdd', props: { id: 'a' } }] } },
+      ] } },
+    ] });
+    expect(texts(inColumns('col3'))).toBe('false');
+    cleanup();
+    expect(texts(inColumns('col2'))).toBe('true');
+  });
+  it('an Add part hidden on phones or desktops by its block style does not count, nor one inside a hidden-by-style block', () => {
+    const flag = { ...VIEWS, TestName: () => <h3>{String(CardTileFamily.useData().addCarriesPrice)}</h3> };
+    const texts = (doc: PuckDoc) => render(<>{compileCard(doc, 'tile', 'storefront')!.render(data(1, 'Oats'), flag)}</>).container.textContent;
+    const root = { props: { title: '', description: '', chrome: 'shell' } } as PuckDoc['root'];
+    const doc = (add: Record<string, unknown>, wrapStyle?: Record<string, unknown>): PuckDoc => ({ root, content: [
+      { type: 'TestFrame', props: { id: 'f', content: [
+        { type: 'TestName', props: { id: 'n' } },
+        { type: 'CardTilePrice', props: { id: 'pr' } },
+        wrapStyle
+          ? { type: 'Columns', props: { id: 'c', columns: '2', col1: [{ type: 'CardTileAdd', props: { id: 'a', ...add } }], col2: [], col3: [], col4: [], blockStyle: wrapStyle } }
+          : { type: 'CardTileAdd', props: { id: 'a', ...add } },
+      ] } },
+    ] });
+    expect(texts(doc({}))).toBe('true');
+    cleanup();
+    expect(texts(doc({ blockStyle: { hide: 'mobile' } }))).toBe('false');
+    cleanup();
+    expect(texts(doc({ blockStyle: { hide: 'desktop' } }))).toBe('false');
+    cleanup();
+    expect(texts(doc({}, { hide: 'mobile' }))).toBe('false');
+    cleanup();
+    // With no Price part to fall back on, a hidden Add part still carries the price wherever it is drawn.
+    const noPrice = { root, content: [{ type: 'TestFrame', props: { id: 'f', content: [{ type: 'TestName', props: { id: 'n' } }, { type: 'CardTileAdd', props: { id: 'a', blockStyle: { hide: 'mobile' } } }] } }] } as PuckDoc;
+    expect(texts(noPrice)).toBe('true');
+    cleanup();
+    // A style that hides nothing is not a hide.
+    expect(texts(doc({ blockStyle: { padTop: 'sm' } }))).toBe('true');
+  });
   it('a new document object compiles again; a guard failure is null', () => {
     compileCard(tileDoc(), 'tile', 'storefront');
     compileCard(tileDoc(), 'tile', 'storefront');
