@@ -171,7 +171,7 @@ test.describe('the menu panel', () => {
       await burger(page).click();
       const dialog = page.getByRole('dialog', { name: 'Menu' });
       await expect(dialog).toBeVisible();
-      await expect(dialog.getByRole('link')).toHaveText(['Catalog', 'Reviews', 'Support', 'Your account']);
+      await expect(dialog.getByRole('link')).toHaveText(['Catalog', 'Reviews', 'FAQ', 'Support', 'Your account']);
       await expect(dialog.locator('[aria-current="page"]')).toHaveText('Catalog');
       // It lies against the right edge, sits above the bottom bar, and the page behind it does not scroll.
       const box = (await dialog.boundingBox())!;

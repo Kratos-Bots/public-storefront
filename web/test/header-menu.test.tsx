@@ -45,10 +45,11 @@ function setViewport(phone: boolean) {
   })) as typeof window.matchMedia;
 }
 
-function mount(element: ReactNode, o: { path?: string; reviews?: boolean; accounts?: boolean; ordering?: boolean } = {}) {
+function mount(element: ReactNode, o: { path?: string; reviews?: boolean; accounts?: boolean; ordering?: boolean; faq?: boolean | 'older' } = {}) {
   h.settings = {
     currency: 'GBP', welcomeMessage: null, enabled: true, supportLinks: [], notices: [],
     reviews: o.reviews === false ? undefined : { enabled: true, maxLength: 500 },
+    ...(o.faq === undefined || o.faq === 'older' ? {} : { faq: { available: o.faq } }),
     brand: { name: 'Northbound Supply', title: 'Northbound Supply', tagline: null, links: { whatsapp: null, telegram: null } },
     features: { layout: 'storefront', ordering: o.ordering !== false, guestCheckout: false, accounts: o.accounts !== false, verify: false, tracking: false, wholesale: false, upsell: false },
   } as unknown as StorefrontSettings;
@@ -139,6 +140,26 @@ describe('the menu panel', () => {
     fireEvent.click(burger()!);
     expect(labels()).toEqual(['Catalog', 'Reviews', 'Support', 'Your account']);
     expect(hrefs()).toEqual(['/', '/reviews', '/support', '/account']);
+  });
+  it('puts FAQ just before Support when the shop has an FAQ, and omits it when it has none or the backend is older', () => {
+    mount(<StorefrontHeader />, { faq: true });
+    fireEvent.click(burger()!);
+    expect(labels()).toEqual(['Catalog', 'Reviews', 'FAQ', 'Support', 'Sign in']);
+    expect(hrefs()).toEqual(['/', '/reviews', '/faq', '/support', '/login']);
+    cleanup();
+    mount(<StorefrontHeader />, { faq: false });
+    fireEvent.click(burger()!);
+    expect(labels()).toEqual(['Catalog', 'Reviews', 'Support', 'Sign in']);
+    cleanup();
+    mount(<StorefrontHeader />, { faq: 'older' });
+    fireEvent.click(burger()!);
+    expect(labels()).toEqual(['Catalog', 'Reviews', 'Support', 'Sign in']);
+  });
+  it('marks FAQ as the current page on /faq', () => {
+    mount(<StorefrontHeader />, { path: '/faq', faq: true });
+    fireEvent.click(burger()!);
+    const current = within(dialog()!).getAllByRole('link').filter((a) => a.getAttribute('aria-current') === 'page');
+    expect(current.map((a) => a.textContent)).toEqual(['FAQ']);
   });
   it('drops Reviews when the shop has reviews off, and the account entry when accounts are off', () => {
     mount(<StorefrontHeader />, { reviews: false, accounts: false });

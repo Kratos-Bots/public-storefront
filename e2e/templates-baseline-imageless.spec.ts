@@ -24,7 +24,8 @@ for (const size of ['mobile', 'desktop'] as const) {
 
     test('catalog renders as rows', async ({ page }) => {
       await page.clock.setFixedTime(FIXED_NOW);
-      await installMocks(page, { layout: 'storefront', session: true, catalog: imagelessCatalog() });
+      // A shop with no FAQ: the phone bottom bar keeps Support, which is what these captured baselines hold.
+      await installMocks(page, { layout: 'storefront', session: true, catalog: imagelessCatalog(), faq: { available: false } });
       await page.goto('/');
       await expect(page.getByRole('heading', { name: 'All products', level: 1 })).toBeVisible();
       await expect(page.getByRole('button', { name: 'Alpine Extract 10ml', exact: true })).toBeVisible(); // a row opener, not a card link
