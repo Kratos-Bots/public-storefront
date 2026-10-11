@@ -80,3 +80,64 @@ test('storefront tile: the price takes the Add button\'s place in the foot, and 
   const emptyBoxes = await paused.locator('div').evaluateAll((els) => els.filter((e) => e.children.length === 0 && !(e.textContent ?? '').trim() && e.getBoundingClientRect().height > 0 && !e.hasAttribute('aria-hidden')).length);
   expect(emptyBoxes).toBe(0);
 });
+
+/**
+ * A long price in a currency with a long symbol: 1,299.99 in CHF, with a bulk rung under it on the tile. In the row the
+ * 116px gutter must hold it (or grow to it) without clipping, overflowing the row or running into the name; on the tile
+ * the foot must hold it inside the card.
+ */
+import { readFileSync } from 'node:fs';
+import type { Catalog } from '../web/src/types/catalog.ts';
+
+function longPriceCatalog(): Catalog {
+  const catalog = JSON.parse(readFileSync(new URL('./fixtures/catalog.json', import.meta.url), 'utf8')) as Catalog;
+  const p = catalog.products.find((x) => x.id === 102)!;
+  p.price = 12999.99;
+  p.pricingTiers = [{ minQuantity: 5, price: 11999.99 }] as typeof p.pricingTiers;
+  return catalog;
+}
+
+async function openLong(page: Page, layout: Layout) {
+  await installMocks(page, {
+    layout, warehouses: PAUSED, catalog: longPriceCatalog(),
+    tweakSettings: (s) => { s.currency = 'CHF'; },
+  });
+  await page.goto('/');
+  await page.locator('[data-warehouse-picker] select').selectOption('2');
+  const part = layout === 'storefront' ? 'product-card' : 'product-row';
+  const card = page.locator(`[data-sf-part="${part}"]`).filter({ hasText: 'Borealis' });
+  await expect(card).toBeVisible();
+  return card;
+}
+
+for (const layout of ['menu', 'webapp', 'storefront'] as const) {
+  test(`${layout}: a long price (CHF 12,999.99) in the paused slot is not clipped, does not overflow and leaves the name alone`, async ({ page }) => {
+    const card = await openLong(page, layout);
+    const price = card.locator('[data-sf-part="price"]');
+    await expect(price).toHaveText(/12,999\.99/);
+    const c = await box(card);
+    const p = await box(price);
+    // Inside the card, on its right.
+    expect(p.x + p.width).toBeLessThanOrEqual(c.x + c.width + 0.5);
+    expect(p.x).toBeGreaterThanOrEqual(c.x);
+    // Not clipped by its own box.
+    const clipped = await price.evaluate((el) => el.scrollWidth > el.clientWidth + 1);
+    expect(clipped).toBe(false);
+    // A row's price stays inside the gutter that carries it (the slot grows to a long price rather than spill).
+    if (layout !== 'storefront') {
+      const g = await box(card.locator('[class*="gutter"]'));
+      expect(p.x).toBeGreaterThanOrEqual(g.x - 0.5);
+      expect(p.x + p.width).toBeLessThanOrEqual(g.x + g.width + 0.5);
+    }
+    // The name ends before the price begins (they may share the row but never overlap).
+    const name = card.locator('h3').first();
+    const n = await box(name);
+    const sameLine = p.y < n.y + n.height && p.y + p.height > n.y;
+    if (sameLine && layout !== 'storefront') expect(n.x + n.width).toBeLessThanOrEqual(p.x + 0.5);
+    // The page does not scroll sideways.
+    const o = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, inner: window.innerWidth }));
+    expect(o.scroll).toBeLessThanOrEqual(o.inner);
+    const dir = process.env.REVIEWS_SHOTS_DIR;
+    if (dir) await card.screenshot({ path: `${dir.replaceAll('\\', '/').replace(/\/?$/, '/')}paused-long-price-${layout}-390.png` });
+  });
+}

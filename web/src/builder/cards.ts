@@ -1,6 +1,6 @@
 import { createElement, Fragment, type ReactNode } from 'react';
 import { validateDoc } from '@/builder/guard.ts';
-import { blockDef, containsVisibleType } from '@/builder/rules.ts';
+import { blockDef, containsAlwaysVisibleType } from '@/builder/rules.ts';
 import { renderBlock } from '@/builder/style/apply.tsx';
 import { CardRowFamily, CardTileFamily, type CardData } from '@/builder/families.ts';
 import { fixedSlot, type FamilyValue } from '@/builder/parts.ts';
@@ -54,8 +54,9 @@ export function compileCard(doc: unknown, kind: CardKind, layout: LayoutKind): C
       const element = build(clean.content, { editing: false, docKey, layout });
       const Family = kind === 'tile' ? CardTileFamily : CardRowFamily;
       const addPart = kind === 'tile' ? 'CardTileAdd' : 'CardRowAdd';
-      // Visible only: an Add part parked in a hidden column never renders, so it cannot carry the price.
-      const hasAddPart = containsVisibleType(clean.content, addPart);
+      // Always drawn only: an Add part parked in a hidden column never renders, and one hidden on phones (or desktops) by
+      // its block style is missing there, so neither can carry the price.
+      const hasAddPart = containsAlwaysVisibleType(clean.content, addPart);
       design = { kind, element, render: (data, views) => createElement(Family.Provider, { value: { data: { ...data, hasAddPart }, views } }, element) };
     } catch (error) {
       // A block render that throws on odd props: the built-in card, never a crashed list.

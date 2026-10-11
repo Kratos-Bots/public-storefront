@@ -58,6 +58,24 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('LastDetailsOffer', () => {
+  it('a failed lookup shows nothing and is not remembered: the next visit asks again and shows the card', async () => {
+    signIn();
+    fetchDetails.mockRejectedValueOnce(new Error('network down'));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const tree = (
+      <QueryClientProvider client={client}>
+        <MantineProvider env="test"><Harness /></MantineProvider>
+      </QueryClientProvider>
+    );
+    const first = render(tree);
+    await waitFor(() => expect(fetchDetails).toHaveBeenCalledTimes(1));
+    expect(card()).toBeNull();
+    first.unmount();
+    render(tree);
+    expect(await screen.findByRole('heading', { name: 'Use the details from your last order?' })).toBeInTheDocument();
+    expect(fetchDetails).toHaveBeenCalledTimes(2);
+  });
+
   it('shows the card with the name and one-line address, and nothing is filled yet', async () => {
     signIn();
     mount();

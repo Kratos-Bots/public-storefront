@@ -158,6 +158,15 @@
    44px (34px with a fine pointer) axis, so the row keeps the height it has with the picker. */
 .gutterPrice {
   min-height: 44px;
+  /* 116px is the picker's width; a long price (CHF 12,999.99) may need more, so the slot grows to it, up to half
+     the row, and the name gives way as it does for any other row. */
+  width: auto;
+  min-width: 116px;
+  max-width: 55%;
+}
+
+.gutterPrice .price {
+  white-space: nowrap;
 }
 
 .quickAdd,

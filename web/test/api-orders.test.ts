@@ -5,6 +5,7 @@ import {
 } from '@/api/orders.ts';
 import { fetchRedeemOptions } from '@/api/profile.ts';
 import { useSessionStore } from '@/stores/session.ts';
+import { ApiError } from '@/lib/errors.ts';
 
 function mockFetch(status: number, body: unknown) {
   return vi.spyOn(globalThis, 'fetch').mockResolvedValue(
@@ -238,11 +239,17 @@ describe('fetchLastCheckoutDetails', () => {
     await expect(fetchLastCheckoutDetails()).resolves.toBeNull();
   });
 
-  it('reads a 404 (an older backend) and any other failure as null, without throwing or retrying', async () => {
+  it('reads a 404 (an older backend) as null, without retrying', async () => {
     const spy = mockFetch(404, { success: false, data: null, error: 'Not found' });
     await expect(fetchLastCheckoutDetails()).resolves.toBeNull();
     expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it('throws any other failure, so it is not cached as "no details"', async () => {
+    const spy = mockFetch(500, { success: false, data: null, error: 'Boom' });
+    await expect(fetchLastCheckoutDetails()).rejects.toMatchObject({ status: 500 });
+    expect(spy).toHaveBeenCalledTimes(1);
     spy.mockRejectedValue(new TypeError('network down'));
-    await expect(fetchLastCheckoutDetails()).resolves.toBeNull();
+    await expect(fetchLastCheckoutDetails()).rejects.toBeInstanceOf(ApiError);
   });
 });
