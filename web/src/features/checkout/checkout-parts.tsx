@@ -67,7 +67,6 @@ function Heading({ styleAttrs }: PartViewProps) {
   const { guest } = CheckoutFamily.useData();
   return (
     <header className={classes.head} {...styleAttrs}>
-      <span className={classes.eyebrow}>{t('checkout.page.eyebrow')}</span>
       <h1 className={classes.title}>{guest ? t('checkout.page.guestTitle') : t('checkout.page.title')}</h1>
     </header>
   );
@@ -85,7 +84,7 @@ function Progress({ styleAttrs }: PartViewProps) {
       iconSize={26}
       data-sf-part="stepper"
       classNames={{
-        root: classes.stepper,
+        root: data.stack ? `${classes.stepper} ${classes.stepperCanvas}` : classes.stepper,
         steps: classes.steps,
         step: classes.step,
         stepIcon: classes.stepIcon,
@@ -220,6 +219,7 @@ function Summary({ styleAttrs }: PartViewProps) {
   return (
     <QuoteSummary
       defaultOpen={d.onReview}
+      fixedOpen={!d.stack && d.onReview}
       quote={d.quote}
       isFetching={d.busy}
       stale={d.quoteStale}

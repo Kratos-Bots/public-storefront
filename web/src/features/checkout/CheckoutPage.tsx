@@ -752,7 +752,6 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
   if (guest && !settings.turnstile) {
     return (
       <EmptyState
-        eyebrow={t('checkout.page.eyebrow')}
         title={t('checkout.page.guestUnavailableTitle')}
         description={t('checkout.page.guestUnavailableBody')}
         action={
@@ -767,7 +766,6 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
   if (lines.length === 0 && !placed) {
     return (
       <EmptyState
-        eyebrow={t('checkout.page.eyebrow')}
         title={t('checkout.page.emptyTitle')}
         description={t('checkout.page.emptyBody')}
         action={
@@ -781,7 +779,10 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
 
   const meta = STEP_META[kind];
   const onReview = step === order.length - 1;
-  const nextDisabled = submitting || locked || (onReview && guest && verifying);
+  // Below 62em the docket column is drawn only on the review step (and on the editor canvas); a custom layout that put the
+  // coupon in there keeps it reachable. Everywhere else it is dropped whole, so it leaves no gap.
+  const asideShown = stack || onReview || containsVisibleType(s.aside.items, 'CheckoutCoupon');
+  const nextDisabled =submitting || locked || (onReview && guest && verifying);
 
   return (
     <CheckoutFamily.Provider value={value}>
@@ -889,7 +890,7 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
           {s.after()}
         </div>
 
-        {s.aside({ className: classes.aside, as: 'aside' })}
+        {s.aside({ className: asideShown ? `${classes.aside} ${classes.asideShown}` : classes.aside, as: 'aside' })}
       </div>
 
       {!stack && guest && settings.turnstile ? (

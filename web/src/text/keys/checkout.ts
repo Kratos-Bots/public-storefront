@@ -20,7 +20,6 @@ export default defineTextArea('checkout', {
   'errors.placeFailed': { en: "We couldn't place your order", max: 100 },
   'errors.inProgress': { en: 'Checkout already in progress', max: 100 },
 
-  'page.eyebrow': { en: 'Checkout', max: 40 },
   'page.title': { en: 'Checkout', max: 60 },
   'page.guestTitle': { en: 'Guest checkout', max: 60 },
   'page.guestUnavailableTitle': { en: "Guest checkout isn't available right now", max: 100 },

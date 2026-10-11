@@ -12,7 +12,7 @@ export const block = defineBlock<{ id: string; head: ComponentData[]; lead: Comp
   name: 'CheckoutFlow', label: 'Checkout', category: 'commerce', layouts: 'all', routeBound: true, slots: ['head', 'lead', 'steps', 'after', 'aside'],
   style: styleSupport('wrap', [...BOX]),
   text: [
-    'checkout.page.eyebrow', 'checkout.page.emptyTitle', 'checkout.page.emptyBody', 'checkout.page.guestUnavailableTitle', 'checkout.page.guestUnavailableBody',
+    'checkout.page.emptyTitle', 'checkout.page.emptyBody', 'checkout.page.guestUnavailableTitle', 'checkout.page.guestUnavailableBody',
     'checkout.page.verifying', 'checkout.page.terms', 'checkout.steps.count', 'checkout.steps.contactTitle', 'checkout.steps.addressTitle',
     'checkout.steps.shippingTitle', 'checkout.steps.paymentTitle', 'checkout.steps.reviewTitle', 'checkout.actions.*', 'checkout.errors.*',
     'common.actions.*', 'common.totals.*',

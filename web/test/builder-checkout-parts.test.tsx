@@ -566,7 +566,7 @@ describe('fix round 1 coverage', () => {
 describe('css', () => {
   it('the heading rules carry the block colour and text scale variables', () => {
     const css = readFileSync(resolve(__dirname, '../src/features/checkout/CheckoutPage.module.css'), 'utf8');
-    for (const sel of ['.eyebrow', '.title']) {
+    for (const sel of ['.title']) {
       const body = css.slice(css.indexOf(`${sel} {`), css.indexOf('}', css.indexOf(`${sel} {`)));
       expect(body).toContain('var(--sf-block-fg,');
       expect(body).toContain('var(--sf-text-scale, 1)');
