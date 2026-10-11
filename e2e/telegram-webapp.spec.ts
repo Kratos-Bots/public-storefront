@@ -140,6 +140,9 @@ test.describe('inside Telegram', () => {
     await goToCart(page);
     await expect(page).toHaveURL(/\/cart$/);
     expect(mocks.state.checkouts.length).toBe(checkoutsBefore);
+    // The button was hidden, not cleared, on the catalogue, so its old "Checkout · " text is still there until the
+    // cart's own effect binds the handler and shows it again: wait for the button to be shown, not for the text.
+    await expect.poll(() => mainVisible(page)).toBe(true);
     await expect.poll(() => mainText(page)).toMatch(/^Checkout · /);
     expect(await mainHandlers(page)).toBe(1);
     expect(await secondaryHandlers(page)).toBe(1);
