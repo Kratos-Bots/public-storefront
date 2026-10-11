@@ -1,13 +1,11 @@
 export interface BackControlsInput {
   /** The client has Telegram's SecondaryButton (Bot API 7.10+). */
   supportsSecondary: boolean;
-  /** The MainButton is showing, so the bottom row exists whatever Back does. */
-  hasPrimaryAction: boolean;
+  /** A page has claimed the primary action (the checkout steps), as opposed to the cart default ("Checkout" on /cart). */
+  pageAction: boolean;
   modalOpen: boolean;
   /** There is somewhere to go back to (not the catalogue home). */
   backAvailable: boolean;
-  /** The in-page running-tab bar is showing instead of the MainButton (see useWebAppCartBar). */
-  cartBar?: boolean;
 }
 
 export interface BackControls {
@@ -19,16 +17,13 @@ export interface BackControls {
 
 /**
  * Which of Telegram's two back controls to show, decided in one place so the header and the bottom row cannot
- * disagree. With a primary action the bottom row carries Back and the header arrow stands down; with none, Back is
- * the SecondaryButton alone, and the header arrow stays beside it as a safety net, so that no client that fails to
- * draw a lone SecondaryButton leaves a page with no way back. The safety net (the `!hasPrimaryAction` branch of
- * showHeaderBack) can go once Back alone has been seen working on a real device.
+ * disagree. Back sits in the bottom row only beside an action a page has claimed for itself (the checkout steps);
+ * everywhere else, whether the cart default, the running-tab bar or nothing at all is showing, a lone or stacked
+ * bottom Back only eats screen height, so Back is the header arrow alone. Never both, never neither while there is
+ * somewhere to go back to (outside a modal).
  */
-export function backControls({ supportsSecondary, hasPrimaryAction, modalOpen, backAvailable, cartBar = false }: BackControlsInput): BackControls {
+export function backControls({ supportsSecondary, pageAction, modalOpen, backAvailable }: BackControlsInput): BackControls {
   if (!backAvailable || modalOpen) return { showHeaderBack: false, showBottomBack: false };
-  if (!supportsSecondary) return { showHeaderBack: true, showBottomBack: false };
-  // The running-tab bar is in the page, so a lone SecondaryButton would stack a second, native bar under it: Back
-  // rides in the header instead, as it does on a client without the SecondaryButton.
-  if (cartBar) return { showHeaderBack: true, showBottomBack: false };
-  return { showHeaderBack: !hasPrimaryAction, showBottomBack: true };
+  if (supportsSecondary && pageAction) return { showHeaderBack: false, showBottomBack: true };
+  return { showHeaderBack: true, showBottomBack: false };
 }
