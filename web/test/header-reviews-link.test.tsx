@@ -5,7 +5,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router';
 import type { ReactNode } from 'react';
 import type { StorefrontSettings } from '@/types/settings.ts';
 
-const h = vi.hoisted(() => ({ settings: {} as StorefrontSettings, bottomNav: true }));
+const h = vi.hoisted(() => ({ settings: {} as StorefrontSettings, bottomNav: true, menu: false }));
 vi.mock('@/app/settings.ts', () => ({ useSettings: () => h.settings }));
 vi.mock('@/app/builder-gate.ts', () => ({ isBuilderMode: vi.fn(() => false) }));
 vi.mock('@/app/preview-listener.ts', () => ({ isPreviewMode: vi.fn(() => false) }));
@@ -20,7 +20,7 @@ vi.mock('@/templates/runtime.tsx', async (importOriginal) => ({
 }));
 vi.mock('@/templates/hooks.ts', async (orig) => {
   const real = await orig<typeof import('@/templates/hooks.ts')>();
-  return { ...real, useCoreOptions: () => ({ ...real.useCoreOptions(), showMobileBottomNav: h.bottomNav }) };
+  return { ...real, useCoreOptions: () => ({ ...real.useCoreOptions(), showMobileBottomNav: h.bottomNav, showHeaderMenu: h.menu }) };
 });
 
 import { isBuilderMode } from '@/app/builder-gate.ts';
@@ -42,6 +42,7 @@ const link = () => screen.queryByRole('link', { name: 'Reviews' });
 
 beforeEach(() => {
   h.bottomNav = true;
+  h.menu = false; // these pin the star's own rules; the header menu (which also retires it on a phone) has its own tests
   vi.mocked(isBuilderMode).mockReturnValue(false);
   vi.mocked(isPreviewMode).mockReturnValue(false);
 });
@@ -54,13 +55,20 @@ describe('the header Reviews link', () => {
       expect(link()?.getAttribute('href')).toBe('/reviews');
       expect(link()!.closest('header')).not.toBeNull();
     });
-  it('is hidden below 62em while the bottom bar carries Reviews, and shown at every width once the bar is off', () => {
+  it('is hidden below 62em while the bottom bar carries Reviews, and shown at every width once the bar (and the header menu) is off', () => {
     mount(<StorefrontHeader />);
     expect(link()!.className).toMatch(/sf-hide-mobile/);
     cleanup();
     h.bottomNav = false;
     mount(<StorefrontHeader />);
     expect(link()!.className).not.toMatch(/sf-hide-mobile/);
+  });
+  it('is hidden below 62em while the header menu carries Reviews, whether or not the bar is on', () => {
+    h.menu = true;
+    h.bottomNav = false;
+    mount(<StorefrontHeader />);
+    expect(link()!.className).toMatch(/sf-hide-mobile/);
+    expect(link()!.querySelector('span')).not.toBeNull(); // the desktop text link is still drawn
   });
   it.each([[{ enabled: false, maxLength: 0 }], [null]])('is absent when reviews are off (%j)', (reviews) => {
     mount(<StorefrontHeader />, reviews);

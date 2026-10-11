@@ -13,7 +13,7 @@ const LINE = {
 };
 
 interface Setup {
-  width?: number; height?: number; layout?: Layout; session?: boolean; cart?: boolean; wholesale?: boolean; navOption?: boolean;
+  width?: number; height?: number; layout?: Layout; session?: boolean; cart?: boolean; wholesale?: boolean; navOption?: boolean; menuOption?: boolean;
   template?: [string, string]; telegram?: boolean; noReviews?: boolean; reviews?: InstallMocksOptions['reviews'];
   tweak?: InstallMocksOptions['tweakSettings'];
 }
@@ -27,14 +27,16 @@ async function setup(page: Page, o: Setup = {}) {
     await page.addInitScript(() => { (window as unknown as { Telegram: { WebApp: { safeAreaInset: { bottom: number } } } }).Telegram.WebApp.safeAreaInset.bottom = 34; });
   }
   if (o.cart) await page.addInitScript((line) => window.localStorage.setItem('sf-cart-v1', JSON.stringify({ state: { lines: [line] }, version: 0 })), LINE);
-  const theme = o.template ? await presetTheme(page, o.template[0], o.template[1], o.navOption === false ? { showMobileBottomNav: false } : {}) : null;
+  // The header menu is on by default; the star tests below switch it off to see the star's own rules.
+  const options = { ...(o.navOption === false ? { showMobileBottomNav: false } : {}), ...(o.menuOption === false ? { showHeaderMenu: false } : {}) };
+  const theme = o.template ? await presetTheme(page, o.template[0], o.template[1], options) : null;
   return installMocks(page, {
     layout: o.layout ?? 'storefront',
     session: o.session ?? false,
     reviews: o.noReviews ? undefined : (o.reviews ?? {}),
     tweakSettings: (s) => {
       theme?.(s);
-      if (!theme && o.navOption === false) s.theme = { ...s.theme, options: { ...s.theme.options, showMobileBottomNav: false } };
+      if (!theme && Object.keys(options).length > 0) s.theme = { ...s.theme, options: { ...s.theme.options, ...options } };
       s.features.wholesale = o.wholesale ?? false;
       o.tweak?.(s);
     },
@@ -84,7 +86,7 @@ test.describe('where the bar shows', () => {
     });
   }
 
-  test('absent when the shop switches it off, and the header carries Reviews on the phone instead', async ({ page }) => {
+  test('absent when the shop switches it off', async ({ page }) => {
     await setup(page, { navOption: false });
     await page.goto('/');
     await expect(page.locator('[data-sf-part="product-row"], [data-sf-part="product-card"]').first()).toBeVisible();
@@ -243,7 +245,7 @@ test.describe('the support page', () => {
   }
 });
 
-test.describe('the header Reviews link', () => {
+test.describe('the header Reviews link (with the header menu off: with it on, the phone star gives way to the menu)', () => {
   const headerHeight = (page: Page) => page.evaluate(() => document.querySelector('[data-sf-part="header"]')!.getBoundingClientRect().height);
   const cases: Array<[Layout, number, boolean]> = [
     ['storefront', 1280, true], ['menu', 1280, true], ['webapp', 1280, true],
@@ -251,7 +253,7 @@ test.describe('the header Reviews link', () => {
   ];
   for (const [layout, width, navOption] of cases) {
     test(`${layout} at ${width}${navOption ? '' : ' with the bar off'}: shown, and the header is as tall as without it`, async ({ page }) => {
-      await setup(page, { layout, width, height: width < 768 ? 844 : 900, navOption, reviews: {} });
+      await setup(page, { layout, width, height: width < 768 ? 844 : 900, navOption, menuOption: false, reviews: {} });
       await page.goto('/');
       const link = page.locator('[data-sf-part="header"]').getByRole('link', { name: 'Reviews' });
       await expect(link).toBeVisible();
@@ -266,7 +268,7 @@ test.describe('the header Reviews link', () => {
 
   for (const [layout, width, height] of [['menu', 390, 844], ['webapp', 390, 844], ['menu', 360, 640], ['webapp', 360, 640]] as const) {
     test(`${layout} at ${width} with the bar off: the search field keeps room for its placeholder, the star overlaps no neighbour and nothing overflows`, async ({ page }) => {
-      await setup(page, { layout, width, height, navOption: false, reviews: {} });
+      await setup(page, { layout, width, height, navOption: false, menuOption: false, reviews: {} });
       await page.goto('/');
       const star = page.locator('[data-sf-part="header"]').getByRole('link', { name: 'Reviews' });
       await expect(star).toBeVisible();
@@ -307,7 +309,7 @@ test.describe('the header Reviews link', () => {
   }
 
   test('with the bar on, the header does not carry it on a phone, and the bar does', async ({ page }) => {
-    await setup(page, { reviews: {} });
+    await setup(page, { menuOption: false, reviews: {} });
     await page.goto('/');
     await expect(navOf(page).getByRole('link', { name: 'Reviews' })).toBeVisible();
     await expect(page.locator('[data-sf-part="header"]').getByRole('link', { name: 'Reviews' })).toBeHidden();

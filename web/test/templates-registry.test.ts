@@ -32,6 +32,7 @@ describe('buildRegistry', () => {
       ['showCategoryEmoji', 'boolean', true],
       ['showOutOfStockPrice', 'boolean', true],
       ['showMobileBottomNav', 'boolean', true],
+      ['showHeaderMenu', 'boolean', true],
     ];
     for (const { manifest } of REGISTRY.values()) {
       for (const [key, type, def] of defaults) {
