@@ -51,5 +51,4 @@ export default defineTextArea('reviews', {
   'page.loadFailedTitle': { en: 'Reviews did not load', max: 60 },
   'page.loadFailedBody': { en: 'Check your connection and try again.', max: 160 },
   'page.noComment': { en: 'Rated without a comment.', max: 80 },
-  'link': { en: 'Customer reviews', max: 40 },
 });

@@ -40,5 +40,4 @@ export default {
   'page.loadFailedTitle': 'Heading shown when the reviews could not be loaded',
   'page.loadFailedBody': 'Line under that heading',
   'page.noComment': 'Shown in a review that has stars but no comment',
-  'link': 'Link to the customer reviews page, in the account menu',
 };
