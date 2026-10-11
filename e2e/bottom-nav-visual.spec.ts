@@ -1,7 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { installMocks, type Layout } from './mocks.ts';
+import { installMocks, installTelegramStub, type Layout } from './mocks.ts';
 import { FIXED_NOW } from './flows.ts';
 import { presetTheme } from './template-theme.ts';
 import type { PublicReview } from '../web/src/types/reviews.ts';
@@ -20,7 +20,7 @@ const LINE = {
   productId: 101, displayName: 'Alpine Extract 10ml', sku: 'ALP-10', unitPrice: 42.5, basePrice: 42.5, pricingTiers: [], quantity: 2,
   isPreorder: false, excludedFromFreeShipping: false, imageProductId: null,
 };
-const THEMES: Array<[string, string]> = [['cyber-brutalism', 'acid-dark'], ['modern', 'default']];
+const THEMES: Array<[string, string]> = [['cyber-brutalism', 'acid-dark'], ['modern', 'default'], ['bento', 'tech-light']];
 const LAYOUTS: Layout[] = ['storefront', 'menu', 'webapp'];
 const LIST: PublicReview[] = [5, 4, 5, 3, 5, 4].map((rating, i) => ({
   id: 100 - i, rating, comment: i % 2 ? null : 'Arrived in two days, well packed and exactly as described.', createdAt: `2026-08-${String(20 - i).padStart(2, '0')}T09:00:00.000Z`,
@@ -76,6 +76,7 @@ for (const [template, preset] of THEMES) {
       test(`${base} cart`, async ({ page }) => {
         await start(page, true);
         await page.goto('/cart');
+        await expect(page.getByText('Alpine Extract 10ml').first()).toBeVisible();
         await page.evaluate(() => document.fonts.ready);
         await shot(page, `${base}-cart`);
       });
@@ -105,4 +106,33 @@ for (const [template, preset] of THEMES) {
       });
     }
   }
+}
+
+// The owner's own case: wholesale, inside the Telegram Mini App, on a phone with a 34px home indicator.
+for (const [template, preset] of [['cyber-brutalism', 'acid-dark'], ['bento', 'tech-light']] as const) {
+  test(`${template} inside Telegram, wholesale, items in the cart, 390`, async ({ page }) => {
+    mkdirSync(OUT, { recursive: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.clock.setFixedTime(FIXED_NOW);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await installTelegramStub(page);
+    await page.addInitScript(() => { (window as unknown as { Telegram: { WebApp: { safeAreaInset: { bottom: number } } } }).Telegram.WebApp.safeAreaInset.bottom = 34; });
+    await page.addInitScript((line) => window.localStorage.setItem('sf-cart-v1', JSON.stringify({ state: { lines: [line] }, version: 0 })), LINE);
+    const theme = await presetTheme(page, template, preset);
+    const mocks = await installMocks(page, { layout: 'menu', session: false, reviews: { list: LIST }, tweakSettings: (s) => { theme(s); s.features.wholesale = true; } });
+    // Inside Telegram the cart is the server's, not the browser's.
+    mocks.state.cart = {
+      items: [{
+        productId: 101, name: 'Alpine Extract 10ml', quantity: 2, unitPrice: 42.5, lineTotal: 85, imageUrl: null, isPreorder: false,
+        outOfStock: false, priceChanged: false, inactive: false, belowMin: false, aboveMax: false, minOrderQuantity: null, maxOrderQuantity: null,
+      }],
+      subtotal: 85, itemCount: 2,
+    };
+    await page.goto('/');
+    await expect(page.locator('[data-sf-part="bottom-nav"]')).toBeVisible();
+    // Inside Telegram the cart's way in is the native main button, outside the page: the bottom bar is all that is at the foot.
+    await expect(page.locator('tr').nth(2)).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    await shot(page, `telegram-${template}-390-wholesale-items`);
+  });
 }

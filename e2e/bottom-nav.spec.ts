@@ -147,6 +147,26 @@ test.describe('what stacks on the bar', () => {
     });
   }
 
+  test('360x640: five 44px targets, nothing overflows, the cart bar sits on the bar and the end of the page clears both', async ({ page }) => {
+    await setup(page, { width: 360, height: 640, cart: true });
+    await page.goto('/');
+    await expect(page.locator('[data-sf-part="cart-bar"]')).toBeVisible();
+    for (const link of await navOf(page).getByRole('link').all()) {
+      const b = (await link.boundingBox())!;
+      expect(b.width, 'tap target width').toBeGreaterThanOrEqual(44);
+      expect(b.height, 'tap target height').toBeGreaterThanOrEqual(44);
+    }
+    // No label is cut off by its cell.
+    expect(await navOf(page).locator('span:last-child').evaluateAll((els) => els.filter((el) => el.scrollWidth > el.clientWidth + 1).length)).toBe(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    const nav = (await rect(page, '[data-sf-part="bottom-nav"]'))!;
+    const bar = (await rect(page, '[data-sf-part="cart-bar"]'))!;
+    expect(Math.abs(bar.bottom - nav.top)).toBeLessThanOrEqual(1);
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    const tail = await page.evaluate(() => (Array.from(document.querySelectorAll('main, footer')).pop()!).getBoundingClientRect().bottom);
+    expect(tail).toBeLessThanOrEqual(bar.top + 1);
+  });
+
   test('the menu layout\'s contact strip rests directly on the bar', async ({ page }) => {
     await setup(page, { layout: 'menu' });
     await page.goto('/');
