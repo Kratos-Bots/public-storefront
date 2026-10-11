@@ -23,6 +23,7 @@ import {
   persistForm,
   type CheckoutForm,
 } from '@/features/checkout/form-state.ts';
+import { clearAcceptedLastDetails } from '@/features/checkout/last-details.ts';
 import {
   addressSchema,
   buildContactSchema,
@@ -171,6 +172,8 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
   const storedKinds = useMemo(() => stepKindsOf(s.steps.items.map((i) => i.type)), [s.steps.items]);
   const orderLegal = isLegalStepOrder(storedKinds);
   const order: readonly StepKind[] = orderLegal ? storedKinds : DEFAULT_STEP_ORDER;
+  // Accepting the last-order offer hides it for this checkout only: the next visit to the page may offer again.
+  useEffect(() => clearAcceptedLastDetails, []);
   // Say so once per mounted page, never per render and never on the editor canvas.
   useEffect(() => {
     if (orderLegal || stack || warnedOrder.current) return;

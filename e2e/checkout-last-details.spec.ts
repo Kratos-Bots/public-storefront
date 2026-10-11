@@ -107,6 +107,19 @@ test('a collection order fills name and contact only', async ({ page }) => {
   await expect(page.getByRole('textbox', { name: 'Address line 1' })).toHaveValue('');
 });
 
+test('accepting a collection order retires the card on the contact and the address step', async ({ page }) => {
+  await open(page, 'storefront', { lastDetails: { ...DETAILS, addressLine1: '1 Point Street', servicePoint: { id: 'sp-1', carrier: 'evri', name: 'Corner News' } } });
+  await page.locator(CARD).getByRole('button', { name: 'Use these details' }).click();
+  await expect(page.locator(CARD)).toHaveCount(0);
+  await expect(page.getByRole('textbox', { name: 'First name' })).toHaveValue('Alex');
+  await expect(page.getByRole('textbox', { name: 'Email' })).toHaveValue('alex@example.invalid');
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await expect(page.getByRole('heading', { name: 'Delivery address' })).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Address line 1' })).toHaveValue('');
+  await page.waitForLoadState('networkidle');
+  await expect(page.locator(CARD)).toHaveCount(0);
+});
+
 test('nothing shows, and nothing is said, when there are no details or the route is missing', async ({ page }) => {
   const none = await open(page, 'storefront', { lastDetails: null });
   await page.waitForLoadState('networkidle');

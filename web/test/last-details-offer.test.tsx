@@ -11,7 +11,7 @@ import { LastDetailsOffer } from '@/features/checkout/LastDetailsOffer.tsx';
 import { ContactStep } from '@/features/checkout/steps/ContactStep.tsx';
 import { AddressStep } from '@/features/checkout/steps/AddressStep.tsx';
 import { DEFAULT_FORM, type CheckoutForm } from '@/features/checkout/form-state.ts';
-import { DISMISS_KEY, resetDismissed } from '@/features/checkout/last-details.ts';
+import { DISMISS_KEY, clearAcceptedLastDetails, resetDismissed } from '@/features/checkout/last-details.ts';
 import { useSessionStore } from '@/stores/session.ts';
 import type { LastCheckoutDetails } from '@/types/checkout.ts';
 import type { ContactModes } from '@/types/settings.ts';
@@ -48,6 +48,23 @@ function AddressHarness({ initial = DEFAULT_FORM, onForm }: { initial?: Checkout
       form={form} patch={patch} errors={{}} countries={['GB', 'DE']}
       before={<LastDetailsOffer form={form} patch={patch} contactModes={MODES} shipCountries={['GB', 'DE']} />}
     />
+  );
+}
+
+/** One form, the two steps one after the other: what the checkout does as the shopper presses Continue. */
+function TwoStepHarness({ onForm }: { onForm?: (f: CheckoutForm) => void }) {
+  const [form, setForm] = useState(DEFAULT_FORM);
+  const [step, setStep] = useState<'contact' | 'address'>('contact');
+  onForm?.(form);
+  const patch = useCallback((next: Partial<CheckoutForm>) => setForm((f) => ({ ...f, ...next })), []);
+  const offer = <LastDetailsOffer form={form} patch={patch} contactModes={MODES} shipCountries={['GB', 'DE']} />;
+  return (
+    <>
+      <button type="button" onClick={() => setStep(step === 'contact' ? 'address' : 'contact')}>Switch step</button>
+      {step === 'contact'
+        ? <ContactStep form={form} patch={patch} errors={{}} contactModes={MODES} guest={false} before={offer} />
+        : <AddressStep form={form} patch={patch} errors={{}} countries={['GB', 'DE']} before={offer} />}
+    </>
   );
 }
 
@@ -239,5 +256,30 @@ describe('LastDetailsOffer', () => {
     expect(latest.email).toBe('alex@example.invalid');
     expect(latest.addressLine1).toBe('');
     expect(latest.deliveryMethod).toBe('home');
+  });
+
+  it('accepting a collection order retires the card on both steps (the address stays empty, nothing is left to offer)', async () => {
+    signIn();
+    fetchDetails.mockResolvedValue({ ...DETAILS, addressLine1: '1 Point Street', servicePoint: { id: 'sp-1', carrier: 'evri', name: 'Corner News' } });
+    let latest: CheckoutForm = DEFAULT_FORM;
+    mount(<TwoStepHarness onForm={(f) => { latest = f; }} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Use these details' }));
+    expect(latest).toMatchObject({ firstName: 'Alex', surname: 'Rowan', email: 'alex@example.invalid', addressLine1: '' });
+    expect(card()).toBeNull();
+    expect(screen.getByRole('status').textContent).toMatch(/filled in from your last order/i);
+    fireEvent.click(screen.getByRole('button', { name: 'Switch step' }));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(card()).toBeNull();
+  });
+
+  it('accepting retires the card for this checkout only: the next checkout offers again', async () => {
+    signIn();
+    const first = mount(<TwoStepHarness />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Use these details' }));
+    expect(card()).toBeNull();
+    first.unmount();
+    clearAcceptedLastDetails();
+    mount(<TwoStepHarness />);
+    expect(await screen.findByRole('button', { name: 'Use these details' })).toBeInTheDocument();
   });
 });

@@ -4,6 +4,7 @@ import { fetchLastCheckoutDetails } from '@/api/orders.ts';
 import { selectIsLoggedIn, useSessionStore } from '@/stores/session.ts';
 import type { CheckoutForm } from '@/features/checkout/form-state.ts';
 import {
+  acceptLastDetails,
   currentDismissed,
   dismissLastDetails,
   lastDetailsPatch,
@@ -74,6 +75,7 @@ export function LastDetailsOffer({ form, patch, contactModes, shipCountries, shi
               data-variant="filled"
               onClick={() => {
                 patch(lastDetailsPatch(details, { contactModes, shipCountries, shipsNowhere, form }));
+                if (customerId !== null) acceptLastDetails(customerId);
                 setFilled(true);
               }}
             >

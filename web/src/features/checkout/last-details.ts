@@ -30,11 +30,13 @@ export function writeDismissed(customerId: number): void {
 // One dismissal for every place the offer is mounted (the contact step and the address step), kept in memory as well as
 // in sessionStorage so that it holds across the two steps even where storage is blocked.
 let dismissedInMemory: number | null = null;
+// Who accepted the offer in this checkout. Memory only: it is not a "No thanks", so a reload or the next checkout asks again.
+let acceptedInMemory: number | null = null;
 const dismissListeners = new Set<() => void>();
 
 /** Who said "No thanks" in this tab: this page's memory first, then sessionStorage (which survives a reload). */
 export function currentDismissed(): number | null {
-  return dismissedInMemory ?? readDismissed();
+  return dismissedInMemory ?? acceptedInMemory ?? readDismissed();
 }
 
 export function subscribeDismissed(listener: () => void): () => void {
@@ -49,9 +51,24 @@ export function dismissLastDetails(customerId: number): void {
   dismissListeners.forEach((l) => l());
 }
 
+/**
+ * "Use these details": the card is done for this checkout on both steps, whether or not the order had anything to fill
+ * (a collection-point order fills name and contact only and leaves the address empty, which would otherwise keep it showing).
+ */
+export function acceptLastDetails(customerId: number): void {
+  acceptedInMemory = customerId;
+  dismissListeners.forEach((l) => l());
+}
+
+/** The checkout page left: the next one may offer again. */
+export function clearAcceptedLastDetails(): void {
+  acceptedInMemory = null;
+}
+
 /** Forget the in-page dismissal (tests; sessionStorage is cleared by the caller). */
 export function resetDismissed(): void {
   dismissedInMemory = null;
+  acceptedInMemory = null;
   dismissListeners.forEach((l) => l());
 }
 

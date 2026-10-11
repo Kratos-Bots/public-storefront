@@ -51,8 +51,7 @@ for (const layout of ['menu', 'webapp'] as const) {
     const price = await within(paused, paused.locator('[data-sf-part="price"]'));
 
     // Same height as the row with the picker, and the price right-aligned to the picker's right edge.
-    expect(row.height).toBeLessThanOrEqual(liveRow.height + 1);
-  expect(row.height).toBeGreaterThanOrEqual(liveRow.height - 6);
+    expect(Math.abs(row.height - liveRow.height)).toBeLessThanOrEqual(1);
     expect(Math.abs(price.x + price.width - (liveSlot.x + liveSlot.width))).toBeLessThanOrEqual(1);
     // Centred on the picker's axis, i.e. on the row, not hanging under the name.
     const h3 = await within(paused, paused.locator('h3'));
@@ -247,7 +246,7 @@ test('wholesale, 390px: the paused unit price stands in the stepper\'s slot, onc
   // The right-hand edge of the row, where the stepper sits with an open warehouse.
   expect(Math.abs(price.x + price.width - (liveStepper.x + liveStepper.width))).toBeLessThanOrEqual(1);
   expect(row.x + row.width - (price.x + price.width)).toBeLessThanOrEqual(12);
-  // The row is no taller than with the stepper (it is a touch shorter: the price left the meta line) and not squashed.
+  // Looser than the menu rows' ±1: the price leaves the meta line, so this row is a touch shorter than with the stepper.
   expect(row.height).toBeLessThanOrEqual(liveRow.height + 1);
   expect(row.height).toBeGreaterThanOrEqual(liveRow.height - 6);
   // Exactly one visible cell draws the price.
