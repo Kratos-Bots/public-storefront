@@ -110,16 +110,16 @@ function PriceText({ product, styleAttrs }: { product: Product; styleAttrs?: Par
 }
 
 function RowPrice({ styleAttrs }: PartViewProps) {
-  const { product, hasAddPart } = CardRowFamily.useData();
+  const { product, addCarriesPrice } = CardRowFamily.useData();
   // Ordering paused: the Add part carries the price, so it is not drawn twice.
-  return usePriceInAddSlot(hasAddPart) ? null : <PriceText product={product} styleAttrs={styleAttrs} />;
+  return usePriceInAddSlot(addCarriesPrice) ? null : <PriceText product={product} styleAttrs={styleAttrs} />;
 }
 
 function RowAdd({ styleAttrs }: PartViewProps) {
-  const { product, hasAddPart } = CardRowFamily.useData();
-  // Paused: the Add part carries the price only when it is drawn on every viewport (`hasAddPart`). A design that hides it on
+  const { product, addCarriesPrice } = CardRowFamily.useData();
+  // Paused: the Add part carries the price only when it is drawn on every viewport (`addCarriesPrice`). A design that hides it on
   // one viewport keeps the Price part everywhere instead, so this part then draws nothing: one price at every width.
-  const priceHere = usePriceInAddSlot(hasAddPart);
+  const priceHere = usePriceInAddSlot(addCarriesPrice);
   const { features } = useSettings();
   const { paused } = useWarehouseOrdering();
   const { t } = useText();

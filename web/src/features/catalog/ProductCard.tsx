@@ -123,16 +123,16 @@ function PriceStack({ product, className, styleAttrs }: { product: Product; clas
 }
 
 function TilePrice({ styleAttrs }: PartViewProps) {
-  const { product, hasAddPart } = CardTileFamily.useData();
+  const { product, addCarriesPrice } = CardTileFamily.useData();
   // Ordering paused: the Add part carries the price, so it is not drawn twice.
-  return usePriceInAddSlot(hasAddPart) ? null : <PriceStack product={product} className={classes.prices} styleAttrs={styleAttrs} />;
+  return usePriceInAddSlot(addCarriesPrice) ? null : <PriceStack product={product} className={classes.prices} styleAttrs={styleAttrs} />;
 }
 
 function TileAdd({ styleAttrs }: PartViewProps) {
-  const { product, hasAddPart } = CardTileFamily.useData();
-  // Paused: the Add part carries the price only when it is drawn on every viewport (`hasAddPart`); otherwise the Price
+  const { product, addCarriesPrice } = CardTileFamily.useData();
+  // Paused: the Add part carries the price only when it is drawn on every viewport (`addCarriesPrice`); otherwise the Price
   // part stays and this part draws nothing, so there is one price at every width.
-  const priceHere = usePriceInAddSlot(hasAddPart);
+  const priceHere = usePriceInAddSlot(addCarriesPrice);
   const { features } = useSettings();
   const { paused } = useWarehouseOrdering();
   // Paused: no empty box and no hole in the foot. The price takes the slot the button would.

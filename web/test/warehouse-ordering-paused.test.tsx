@@ -214,8 +214,8 @@ describe('header notice and cart notice together', () => {
 });
 
 describe('usePriceInAddSlot', () => {
-  function Probe({ hasAddPart }: { hasAddPart?: boolean }) {
-    return <p data-testid="slot">{String(usePriceInAddSlot(hasAddPart))}</p>;
+  function Probe({ addCarriesPrice }: { addCarriesPrice?: boolean }) {
+    return <p data-testid="slot">{String(usePriceInAddSlot(addCarriesPrice))}</p>;
   }
   const slot = () => screen.getByTestId('slot').textContent;
 
@@ -224,7 +224,7 @@ describe('usePriceInAddSlot', () => {
     wrap(<Probe />);
     expect(slot()).toBe('true');
     cleanup();
-    wrap(<Probe hasAddPart={false} />);
+    wrap(<Probe addCarriesPrice={false} />);
     expect(slot()).toBe('false');
   });
 

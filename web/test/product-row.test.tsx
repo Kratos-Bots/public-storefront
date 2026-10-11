@@ -233,12 +233,12 @@ describe('ProductRow while ordering is paused', () => {
     expect(prices(container)[0]!.parentElement!.className).not.toMatch(/gutter/);
   });
 
-  function view(name: 'CardRowPrice' | 'CardRowAdd', hasAddPart?: boolean) {
+  function view(name: 'CardRowPrice' | 'CardRowAdd', addCarriesPrice?: boolean) {
     state.settings = { currency: 'GBP', features: { layout: 'menu', ordering: true } } as unknown as StorefrontSettings;
     const View = ROW_VIEWS[name]!;
     return render(
       <MantineProvider env="test">
-        <CardRowFamily.Provider value={{ data: { product: product(), eager: false, hasSiblingImages: true, hasAddPart }, views: ROW_VIEWS }}>
+        <CardRowFamily.Provider value={{ data: { product: product(), eager: false, hasSiblingImages: true, addCarriesPrice }, views: ROW_VIEWS }}>
           <View props={{}} />
         </CardRowFamily.Provider>
       </MantineProvider>,
@@ -255,7 +255,7 @@ describe('ProductRow while ordering is paused', () => {
     expect(prices(view('CardRowPrice', false).container)).toHaveLength(1);
   });
 
-  it('one price whichever part carries it: a hasAddPart of false leaves the Add part drawing nothing', () => {
+  it('one price whichever part carries it: a addCarriesPrice of false leaves the Add part drawing nothing', () => {
     pause();
     expect(prices(view('CardRowAdd', false).container)).toHaveLength(0);
     expect(view('CardRowAdd', false).container.querySelector('[class*="gutter"]')).toBeNull();
@@ -265,7 +265,7 @@ describe('ProductRow while ordering is paused', () => {
     expect(prices(view('CardRowAdd', true).container)).toHaveLength(1);
   });
 
-  it('with ordering on nothing changes: the Add part is the picker whatever hasAddPart says', () => {
+  it('with ordering on nothing changes: the Add part is the picker whatever addCarriesPrice says', () => {
     pause(null);
     const { container } = view('CardRowAdd', false);
     expect(container.querySelector('[class*="quickAdd"]')).not.toBeNull();
