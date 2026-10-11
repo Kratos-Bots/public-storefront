@@ -50,7 +50,7 @@ const rect = (page: Page, selector: string) => page.evaluate((sel) => {
 }, selector);
 
 test.describe('where the bar shows', () => {
-  for (const path of ['/', '/p/101', '/cart', '/account/profile', '/reviews']) {
+  for (const path of ['/', '/p/101', '/cart', '/account/profile', '/reviews', '/support']) {
     test(`390x844: on ${path}`, async ({ page }) => {
       await setup(page, { session: true, cart: path === '/cart' });
       await page.goto(path);
@@ -189,4 +189,19 @@ test.describe('what stacks on the bar', () => {
     const box = (await field.boundingBox())!;
     expect(box.y + box.height).toBeLessThanOrEqual(nav.top + 1);
   });
+});
+
+test.describe('the support page', () => {
+  for (const layout of ['storefront', 'menu', 'webapp'] as const) {
+    test(`${layout}: opens from the bar, shows the heading and the coming-soon line`, async ({ page }) => {
+      await setup(page, { layout });
+      await page.goto('/');
+      await expect(navOf(page)).toBeVisible();
+      await navOf(page).getByRole('link', { name: 'Support' }).click();
+      await expect(page).toHaveURL(/\/support$/);
+      await expect(page.getByRole('heading', { level: 1, name: 'Support' })).toBeVisible();
+      await expect(page.getByText(/coming soon/i)).toBeVisible();
+      await expect(navOf(page).locator('[aria-current="page"]')).toHaveText('Support');
+    });
+  }
 });
