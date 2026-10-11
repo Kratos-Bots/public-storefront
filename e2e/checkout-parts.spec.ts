@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import {
   COUPON_CODE, installMocks, installTelegramStub, type InstallMocksOptions, type Layout, type MockHandle,
 } from './mocks.ts';
-import { FIXED_NOW } from './flows.ts';
+import { FIXED_NOW, guestQuoteSettled } from './flows.ts';
 import { presetTheme } from './template-theme.ts';
 import {
   arrangedCheckoutSet, defaultCheckoutSet, illegalCheckoutSet, LEGAL_STEP_ORDERS, noCouponCheckoutSet,
@@ -182,17 +182,6 @@ const BASE_BODY = {
   shippingOptionId: 11, paymentMethod: 'crypto_static', coin: 'usdt', network: 'polygon', email: 'ada@example.invalid',
   shippingAddress: { firstName: 'Ada', surname: 'Sterling', addressLine1: '14 Kirkgate', city: 'Leeds', zip: 'LS1 6BY', country: 'GB' },
 };
-
-/**
- * A guest's quote is debounced (300 ms) and mints a token of its own, and the Place order button is down while it does.
- * Picking the shipping option starts that run, and the walk reaches Review well inside a second: a click landing in the
- * gap before it starts is answered by an error, and one landing as it starts hits a disabled button and does nothing.
- * So wait for the quote priced for the pick to be asked for and finished, as a shopper would see the button come back.
- */
-async function guestQuoteSettled(page: Page, mocks: MockHandle): Promise<void> {
-  await expect.poll(() => mocks.state.guestQuotes.some((q) => q.shippingOptionId === 11)).toBe(true);
-  await expect(page.getByText('Verifying')).toHaveCount(0);
-}
 
 /** The cart is spent and the saved checkout form is gone. */
 async function expectSpent(page: Page): Promise<void> {
@@ -653,6 +642,7 @@ test.describe('checkout · removed coupon and notes parts', () => {
   test('guest: the same, and exactly one Turnstile mint per guest request', async ({ page, browser }) => {
     const gone = await open(page, 'storefront', noCouponCheckoutSet('storefront'), '/checkout', { guest: true, seed: SAVED });
     await walk(page, { order: LEGAL_STEP_ORDERS[0]! });
+    await guestQuoteSettled(page, gone.mocks);
     await placeOrder(page, 'guest');
     expect(gone.mocks.state.guestQuotes.length).toBeGreaterThan(0);
     for (const q of gone.mocks.state.guestQuotes) expect(q.couponCode, JSON.stringify(q)).toBeUndefined();
@@ -670,6 +660,7 @@ test.describe('checkout · removed coupon and notes parts', () => {
       const p2 = await ctx.newPage();
       const back = await open(p2, 'storefront', noCouponCheckoutSet('storefront', { coupon: true, notes: true }), '/checkout', { guest: true, seed: SAVED });
       await walk(p2, { order: LEGAL_STEP_ORDERS[0]! });
+      await guestQuoteSettled(p2, back.mocks);
       await placeOrder(p2, 'guest');
       expect(back.mocks.state.guestQuotes.some((q) => q.couponCode === COUPON_CODE)).toBe(true);
       expect(back.mocks.state.checkouts[0]).toMatchObject({ ...BASE_BODY, couponCode: COUPON_CODE, notes: 'Saved note from a previous visit' });

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Button } from '@mantine/core';
 import { EmptyState } from '@/components/EmptyState.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
@@ -87,22 +88,68 @@ function ReviewsBody() {
               </li>
             ))}
           </ul>
-          {query.isFetchNextPageError ? (
-            <div className={classes.moreError} role="alert">
-              <p>{errorMessage(query.error, t('reviews.page.loadMoreFailed'))}</p>
-              <Button variant="default" size="sm" loading={query.isFetchingNextPage} onClick={() => void query.fetchNextPage()}>
-                {t('common.actions.tryAgain')}
-              </Button>
-            </div>
-          ) : query.hasNextPage ? (
-            <div className={classes.more}>
-              <Button variant="default" size="sm" loading={query.isFetchingNextPage} onClick={() => void query.fetchNextPage()}>
-                {t('reviews.page.loadMore')}
-              </Button>
-            </div>
-          ) : null}
+          <MoreReviews query={query} />
         </>
       )}
+    </div>
+  );
+}
+
+/** How far below the viewport the end of the list may be before the next page is asked for. */
+const NEAR_END = '400px';
+
+/**
+ * The end of the list: the next page loads by itself when a sentinel under the last review comes within 400px of the
+ * viewport, one page at a time and never while a fetch is in flight. A failed page keeps the retry button (nothing
+ * retries on its own, or a dead network would be asked in a loop). Without IntersectionObserver the button is
+ * the way to the next page, as it was.
+ */
+function MoreReviews({ query }: { query: ReturnType<typeof useReviews> }) {
+  const { t } = useText();
+  const sentinel = useRef<HTMLDivElement>(null);
+  const { hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage } = query;
+  const pages = query.data?.pages.length ?? 0;
+  const observed = typeof IntersectionObserver !== 'undefined';
+  const watching = observed && hasNextPage && !isFetchingNextPage && !isFetchNextPageError;
+
+  // A fresh observer after every page reports where the sentinel is straight away, so a page that did not push it out
+  // of range is followed by the next one without the shopper scrolling.
+  useEffect(() => {
+    const el = sentinel.current;
+    if (!watching || !el) return undefined;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) {
+        observer.disconnect();
+        void fetchNextPage();
+      }
+    }, { rootMargin: NEAR_END });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [watching, pages, fetchNextPage]);
+
+  if (isFetchNextPageError) {
+    return (
+      <div className={classes.moreError} role="alert">
+        <p>{errorMessage(query.error, t('reviews.page.loadMoreFailed'))}</p>
+        <Button variant="default" size="sm" loading={isFetchingNextPage} onClick={() => void fetchNextPage()}>
+          {t('common.actions.tryAgain')}
+        </Button>
+      </div>
+    );
+  }
+  if (!hasNextPage) return null;
+  if (!observed) {
+    return (
+      <div className={classes.more}>
+        <Button variant="default" size="sm" loading={isFetchingNextPage} onClick={() => void fetchNextPage()}>
+          {t('reviews.page.loadMore')}
+        </Button>
+      </div>
+    );
+  }
+  return (
+    <div ref={sentinel} className={classes.more} data-sf-part="reviews-sentinel">
+      <p className={classes.loading} role="status" aria-live="polite">{isFetchingNextPage ? t('reviews.page.loadingMore') : ''}</p>
     </div>
   );
 }

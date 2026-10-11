@@ -23,6 +23,7 @@ import {
   persistForm,
   type CheckoutForm,
 } from '@/features/checkout/form-state.ts';
+import { clearAcceptedLastDetails } from '@/features/checkout/last-details.ts';
 import {
   addressSchema,
   buildContactSchema,
@@ -171,6 +172,8 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
   const storedKinds = useMemo(() => stepKindsOf(s.steps.items.map((i) => i.type)), [s.steps.items]);
   const orderLegal = isLegalStepOrder(storedKinds);
   const order: readonly StepKind[] = orderLegal ? storedKinds : DEFAULT_STEP_ORDER;
+  // Accepting the last-order offer hides it for this checkout only: the next visit to the page may offer again.
+  useEffect(() => clearAcceptedLastDetails, []);
   // Say so once per mounted page, never per render and never on the editor canvas.
   useEffect(() => {
     if (orderLegal || stack || warnedOrder.current) return;
@@ -752,7 +755,6 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
   if (guest && !settings.turnstile) {
     return (
       <EmptyState
-        eyebrow={t('checkout.page.eyebrow')}
         title={t('checkout.page.guestUnavailableTitle')}
         description={t('checkout.page.guestUnavailableBody')}
         action={
@@ -767,7 +769,6 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
   if (lines.length === 0 && !placed) {
     return (
       <EmptyState
-        eyebrow={t('checkout.page.eyebrow')}
         title={t('checkout.page.emptyTitle')}
         description={t('checkout.page.emptyBody')}
         action={
@@ -781,6 +782,9 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
 
   const meta = STEP_META[kind];
   const onReview = step === order.length - 1;
+  // Below 62em the docket column is drawn only on the review step (and on the editor canvas); a custom layout that put the
+  // coupon in there keeps it reachable. Everywhere else it is dropped whole, so it leaves no gap.
+  const asideShown = stack || onReview || containsVisibleType(s.aside.items, 'CheckoutCoupon');
   const nextDisabled = submitting || locked || (onReview && guest && verifying);
 
   return (
@@ -889,7 +893,7 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
           {s.after()}
         </div>
 
-        {s.aside({ className: classes.aside, as: 'aside' })}
+        {s.aside({ className: asideShown ? `${classes.aside} ${classes.asideShown}` : classes.aside, as: 'aside' })}
       </div>
 
       {!stack && guest && settings.turnstile ? (

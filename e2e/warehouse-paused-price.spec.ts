@@ -201,3 +201,97 @@ test('menu 320px: a long price (CHF 12,999.99) in the paused slot wraps or fits,
   const dir = process.env.REVIEWS_SHOTS_DIR;
   if (dir) await card.screenshot({ path: `${dir.replaceAll('\\', '/').replace(/\/?$/, '/')}paused-long-price-menu-320.png` });
 });
+
+/**
+ * Wholesale mode (the trade sheet): with ordering paused the unit price stands in the slot the stepper holds with an open
+ * warehouse (phone), once; on a desktop the table keeps its Unit price column and gains nothing.
+ */
+const SHOTS = process.env.UX_SHOTS ?? '';
+const shotDir = () => SHOTS.replaceAll('\\', '/').replace(/\/?$/, '/');
+
+async function openTrade(page: Page, warehouses: NonNullable<InstallMocksOptions['warehouses']>, over: { browseOnly?: boolean; catalog?: Catalog; currency?: string } = {}) {
+  await installMocks(page, {
+    layout: 'webapp', session: true, warehouses, ...(over.catalog ? { catalog: over.catalog } : {}),
+    tweakSettings: (s) => {
+      s.features.layout = 'webapp'; s.features.wholesale = true;
+      if (over.browseOnly) s.features.ordering = false;
+      if (over.currency) s.currency = over.currency;
+    },
+  });
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Trade list', level: 1 })).toBeVisible();
+  if (!over.browseOnly) await page.locator('[data-warehouse-picker] select').selectOption('2');
+  const row = page.getByRole('row').filter({ hasText: 'Borealis Drops' });
+  await expect(row).toBeVisible();
+  return row;
+}
+
+const visibleText = (row: ReturnType<Page['locator']>, re: RegExp) =>
+  row.locator('td').evaluateAll((cells, src) => cells.filter((c) => {
+    const r = c.getBoundingClientRect();
+    return r.width > 0 && r.height > 0 && getComputedStyle(c).display !== 'none' && new RegExp(src).test(c.textContent ?? '');
+  }).length, re.source);
+
+test('wholesale, 390px: the paused unit price stands in the stepper\'s slot, once', async ({ page, context }) => {
+  const paused = await openTrade(page, PAUSED);
+  const live = await openTrade(await context.newPage(), OPEN);
+  const slot = paused.locator('[data-price-slot]');
+  await expect(slot).toBeVisible();
+  await expect(paused.getByRole('textbox')).toHaveCount(0);
+
+  const price = await box(slot);
+  const row = await box(paused);
+  const liveStepper = await box(live.getByRole('button', { name: /One more Borealis/ }));
+  const liveRow = await box(live);
+  // The right-hand edge of the row, where the stepper sits with an open warehouse.
+  expect(Math.abs(price.x + price.width - (liveStepper.x + liveStepper.width))).toBeLessThanOrEqual(1);
+  expect(row.x + row.width - (price.x + price.width)).toBeLessThanOrEqual(12);
+  // Looser than the menu rows' ±1: the price leaves the meta line, so this row is a touch shorter than with the stepper.
+  expect(row.height).toBeLessThanOrEqual(liveRow.height + 1);
+  expect(row.height).toBeGreaterThanOrEqual(liveRow.height - 6);
+  // Exactly one visible cell draws the price.
+  expect(await visibleText(paused, /£\d/)).toBe(1);
+  if (SHOTS) await paused.screenshot({ path: `${shotDir()}wholesale-paused-390.png` });
+});
+
+test('wholesale, 360px: a long price (CHF 12,999.99) does not overflow the row or sit over the name', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  const row = await openTrade(page, PAUSED, { catalog: longPriceCatalog(), currency: 'CHF' });
+  const slot = row.locator('[data-price-slot]');
+  await expect(slot).toHaveText(/12,999\.99/);
+  const r = await box(row);
+  const p = await box(slot);
+  const n = await box(row.getByText('Borealis Drops 25ml', { exact: true }).first());
+  expect(p.x + p.width).toBeLessThanOrEqual(r.x + r.width + 0.5);
+  expect(await slot.evaluate((el) => el.scrollWidth > el.clientWidth + 1)).toBe(false);
+  if (p.y < n.y + n.height && p.y + p.height > n.y) expect(n.x + n.width).toBeLessThanOrEqual(p.x + 0.5);
+  const o = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, inner: window.innerWidth }));
+  expect(o.scroll).toBeLessThanOrEqual(o.inner);
+  if (SHOTS) await row.screenshot({ path: `${shotDir()}wholesale-paused-long-360.png` });
+});
+
+test('wholesale, 1280px: the table is unchanged, the price stays in its own column and nothing is added', async ({ page, context }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const paused = await openTrade(page, PAUSED);
+  const other = await context.newPage();
+  await other.setViewportSize({ width: 1280, height: 900 });
+  // A browse-only shop draws the same table a paused one did before: code, product, unit price, bulk. That is the reference.
+  const live = await openTrade(other, OPEN, { browseOnly: true });
+  await expect(paused.locator('[data-price-slot]')).toBeHidden();
+  expect(await visibleText(paused, /£\d/)).toBe(1);
+  // The Unit price column is where it is in the reference table.
+  const pu = await box(paused.getByRole('cell').nth(2));
+  const lu = await box(live.getByRole('cell').nth(2));
+  expect(Math.abs(pu.x - lu.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(pu.width - lu.width)).toBeLessThanOrEqual(1);
+  // No extra column.
+  const shown = await paused.locator('td').evaluateAll((c) => c.filter((x) => getComputedStyle(x).display !== 'none').length);
+  expect(shown).toBe(await live.locator('td').evaluateAll((c) => c.filter((x) => getComputedStyle(x).display !== 'none').length));
+  if (SHOTS) await paused.screenshot({ path: `${shotDir()}wholesale-paused-1280.png` });
+});
+
+test('wholesale browse-only shop (ordering off): nothing is added anywhere', async ({ page }) => {
+  const row = await openTrade(page, OPEN, { browseOnly: true });
+  await expect(row.locator('[data-price-slot]')).toHaveCount(0);
+  expect(await visibleText(row, /£\d/)).toBe(1);
+});

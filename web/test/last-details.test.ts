@@ -2,11 +2,16 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { DEFAULT_FORM, type CheckoutForm } from '@/features/checkout/form-state.ts';
 import {
   DISMISS_KEY,
-  formHasTyping,
+  acceptLastDetails,
+  addressHasTyping,
+  clearAcceptedLastDetails,
+  dismissLastDetails,
+  isHiddenFor,
   isShippable,
   lastDetailsPatch,
   offerSummary,
   readDismissed,
+  resetDismissed,
   shouldOfferLastDetails,
   splitPhone,
   writeDismissed,
@@ -48,14 +53,23 @@ describe('shouldOfferLastDetails', () => {
   it('offers again to another customer in the same tab', () => {
     expect(shouldOfferLastDetails({ ...base, customerId: 8, dismissedFor: 7 })).toBe(true);
   });
-  it.each(['firstName', 'surname', 'email', 'phone', 'addressLine1', 'addressLine2', 'addressLine3', 'city', 'county', 'zip'] as const)(
-    'does not offer once %s holds anything (a restored form)', (field) => {
+  it.each(['firstName', 'surname', 'email', 'phone'] as const)(
+    'still offers with %s filled in (a restored draft): only the address decides', (field) => {
+      expect(shouldOfferLastDetails({ ...base, form: form({ [field]: 'x' }) })).toBe(true);
+    },
+  );
+  it('still offers with every contact field filled and the address empty', () => {
+    expect(shouldOfferLastDetails({ ...base, form: form({ firstName: 'A', surname: 'B', email: 'a@example.invalid', phone: '7700900123' }) })).toBe(true);
+  });
+  it.each(['addressLine1', 'addressLine2', 'addressLine3', 'city', 'county', 'zip'] as const)(
+    'does not offer once %s holds anything', (field) => {
       expect(shouldOfferLastDetails({ ...base, form: form({ [field]: 'x' }) })).toBe(false);
     },
   );
   it('whitespace is not typing; a restored collection point is', () => {
-    expect(formHasTyping(form({ firstName: '   ' }))).toBe(false);
-    expect(formHasTyping(form({ servicePoint: { id: 'p', carrier: 'c', name: 'n', street: '', houseNumber: '', postalCode: '', city: '', country: 'GB', latitude: null, longitude: null, distance: null } }))).toBe(true);
+    expect(addressHasTyping(form({ addressLine1: '   ' }))).toBe(false);
+    expect(addressHasTyping(form({ servicePoint: { id: 'p', carrier: 'c', name: 'n', street: '', houseNumber: '', postalCode: '', city: '', country: 'GB', latitude: null, longitude: null, distance: null } }))).toBe(true);
+    expect(shouldOfferLastDetails({ ...base, form: form({ servicePoint: { id: 'p', carrier: 'c', name: 'n', street: '', houseNumber: '', postalCode: '', city: '', country: 'GB', latitude: null, longitude: null, distance: null } }) })).toBe(false);
   });
 });
 
@@ -82,6 +96,38 @@ describe('dismissal storage', () => {
       Storage.prototype.getItem = real;
       Storage.prototype.setItem = set;
     }
+  });
+});
+
+describe('hidden for a customer', () => {
+  afterEach(() => resetDismissed());
+
+  it('is hidden for the customer who dismissed, and only for them', () => {
+    dismissLastDetails(1);
+    expect(isHiddenFor(1)).toBe(true);
+    expect(isHiddenFor(2)).toBe(false);
+  });
+  it('is hidden for the customer who accepted, and only for them', () => {
+    acceptLastDetails(2);
+    expect(isHiddenFor(2)).toBe(true);
+    expect(isHiddenFor(1)).toBe(false);
+  });
+  it('A dismisses and signs out; B signs in and accepts: the card is hidden for B (and for A again)', () => {
+    dismissLastDetails(1);
+    acceptLastDetails(2);
+    expect(isHiddenFor(2)).toBe(true);
+    expect(isHiddenFor(1)).toBe(true);
+    clearAcceptedLastDetails();
+    expect(isHiddenFor(2)).toBe(false);
+    expect(isHiddenFor(1)).toBe(true);
+  });
+  it('a dismissal survives a reload (sessionStorage) for that customer only', () => {
+    writeDismissed(1);
+    expect(isHiddenFor(1)).toBe(true);
+    expect(isHiddenFor(2)).toBe(false);
+  });
+  it('nobody is hidden when nobody has dismissed or accepted', () => {
+    expect(isHiddenFor(1)).toBe(false);
   });
 });
 
@@ -121,6 +167,20 @@ describe('isShippable', () => {
 });
 
 describe('lastDetailsPatch', () => {
+  it('fills only the blanks: a typed name, email or phone is never overwritten', () => {
+    const patch = lastDetailsPatch(DETAILS, ctx({ form: form({ firstName: 'Sam', email: 'typed@example.invalid', phone: '7000000000', phonePrefix: 'DE' }) }));
+    expect(patch).not.toHaveProperty('firstName');
+    expect(patch).not.toHaveProperty('email');
+    expect(patch).not.toHaveProperty('phone');
+    expect(patch).not.toHaveProperty('phonePrefix');
+    expect(patch).not.toHaveProperty('phonePrefixTouched');
+    expect(patch).toMatchObject({ surname: 'Rowan', addressLine1: '14 Test Lane', city: 'Leeds', country: 'GB' });
+  });
+  it('fills the blank ones next to a typed one', () => {
+    const patch = lastDetailsPatch(DETAILS, ctx({ form: form({ email: 'typed@example.invalid' }) }));
+    expect(patch).toMatchObject({ firstName: 'Alex', surname: 'Rowan', phone: '7700900123' });
+    expect(patch).not.toHaveProperty('email');
+  });
   it('fills name, address, country, email and phone', () => {
     expect(lastDetailsPatch(DETAILS, ctx())).toEqual({
       firstName: 'Alex', surname: 'Rowan', email: 'alex@example.invalid',

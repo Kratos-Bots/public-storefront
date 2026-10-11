@@ -274,15 +274,21 @@
   }
 }
 
+/* The bottom navigation bar is fixed over the foot of the page too, whether or not a cart bar sits on it.
+   (Before .withBar: same specificity, and the tab then adds its own 76px.) */
+.shell {
+  padding-bottom: var(--sf-nav-h, 0px);
+}
+
 /* Clearance for the running tab, which is fixed to the foot of the phone and
    would otherwise sit on top of the last thing the footer says. */
 .withBar {
-  padding-bottom: 76px;
+  padding-bottom: calc(76px + var(--sf-nav-h, 0px));
 }
 
 /* The same clearance, told to the document: its scroll-padding-bottom (global.css) keeps a focused field out
    from under the band. It sits on :root because the document is what scrolls, and a variable set on the shell
    would never reach it. */
 :global(:root):has(.withBar) {
-  --sf-bottom-inset: calc(76px + env(safe-area-inset-bottom, 0px));
+  --sf-bottom-inset: calc(76px + var(--sf-nav-h, 0px) + var(--sf-bar-safe, env(safe-area-inset-bottom, 0px)));
 }

@@ -24,31 +24,50 @@ describe('bottom inset', () => {
       const css = read(file);
       const inset = block(css, ':global(:root):has(.withBar)');
       expect(inset).toMatch(/--sf-bottom-inset:\s*calc\(76px\b/);
+      // The bottom navigation bar's height is on top, and it takes the browser's inset over from the bar (--sf-bar-safe is 0 then).
+      expect(inset).toContain('var(--sf-nav-h, 0px)');
+      expect(inset).toContain('var(--sf-bar-safe');
       expect(inset).toContain('safe-area-inset-bottom');
       expect(block(css, '\n.withBar {')).toMatch(/padding-bottom:\s*(calc\()?76px/);
+      expect(block(css, '\n.withBar {')).toContain('var(--sf-nav-h, 0px)');
     },
   );
 
   it('the Mini App shell keeps clear of the home indicator inside Telegram when no bar is in the page', () => {
     const css = read('layouts/WebAppShell.module.css');
-    expect(block(css, ':global(:root):has(.native:not(.withBar))')).toMatch(/--sf-bottom-inset:\s*var\(--tg-safe-bottom/);
-    expect(block(css, '\n.native:not(.withBar) {')).toMatch(/padding-bottom:\s*var\(--tg-safe-bottom/);
+    expect(block(css, ':global(:root):has(.native:not(.withBar))')).toMatch(/--sf-bottom-inset:\s*calc\(var\(--sf-nav-h, 0px\) \+ var\(--sf-bar-safe, var\(--tg-safe-bottom/);
+    expect(block(css, '\n.native:not(.withBar) {')).toMatch(/padding-bottom:\s*calc\(var\(--sf-nav-h, 0px\) \+ var\(--sf-bar-safe, var\(--tg-safe-bottom/);
   });
 
   it('inside Telegram the running-tab bar is in the page: 76px plus the Telegram inset is reserved and published, never env()', () => {
     const css = read('layouts/WebAppShell.module.css');
     const inset = block(css, ':global(:root):has(.native.withBar)');
-    expect(inset).toMatch(/--sf-bottom-inset:\s*calc\(76px \+ var\(--tg-safe-bottom/);
+    expect(inset).toMatch(/--sf-bottom-inset:\s*calc\(76px \+ var\(--sf-nav-h, 0px\) \+ var\(--sf-bar-safe, var\(--tg-safe-bottom/);
     expect(inset).not.toContain('env(');
     const pad = block(css, '\n.native.withBar {');
-    expect(pad).toMatch(/padding-bottom:\s*calc\(76px \+ var\(--tg-safe-bottom/);
+    expect(pad).toMatch(/padding-bottom:\s*calc\(76px \+ var\(--sf-nav-h, 0px\) \+ var\(--sf-bar-safe, var\(--tg-safe-bottom/);
     expect(pad).not.toContain('env(');
   });
 
   it('the running-tab bar inside Telegram pads its own foot with the Telegram inset only', () => {
     const tg = block(read('features/cart/MobileCartBar.module.css'), '\n.telegram {');
-    expect(tg).toMatch(/padding-bottom:\s*var\(--tg-safe-bottom/);
+    expect(tg).toMatch(/padding-bottom:\s*var\(--sf-bar-safe, var\(--tg-safe-bottom/);
     expect(tg).not.toContain('env(');
+  });
+
+  it('every bar the bottom navigation bar carries leaves the home-indicator inset to it (--sf-bar-safe is 0 while it shows)', () => {
+    // The strip, the wholesale bar and the running-tab bar would otherwise add the inset on top of the bar's own.
+    for (const [file, selector] of [
+      ['components/ContactLinks.module.css', '.strip .link {'],
+      ['features/wholesale/WholesaleBar.module.css', '.bar {'],
+      ['features/cart/MobileCartBar.module.css', '.bar {'],
+    ] as const) {
+      const rule = block(read(file), selector);
+      expect(rule, `${file} ${selector}`).toContain('var(--sf-bar-safe');
+      expect(rule, `${file} ${selector}`).toContain('safe-area-inset-bottom');
+    }
+    expect(read('features/webapp/PrimaryActionBar.module.css')).toContain('height: var(--sf-bar-safe, var(--tg-safe-bottom');
+    expect(block(read('layouts/BottomNav.module.css'), ':global(:root):has(.nav)')).toContain('--sf-bar-safe: 0px');
   });
 
   it("the checkout's sticky Continue band publishes its height on phones only", () => {
@@ -70,7 +89,8 @@ describe('bottom inset', () => {
   it('the fixed bars the shells reserve room for are still fixed to the foot (the PrimaryActionBar composes the cart bar)', () => {
     const bar = block(read('features/cart/MobileCartBar.module.css'), '.bar {');
     expect(bar).toMatch(/position:\s*fixed/);
-    expect(bar).toMatch(/bottom:\s*0/);
+    // On the bottom navigation bar when it is on the page, on the screen's foot otherwise.
+    expect(bar).toMatch(/bottom:\s*var\(--sf-nav-h, 0px\)/);
     expect(read('features/webapp/PrimaryActionBar.module.css')).toMatch(/composes:\s*bar from '\.\.\/cart\/MobileCartBar\.module\.css'/);
   });
 });

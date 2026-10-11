@@ -47,6 +47,7 @@ export default defineTextArea('reviews', {
   'page.scale': { en: '/ 5', max: 20 },
   'page.loadMoreFailed': { en: 'More reviews did not load.', max: 80 },
   'page.loadMore': { en: 'Load more reviews', max: 40 },
+  'page.loadingMore': { en: 'Loading more reviews', max: 40 },
   'page.loadFailedTitle': { en: 'Reviews did not load', max: 60 },
   'page.loadFailedBody': { en: 'Check your connection and try again.', max: 160 },
   'page.noComment': { en: 'Rated without a comment.', max: 80 },

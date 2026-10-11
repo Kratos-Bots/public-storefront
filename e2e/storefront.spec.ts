@@ -1,7 +1,7 @@
 import { fileURLToPath } from 'node:url';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { installMocks, ORDER_REF, ORIGIN, type Layout, type MockHandle } from './mocks.ts';
-import { fillCheckout, onlyVisible, openCart, openProduct, productOpener } from './flows.ts';
+import { fillCheckout, guestQuoteSettled, onlyVisible, openCart, openProduct, productOpener } from './flows.ts';
 
 /**
  * The mocked end-to-end pass. Vite serves the real app; every `/api/*`,
@@ -221,6 +221,8 @@ test.describe('guest checkout', () => {
     await fillCheckout(page);
     await shot(page, '3-guest-review');
 
+    // The shipping pick starts a debounced re-quote that takes the button down; order once it is back.
+    await guestQuoteSettled(page, mocks);
     await page.getByRole('button', { name: /^Place order/ }).click();
     // A guest has no order page: they land on the order-placed screen, which sends them to sign in.
     await expect(page).toHaveURL(new RegExp(`/order-placed\\?order=${ORDER_REF}$`));
@@ -280,7 +282,8 @@ for (const [size, viewport] of VIEWPORTS) {
       await expect(page.getByText('People referred')).toBeVisible();
       await shot(page, `4-account-referrals-${size}`);
 
-      await page.getByRole('link', { name: 'Profile', exact: true }).click();
+      // Scoped to the page: the phone's bottom navigation bar has a Profile link too.
+      await page.locator('main').getByRole('link', { name: 'Profile', exact: true }).click();
       await expect(page.getByText('WhatsApp linked')).toBeVisible();
       await expect(page.getByText('Telegram not linked')).toBeVisible();
       await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();

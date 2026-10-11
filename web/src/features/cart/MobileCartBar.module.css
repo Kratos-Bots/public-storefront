@@ -5,21 +5,23 @@
   composes: glass from global;
   position: fixed;
   inset-inline: 0;
-  bottom: 0;
+  /* Directly above the bottom navigation bar when it is on the page (0 otherwise). That bar owns the foot's inset, so
+     --sf-bar-safe is 0 while it shows and the inset is not counted twice. */
+  bottom: var(--sf-nav-h, 0px);
   z-index: 30;
   border-top: 1px solid var(--sf-line-strong);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-bottom: var(--sf-bar-safe, env(safe-area-inset-bottom, 0px));
 }
 
 /* The Mini App's two homes for the same band. In a browser tab it adds Telegram's own bottom inset (0 outside a
    Mini App) to the browser's; inside Telegram only that inset counts, because env(safe-area-inset-bottom) would
    count the notch twice. */
 .webapp {
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--tg-safe-bottom, 0px));
+  padding-bottom: var(--sf-bar-safe, calc(env(safe-area-inset-bottom, 0px) + var(--tg-safe-bottom, 0px)));
 }
 
 .telegram {
-  padding-bottom: var(--tg-safe-bottom, 0px);
+  padding-bottom: var(--sf-bar-safe, var(--tg-safe-bottom, 0px));
 }
 
 .inner {

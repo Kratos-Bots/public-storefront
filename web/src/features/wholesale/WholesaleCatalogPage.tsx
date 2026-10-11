@@ -37,6 +37,8 @@ export function WholesaleCatalogPage() {
   // Quantity inputs and the running tab are ordering controls; a paused warehouse is browse-only.
   const { paused } = useWarehouseOrdering();
   const ordering = features.ordering && !paused;
+  // Paused in a shop that orders: on a phone the unit price takes the slot the quantity control has otherwise.
+  const priceInSlot = features.ordering && paused;
   const { search, setSearch } = useShellSearch();
   const { categorySlug } = useParams();
   const catalog = useCatalog();
@@ -213,6 +215,7 @@ export function WholesaleCatalogPage() {
               band={band}
               groupEnd={groupEnd}
               ordering={ordering}
+              priceInSlot={priceInSlot}
               index={i}
             />
           ))}

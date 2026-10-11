@@ -140,6 +140,9 @@ test.describe('inside Telegram', () => {
     await goToCart(page);
     await expect(page).toHaveURL(/\/cart$/);
     expect(mocks.state.checkouts.length).toBe(checkoutsBefore);
+    // The button was hidden, not cleared, on the catalogue, so its old "Checkout · " text is still there until the
+    // cart's own effect binds the handler and shows it again: wait for the button to be shown, not for the text.
+    await expect.poll(() => mainVisible(page)).toBe(true);
     await expect.poll(() => mainText(page)).toMatch(/^Checkout · /);
     expect(await mainHandlers(page)).toBe(1);
     expect(await secondaryHandlers(page)).toBe(1);
@@ -440,7 +443,9 @@ test.describe('webapp layout in a plain browser', () => {
     await page.goto('/account');
     await expect(page.locator('[data-sf-layout="webapp"]')).toBeVisible();
     await expect(page.locator('[data-sf-part="primary-bar"]')).toHaveCount(0);
-    expect(await page.locator('[data-sf-layout="webapp"]').evaluate((el) => getComputedStyle(el).paddingBottom)).toBe('0px');
+    // The only room reserved is the bottom navigation bar's own: no bar of ours is under it.
+    const navHeight = (await page.locator('[data-sf-part="bottom-nav"]').boundingBox())!.height;
+    expect(await page.locator('[data-sf-layout="webapp"]').evaluate((el) => getComputedStyle(el).paddingBottom)).toBe(`${navHeight}px`);
     await expect(page.locator('[data-sf-part="header"]').getByRole('button', { name: 'Back' })).toBeVisible();
   });
 
@@ -484,7 +489,12 @@ test.describe('inside Telegram: room at the foot', () => {
     await expect(page.locator('[data-sf-layout="webapp"]')).toBeVisible();
     // Telegram's own buttons sit outside the page, so there is no fixed bar of ours to clear.
     await expect(page.locator('[data-sf-part="primary-bar"]')).toHaveCount(0);
-    await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement).scrollPaddingBottom)).toBe('34px');
+    // The bottom navigation bar is in the page: it owns the home indicator (34px of padding), and a focused field keeps clear of it.
+    const nav = page.locator('[data-sf-part="bottom-nav"]');
+    await expect(nav).toBeVisible();
+    expect(await nav.evaluate((el) => getComputedStyle(el).paddingBottom)).toBe('34px');
+    const navHeight = (await nav.boundingBox())!.height;
+    await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement).scrollPaddingBottom)).toBe(`${navHeight}px`);
   });
 
   test('with something in the cart the running tab is in the page, clears the home indicator by Telegram\'s inset alone, and the shell reserves it', async ({ page }) => {
@@ -499,13 +509,19 @@ test.describe('inside Telegram: room at the foot', () => {
     await addFirstToCart(page, 'webapp', mocks);
     const bar = cartBar(page);
     await expect(bar).toBeVisible();
-    // The bar's own foot is Telegram's inset (the browser's env() would count the notch twice), and it sits flush at the bottom.
-    expect(await bar.evaluate((el) => getComputedStyle(el).paddingBottom)).toBe('34px');
+    // The bottom navigation bar owns the foot's inset (Telegram's 34px; the browser's env() would count the notch twice),
+    // and the running tab sits directly on it with no inset of its own.
+    const nav = page.locator('[data-sf-part="bottom-nav"]');
+    expect(await nav.evaluate((el) => getComputedStyle(el).paddingBottom)).toBe('34px');
+    const navBox = (await nav.boundingBox())!;
+    expect(Math.round(navBox.y + navBox.height)).toBe(844);
+    expect(await bar.evaluate((el) => getComputedStyle(el).paddingBottom)).toBe('0px');
     const box = (await bar.boundingBox())!;
-    expect(Math.round(box.y + box.height)).toBe(844);
+    expect(Math.round(box.y + box.height)).toBe(Math.round(navBox.y));
     const shell = page.locator('[data-sf-layout="webapp"]');
-    expect(await shell.evaluate((el) => getComputedStyle(el).paddingBottom)).toBe('110px');
-    await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement).scrollPaddingBottom)).toBe('110px');
+    // The shell reserves the running tab's 76px and the bar's own height.
+    expect(await shell.evaluate((el) => getComputedStyle(el).paddingBottom)).toBe(`${76 + navBox.height}px`);
+    await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement).scrollPaddingBottom)).toBe(`${76 + navBox.height}px`);
     expect(await mainVisible(page)).toBe(false);
   });
 

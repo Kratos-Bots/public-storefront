@@ -107,11 +107,10 @@ for (const t of TEMPLATES) {
     });
 
     for (const layout of ['menu', 'webapp'] as const) {
-      test(`reviews link under the shop, ${layout} 390`, async ({ page }) => {
+      test(`reviews in the bottom bar, ${layout} 390`, async ({ page }) => {
         await setup(page, t.template, t.preset, 390, layout, { list: LIST }, false);
         await page.goto('/');
-        const link = page.getByRole('link', { name: 'Customer reviews' });
-        await link.scrollIntoViewIfNeeded();
+        const link = page.locator('[data-sf-part="bottom-nav"]').getByRole('link', { name: 'Reviews' });
         await expect(link).toBeVisible();
         await page.evaluate(() => document.fonts.ready);
         await shot(page, `${t.template}-link-${layout}-390`, false);

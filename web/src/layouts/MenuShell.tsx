@@ -10,7 +10,7 @@ import { CutoffBar } from '@/features/notices/CutoffBar.tsx';
 import { LoginModal } from '@/features/auth/LoginModal.tsx';
 import { UnpaidOrderPrompt } from '@/features/unpaid-prompt/UnpaidOrderPrompt.tsx';
 import { ReviewPrompt } from '@/features/review-prompt/ReviewPrompt.tsx';
-import { ReviewsLink } from '@/layouts/ReviewsLink.tsx';
+import { BottomNav } from '@/layouts/BottomNav.tsx';
 import { CartDrawer } from '@/features/cart/CartDrawer.tsx';
 import { MobileCartBar, useMobileCartBar } from '@/features/cart/MobileCartBar.tsx';
 import { HeaderBar, legacyHeaderSlots } from '@/layouts/header-parts.tsx';
@@ -66,7 +66,7 @@ export function MenuFrame({ children, cartBar = true }: { children: ReactNode; c
   return (
     <div className={barShowing ? `${classes.shell} ${classes.withBar}` : classes.shell} data-sf-wide={onCheckoutPath(pathname) ? '' : undefined}>
       {children}
-      <ReviewsLink />
+      <BottomNav />
 
       {features.ordering ? (
         <>

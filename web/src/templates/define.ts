@@ -117,7 +117,9 @@ const HEADER_ICON_CHOICES: readonly { value: HeaderIconMode; label: string }[] =
  * `options[]` by the registry (see `withCoreOptions`), so the admin's Template options card and
  * the generated templates.json list them for every template. The keys are reserved: a manifest
  * that declares one of them is invalid. Every default leaves the store looking exactly as it did
- * before the option existed: shown, everywhere, with the built-in wording.
+ * before the option existed: shown, everywhere, with the built-in wording — with one deliberate
+ * exception: `showMobileBottomNav` defaults ON (owner decision, storefront UX batch 2), so a phone
+ * visitor gets the bottom navigation bar until a shop switches it off.
  */
 export const CORE_OPTIONS: readonly TemplateOption[] = Object.freeze([
   { key: 'showPageTitle', type: 'boolean', label: 'Page title', help: 'The catalogue heading and its product count. Screen readers still announce the heading when it is hidden.', default: true },
@@ -132,6 +134,7 @@ export const CORE_OPTIONS: readonly TemplateOption[] = Object.freeze([
   { key: 'showCutoffCountdown', type: 'boolean', label: 'Cut-off countdown', help: 'The time left ("4h 12m left") and the meter along the banner.', default: true },
   { key: 'showCategoryEmoji', type: 'boolean', label: 'Category emojis', help: 'The emoji beside each category in the catalogue sections and the category picker.', default: true },
   { key: 'showOutOfStockPrice', type: 'boolean', label: 'Price on out-of-stock products', help: 'When off, a product that is out of stock shows "Out of stock" where its price would be, in the catalogue lists and cards.', default: true },
+  { key: 'showMobileBottomNav', type: 'boolean', label: 'Mobile bottom navigation', help: 'The bar of shortcuts (Catalog, Profile, Cart, Reviews, Support) fixed to the foot of the screen on phones. When off, Reviews moves into the header.', default: true },
 ] satisfies TemplateOption[]);
 export const CORE_OPTION_KEYS: readonly string[] = Object.freeze(CORE_OPTIONS.map((o) => o.key));
 /** How many options a manifest may declare itself — the backend's cap minus the core options. */

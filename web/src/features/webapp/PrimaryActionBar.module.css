@@ -31,5 +31,5 @@
 /* Telegram's own bottom inset (home indicator) when a browser tab is a Mini App
    opened in an external browser — 0 everywhere else. */
 .safe {
-  height: var(--tg-safe-bottom, 0px);
+  height: var(--sf-bar-safe, var(--tg-safe-bottom, 0px));
 }

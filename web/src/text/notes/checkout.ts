@@ -17,7 +17,6 @@ export default {
   'errors.verifyFailed': 'Guest checkout, when the invisible bot check fails or times out',
   'errors.placeFailed': 'Top of the checkout, when placing the order fails without a reason from the shop',
   'errors.inProgress': 'Pop-up message when the order is placed twice at the same time',
-  'page.eyebrow': 'Small label above the checkout heading and the checkout notices',
   'page.title': 'Checkout page heading for a signed-in shopper',
   'page.guestTitle': 'Checkout page heading for a shopper who is not signed in',
   'page.guestUnavailableTitle': 'Checkout page heading when guest checkout is switched on but cannot run',

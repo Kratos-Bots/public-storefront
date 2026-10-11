@@ -325,6 +325,15 @@
   color: var(--sf-success);
 }
 
+/* Review step on a phone: open, with its own title where the toggle was. */
+.docket[data-fixed='true'] .head {
+  display: flex;
+}
+
+.docket[data-fixed='true'] .body {
+  display: block;
+}
+
 @media (min-width: 62em) {
   .toggle {
     display: none;

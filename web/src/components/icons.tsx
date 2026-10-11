@@ -211,3 +211,33 @@ export function PhotoIcon({ size = 16 }: GlyphProps) {
     </svg>
   );
 }
+
+/** The catalogue: a shopfront with its door, for the bottom navigation. */
+export function HomeIcon({ size = 16 }: GlyphProps) {
+  return (
+    <svg {...stroke(size)}>
+      <path d="M4 10.5 12 4l8 6.5V20H4v-9.5z" />
+      <path d="M10 20v-5.5h4V20" />
+    </svg>
+  );
+}
+
+/** Reviews: a five-point star. */
+export function StarIcon({ size = 16 }: GlyphProps) {
+  return (
+    <svg {...stroke(size)}>
+      <path d="m12 3.6 2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 17l-5.2 2.8 1-5.9L3.5 9.8l5.9-.8L12 3.6z" />
+    </svg>
+  );
+}
+
+/** Support: a question mark in a ring. */
+export function HelpIcon({ size = 16 }: GlyphProps) {
+  return (
+    <svg {...stroke(size)}>
+      <circle cx="12" cy="12" r="8.6" />
+      <path d="M9.6 9.7a2.5 2.5 0 0 1 4.8.8c0 1.7-2.4 2-2.4 3.6" />
+      <path d="M12 16.9v.1" />
+    </svg>
+  );
+}

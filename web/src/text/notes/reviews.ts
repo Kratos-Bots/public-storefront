@@ -35,9 +35,10 @@ export default {
   'page.empty.body': 'Line under the heading when there are no published reviews',
   'page.scale': 'Small mark after the average rating on the customer reviews page: the top of the scale, e.g. / 5',
   'page.loadMoreFailed': 'Message beside the retry button when loading more reviews failed',
-  'page.loadMore': 'Button at the end of the reviews list that shows older reviews',
+  'page.loadMore': 'Button at the end of the reviews list that shows older reviews, for browsers that cannot load them by themselves as the shopper scrolls',
+  'page.loadingMore': 'Quiet line at the end of the reviews list while older reviews load as the shopper scrolls',
   'page.loadFailedTitle': 'Heading shown when the reviews could not be loaded',
   'page.loadFailedBody': 'Line under that heading',
   'page.noComment': 'Shown in a review that has stars but no comment',
-  'link': 'Link to the customer reviews page, in the footer and the account menu',
+  'link': 'Link to the customer reviews page, in the account menu',
 };

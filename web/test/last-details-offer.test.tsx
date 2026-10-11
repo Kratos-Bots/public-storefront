@@ -9,8 +9,9 @@ vi.mock('@/api/orders.ts', () => ({ fetchLastCheckoutDetails: fetchDetails }));
 
 import { LastDetailsOffer } from '@/features/checkout/LastDetailsOffer.tsx';
 import { ContactStep } from '@/features/checkout/steps/ContactStep.tsx';
+import { AddressStep } from '@/features/checkout/steps/AddressStep.tsx';
 import { DEFAULT_FORM, type CheckoutForm } from '@/features/checkout/form-state.ts';
-import { DISMISS_KEY } from '@/features/checkout/last-details.ts';
+import { DISMISS_KEY, clearAcceptedLastDetails, resetDismissed } from '@/features/checkout/last-details.ts';
 import { useSessionStore } from '@/stores/session.ts';
 import type { LastCheckoutDetails } from '@/types/checkout.ts';
 import type { ContactModes } from '@/types/settings.ts';
@@ -37,6 +38,36 @@ function Harness({ initial = DEFAULT_FORM, onForm }: { initial?: CheckoutForm; o
   );
 }
 
+/** The real address step with the same offer in its `before` slot: the second mount point. */
+function AddressHarness({ initial = DEFAULT_FORM, onForm }: { initial?: CheckoutForm; onForm?: (f: CheckoutForm) => void }) {
+  const [form, setForm] = useState(initial);
+  onForm?.(form);
+  const patch = useCallback((next: Partial<CheckoutForm>) => setForm((f) => ({ ...f, ...next })), []);
+  return (
+    <AddressStep
+      form={form} patch={patch} errors={{}} countries={['GB', 'DE']}
+      before={<LastDetailsOffer form={form} patch={patch} contactModes={MODES} shipCountries={['GB', 'DE']} />}
+    />
+  );
+}
+
+/** One form, the two steps one after the other: what the checkout does as the shopper presses Continue. */
+function TwoStepHarness({ onForm }: { onForm?: (f: CheckoutForm) => void }) {
+  const [form, setForm] = useState(DEFAULT_FORM);
+  const [step, setStep] = useState<'contact' | 'address'>('contact');
+  onForm?.(form);
+  const patch = useCallback((next: Partial<CheckoutForm>) => setForm((f) => ({ ...f, ...next })), []);
+  const offer = <LastDetailsOffer form={form} patch={patch} contactModes={MODES} shipCountries={['GB', 'DE']} />;
+  return (
+    <>
+      <button type="button" onClick={() => setStep(step === 'contact' ? 'address' : 'contact')}>Switch step</button>
+      {step === 'contact'
+        ? <ContactStep form={form} patch={patch} errors={{}} contactModes={MODES} guest={false} before={offer} />
+        : <AddressStep form={form} patch={patch} errors={{}} countries={['GB', 'DE']} before={offer} />}
+    </>
+  );
+}
+
 function mount(ui = <Harness />) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -51,6 +82,7 @@ const card = () => document.querySelector('[data-last-details]');
 
 beforeEach(() => {
   sessionStorage.clear();
+  resetDismissed();
   useSessionStore.getState().clear();
   fetchDetails.mockReset();
   fetchDetails.mockResolvedValue(DETAILS);
@@ -126,11 +158,71 @@ describe('LastDetailsOffer', () => {
     expect(await screen.findByRole('button', { name: 'Use these details' })).toBeInTheDocument();
   });
 
-  it('hides itself when the shopper starts typing, and never shows over a restored form', async () => {
+  it('never shows over a restored address, whichever field of it holds something', async () => {
     signIn();
     mount(<Harness initial={{ ...DEFAULT_FORM, city: 'Leeds' }} />);
     await waitFor(() => expect(fetchDetails).toHaveBeenCalled());
     expect(card()).toBeNull();
+  });
+
+  it('shows over a restored draft that holds only contact fields (saved name, email and phone)', async () => {
+    signIn();
+    mount(<Harness initial={{ ...DEFAULT_FORM, firstName: 'Sam', surname: 'Hart', email: 'sam@example.invalid', phone: '7000000000' }} />);
+    expect(await screen.findByRole('heading', { name: 'Use the details from your last order?' })).toBeInTheDocument();
+  });
+
+  it('accepting keeps a typed email, phone and name and fills only the blanks', async () => {
+    signIn();
+    let latest: CheckoutForm = DEFAULT_FORM;
+    mount(<Harness initial={{ ...DEFAULT_FORM, firstName: 'Sam', email: 'sam@example.invalid', phone: '7000000000', phonePrefix: 'DE' }} onForm={(f) => { latest = f; }} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Use these details' }));
+    expect(latest).toMatchObject({ firstName: 'Sam', email: 'sam@example.invalid', phone: '7000000000', phonePrefix: 'DE' });
+    expect(latest).toMatchObject({ surname: 'Rowan', addressLine1: '14 Test Lane', city: 'Leeds', zip: 'LS1 4AB' });
+    expect(card()).toBeNull();
+  });
+
+  it('is offered on the address step too, and fills the address there', async () => {
+    signIn();
+    let latest: CheckoutForm = DEFAULT_FORM;
+    mount(<AddressHarness initial={{ ...DEFAULT_FORM, firstName: 'Sam', email: 'sam@example.invalid' }} onForm={(f) => { latest = f; }} />);
+    expect(await screen.findByRole('heading', { name: 'Use the details from your last order?' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Use these details' }));
+    expect(latest).toMatchObject({ firstName: 'Sam', email: 'sam@example.invalid', addressLine1: '14 Test Lane', city: 'Leeds', country: 'GB' });
+    expect((screen.getByLabelText('Address line 1') as HTMLInputElement).value).toBe('14 Test Lane');
+    expect(card()).toBeNull();
+  });
+
+  it('is not offered on the address step once the address holds anything', async () => {
+    signIn();
+    mount(<AddressHarness initial={{ ...DEFAULT_FORM, zip: 'LS1 4AB' }} />);
+    await waitFor(() => expect(fetchDetails).toHaveBeenCalled());
+    expect(card()).toBeNull();
+  });
+
+  it('"No thanks" on one step hides it on the other: one dismissal, even with storage blocked', async () => {
+    signIn();
+    const real = Storage.prototype.setItem;
+    Storage.prototype.setItem = () => { throw new Error('blocked'); };
+    try {
+      const contact = mount();
+      fireEvent.click(await screen.findByRole('button', { name: 'No thanks' }));
+      expect(card()).toBeNull();
+      contact.unmount();
+      mount(<AddressHarness />);
+      await waitFor(() => expect(fetchDetails).toHaveBeenCalled());
+      await new Promise((r) => setTimeout(r, 20));
+      expect(card()).toBeNull();
+    } finally {
+      Storage.prototype.setItem = real;
+    }
+  });
+
+  it('both mount points mounted together share the dismissal', async () => {
+    signIn();
+    mount(<><Harness /><AddressHarness /></>);
+    await waitFor(() => expect(document.querySelectorAll('[data-last-details]')).toHaveLength(2));
+    fireEvent.click(screen.getAllByRole('button', { name: 'No thanks' })[0]!);
+    expect(document.querySelectorAll('[data-last-details]')).toHaveLength(0);
   });
 
   it('never asks the backend for a guest, and shows nothing', async () => {
@@ -164,5 +256,30 @@ describe('LastDetailsOffer', () => {
     expect(latest.email).toBe('alex@example.invalid');
     expect(latest.addressLine1).toBe('');
     expect(latest.deliveryMethod).toBe('home');
+  });
+
+  it('accepting a collection order retires the card on both steps (the address stays empty, nothing is left to offer)', async () => {
+    signIn();
+    fetchDetails.mockResolvedValue({ ...DETAILS, addressLine1: '1 Point Street', servicePoint: { id: 'sp-1', carrier: 'evri', name: 'Corner News' } });
+    let latest: CheckoutForm = DEFAULT_FORM;
+    mount(<TwoStepHarness onForm={(f) => { latest = f; }} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Use these details' }));
+    expect(latest).toMatchObject({ firstName: 'Alex', surname: 'Rowan', email: 'alex@example.invalid', addressLine1: '' });
+    expect(card()).toBeNull();
+    expect(screen.getByRole('status').textContent).toMatch(/filled in from your last order/i);
+    fireEvent.click(screen.getByRole('button', { name: 'Switch step' }));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(card()).toBeNull();
+  });
+
+  it('accepting retires the card for this checkout only: the next checkout offers again', async () => {
+    signIn();
+    const first = mount(<TwoStepHarness />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Use these details' }));
+    expect(card()).toBeNull();
+    first.unmount();
+    clearAcceptedLastDetails();
+    mount(<TwoStepHarness />);
+    expect(await screen.findByRole('button', { name: 'Use these details' })).toBeInTheDocument();
   });
 });

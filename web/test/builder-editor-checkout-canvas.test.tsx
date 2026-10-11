@@ -188,6 +188,34 @@ describe('stacked checkout canvas', () => {
   }, T);
 });
 
+describe('phone-width exemptions for the stepper and the summary column', () => {
+  const stepper = (root: HTMLElement) => root.querySelector('[data-sf-part="stepper"]')!;
+  const asideOf = (root: HTMLElement) => root.querySelector('aside')!;
+
+  it('the editor canvas (stacked) keeps both the stepper and the aside out of the phone-width hide', async () => {
+    const m = mount(flowDoc(), EDITING);
+    await screen.findByText('Step 5 of 5');
+    expect(stepper(m.container).className).toMatch(/stepperCanvas/);
+    expect(asideOf(m.container).className).toMatch(/asideShown/);
+  }, T);
+
+  it('a shopper on the first step has neither exemption', async () => {
+    const m = mount(flowDoc(), null);
+    await screen.findByText('Step 1 of 5');
+    expect(stepper(m.container).className).not.toMatch(/stepperCanvas/);
+    expect(asideOf(m.container).className).not.toMatch(/asideShown/);
+  }, T);
+
+  it('a coupon an owner put in the aside keeps the aside reachable for a shopper', async () => {
+    // The coupon is unique, so it moves out of the step that carries it by default.
+    const steps = defaults().steps!.map((st) => ({ ...st, props: { ...st.props, before: [], after: [] } }));
+    const m = mount(flowDoc({ steps, aside: [...defaults().aside!, c('CheckoutCoupon', 'cp')] }), null);
+    await screen.findByText('Step 1 of 5');
+    expect(asideOf(m.container).className).toMatch(/asideShown/);
+    expect(stepper(m.container).className).not.toMatch(/stepperCanvas/);
+  }, T);
+});
+
 describe('illegal stored step order', () => {
   const slot = (types: string[]) => Object.assign(() => null, { items: types.map((type, i) => c(type, `s${i}`)) });
   const empty = () => Object.assign(() => null, { items: [] as ComponentData[] });

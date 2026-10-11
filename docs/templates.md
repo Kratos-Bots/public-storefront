@@ -160,8 +160,8 @@ storefront enforces every one of the backend's numbers, and is stricter where no
 | preset `name` | ≤ 60 characters |
 | `editable.colors` | colour keys, no duplicates (so ≤ 8) |
 | `editable.fonts` / `.radius` / `.density` | booleans (required) |
-| `options` | ≤ 18 entries (the backend caps a catalog entry at 30; the twelve core options take the rest) |
-| option `key` | not a core option key (`showPageTitle`, `showCatalogIntro`, `showSectionLabels`, `showSku`, `showCategoryPicker`, `headerAccountIcon`, `headerCartIcon`, `showCutoffBar`, `cutoffMessage`, `showCutoffCountdown`, `showCategoryEmoji`, `showOutOfStockPrice` — all reserved) |
+| `options` | ≤ 17 entries of your own: the backend caps a catalog entry at 30 and the thirteen core options take the rest. This was 18 before `showMobileBottomNav` became the thirteenth core option, so a template that declares 18 options now fails validation (`at most 17 options (13 more are added to every template)`). |
+| option `key` | not a core option key (`showPageTitle`, `showCatalogIntro`, `showSectionLabels`, `showSku`, `showCategoryPicker`, `headerAccountIcon`, `headerCartIcon`, `showCutoffBar`, `cutoffMessage`, `showCutoffCountdown`, `showCategoryEmoji`, `showOutOfStockPrice`, `showMobileBottomNav` — all reserved) |
 | option `label` | 1–80 characters |
 | option `help` | optional; a string of ≤ 200 characters |
 | select `choices` | 1–20 entries |
@@ -197,7 +197,7 @@ A store's stored theme (`Theme` in `types/settings.ts`) always names a `template
   object key by key, discarding any stored value whose type or shape doesn't match the option's
   declared `type` (boolean/select/text) — so a stale or foreign options blob degrades to defaults
   field-by-field, never wholesale.
-- **Core options**: every template — built-in and external — also carries twelve shared options,
+- **Core options**: every template — built-in and external — also carries thirteen shared options,
   declared once as `CORE_OPTIONS` in `define.ts` and prepended to each manifest's own `options[]`
   by the registry (`withCoreOptions()` in `buildRegistry`, after validation). Because the catalog
   (`catalog.ts` → `templates.json`) and `lookupManifest` both read the registry, the admin's
@@ -220,6 +220,7 @@ A store's stored theme (`Theme` in `types/settings.ts`) always names a `template
   | `showCutoffCountdown` | Cut-off countdown | The "4h 12m left" readout and the draining meter. |
   | `showCategoryEmoji` | Category emojis | The emoji beside each category: the group heads in `ProductList` (and their reserved glyph column), `CategoryNav` chips and tree. Off draws none and reserves no column. The admin-facing editor picker is unaffected. |
   | `showOutOfStockPrice` | Price on out-of-stock products | Default on. Off: an out-of-stock, non-preorder product shows the "Out of Stock" chip in the price slot of `ProductRow` and `ProductCard` (right-aligned), and the meta/flags line drops its duplicate chip. Product sheet and page keep the price; low stock is unchanged (`useOutOfStockInPriceSlot()`). |
+  | `showMobileBottomNav` | Mobile bottom navigation | **Default on — the one core option whose default changes the look of an existing store** (owner decision, UX batch 2). On phones (below 62em) a bar fixed to the foot of the screen carries Catalog, Profile, Cart (with the item count), Reviews and Support; items follow the shop's switches (accounts, ordering, reviews). Off: no bar, and the header carries a "Reviews" link on phones too (on desktop it is always there). Never drawn on `/checkout`, `/payment/*`, `/order-placed`, `/login`, `/auth/*`, `/reset-password`, `/verify-email`, in the page builder or in previews. Cart bars (phone cart bar, web app running-tab bar, wholesale bar, the browser stand-in for Telegram's MainButton) stack directly above it. The bar publishes its height as `--sf-nav-h` on the root (0 when absent) and every bottom element and the shells' page clearance add it. Component: `layouts/BottomNav.tsx`. |
 
   `CatalogHero` and `SectionLabel` are gated centrally in `<Slot>` (`runtime.tsx`), so a template's
   slot never needs to check them; the page title is gated in the three views through
@@ -499,6 +500,7 @@ interface CoreOptions {
   headerAccountIcon: HeaderIconMode; headerCartIcon: HeaderIconMode;   // 'all' | 'desktop' | 'mobile' | 'none'
   showCutoffBar: boolean; cutoffMessage: string; showCutoffCountdown: boolean;
   showCategoryEmoji: boolean; showOutOfStockPrice: boolean;
+  showMobileBottomNav: boolean;
 }
 useCoreOptions(): CoreOptions                                                           // only an explicit false (or a non-default choice) hides
 interface StorefrontInfo { brand: Brand; features: Features; supportLinks: SupportLink[]; welcomeMessage: string | null; currency: string; enabled: boolean }
@@ -681,9 +683,9 @@ export interface CatalogTemplate {
 export interface TemplatesCatalog { schemaVersion: 1; templates: CatalogTemplate[] }
 ```
 
-Each entry's `options` starts with the twelve core options (`showPageTitle`, `showCatalogIntro`,
+Each entry's `options` starts with the thirteen core options (`showPageTitle`, `showCatalogIntro`,
 `showSectionLabels`, `showSku`, `showCategoryPicker`, `headerAccountIcon`, `headerCartIcon`,
-`showCutoffBar`, `cutoffMessage`, `showCutoffCountdown`, `showCategoryEmoji`, `showOutOfStockPrice`), then the template's own — the catalog is built from the registry, which adds
+`showCutoffBar`, `cutoffMessage`, `showCutoffCountdown`, `showCategoryEmoji`, `showOutOfStockPrice`, `showMobileBottomNav`), then the template's own — the catalog is built from the registry, which adds
 them. Templates are sorted `modern` first, then other built-ins, then imported templates, each group
 alphabetical by name. A template's preview image (if it declares one) is copied to
 `templates/<id>/preview.<ext>` in the build output and served at `/templates/<id>/preview.<ext>` in
@@ -713,7 +715,7 @@ preview mode, so nothing a preview ever applies is written to `localStorage`.
 | `cyber-brutalism` | dark, light | Acid Dark (default), Purple Light | fonts, radius (always square) | `systemBar`, `statusBar`, `crosshairs`, `showFooter`, `buttonArrow` (on), `nodeLabel` (text, `NODE_01`, ≤ 24) |
 | `bento` | dark, light | one dark + one light per store type: Tech & electronics (`tech-dark` default), Fashion & apparel, Beauty & wellness, Home & lifestyle, Food & grocery, Monochrome | fonts, radius | `dispatch`, `contact`, `featured`, `showFooter` (all on) |
 
-Every template also has the twelve core options (section 2, "Presets, `editable` locks and options"). `showFooter` removes the template's
+Every template also has the thirteen core options (section 2, "Presets, `editable` locks and options"). `showFooter` removes the template's
 `Footer` slot outright (the luxury status badge and the brutalist status strip live in it, so they
 go too); `buttonArrow` removes the brutalist ↗ `ButtonAdornment`.
 

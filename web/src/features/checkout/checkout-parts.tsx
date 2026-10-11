@@ -67,7 +67,6 @@ function Heading({ styleAttrs }: PartViewProps) {
   const { guest } = CheckoutFamily.useData();
   return (
     <header className={classes.head} {...styleAttrs}>
-      <span className={classes.eyebrow}>{t('checkout.page.eyebrow')}</span>
       <h1 className={classes.title}>{guest ? t('checkout.page.guestTitle') : t('checkout.page.title')}</h1>
     </header>
   );
@@ -85,7 +84,7 @@ function Progress({ styleAttrs }: PartViewProps) {
       iconSize={26}
       data-sf-part="stepper"
       classNames={{
-        root: classes.stepper,
+        root: data.stack ? `${classes.stepper} ${classes.stepperCanvas}` : classes.stepper,
         steps: classes.steps,
         step: classes.step,
         stepIcon: classes.stepIcon,
@@ -129,7 +128,15 @@ function Address({ props, styleAttrs }: PartViewProps) {
   return framed(d, 'address', (
     <AddressStep
       form={d.form} patch={d.patch} errors={d.errors} notice={d.addressNotice} countries={d.shipCountries} shipsNowhere={d.shipsNowhere} mode={d.countryMode}
-      before={slotOf(props, 'before')} after={slotOf(props, 'after')} rootAttrs={styleAttrs}
+      before={(
+        <>
+          {/* The same offer as on the contact step, for a shopper who skipped it or came back; same dismissal. */}
+          {d.stack ? null : (
+            <LastDetailsOffer form={d.form} patch={d.patch} contactModes={d.contactModes} shipCountries={d.shipCountries} shipsNowhere={d.shipsNowhere} />
+          )}
+          {slotOf(props, 'before')}
+        </>
+      )} after={slotOf(props, 'after')} rootAttrs={styleAttrs}
     />
   ));
 }
@@ -212,6 +219,7 @@ function Summary({ styleAttrs }: PartViewProps) {
   return (
     <QuoteSummary
       defaultOpen={d.onReview}
+      fixedOpen={!d.stack && d.onReview}
       quote={d.quote}
       isFetching={d.busy}
       stale={d.quoteStale}

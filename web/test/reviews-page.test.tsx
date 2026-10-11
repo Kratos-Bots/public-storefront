@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
 import { MemoryRouter } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -55,7 +55,7 @@ describe('the reviews page', () => {
     expect(fetchMock).toHaveBeenCalledWith(1, 10);
   });
 
-  it('Load more fetches the next page and appends it', async () => {
+  it('without IntersectionObserver, Load more fetches the next page and appends it', async () => {
     fetchMock
       .mockResolvedValueOnce({ data: { stats: { average: 4.5, count: 12 }, reviews: [review(12, 5, 'Newest')] }, meta: meta(1, 2) })
       .mockResolvedValueOnce({ data: { stats: { average: 4.5, count: 12 }, reviews: [review(11, 4, 'Older')] }, meta: meta(2, 2) });
@@ -68,7 +68,7 @@ describe('the reviews page', () => {
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Load more reviews' })).toBeNull());
   });
 
-  it('a failed Load more keeps the loaded reviews and offers a retry beside the control', async () => {
+  it('without IntersectionObserver, a failed Load more keeps the loaded reviews and offers a retry beside the control', async () => {
     fetchMock
       .mockResolvedValueOnce({ data: { stats: { average: 4.5, count: 12 }, reviews: [review(12, 5, 'Newest')] }, meta: meta(1, 2) })
       .mockRejectedValueOnce(new ApiError(0, 'Network error'))
@@ -112,5 +112,104 @@ describe('the reviews page', () => {
     mount();
     expect(screen.queryByRole('heading', { name: 'Customer reviews' })).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+/** A stand-in for the browser's observer: the test decides when the sentinel comes into range. */
+class FakeObserver {
+  static all: FakeObserver[] = [];
+  disconnected = false;
+  target: Element | null = null;
+  callback: IntersectionObserverCallback;
+  options?: IntersectionObserverInit;
+  constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+    this.callback = callback;
+    this.options = options;
+    FakeObserver.all.push(this);
+  }
+  observe(el: Element) { this.target = el; }
+  unobserve() {}
+  disconnect() { this.disconnected = true; }
+  takeRecords() { return []; }
+  static live() { return FakeObserver.all.filter((o) => !o.disconnected); }
+  static intersect() {
+    for (const o of FakeObserver.live()) o.callback([{ isIntersecting: true, target: o.target! } as IntersectionObserverEntry], o as unknown as IntersectionObserver);
+  }
+}
+
+describe('the reviews page loads more as the shopper scrolls', () => {
+  const first = { data: { stats: { average: 4.5, count: 12 }, reviews: [review(12, 5, 'Newest')] }, meta: meta(1, 2) };
+  const second = { data: { stats: { average: 4.5, count: 12 }, reviews: [review(11, 4, 'Older')] }, meta: meta(2, 2) };
+  beforeEach(() => {
+    FakeObserver.all = [];
+    vi.stubGlobal('IntersectionObserver', FakeObserver);
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('has no button, and watches a sentinel with 400px to spare', async () => {
+    fetchMock.mockResolvedValueOnce(first);
+    mount();
+    await screen.findByText('Newest');
+    expect(screen.queryByRole('button', { name: 'Load more reviews' })).toBeNull();
+    expect(FakeObserver.live()).toHaveLength(1);
+    expect(FakeObserver.live()[0]!.options?.rootMargin).toBe('400px');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks for the next page once the sentinel is in range, says so while it loads, and appends it', async () => {
+    let release: (v: typeof second) => void = () => {};
+    fetchMock.mockResolvedValueOnce(first).mockImplementationOnce(() => new Promise((r) => { release = r as typeof release; }));
+    mount();
+    await screen.findByText('Newest');
+    act(() => FakeObserver.intersect());
+    expect(await screen.findByText('Loading more reviews')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveAttribute('aria-live', 'polite');
+    expect(fetchMock).toHaveBeenLastCalledWith(2, 10);
+    // Never while a fetch is in flight: nothing is watching until it lands.
+    expect(FakeObserver.live()).toHaveLength(0);
+    await act(async () => release(second));
+    await screen.findByText('Older');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(screen.queryByText('Loading more reviews')).toBeNull();
+  });
+
+  it('does not ask again after the last page', async () => {
+    fetchMock.mockResolvedValueOnce(first).mockResolvedValueOnce(second);
+    mount();
+    await screen.findByText('Newest');
+    act(() => FakeObserver.intersect());
+    await screen.findByText('Older');
+    await waitFor(() => expect(FakeObserver.live()).toHaveLength(0));
+    act(() => FakeObserver.intersect());
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(document.querySelector('[data-sf-part="reviews-sentinel"]')).toBeNull();
+  });
+
+  it('watches again after each page, so one that leaves the sentinel in range is followed by the next', async () => {
+    const third = { data: { stats: { average: 4.5, count: 12 }, reviews: [review(10, 3, 'Oldest')] }, meta: { ...meta(3, 3) } };
+    fetchMock.mockResolvedValueOnce({ ...first, meta: meta(1, 3) }).mockResolvedValueOnce({ ...second, meta: meta(2, 3) }).mockResolvedValueOnce(third);
+    mount();
+    await screen.findByText('Newest');
+    act(() => FakeObserver.intersect());
+    await screen.findByText('Older');
+    await waitFor(() => expect(FakeObserver.live()).toHaveLength(1));
+    act(() => FakeObserver.intersect());
+    await screen.findByText('Oldest');
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('a failed page keeps the retry button and nothing retries by itself', async () => {
+    fetchMock.mockResolvedValueOnce(first).mockRejectedValueOnce(new ApiError(0, 'Network error')).mockResolvedValueOnce(second);
+    mount();
+    await screen.findByText('Newest');
+    act(() => FakeObserver.intersect());
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toContain('Network error');
+    expect(FakeObserver.live()).toHaveLength(0);
+    act(() => FakeObserver.intersect());
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    fireEvent.click(within(alert).getByRole('button', { name: 'Try again' }));
+    await screen.findByText('Older');
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });

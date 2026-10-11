@@ -5,13 +5,16 @@ import { useSessionStore, selectIsLoggedIn } from '@/stores/session.ts';
 import { useCartStore, selectCount } from '@/stores/cart.ts';
 import { useUiStore } from '@/stores/ui.ts';
 import { Brand } from '@/components/Brand.tsx';
-import { BagIcon, ChevronIcon, FilterIcon, UserIcon } from '@/components/icons.tsx';
+import { BagIcon, ChevronIcon, FilterIcon, StarIcon, UserIcon } from '@/components/icons.tsx';
 import { NoticeBanners } from '@/features/notices/NoticeBanners.tsx';
 import { WarehouseBar } from '@/features/warehouses/WarehouseBar.tsx';
 import { isFirstHistoryEntry } from '@/features/webapp/useTelegramChrome.ts';
 import { SearchField } from '@/layouts/SearchField.tsx';
 import { useShellState } from '@/layouts/shell-context.ts';
 import { isTelegramWebApp } from '@/lib/telegram-webapp.ts';
+import { isBuilderMode } from '@/app/builder-gate.ts';
+import { isPreviewMode } from '@/app/preview-listener.ts';
+import { reviewSettingsOf } from '@/features/reviews/settings.ts';
 import { Slot } from '@/templates/runtime.tsx';
 import { headerIconClass, useCoreOptions } from '@/templates/hooks.ts';
 import { useText } from '@/text/runtime.tsx';
@@ -23,6 +26,7 @@ import type { ComponentData } from '@/builder/types.ts';
 import storefront from '@/layouts/StorefrontShell.module.css';
 import menu from '@/layouts/MenuShell.module.css';
 import webapp from '@/layouts/WebAppShell.module.css';
+import reviewsLink from '@/layouts/HeaderReviewsLink.module.css';
 
 type Variant = HeaderData['variant'];
 
@@ -158,6 +162,28 @@ function CartView({ props, styleAttrs }: PartViewProps) {
   );
 }
 
+/**
+ * The header's "Reviews" link: a system mount of the header bar, not a part an owner places, so every header (a published
+ * one included) carries it. Shown while the shop has reviews on, always on desktop, and on a phone only when the bottom
+ * navigation bar (which carries Reviews there) is switched off. Not drawn in the page builder's canvas or in previews.
+ */
+function HeaderReviewsLink() {
+  const settings = useSettings();
+  const { t } = useText();
+  const { showMobileBottomNav } = useCoreOptions();
+  if (!reviewSettingsOf(settings).enabled || isBuilderMode() || isPreviewMode()) return null;
+  return (
+    <Link
+      to="/reviews"
+      className={showMobileBottomNav ? `${reviewsLink.link} sf-hide-mobile` : reviewsLink.link}
+      aria-label={t('shell.header.reviews')}
+    >
+      <span className={reviewsLink.text}>{t('shell.header.reviews')}</span>
+      <span className={reviewsLink.glyph} aria-hidden><StarIcon size={17} /></span>
+    </Link>
+  );
+}
+
 export const HEADER_VIEWS: FamilyValue<HeaderData>['views'] = {
   HeaderBrand: BrandView, HeaderBack: BackView, HeaderSearch: SearchView,
   HeaderFilter: FilterView, HeaderAccount: AccountView, HeaderCart: CartView,
@@ -210,6 +236,7 @@ export function HeaderBar({ variant, topBar, sticky, slots, styleAttrs }: Header
         <div className={c.inner}>
           {slots.start()}
           {slots.nav()}
+          <HeaderReviewsLink />
           {slots.middle()}
           {slots.end({ className: c.actions })}
         </div>

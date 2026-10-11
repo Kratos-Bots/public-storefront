@@ -15,6 +15,7 @@ import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { useUiStore } from '@/stores/ui.ts';
 
 const ReviewsPage = lazy(() => import('@/features/reviews/ReviewsPage.tsx').then((m) => ({ default: m.ReviewsPage })));
+const SupportPage = lazy(() => import('@/features/support/SupportPage.tsx').then((m) => ({ default: m.SupportPage })));
 
 /** Mantine's `md` breakpoint — the point at which the cart becomes a drawer instead of a page. */
 const DESKTOP = '(min-width: 62em)';
@@ -197,6 +198,15 @@ export const routes: RouteObject[] = [
         element: (
           <Suspense fallback={<PageSkeleton inline />}>
             <ReviewsPage />
+          </Suspense>
+        ),
+      },
+      // A shell page like /reviews: not a page-builder document, in every layout.
+      {
+        path: 'support',
+        element: (
+          <Suspense fallback={<PageSkeleton inline />}>
+            <SupportPage />
           </Suspense>
         ),
       },

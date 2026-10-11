@@ -4,11 +4,12 @@
 .bar {
   composes: glass from global;
   position: sticky;
-  bottom: 0;
+  /* Rests on the bottom navigation bar when it is on the page. */
+  bottom: var(--sf-nav-h, 0px);
   z-index: 20;
   margin-inline: calc(-1 * var(--sf-main-pad, 0px));
   border-top: 1px solid var(--sf-line-strong);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-bottom: var(--sf-bar-safe, env(safe-area-inset-bottom, 0px));
 }
 
 .action {

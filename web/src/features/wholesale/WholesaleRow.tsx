@@ -20,6 +20,12 @@ export interface WholesaleRowProps {
   /** Last row of its run; closes it with the heavier rule. */
   groupEnd: boolean;
   ordering: boolean;
+  /**
+   * Ordering is paused at the warehouse in force in a shop that does take orders (the rule of `usePriceInAddSlot`): on
+   * a phone the unit price stands in the right-hand slot the stepper would hold and is not drawn in its usual place.
+   * The table keeps its price column. Only ever true when `ordering` is false.
+   */
+  priceInSlot?: boolean;
   /** Position in the sheet, for the entrance stagger. */
   index?: number;
 }
@@ -32,7 +38,7 @@ export interface WholesaleRowProps {
  * whole argument of the sheet — so the unit price moves as the stepper passes a
  * price break, and the chip turns into the discount it just won.
  */
-export function WholesaleRow({ product, band, groupEnd, ordering, index }: WholesaleRowProps) {
+export function WholesaleRow({ product, band, groupEnd, ordering, priceInSlot = false, index }: WholesaleRowProps) {
   const { t } = useText();
   const { currency } = useSettings();
   const { showSku } = useCoreOptions();
@@ -137,7 +143,12 @@ export function WholesaleRow({ product, band, groupEnd, ordering, index }: Whole
             </span>
           </td>
 
-          <td className={classes.unit} role="cell">
+          {/* Paused with a price in the slot: this cell is the table's copy, hidden below 62em. */}
+          <td
+            className={priceInSlot ? `${classes.unit} ${classes.tableOnly}` : classes.unit}
+            role="cell"
+            data-table-only={priceInSlot ? '' : undefined}
+          >
             <span className={classes.unitPrice}>{formatMoney(unitPrice, currency)}</span>
             <span className={classes.each}>{t('cart.line.perUnit')}</span>
           </td>
@@ -163,6 +174,13 @@ export function WholesaleRow({ product, band, groupEnd, ordering, index }: Whole
               </button>
             ) : null}
           </td>
+
+          {priceInSlot ? (
+            // A phone-only cell: the table has no column for it (see `.priceSlot`).
+            <td className={classes.priceSlot} role="cell" data-price-slot="">
+              {formatMoney(unitPrice, currency)}
+            </td>
+          ) : null}
 
           {ordering ? (
             <>

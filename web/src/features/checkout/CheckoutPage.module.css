@@ -13,15 +13,6 @@
   border-bottom: 1px solid var(--sf-line-strong);
 }
 
-.eyebrow {
-  font-family: var(--sf-font-mono);
-  font-size: calc(10px * var(--sf-text-scale, 1));
-  font-weight: 500;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--sf-block-fg, var(--sf-faint));
-}
-
 .title {
   margin: 0;
   font-family: var(--sf-font-heading);
@@ -40,6 +31,16 @@
 
 .aside {
   order: -1;
+}
+
+/* A phone is given the least that gets the order placed. The stepper goes (the card's own "Step n of m" says where the
+   shopper is) and so does the docket until the review step, where the figures are what is being checked; the Continue
+   band and the next step reveal the rest. The editor canvas opts back in, so owners can still select and edit both. */
+@media (max-width: 61.99em) {
+  .stepper:not(.stepperCanvas),
+  .aside:not(.asideShown) {
+    display: none;
+  }
 }
 
 /* ── Stepper skin ─────────────────────────────────────────────────────────

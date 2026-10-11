@@ -27,12 +27,66 @@ export function writeDismissed(customerId: number): void {
   }
 }
 
-/** The fields a shopper types: the seeded `country` and `phonePrefix` defaults are not theirs and are ignored. */
-const TYPED_FIELDS = ['firstName', 'surname', 'email', 'phone', 'addressLine1', 'addressLine2', 'addressLine3', 'city', 'county', 'zip'] as const;
+// One dismissal for every place the offer is mounted (the contact step and the address step), kept in memory as well as
+// in sessionStorage so that it holds across the two steps even where storage is blocked.
+let dismissedInMemory: number | null = null;
+// Who accepted the offer in this checkout. Memory only: it is not a "No thanks", so a reload or the next checkout asks again.
+let acceptedInMemory: number | null = null;
+const dismissListeners = new Set<() => void>();
 
-/** Has the shopper (or a restored session of the form) put anything into the contact and address fields? */
-export function formHasTyping(form: CheckoutForm): boolean {
-  return TYPED_FIELDS.some((k) => form[k].trim() !== '') || form.servicePoint !== null;
+/**
+ * Is the card done for this customer: did they say "No thanks" (this page's memory, or sessionStorage, which survives a
+ * reload) or accept it in this checkout? Asked per customer, because the two slots are separate: one customer's
+ * dismissal must not stand in for the next customer's acceptance on the same device.
+ */
+export function isHiddenFor(customerId: number | null): boolean {
+  if (customerId === null) return false;
+  return dismissedInMemory === customerId || acceptedInMemory === customerId || readDismissed() === customerId;
+}
+
+export function subscribeDismissed(listener: () => void): () => void {
+  dismissListeners.add(listener);
+  return () => dismissListeners.delete(listener);
+}
+
+/** "No thanks": remembered for this customer, and every mounted offer hides at once. */
+export function dismissLastDetails(customerId: number): void {
+  dismissedInMemory = customerId;
+  writeDismissed(customerId);
+  dismissListeners.forEach((l) => l());
+}
+
+/**
+ * "Use these details": the card is done for this checkout on both steps, whether or not the order had anything to fill
+ * (a collection-point order fills name and contact only and leaves the address empty, which would otherwise keep it showing).
+ */
+export function acceptLastDetails(customerId: number): void {
+  acceptedInMemory = customerId;
+  dismissListeners.forEach((l) => l());
+}
+
+/** The checkout page left: the next one may offer again. */
+export function clearAcceptedLastDetails(): void {
+  acceptedInMemory = null;
+}
+
+/** Forget the in-page dismissal (tests; sessionStorage is cleared by the caller). */
+export function resetDismissed(): void {
+  dismissedInMemory = null;
+  acceptedInMemory = null;
+  dismissListeners.forEach((l) => l());
+}
+
+/** The address part of the form. */
+const ADDRESS_FIELDS = ['addressLine1', 'addressLine2', 'addressLine3', 'city', 'county', 'zip'] as const;
+
+/**
+ * Has anything been put into the address (or a collection point chosen)? Only the address decides whether the offer
+ * shows: the checkout restores a saved draft, so a name, email or phone is usually already there and says nothing about
+ * whether the shopper has dealt with the address. The seeded `country` and `phonePrefix` defaults are not theirs.
+ */
+export function addressHasTyping(form: CheckoutForm): boolean {
+  return ADDRESS_FIELDS.some((k) => form[k].trim() !== '') || form.servicePoint !== null;
 }
 
 export interface OfferInput {
@@ -44,9 +98,9 @@ export interface OfferInput {
   dismissedFor: number | null;
 }
 
-/** Signed in, there is an order to copy from, nothing typed yet, and not turned down in this tab. */
+/** Signed in, there is an order to copy from, the address is still empty, and not turned down in this tab. */
 export function shouldOfferLastDetails({ loggedIn, customerId, details, form, dismissedFor }: OfferInput): boolean {
-  return loggedIn && customerId !== null && !!details && dismissedFor !== customerId && !formHasTyping(form);
+  return loggedIn && customerId !== null && !!details && dismissedFor !== customerId && !addressHasTyping(form);
 }
 
 const dialCodes = [...new Set(Object.values(DIAL_CODES))];
@@ -93,25 +147,28 @@ export function isShippable(country: string, shipCountries: readonly string[], s
  * was; contact fields the shop hides are not filled; a phone that cannot be split confidently stays empty.
  */
 export function lastDetailsPatch(details: LastCheckoutDetails, { contactModes, shipCountries, shipsNowhere, form }: ApplyContext): Partial<CheckoutForm> {
-  const out: Partial<CheckoutForm> = {
-    firstName: details.firstName.trim(),
-    surname: details.surname.trim(),
-  };
-  if (contactModes.emailMode !== 'hidden' && details.email?.trim()) out.email = details.email.trim();
-  if (contactModes.phoneMode !== 'hidden') {
+  const blank = (k: keyof CheckoutForm): boolean => String(form[k] ?? '').trim() === '';
+  const out: Partial<CheckoutForm> = {};
+  if (blank('firstName')) out.firstName = details.firstName.trim();
+  if (blank('surname')) out.surname = details.surname.trim();
+  if (blank('email') && contactModes.emailMode !== 'hidden' && details.email?.trim()) out.email = details.email.trim();
+  if (blank('phone') && contactModes.phoneMode !== 'hidden') {
     const split = splitPhone(details.phone, [form.phonePrefix, details.country, form.country, contactModes.defaultPhoneCountry]);
     if (split) Object.assign(out, { phonePrefix: split.prefix, phonePrefixTouched: true, phone: split.national });
   }
   if (details.servicePoint) return out;
-  Object.assign(out, {
-    addressLine1: details.addressLine1.trim(),
-    addressLine2: details.addressLine2?.trim() ?? '',
-    addressLine3: details.addressLine3?.trim() ?? '',
-    city: details.city.trim(),
-    county: details.county?.trim() ?? '',
-    zip: details.zip.trim(),
-  });
-  if (isShippable(details.country, shipCountries, shipsNowhere)) out.country = details.country.trim().toUpperCase();
+  // The offer only shows over an empty address, but the patch is blank-only on its own account: a typed value is never overwritten.
+  const lines: Array<[(typeof ADDRESS_FIELDS)[number], string]> = [
+    ['addressLine1', details.addressLine1.trim()],
+    ['addressLine2', details.addressLine2?.trim() ?? ''],
+    ['addressLine3', details.addressLine3?.trim() ?? ''],
+    ['city', details.city.trim()],
+    ['county', details.county?.trim() ?? ''],
+    ['zip', details.zip.trim()],
+  ];
+  const addressEmpty = ADDRESS_FIELDS.every(blank);
+  for (const [key, value] of lines) if (blank(key)) out[key] = value;
+  if (addressEmpty && isShippable(details.country, shipCountries, shipsNowhere)) out.country = details.country.trim().toUpperCase();
   return out;
 }
 

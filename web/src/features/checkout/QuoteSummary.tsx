@@ -23,6 +23,8 @@ export interface QuoteSummaryProps {
   /** Open the collapsed phone head once, when the shopper reaches the review —
    *  that is the one step whose whole job is checking these figures. */
   defaultOpen?: boolean;
+  /** The shopper's own review step: below 62em the docket is always open and has no collapse toggle. */
+  fixedOpen?: boolean;
   rootAttrs?: StyleAttrs;
 }
 
@@ -42,6 +44,7 @@ export function QuoteSummary({
   method,
   combo,
   defaultOpen = false,
+  fixedOpen = false,
   rootAttrs,
 }: QuoteSummaryProps) {
   const text = useText();
@@ -99,24 +102,27 @@ export function QuoteSummary({
     <section
       className={classes.docket}
       {...rootAttrs}
-      data-open={open}
+      data-open={open || fixedOpen}
+      data-fixed={fixedOpen || undefined}
       data-stale={stale}
       data-fetching={isFetching}
       aria-label={t('checkout.summary.ariaLabel')}
     >
-      <button
-        type="button"
-        className={classes.toggle}
-        aria-expanded={open}
-        aria-controls={bodyId}
-        onClick={() => setOpen((v) => !v)}
-      >
-        <span className={classes.toggleLabel}>{open ? t('checkout.summary.hide') : t('checkout.summary.ariaLabel')}</span>
-        <span className={classes.toggleFigure}>
-          <Money amount={heroAmount ?? quote?.grandTotal ?? localSubtotal} />
-        </span>
-        <span className={classes.caret} aria-hidden />
-      </button>
+      {fixedOpen ? null : (
+        <button
+          type="button"
+          className={classes.toggle}
+          aria-expanded={open}
+          aria-controls={bodyId}
+          onClick={() => setOpen((v) => !v)}
+        >
+          <span className={classes.toggleLabel}>{open ? t('checkout.summary.hide') : t('checkout.summary.ariaLabel')}</span>
+          <span className={classes.toggleFigure}>
+            <Money amount={heroAmount ?? quote?.grandTotal ?? localSubtotal} />
+          </span>
+          <span className={classes.caret} aria-hidden />
+        </button>
+      )}
 
       <div className={classes.body} id={bodyId}>
         <header className={classes.head}>
