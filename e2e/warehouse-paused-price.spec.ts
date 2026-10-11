@@ -141,3 +141,63 @@ for (const layout of ['menu', 'webapp', 'storefront'] as const) {
     if (dir) await card.screenshot({ path: `${dir.replaceAll('\\', '/').replace(/\/?$/, '/')}paused-long-price-${layout}-390.png` });
   });
 }
+
+/**
+ * An owner card design whose Add part is hidden on one viewport by its block style: with ordering paused there must be
+ * exactly one VISIBLE price at 390px and at 1280px (never none, never two), in the row and in the tile.
+ */
+import { pausedPriceDesignSet } from './page-sets.ts';
+
+const CASES: Array<{ hide: 'mobile' | 'desktop' | undefined; label: string }> = [
+  { hide: undefined, label: 'Add part never hidden' },
+  { hide: 'mobile', label: 'Add part hidden on phones' },
+  { hide: 'desktop', label: 'Add part hidden on desktops' },
+];
+
+for (const layout of ['menu', 'storefront'] as const) {
+  for (const { hide, label } of CASES) {
+    for (const width of [390, 1280] as const) {
+      test(`${layout} ${label}, ${width}px: one visible price while ordering is paused`, async ({ page }) => {
+        await page.setViewportSize({ width, height: 900 });
+        await installMocks(page, { layout, warehouses: PAUSED, pages: { [layout]: pausedPriceDesignSet(layout, hide) } });
+        await page.goto('/');
+        await page.locator('[data-warehouse-picker] select').selectOption('2');
+        const part = layout === 'storefront' ? 'product-card' : 'product-row';
+        const card = page.locator(`[data-sf-part="${part}"]`).filter({ hasText: 'Borealis' });
+        await expect(card).toBeVisible();
+        const visible = await card.locator('[data-sf-part="price"]').evaluateAll((els) => els.filter((el) => {
+          const r = el.getBoundingClientRect();
+          return r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== 'hidden' && !el.closest('[hidden]');
+        }).length);
+        expect(visible).toBe(1);
+        // The design is the one that was published: the Add part carries the price only when it is never hidden.
+        const inSlot = await card.locator('[data-sf-part="price"]').evaluate((el) => !!el.closest('[class*="gutter"], [class*="addPrice"]'));
+        expect(inSlot).toBe(hide === undefined);
+        const total = await card.locator('[data-sf-part="price"]').count();
+        expect(total).toBe(1);
+      });
+    }
+  }
+}
+
+test('menu 320px: a long price (CHF 12,999.99) in the paused slot wraps or fits, never overflows the row or the name', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 800 });
+  await installMocks(page, { layout: 'menu', warehouses: PAUSED, catalog: longPriceCatalog(), tweakSettings: (s) => { s.currency = 'CHF'; } });
+  await page.goto('/');
+  await page.locator('[data-warehouse-picker] select').selectOption('2');
+  const card = page.locator('[data-sf-part="product-row"]').filter({ hasText: 'Borealis' });
+  await expect(card).toBeVisible();
+  const price = card.locator('[data-sf-part="price"]');
+  const c = await box(card);
+  const p = await box(price);
+  const g = await box(card.locator('[class*="gutter"]'));
+  const n = await box(card.locator('h3').first());
+  expect(p.x).toBeGreaterThanOrEqual(g.x - 0.5);
+  expect(p.x + p.width).toBeLessThanOrEqual(g.x + g.width + 0.5);
+  expect(g.x + g.width).toBeLessThanOrEqual(c.x + c.width + 0.5);
+  expect(n.x + n.width).toBeLessThanOrEqual(g.x + 0.5);
+  const o = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, inner: window.innerWidth }));
+  expect(o.scroll).toBeLessThanOrEqual(o.inner);
+  const dir = process.env.REVIEWS_SHOTS_DIR;
+  if (dir) await card.screenshot({ path: `${dir.replaceAll('\\', '/').replace(/\/?$/, '/')}paused-long-price-menu-320.png` });
+});

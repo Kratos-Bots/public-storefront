@@ -165,8 +165,10 @@
   max-width: 55%;
 }
 
+/* A price wider than the slot's cap wraps ("CHF" over the figure) rather than spilling over the name. */
 .gutterPrice .price {
-  white-space: nowrap;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .quickAdd,

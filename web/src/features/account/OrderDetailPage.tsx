@@ -471,7 +471,9 @@ export function OrderDetailPage({ slots, ctx = STANDALONE }: { slots?: { content
   // The renderer emits a slot's blocks as bare children, and one grid cannot stack two columns
   // independently (rows couple their heights), so the page sorts the items into its areas itself.
   // A copy from the cache that is being refreshed is not yet the order as it is: the review link waits for the refresh.
-  const fresh = order.isFetchedAfterMount !== false && !order.isFetching;
+  // Fresh: nothing is being fetched and the copy is either one this visit fetched, or one still within its stale time (a
+  // quick second visit gets no mount fetch, so waiting for `isFetchedAfterMount` alone would wait forever).
+  const fresh = !order.isFetching && (order.isFetchedAfterMount !== false || order.isStale !== true);
   const base: BlockRenderContext = { editing: ctx.editing, docKey: ctx.docKey, layout: ctx.layout };
   const silent = silentParts(detail);
   // An owner's published arrangement can predate the review part: it is added under the items, so the form is

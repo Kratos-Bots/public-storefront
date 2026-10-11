@@ -255,6 +255,22 @@ describe('ProductRow while ordering is paused', () => {
     expect(prices(view('CardRowPrice', false).container)).toHaveLength(1);
   });
 
+  it('one price whichever part carries it: a hasAddPart of false leaves the Add part drawing nothing', () => {
+    pause();
+    expect(prices(view('CardRowAdd', false).container)).toHaveLength(0);
+    expect(view('CardRowAdd', false).container.querySelector('[class*="gutter"]')).toBeNull();
+    cleanup();
+    expect(prices(view('CardRowPrice', false).container)).toHaveLength(1);
+    cleanup();
+    expect(prices(view('CardRowAdd', true).container)).toHaveLength(1);
+  });
+
+  it('with ordering on nothing changes: the Add part is the picker whatever hasAddPart says', () => {
+    pause(null);
+    const { container } = view('CardRowAdd', false);
+    expect(container.querySelector('[class*="quickAdd"]')).not.toBeNull();
+  });
+
   it('with both parts, the Price part steps aside when paused and returns when it is not', () => {
     pause();
     expect(prices(view('CardRowPrice', true).container)).toHaveLength(0);

@@ -129,11 +129,15 @@ function TilePrice({ styleAttrs }: PartViewProps) {
 }
 
 function TileAdd({ styleAttrs }: PartViewProps) {
-  const { product } = CardTileFamily.useData();
+  const { product, hasAddPart } = CardTileFamily.useData();
+  // Paused: the Add part carries the price only when it is drawn on every viewport (`hasAddPart`); otherwise the Price
+  // part stays and this part draws nothing, so there is one price at every width.
+  const priceHere = usePriceInAddSlot(hasAddPart);
   const { features } = useSettings();
   const { paused } = useWarehouseOrdering();
   // Paused: no empty box and no hole in the foot. The price takes the slot the button would.
   if (features.ordering && paused) {
+    if (!priceHere) return null;
     return (
       <div className={`${classes.add} ${classes.addPrice}`} {...styleAttrs}>
         <PriceStack product={product} className={classes.prices} />

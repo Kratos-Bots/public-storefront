@@ -517,3 +517,17 @@ export function illegalCheckoutSet(layout: Layout, kind: IllegalCheckout): PageS
 export function noCouponCheckoutSet(layout: Layout, keep: { coupon?: boolean; notes?: boolean } = {}): PageSet {
   return checkoutPages(layout, checkoutDoc({ coupon: keep.coupon ? 'shipping.after' : 'none', notes: keep.notes ? 'review.after' : 'none' }));
 }
+
+/**
+ * Card designs with Price and Add parts, the Add part hidden by its block style on `hide` (undefined: never). With the
+ * warehouse paused, the shopper must see exactly one price at every width.
+ */
+export function pausedPriceDesignSet(layout: Layout, hide?: 'mobile' | 'desktop'): PageSet {
+  const style = hide ? { blockStyle: { hide } } : {};
+  const tile = doc([c('CardTile', { content: [p('CardTileImage', 't-img'), g('body', [
+    p('CardTileName', 't-name'), g('foot', [p('CardTilePrice', 't-price'), p('CardTileAdd', 't-add', style)], 'CardTileGroup', 't-foot'),
+  ], 'CardTileGroup', 't-body')] }, 'tile-pp-e2e')]);
+  const row = doc([c('CardRow', { content: [g('text', [p('CardRowName', 'r-name')], 'CardRowGroup', 'r-text'), p('CardRowPrice', 'r-price'), p('CardRowAdd', 'r-add', style)] }, 'row-pp-e2e')]);
+  const base = storySet(layout);
+  return { ...base, cards: { tile, row } };
+}

@@ -117,4 +117,23 @@ describe('ProductCard while ordering is paused', () => {
     cleanup();
     expect(prices(view('CardTilePrice', true).container)).toHaveLength(0);
   });
+
+  it('one price whichever part carries it: Add draws the price only when the design says it is always drawn', () => {
+    pause();
+    const both = (hasAddPart: boolean) => {
+      const total = prices(view('CardTilePrice', hasAddPart).container).length + prices(view('CardTileAdd', hasAddPart).container).length;
+      cleanup();
+      return total;
+    };
+    expect(both(true)).toBe(1);
+    // An Add part hidden on one viewport by its style (hasAddPart false): the Price part keeps the price, the Add part draws none.
+    expect(both(false)).toBe(1);
+    expect(prices(view('CardTileAdd', false).container)).toHaveLength(0);
+  });
+
+  it('with ordering on nothing changes: the Add part is the button whatever hasAddPart says', () => {
+    pause(null);
+    view('CardTileAdd', false);
+    expect(screen.getByRole('button', { name: /add/i })).toBeInTheDocument();
+  });
 });

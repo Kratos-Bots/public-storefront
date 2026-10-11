@@ -116,7 +116,10 @@ function RowPrice({ styleAttrs }: PartViewProps) {
 }
 
 function RowAdd({ styleAttrs }: PartViewProps) {
-  const { product } = CardRowFamily.useData();
+  const { product, hasAddPart } = CardRowFamily.useData();
+  // Paused: the Add part carries the price only when it is drawn on every viewport (`hasAddPart`). A design that hides it on
+  // one viewport keeps the Price part everywhere instead, so this part then draws nothing: one price at every width.
+  const priceHere = usePriceInAddSlot(hasAddPart);
   const { features } = useSettings();
   const { paused } = useWarehouseOrdering();
   const { t } = useText();
@@ -175,7 +178,7 @@ function RowAdd({ styleAttrs }: PartViewProps) {
         </button>
       )}
     </div>
-  ) : features.ordering ? (
+  ) : priceHere ? (
     // Paused: the price stands where the picker would, same slot, same edge, same height.
     <div className={`${classes.gutter} ${classes.gutterPrice}`} {...styleAttrs}>
       <PriceText product={product} />
