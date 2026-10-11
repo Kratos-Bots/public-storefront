@@ -72,6 +72,17 @@ export async function fillCheckout(
   await expect(page.getByText('USDT on Polygon')).toBeVisible();
 }
 
+/**
+ * A guest's quote is debounced (350 ms) and mints a token of its own, and the Place order button is down while it does.
+ * Picking the shipping option starts that run, and the walk reaches Review well inside a second: a click landing in the
+ * gap before it starts is answered by an error, and one landing as it starts hits a disabled button and does nothing.
+ * So wait for the quote priced for the pick to be asked for and finished, as a shopper would see the button come back.
+ */
+export async function guestQuoteSettled(page: Page, mocks: MockHandle): Promise<void> {
+  await expect.poll(() => mocks.state.guestQuotes.some((q) => q.shippingOptionId === 11)).toBe(true);
+  await expect(page.getByText('Verifying')).toHaveCount(0);
+}
+
 /** Add the open product once and wait until the line is on the server and the button has settled. */
 export async function addFirstToCart(page: Page, layout: Layout, mocks: MockHandle): Promise<void> {
   await page.getByRole('button', { name: /^Add · / }).first().click();

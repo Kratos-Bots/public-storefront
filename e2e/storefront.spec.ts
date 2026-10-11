@@ -1,7 +1,7 @@
 import { fileURLToPath } from 'node:url';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { installMocks, ORDER_REF, ORIGIN, type Layout, type MockHandle } from './mocks.ts';
-import { fillCheckout, onlyVisible, openCart, openProduct, productOpener } from './flows.ts';
+import { fillCheckout, guestQuoteSettled, onlyVisible, openCart, openProduct, productOpener } from './flows.ts';
 
 /**
  * The mocked end-to-end pass. Vite serves the real app; every `/api/*`,
@@ -221,6 +221,8 @@ test.describe('guest checkout', () => {
     await fillCheckout(page);
     await shot(page, '3-guest-review');
 
+    // The shipping pick starts a debounced re-quote that takes the button down; order once it is back.
+    await guestQuoteSettled(page, mocks);
     await page.getByRole('button', { name: /^Place order/ }).click();
     // A guest has no order page: they land on the order-placed screen, which sends them to sign in.
     await expect(page).toHaveURL(new RegExp(`/order-placed\\?order=${ORDER_REF}$`));

@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import {
   COUPON_CODE, installMocks, installTelegramStub, type InstallMocksOptions, type Layout, type MockHandle,
 } from './mocks.ts';
-import { FIXED_NOW } from './flows.ts';
+import { FIXED_NOW, guestQuoteSettled } from './flows.ts';
 import { presetTheme } from './template-theme.ts';
 import {
   arrangedCheckoutSet, defaultCheckoutSet, illegalCheckoutSet, LEGAL_STEP_ORDERS, noCouponCheckoutSet,
@@ -182,17 +182,6 @@ const BASE_BODY = {
   shippingOptionId: 11, paymentMethod: 'crypto_static', coin: 'usdt', network: 'polygon', email: 'ada@example.invalid',
   shippingAddress: { firstName: 'Ada', surname: 'Sterling', addressLine1: '14 Kirkgate', city: 'Leeds', zip: 'LS1 6BY', country: 'GB' },
 };
-
-/**
- * A guest's quote is debounced (300 ms) and mints a token of its own, and the Place order button is down while it does.
- * Picking the shipping option starts that run, and the walk reaches Review well inside a second: a click landing in the
- * gap before it starts is answered by an error, and one landing as it starts hits a disabled button and does nothing.
- * So wait for the quote priced for the pick to be asked for and finished, as a shopper would see the button come back.
- */
-async function guestQuoteSettled(page: Page, mocks: MockHandle): Promise<void> {
-  await expect.poll(() => mocks.state.guestQuotes.some((q) => q.shippingOptionId === 11)).toBe(true);
-  await expect(page.getByText('Verifying')).toHaveCount(0);
-}
 
 /** The cart is spent and the saved checkout form is gone. */
 async function expectSpent(page: Page): Promise<void> {
