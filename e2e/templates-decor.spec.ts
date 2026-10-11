@@ -193,6 +193,9 @@ test.describe('dark-luxury', () => {
     await addFirstToCart(page, layout, mocks);
     const cta = page.locator('[data-sf-part="cart-bar"] [data-sf-cta="main"]');
     await expect(cta).toBeVisible();
+    // The pointer is left where Add to cart was, which is now over the bar (it sits above the bottom navigation): a hovered
+    // button holds still, so park the pointer out of the way.
+    await page.mouse.move(0, 0);
     expect(await style(cta, 'animation-name')).toBe('sf-lux-pulse');
     expect(await noOverflow(page)).toBe(true);
   });

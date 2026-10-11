@@ -166,6 +166,23 @@ test.describe('what stacks on the bar', () => {
     expect(Math.abs(bar.bottom - nav.top)).toBeLessThanOrEqual(1);
   });
 
+  test('the web app layout in a browser tab: the stand-in for the Telegram main button rests on the bar and adds no inset', async ({ page }) => {
+    const mocks = await setup(page, { layout: 'webapp', session: true });
+    mocks.state.cart = {
+      items: [{
+        productId: 101, name: 'Alpine Extract 10ml', quantity: 1, unitPrice: 42.5, lineTotal: 42.5, imageUrl: null, isPreorder: false,
+        outOfStock: false, priceChanged: false, inactive: false, belowMin: false, aboveMax: false, minOrderQuantity: null, maxOrderQuantity: null,
+      }],
+      subtotal: 42.5, itemCount: 1,
+    };
+    await page.goto('/cart');
+    await expect(page.locator('[data-sf-part="primary-bar"]')).toBeVisible();
+    const nav = (await rect(page, '[data-sf-part="bottom-nav"]'))!;
+    const bar = (await rect(page, '[data-sf-part="primary-bar"]'))!;
+    expect(Math.abs(bar.bottom - nav.top)).toBeLessThanOrEqual(1);
+    expect(await page.locator('[data-sf-part="primary-bar"]').evaluate((el) => getComputedStyle(el).paddingBottom)).toBe('0px');
+  });
+
   test('inside Telegram the bar takes the 34px inset alone, and what stacks on it adds none', async ({ page }) => {
     await setup(page, { layout: 'menu', cart: true, telegram: true });
     await page.goto('/');
