@@ -1,8 +1,14 @@
 /* The phone header's menu: a button at the header's right end and the panel it opens. Both are drawn from the shop's
    tokens only (bg-deep, line, radius, mono voice, primary), the way the bottom bar is, so each template restyles them
    as it restyles the bar. The button borrows its shell's own action look (44px, muted glyph, surface on hover). */
+/* The storefront shell's action class is written for links; a button needs the browser's own box taken off. */
 .button {
   flex: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
   /* The row's end group (account, cart, filter) takes the free space itself in the storefront shell, and the search
      does in the others. When that group is empty on a phone (the bottom bar carries Account and Cart) it leaves the
      row below, and this button takes the free space instead, landing at the right edge. */
