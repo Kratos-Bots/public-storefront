@@ -4,8 +4,14 @@ import { expect, test } from '@playwright/test';
 import { installMocks, type InstallMocksOptions, type Layout } from './mocks.ts';
 import { FIXED_NOW } from './flows.ts';
 
-const OUT = process.env.S1_SHOTS ?? '';
-test.skip(!OUT, 'set S1_SHOTS');
+/**
+ * Screenshots for a visual review of the paused-warehouse price, the warehouse chooser cards and the checkout's last-order
+ * offer, at 390px and desktop. Only runs when asked, and writes outside the repo:
+ * `UX_SHOTS=<output dir> TZ=UTC npx playwright test -c e2e/playwright.config.ts e2e/catalog-chooser-checkout-visual.spec.ts`
+ * Synthetic data only.
+ */
+const OUT = process.env.UX_SHOTS ?? '';
+test.skip(!OUT, 'set UX_SHOTS');
 const LIST = [
   { id: 1, name: 'Main Warehouse', country: 'GB', isDefault: true },
   { id: 2, name: 'Test EU Warehouse', country: 'DE', isDefault: false },
@@ -15,7 +21,7 @@ const PAUSED: NonNullable<InstallMocksOptions['warehouses']> = {
   list: [LIST[0]!, { ...LIST[1]!, orderingEnabled: false, orderingMessage: 'Back Monday' }],
 };
 const OPEN: NonNullable<InstallMocksOptions['warehouses']> = { carries: { 2: [102, 104] }, list: LIST };
-const TAG = process.env.S1_TAG ?? 'before';
+const TAG = 'shot';
 for (const layout of ['menu', 'webapp', 'storefront'] as Layout[]) {
   for (const [w, h, label] of [[390, 800, 'm'], [1280, 800, 'd']] as const) {
     for (const [state, wh] of [['paused', PAUSED], ['live', OPEN]] as const) {
@@ -70,7 +76,7 @@ for (const [w, h, label] of [[390, 844, 'm'], [1280, 900, 'd']] as const) {
     await page.clock.setFixedTime(FIXED_NOW);
     await page.emulateMedia({ reducedMotion: 'reduce' });
     const mocks = await installMocks(page, { layout: 'storefront', session: true,
-      ...(process.env.S1_DETAILS ? { lastDetails: { orderReference: 'E2E0', placedAt: '2026-08-01T10:00:00.000Z', firstName: 'Alex', surname: 'Rowan', addressLine1: '14 Test Lane', addressLine2: 'Flat 2', addressLine3: null, city: 'Leeds', county: null, zip: 'LS1 4AB', country: 'GB', email: 'alex@example.invalid', phone: '+447700900123', servicePoint: null } } : {}) });
+      lastDetails: { orderReference: 'E2E0', placedAt: '2026-08-01T10:00:00.000Z', firstName: 'Alex', surname: 'Rowan', addressLine1: '14 Test Lane', addressLine2: 'Flat 2', addressLine3: null, city: 'Leeds', county: null, zip: 'LS1 4AB', country: 'GB', email: 'alex@example.invalid', phone: '+447700900123', servicePoint: null } });
     mocks.state.cart = { items: [{ productId: 101, name: 'Alpine Extract 10ml', quantity: 1, unitPrice: 42.5, lineTotal: 42.5, imageUrl: null, isPreorder: false, outOfStock: false, priceChanged: false, inactive: false, belowMin: false, aboveMax: false, minOrderQuantity: null, maxOrderQuantity: null }], subtotal: 42.5, itemCount: 1 };
     await page.goto('/checkout');
     await expect(page.getByRole('heading', { name: 'Your details' })).toBeVisible();

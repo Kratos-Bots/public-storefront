@@ -6,11 +6,11 @@ import type { LastCheckoutDetails } from '../web/src/types/checkout.ts';
 
 /**
  * "Use the details from your last order?" on the checkout's first step, at phone width, with the route mocked. Synthetic
- * data only. Set S1_SHOTS to an output directory to also save screenshots.
+ * data only. Set UX_SHOTS to an output directory to also save screenshots.
  */
 test.use({ viewport: { width: 390, height: 844 } });
 
-const SHOTS = process.env.S1_SHOTS ?? '';
+const SHOTS = process.env.UX_SHOTS ?? '';
 const DETAILS: LastCheckoutDetails = {
   orderReference: 'E2E0', placedAt: '2026-08-01T10:00:00.000Z',
   firstName: 'Alex', surname: 'Rowan',
