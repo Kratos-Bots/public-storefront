@@ -1,0 +1,163 @@
+/* The phone header's menu: a button at the header's right end and the panel it opens. Both are drawn from the shop's
+   tokens only (bg-deep, line, radius, mono voice, primary), the way the bottom bar is, so each template restyles them
+   as it restyles the bar. The button borrows its shell's own action look (44px, muted glyph, surface on hover). */
+/* The storefront shell's action class is written for links; a button needs the browser's own box taken off. */
+.button {
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+  /* The row's end group (account, cart, filter) takes the free space itself in the storefront shell, and the search
+     does in the others. When that group is empty on a phone (the bottom bar carries Account and Cart) it leaves the
+     row below, and this button takes the free space instead, landing at the right edge. */
+  margin-inline-start: auto;
+  /* The glyph is 20px in a 44px target: the target takes 8px of the header's own gutter at the edge, and (next to the
+     group) 8px of the gap, which is wider than that, so no neighbour's box is overlapped and the search keeps its room. */
+  margin-inline-end: -0.5rem;
+}
+
+div:not(:empty) + .button {
+  margin-inline-start: -0.5rem;
+}
+
+@media (max-width: 61.99em) {
+  :global(div):empty:has(+ .button) {
+    display: none;
+  }
+}
+
+/* On the narrowest phones, with the bottom bar off, the search field shares the row with the shop's mark, Account, Cart and
+   this button, and has no room left for the word "Search" (it would be clipped to "Sea"): it becomes icon-only (the
+   placeholder goes transparent; the field keeps its accessible name). The Reviews star's own rule does the same. */
+@media (max-width: 24.25em) {
+  :global([data-sf-part='header']):has(.crowded) input::placeholder {
+    color: transparent;
+  }
+}
+
+/* The panel */
+.panel {
+  display: flex;
+  flex-direction: column;
+  background: var(--sf-bg-deep);
+  border-left: 1px solid var(--sf-line-strong);
+  border-radius: var(--sf-card-radius) 0 0 var(--sf-card-radius);
+  /* The notch and the home indicator, at the side the panel lies against. Inside Telegram only its own insets count
+     (env() there would count the notch twice), as for the bottom bar. */
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) 0;
+}
+
+/* (Telegram publishes top and bottom insets only; the side one stays the browser's.) */
+.telegram {
+  padding: calc(var(--tg-safe-top, 0px) + var(--tg-content-safe-top, 0px)) env(safe-area-inset-right, 0px) var(--tg-safe-bottom, 0px) 0;
+}
+
+.head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 56px;
+  padding: 0 0.5rem 0 1.25rem;
+  border-bottom: 1px solid var(--sf-line);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--sf-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--sf-faint);
+}
+
+.close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--sf-muted);
+  border-radius: var(--sf-card-radius);
+  cursor: pointer;
+}
+
+.close:hover {
+  color: var(--sf-text);
+  background: var(--sf-surface);
+}
+
+.close:focus-visible,
+.button:focus-visible,
+.item:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: -2px;
+}
+
+.nav {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.list {
+  margin: 0;
+  padding: 0.5rem 0;
+  list-style: none;
+}
+
+/* One row per page: glyph and word. The page you are on carries the bottom bar's own mark, full-strength text and a
+   2px primary rule, on the row's leading edge. */
+.item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  min-height: 56px;
+  padding: 0 1.25rem;
+  color: var(--sf-muted);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 150ms ease, background-color 150ms ease;
+}
+
+.item:active,
+.item:hover {
+  color: var(--sf-text);
+  background: var(--sf-surface);
+}
+
+.item[aria-current='page'] {
+  color: var(--sf-text);
+}
+
+.item[aria-current='page']::before {
+  content: '';
+  position: absolute;
+  inset-block: 10px;
+  inset-inline-start: 0;
+  width: 2px;
+  background: var(--sf-primary);
+}
+
+.label {
+  font-family: var(--sf-font-heading);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .item {
+    transition: none;
+  }
+}

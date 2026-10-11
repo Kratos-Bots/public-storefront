@@ -36,6 +36,9 @@ vi.mock('@/templates/hooks.ts', async (orig) => {
       const scope = useContext(CoreOptionsScopeContext);
       return {
         ...base,
+        // These pin the header's parts, so the bottom bar (which would take Account and Cart off a phone) and the header menu are off.
+        showMobileBottomNav: false,
+        showHeaderMenu: false,
         headerAccountIcon: scope.headerAccountIcon ?? (state.headerIcon as typeof base.headerAccountIcon),
         headerCartIcon: scope.headerCartIcon ?? (state.headerIcon as typeof base.headerCartIcon),
       };

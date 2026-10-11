@@ -50,10 +50,11 @@ test.describe('scroll · storefront layout', () => {
     expect(await scrollY(page)).toBeLessThan(y + 20);
   });
 
-  test('a header link from a scrolled page lands at the top of the next page', async ({ page }) => {
+  test('a navigation link from a scrolled page lands at the top of the next page', async ({ page }) => {
     await open(page, 'storefront');
     await scrollTo(page, SCROLLED);
-    await onlyVisible(page.getByRole('link', { name: 'Sign in' })).click();
+    // The phone's header leaves Account to the bottom bar, whose link is named Profile.
+    await onlyVisible(page.getByRole('link', { name: 'Profile' })).click();
     await expect(page).toHaveURL(/\/login/);
     await expect.poll(() => scrollY(page)).toBe(0);
   });
@@ -104,10 +105,11 @@ for (const layout of ['menu', 'webapp'] as const) {
       await expect.poll(async () => Math.abs((await scrollY(page)) - y)).toBeLessThan(5);
     });
 
-    test('a header link from a scrolled list lands at the top of the next page', async ({ page }) => {
+    test('a navigation link from a scrolled list lands at the top of the next page', async ({ page }) => {
       await open(page, layout);
       await scrollTo(page, SCROLLED);
-      await onlyVisible(page.getByRole('link', { name: /^(Sign in|Your account)$/ })).click();
+      // The phone's header leaves Account to the bottom bar, whose link is named Profile.
+      await onlyVisible(page.getByRole('link', { name: 'Profile' })).click();
       await expect(page).toHaveURL(/\/(login|account)/);
       await expect.poll(() => scrollY(page)).toBe(0);
     });

@@ -44,11 +44,11 @@ describe('validateManifest', () => {
     expect(errors.length).toBeGreaterThan(0);
     expect(errors.join('\n')).toContain(fragment);
   });
-  it('rejects more than 17 own options (30 minus the thirteen core options)', () => {
-    expect(MAX_TEMPLATE_OPTIONS).toBe(17);
-    const options = Array.from({ length: 18 }, (_, i) => ({ key: `o${i}`, type: 'boolean' as const, label: 'x', default: true }));
-    expect(validateManifest(manifest({ options }), 'acme').join('\n')).toContain('at most 17 options (13 more are added to every template)');
-    expect(validateManifest(manifest({ options: options.slice(0, 17) }), 'acme')).toEqual([]);
+  it('rejects more than 16 own options (30 minus the fourteen core options)', () => {
+    expect(MAX_TEMPLATE_OPTIONS).toBe(16);
+    const options = Array.from({ length: 17 }, (_, i) => ({ key: `o${i}`, type: 'boolean' as const, label: 'x', default: true }));
+    expect(validateManifest(manifest({ options }), 'acme').join('\n')).toContain('at most 16 options (14 more are added to every template)');
+    expect(validateManifest(manifest({ options: options.slice(0, 16) }), 'acme')).toEqual([]);
   });
   it.each(CORE_OPTIONS.map((o) => o.key))('reserves the core option key %s', (key) => {
     expect(validateManifest(manifest({ options: [{ key, type: 'boolean', label: 'x', default: false }] }), 'acme'))
@@ -156,7 +156,7 @@ describe('validateManifest — tokens', () => {
 });
 
 describe('core options', () => {
-  it('are thirteen options whose defaults leave the store as it was (shown, everywhere, built-in wording), except the bottom navigation bar, which is on by owner decision', () => {
+  it('are fourteen options whose defaults leave the store as it was (shown, everywhere, built-in wording), except the bottom navigation bar and the header menu, which are on by owner decision', () => {
     expect(CORE_OPTIONS.map((o) => [o.key, o.type, o.label, o.default])).toEqual([
       ['showPageTitle', 'boolean', 'Page title', true],
       ['showCatalogIntro', 'boolean', 'Catalogue intro', true],
@@ -171,6 +171,7 @@ describe('core options', () => {
       ['showCategoryEmoji', 'boolean', 'Category emojis', true],
       ['showOutOfStockPrice', 'boolean', 'Price on out-of-stock products', true],
       ['showMobileBottomNav', 'boolean', 'Mobile bottom navigation', true],
+      ['showHeaderMenu', 'boolean', 'Header menu (phones)', true],
     ]);
   });
   it('offers the header icons on phones and desktop, desktop only, phones only or hidden', () => {

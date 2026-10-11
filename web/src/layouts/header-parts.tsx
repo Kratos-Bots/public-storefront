@@ -13,6 +13,8 @@ import { SearchField } from '@/layouts/SearchField.tsx';
 import { useShellState } from '@/layouts/shell-context.ts';
 import { isTelegramWebApp } from '@/lib/telegram-webapp.ts';
 import { isBuilderMode } from '@/app/builder-gate.ts';
+import { useBottomNavShown } from '@/layouts/bottom-nav-rules.ts';
+import { HeaderMenu } from '@/layouts/HeaderMenu.tsx';
 import { isPreviewMode } from '@/app/preview-listener.ts';
 import { reviewSettingsOf } from '@/features/reviews/settings.ts';
 import { Slot } from '@/templates/runtime.tsx';
@@ -107,7 +109,9 @@ function AccountInner({ styleAttrs }: { styleAttrs?: StyleAttrs }) {
   const { t } = useText();
   const { headerAccountIcon } = useCoreOptions();
   const accountClass = headerIconClass(headerAccountIcon);
-  if (!features.accounts || accountClass === null) return null;
+  // The bottom bar carries Profile wherever it is on screen: the header does not repeat it.
+  const barShown = useBottomNavShown();
+  if (!features.accounts || accountClass === null || barShown) return null;
   if (variant === 'storefront') {
     return loggedIn ? (
       <Link to="/account" className={`${classes.action} ${accountClass}`} aria-label={t('common.nav.yourAccount')} {...styleAttrs}>
@@ -145,7 +149,9 @@ function CartInner({ styleAttrs }: { styleAttrs?: StyleAttrs }) {
   const { tp } = useText();
   const { headerCartIcon } = useCoreOptions();
   const cartClass = headerIconClass(headerCartIcon);
-  if (!features.ordering || cartClass === null) return null;
+  // Likewise Cart.
+  const barShown = useBottomNavShown();
+  if (!features.ordering || cartClass === null || barShown) return null;
   return (
     <Link to="/cart" className={`${classes.action} ${cartClass}`} aria-label={tp('shell.header.cartAriaLabel', cartCount)} {...styleAttrs}>
       <BagIcon size={variant === 'storefront' ? 18 : 17} />
@@ -164,18 +170,19 @@ function CartView({ props, styleAttrs }: PartViewProps) {
 
 /**
  * The header's "Reviews" link: a system mount of the header bar, not a part an owner places, so every header (a published
- * one included) carries it. Shown while the shop has reviews on, always on desktop, and on a phone only when the bottom
- * navigation bar (which carries Reviews there) is switched off. Not drawn in the page builder's canvas or in previews.
+ * one included) carries it. Shown while the shop has reviews on, always on desktop, and on a phone only when neither the
+ * bottom navigation bar nor the header menu (which both carry Reviews there) is switched on. Not drawn in the page
+ * builder's canvas or in previews.
  */
 function HeaderReviewsLink() {
   const settings = useSettings();
   const { t } = useText();
-  const { showMobileBottomNav } = useCoreOptions();
+  const { showMobileBottomNav, showHeaderMenu } = useCoreOptions();
   if (!reviewSettingsOf(settings).enabled || isBuilderMode() || isPreviewMode()) return null;
   return (
     <Link
       to="/reviews"
-      className={showMobileBottomNav ? `${reviewsLink.link} sf-hide-mobile` : reviewsLink.link}
+      className={showMobileBottomNav || showHeaderMenu ? `${reviewsLink.link} sf-hide-mobile` : reviewsLink.link}
       aria-label={t('shell.header.reviews')}
     >
       <span className={reviewsLink.text}>{t('shell.header.reviews')}</span>
@@ -239,6 +246,7 @@ export function HeaderBar({ variant, topBar, sticky, slots, styleAttrs }: Header
           <HeaderReviewsLink />
           {slots.middle()}
           {slots.end({ className: c.actions })}
+          <HeaderMenu />
         </div>
         <WarehouseBar />
       </header>

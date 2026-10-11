@@ -160,8 +160,8 @@ storefront enforces every one of the backend's numbers, and is stricter where no
 | preset `name` | ≤ 60 characters |
 | `editable.colors` | colour keys, no duplicates (so ≤ 8) |
 | `editable.fonts` / `.radius` / `.density` | booleans (required) |
-| `options` | ≤ 17 entries of your own: the backend caps a catalog entry at 30 and the thirteen core options take the rest. This was 18 before `showMobileBottomNav` became the thirteenth core option, so a template that declares 18 options now fails validation (`at most 17 options (13 more are added to every template)`). |
-| option `key` | not a core option key (`showPageTitle`, `showCatalogIntro`, `showSectionLabels`, `showSku`, `showCategoryPicker`, `headerAccountIcon`, `headerCartIcon`, `showCutoffBar`, `cutoffMessage`, `showCutoffCountdown`, `showCategoryEmoji`, `showOutOfStockPrice`, `showMobileBottomNav` — all reserved) |
+| `options` | ≤ 16 entries of your own: the backend caps a catalog entry at 30 and the fourteen core options take the rest. This was 17 before `showHeaderMenu` became the fourteenth core option (and 18 before `showMobileBottomNav` became the thirteenth), so a template that declares 17 options now fails validation (`at most 16 options (14 more are added to every template)`). |
+| option `key` | not a core option key (`showPageTitle`, `showCatalogIntro`, `showSectionLabels`, `showSku`, `showCategoryPicker`, `headerAccountIcon`, `headerCartIcon`, `showCutoffBar`, `cutoffMessage`, `showCutoffCountdown`, `showCategoryEmoji`, `showOutOfStockPrice`, `showMobileBottomNav`, `showHeaderMenu` — all reserved) |
 | option `label` | 1–80 characters |
 | option `help` | optional; a string of ≤ 200 characters |
 | select `choices` | 1–20 entries |
@@ -197,7 +197,7 @@ A store's stored theme (`Theme` in `types/settings.ts`) always names a `template
   object key by key, discarding any stored value whose type or shape doesn't match the option's
   declared `type` (boolean/select/text) — so a stale or foreign options blob degrades to defaults
   field-by-field, never wholesale.
-- **Core options**: every template — built-in and external — also carries thirteen shared options,
+- **Core options**: every template — built-in and external — also carries fourteen shared options,
   declared once as `CORE_OPTIONS` in `define.ts` and prepended to each manifest's own `options[]`
   by the registry (`withCoreOptions()` in `buildRegistry`, after validation). Because the catalog
   (`catalog.ts` → `templates.json`) and `lookupManifest` both read the registry, the admin's
@@ -213,14 +213,15 @@ A store's stored theme (`Theme` in `types/settings.ts`) always names a `template
   | `showSectionLabels` | Section labels | The `SectionLabel` slot at page and group level (custom or default). |
   | `showSku` | Product codes | The SKU in `ProductRow`, `ProductDetailPage` and `ProductDetailSheet`, and the wholesale sheet's Code column (header, cells, the tier ladder's leading pad; on a phone the row's code track collapses via `.noCode`). Search still matches codes; the contact prefill still quotes the code to staff. |
   | `showCategoryPicker` | Category picker | `CategoryNav` (chips and rail) and `FilterDrawer` in `ProductGrid` (the column goes full width), `FilterSheet` in `ProductList`, and the Categories button in `MenuShell`/`WebAppShell`. `/c/<slug>` links still work. |
-  | `headerAccountIcon` | Header account icon | Select: `all` (default), `desktop`, `mobile`, `none`. The account link (or Sign in) in all three shells' headers. `desktop`/`mobile` add the global `sf-hide-mobile`/`sf-hide-desktop` class (62em); `none` doesn't render it (`headerIconClass()` in `hooks.ts`). |
-  | `headerCartIcon` | Header cart icon | Same choices, for the header cart link. The phone cart bar and the web app's foot are untouched — that's the point: in the web app the running-tab bar (subtotal, item count, Checkout; the same bar as the phone cart bar, drawn in the page inside Telegram too, where it replaces the native View cart button) already opens the cart. |
+  | `headerAccountIcon` | Header account icon | Select: `all` (default), `desktop`, `mobile`, `none`. The account link (or Sign in) in all three shells' headers. On a phone it is not shown while the bottom bar is on screen (the bar carries Profile), whatever the mode. `desktop`/`mobile` add the global `sf-hide-mobile`/`sf-hide-desktop` class (62em); `none` doesn't render it (`headerIconClass()` in `hooks.ts`). |
+  | `headerCartIcon` | Header cart icon | Same choices, for the header cart link. On a phone it is not shown while the bottom bar is on screen (the bar carries Cart), whatever the mode. The phone cart bar and the web app's foot are untouched — that's the point: in the web app the running-tab bar (subtotal, item count, Checkout; the same bar as the phone cart bar, drawn in the page inside Telegram too, where it replaces the native View cart button) already opens the cart. |
   | `showCutoffBar` | Dispatch cut-off banner | `CutoffBar` in all three shells. |
   | `cutoffMessage` | Cut-off banner wording | Text (≤ 100). Blank = "Order by {time} for {dispatch} dispatch"; otherwise the store's sentence with `{time}` and `{dispatch}` swapped for the styled cut-off time and ship day (`fillCutoffMessage()`). The weekday prefix for a cut-off that isn't today stays. |
   | `showCutoffCountdown` | Cut-off countdown | The "4h 12m left" readout and the draining meter. |
   | `showCategoryEmoji` | Category emojis | The emoji beside each category: the group heads in `ProductList` (and their reserved glyph column), `CategoryNav` chips and tree. Off draws none and reserves no column. The admin-facing editor picker is unaffected. |
   | `showOutOfStockPrice` | Price on out-of-stock products | Default on. Off: an out-of-stock, non-preorder product shows the "Out of Stock" chip in the price slot of `ProductRow` and `ProductCard` (right-aligned), and the meta/flags line drops its duplicate chip. Product sheet and page keep the price; low stock is unchanged (`useOutOfStockInPriceSlot()`). |
-  | `showMobileBottomNav` | Mobile bottom navigation | **Default on — the one core option whose default changes the look of an existing store** (owner decision, UX batch 2). On phones (below 62em) a bar fixed to the foot of the screen carries Catalog, Profile, Cart (with the item count), Reviews and Support; items follow the shop's switches (accounts, ordering, reviews). Off: no bar, and the header carries a "Reviews" link on phones too (on desktop it is always there). Never drawn on `/checkout`, `/payment/*`, `/order-placed`, `/login`, `/auth/*`, `/reset-password`, `/verify-email`, in the page builder or in previews. Cart bars (phone cart bar, web app running-tab bar, wholesale bar, the browser stand-in for Telegram's MainButton) stack directly above it. The bar publishes its height as `--sf-nav-h` on the root (0 when absent) and every bottom element and the shells' page clearance add it. Component: `layouts/BottomNav.tsx`. |
+  | `showMobileBottomNav` | Mobile bottom navigation | **Default on — the one core option whose default changes the look of an existing store** (owner decision, UX batch 2). On phones (below 62em) a bar fixed to the foot of the screen carries Catalog, Profile, Cart (with the item count), Reviews and Support; items follow the shop's switches (accounts, ordering, reviews). Off: no bar, and Reviews is reached from the header menu (`showHeaderMenu`), or from a star in the header if that is off too (on desktop the header always carries a "Reviews" link). **Where the bar is on screen the header drops its Account and Cart buttons** (whatever `headerAccountIcon` / `headerCartIcon` say): the bar already carries Profile and Cart. Where the bar is not on screen (desktop, option off, `/checkout`, `/login`, the builder canvas, previews) the header is unchanged. One hook, `useBottomNavShown()` in `layouts/bottom-nav-rules.ts`, decides this for the bar and the header alike. Never drawn on `/checkout`, `/payment/*`, `/order-placed`, `/login`, `/auth/*`, `/reset-password`, `/verify-email`, in the page builder or in previews. Cart bars (phone cart bar, web app running-tab bar, wholesale bar, the browser stand-in for Telegram's MainButton) stack directly above it. The bar publishes its height as `--sf-nav-h` on the root (0 when absent) and every bottom element and the shells' page clearance add it. Component: `layouts/BottomNav.tsx`. |
+  | `showHeaderMenu` | Header menu (phones) | **Default on — the second core option whose default changes the look of an existing store** (owner decision, UX batch 3). On phones (below 62em) a menu button at the right end of the header opens a panel from the right: a modal dialog (focus trapped, Esc and a tap outside close it, page scroll locked, closes on navigation) that lists Catalog, Reviews (while the shop has reviews on), Support and the account ("Your account" when signed in, "Sign in" when not; absent when accounts are off), marking the current page. The list is one array, `MENU_LINKS` in `layouts/menu-links.ts`: a new page is one entry plus one `shell.menu.*` text key. A system mount of the header (like the Reviews link): not an owner-placed part, never drawn in the page builder or in previews, never drawn from 62em. With it on, the phone Reviews star in the header is gone (Reviews is in the menu); off, the star behaves as before (shown only while the bottom bar is off). Components: `layouts/HeaderMenu.tsx`, `layouts/menu-links.ts`. |
 
   `CatalogHero` and `SectionLabel` are gated centrally in `<Slot>` (`runtime.tsx`), so a template's
   slot never needs to check them; the page title is gated in the three views through
@@ -683,9 +684,9 @@ export interface CatalogTemplate {
 export interface TemplatesCatalog { schemaVersion: 1; templates: CatalogTemplate[] }
 ```
 
-Each entry's `options` starts with the thirteen core options (`showPageTitle`, `showCatalogIntro`,
+Each entry's `options` starts with the fourteen core options (`showPageTitle`, `showCatalogIntro`,
 `showSectionLabels`, `showSku`, `showCategoryPicker`, `headerAccountIcon`, `headerCartIcon`,
-`showCutoffBar`, `cutoffMessage`, `showCutoffCountdown`, `showCategoryEmoji`, `showOutOfStockPrice`, `showMobileBottomNav`), then the template's own — the catalog is built from the registry, which adds
+`showCutoffBar`, `cutoffMessage`, `showCutoffCountdown`, `showCategoryEmoji`, `showOutOfStockPrice`, `showMobileBottomNav`, `showHeaderMenu`), then the template's own — the catalog is built from the registry, which adds
 them. Templates are sorted `modern` first, then other built-ins, then imported templates, each group
 alphabetical by name. A template's preview image (if it declares one) is copied to
 `templates/<id>/preview.<ext>` in the build output and served at `/templates/<id>/preview.<ext>` in
@@ -715,7 +716,7 @@ preview mode, so nothing a preview ever applies is written to `localStorage`.
 | `cyber-brutalism` | dark, light | Acid Dark (default), Purple Light | fonts, radius (always square) | `systemBar`, `statusBar`, `crosshairs`, `showFooter`, `buttonArrow` (on), `nodeLabel` (text, `NODE_01`, ≤ 24) |
 | `bento` | dark, light | one dark + one light per store type: Tech & electronics (`tech-dark` default), Fashion & apparel, Beauty & wellness, Home & lifestyle, Food & grocery, Monochrome | fonts, radius | `dispatch`, `contact`, `featured`, `showFooter` (all on) |
 
-Every template also has the thirteen core options (section 2, "Presets, `editable` locks and options"). `showFooter` removes the template's
+Every template also has the fourteen core options (section 2, "Presets, `editable` locks and options"). `showFooter` removes the template's
 `Footer` slot outright (the luxury status badge and the brutalist status strip live in it, so they
 go too); `buttonArrow` removes the brutalist ↗ `ButtonAdornment`.
 

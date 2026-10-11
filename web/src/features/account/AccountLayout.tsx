@@ -3,7 +3,6 @@ import { NavLink, Outlet, useLocation } from 'react-router';
 import { accessGate } from '@/app/access-gate.ts';
 import { useSessionStore } from '@/stores/session.ts';
 import { formatDate } from '@/lib/format.ts';
-import { useReviewSettings } from '@/features/reviews/settings.ts';
 import { useProfile } from '@/features/account/queries.ts';
 import { textKey, useText } from '@/text/runtime.tsx';
 import { FADE } from '@/lib/motion.ts';
@@ -20,8 +19,6 @@ const TABS = [
   { to: '/account/referrals', label: textKey('account.nav.referrals') },
   { to: '/account/profile', label: textKey('account.nav.profile') },
 ];
-// The shop's reviews page sits at the end of the rail while the shop has reviews on.
-const REVIEWS_TAB = { to: '/reviews', label: textKey('reviews.link') };
 
 /** One order's own page: it is read on its own, so the account's greeting and section rail stay out of the way. */
 export function isOrderDetailPath(pathname: string): boolean {
@@ -51,11 +48,10 @@ function GreetingView({ styleAttrs }: PartViewProps) {
 function TabsView({ styleAttrs }: PartViewProps) {
   const { t } = useText();
   const { pathname } = AccountFamily.useData();
-  const reviews = useReviewSettings().enabled;
   if (isOrderDetailPath(pathname)) return null;
   return (
     <nav className={classes.tabs} aria-label={t('account.nav.ariaLabel')} {...styleAttrs}>
-      {(reviews ? [...TABS, REVIEWS_TAB] : TABS).map((tab) => (
+      {TABS.map((tab) => (
         <NavLink
           key={tab.to}
           to={tab.to}

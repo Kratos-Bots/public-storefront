@@ -1,5 +1,5 @@
 /* The header's way to the reviews page. From 62em a quiet micro-caps link in the shop's mono voice, beside the sign-in
-   link's; on a phone (where it only shows when the bottom bar is off) a star in the 44px square of the other header
+   link's; on a phone (where it only shows when both the bottom bar and the header menu are off) a star in the 44px square of the other header
    buttons, so it never squeezes the search field. It sits in the header's fixed-height row, so it can never change the
    bar's height (--sf-bar-h). */
 .link {

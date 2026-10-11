@@ -59,6 +59,17 @@ export function FilterIcon({ size = 16 }: GlyphProps) {
   );
 }
 
+/** Menu: three equal bars (the filter glyph's three step down in width, so the two never read alike). */
+export function MenuIcon({ size = 16 }: GlyphProps) {
+  return (
+    <svg {...stroke(size)}>
+      <path d="M4 7h16" />
+      <path d="M4 12h16" />
+      <path d="M4 17h16" />
+    </svg>
+  );
+}
+
 export function PlusIcon({ size = 16 }: GlyphProps) {
   return (
     <svg {...stroke(size)}>
