@@ -42,6 +42,9 @@ for (const layout of ['menu', 'webapp'] as const) {
     const live = await open(await context.newPage(), layout, OPEN);
 
     await expect(paused.locator('[data-sf-part="price"]')).toHaveCount(1);
+    // It sits in the gutter, the same box that holds the Add button with an open warehouse.
+    await expect(paused.locator('[class*="gutter"] [data-sf-part="price"]')).toHaveCount(1);
+    await expect(live.locator('[class*="gutter"] button')).toHaveCount(1);
     const liveRow = await box(live);
     const row = await box(paused);
     const liveSlot = await within(live, live.locator('button').last());
