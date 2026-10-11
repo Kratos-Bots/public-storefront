@@ -5,6 +5,7 @@ import type { CheckoutPayment, CheckoutResult, LastCheckoutDetails, PaymentMetho
 import type { ServerCart, ServerCartLine, CartLineInput } from '../web/src/types/cart.ts';
 import type { OrderDetail, OrderSummary, PageMeta, UnpaidOrder } from '../web/src/types/orders.ts';
 import type { OrderReviewRecord, PublicReview, ReviewableOrder } from '../web/src/types/reviews.ts';
+import type { FaqSection } from '../web/src/types/faq.ts';
 import type { Profile, RedeemOptions } from '../web/src/types/profile.ts';
 import type { PublicOrder, SelectPaymentResult, Shipment } from '../web/src/types/public-order.ts';
 import type { ServicePoint } from '../web/src/types/service-points.ts';
@@ -187,6 +188,13 @@ export const FOUR_METHODS: PaymentMethod[] = [
   { method: 'uk_bank_transfer', displayName: 'Bank transfer (UK)', type: 'offline', details: { 'Account Name': 'Example Shop Ltd', 'Sort Code': '00-00-00', 'Account Number': '00000000' }, feeType: null, feeValue: null, feeRateText: '', feeLabel: '', fee: 0, chargeTotal: 47.45 },
 ];
 
+/** Synthetic FAQ sections: the shop's default three, the last one an extra the owner added. */
+export const DEFAULT_FAQ: FaqSection[] = [
+  { id: 'ordering', title: 'Ordering Process', body: 'Add what you want to your cart, then check out.\nYou will get an order number by email.' },
+  { id: 'shipping', title: 'Shipping Info', body: 'Orders leave within two working days. Track yours at https://example.com/track.' },
+  { id: 'x3f9k2abq', title: 'Payment', body: 'We take cards and bank transfer.' },
+];
+
 export interface InstallMocksOptions {
   /** Which settings fixture to serve. Ignored when `settings` is given outright. */
   layout?: Layout;
@@ -262,6 +270,13 @@ export interface InstallMocksOptions {
     canReview?: boolean;
     existing?: OrderReviewRecord;
   };
+  /**
+   * The shop's FAQ (`settings.faq` and `GET storefront/faq`). Default: available, with three synthetic sections (`DEFAULT_FAQ`), so
+   * the phone bottom bar carries FAQ in place of Support. `available: false` is a shop with no FAQ (the route answers an empty list);
+   * `older: true` is a backend that predates the FAQ (no `faq` in the settings, and the route is a 404); `status` makes the route
+   * answer that HTTP status with `message` (e.g. 401 LOGIN_REQUIRED). `sections` are served as given.
+   */
+  faq?: { available?: boolean; older?: boolean; sections?: FaqSection[]; status?: number; message?: string };
   /** `GET storefront/checkout/last-details` (signed in only) answers `{ details }` with this; `null` answers no details. Omitted: the route is not there (404), as on an older backend. */
   lastDetails?: LastCheckoutDetails | null;
   /** What both cancel routes answer. `'ok'` (default) cancels; a number answers that status with 409 `ORDER_NOT_CANCELLABLE:bank_transfer` (any other status answers a plain error) and marks the order as blocked. */
@@ -641,6 +656,8 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     state.settings = { ...state.settings, reviews: { enabled: true, maxLength: options.reviews.maxLength ?? 500 } };
     state.orderDetail.review = { canReview: options.reviews.canReview ?? !options.reviews.existing, existing: options.reviews.existing ?? null };
   }
+
+  if (!options.faq?.older) state.settings = { ...state.settings, faq: { available: options.faq?.available ?? true } };
 
   options.tweakSettings?.(state.settings);
   options.tweakProfile?.(state.profile);
@@ -1146,6 +1163,20 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
         return;
       }
       await envelope(route, { orders: asked ?? [] });
+      return;
+    }
+
+    if (path === 'storefront/faq' && method === 'GET') {
+      if (options.faq?.older) {
+        await fail(route, 404, 'Not found');
+        return;
+      }
+      if (options.faq?.status) {
+        await fail(route, options.faq.status, options.faq.message ?? 'Error');
+        return;
+      }
+      const available = options.faq?.available ?? true;
+      await envelope(route, { sections: available ? (options.faq?.sections ?? DEFAULT_FAQ) : [] });
       return;
     }
 
