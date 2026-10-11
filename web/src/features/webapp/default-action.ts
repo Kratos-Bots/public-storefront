@@ -23,10 +23,10 @@ export interface DefaultAction {
   disabled: boolean;
 }
 
-/** Routes that are the end of a purchase: nothing to push the shopper towards. */
 /** The catalogue: the home page and a category listing. */
 const isCatalogue = (pathname: string) => pathname === '/' || pathname.startsWith('/c/');
 
+/** Routes that are the end of a purchase: nothing to push the shopper towards. */
 const TERMINAL = ['/checkout', '/order-placed', '/payment/'];
 
 /**
