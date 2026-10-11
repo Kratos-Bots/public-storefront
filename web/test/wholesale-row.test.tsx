@@ -28,12 +28,12 @@ function line(overrides: Partial<LocalLine> = {}): LocalLine {
   };
 }
 
-function mount(p: Product) {
+function mount(p: Product, props: { ordering?: boolean; priceInSlot?: boolean } = {}) {
   state.settings = { currency: 'GBP' } as StorefrontSettings;
   return render(
     <MantineProvider env="test">
       <table>
-        <WholesaleRow product={p} band={false} groupEnd={false} ordering />
+        <WholesaleRow product={p} band={false} groupEnd={false} ordering={props.ordering ?? true} priceInSlot={props.priceInSlot} />
       </table>
     </MantineProvider>,
   );
@@ -114,5 +114,45 @@ describe('WholesaleRow', () => {
     fireEvent.change(input, { target: { value: '2' } });
     fireEvent.keyDown(input, { key: 'Enter' });
     expect(useCartStore.getState().lines[0]!.quantity).toBe(10);
+  });
+
+  describe('ordering paused at the warehouse in force (priceInSlot)', () => {
+    const paused = { ordering: false, priceInSlot: true };
+    const drawn = () => screen.getAllByText('£20.00');
+
+    it('draws the unit price in the slot the stepper holds when ordering is open', () => {
+      mount(product(), paused);
+      const slot = document.querySelector('[data-price-slot]') as HTMLElement;
+      expect(slot).not.toBeNull();
+      expect(slot.textContent).toBe('£20.00');
+      expect(screen.queryByRole('button', { name: 'One more BPC-157 5mg' })).toBeNull();
+      expect(screen.queryByRole('textbox')).toBeNull();
+    });
+
+    it('is not also drawn in its usual cell on a phone: that cell is the table-only copy', () => {
+      mount(product(), paused);
+      const phoneVisible = drawn().filter((el) => !el.closest('[data-table-only]'));
+      expect(phoneVisible).toHaveLength(1);
+      expect(phoneVisible[0]!.closest('[data-price-slot]')).not.toBeNull();
+      // The table keeps its price column, so the usual cell is still rendered (CSS hides it on a phone).
+      expect(drawn().filter((el) => el.closest('[data-table-only]'))).toHaveLength(1);
+    });
+
+    it('quotes the price at the quantity already in the cart', () => {
+      useCartStore.setState({ lines: [line({ quantity: 5 })], mode: 'local' });
+      mount(product({ pricingTiers: [{ id: 1, minQuantity: 5, price: 15 }] }), paused);
+      expect(document.querySelector('[data-price-slot]')!.textContent).toBe('£15.00');
+    });
+
+    it('changes nothing with ordering open, or in a browse-only shop', () => {
+      mount(product());
+      expect(document.querySelector('[data-price-slot]')).toBeNull();
+      expect(document.querySelector('[data-table-only]')).toBeNull();
+      expect(screen.getByRole('button', { name: 'One more BPC-157 5mg' })).toBeInTheDocument();
+      cleanup();
+      mount(product(), { ordering: false });
+      expect(document.querySelector('[data-price-slot]')).toBeNull();
+      expect(document.querySelector('[data-table-only]')).toBeNull();
+    });
   });
 });
