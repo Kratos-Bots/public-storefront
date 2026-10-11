@@ -44,6 +44,8 @@ export default defineTextArea('reviews', {
   'page.count': { en: { one: '{count} review', other: '{count} reviews' }, max: 40 },
   'page.empty.title': { en: 'No reviews yet', max: 60 },
   'page.empty.body': { en: 'Reviews from delivered orders will appear here.', max: 160 },
+  'page.scale': { en: '/ 5', max: 20 },
+  'page.loadMoreFailed': { en: 'More reviews did not load.', max: 80 },
   'page.loadMore': { en: 'Load more reviews', max: 40 },
   'page.loadFailedTitle': { en: 'Reviews did not load', max: 60 },
   'page.loadFailedBody': { en: 'Check your connection and try again.', max: 160 },

@@ -106,6 +106,18 @@ for (const t of TEMPLATES) {
       await shot(page, `${t.template}-reviews-empty-390`);
     });
 
+    for (const layout of ['menu', 'webapp'] as const) {
+      test(`reviews link under the shop, ${layout} 390`, async ({ page }) => {
+        await setup(page, t.template, t.preset, 390, layout, { list: LIST }, false);
+        await page.goto('/');
+        const link = page.getByRole('link', { name: 'Customer reviews' });
+        await link.scrollIntoViewIfNeeded();
+        await expect(link).toBeVisible();
+        await page.evaluate(() => document.fonts.ready);
+        await shot(page, `${t.template}-link-${layout}-390`, false);
+      });
+    }
+
     test('reminder in the web app layout 390', async ({ page }) => {
       await setup(page, t.template, t.preset, 390, 'webapp', { reviewable: [reviewable] });
       await page.goto('/');

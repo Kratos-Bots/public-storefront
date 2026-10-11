@@ -34,7 +34,8 @@ function ReviewsBody() {
       </>
     );
   }
-  if (query.isError) {
+  // A failed "Load more" also sets isError; with reviews already on screen that is not a failed page.
+  if (query.isError && !query.data) {
     return (
       <EmptyState
         as="h1"
@@ -61,7 +62,7 @@ function ReviewsBody() {
         <section className={classes.summary} aria-label={t('reviews.page.average')}>
           <p className={classes.figure}>
             <span className={classes.average}>{average}</span>
-            <span className={classes.outOf} aria-hidden>/ 5</span>
+            <span className={classes.outOf} aria-hidden>{t('reviews.page.scale')}</span>
             <span className={classes.srOnly}>{t('reviews.page.averageValue', { average })}</span>
           </p>
           <div className={classes.summaryRest}>
@@ -86,7 +87,14 @@ function ReviewsBody() {
               </li>
             ))}
           </ul>
-          {query.hasNextPage ? (
+          {query.isFetchNextPageError ? (
+            <div className={classes.moreError} role="alert">
+              <p>{errorMessage(query.error, t('reviews.page.loadMoreFailed'))}</p>
+              <Button variant="default" size="sm" loading={query.isFetchingNextPage} onClick={() => void query.fetchNextPage()}>
+                {t('common.actions.tryAgain')}
+              </Button>
+            </div>
+          ) : query.hasNextPage ? (
             <div className={classes.more}>
               <Button variant="default" size="sm" loading={query.isFetchingNextPage} onClick={() => void query.fetchNextPage()}>
                 {t('reviews.page.loadMore')}

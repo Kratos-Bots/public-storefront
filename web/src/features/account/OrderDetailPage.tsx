@@ -30,7 +30,7 @@ import { useSessionStore } from '@/stores/session.ts';
 import { StatusPill } from '@/features/account/StatusPill.tsx';
 import { useOrder, useOrderPayment } from '@/features/account/queries.ts';
 import { textKey, useText, type TextApi } from '@/text/runtime.tsx';
-import { ReviewView } from '@/features/account/OrderReview.tsx';
+import { OrderFreshContext, ReviewView } from '@/features/account/OrderReview.tsx';
 import { OrderFamily, type OrderData, type OrderPreview } from '@/builder/family-order.ts';
 import { usePreviewFixture } from '@/builder/mode.ts';
 import { flattenTypes, part, type FamilyValue, type PartViewProps } from '@/builder/parts.ts';
@@ -470,6 +470,8 @@ export function OrderDetailPage({ slots, ctx = STANDALONE }: { slots?: { content
 
   // The renderer emits a slot's blocks as bare children, and one grid cannot stack two columns
   // independently (rows couple their heights), so the page sorts the items into its areas itself.
+  // A copy from the cache that is being refreshed is not yet the order as it is: the review link waits for the refresh.
+  const fresh = order.isFetchedAfterMount !== false && !order.isFetching;
   const base: BlockRenderContext = { editing: ctx.editing, docKey: ctx.docKey, layout: ctx.layout };
   const silent = silentParts(detail);
   // An owner's published arrangement can predate the review part: it is added under the items, so the form is
@@ -480,6 +482,7 @@ export function OrderDetailPage({ slots, ctx = STANDALONE }: { slots?: { content
   const draw = (items: typeof areas.main) => items.map((item) => renderComponent(item, base));
   return (
     <OrderFamily.Provider value={value}>
+      <OrderFreshContext.Provider value={fresh}>
       <div className={classes.page}>
         <OrderAnnouncements order={detail} previewing={!!preview} />
         <div className={classes.overview} data-columns={two ? 'two' : 'one'}>
@@ -491,6 +494,7 @@ export function OrderDetailPage({ slots, ctx = STANDALONE }: { slots?: { content
           {two ? <div className={classes.side}>{draw(areas.side)}</div> : null}
         </div>
       </div>
+      </OrderFreshContext.Provider>
     </OrderFamily.Provider>
   );
 }

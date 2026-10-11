@@ -122,6 +122,21 @@
   padding-top: 1.25rem;
 }
 
+.moreError {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding-top: 1.25rem;
+  text-align: center;
+  font-size: calc(0.875rem * var(--sf-text-scale, 1));
+  color: var(--sf-danger);
+}
+
+.moreError p {
+  margin: 0;
+}
+
 .srOnly {
   position: absolute;
   width: 1px;

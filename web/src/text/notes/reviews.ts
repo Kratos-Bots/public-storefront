@@ -33,6 +33,8 @@ export default {
   'page.count': 'How many reviews there are, beside the average; {count} is the number',
   'page.empty.title': 'Heading shown when the shop has no published reviews',
   'page.empty.body': 'Line under the heading when there are no published reviews',
+  'page.scale': 'Small mark after the average rating on the customer reviews page: the top of the scale, e.g. / 5',
+  'page.loadMoreFailed': 'Message beside the retry button when loading more reviews failed',
   'page.loadMore': 'Button at the end of the reviews list that shows older reviews',
   'page.loadFailedTitle': 'Heading shown when the reviews could not be loaded',
   'page.loadFailedBody': 'Line under that heading',

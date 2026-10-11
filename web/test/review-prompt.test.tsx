@@ -16,6 +16,7 @@ import { fetchReviewableOrders } from '@/api/reviews.ts';
 import { accessGate } from '@/app/access-gate.ts';
 import { ReviewPrompt, resetReminderForTests } from '@/features/review-prompt/ReviewPrompt.tsx';
 import { STORAGE_KEY } from '@/features/review-prompt/rules.ts';
+import { refreshAfterReview, resetReviewedForTests } from '@/features/reviews/queries.ts';
 import { UnpaidOrderPrompt } from '@/features/unpaid-prompt/UnpaidOrderPrompt.tsx';
 import { resetDismissalForTests } from '@/features/unpaid-prompt/useUnpaidOrder.ts';
 import { useSessionStore } from '@/stores/session.ts';
@@ -59,6 +60,7 @@ const stored = () => JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') as Re
 beforeEach(() => {
   resetDismissalForTests();
   resetReminderForTests();
+  resetReviewedForTests();
   localStorage.clear();
   useUiStore.setState({ loginOpen: false, cartOpen: false });
   unpaidMock.mockReset();
@@ -200,6 +202,31 @@ describe('ReviewPrompt', () => {
     mount('/', client);
     await screen.findByRole('dialog');
     expect(reviewableMock).not.toHaveBeenCalled();
+  });
+
+  describe('an order just reviewed', () => {
+    it('is not asked about again even if the list still names it', async () => {
+      const client = new QueryClient();
+      refreshAfterReview(client, 'K4M2QP');
+      reviewableMock.mockResolvedValue({ orders: [reviewable('K4M2QP'), reviewable('NEXT01')] });
+      mount('/', client);
+      await screen.findByText(/Order NEXT01 has arrived/);
+    });
+
+    it('is not offered from a stale cached list while that list is being refreshed', async () => {
+      const client = new QueryClient();
+      client.setQueryData(['orders', 'reviewable', 1], { orders: [reviewable('K4M2QP')] });
+      await client.invalidateQueries({ queryKey: ['orders', 'reviewable'] }); // as a submit does: stale, refetched when next watched
+      let answer: (v: never) => void = () => undefined;
+      reviewableMock.mockReturnValue(new Promise((resolve) => { answer = resolve as never; }));
+      mount('/', client);
+      await settle();
+      expect(reviewDialog()).toBeNull();
+      await act(async () => { answer({ orders: [] } as never); });
+      await settle();
+      expect(reviewDialog()).toBeNull();
+      expect(stored()).toEqual({});
+    });
   });
 
   describe('against the unpaid-order pop-up', () => {

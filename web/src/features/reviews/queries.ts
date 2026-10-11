@@ -1,6 +1,15 @@
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchReviews, submitReview } from '@/api/reviews.ts';
+import { useSessionStore } from '@/stores/session.ts';
 import type { SubmitReviewBody } from '@/types/reviews.ts';
+
+// Orders this customer has reviewed (or found already reviewed) during this page load. A cached reminder list
+// can still name one until it is refreshed, and the reminder must not ask about an order that was just reviewed.
+const reviewedThisLoad = new Set<string>();
+const reviewedKey = (customerId: number | null, reference: string) => `${customerId ?? ''}:${reference}`;
+export const isReviewedThisLoad = (customerId: number | null, reference: string) => reviewedThisLoad.has(reviewedKey(customerId, reference));
+/** Tests stand in for a page load. */
+export const resetReviewedForTests = () => reviewedThisLoad.clear();
 
 export const REVIEWS_PAGE_SIZE = 10;
 
@@ -31,6 +40,7 @@ export function useSubmitReview(reference: string) {
 
 /** Also what a 409 or "already exists" 422 does: the order now carries the review. */
 export function refreshAfterReview(client: ReturnType<typeof useQueryClient>, reference: string) {
+  reviewedThisLoad.add(reviewedKey(useSessionStore.getState().customer?.id ?? null, reference));
   void client.invalidateQueries({ queryKey: ['order', reference] });
   void client.invalidateQueries({ queryKey: ['orders', 'reviewable'] });
   void client.invalidateQueries({ queryKey: REVIEWS_KEY });

@@ -3,7 +3,7 @@ import { useLocation } from 'react-router';
 import { fetchReviewableOrders } from '@/api/reviews.ts';
 import { isBuilderMode } from '@/app/builder-gate.ts';
 import { isPreviewMode } from '@/app/preview-listener.ts';
-import { reviewableKey } from '@/features/reviews/queries.ts';
+import { isReviewedThisLoad, reviewableKey } from '@/features/reviews/queries.ts';
 import { useReviewSettings } from '@/features/reviews/settings.ts';
 import { shouldFetchReviewable, type DecideInputs } from '@/features/review-prompt/rules.ts';
 import { useShopRefused, useUnpaidState } from '@/features/unpaid-prompt/useUnpaidOrder.ts';
@@ -39,6 +39,9 @@ export function useReminderInputs(): ReminderInputs {
     ...QUERY,
   });
 
-  const orders = list.isError || !Array.isArray(list.data?.orders) ? null : list.data.orders;
+  // Decided only on a list that is not a stale copy being refreshed, and never naming an order reviewed during this load.
+  const orders = list.isError || list.isFetching || !Array.isArray(list.data?.orders)
+    ? null
+    : list.data.orders.filter((o) => !isReviewedThisLoad(base.customerId, o.reference));
   return { ...base, cartOpen, loginOpen, unpaid, reviewable: orders };
 }

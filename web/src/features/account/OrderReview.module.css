@@ -30,10 +30,6 @@
   color: var(--sf-faint);
 }
 
-.counter[data-over='true'] {
-  color: var(--sf-danger);
-}
-
 .error {
   margin: 0;
   padding: 0.6rem 0.75rem;

@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
+import { createContext, useContext, useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router';
 import { ApiError } from '@/lib/errors.ts';
@@ -18,6 +18,13 @@ import classes from '@/features/account/OrderReview.module.css';
 /** The backend's wording for a second review of the same order, which can arrive as a 422 as well as a 409. */
 const DUPLICATE = /already (?:exists|reviewed)/i;
 
+/**
+ * Whether the order on screen is a read made on this visit (not a cached copy still being refreshed). The page says so;
+ * the `?review=1` link is acted on only then, because a stale copy can lack `canReview` that the refresh brings.
+ * Defaults to true where nothing says otherwise (the editor's preview).
+ */
+export const OrderFreshContext = createContext(true);
+
 const prefersReducedMotion = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 /**
@@ -25,11 +32,11 @@ const prefersReducedMotion = () => typeof window !== 'undefined' && !!window.mat
  * the rating; either way the parameter goes, replacing the entry so Back does not step through it again.
  * Runs when the part mounts, which is once the order has loaded.
  */
-function useReviewDeepLink(canReview: boolean, groupRef: React.RefObject<HTMLDivElement | null>, cardRef: React.RefObject<HTMLElement | null>) {
+function useReviewDeepLink(canReview: boolean, fresh: boolean, groupRef: React.RefObject<HTMLDivElement | null>, cardRef: React.RefObject<HTMLElement | null>) {
   const [params, setParams] = useSearchParams();
   const wanted = params.get('review') === '1';
   useEffect(() => {
-    if (!wanted) return;
+    if (!wanted || !fresh) return;
     if (canReview) {
       cardRef.current?.scrollIntoView?.({ block: 'center', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
       groupRef.current?.querySelector<HTMLInputElement>('input[type="radio"]')?.focus({ preventScroll: true });
@@ -37,7 +44,7 @@ function useReviewDeepLink(canReview: boolean, groupRef: React.RefObject<HTMLDiv
     const next = new URLSearchParams(params);
     next.delete('review');
     setParams(next, { replace: true });
-  }, [wanted, canReview, params, setParams, groupRef, cardRef]);
+  }, [wanted, fresh, canReview, params, setParams, groupRef, cardRef]);
 }
 
 /** What the shopper sent, read-only, with where it stands. */
@@ -102,7 +109,6 @@ function ReviewForm({ reference, groupRef, onSent }: { reference: string; groupR
     );
   };
 
-  const over = comment.length > limit;
   return (
     <form onSubmit={send} noValidate>
       <div className={cardClasses.cardHead}>
@@ -137,7 +143,7 @@ function ReviewForm({ reference, groupRef, onSent }: { reference: string; groupR
           onChange={(e) => setComment(e.currentTarget.value)}
           aria-describedby={counterId}
         />
-        <p id={counterId} className={classes.counter} data-over={over ? 'true' : undefined}>
+        <p id={counterId} className={classes.counter}>
           {t('reviews.form.counter', { count: comment.length, max: limit })}
         </p>
       </div>
@@ -165,14 +171,17 @@ function ReviewForm({ reference, groupRef, onSent }: { reference: string; groupR
  */
 export function ReviewView({ styleAttrs }: PartViewProps) {
   const { order } = OrderFamily.useData();
-  const state = order.review;
+  // Switched off (or an older backend that says nothing): the page is what it was before reviews, even for an old review.
+  const { enabled } = useReviewSettings();
+  const fresh = useContext(OrderFreshContext);
+  const state = enabled ? order.review : undefined;
   const [sentFor, setSentFor] = useState<{ reference: string; review: OrderReviewRecord } | null>(null);
   const sent = sentFor?.reference === order.reference ? sentFor.review : null;
   const groupRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLElement>(null);
   const shown = sent ?? state?.existing ?? null;
   const showForm = !shown && !!state?.canReview;
-  useReviewDeepLink(showForm, groupRef, cardRef);
+  useReviewDeepLink(showForm, fresh, groupRef, cardRef);
 
   if (!shown && !showForm) return null;
   return (

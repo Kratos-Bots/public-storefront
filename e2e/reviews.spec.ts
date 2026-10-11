@@ -224,6 +224,18 @@ test.describe('reviews · the public page', () => {
     await expect(page.getByRole('button', { name: 'Load more reviews' })).toHaveCount(0);
   });
 
+  for (const layout of ['menu', 'webapp'] as const) {
+    test(`${layout} layout at phone width: a signed-out visitor reaches the reviews page from the link under the shop`, async ({ page }) => {
+      await open(page, { width: 390, layout, reviews: { list: many }, session: false });
+      const link = page.getByRole('link', { name: 'Customer reviews' });
+      await link.scrollIntoViewIfNeeded();
+      await expect(link).toBeVisible();
+      await link.click();
+      await expect(page).toHaveURL(/\/reviews$/);
+      await expect(page.getByText('Comment number 12')).toBeVisible();
+    });
+  }
+
   test('with none yet it says so', async ({ page }) => {
     await open(page, { path: '/reviews', reviews: { list: [] }, session: false });
     await expect(page.getByText('No reviews yet')).toBeVisible();

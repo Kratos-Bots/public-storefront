@@ -68,6 +68,23 @@ describe('the reviews page', () => {
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Load more reviews' })).toBeNull());
   });
 
+  it('a failed Load more keeps the loaded reviews and offers a retry beside the control', async () => {
+    fetchMock
+      .mockResolvedValueOnce({ data: { stats: { average: 4.5, count: 12 }, reviews: [review(12, 5, 'Newest')] }, meta: meta(1, 2) })
+      .mockRejectedValueOnce(new ApiError(0, 'Network error'))
+      .mockResolvedValueOnce({ data: { stats: { average: 4.5, count: 12 }, reviews: [review(11, 4, 'Older')] }, meta: meta(2, 2) });
+    mount();
+    await screen.findByText('Newest');
+    fireEvent.click(screen.getByRole('button', { name: 'Load more reviews' }));
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toContain('Network error');
+    expect(screen.getByText('Newest')).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Reviews did not load' })).toBeNull();
+    fireEvent.click(within(alert).getByRole('button', { name: 'Try again' }));
+    await screen.findByText('Older');
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
   it('with no reviews yet, says so and shows no summary', async () => {
     fetchMock.mockResolvedValue({ data: { stats: { average: null, count: 0 }, reviews: [] }, meta: meta(1, 0) });
     mount();

@@ -4,9 +4,9 @@ import { MantineProvider } from '@mantine/core';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-const h = vi.hoisted(() => ({ order: {} as Record<string, unknown> }));
+const h = vi.hoisted(() => ({ order: {} as Record<string, unknown>, reviews: { enabled: true, maxLength: 40 } as undefined | { enabled: boolean; maxLength: number } }));
 vi.mock('@/app/settings.ts', () => ({
-  useSettings: () => ({ currency: 'GBP', brand: { name: 'Northbound Supply', links: {} }, supportLinks: [], reviews: { enabled: true, maxLength: 40 } }),
+  useSettings: () => ({ currency: 'GBP', brand: { name: 'Northbound Supply', links: {} }, supportLinks: [], reviews: h.reviews }),
 }));
 vi.mock('@/features/account/queries.ts', async (orig) => ({
   ...(await orig<typeof import('@/features/account/queries.ts')>()),
@@ -17,6 +17,8 @@ vi.mock('@/api/reviews.ts', () => ({ submitReview: vi.fn(), fetchReviewableOrder
 
 import { submitReview } from '@/api/reviews.ts';
 import { OrderDetailPage } from '@/features/account/OrderDetailPage.tsx';
+import { OrderFreshContext, ReviewView } from '@/features/account/OrderReview.tsx';
+import { OrderFamily } from '@/builder/family-order.ts';
 import { silentParts } from '@/features/account/order-layout.ts';
 import { ApiError } from '@/lib/errors.ts';
 import { RenderDoc } from '@/builder/render.tsx';
@@ -58,6 +60,7 @@ const send = () => screen.getByRole('button', { name: /Send review|Sending/ }) a
 beforeEach(() => {
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   submitMock.mockReset();
+  h.reviews = { enabled: true, maxLength: 40 };
   Element.prototype.scrollIntoView = vi.fn();
 });
 afterEach(cleanup);
@@ -200,6 +203,26 @@ describe('an existing review', () => {
   });
 });
 
+describe('reviews switched off', () => {
+  it.each([[{ enabled: false, maxLength: 0 }], [undefined]])('draws nothing at all, even for an order with an old review (%j)', async (reviews) => {
+    h.reviews = reviews;
+    h.order = existing('approved');
+    mount('?review=1');
+    await screen.findByRole('heading', { level: 1, name: 'K4M2QP' });
+    expect(screen.queryByText('Your review')).toBeNull();
+    expect(screen.queryByText('Arrived quickly')).toBeNull();
+    expect(screen.queryByRole('radiogroup')).toBeNull();
+  });
+
+  it('and no form even if the order says it can be reviewed', async () => {
+    h.reviews = { enabled: false, maxLength: 0 };
+    h.order = canReview;
+    mount();
+    await screen.findByRole('heading', { level: 1, name: 'K4M2QP' });
+    expect(screen.queryByRole('radiogroup')).toBeNull();
+  });
+});
+
 describe('neither form nor review', () => {
   it.each([
     ['an order that cannot be reviewed', { ...base, review: { canReview: false, existing: null } }],
@@ -239,6 +262,34 @@ describe('?review=1', () => {
     await screen.findByRole('radiogroup');
     expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
     expect(document.activeElement).not.toBe(stars()[0]);
+  });
+});
+
+describe('?review=1 against a stale copy of the order', () => {
+  function Harness({ fresh, order }: { fresh: boolean; order: unknown }) {
+    return (
+      <OrderFamily.Provider value={{ data: { order: order as never }, views: { OrderReview: ReviewView } }}>
+        <OrderFreshContext.Provider value={fresh}>
+          <OrderFamily.PartHost name="OrderReview" props={{}} />
+        </OrderFreshContext.Provider>
+      </OrderFamily.Provider>
+    );
+  }
+  const tree = (fresh: boolean, order: unknown) => (
+    <QueryClientProvider client={client}>
+      <MantineProvider env="test">
+        <MemoryRouter initialEntries={['/account/orders/K4M2QP?review=1']}><Harness fresh={fresh} order={order} /><Where /></MemoryRouter>
+      </MantineProvider>
+    </QueryClientProvider>
+  );
+
+  it('keeps the parameter while the copy is stale, then focuses the form once the refresh makes it reviewable', async () => {
+    const view = render(tree(false, { ...base, review: { canReview: false, existing: null } }));
+    await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
+    expect(screen.getByTestId('where').textContent).toContain('review=1');
+    view.rerender(tree(true, canReview));
+    await waitFor(() => expect(document.activeElement).toBe(stars()[0]));
+    await waitFor(() => expect(screen.getByTestId('where').textContent).not.toContain('review=1'));
   });
 });
 

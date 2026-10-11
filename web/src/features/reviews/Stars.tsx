@@ -31,8 +31,6 @@ export interface StarPickerProps {
   /** The group's visible name. */
   label: string;
   disabled?: boolean;
-  invalid?: boolean;
-  describedBy?: string;
   /** Lets the page move focus to the group (the `?review=1` link). */
   groupRef?: React.Ref<HTMLDivElement>;
 }
@@ -41,7 +39,7 @@ export interface StarPickerProps {
  * A real radio group: five native radios, so the arrow keys, Tab and screen readers behave as the platform
  * does, with the stars drawn on the labels. Focus shows on the star, hover previews one on a pointer device.
  */
-export function StarPicker({ value, onChange, label, disabled, invalid, describedBy, groupRef }: StarPickerProps) {
+export function StarPicker({ value, onChange, label, disabled, groupRef }: StarPickerProps) {
   const { tp } = useText();
   const name = useId();
   const [hover, setHover] = useState(0);
@@ -57,8 +55,6 @@ export function StarPicker({ value, onChange, label, disabled, invalid, describe
       className={classes.picker}
       role="radiogroup"
       aria-label={label}
-      aria-invalid={invalid || undefined}
-      aria-describedby={describedBy}
       onPointerLeave={() => setHover(0)}
     >
       {STARS.map((n) => (
