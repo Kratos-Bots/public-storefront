@@ -2,6 +2,7 @@ import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { installMocks, type Layout, type MockHandle } from './mocks.ts';
+import { fillCheckout } from './flows.ts';
 import type { LastCheckoutDetails } from '../web/src/types/checkout.ts';
 
 /**
@@ -131,4 +132,83 @@ test('a guest is never asked for, and sees nothing', async ({ page }) => {
   await page.waitForLoadState('networkidle');
   expect(asks(mocks)).toBe(0);
   await expect(page.locator(CARD)).toHaveCount(0);
+});
+
+/**
+ * A saved draft (localStorage `sf-checkout-v1`) restores the contact fields on the next visit, which used to hide the
+ * offer for good. Only the address decides now. Synthetic draft: someone else's name and email, no address.
+ */
+const DRAFT = { firstName: 'Sam', surname: 'Hart', email: 'sam@example.invalid' };
+
+async function openWithDraft(page: Page, draft: Record<string, unknown>, layout: Layout = 'storefront') {
+  await page.addInitScript((d) => {
+    if (!window.localStorage.getItem('sf-checkout-v1')) window.localStorage.setItem('sf-checkout-v1', JSON.stringify(d));
+  }, draft);
+  const mocks = await open(page, layout, { lastDetails: DETAILS });
+  await expect(page.getByRole('textbox', { name: 'First name' })).toHaveValue(draft.firstName as string);
+  return mocks;
+}
+
+for (const layout of ['storefront', 'menu', 'webapp'] as const) {
+  test(`${layout}: a saved draft with name and email still gets the offer, and Use keeps what is typed`, async ({ page }) => {
+    await openWithDraft(page, DRAFT, layout);
+    const card = page.locator(CARD);
+    await expect(card).toBeVisible();
+    await shot(page, `checkout-offer-draft-${layout}-m`);
+    await card.getByRole('button', { name: 'Use these details' }).click();
+    await expect(card).toHaveCount(0);
+    await expect(page.getByRole('textbox', { name: 'First name' })).toHaveValue('Sam');
+    await expect(page.getByRole('textbox', { name: 'Surname' })).toHaveValue('Hart');
+    await expect(page.getByRole('textbox', { name: 'Email' })).toHaveValue('sam@example.invalid');
+    await expect(page.locator('input[name="tel"]')).toHaveValue('7700900123');
+    await page.getByRole('button', { name: 'Continue' }).click();
+    await expect(page.getByRole('heading', { name: 'Delivery address' })).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Address line 1' })).toHaveValue('14 Test Lane');
+    await expect(page.locator(CARD)).toHaveCount(0); // the address is filled: nothing left to offer
+  });
+}
+
+test('the address step offers it too, to a shopper who passed the contact step without it', async ({ page }) => {
+  await openWithDraft(page, DRAFT);
+  await expect(page.locator(CARD)).toBeVisible();
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await expect(page.getByRole('heading', { name: 'Delivery address' })).toBeVisible();
+  const card = page.locator(CARD);
+  await expect(card).toBeVisible();
+  await shot(page, 'checkout-offer-address-m');
+  const box = (await card.boundingBox())!;
+  expect(box.x + box.width).toBeLessThanOrEqual(390);
+  await card.getByRole('button', { name: 'Use these details' }).click();
+  await expect(card).toHaveCount(0);
+  await expect(page.getByRole('textbox', { name: 'Address line 1' })).toHaveValue('14 Test Lane');
+  await expect(page.getByRole('textbox', { name: 'Postcode' })).toHaveValue('LS1 4AB');
+  await shot(page, 'checkout-filled-address-m');
+});
+
+test('an address in the saved draft hides it on both steps', async ({ page }) => {
+  await openWithDraft(page, { ...DRAFT, city: 'Leeds' });
+  await page.waitForLoadState('networkidle');
+  await expect(page.locator(CARD)).toHaveCount(0);
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await expect(page.getByRole('heading', { name: 'Delivery address' })).toBeVisible();
+  await expect(page.locator(CARD)).toHaveCount(0);
+});
+
+test('No thanks on the contact step hides it on the address step too', async ({ page }) => {
+  await openWithDraft(page, DRAFT);
+  await page.locator(CARD).getByRole('button', { name: 'No thanks' }).click();
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await expect(page.getByRole('heading', { name: 'Delivery address' })).toBeVisible();
+  await page.waitForLoadState('networkidle');
+  await expect(page.locator(CARD)).toHaveCount(0);
+});
+
+test('a placed order leaves no checkout draft behind, even after the page has settled', async ({ page }) => {
+  const mocks = await open(page, 'storefront', { lastDetails: null });
+  await fillCheckout(page);
+  await page.getByRole('button', { name: /^Place order/ }).click();
+  await expect.poll(() => mocks.state.checkouts.length).toBe(1);
+  await page.waitForURL(/account\/orders|order-placed/);
+  await page.waitForTimeout(1000);
+  expect(await page.evaluate(() => window.localStorage.getItem('sf-checkout-v1'))).toBeNull();
 });

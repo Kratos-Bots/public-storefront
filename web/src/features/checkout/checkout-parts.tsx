@@ -129,7 +129,15 @@ function Address({ props, styleAttrs }: PartViewProps) {
   return framed(d, 'address', (
     <AddressStep
       form={d.form} patch={d.patch} errors={d.errors} notice={d.addressNotice} countries={d.shipCountries} shipsNowhere={d.shipsNowhere} mode={d.countryMode}
-      before={slotOf(props, 'before')} after={slotOf(props, 'after')} rootAttrs={styleAttrs}
+      before={(
+        <>
+          {/* The same offer as on the contact step, for a shopper who skipped it or came back; same dismissal. */}
+          {d.stack ? null : (
+            <LastDetailsOffer form={d.form} patch={d.patch} contactModes={d.contactModes} shipCountries={d.shipCountries} shipsNowhere={d.shipsNowhere} />
+          )}
+          {slotOf(props, 'before')}
+        </>
+      )} after={slotOf(props, 'after')} rootAttrs={styleAttrs}
     />
   ));
 }

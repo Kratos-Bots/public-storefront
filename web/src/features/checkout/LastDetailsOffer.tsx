@@ -1,14 +1,15 @@
-import { useId, useState } from 'react';
+import { useId, useState, useSyncExternalStore } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchLastCheckoutDetails } from '@/api/orders.ts';
 import { selectIsLoggedIn, useSessionStore } from '@/stores/session.ts';
 import type { CheckoutForm } from '@/features/checkout/form-state.ts';
 import {
+  currentDismissed,
+  dismissLastDetails,
   lastDetailsPatch,
   offerSummary,
-  readDismissed,
   shouldOfferLastDetails,
-  writeDismissed,
+  subscribeDismissed,
 } from '@/features/checkout/last-details.ts';
 import { useText } from '@/text/runtime.tsx';
 import type { ContactModes } from '@/types/settings.ts';
@@ -23,17 +24,18 @@ export interface LastDetailsOfferProps {
 }
 
 /**
- * "Use the details from your last order?" at the top of the contact step, for a signed-in shopper whose form is still
- * empty. It fills the form through `patch` and nothing more: no step is skipped and nothing is submitted. "No thanks" is
- * remembered for this tab. A guest, an older backend (no such route) and a failed lookup all show nothing, silently.
+ * "Use the details from your last order?" at the top of the contact step and of the address step, for a signed-in
+ * shopper whose address is still empty (a saved draft's name and contact details do not hide it). It fills the blank
+ * fields through `patch` and nothing more: no step is skipped and nothing is submitted. "No thanks" is remembered for
+ * this tab, once for both steps. A guest, an older backend (no such route) and a failed lookup all show nothing, silently.
  */
 export function LastDetailsOffer({ form, patch, contactModes, shipCountries, shipsNowhere = false }: LastDetailsOfferProps) {
   const { t } = useText();
   const headingId = useId();
   const loggedIn = useSessionStore(selectIsLoggedIn);
   const customerId = useSessionStore((s) => s.customer?.id ?? null);
-  // Local copy of the dismissal, so the card goes even where sessionStorage is blocked.
-  const [dismissedHere, setDismissedHere] = useState(false);
+  // One dismissal shared by every mount (see `dismissLastDetails`): it holds across the steps even with storage blocked.
+  const dismissedFor = useSyncExternalStore(subscribeDismissed, currentDismissed, () => null);
   const [filled, setFilled] = useState(false);
 
   const { data: details } = useQuery({
@@ -51,7 +53,7 @@ export function LastDetailsOffer({ form, patch, contactModes, shipCountries, shi
     customerId,
     details,
     form,
-    dismissedFor: dismissedHere ? customerId : readDismissed(),
+    dismissedFor,
   });
 
   return (
@@ -81,8 +83,7 @@ export function LastDetailsOffer({ form, patch, contactModes, shipCountries, shi
               type="button"
               className={classes.dismiss}
               onClick={() => {
-                if (customerId !== null) writeDismissed(customerId);
-                setDismissedHere(true);
+                if (customerId !== null) dismissLastDetails(customerId);
               }}
             >
               {t('checkout.contact.autofillDismiss')}
