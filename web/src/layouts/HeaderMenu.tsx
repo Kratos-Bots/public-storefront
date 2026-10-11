@@ -6,6 +6,7 @@ import { useSettings } from '@/app/settings.ts';
 import { isBuilderMode } from '@/app/builder-gate.ts';
 import { isPreviewMode } from '@/app/preview-listener.ts';
 import { CloseIcon, MenuIcon } from '@/components/icons.tsx';
+import { faqAvailable } from '@/features/faq/settings.ts';
 import { reviewSettingsOf } from '@/features/reviews/settings.ts';
 import { isTelegramWebApp } from '@/lib/telegram-webapp.ts';
 import { HeaderFamily } from '@/builder/family-header.ts';
@@ -55,6 +56,7 @@ function Menu() {
 
   const ctx: MenuContext = {
     reviews: reviewSettingsOf(settings).enabled,
+    faq: faqAvailable(settings),
     accounts: settings.features.accounts,
     loggedIn,
     // Where the header's own Account button sends a signed-out visitor.

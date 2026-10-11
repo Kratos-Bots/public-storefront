@@ -61,6 +61,11 @@ describe('cacheTtlFor', () => {
     expect(cacheTtlFor('catalog/products/9')).toBe(60);
     expect(cacheTtlFor('storefront/cart')).toBe(0);
   });
+  it('proxies the FAQ like the reviews: allowed, and not cached by the Worker (the backend sets its own 60s for a public shop)', () => {
+    expect(isAllowedApiPath('storefront/faq')).toBe(true);
+    expect(cacheTtlFor('storefront/faq')).toBe(0);
+    expect(cacheTtlFor('storefront/reviews')).toBe(0);
+  });
   it('caches the published page set 30s per layout and nothing next to it', () => {
     expect(cacheTtlFor('storefront/pages/storefront')).toBe(30);
     expect(cacheTtlFor('storefront/pages/menu')).toBe(30);

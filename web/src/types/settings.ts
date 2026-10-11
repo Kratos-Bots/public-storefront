@@ -96,4 +96,6 @@ export interface StorefrontSettings {
   access?: AccessSettings;
   /** Absent on backends older than storefront reviews: reviews are off. */
   reviews?: ReviewSettings;
+  /** Whether the shop has an FAQ to show (switch on and at least one answer written). Absent on an older backend: no FAQ. */
+  faq?: { available: boolean };
 }

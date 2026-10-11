@@ -242,6 +242,17 @@ export function StarIcon({ size = 16 }: GlyphProps) {
   );
 }
 
+/** A speech bubble holding a question mark: the shop's FAQ. Distinct from HelpIcon (a ringed question mark), which is Support's. */
+export function FaqIcon({ size = 16 }: GlyphProps) {
+  return (
+    <svg {...stroke(size)}>
+      <path d="M4 5.2h16v10.6H10.4L6.2 19.6v-3.8H4z" />
+      <path d="M9.9 9.3a2.1 2.1 0 0 1 4.1.6c0 1.4-2 1.6-2 3" />
+      <path d="M12 14.1v.1" />
+    </svg>
+  );
+}
+
 /** Support: a question mark in a ring. */
 export function HelpIcon({ size = 16 }: GlyphProps) {
   return (

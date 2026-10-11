@@ -12,6 +12,7 @@ import order from '@/text/keys/order.ts';
 import payment from '@/text/keys/payment.ts';
 import tracking from '@/text/keys/tracking.ts';
 import reviews from '@/text/keys/reviews.ts';
+import faq from '@/text/keys/faq.ts';
 import verify from '@/text/keys/verify.ts';
 import wholesale from '@/text/keys/wholesale.ts';
 import webapp from '@/text/keys/webapp.ts';
@@ -24,13 +25,13 @@ import boot from '@/text/keys/boot.ts';
 /** Every key of this release. The running release's registry decides which stored keys exist. */
 export const TEXT = {
   ...common.entries, ...shell.entries, ...catalog.entries, ...product.entries, ...cart.entries, ...checkout.entries,
-  ...auth.entries, ...account.entries, ...order.entries, ...payment.entries, ...tracking.entries, ...reviews.entries, ...verify.entries,
+  ...auth.entries, ...account.entries, ...order.entries, ...payment.entries, ...tracking.entries, ...reviews.entries, ...faq.entries, ...verify.entries,
   ...wholesale.entries, ...webapp.entries, ...notices.entries, ...errors.entries, ...templates.entries,
   ...closed.entries, ...boot.entries,
 };
 export const TEXT_ENTRIES: Readonly<Record<string, TextEntry>> = TEXT;
 /** Areas in Text-panel order. */
-export const TEXT_AREAS = [common, shell, catalog, product, cart, checkout, auth, account, order, payment, tracking, reviews,
+export const TEXT_AREAS = [common, shell, catalog, product, cart, checkout, auth, account, order, payment, tracking, reviews, faq,
   verify, wholesale, webapp, notices, errors, templates, closed, boot].map((a) => a.area);
 
 type Registry = typeof TEXT;

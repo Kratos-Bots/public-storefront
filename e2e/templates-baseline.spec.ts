@@ -17,7 +17,8 @@ for (const layout of LAYOUTS) {
 
       test('catalog → detail → cart → checkout', async ({ page }) => {
         await page.clock.setFixedTime(FIXED_NOW);
-        const mocks = await installMocks(page, { layout, session: true });
+        // A shop with no FAQ: the phone bottom bar keeps Support, which is what these captured baselines hold.
+        const mocks = await installMocks(page, { layout, session: true, faq: { available: false } });
         await page.goto('/');
         await expect(page.getByRole('heading', { name: 'All products', level: 1 })).toBeVisible();
         await expect(page).toHaveScreenshot(`${layout}-${size}-catalog.png`, { fullPage: true });

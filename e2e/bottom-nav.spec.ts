@@ -14,7 +14,7 @@ const LINE = {
 
 interface Setup {
   width?: number; height?: number; layout?: Layout; session?: boolean; cart?: boolean; wholesale?: boolean; navOption?: boolean; menuOption?: boolean;
-  template?: [string, string]; telegram?: boolean; noReviews?: boolean; reviews?: InstallMocksOptions['reviews'];
+  template?: [string, string]; telegram?: boolean; noReviews?: boolean; reviews?: InstallMocksOptions['reviews']; faq?: InstallMocksOptions['faq'];
   tweak?: InstallMocksOptions['tweakSettings'];
 }
 
@@ -34,6 +34,7 @@ async function setup(page: Page, o: Setup = {}) {
     layout: o.layout ?? 'storefront',
     session: o.session ?? false,
     reviews: o.noReviews ? undefined : (o.reviews ?? {}),
+    faq: o.faq,
     tweakSettings: (s) => {
       theme?.(s);
       if (!theme && Object.keys(options).length > 0) s.theme = { ...s.theme, options: { ...s.theme.options, ...options } };
@@ -52,7 +53,7 @@ const rect = (page: Page, selector: string) => page.evaluate((sel) => {
 }, selector);
 
 test.describe('where the bar shows', () => {
-  for (const path of ['/', '/p/101', '/cart', '/account/profile', '/reviews', '/support']) {
+  for (const path of ['/', '/p/101', '/cart', '/account/profile', '/reviews', '/support', '/faq']) {
     test(`390x844: on ${path}`, async ({ page }) => {
       await setup(page, { session: true, cart: path === '/cart' });
       await page.goto(path);
@@ -97,7 +98,7 @@ test.describe('where the bar shows', () => {
     await setup(page, { tweak: (s) => { s.features.accounts = false; s.features.ordering = false; } , noReviews: true });
     await page.goto('/');
     await expect(navOf(page)).toBeVisible();
-    expect(await navOf(page).getByRole('link').allTextContents()).toEqual(['Catalog', 'Support']);
+    expect(await navOf(page).getByRole('link').allTextContents()).toEqual(['Catalog', 'FAQ']);
   });
 
   test('marks the current page, and the cart count follows the cart', async ({ page }) => {
@@ -233,7 +234,8 @@ test.describe('what stacks on the bar', () => {
 test.describe('the support page', () => {
   for (const layout of ['storefront', 'menu', 'webapp'] as const) {
     test(`${layout}: opens from the bar, shows the heading and the coming-soon line`, async ({ page }) => {
-      await setup(page, { layout });
+      // A shop with no FAQ keeps Support in the bar (with one, FAQ takes its place and Support lives in the header menu).
+      await setup(page, { layout, faq: { available: false } });
       await page.goto('/');
       await expect(navOf(page)).toBeVisible();
       await navOf(page).getByRole('link', { name: 'Support' }).click();

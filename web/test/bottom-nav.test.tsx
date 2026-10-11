@@ -81,6 +81,31 @@ describe('BottomNav items', () => {
   });
 });
 
+describe('BottomNav FAQ slot', () => {
+  it('replaces Support with FAQ as the last slot when the shop has an FAQ', () => {
+    h.settings = { ...h.settings, faq: { available: true } };
+    mount();
+    expect(labels()).toEqual(['Catalog', 'Profile', 'Cart', 'Reviews', 'FAQ']);
+    expect(within(nav()!).getAllByRole('link').map((a) => a.getAttribute('href'))).toEqual(['/', '/login', '/cart', '/reviews', '/faq']);
+    expect(within(nav()!).queryByRole('link', { name: 'Support' })).toBeNull();
+  });
+  it.each([[{ available: false }], [undefined], [{}], [null]])('keeps Support when faq is %j (including an older backend with no faq key)', (faq) => {
+    h.settings = { ...h.settings, faq };
+    mount();
+    expect(labels()).toEqual(['Catalog', 'Profile', 'Cart', 'Reviews', 'Support']);
+  });
+  it('marks FAQ current on /faq and Support on nothing', () => {
+    h.settings = { ...h.settings, faq: { available: true } };
+    mount('/faq');
+    const current = within(nav()!).getAllByRole('link').filter((a) => a.getAttribute('aria-current') === 'page');
+    expect(current.map((a) => a.textContent)).toEqual(['FAQ']);
+  });
+  it('shows on /faq', () => {
+    mount('/faq');
+    expect(nav()).not.toBeNull();
+  });
+});
+
 describe('BottomNav active item', () => {
   it.each([
     ['/', 'Catalog'], ['/c/serums', 'Catalog'], ['/p/12', 'Catalog'], ['/cart', 'Cart'], ['/account/profile', 'Profile'], ['/account/orders', 'Profile'],
