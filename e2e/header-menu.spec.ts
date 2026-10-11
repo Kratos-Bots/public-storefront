@@ -135,6 +135,33 @@ test.describe('the phone header, bar x menu', () => {
   }
 });
 
+// The bar never shows on /checkout, so the header keeps Account and Cart beside the burger there even with the bar option on.
+for (const layout of ['menu', 'webapp', 'storefront'] as const) {
+  test(`${layout} at 360, /checkout with the bar option on: no overlapping hit boxes, no horizontal overflow`, async ({ page }) => {
+    await page.addInitScript(() => window.localStorage.setItem('sf-cart-v1', JSON.stringify({ state: { lines: [{
+      productId: 101, displayName: 'Alpine Extract 10ml', sku: 'ALP-10', unitPrice: 42.5, basePrice: 42.5, pricingTiers: [], quantity: 2,
+      isPreorder: false, excludedFromFreeShipping: false, imageProductId: null,
+    }] }, version: 0 })));
+    await setup(page, { layout, width: 360, height: 640, bar: true, menu: true, session: true });
+    await page.goto('/checkout');
+    await expect(header(page)).toBeVisible();
+    await expect(burger(page)).toBeVisible();
+    await expect(page.locator('[data-sf-part="bottom-nav"]')).toHaveCount(0);
+    await page.evaluate(() => document.fonts.ready);
+    expect(await noOverflow(page), 'no horizontal overflow').toBe(true);
+    const all = await controls(page);
+    expect(all.length).toBeGreaterThanOrEqual(3);
+    for (let i = 0; i < all.length; i++) {
+      for (let j = i + 1; j < all.length; j++) {
+        const a = all[i]!;
+        const b = all[j]!;
+        const apart = a.right <= b.left + 0.5 || b.right <= a.left + 0.5 || a.bottom <= b.top + 0.5 || b.bottom <= a.top + 0.5;
+        expect(apart, `${a.name} overlaps ${b.name}`).toBe(true);
+      }
+    }
+  });
+}
+
 test.describe('the menu panel', () => {
   for (const layout of LAYOUTS) {
     test(`${layout} 390x844: opens, lists the pages, navigates and closes`, async ({ page }) => {

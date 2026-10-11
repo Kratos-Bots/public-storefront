@@ -42,8 +42,12 @@ function Menu() {
   const { variant, classes: header, loggedIn, native } = HeaderFamily.useData();
   const reducedMotion = useReducedMotion();
   const [opened, setOpened] = useState(false);
-  // With the bottom bar off the header still holds Account and Cart beside the search: see `.crowded`.
+  // With the bottom bar off, the header may still hold Account and Cart beside the search: see `.crowded`. Only a button
+  // that is really drawn on a phone counts (the shop's switches and the icon options can hide either).
   const barShown = useBottomNavShown();
+  const { headerAccountIcon, headerCartIcon } = useCoreOptions();
+  const onPhone = (mode: string) => mode === 'all' || mode === 'mobile';
+  const holdsButtons = (settings.features.accounts && onPhone(headerAccountIcon)) || (settings.features.ordering && onPhone(headerCartIcon));
   const close = () => setOpened(false);
 
   // Any navigation (a link in the panel, the browser's back button) leaves the panel behind.
@@ -63,7 +67,7 @@ function Menu() {
     <>
       <button
         type="button"
-        className={barShown ? `${header.action} ${classes.button}` : `${header.action} ${classes.button} ${classes.crowded}`}
+        className={!barShown && holdsButtons ? `${header.action} ${classes.button} ${classes.crowded}` : `${header.action} ${classes.button}`}
         onClick={() => setOpened(true)}
         aria-label={t('shell.menu.open')}
         aria-haspopup="dialog"

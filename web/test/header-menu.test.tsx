@@ -10,6 +10,8 @@ const h = vi.hoisted(() => ({
   bar: false,
   menu: true,
   native: false,
+  account: 'all',
+  cart: 'all',
 }));
 vi.mock('@/app/settings.ts', () => ({ useSettings: () => h.settings }));
 vi.mock('@/app/builder-gate.ts', () => ({ isBuilderMode: vi.fn(() => false) }));
@@ -25,7 +27,7 @@ vi.mock('@/templates/runtime.tsx', async (importOriginal) => ({
 }));
 vi.mock('@/templates/hooks.ts', async (orig) => {
   const real = await orig<typeof import('@/templates/hooks.ts')>();
-  return { ...real, useCoreOptions: () => ({ ...real.useCoreOptions(), showMobileBottomNav: h.bar, showHeaderMenu: h.menu }) };
+  return { ...real, useCoreOptions: () => ({ ...real.useCoreOptions(), showMobileBottomNav: h.bar, showHeaderMenu: h.menu, headerAccountIcon: h.account as 'all', headerCartIcon: h.cart as 'all' }) };
 });
 
 import { isBuilderMode } from '@/app/builder-gate.ts';
@@ -43,12 +45,12 @@ function setViewport(phone: boolean) {
   })) as typeof window.matchMedia;
 }
 
-function mount(element: ReactNode, o: { path?: string; reviews?: boolean; accounts?: boolean } = {}) {
+function mount(element: ReactNode, o: { path?: string; reviews?: boolean; accounts?: boolean; ordering?: boolean } = {}) {
   h.settings = {
     currency: 'GBP', welcomeMessage: null, enabled: true, supportLinks: [], notices: [],
     reviews: o.reviews === false ? undefined : { enabled: true, maxLength: 500 },
     brand: { name: 'Northbound Supply', title: 'Northbound Supply', tagline: null, links: { whatsapp: null, telegram: null } },
-    features: { layout: 'storefront', ordering: true, guestCheckout: false, accounts: o.accounts !== false, verify: false, tracking: false, wholesale: false, upsell: false },
+    features: { layout: 'storefront', ordering: o.ordering !== false, guestCheckout: false, accounts: o.accounts !== false, verify: false, tracking: false, wholesale: false, upsell: false },
   } as unknown as StorefrontSettings;
   const router = createMemoryRouter([{ path: '*', element }], { initialEntries: [o.path ?? '/'] });
   const view = render(<MantineProvider env="test"><RouterProvider router={router} /></MantineProvider>);
@@ -63,6 +65,8 @@ beforeEach(() => {
   h.bar = false;
   h.menu = true;
   h.native = false;
+  h.account = 'all';
+  h.cart = 'all';
   setViewport(true);
   vi.mocked(isBuilderMode).mockReturnValue(false);
   vi.mocked(isPreviewMode).mockReturnValue(false);
@@ -232,6 +236,42 @@ describe('the menu panel', () => {
     mount(<StorefrontHeader />);
     fireEvent.click(burger()!);
     expect(dialog()!.className).not.toMatch(/telegram/);
+  });
+});
+
+describe('the crowded-search mark on the menu button', () => {
+  const crowded = () => /crowded/.test(burger()!.className);
+  it('is set when the bar is off and the header still draws Account and Cart', () => {
+    mount(<MenuHeader />);
+    expect(crowded()).toBe(true);
+  });
+  it('is not set while the bar is on screen (the header draws neither)', () => {
+    h.bar = true;
+    mount(<MenuHeader />);
+    expect(crowded()).toBe(false);
+  });
+  it('is not set when accounts and ordering are both off', () => {
+    mount(<MenuHeader />, { accounts: false, ordering: false });
+    expect(crowded()).toBe(false);
+  });
+  it('is not set when both icon options hide the button on phones (none, desktop)', () => {
+    h.account = 'none';
+    h.cart = 'desktop';
+    mount(<MenuHeader />);
+    expect(crowded()).toBe(false);
+  });
+  it('stays set while either button is still drawn', () => {
+    h.account = 'none';
+    mount(<MenuHeader />);
+    expect(crowded()).toBe(true);
+    cleanup();
+    h.account = 'all';
+    mount(<MenuHeader />, { ordering: false });
+    expect(crowded()).toBe(true);
+    cleanup();
+    h.account = 'desktop';
+    mount(<MenuHeader />, { ordering: false });
+    expect(crowded()).toBe(false);
   });
 });
 

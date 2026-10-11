@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react';
 import { textKey } from '@/text/runtime.tsx';
+import type { StringKey } from '@/text/registry.ts';
 import { HelpIcon, HomeIcon, StarIcon, UserIcon, type GlyphProps } from '@/components/icons.tsx';
 
 /** What an entry's `when` and `to` may depend on: the shop's switches and who is looking. */
@@ -11,8 +12,8 @@ export interface MenuContext {
   signInTo: string;
 }
 
-/** The text keys an entry's label may be: plain strings, with no parameters. */
-export type MenuLabelKey = 'shell.menu.catalog' | 'shell.menu.reviews' | 'shell.menu.support' | 'shell.menu.account' | 'shell.menu.signIn';
+/** The text keys an entry's label may be: any plain-string `shell.menu.*` key in the registry. */
+export type MenuLabelKey = Extract<StringKey, `shell.menu.${string}`>;
 
 export interface MenuLink {
   key: string;
@@ -27,8 +28,9 @@ export interface MenuLink {
 }
 
 /**
- * The header menu's pages, in order. Adding a page is one entry here plus one `shell.menu.*` text key (and its note);
- * nothing else needs to know. There is deliberately no cart entry: the cart is the bottom bar's and the header's button.
+ * The header menu's pages, in order. To add a page (FAQ, say): add one entry here and one `shell.menu.<name>` text key
+ * (with its note in text/notes/shell.ts). The label's type comes from the registry, so nothing else needs editing; nothing
+ * else needs to know. There is deliberately no cart entry: the cart is the bottom bar's and the header's button.
  */
 export const MENU_LINKS: readonly MenuLink[] = [
   { key: 'catalog', to: '/', label: textKey('shell.menu.catalog'), Icon: HomeIcon, current: (p) => p === '/' || p.startsWith('/c/') || p.startsWith('/p/') },
