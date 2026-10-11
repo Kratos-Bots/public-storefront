@@ -40,6 +40,8 @@ const THEME: Theme = {
   colors: { primary: '#ffffff', bg: '#0f3965', surface: '#15457a', text: '#f4f7fc', muted: '#a9c0e0', success: '#5fcc9b', warn: '#e3b97a', danger: '#e08278' },
   fonts: { heading: null, body: null, mono: null }, radius: 'none', density: 'comfortable', customCss: '',
 };
+// The shell tests pin the header itself, so the bottom bar (which takes Account and Cart off a phone) is off.
+const NO_BAR = { showMobileBottomNav: false };
 const MODULE: TemplateModule = { slots: {} };
 
 function settings(layout: 'storefront' | 'menu' | 'webapp') {
@@ -60,7 +62,7 @@ function mount(Shell: ComponentType, pageSet: PageSet | null, path = '/', childK
       { path: 'pages/:slug', handle: { routeKey: 'page' }, element: <p>custom</p> },
     ],
   }], { initialEntries: [path] });
-  const resolved = resolveTheme({ ...THEME, options: {} }, lookupManifest);
+  const resolved = resolveTheme({ ...THEME, options: NO_BAR }, lookupManifest);
   return render(
     <QueryClientProvider client={client}>
       <PageSetOverrideProvider pageSet={pageSet}>
@@ -166,7 +168,7 @@ describe('PuckShell shell state', () => {
     settings(layout);
     const client = new QueryClient();
     const router = createMemoryRouter([{ path: '/', element: <PuckShell />, children: [{ index: true, handle: { routeKey: 'catalog' }, element: <SearchEcho /> }] }]);
-    const resolved = resolveTheme({ ...THEME, options: {} }, lookupManifest);
+    const resolved = resolveTheme({ ...THEME, options: NO_BAR }, lookupManifest);
     render(
       <QueryClientProvider client={client}>
         <PageSetOverrideProvider pageSet={null}>

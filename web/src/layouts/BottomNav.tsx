@@ -1,23 +1,16 @@
 import { useLayoutEffect, useRef, type ComponentType } from 'react';
 import { Link, useLocation } from 'react-router';
-import { useMediaQuery } from '@mantine/hooks';
 import { useSettings } from '@/app/settings.ts';
 import { useEffectiveLayout } from '@/app/layout.ts';
-import { isBuilderMode } from '@/app/builder-gate.ts';
-import { isPreviewMode } from '@/app/preview-listener.ts';
 import { BagIcon, HelpIcon, HomeIcon, StarIcon, UserIcon, type GlyphProps } from '@/components/icons.tsx';
 import { reviewSettingsOf } from '@/features/reviews/settings.ts';
 import { useModalOpen } from '@/lib/use-modal-open.ts';
 import { isTelegramWebApp } from '@/lib/telegram-webapp.ts';
 import { useSessionStore, selectIsLoggedIn } from '@/stores/session.ts';
 import { useCartStore, selectCount } from '@/stores/cart.ts';
-import { useCoreOptions } from '@/templates/hooks.ts';
 import { useText } from '@/text/runtime.tsx';
-import { bottomNavAllowedOn } from '@/layouts/bottom-nav-rules.ts';
+import { useBottomNavShown } from '@/layouts/bottom-nav-rules.ts';
 import classes from '@/layouts/BottomNav.module.css';
-
-/** Mantine's `md` breakpoint: from here the header carries everything and the bar stands down. */
-const DESKTOP = '(min-width: 62em)';
 
 interface Item {
   key: string;
@@ -41,11 +34,8 @@ interface Item {
  * way the web app's own bars do, keeping the space it holds so the page does not shift.
  */
 export function BottomNav({ inset = 'page', coverUnderDialog = false }: { inset?: 'page' | 'webapp'; coverUnderDialog?: boolean }) {
-  const { showMobileBottomNav } = useCoreOptions();
   const { pathname } = useLocation();
-  // Read synchronously: a deferred match would flash the bar on a desktop first paint.
-  const desktop = useMediaQuery(DESKTOP, false, { getInitialValueInEffect: false });
-  if (!showMobileBottomNav || desktop || !bottomNavAllowedOn(pathname) || isBuilderMode() || isPreviewMode()) return null;
+  if (!useBottomNavShown()) return null;
   return <Bar pathname={pathname} inset={inset} coverUnderDialog={coverUnderDialog} />;
 }
 

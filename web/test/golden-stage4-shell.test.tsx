@@ -42,7 +42,8 @@ vi.mock('@/templates/hooks.ts', async (orig) => {
       const base = real.useCoreOptions();
       const scope = useContext(CoreOptionsScopeContext);
       const o = state.options as Partial<Record<'headerAccountIcon' | 'headerCartIcon', typeof base.headerAccountIcon>>;
-      return { ...base, headerAccountIcon: scope.headerAccountIcon ?? o.headerAccountIcon ?? base.headerAccountIcon, headerCartIcon: scope.headerCartIcon ?? o.headerCartIcon ?? base.headerCartIcon };
+      // These pin the header itself, so the bottom bar (which would take the Account and Cart buttons off a phone) is off.
+      return { ...base, showMobileBottomNav: false, headerAccountIcon: scope.headerAccountIcon ?? o.headerAccountIcon ?? base.headerAccountIcon, headerCartIcon: scope.headerCartIcon ?? o.headerCartIcon ?? base.headerCartIcon };
     },
   };
 });

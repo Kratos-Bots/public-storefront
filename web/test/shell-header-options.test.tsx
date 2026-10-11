@@ -50,7 +50,7 @@ function mount(Shell: ComponentType, options: OptionValues, features: Partial<St
     brand: { name: 'Shop', title: 'Shop', tagline: null, links: { whatsapp: null, telegram: null } },
     features: { layout: 'storefront', ordering: true, guestCheckout: false, accounts: true, verify: false, tracking: false, wholesale: false, upsell: false, ...features },
   } as unknown as StorefrontSettings;
-  const resolved = resolveTheme({ ...THEME, options }, lookupManifest);
+  const resolved = resolveTheme({ ...THEME, options: { showMobileBottomNav: false, ...options } }, lookupManifest);
   return render(
     <MantineProvider env="test">
       <TemplateProvider resolved={resolved} fallback={null} load={() => Promise.resolve(MODULE)} peek={() => MODULE}>

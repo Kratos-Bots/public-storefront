@@ -13,6 +13,7 @@ import { SearchField } from '@/layouts/SearchField.tsx';
 import { useShellState } from '@/layouts/shell-context.ts';
 import { isTelegramWebApp } from '@/lib/telegram-webapp.ts';
 import { isBuilderMode } from '@/app/builder-gate.ts';
+import { useBottomNavShown } from '@/layouts/bottom-nav-rules.ts';
 import { isPreviewMode } from '@/app/preview-listener.ts';
 import { reviewSettingsOf } from '@/features/reviews/settings.ts';
 import { Slot } from '@/templates/runtime.tsx';
@@ -107,7 +108,9 @@ function AccountInner({ styleAttrs }: { styleAttrs?: StyleAttrs }) {
   const { t } = useText();
   const { headerAccountIcon } = useCoreOptions();
   const accountClass = headerIconClass(headerAccountIcon);
-  if (!features.accounts || accountClass === null) return null;
+  // The bottom bar carries Profile wherever it is on screen: the header does not repeat it.
+  const barShown = useBottomNavShown();
+  if (!features.accounts || accountClass === null || barShown) return null;
   if (variant === 'storefront') {
     return loggedIn ? (
       <Link to="/account" className={`${classes.action} ${accountClass}`} aria-label={t('common.nav.yourAccount')} {...styleAttrs}>
@@ -145,7 +148,9 @@ function CartInner({ styleAttrs }: { styleAttrs?: StyleAttrs }) {
   const { tp } = useText();
   const { headerCartIcon } = useCoreOptions();
   const cartClass = headerIconClass(headerCartIcon);
-  if (!features.ordering || cartClass === null) return null;
+  // Likewise Cart.
+  const barShown = useBottomNavShown();
+  if (!features.ordering || cartClass === null || barShown) return null;
   return (
     <Link to="/cart" className={`${classes.action} ${cartClass}`} aria-label={tp('shell.header.cartAriaLabel', cartCount)} {...styleAttrs}>
       <BagIcon size={variant === 'storefront' ? 18 : 17} />
