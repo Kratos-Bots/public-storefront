@@ -785,7 +785,7 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
   // Below 62em the docket column is drawn only on the review step (and on the editor canvas); a custom layout that put the
   // coupon in there keeps it reachable. Everywhere else it is dropped whole, so it leaves no gap.
   const asideShown = stack || onReview || containsVisibleType(s.aside.items, 'CheckoutCoupon');
-  const nextDisabled =submitting || locked || (onReview && guest && verifying);
+  const nextDisabled = submitting || locked || (onReview && guest && verifying);
 
   return (
     <CheckoutFamily.Provider value={value}>

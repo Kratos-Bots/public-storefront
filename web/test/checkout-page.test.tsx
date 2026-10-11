@@ -325,6 +325,14 @@ describe('CheckoutPage — signed in', () => {
     useSessionStore.setState({ token: 'sess-1', customer: { id: 5, nickname: 'ada' } });
   });
 
+  it('draws the order summary on a phone only on the review step (the class that exempts it from the phone-width hide)', async () => {
+    const { container } = mount();
+    const aside = () => container.querySelector('aside')!;
+    expect(aside().className).not.toMatch(/asideShown/);
+    await walkToReview();
+    expect(aside().className).toMatch(/asideShown/);
+  });
+
   it('walks Contact → Review and places the order with the collected details', async () => {
     mount();
     await walkToReview();
