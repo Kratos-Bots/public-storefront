@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { guestQuoteSettled } from './flows.ts';
 import { installMocks, type MockHandle } from './mocks.ts';
 
 /**
@@ -45,8 +46,8 @@ async function toShipping(page: Page): Promise<void> {
   await expect(page.getByText('Tracked 24')).toBeVisible();
 }
 
-/** From the shipping step to a placed order. */
-async function placeOrder(page: Page): Promise<void> {
+/** From the shipping step to a placed order. A guest's quote is debounced, so it settles before Place order is clicked. */
+async function placeOrder(page: Page, mocks: MockHandle): Promise<void> {
   const next = () => page.getByRole('button', { name: 'Continue' }).click();
   await page.getByText('Tracked 24').click();
   await next();
@@ -55,6 +56,7 @@ async function placeOrder(page: Page): Promise<void> {
   await page.locator('label').filter({ hasText: 'USDT' }).first().click();
   await next();
   await expect(page.getByRole('heading', { name: 'Review your order' })).toBeVisible();
+  await guestQuoteSettled(page, mocks);
   await page.getByRole('button', { name: /^Place order/ }).click();
   await expect(page).toHaveURL(/\/order-placed\?order=/);
 }
@@ -71,7 +73,7 @@ test.describe('referral links', () => {
     await toShipping(page);
     await expect(page.getByRole('textbox', { name: 'Coupon code' })).toBeVisible();
     await expect(page.getByRole('textbox', { name: 'Referral code' })).toHaveCount(0);
-    await placeOrder(page);
+    await placeOrder(page, mocks);
 
     expect(mocks.state.checkouts).toHaveLength(1);
     expect(mocks.state.checkouts[0]).toMatchObject({ referralCode: 'TESTCODE1' });
@@ -98,7 +100,7 @@ test.describe('referral links', () => {
     const [c, r] = await Promise.all([coupon.boundingBox(), referral.boundingBox()]);
     expect(r!.y).toBeGreaterThan(c!.y);
     await referral.fill('testcode3');
-    await placeOrder(page);
+    await placeOrder(page, mocks);
 
     expect(mocks.state.checkouts[0]).toMatchObject({ referralCode: 'TESTCODE3' });
     for (const q of mocks.state.guestQuotes) expect(q).not.toHaveProperty('referralCode');
@@ -108,7 +110,7 @@ test.describe('referral links', () => {
     const mocks = await boot(page);
     await page.goto('/checkout');
     await toShipping(page);
-    await placeOrder(page);
+    await placeOrder(page, mocks);
     expect(mocks.state.checkouts[0]).not.toHaveProperty('referralCode');
   });
 

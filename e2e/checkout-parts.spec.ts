@@ -642,6 +642,7 @@ test.describe('checkout · removed coupon and notes parts', () => {
   test('guest: the same, and exactly one Turnstile mint per guest request', async ({ page, browser }) => {
     const gone = await open(page, 'storefront', noCouponCheckoutSet('storefront'), '/checkout', { guest: true, seed: SAVED });
     await walk(page, { order: LEGAL_STEP_ORDERS[0]! });
+    await guestQuoteSettled(page, gone.mocks);
     await placeOrder(page, 'guest');
     expect(gone.mocks.state.guestQuotes.length).toBeGreaterThan(0);
     for (const q of gone.mocks.state.guestQuotes) expect(q.couponCode, JSON.stringify(q)).toBeUndefined();
@@ -659,6 +660,7 @@ test.describe('checkout · removed coupon and notes parts', () => {
       const p2 = await ctx.newPage();
       const back = await open(p2, 'storefront', noCouponCheckoutSet('storefront', { coupon: true, notes: true }), '/checkout', { guest: true, seed: SAVED });
       await walk(p2, { order: LEGAL_STEP_ORDERS[0]! });
+      await guestQuoteSettled(p2, back.mocks);
       await placeOrder(p2, 'guest');
       expect(back.mocks.state.guestQuotes.some((q) => q.couponCode === COUPON_CODE)).toBe(true);
       expect(back.mocks.state.checkouts[0]).toMatchObject({ ...BASE_BODY, couponCode: COUPON_CODE, notes: 'Saved note from a previous visit' });
