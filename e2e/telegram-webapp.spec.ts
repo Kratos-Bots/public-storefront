@@ -247,7 +247,8 @@ test.describe('inside Telegram', () => {
   test('a Back control appears off the catalogue and goes back', async ({ page }) => {
     await openInTelegram(page);
     await expect.poll(() => backShowing(page)).toBe(false);
-    await page.getByRole('link', { name: /^Cart, / }).click();
+    // The header leaves Cart to the bottom bar, whose link is named Cart (with the count once there are items).
+    await page.getByRole('link', { name: /^Cart(, |$)/ }).click();
     await expect(page).toHaveURL(/\/cart$/);
     await expect.poll(() => backShowing(page)).toBe(true);
     await clickBack(page);
@@ -285,7 +286,7 @@ test.describe('inside Telegram', () => {
   test('with no primary action (an account page, empty cart) both back controls show, one handler each, and each goes back', async ({ page }) => {
     await openInTelegram(page);
     for (const control of ['bottom', 'header'] as const) {
-      await page.getByRole('link', { name: 'Your account' }).click();
+      await page.getByRole('link', { name: 'Profile' }).click();
       await expect(page).toHaveURL(/\/account/);
       await expect.poll(() => tg(page).then((t) => t.secondary.isVisible && t.back.isVisible)).toBe(true);
       expect((await tg(page)).main.isVisible).toBe(false);
@@ -302,7 +303,8 @@ test.describe('inside Telegram', () => {
 
   test('an older client keeps the header BackButton and has no bottom Back', async ({ page }) => {
     await openInTelegram(page, {}, '/', '7.9');
-    await page.getByRole('link', { name: /^Cart, / }).click();
+    // The header leaves Cart to the bottom bar, whose link is named Cart (with the count once there are items).
+    await page.getByRole('link', { name: /^Cart(, |$)/ }).click();
     await expect(page).toHaveURL(/\/cart$/);
     await expect.poll(() => tg(page).then((t) => t.back.isVisible)).toBe(true);
     expect((await tg(page)).secondary.isVisible).toBe(false);

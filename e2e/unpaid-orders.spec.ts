@@ -62,7 +62,8 @@ const unpaidAsks = (mocks: MockHandle): number => mocks.requests().filter((r) =>
 
 /** Leaves the page in the app (the account page) and comes back by the browser's Back, without a reload. */
 async function awayAndBack(page: Page): Promise<void> {
-  await onlyVisible(page.getByRole('link', { name: 'Your account' })).click();
+  // The phone's header leaves Account to the bottom bar, whose link is named Profile.
+  await onlyVisible(page.getByRole('link', { name: 'Profile' })).click();
   await expect(page).toHaveURL(/\/account/);
   await expect(page.getByRole('heading', { name: 'Ada', level: 1 })).toBeVisible();
   await page.goBack();

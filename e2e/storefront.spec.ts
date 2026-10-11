@@ -329,7 +329,8 @@ test.describe('closed shop', () => {
 
     const before = mocks.requests().length;
     mocks.closeShop();
-    await onlyVisible(page.getByRole('link', { name: /^Cart, / })).click();
+    // The phone's header leaves Cart to the bottom bar, whose link is named Cart (with the count once there are items).
+    await onlyVisible(page.getByRole('link', { name: /^Cart(, |$)/ })).click();
 
     await expect(page.getByText('Currently closed')).toBeVisible();
     expect(mocks.requests().slice(before)).toContain('GET storefront/cart');

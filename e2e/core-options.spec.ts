@@ -79,7 +79,8 @@ test('menu, phone: product codes, category picker, account icon and cut-off coun
       s.theme = {
         ...s.theme,
         options: {
-          showSku: false, showCategoryPicker: false, headerAccountIcon: 'none', headerCartIcon: 'desktop',
+          // The bottom bar would take the header's Account and Cart buttons off a phone whatever these say: it is off here.
+          showMobileBottomNav: false, showSku: false, showCategoryPicker: false, headerAccountIcon: 'none', headerCartIcon: 'desktop',
           cutoffMessage: 'Order before {time} and it leaves {dispatch}', showCutoffCountdown: false,
         },
       };
