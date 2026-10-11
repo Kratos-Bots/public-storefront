@@ -218,10 +218,29 @@ test.describe('reviews · the public page', () => {
     await expect(page).toHaveURL(/\/reviews$/);
     await expect(page.getByRole('heading', { level: 1, name: 'Customer reviews' })).toBeVisible();
     await expect(page.getByText('12 reviews')).toBeVisible();
-    await expect(page.locator('li:has(time)')).toHaveCount(10);
-    await page.getByRole('button', { name: 'Load more reviews' }).click();
+    // The rest loads by itself as the end of the list nears; there is no button.
+    await expect(page.getByRole('button', { name: 'Load more reviews' })).toHaveCount(0);
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     await expect(page.locator('li:has(time)')).toHaveCount(12);
     await expect(page.getByRole('button', { name: 'Load more reviews' })).toHaveCount(0);
+  });
+
+  test('a long list loads a page at a time as the end nears, with no button, and stops after the last page', async ({ page }) => {
+    const long = Array.from({ length: 35 }, (_, i) => review(35 - i, 5 - (i % 3), `Comment number ${35 - i}`));
+    const mocks = await open(page, { path: '/reviews', width: 390, reviews: { list: long }, session: false });
+    await expect(page.getByText('Comment number 35')).toBeVisible();
+    await expect(page.locator('li:has(time)')).toHaveCount(10);
+    await expect(page.getByRole('button', { name: 'Load more reviews' })).toHaveCount(0);
+    expect(asks(mocks, 'GET storefront/reviews')).toBe(1);
+    // Scrolling to the end until the last page lands: the observer is re-armed once each page is in. A page may chain
+    // into the next when it leaves the end in range, so only the end state is pinned here (one page at a time is the unit test).
+    await expect(async () => {
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+      await expect(page.locator('li:has(time)')).toHaveCount(35, { timeout: 2000 });
+    }).toPass({ timeout: 20_000 });
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await page.waitForTimeout(500);
+    expect(asks(mocks, 'GET storefront/reviews')).toBe(4);
   });
 
   for (const layout of ['menu', 'webapp'] as const) {
