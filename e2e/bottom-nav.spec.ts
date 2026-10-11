@@ -205,3 +205,39 @@ test.describe('the support page', () => {
     });
   }
 });
+
+test.describe('the header Reviews link', () => {
+  const headerHeight = (page: Page) => page.evaluate(() => document.querySelector('[data-sf-part="header"]')!.getBoundingClientRect().height);
+  const cases: Array<[Layout, number, boolean]> = [
+    ['storefront', 1280, true], ['menu', 1280, true], ['webapp', 1280, true],
+    ['storefront', 390, false], ['menu', 390, false], ['webapp', 390, false],
+  ];
+  for (const [layout, width, navOption] of cases) {
+    test(`${layout} at ${width}${navOption ? '' : ' with the bar off'}: shown, and the header is as tall as without it`, async ({ page }) => {
+      await setup(page, { layout, width, height: width < 768 ? 844 : 900, navOption, reviews: {} });
+      await page.goto('/');
+      const link = page.locator('[data-sf-part="header"]').getByRole('link', { name: 'Reviews' });
+      await expect(link).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+      const withLink = await headerHeight(page);
+      const noOverflow = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
+      expect(noOverflow, 'no horizontal overflow').toBe(true);
+      await link.evaluate((el) => { (el as HTMLElement).style.display = 'none'; });
+      expect(withLink).toBe(await headerHeight(page));
+    });
+  }
+
+  test('with the bar on, the header does not carry it on a phone, and the bar does', async ({ page }) => {
+    await setup(page, { reviews: {} });
+    await page.goto('/');
+    await expect(navOf(page).getByRole('link', { name: 'Reviews' })).toBeVisible();
+    await expect(page.locator('[data-sf-part="header"]').getByRole('link', { name: 'Reviews' })).toBeHidden();
+  });
+
+  test('no reviews, no link', async ({ page }) => {
+    await setup(page, { width: 1280, height: 900, noReviews: true });
+    await page.goto('/');
+    await expect(page.locator('[data-sf-part="product-row"], [data-sf-part="product-card"]').first()).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Reviews', exact: true })).toHaveCount(0);
+  });
+});

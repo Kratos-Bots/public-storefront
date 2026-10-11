@@ -212,9 +212,9 @@ test.describe('reviews · the reminder', () => {
 test.describe('reviews · the public page', () => {
   const many = Array.from({ length: 12 }, (_, i) => review(12 - i, 5 - (i % 3), i % 4 === 3 ? null : `Comment number ${12 - i}`));
 
-  test('lists approved reviews with the average, loads more, and is linked from the footer', async ({ page }) => {
+  test('lists approved reviews with the average, loads more, and is linked from the header', async ({ page }) => {
     await open(page, { reviews: { list: many }, session: false });
-    await page.getByRole('link', { name: 'Customer reviews' }).click();
+    await page.locator('header').getByRole('link', { name: 'Reviews' }).click();
     await expect(page).toHaveURL(/\/reviews$/);
     await expect(page.getByRole('heading', { level: 1, name: 'Customer reviews' })).toBeVisible();
     await expect(page.getByText('12 reviews')).toBeVisible();
@@ -225,10 +225,9 @@ test.describe('reviews · the public page', () => {
   });
 
   for (const layout of ['menu', 'webapp'] as const) {
-    test(`${layout} layout at phone width: a signed-out visitor reaches the reviews page from the link under the shop`, async ({ page }) => {
+    test(`${layout} layout at phone width: a signed-out visitor reaches the reviews page from the bottom bar`, async ({ page }) => {
       await open(page, { width: 390, layout, reviews: { list: many }, session: false });
-      const link = page.getByRole('link', { name: 'Customer reviews' });
-      await link.scrollIntoViewIfNeeded();
+      const link = page.locator('[data-sf-part="bottom-nav"]').getByRole('link', { name: 'Reviews' });
       await expect(link).toBeVisible();
       await link.click();
       await expect(page).toHaveURL(/\/reviews$/);
@@ -244,6 +243,6 @@ test.describe('reviews · the public page', () => {
   test('reviews off: the page is not found and no link is shown', async ({ page }) => {
     await open(page, { path: '/reviews', session: false });
     await expect(page.getByRole('heading', { name: 'Customer reviews' })).toHaveCount(0);
-    await expect(page.getByRole('link', { name: 'Customer reviews' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Reviews', exact: true })).toHaveCount(0);
   });
 });

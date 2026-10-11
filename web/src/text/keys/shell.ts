@@ -7,6 +7,7 @@ export default defineTextArea('shell', {
   'header.searchPlaceholder': { en: 'Search', max: 40 },
   'header.categories': { en: 'Categories', max: 40 },
   'header.categoriesFiltered': { en: 'Categories — one category selected', max: 80 },
+  'header.reviews': { en: 'Reviews', max: 24 },
   'header.cartAriaLabel': { en: { one: 'Cart, {count} item', other: 'Cart, {count} items' }, max: 60 },
   'bottomNav.ariaLabel': { en: 'Shop menu', max: 40 },
   'bottomNav.catalog': { en: 'Shop', max: 16 },

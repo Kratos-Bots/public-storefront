@@ -7,7 +7,6 @@ import { CutoffBar } from '@/features/notices/CutoffBar.tsx';
 import { LoginModal } from '@/features/auth/LoginModal.tsx';
 import { UnpaidOrderPrompt } from '@/features/unpaid-prompt/UnpaidOrderPrompt.tsx';
 import { ReviewPrompt } from '@/features/review-prompt/ReviewPrompt.tsx';
-import { ReviewsLink } from '@/layouts/ReviewsLink.tsx';
 import { BottomNav } from '@/layouts/BottomNav.tsx';
 import { PrimaryActionBar, usePrimaryBarShowing } from '@/features/webapp/PrimaryActionBar.tsx';
 import { WebAppCartBar } from '@/features/webapp/WebAppCartBar.tsx';
@@ -57,7 +56,6 @@ export function WebAppFrame({ children }: { children: ReactNode; cartBar?: boole
   return (
     <div className={shellClass} data-sf-layout="webapp">
       {children}
-      <ReviewsLink />
       <BottomNav inset="webapp" coverUnderDialog />
 
       <PrimaryActionBar />

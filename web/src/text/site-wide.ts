@@ -10,5 +10,5 @@ import type { TextKeyPattern } from '@/text/registry.ts';
 export const SITE_WIDE_TEXT: readonly TextKeyPattern[] = [
   'cart.drawer.*', 'cart.empty.*', 'cart.page.eyebrow', 'cart.line.*', 'cart.summary.*', 'cart.sync.*', 'cart.bar.*',
   'auth.modal.*', 'auth.login.*', 'auth.options.*', 'auth.password.*', 'auth.telegram.*', 'auth.whatsapp.*', 'auth.access.*', 'auth.code.*',
-  'order.prompt.*', 'reviews.prompt.*', 'reviews.page.*', 'reviews.link', 'reviews.stars.*', 'order.cancel.*', 'webapp.*', 'shell.webapp.*', 'shell.notFound.*', 'shell.warehouse.*', 'shell.bottomNav.*', 'shell.support.*','errors.*', 'common.*',
+  'order.prompt.*', 'reviews.prompt.*', 'reviews.page.*', 'reviews.link', 'reviews.stars.*', 'order.cancel.*', 'webapp.*', 'shell.webapp.*', 'shell.notFound.*', 'shell.warehouse.*', 'shell.header.reviews', 'shell.bottomNav.*', 'shell.support.*','errors.*', 'common.*',
 ];

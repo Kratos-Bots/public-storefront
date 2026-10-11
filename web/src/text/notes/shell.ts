@@ -5,6 +5,7 @@ export default {
   'header.searchPlaceholder': 'Placeholder in the header search field of the menu and Telegram layouts',
   'header.categories': 'Screen-reader label of the header button that opens the category list',
   'header.categoriesFiltered': 'Screen-reader label of the category button while a category is picked',
+  'header.reviews': 'Link to the customer reviews page in the header: always on desktop, and on phones only when the bottom navigation bar is switched off',
   'header.cartAriaLabel': 'Screen-reader label of the header cart button, with the number of items in the cart',
   'bottomNav.ariaLabel': 'Screen-reader name of the navigation bar fixed to the foot of the screen on phones',
   'bottomNav.catalog': 'Label under the catalogue icon in the phone bottom bar',
