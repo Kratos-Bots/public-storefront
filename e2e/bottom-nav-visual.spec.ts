@@ -32,7 +32,7 @@ for (const [template, preset] of THEMES) {
   for (const layout of LAYOUTS) {
     for (const width of [390, 1280] as const) {
       const base = `${template}-${layout}-${width}`;
-      const start = async (page: Page, cart: boolean, wholesale = false) => {
+      const start = async (page: Page, cart: boolean, wholesale = false, navOff = false) => {
         mkdirSync(OUT, { recursive: true });
         await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
         await page.clock.setFixedTime(FIXED_NOW);
@@ -41,7 +41,11 @@ for (const [template, preset] of THEMES) {
         const theme = await presetTheme(page, template, preset);
         await installMocks(page, {
           layout, session: false, reviews: { list: LIST },
-          tweakSettings: (s) => { theme(s); s.features.wholesale = wholesale; },
+          tweakSettings: (s) => {
+            theme(s);
+            s.features.wholesale = wholesale;
+            if (navOff) s.theme = { ...s.theme, options: { ...s.theme.options, showMobileBottomNav: false } };
+          },
         });
       };
 
@@ -82,6 +86,14 @@ for (const [template, preset] of THEMES) {
         await expect(page.getByText('Arrived in two days').first()).toBeVisible();
         await page.evaluate(() => document.fonts.ready);
         await shot(page, `${base}-reviews`);
+      });
+
+      test(`${base} bar off, Reviews in the header`, async ({ page }) => {
+        await start(page, false, false, true);
+        await page.goto('/');
+        await expect(page.locator('[data-sf-part="header"]').getByRole('link', { name: 'Reviews' })).toBeVisible();
+        await page.evaluate(() => document.fonts.ready);
+        await shot(page, `${base}-header-reviews`);
       });
 
       test(`${base} support`, async ({ page }) => {

@@ -5,7 +5,7 @@ import { useSessionStore, selectIsLoggedIn } from '@/stores/session.ts';
 import { useCartStore, selectCount } from '@/stores/cart.ts';
 import { useUiStore } from '@/stores/ui.ts';
 import { Brand } from '@/components/Brand.tsx';
-import { BagIcon, ChevronIcon, FilterIcon, UserIcon } from '@/components/icons.tsx';
+import { BagIcon, ChevronIcon, FilterIcon, StarIcon, UserIcon } from '@/components/icons.tsx';
 import { NoticeBanners } from '@/features/notices/NoticeBanners.tsx';
 import { WarehouseBar } from '@/features/warehouses/WarehouseBar.tsx';
 import { isFirstHistoryEntry } from '@/features/webapp/useTelegramChrome.ts';
@@ -173,8 +173,13 @@ function HeaderReviewsLink() {
   const { showMobileBottomNav } = useCoreOptions();
   if (!reviewSettingsOf(settings).enabled || isBuilderMode() || isPreviewMode()) return null;
   return (
-    <Link to="/reviews" className={showMobileBottomNav ? `${reviewsLink.link} sf-hide-mobile` : reviewsLink.link}>
-      {t('shell.header.reviews')}
+    <Link
+      to="/reviews"
+      className={showMobileBottomNav ? `${reviewsLink.link} sf-hide-mobile` : reviewsLink.link}
+      aria-label={t('shell.header.reviews')}
+    >
+      <span className={reviewsLink.text}>{t('shell.header.reviews')}</span>
+      <span className={reviewsLink.glyph} aria-hidden><StarIcon size={17} /></span>
     </Link>
   );
 }

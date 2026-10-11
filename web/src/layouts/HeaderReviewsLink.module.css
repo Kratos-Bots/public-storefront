@@ -1,11 +1,15 @@
-/* The header's way to the reviews page: a quiet micro-caps link in the shop's mono voice, beside the sign-in link's.
-   It sits in the header's fixed-height row, so it can never change the bar's height (--sf-bar-h). */
+/* The header's way to the reviews page. From 62em a quiet micro-caps link in the shop's mono voice, beside the sign-in
+   link's; on a phone (where it only shows when the bottom bar is off) a star in the 44px square of the other header
+   buttons, so it never squeezes the search field. It sits in the header's fixed-height row, so it can never change the
+   bar's height (--sf-bar-h). */
 .link {
   display: inline-flex;
   flex: none;
   align-items: center;
+  justify-content: center;
+  min-width: 44px;
   min-height: 44px;
-  padding: 0 0.6rem;
+  padding: 0;
   font-family: var(--sf-font-mono);
   font-size: 10px;
   font-weight: 500;
@@ -27,10 +31,22 @@
   outline-offset: 2px;
 }
 
-/* On the dense bars, one step quieter. */
-@media (max-width: 61.99em) {
+.glyph {
+  display: inline-flex;
+}
+
+.text {
+  display: none;
+}
+
+@media (min-width: 62em) {
   .link {
-    padding: 0 0.4rem;
-    letter-spacing: 0.16em;
+    padding: 0 0.6rem;
+  }
+  .text {
+    display: inline;
+  }
+  .glyph {
+    display: none;
   }
 }
