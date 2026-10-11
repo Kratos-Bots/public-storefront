@@ -30,7 +30,7 @@ interface Item {
 }
 
 /**
- * The phone's bottom navigation: Shop, Profile, Cart, Reviews, Support, in a bar fixed to the foot of the screen.
+ * The phone's bottom navigation: Catalog, Profile, Cart, Reviews, Support, in a bar fixed to the foot of the screen.
  * Mounted once by each frame, so it needs no placement of its own. It publishes its measured height (safe area
  * included) as `--sf-nav-h` on the root, 0 whenever it is not on the page, and every other bottom element — the
  * cart bars, the wholesale bar, the contact strip, the shells' clearance — adds that value.

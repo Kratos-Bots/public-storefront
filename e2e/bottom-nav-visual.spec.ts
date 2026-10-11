@@ -136,3 +136,18 @@ for (const [template, preset] of [['cyber-brutalism', 'acid-dark'], ['bento', 't
     await shot(page, `telegram-${template}-390-wholesale-items`);
   });
 }
+
+// The small phone: 360x640, menu layout, wholesale, items in the cart.
+test('cyber-brutalism menu wholesale with items, 360x640', async ({ page }) => {
+  mkdirSync(OUT, { recursive: true });
+  await page.setViewportSize({ width: 360, height: 640 });
+  await page.clock.setFixedTime(FIXED_NOW);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.addInitScript((line) => window.localStorage.setItem('sf-cart-v1', JSON.stringify({ state: { lines: [line] }, version: 0 })), LINE);
+  const theme = await presetTheme(page, 'cyber-brutalism', 'acid-dark');
+  await installMocks(page, { layout: 'menu', session: false, reviews: { list: LIST }, tweakSettings: (s) => { theme(s); s.features.wholesale = true; } });
+  await page.goto('/');
+  await expect(page.locator('a[href="/cart"]:not([data-sf-nav])').filter({ hasText: /basket/i })).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
+  await shot(page, 'cyber-brutalism-menu-360x640-wholesale-items');
+});

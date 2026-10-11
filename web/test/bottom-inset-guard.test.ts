@@ -55,6 +55,21 @@ describe('bottom inset', () => {
     expect(tg).not.toContain('env(');
   });
 
+  it('every bar the bottom navigation bar carries leaves the home-indicator inset to it (--sf-bar-safe is 0 while it shows)', () => {
+    // The strip, the wholesale bar and the running-tab bar would otherwise add the inset on top of the bar's own.
+    for (const [file, selector] of [
+      ['components/ContactLinks.module.css', '.strip .link {'],
+      ['features/wholesale/WholesaleBar.module.css', '.bar {'],
+      ['features/cart/MobileCartBar.module.css', '.bar {'],
+    ] as const) {
+      const rule = block(read(file), selector);
+      expect(rule, `${file} ${selector}`).toContain('var(--sf-bar-safe');
+      expect(rule, `${file} ${selector}`).toContain('safe-area-inset-bottom');
+    }
+    expect(read('features/webapp/PrimaryActionBar.module.css')).toContain('height: var(--sf-bar-safe, var(--tg-safe-bottom');
+    expect(block(read('layouts/BottomNav.module.css'), ':global(:root):has(.nav)')).toContain('--sf-bar-safe: 0px');
+  });
+
   it("the checkout's sticky Continue band publishes its height on phones only", () => {
     const css = read('features/checkout/CheckoutPage.module.css');
     expect(css).toMatch(/@media \(max-width: 61\.99em\) \{\s*(?:\/\*[^*]*\*\/\s*)?:global\(:root\):global\(:root\):has\(\.nav\) \{\s*--sf-bottom-inset:/);

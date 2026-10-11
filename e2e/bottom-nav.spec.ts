@@ -95,7 +95,7 @@ test.describe('where the bar shows', () => {
     await setup(page, { tweak: (s) => { s.features.accounts = false; s.features.ordering = false; } , noReviews: true });
     await page.goto('/');
     await expect(navOf(page)).toBeVisible();
-    expect(await navOf(page).getByRole('link').allTextContents()).toEqual(['Shop', 'Support']);
+    expect(await navOf(page).getByRole('link').allTextContents()).toEqual(['Catalog', 'Support']);
   });
 
   test('marks the current page, and the cart count follows the cart', async ({ page }) => {
@@ -261,6 +261,30 @@ test.describe('the header Reviews link', () => {
       expect(noOverflow, 'no horizontal overflow').toBe(true);
       await link.evaluate((el) => { (el as HTMLElement).style.display = 'none'; });
       expect(withLink).toBe(await headerHeight(page));
+    });
+  }
+
+  for (const layout of ['menu', 'webapp'] as const) {
+    test(`${layout} at 390 with the bar off: the search field keeps room for its placeholder next to the star`, async ({ page }) => {
+      await setup(page, { layout, navOption: false, reviews: {} });
+      await page.goto('/');
+      const star = page.locator('[data-sf-part="header"]').getByRole('link', { name: 'Reviews' });
+      await expect(star).toBeVisible();
+      const field = page.locator('[data-sf-part="header"]').getByRole('textbox', { name: 'Search products' });
+      await expect(field).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+      // The placeholder, the icon and a little air: measured by drawing the placeholder text in the field's own font.
+      const need = await field.evaluate((el) => {
+        const cs = getComputedStyle(el);
+        const c = document.createElement('canvas').getContext('2d')!;
+        c.font = `${cs.fontSize} ${cs.fontFamily}`;
+        return c.measureText((el as HTMLInputElement).placeholder).width + parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+      });
+      const box = (await field.boundingBox())!;
+      expect(box.width, 'search field wide enough for its placeholder').toBeGreaterThanOrEqual(need + 4);
+      const s = (await star.boundingBox())!;
+      expect(s.width).toBeGreaterThanOrEqual(44);
+      expect(s.height).toBeGreaterThanOrEqual(44);
     });
   }
 

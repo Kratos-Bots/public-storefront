@@ -10,7 +10,7 @@ export default defineTextArea('shell', {
   'header.reviews': { en: 'Reviews', max: 24 },
   'header.cartAriaLabel': { en: { one: 'Cart, {count} item', other: 'Cart, {count} items' }, max: 60 },
   'bottomNav.ariaLabel': { en: 'Shop menu', max: 40 },
-  'bottomNav.catalog': { en: 'Shop', max: 16 },
+  'bottomNav.catalog': { en: 'Catalog', max: 16 },
   'bottomNav.profile': { en: 'Profile', max: 16 },
   'bottomNav.cart': { en: 'Cart', max: 16 },
   'bottomNav.reviews': { en: 'Reviews', max: 16 },

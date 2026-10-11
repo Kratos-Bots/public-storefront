@@ -11,12 +11,12 @@
   min-height: 44px;
   padding: 0;
   font-family: var(--sf-font-mono);
-  font-size: 10px;
+  font-size: calc(10px * var(--sf-text-scale, 1));
   font-weight: 500;
   letter-spacing: 0.22em;
   text-transform: uppercase;
   white-space: nowrap;
-  color: var(--sf-block-fg, var(--sf-muted));
+  color: var(--sf-block-fg, var(--sf-text));
   border-radius: var(--sf-card-radius);
   text-decoration: none;
 }
@@ -29,6 +29,14 @@
 .link:focus-visible {
   outline: 2px solid var(--sf-primary);
   outline-offset: 2px;
+}
+
+/* The star keeps its 44px tap target but takes only 28px of the row: the extra 16px lies over the gaps either side, which
+   are wider than that, so no other control's box is overlapped and the search field keeps its room. */
+@media (max-width: 61.99em) {
+  .link {
+    margin-inline: -0.5rem;
+  }
 }
 
 .glyph {

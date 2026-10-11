@@ -50,7 +50,7 @@ afterEach(() => {
 describe('BottomNav items', () => {
   it('shows Shop, Profile, Cart, Reviews and Support in that order, each a link with a label', () => {
     mount();
-    expect(labels()).toEqual(['Shop', 'Profile', 'Cart', 'Reviews', 'Support']);
+    expect(labels()).toEqual(['Catalog', 'Profile', 'Cart', 'Reviews', 'Support']);
     expect(within(nav()!).getAllByRole('link').map((a) => a.getAttribute('href'))).toEqual(['/', '/login', '/cart', '/reviews', '/support']);
   });
   it('sends Profile to the profile page once signed in, and to sign-in before', () => {
@@ -67,7 +67,7 @@ describe('BottomNav items', () => {
   it('drops Profile when accounts are off, Cart when ordering is off, Reviews when reviews are off', () => {
     h.settings = { currency: 'GBP', features: { accounts: false, ordering: false } };
     mount();
-    expect(labels()).toEqual(['Shop', 'Support']);
+    expect(labels()).toEqual(['Catalog', 'Support']);
   });
   it('shows the cart count as a badge that follows the cart, and names it for screen readers', () => {
     useCartStore.setState({ lines: [line(2), { ...line(3), productId: 13 }], mode: 'local' });
@@ -83,7 +83,7 @@ describe('BottomNav items', () => {
 
 describe('BottomNav active item', () => {
   it.each([
-    ['/', 'Shop'], ['/c/serums', 'Shop'], ['/p/12', 'Shop'], ['/cart', 'Cart'], ['/account/profile', 'Profile'], ['/account/orders', 'Profile'],
+    ['/', 'Catalog'], ['/c/serums', 'Catalog'], ['/p/12', 'Catalog'], ['/cart', 'Cart'], ['/account/profile', 'Profile'], ['/account/orders', 'Profile'],
     ['/reviews', 'Reviews'], ['/support', 'Support'],
   ])('marks the item for %s as the current page: %s', (path, label) => {
     mount(path);
