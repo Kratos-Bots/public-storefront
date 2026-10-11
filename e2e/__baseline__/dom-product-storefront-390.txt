@@ -23,23 +23,17 @@ title: Alpine Extract 10ml — Northbound Supply
 </div>
 </div>
 <div class="_actions_H">
-<a class="_action_H " aria-label="Your account" href="/account" data-discover="true">
-<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
-<circle cx="12" cy="8" r="3.6">
-</circle>
-<path d="M4.6 20.2c1.1-3.7 4-5.6 7.4-5.6s6.3 1.9 7.4 5.6">
-</path>
-</svg>
-</a>
-<a class="_action_H " aria-label="Cart, 0 items" href="/cart" data-discover="true">
-<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
-<path d="M5 7h14l-1.3 12.1a1.5 1.5 0 0 1-1.5 1.4H7.8a1.5 1.5 0 0 1-1.5-1.4L5 7z">
-</path>
-<path d="M9 7V5a3 3 0 0 1 6 0v2">
-</path>
-</svg>
-</a>
 </div>
+<button type="button" class="_action_H _button_H" aria-label="Open menu" aria-haspopup="dialog" aria-expanded="false" data-sf-part="header-menu">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
+<path d="M4 7h16">
+</path>
+<path d="M4 12h16">
+</path>
+<path d="M4 17h16">
+</path>
+</svg>
+</button>
 </div>
 </header>
 <aside aria-label="Store notices">
@@ -304,6 +298,10 @@ title: Alpine Extract 10ml — Northbound Supply
 </div>
 <div>
 <div class="m_f11b401e mantine-Drawer-root" id="mantine-ID" style="--drawer-size: 88dvh; --drawer-flex: 0 0 calc(100% - var(--drawer-offset, 0rem) * 2); --drawer-height: var(--drawer-size); --drawer-align: flex-end; --mb-z-index: 200; --mb-padding: 0rem;">
+</div>
+</div>
+<div>
+<div class="m_f11b401e mantine-Drawer-root" id="mantine-ID" style="--drawer-size: min(20rem, 86vw); --drawer-justify: flex-end; --mb-z-index: 200; --mb-padding: 0rem;">
 </div>
 </div>
 <div>
