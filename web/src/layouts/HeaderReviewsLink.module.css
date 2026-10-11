@@ -58,3 +58,11 @@
     display: none;
   }
 }
+
+/* On the narrowest phones, with the star in the row, the search field has no room for the word "Search" (it would be clipped
+   to "Sea"): it becomes icon-only (the placeholder goes transparent; the field keeps its accessible name). */
+@media (max-width: 24.25em) {
+  :global([data-sf-part='header']):has(.link:not(:global(.sf-hide-mobile))) input::placeholder {
+    color: transparent;
+  }
+}

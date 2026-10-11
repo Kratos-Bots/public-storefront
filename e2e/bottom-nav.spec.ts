@@ -264,9 +264,9 @@ test.describe('the header Reviews link', () => {
     });
   }
 
-  for (const layout of ['menu', 'webapp'] as const) {
-    test(`${layout} at 390 with the bar off: the search field keeps room for its placeholder next to the star`, async ({ page }) => {
-      await setup(page, { layout, navOption: false, reviews: {} });
+  for (const [layout, width, height] of [['menu', 390, 844], ['webapp', 390, 844], ['menu', 360, 640], ['webapp', 360, 640]] as const) {
+    test(`${layout} at ${width} with the bar off: the search field keeps room for its placeholder, the star overlaps no neighbour and nothing overflows`, async ({ page }) => {
+      await setup(page, { layout, width, height, navOption: false, reviews: {} });
       await page.goto('/');
       const star = page.locator('[data-sf-part="header"]').getByRole('link', { name: 'Reviews' });
       await expect(star).toBeVisible();
@@ -281,10 +281,28 @@ test.describe('the header Reviews link', () => {
         return c.measureText((el as HTMLInputElement).placeholder).width + parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
       });
       const box = (await field.boundingBox())!;
-      expect(box.width, 'search field wide enough for its placeholder').toBeGreaterThanOrEqual(need + 4);
+      // Either the placeholder fits, or the field has gone icon-only (placeholder transparent): never a clipped word.
+      const hidden = await field.evaluate((el) => getComputedStyle(el, '::placeholder').color === 'rgba(0, 0, 0, 0)');
+      if (width <= 388) expect(hidden, 'icon-only field on the narrowest phones').toBe(true);
+      else expect(hidden).toBe(false);
+      if (!hidden) expect(box.width, 'search field wide enough for its placeholder').toBeGreaterThanOrEqual(need + 4);
       const s = (await star.boundingBox())!;
       expect(s.width).toBeGreaterThanOrEqual(44);
       expect(s.height).toBeGreaterThanOrEqual(44);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+      // The star's 44px box lies over the gaps either side of it, never over another control's box.
+      const others = await page.evaluate(() => {
+        const header = document.querySelector('[data-sf-part="header"]')!;
+        const star = Array.from(header.querySelectorAll('a')).find((a) => a.getAttribute('aria-label') === 'Reviews')!;
+        return Array.from(header.querySelectorAll('a, button, input'))
+          .filter((el) => el !== star && !star.contains(el) && el.getBoundingClientRect().width > 0)
+          .map((el) => { const r = el.getBoundingClientRect(); return { name: el.getAttribute('aria-label') ?? el.tagName, left: r.left, right: r.right, top: r.top, bottom: r.bottom }; });
+      });
+      expect(others.length).toBeGreaterThanOrEqual(4);
+      for (const o of others) {
+        const apart = o.right <= s.x || o.left >= s.x + s.width || o.bottom <= s.y || o.top >= s.y + s.height;
+        expect(apart, `star overlaps ${o.name}`).toBe(true);
+      }
     });
   }
 
