@@ -1,0 +1,80 @@
+/* The review box is an ordinary order card; only what is specific to it is styled here, all in the page's tokens. */
+.card {
+  gap: 0.75rem;
+}
+
+.card form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.lede {
+  margin: -0.5rem 0 0;
+  font-size: calc(0.9375rem * var(--sf-text-scale, 1));
+  line-height: 1.5;
+  color: var(--sf-block-fg, var(--sf-muted));
+}
+
+/* The stars are the one expressive thing here: large, left-aligned with the text, on the accent. The picker's
+   44px targets bleed 8px past the glyph, so pull the first one back to the text edge. */
+.rating {
+  margin-left: -8px;
+}
+
+.counter {
+  margin: 0;
+  align-self: flex-end;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--sf-faint);
+}
+
+.counter[data-over='true'] {
+  color: var(--sf-danger);
+}
+
+.error {
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--sf-danger);
+  border-radius: var(--sf-card-radius);
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--sf-danger);
+}
+
+.hint {
+  margin: -0.4rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--sf-faint);
+}
+
+/* A review already sent, read back. */
+.quote {
+  margin: 0;
+  font-size: calc(1rem * var(--sf-text-scale, 1));
+  line-height: 1.55;
+  color: var(--sf-block-fg, var(--sf-text));
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+.quoteEmpty {
+  composes: quote;
+  color: var(--sf-block-fg, var(--sf-muted));
+}
+
+.status {
+  margin: 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--sf-line);
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--sf-block-fg, var(--sf-muted));
+}
+
+.status[data-status='approved'] {
+  color: var(--sf-block-fg, var(--sf-success));
+}

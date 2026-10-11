@@ -13,6 +13,7 @@ vi.mock('@/features/notices/NoticeBanners.tsx', () => ({ NoticeBanners: () => nu
 vi.mock('@/features/notices/CutoffBar.tsx', () => ({ CutoffBar: () => null }));
 vi.mock('@/features/auth/LoginModal.tsx', () => ({ LoginModal: () => null }));
 vi.mock('@/features/unpaid-prompt/UnpaidOrderPrompt.tsx', () => ({ UnpaidOrderPrompt: () => null }));
+vi.mock('@/features/review-prompt/ReviewPrompt.tsx', () => ({ ReviewPrompt: () => null }));
 vi.mock('@/features/cart/CartDrawer.tsx', () => ({ CartDrawer: () => null, useCartDrawerReady: () => true }));
 vi.mock('@/features/cart/MobileCartBar.tsx', () => ({ MobileCartBar: () => <i data-testid="cart-bar" />, useMobileCartBar: () => false }));
 vi.mock('@/features/webapp/PrimaryActionBar.tsx', () => ({ PrimaryActionBar: () => <i data-testid="primary-bar" />, usePrimaryBarShowing: () => false }));

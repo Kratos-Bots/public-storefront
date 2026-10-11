@@ -1,0 +1,29 @@
+/* A quiet line under the template's footer, in the template's own colours. */
+.strip {
+  display: flex;
+  justify-content: center;
+  padding: 0.5rem 1rem 1.25rem;
+  background: var(--sf-bg);
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 0.5rem;
+  font-size: 0.875rem;
+  color: var(--sf-muted);
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+}
+
+.link:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) {
+  .link:hover {
+    color: var(--sf-text);
+  }
+}

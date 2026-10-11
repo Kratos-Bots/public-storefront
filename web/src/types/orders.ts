@@ -1,3 +1,4 @@
+import type { OrderReviewState } from '@/types/reviews.ts';
 import type { CancelBlockedBy, ShippingAddress } from '@/types/public-order.ts';
 
 export interface OrderSummary { reference: string; status: string; createdAt: string; totalAmount: number; outstandingBalance: number }
@@ -13,6 +14,8 @@ export interface OrderDetail {
   outstandingBalance: number; shipments: OrderShipment[];
   canCancel?: boolean; cancelBlockedBy?: CancelBlockedBy | null;
   shippingAddress?: ShippingAddress | null;
+  /** Absent on backends older than storefront reviews. */
+  review?: OrderReviewState;
 }
 
 /** An order the customer can still pay, as `GET storefront/orders/unpaid` returns it. */

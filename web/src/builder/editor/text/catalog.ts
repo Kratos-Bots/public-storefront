@@ -42,6 +42,7 @@ export const AREA_TITLES: Record<string, string> = {
   order: 'Order status',
   payment: 'Payment and order placed',
   tracking: 'Tracking',
+  reviews: 'Reviews',
   verify: 'Product check',
   wholesale: 'Wholesale',
   webapp: 'Telegram buttons',

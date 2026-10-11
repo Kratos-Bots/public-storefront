@@ -6,6 +6,7 @@ import { NoticeBanners } from '@/features/notices/NoticeBanners.tsx';
 import { CutoffBar } from '@/features/notices/CutoffBar.tsx';
 import { LoginModal } from '@/features/auth/LoginModal.tsx';
 import { UnpaidOrderPrompt } from '@/features/unpaid-prompt/UnpaidOrderPrompt.tsx';
+import { ReviewPrompt } from '@/features/review-prompt/ReviewPrompt.tsx';
 import { CartDrawer } from '@/features/cart/CartDrawer.tsx';
 import { MobileCartBar, useMobileCartBar } from '@/features/cart/MobileCartBar.tsx';
 import { HeaderBar, legacyHeaderSlots } from '@/layouts/header-parts.tsx';
@@ -64,6 +65,7 @@ export function StorefrontFrame({ children, cartBar = true }: { children: ReactN
 
       {features.accounts ? <LoginModal /> : null}
       <UnpaidOrderPrompt />
+      <ReviewPrompt />
 
       <Slot name="Overlay" />
     </div>

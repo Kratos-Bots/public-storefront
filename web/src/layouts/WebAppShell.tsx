@@ -6,6 +6,7 @@ import { NoticeBanners } from '@/features/notices/NoticeBanners.tsx';
 import { CutoffBar } from '@/features/notices/CutoffBar.tsx';
 import { LoginModal } from '@/features/auth/LoginModal.tsx';
 import { UnpaidOrderPrompt } from '@/features/unpaid-prompt/UnpaidOrderPrompt.tsx';
+import { ReviewPrompt } from '@/features/review-prompt/ReviewPrompt.tsx';
 import { PrimaryActionBar, usePrimaryBarShowing } from '@/features/webapp/PrimaryActionBar.tsx';
 import { WebAppCartBar } from '@/features/webapp/WebAppCartBar.tsx';
 import { useTelegramChrome } from '@/features/webapp/useTelegramChrome.ts';
@@ -60,6 +61,7 @@ export function WebAppFrame({ children }: { children: ReactNode; cartBar?: boole
 
       {features.accounts && !native ? <LoginModal /> : null}
       <UnpaidOrderPrompt />
+      <ReviewPrompt />
 
       <Slot name="Overlay" />
     </div>

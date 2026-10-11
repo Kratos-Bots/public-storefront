@@ -96,7 +96,7 @@ const settled = (d: PuckDoc, key: DocKey) => { const r = validateDoc(d, key, 'st
 describe('contract', () => {
   it('covers every part of the three containers', () => {
     expect(NEW_PARTS.sort()).toEqual(['AccountGreeting', 'AccountTabs', 'OrderBackLink', 'OrderBalance', 'OrderHeading', 'OrderItems',
-      'OrderPayments', 'OrderParcels', 'OrderAddress', 'OrdersEmpty', 'OrdersHeading', 'OrdersMore', 'OrdersRows'].sort());
+      'OrderPayments', 'OrderParcels', 'OrderReview', 'OrderAddress', 'OrdersEmpty', 'OrdersHeading', 'OrdersMore', 'OrdersRows'].sort());
   });
   it.each(NEW_PARTS)('%s: family and style match the stage 4 table', (name) => {
     const def = BLOCKS[name]!;
@@ -147,7 +147,7 @@ describe('rules', () => {
     expect(rulesOf(doc([nav([...head, { ...p('nav', name), props: { id: 'dup' } }])]))).toContain(`part-required:AccountNav.${name}`);
     expect(rulesOf(doc([nav(head)]))).not.toContain(`part-required:AccountNav.${name}`);
   });
-  it.each([['OrdersList', ['OrdersRows', 'OrdersEmpty'], ['OrdersHeading', 'OrdersMore']], ['OrderDetail', ['OrderHeading', 'OrderItems'], ['OrderBackLink', 'OrderBalance', 'OrderAddress', 'OrderPayments', 'OrderParcels']]] as const)(
+  it.each([['OrdersList', ['OrdersRows', 'OrdersEmpty'], ['OrdersHeading', 'OrdersMore']], ['OrderDetail', ['OrderHeading', 'OrderItems'], ['OrderBackLink', 'OrderBalance', 'OrderReview', 'OrderAddress', 'OrderPayments', 'OrderParcels']]] as const)(
     '%s: required and unique parts', (container, required, optional) => {
       const full = (): ComponentData[] => SPECS[container]!.defaultSlots({}, { layout: 'storefront', id: 'k' }).content!;
       const key = DOC_OF[container]!;
@@ -192,7 +192,7 @@ describe('upgrade (spec section 8)', () => {
     expect(types((out.props.body as ComponentData[])[0]!.props.content)).toEqual(['OrdersHeading', 'OrdersRows', 'OrdersMore', 'OrdersEmpty']);
   });
   it.each([['OrdersList', ['OrdersHeading', 'OrdersRows', 'OrdersMore', 'OrdersEmpty']],
-    ['OrderDetail', ['OrderBackLink', 'OrderHeading', 'OrderBalance', 'OrderItems', 'OrderAddress', 'OrderParcels', 'OrderPayments']]] as const)(
+    ['OrderDetail', ['OrderBackLink', 'OrderHeading', 'OrderBalance', 'OrderItems', 'OrderReview', 'OrderAddress', 'OrderParcels', 'OrderPayments']]] as const)(
     '%s: absent content equals the defaults, [] is untouched, a second pass is idempotent', (type, expected) => {
       const once = upgradeItems(stored(type, {}), 'storefront');
       expect(types(once[0]!.props.content)).toEqual(expected);

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'react-router';
 import { fetchUnpaidOrders } from '@/api/orders.ts';
@@ -17,11 +18,14 @@ import { useUiStore } from '@/stores/ui.ts';
 // It is the customer who said it: another one signing in within the same load (a session that expired, a Telegram
 // account switch; neither reloads) is asked for themselves.
 let dismissedFor: number | null = null;
+// Who the pop-up has actually been put in front of during this load: the review reminder stays away for the whole load.
+let shownFor: number | null = null;
 export const isDismissed = (customerId: number | null) => customerId !== null && dismissedFor === customerId;
 export const dismissForThisLoad = (customerId: number | null) => { if (customerId !== null) dismissedFor = customerId; };
 /** Tests stand in for a page load. */
-export const resetDismissalForTests = () => { dismissedFor = null; };
+export const resetDismissalForTests = () => { dismissedFor = null; shownFor = null; };
 
+const unpaidKey = (customerId: number | null) => ['orders', 'unpaid', customerId] as const;
 const QUERY = { retry: false, staleTime: 60_000, refetchOnWindowFocus: false } as const;
 
 /**
@@ -36,28 +40,53 @@ const QUERY = { retry: false, staleTime: 60_000, refetchOnWindowFocus: false } a
  * hook waits for the profile the account pages already load (read from the cache, never requested here) to say
  * `shopAccess: true`, and stays off once the access gate has been told "denied".
  */
+/** Whether the shop has refused this customer (a restricted shop that has not allowed them). */
+export function useShopRefused(loggedIn: boolean): boolean {
+  const denied = accessGate((s) => s.denied);
+  const restricted = accessOf(useSettings()).storefront === 'restricted';
+  // Disabled: this only subscribes to the cache entry the boundary / account layout fill; it never fetches.
+  const profile = useQuery({ queryKey: PROFILE_KEY, queryFn: fetchProfile, enabled: false });
+  return denied || (restricted && loggedIn && profile.data?.shopAccess !== true);
+}
+
 export function useUnpaidOrder(): { order: PromptOrder | null; more: boolean } {
   const { pathname } = useLocation();
   const loggedIn = useSessionStore(selectIsLoggedIn);
   const customerId = useSessionStore((s) => s.customer?.id ?? null);
   // Never on top of the sign-in dialog or the cart drawer: it may appear once they close.
   const otherDialogOpen = useUiStore((s) => s.loginOpen || s.cartOpen);
-  const denied = accessGate((s) => s.denied);
-  const restricted = accessOf(useSettings()).storefront === 'restricted';
-  // Disabled: this only subscribes to the cache entry the boundary / account layout fill; it never fetches.
-  const profile = useQuery({ queryKey: PROFILE_KEY, queryFn: fetchProfile, enabled: false });
-  const refused = denied || (restricted && loggedIn && profile.data?.shopAccess !== true);
+  const refused = useShopRefused(loggedIn);
   const active = loggedIn && promptAllowedOn(pathname) && !isBuilderMode() && !isPreviewMode() && !isDismissed(customerId) && !otherDialogOpen && !refused;
 
   const signedIn = useQuery({
     // Keyed by customer: a different login without a reload never reads the previous one's list.
-    queryKey: ['orders', 'unpaid', customerId],
+    queryKey: unpaidKey(customerId),
     queryFn: fetchUnpaidOrders,
     enabled: active && customerId !== null,
     ...QUERY,
   });
 
-  if (!active) return { order: null, more: false };
   const list = signedIn.isError || !Array.isArray(signedIn.data) ? [] : signedIn.data;
-  return { order: list[0] ? fromUnpaid(list[0]) : null, more: list.length > 1 };
+  const order = active && list[0] ? fromUnpaid(list[0]) : null;
+  useEffect(() => {
+    if (order && customerId !== null) shownFor = customerId;
+  }, [order, customerId]);
+  if (!active) return { order: null, more: false };
+  return { order, more: list.length > 1 };
+}
+
+export type UnpaidState = 'waiting' | 'blocked' | 'clear';
+
+/**
+ * Where the unpaid-order pop-up stands for this customer in this page load, for whatever must not share a load with it
+ * (the review reminder). `waiting`: its lookup has not answered yet; `blocked`: it is showing, was shown, or the customer
+ * was dealt with (dismissed it, or opened an order they owe on); `clear`: nothing unpaid, or the lookup failed.
+ * It only reads the lookup's cache entry, so it never asks the backend itself.
+ */
+export function useUnpaidState(customerId: number | null): UnpaidState {
+  const query = useQuery({ queryKey: unpaidKey(customerId), queryFn: fetchUnpaidOrders, enabled: false, ...QUERY });
+  if (customerId !== null && (isDismissed(customerId) || shownFor === customerId)) return 'blocked';
+  if (query.isError) return 'clear';
+  if (query.status === 'pending' || query.data === undefined) return 'waiting';
+  return Array.isArray(query.data) && query.data.length > 0 ? 'blocked' : 'clear';
 }

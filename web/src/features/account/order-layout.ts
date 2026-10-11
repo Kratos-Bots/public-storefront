@@ -5,7 +5,7 @@ import type { OrderDetail } from '@/types/orders.ts';
 export type OrderArea = 'head' | 'main' | 'side';
 
 const AREA: Record<string, OrderArea> = {
-  OrderBackLink: 'head', OrderHeading: 'head', OrderBalance: 'main', OrderItems: 'main',
+  OrderBackLink: 'head', OrderHeading: 'head', OrderBalance: 'main', OrderItems: 'main', OrderReview: 'main',
   OrderAddress: 'side', OrderParcels: 'side', OrderPayments: 'side',
 };
 
@@ -39,6 +39,7 @@ export function silentParts(order: OrderDetail): Set<string> {
   if (!order.shippingAddress) silent.add('OrderAddress');
   if (order.shipments.length === 0) silent.add('OrderParcels');
   if (shownPayments(order.payments).length === 0) silent.add('OrderPayments');
+  if (!order.review?.canReview && !order.review?.existing) silent.add('OrderReview');
   return silent;
 }
 

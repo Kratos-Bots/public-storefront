@@ -283,7 +283,7 @@ The same deployment is the bot's Mini App — nothing extra to build. To switch 
 
 Inside Telegram the storefront always uses the `webapp` layout and signs the shopper in from
 `initData`; choosing **Web app** in Admin → Storefront → Features makes browsers use it too.
-Reviews, FAQ and Giveaways are not in the storefront yet — prefer Beta over Forced until they are.
+Reviews are in the storefront (a form on the order page, a reminder dialog and a /reviews page, all behind the shop's reviews switch, and a Telegram notification's "Leave a review" button opens the form inside the Mini App). FAQ and Giveaways are not yet — prefer Beta over Forced until they are.
 
 ## Release process
 
