@@ -146,38 +146,31 @@ describe('inside Telegram with the SecondaryButton (7.10+)', () => {
     expect(tg.handlers.secondary).toHaveLength(1);
   });
 
-  it('with no primary action, Back alone below and the header arrow too, one handler each, each going back', async () => {
+  it('with no primary action, no lone bottom Back: the header arrow alone, one handler, going back', async () => {
     const tg = installTelegram('8.0');
     render(<MemoryRouter initialEntries={['/', '/account']} initialIndex={1}><Harness /></MemoryRouter>);
-    await waitFor(() => expect(tg.secondary.isVisible).toBe(true));
     await waitFor(() => expect(tg.back.isVisible).toBe(true));
+    await new Promise((r) => setTimeout(r, 10));
     expect(tg.main.isVisible).toBe(false);
-    expect(tg.handlers.secondary).toHaveLength(1);
+    expect(tg.secondary.isVisible).toBe(false);
+    expect(tg.handlers.secondary).toHaveLength(0);
     expect(tg.handlers.back).toHaveLength(1);
     act(() => tg.handlers.back.slice().forEach((h) => h()));
     expect(screen.getByTestId('where').textContent).toBe('/');
   });
 
-  it('with no primary action, the bottom Back goes back too', async () => {
-    const tg = installTelegram('8.0');
-    render(<MemoryRouter initialEntries={['/', '/account']} initialIndex={1}><Harness /></MemoryRouter>);
-    await waitFor(() => expect(tg.secondary.isVisible).toBe(true));
-    act(() => tg.handlers.secondary.slice().forEach((h) => h()));
-    expect(screen.getByTestId('where').textContent).toBe('/');
-  });
-
-  it('with no primary action, a modal hides both back controls and they return', async () => {
+  it('with no primary action, a modal hides the header arrow and it returns', async () => {
     const tg = installTelegram('8.0');
     mount('/account');
-    await waitFor(() => expect(tg.secondary.isVisible && tg.back.isVisible).toBe(true));
+    await waitFor(() => expect(tg.back.isVisible).toBe(true));
     let dialog!: HTMLElement;
     act(() => { dialog = openDialog(); });
-    await waitFor(() => expect(tg.secondary.isVisible || tg.back.isVisible).toBe(false));
-    expect(tg.handlers.secondary).toHaveLength(0);
+    await waitFor(() => expect(tg.back.isVisible).toBe(false));
+    expect(tg.secondary.isVisible).toBe(false);
     expect(tg.handlers.back).toHaveLength(0);
     act(() => { dialog.remove(); });
-    await waitFor(() => expect(tg.secondary.isVisible && tg.back.isVisible).toBe(true));
-    expect(tg.handlers.secondary).toHaveLength(1);
+    await waitFor(() => expect(tg.back.isVisible).toBe(true));
+    expect(tg.secondary.isVisible).toBe(false);
     expect(tg.handlers.back).toHaveLength(1);
   });
 

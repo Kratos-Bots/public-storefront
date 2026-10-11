@@ -13,6 +13,19 @@ describe('defaultPrimaryAction', () => {
     expect(defaultPrimaryAction({ ...base, pathname: '/account/orders' })?.to).toBe('/cart');
   });
 
+  it('inside Telegram, offers the cart on the catalogue and category listings only', () => {
+    const tg = { ...base, browseOnCatalogOnly: true };
+    expect(defaultPrimaryAction(tg)?.to).toBe('/cart');
+    expect(defaultPrimaryAction({ ...tg, pathname: '/c/tea' })?.to).toBe('/cart');
+    for (const pathname of ['/account', '/account/orders', '/p/sample-tea', '/reviews', '/support', '/login']) {
+      expect(defaultPrimaryAction({ ...tg, pathname })).toBeNull();
+    }
+  });
+
+  it('inside Telegram, /cart still offers checkout', () => {
+    expect(defaultPrimaryAction({ ...base, pathname: '/cart', browseOnCatalogOnly: true })?.label).toBe('Checkout · £24.00');
+  });
+
   it('offers checkout from the cart, to wherever checkout lives for this shopper', () => {
     expect(defaultPrimaryAction({ ...base, pathname: '/cart', checkoutTo: '/login?returnTo=%2Fcheckout' }))
       .toEqual({ label: 'Checkout · £24.00', to: '/login?returnTo=%2Fcheckout', disabled: false });

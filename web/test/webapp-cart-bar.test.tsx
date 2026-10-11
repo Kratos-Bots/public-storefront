@@ -195,7 +195,7 @@ describe('browser-mode web app', () => {
 });
 
 describe('inside Telegram', () => {
-  it('draws the running tab in the page and hides the MainButton, on the catalogue and a product', async () => {
+  it('draws the running tab in the page and hides the MainButton, on the catalogue and a category', async () => {
     const tg = installTelegram('8.0');
     mount('/');
     expect(bar()).not.toBeNull();
@@ -205,10 +205,32 @@ describe('inside Telegram', () => {
     expect(tg.main.isVisible).toBe(false);
     expect(tg.handlers.main).toHaveLength(0);
     cleanup();
-    mount('/p/sample-tea');
+    mount('/c/tea');
     expect(bar()).not.toBeNull();
     await new Promise((r) => setTimeout(r, 10));
     expect(tg.main.isVisible).toBe(false);
+  });
+
+  it.each(['/p/sample-tea', '/account', '/reviews', '/support'])('has no default action on %s: no running tab, no MainButton, no reserved room', async (path) => {
+    const tg = installTelegram('8.0');
+    mount(['/', path], 1);
+    await waitFor(() => expect(tg.back.isVisible).toBe(true));
+    await new Promise((r) => setTimeout(r, 10));
+    expect(bar()).toBeNull();
+    expect(tg.main.isVisible).toBe(false);
+    expect(tg.secondary.isVisible).toBe(false);
+    const { result } = renderHook(() => usePrimaryBarShowing(), { wrapper: ({ children }) => <MemoryRouter initialEntries={[path]}>{children}</MemoryRouter> });
+    expect(result.current).toBe(false);
+  });
+
+  it('shows the native Checkout on /cart with the header arrow alone, no bottom Back', async () => {
+    const tg = installTelegram('8.0');
+    mount(['/', '/cart'], 1);
+    await waitFor(() => expect(tg.main.isVisible).toBe(true));
+    await waitFor(() => expect(tg.back.isVisible).toBe(true));
+    expect(tg.main.text).toBe('Checkout · £24.00');
+    expect(tg.secondary.isVisible).toBe(false);
+    expect(tg.handlers.secondary).toHaveLength(0);
   });
 
   it('shows the native MainButton on /cart, with no running tab', async () => {
@@ -230,7 +252,7 @@ describe('inside Telegram', () => {
 
   it('the MainButton returns with one live handler when the shopper reaches /cart from a product', async () => {
     const tg = installTelegram('8.0');
-    mount(['/', '/p/sample-tea'], 1);
+    mount(['/', '/c/tea'], 1);
     expect(bar()).not.toBeNull();
     fireEvent.click(bar()!.querySelector('a[href="/cart"]')!);
     await waitFor(() => expect(tg.main.isVisible).toBe(true));
@@ -240,7 +262,7 @@ describe('inside Telegram', () => {
 
   it('Back moves to the header arrow alone: no SecondaryButton stacked under the running tab', async () => {
     const tg = installTelegram('8.0');
-    mount(['/', '/p/sample-tea'], 1);
+    mount(['/', '/c/tea'], 1);
     await waitFor(() => expect(tg.back.isVisible).toBe(true));
     await new Promise((r) => setTimeout(r, 10));
     expect(tg.secondary.isVisible).toBe(false);
@@ -252,7 +274,7 @@ describe('inside Telegram', () => {
 
   it('an older client keeps the header arrow too', async () => {
     const tg = installTelegram('7.9');
-    mount(['/', '/p/sample-tea'], 1);
+    mount(['/', '/c/tea'], 1);
     await waitFor(() => expect(tg.back.isVisible).toBe(true));
     expect(bar()).not.toBeNull();
     expect(tg.main.isVisible).toBe(false);
@@ -274,7 +296,7 @@ describe('inside Telegram', () => {
 
   it('hides under a dialog and the header Back stands down too, then everything returns', async () => {
     const tg = installTelegram('8.0');
-    mount(['/', '/p/sample-tea'], 1);
+    mount(['/', '/c/tea'], 1);
     await waitFor(() => expect(tg.back.isVisible).toBe(true));
     let dialog!: HTMLElement;
     act(() => { dialog = openDialog(); });
@@ -296,16 +318,16 @@ describe('inside Telegram', () => {
 
 describe('backControls with the running tab', () => {
   it('uses the header arrow only, whatever the SecondaryButton support', () => {
-    expect(backControls({ supportsSecondary: true, hasPrimaryAction: false, modalOpen: false, backAvailable: true, cartBar: true }))
+    expect(backControls({ supportsSecondary: true, pageAction: false, modalOpen: false, backAvailable: true }))
       .toEqual({ showHeaderBack: true, showBottomBack: false });
-    expect(backControls({ supportsSecondary: false, hasPrimaryAction: false, modalOpen: false, backAvailable: true, cartBar: true }))
+    expect(backControls({ supportsSecondary: false, pageAction: false, modalOpen: false, backAvailable: true }))
       .toEqual({ showHeaderBack: true, showBottomBack: false });
   });
 
   it('still shows nothing where there is no way back or under a modal', () => {
-    expect(backControls({ supportsSecondary: true, hasPrimaryAction: false, modalOpen: false, backAvailable: false, cartBar: true }))
+    expect(backControls({ supportsSecondary: true, pageAction: false, modalOpen: false, backAvailable: false }))
       .toEqual({ showHeaderBack: false, showBottomBack: false });
-    expect(backControls({ supportsSecondary: true, hasPrimaryAction: false, modalOpen: true, backAvailable: true, cartBar: true }))
+    expect(backControls({ supportsSecondary: true, pageAction: false, modalOpen: true, backAvailable: true }))
       .toEqual({ showHeaderBack: false, showBottomBack: false });
   });
 });

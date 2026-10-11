@@ -8,6 +8,7 @@ import { usePrimaryActionStore, type PrimaryAction } from '@/stores/primary-acti
 import { useServerCart } from '@/features/cart/useServerCart.ts';
 import { checkoutTarget } from '@/features/cart/checkout-target.ts';
 import { defaultPrimaryAction } from '@/features/webapp/default-action.ts';
+import { isTelegramWebApp } from '@/lib/telegram-webapp.ts';
 import { formatMoney } from '@/lib/format.ts';
 import { useText } from '@/text/runtime.tsx';
 
@@ -42,6 +43,7 @@ function useActionParts(): ActionParts {
     // A paused warehouse takes no orders: no "View cart", no "Checkout" (the header's cart button still opens the basket).
     ordering: features.ordering && !paused,
     blocked: issues.some((i) => i.inactive || i.belowMin || i.aboveMax),
+    browseOnCatalogOnly: isTelegramWebApp(),
   }, t);
   const label = fallback?.label ?? null;
   const to = fallback?.to ?? null;
