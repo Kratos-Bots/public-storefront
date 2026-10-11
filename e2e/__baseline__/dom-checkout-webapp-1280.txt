@@ -78,7 +78,6 @@ title: Northbound Supply
 <div class="_root_H anim-fade">
 <span class="_rule_H" aria-hidden="true">
 </span>
-<span class="_eyebrow_H">Checkout</span>
 <h2 class="_title_H">There's nothing to check out</h2>
 <p class="_description_H">Add something to your cart and we'll pick this back up.</p>
 <div class="_action_H">

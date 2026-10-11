@@ -195,6 +195,64 @@ title: Northbound Supply
 </div>
 </div>
 </main>
+<nav class="_nav_H glass _webapp_H" aria-label="Shop menu" data-sf-part="bottom-nav">
+<ul class="_list_H">
+<li class="_cell_H">
+<a class="_item_H" data-sf-nav="catalog" href="/" data-discover="true">
+<span class="_icon_H">
+<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
+<path d="M4 10.5 12 4l8 6.5V20H4v-9.5z">
+</path>
+<path d="M10 20v-5.5h4V20">
+</path>
+</svg>
+</span>
+<span class="_label_H">Catalog</span>
+</a>
+</li>
+<li class="_cell_H">
+<a class="_item_H" aria-current="page" data-sf-nav="profile" href="/account/profile" data-discover="true">
+<span class="_icon_H">
+<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
+<circle cx="12" cy="8" r="3.6">
+</circle>
+<path d="M4.6 20.2c1.1-3.7 4-5.6 7.4-5.6s6.3 1.9 7.4 5.6">
+</path>
+</svg>
+</span>
+<span class="_label_H">Profile</span>
+</a>
+</li>
+<li class="_cell_H">
+<a class="_item_H" data-sf-nav="cart" href="/cart" data-discover="true">
+<span class="_icon_H">
+<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
+<path d="M5 7h14l-1.3 12.1a1.5 1.5 0 0 1-1.5 1.4H7.8a1.5 1.5 0 0 1-1.5-1.4L5 7z">
+</path>
+<path d="M9 7V5a3 3 0 0 1 6 0v2">
+</path>
+</svg>
+</span>
+<span class="_label_H">Cart</span>
+</a>
+</li>
+<li class="_cell_H">
+<a class="_item_H" data-sf-nav="support" href="/support" data-discover="true">
+<span class="_icon_H">
+<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
+<circle cx="12" cy="12" r="8.6">
+</circle>
+<path d="M9.6 9.7a2.5 2.5 0 0 1 4.8.8c0 1.7-2.4 2-2.4 3.6">
+</path>
+<path d="M12 16.9v.1">
+</path>
+</svg>
+</span>
+<span class="_label_H">Support</span>
+</a>
+</li>
+</ul>
+</nav>
 </div>
 </div>
     
