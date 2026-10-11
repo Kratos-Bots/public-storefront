@@ -1,0 +1,137 @@
+/* The phone's bottom navigation: five equal cells on a hairline, label under glyph. Drawn from the shop's tokens only
+   (surface, line, radius, mono voice, primary), so each template restyles it the way it restyles the cart bar above it.
+   The cart bars stack directly on top of this one; see --sf-nav-h in BottomNav.tsx. */
+.nav {
+  composes: glass from global;
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  /* Below the cart bars (30) and the header (30), above the sticky wholesale bar and contact strip (20). */
+  z-index: 25;
+  border-top: 1px solid var(--sf-line-strong);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* The Mini App's browser stand-in adds Telegram's own inset (0 outside a Mini App) to the browser's. Inside Telegram
+   only that inset counts: env(safe-area-inset-bottom) there would count the notch twice. */
+.webapp {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--tg-safe-bottom, 0px));
+}
+
+.telegram {
+  padding-bottom: var(--tg-safe-bottom, 0px);
+}
+
+/* Behind a dialog the bar goes unseen but keeps its place, so the page behind the dialog does not move. */
+.covered {
+  visibility: hidden;
+}
+
+/* The bar owns the foot's inset: whatever stacks above it drops its own, or the inset would count twice. */
+:global(:root):has(.nav) {
+  --sf-bar-safe: 0px;
+}
+
+/* Page clearance when only the bar is at the foot. The shells' own rules (cart bar showing) add it to theirs and win
+   on specificity. */
+:where(:root):has(.nav) {
+  --sf-bottom-inset: var(--sf-nav-h, 0px);
+}
+
+.list {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  max-width: var(--sf-rail-max, 48rem);
+  margin: 0 auto;
+  padding: 0;
+  list-style: none;
+}
+
+.cell {
+  display: flex;
+  min-width: 0;
+}
+
+.item {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  min-width: 44px;
+  min-height: 54px;
+  padding: 0.35rem 0.1rem 0.3rem;
+  color: var(--sf-muted);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 150ms ease;
+}
+
+.item:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: -4px;
+  border-radius: var(--sf-card-radius);
+}
+
+.item:active {
+  background: var(--sf-surface);
+}
+
+/* The page you are on: full-strength label and a bar in the primary lying on the rule above. */
+.item[aria-current='page'] {
+  color: var(--sf-text);
+}
+
+.item[aria-current='page']::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 22%;
+  right: 22%;
+  height: 2px;
+  background: var(--sf-primary);
+}
+
+.icon {
+  position: relative;
+  display: inline-flex;
+}
+
+.label {
+  max-width: 100%;
+  overflow: hidden;
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.badge {
+  position: absolute;
+  top: -6px;
+  left: 55%;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: var(--sf-pill-radius);
+  background: var(--sf-primary);
+  color: var(--sf-bg);
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 16px;
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .item {
+    transition: none;
+  }
+}

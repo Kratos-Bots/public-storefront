@@ -63,31 +63,31 @@
 /* Room for an in-page bar: the single-button bar in a browser tab (Telegram's MainButton sits outside the WebView),
    or the running-tab bar anywhere (see .native.withBar below for inside Telegram). */
 .withBar {
-  padding-bottom: calc(76px + var(--tg-safe-bottom, 0px));
+  padding-bottom: calc(76px + var(--sf-nav-h, 0px) + var(--sf-bar-safe, var(--tg-safe-bottom, 0px)));
 }
 
 /* The same clearance, told to the document (see StorefrontShell). */
 :global(:root):has(.withBar) {
-  --sf-bottom-inset: calc(76px + env(safe-area-inset-bottom, 0px) + var(--tg-safe-bottom, 0px));
+  --sf-bottom-inset: calc(76px + var(--sf-nav-h, 0px) + var(--sf-bar-safe, calc(env(safe-area-inset-bottom, 0px) + var(--tg-safe-bottom, 0px))));
 }
 
 /* Telegram keeps the WebView above its MainButton, but the home indicator can
    still cover the last row. */
 .native:not(.withBar) {
-  padding-bottom: var(--tg-safe-bottom, 0px);
+  padding-bottom: calc(var(--sf-nav-h, 0px) + var(--sf-bar-safe, var(--tg-safe-bottom, 0px)));
 }
 
 /* The buttons themselves are outside the WebView, so only the home indicator is left to keep clear of. */
 :global(:root):has(.native:not(.withBar)) {
-  --sf-bottom-inset: var(--tg-safe-bottom, 0px);
+  --sf-bottom-inset: calc(var(--sf-nav-h, 0px) + var(--sf-bar-safe, var(--tg-safe-bottom, 0px)));
 }
 
 /* The running-tab bar is in the page even inside Telegram (the MainButton is hidden while it shows), so the
    content clears its 76px as well as the home indicator. Never env(): inside Telegram that counts the notch twice. */
 .native.withBar {
-  padding-bottom: calc(76px + var(--tg-safe-bottom, 0px));
+  padding-bottom: calc(76px + var(--sf-nav-h, 0px) + var(--sf-bar-safe, var(--tg-safe-bottom, 0px)));
 }
 
 :global(:root):has(.native.withBar) {
-  --sf-bottom-inset: calc(76px + var(--tg-safe-bottom, 0px));
+  --sf-bottom-inset: calc(76px + var(--sf-nav-h, 0px) + var(--sf-bar-safe, var(--tg-safe-bottom, 0px)));
 }

@@ -280,7 +280,8 @@ for (const [size, viewport] of VIEWPORTS) {
       await expect(page.getByText('People referred')).toBeVisible();
       await shot(page, `4-account-referrals-${size}`);
 
-      await page.getByRole('link', { name: 'Profile', exact: true }).click();
+      // Scoped to the page: the phone's bottom navigation bar has a Profile link too.
+      await page.locator('main').getByRole('link', { name: 'Profile', exact: true }).click();
       await expect(page.getByText('WhatsApp linked')).toBeVisible();
       await expect(page.getByText('Telegram not linked')).toBeVisible();
       await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();

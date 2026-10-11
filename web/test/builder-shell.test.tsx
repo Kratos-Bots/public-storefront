@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryRouter, RouterProvider } from 'react-router';
@@ -178,9 +178,11 @@ describe('PuckShell shell state', () => {
         </PageSetOverrideProvider>
       </QueryClientProvider>,
     );
-    expect(screen.getAllByRole('listitem')).toHaveLength(3);
+    // The page's own list: the phone's bottom navigation bar is a list too.
+    const page = () => within(document.querySelector<HTMLElement>('main')!);
+    expect(page().getAllByRole('listitem')).toHaveLength(3);
     fireEvent.change(screen.getByRole('textbox', { name: 'Search products' }), { target: { value: 'oak' } });
-    expect(screen.getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Oak shelf', 'Oak stool']);
+    expect(page().getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Oak shelf', 'Oak stool']);
   });
 });
 
