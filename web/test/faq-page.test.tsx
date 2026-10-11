@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
 import { MemoryRouter } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -22,14 +22,17 @@ const sections = [
   { id: 'xabc12345', title: 'Payment', body: 'Cards and bank transfer.' },
 ];
 
-const mount = () =>
-  render(
-    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+const mount = () => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const view = render(
+    <QueryClientProvider client={client}>
       <MantineProvider env="test">
         <MemoryRouter><FaqPage /></MemoryRouter>
       </MantineProvider>
     </QueryClientProvider>,
   );
+  return { ...view, client };
+};
 const headers = () => screen.getAllByRole('button').filter((b) => b.hasAttribute('aria-expanded'));
 
 beforeEach(() => {
@@ -45,6 +48,7 @@ describe('the FAQ page', () => {
     mount();
     expect(screen.getByRole('heading', { level: 1, name: 'Frequently asked questions' })).toBeInTheDocument();
     expect(screen.queryAllByRole('button')).toHaveLength(0);
+    expect(screen.getByRole('status')).toBeInTheDocument();
     resolve({ sections });
     await screen.findByRole('button', { name: 'Ordering Process' });
   });
@@ -126,6 +130,37 @@ describe('the FAQ page', () => {
     expect(document.title).toBe('Northbound Supply');
   });
 
+  it('keeps the list on screen when a background refetch fails', async () => {
+    fetchMock.mockResolvedValueOnce({ sections });
+    const { client } = mount();
+    await screen.findByRole('button', { name: 'Ordering Process' });
+    fetchMock.mockRejectedValue(new ApiError(500, 'Boom'));
+    await act(async () => { await client.refetchQueries({ queryKey: ['faq'] }); });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3), { timeout: 4000 });
+    expect(headers().map((b) => b.textContent)).toEqual(['Ordering Process', 'Shipping Info', 'Payment']);
+    expect(screen.queryByText('Boom')).toBeNull();
+  });
+
+  it('opens the first section when the open one disappears after a refetch', async () => {
+    fetchMock.mockResolvedValueOnce({ sections });
+    const { client } = mount();
+    await screen.findByRole('button', { name: 'Ordering Process' });
+    fireEvent.click(screen.getByRole('button', { name: 'Shipping Info' }));
+    fetchMock.mockResolvedValueOnce({ sections: [sections[0]!, sections[2]!] });
+    await act(async () => { await client.refetchQueries({ queryKey: ['faq'] }); });
+    await waitFor(() => expect(headers().map((b) => b.textContent)).toEqual(['Ordering Process', 'Payment']));
+    expect(headers().map((b) => b.getAttribute('aria-expanded'))).toEqual(['true', 'false']);
+  });
+
+  it('keeps everything closed when the shopper closed it, even after a refetch', async () => {
+    fetchMock.mockResolvedValue({ sections });
+    const { client } = mount();
+    await screen.findByRole('button', { name: 'Ordering Process' });
+    fireEvent.click(screen.getByRole('button', { name: 'Ordering Process' }));
+    await act(async () => { await client.refetchQueries({ queryKey: ['faq'] }); });
+    expect(headers().map((b) => b.getAttribute('aria-expanded'))).toEqual(['false', 'false', 'false']);
+  });
+
   it('shows the empty state when the list is empty', async () => {
     fetchMock.mockResolvedValue({ sections: [] });
     mount();
@@ -148,12 +183,20 @@ describe('the FAQ page', () => {
   });
 
   it('shows an error with a way to try again', async () => {
-    fetchMock.mockRejectedValueOnce(new ApiError(500, 'Boom'));
+    // Other errors get one retry (about a second) before the page gives up.
+    fetchMock.mockRejectedValue(new ApiError(500, 'Boom'));
     mount();
-    expect(await screen.findByText('Boom')).toBeInTheDocument();
-    fetchMock.mockResolvedValueOnce({ sections });
+    expect(await screen.findByText('Boom', {}, { timeout: 4000 })).toBeInTheDocument();
+    fetchMock.mockResolvedValue({ sections });
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     await screen.findByRole('button', { name: 'Ordering Process' });
+  });
+
+  it('does not retry a 401 or 403: the sign-in message shows at once', async () => {
+    fetchMock.mockRejectedValue(new ApiError(401, 'LOGIN_REQUIRED'));
+    mount();
+    await screen.findByText('Please sign in to continue.');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it('tells a shopper who must sign in first to sign in (401 LOGIN_REQUIRED)', async () => {

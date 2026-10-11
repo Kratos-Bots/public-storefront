@@ -48,7 +48,8 @@ export function FaqPage() {
       </>
     );
   }
-  if (query.isError) {
+  // A failed background refetch also sets isError; with the list already on screen that is not a failed page.
+  if (query.isError && !query.data) {
     return (
       <EmptyState
         as="h1"
@@ -59,7 +60,7 @@ export function FaqPage() {
     );
   }
 
-  const sections = query.data.sections;
+  const sections = query.data!.sections;
   if (sections.length === 0) return empty;
 
   return (
@@ -89,7 +90,8 @@ function Accordion({ sections }: { sections: FaqSection[] }) {
   const base = useId();
   // `undefined` is "nothing chosen yet": the first section is open. `null` is "the shopper closed it".
   const [chosen, setChosen] = useState<string | null | undefined>(undefined);
-  const openId = chosen === undefined ? sections[0]?.id ?? null : chosen;
+  // Nothing chosen yet, or the chosen section has gone (a refetch removed it): the first is open. Only the shopper's own close leaves all shut.
+  const openId = chosen === null ? null : chosen !== undefined && sections.some((s) => s.id === chosen) ? chosen : sections[0]?.id ?? null;
   const buttons = useRef<Array<HTMLButtonElement | null>>([]);
 
   // Up / Down / Home / End move between the headings; Tab, Enter and Space need nothing extra from a button.

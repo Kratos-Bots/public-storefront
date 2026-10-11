@@ -60,7 +60,7 @@ describe('linkify', () => {
       { kind: 'text', text: '\nnext' },
     ]);
   });
-  it('never makes a link of javascript:, data: or other schemes, or of markup', () => {
+  it('only ever makes http(s) hrefs: other schemes stay text, and markup is never parsed', () => {
     for (const hostile of ['javascript:alert(1)', 'data:text/html,<b>x</b>', '<script>alert(1)</script>', 'ftp://example.com/x', 'vbscript:x', '<a href="https://example.com">x</a>']) {
       const parts = linkify(hostile);
       const hrefs = parts.filter((p) => p.kind === 'link').map((p) => (p as { href: string }).href);
