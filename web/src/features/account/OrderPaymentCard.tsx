@@ -59,7 +59,7 @@ export function OrderPaymentCard({ order, payment, styleAttrs }: { order: OrderD
   if (!loaded && payment.isError && !lastFailed) { setLastFailed(true); setLastError(payment.error ?? null); }
   if (loaded && lastFailed) { setLastFailed(false); setLastError(null); }
   // What PaymentSection would draw: a way to pay, or crypto payments to show.
-  const payable = loaded && (loaded.payment?.canPay || visibleCryptoPayments(loaded).length > 0) ? loaded : null;
+  const payable = loaded && (loaded.payment?.canPay || loaded.payment?.partnerPending || visibleCryptoPayments(loaded).length > 0) ? loaded : null;
   const cancelShows = cancelView(order.canCancel, order.cancelBlockedBy);
   // The payment view is the fresher read: when it says the order has moved on, the account order is about to say
   // the same, and until it does nothing here should claim the balance cannot be paid.

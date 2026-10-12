@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { fetchOrder, fetchOrderPayment, fetchOrders } from '@/api/orders.ts';
 import { orderPaymentKey } from '@/features/order-status/queries.ts';
+import { trackPartnerWait } from '@/features/order-status/partner-pending.ts';
 import { paymentPollInterval } from '@/features/order-status/payment-state.ts';
 import { fetchProfile, fetchRedeemOptions } from '@/api/profile.ts';
 
@@ -64,7 +65,12 @@ export function useOrderPayment(reference: string, enabled: boolean) {
     enabled,
     retry: false,
     staleTime: 30_000,
-    refetchInterval: (query) => paymentPollInterval(query.state, Date.now() - watching.current.since),
+    refetchInterval: (query) =>
+      paymentPollInterval(
+        query.state,
+        Date.now() - watching.current.since,
+        trackPartnerWait(reference, query.state.data?.payment?.partnerPending === true) ?? 0,
+      ),
     refetchIntervalInBackground: true,
   });
 }

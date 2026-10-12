@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import type { Page, Route } from '@playwright/test';
 import type { Catalog, Product } from '../web/src/types/catalog.ts';
-import type { CheckoutPayment, CheckoutResult, LastCheckoutDetails, PaymentMethod, Quote, ShippingOption } from '../web/src/types/checkout.ts';
+import type { CheckoutPayment, CheckoutResult, LastCheckoutDetails, PaymentMethod, PaymentMethodsUnavailable, Quote, ShippingOption } from '../web/src/types/checkout.ts';
 import type { ServerCart, ServerCartLine, CartLineInput } from '../web/src/types/cart.ts';
 import type { OrderDetail, OrderSummary, PageMeta, UnpaidOrder } from '../web/src/types/orders.ts';
 import type { OrderReviewRecord, PublicReview, ReviewableOrder } from '../web/src/types/reviews.ts';
@@ -188,6 +188,19 @@ export const FOUR_METHODS: PaymentMethod[] = [
   { method: 'uk_bank_transfer', displayName: 'Bank transfer (UK)', type: 'offline', details: { 'Account Name': 'Example Shop Ltd', 'Sort Code': '00-00-00', 'Account Number': '00000000' }, feeType: null, feeValue: null, feeRateText: '', feeLabel: '', fee: 0, chargeTotal: 47.45 },
 ];
 
+/**
+ * Partner scope, synthetic: the store sells in USD, the warehouse's partner takes payment in EUR. `fee` / `chargeTotal`
+ * stay in the store currency; `chargeCurrency` / `settlementTotal` are what the shopper is charged. Pair with
+ * `tweakSettings: (s) => { s.currency = 'USD'; }`.
+ */
+export const PARTNER_EUR_METHODS: PaymentMethod[] = [
+  { method: 'crypto', displayName: 'Pay with crypto', type: 'crypto', details: null, feeType: null, feeValue: null, feeRateText: '', feeLabel: '', fee: 0, chargeTotal: 47.45, chargeCurrency: 'EUR', settlementTotal: 43.65,
+    cryptoOptions: [
+      { coin: 'usdt', network: 'polygon', coinLabel: 'USDT', networkLabel: 'Polygon', feeType: null, feeValue: null, feeRateText: '', feeLabel: '', fee: 0, chargeTotal: 47.45, chargeCurrency: 'EUR', settlementTotal: 42.3 },
+    ] },
+  { method: 'stripe', displayName: 'Pay by card', type: 'gateway', details: null, feeType: null, feeValue: null, feeRateText: '', feeLabel: '', fee: 0, chargeTotal: 47.45, chargeCurrency: 'EUR', settlementTotal: 43.65 },
+];
+
 /** Synthetic FAQ sections: the shop's default three, the last one an extra the owner added. */
 export const DEFAULT_FAQ: FaqSection[] = [
   { id: 'ordering', title: 'Ordering Process', body: 'Add what you want to your cart, then check out.\nYou will get an order number by email.' },
@@ -283,6 +296,13 @@ export interface InstallMocksOptions {
   cancelAnswers?: number | 'ok';
   /** What `GET storefront/service-points` answers with a postcode (default: three synthetic GB points). A number answers with that HTTP status instead. */
   servicePoints?: ServicePoint[] | number;
+  /** Every quote (signed in or guest) answers `paymentMethods: []` with this `paymentMethodsUnavailable`, until a test sets `MockState.quoteUnavailable` to null. */
+  partnerQuoteUnavailable?: PaymentMethodsUnavailable;
+  /**
+   * The order's payment view says `partnerPending` (no active payment) until its `resolveOnRead`th read, which answers a hosted
+   * EUR checkout; `null` never resolves.
+   */
+  partnerPending?: { resolveOnRead: number | null };
   /** What the checkout routes answer with as `payment` (default: a crypto address). */
   checkoutPayment?: CheckoutPayment;
   /** The reference the checkout routes answer with (default `E2E1`). */
@@ -406,6 +426,10 @@ export interface MockState {
   /** Bodies of the review submissions the page has sent. */
   reviewPosts: Array<Record<string, unknown>>;
   /** The pay routes answer 404 "Order not found". The first such answer also takes the order's own read with it (`orderGone`), as an order that has gone would. */
+  /** Reads of the order's payment view so far (for `partnerPending`). */
+  paymentReads: number;
+  /** What quotes answer as `paymentMethodsUnavailable` now; null = the normal quote. */
+  quoteUnavailable: PaymentMethodsUnavailable | null;
   payGone: boolean;
   /** `GET storefront/orders/:ref` answers 404. */
   orderGone: boolean;
@@ -648,6 +672,8 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     anonymousCatalogHits: 0,
     cancels: [],
     reviewPosts: [],
+    paymentReads: 0,
+    quoteUnavailable: options.partnerQuoteUnavailable ?? null,
     payGone: options.payRoutesGone ?? false,
     orderGone: false,
   };
@@ -988,6 +1014,10 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
       const asked = body(route);
       if (path.includes('guest')) state.guestQuotes.push(asked);
       else state.quotes.push(asked);
+      if (state.quoteUnavailable) {
+        await envelope(route, { ...state.quote, paymentMethods: [], paymentMethodsUnavailable: state.quoteUnavailable });
+        return;
+      }
       const lined = options.warehouses?.prices ? requoteLines(state.quote, asked, pricedAt(Number(asked.warehouseId), state.catalog)) : state.quote;
       const perWarehouse = options.warehouses?.quoteShipping;
       if (perWarehouse) {
@@ -1071,6 +1101,16 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
         return;
       }
       if (tail === 'payment' && method === 'GET') {
+        if (options.partnerPending) {
+          state.paymentReads += 1;
+          const resolveOn = options.partnerPending.resolveOnRead;
+          const base = state.order.payment!;
+          const view: PublicOrder = resolveOn !== null && state.paymentReads >= resolveOn
+            ? { ...state.order, payment: { ...base, canPay: true, activePayment: { paymentId: 9005, method: 'stripe', kind: 'gateway', status: 'pending', checkoutUrl: `https://pay.example.invalid/checkout/${state.order.reference}`, canChange: false, settlementAmount: 43.65, settlementCurrency: 'EUR' } } }
+            : { ...state.order, payment: { ...base, canPay: true, activePayment: null, partnerPending: true } };
+          await envelope(route, view);
+          return;
+        }
         await envelope(route, state.order);
         return;
       }

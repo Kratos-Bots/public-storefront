@@ -13,6 +13,7 @@ import { errorMessage } from '@/lib/errors.ts';
 import { methodName } from '@/lib/method-name.ts';
 import { orderChatMessage } from '@/lib/chat-links.ts';
 import { formatAmountPlain, formatMoney } from '@/lib/format.ts';
+import { chargedIn, chargedInFor } from '@/lib/charged-in.ts';
 import { CryptoComboPicker, type CryptoCombo } from '@/features/checkout/CryptoComboPicker.tsx';
 import { CopyRow } from '@/features/order-status/CopyRow.tsx';
 import { invalidateOrderGone } from '@/features/order-status/order-gone.ts';
@@ -164,6 +165,7 @@ export function MethodPicker({ order, reference }: MethodPickerProps) {
           // already narrating it ("Preparing payment...") and no checkout opens.
           const opening = inFlight && !opensHere;
           const note = methodNote(method, order.currency);
+          const rowCharged = chargedIn(method, order.currency);
           const rowClass = [
             classes.method,
             index === 0 ? classes.methodPrimary : '',
@@ -185,6 +187,11 @@ export function MethodPicker({ order, reference }: MethodPickerProps) {
                 <span className={classes.methodText}>
                   <span className={classes.methodName}>{opening ? t('order.method.opening') : methodName(method)}</span>
                   {note ? <span className={classes.methodNote}>{note}</span> : null}
+                  {rowCharged ? (
+                    <span className={classes.methodNote} data-testid="charged-in">
+                      {t('order.method.chargedIn', { currency: rowCharged.currency, amount: formatMoney(rowCharged.amount, rowCharged.currency) })}
+                    </span>
+                  ) : null}
                 </span>
                 <span className={classes.methodFigure}>{formatMoney(method.chargeTotal, order.currency)}</span>
                 <span className={expanded ? `${classes.chevron} ${classes.chevronOpen}` : classes.chevron} aria-hidden>
@@ -200,6 +207,15 @@ export function MethodPicker({ order, reference }: MethodPickerProps) {
                     onChange={setCombo}
                     currency={order.currency}
                   />
+                  {(() => {
+                    const picked = combos.find((o) => o.coin === combo?.coin && o.network === combo?.network) ?? null;
+                    const charged = chargedInFor(method, picked, order.currency);
+                    return charged ? (
+                      <p className={classes.txidBlurb} data-testid="charged-in">
+                        {t('order.method.chargedIn', { currency: charged.currency, amount: formatMoney(charged.amount, charged.currency) })}
+                      </p>
+                    ) : null;
+                  })()}
                   <button
                     type="button"
                     className={classes.cta}

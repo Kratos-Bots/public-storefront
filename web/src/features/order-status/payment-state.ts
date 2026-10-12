@@ -6,6 +6,7 @@ import type {
 import type { PaymentMethod } from '@/types/checkout.ts';
 import { formatMoney } from '@/lib/format.ts';
 import { textSnapshot } from '@/text/snapshot.ts';
+import { PARTNER_POLL_MS, PARTNER_WINDOW_MS } from '@/features/order-status/partner-pending.ts';
 
 // The order page's payment logic, kept out of the components that render it.
 // Ported from `ecommerce-menu/web/src/features/order-status/{PaymentSection,
@@ -105,9 +106,18 @@ export function paymentMovedOn(payment: PublicOrder, accountStatus: string): boo
 export function paymentPollInterval(
   state: { data: PublicOrder | undefined; status: 'pending' | 'error' | 'success' },
   watchedMs = 0,
+  partnerWaitedMs = 0,
 ): number | false {
   if (!state.data) return false;
-  if (state.status === 'error') return FAILED_READ_POLL_MS;
+  const partner = state.data.payment?.partnerPending === true;
+  // A partner payment is being created: ask often, but only for a couple of minutes (the page then offers Refresh).
+  // The stop wins over everything, a failed read included.
+  if (partner && partnerWaitedMs >= PARTNER_WINDOW_MS) return false;
+  if (state.status === 'error') {
+    // The slow retry must not land past the stop either.
+    return partner && partnerWaitedMs + FAILED_READ_POLL_MS >= PARTNER_WINDOW_MS ? false : FAILED_READ_POLL_MS;
+  }
+  if (partner) return PARTNER_POLL_MS;
   const interval = pollInterval(state.data);
   // A tab left open on an unpaid order is not being watched any more: stop asking every ten seconds.
   return interval !== false && watchedMs >= LONG_WATCH_MS ? Math.max(interval, LONG_WATCH_POLL_MS) : interval;
@@ -126,6 +136,7 @@ export function paymentSignature(order: PublicOrder): string {
     p?.canCancel ?? null,
     p?.cancelBlockedBy ?? null,
     p?.activePayment ? [p.activePayment.paymentId, p.activePayment.status] : null,
+    p?.partnerPending ?? null,
     (order.cryptoPayments ?? []).map((c) => [c.paymentId, c.paymentStatus, c.verificationStatus]),
   ]);
 }

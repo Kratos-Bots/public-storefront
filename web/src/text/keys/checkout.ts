@@ -131,6 +131,11 @@ export default defineTextArea('checkout', {
   'payment.noMethods': { en: 'No payment method is available right now. Message us and we’ll take it from here.' },
   'payment.methodHeading': { en: 'Payment method', max: 40 },
   'payment.fee': { en: 'Fee', max: 30 },
+  'payment.chargedIn': { en: 'Charged in {currency}: {amount}', max: 60 },
+  'payment.unreachable': { en: 'We couldn’t reach the payment service for this warehouse. Try again in a moment.', max: 160 },
+  'payment.rateUnavailable': { en: 'We couldn’t get a current exchange rate for this payment. Try again in a moment.', max: 160 },
+  'payment.notReady': { en: 'Payment isn’t available at this warehouse right now.', max: 160 },
+  'payment.retry': { en: 'Try again', max: 30 },
   'payment.offlineNote': { en: 'We’ll send the transfer details once the order is placed.', max: 120 },
 
   'review.blurb': { en: 'One last look before we place it.', max: 100 },

@@ -4,6 +4,8 @@ import type { Quote } from '@/types/checkout.ts';
 import type { CheckoutForm } from '@/features/checkout/form-state.ts';
 import { Money } from '@/components/Money.tsx';
 import { methodName } from '@/lib/method-name.ts';
+import { chargedInFor } from '@/lib/charged-in.ts';
+import { formatMoney } from '@/lib/format.ts';
 import { CryptoComboPicker } from '@/features/checkout/CryptoComboPicker.tsx';
 import { useText } from '@/text/runtime.tsx';
 import fields from '@/features/checkout/Fields.module.css';
@@ -17,6 +19,10 @@ export interface PaymentStepProps {
   /** A guest has no customer row, so no balance to spend. */
   guest: boolean;
   currency: string;
+  /** Asks for the quote again; the unavailable message offers it as Try again. */
+  onRetryQuote?: () => void;
+  /** A quote is in the air. */
+  busy?: boolean;
   /** Content slots of the step part: before everything, after everything. */
   before?: ReactNode;
   after?: ReactNode;
@@ -29,12 +35,15 @@ export interface PaymentStepProps {
  * never a footnote. Crypto opens its combos underneath, because the network
  * changes the number too.
  */
-export function PaymentStep({ quote, form, patch, errors, guest, currency, before, after, rootAttrs }: PaymentStepProps) {
+export function PaymentStep({ quote, form, patch, errors, guest, currency, onRetryQuote, busy, before, after, rootAttrs }: PaymentStepProps) {
   const { t, tn, msg } = useText();
   const name = useId();
   const methods = quote?.paymentMethods ?? [];
   const balance = quote?.storeCredit.balance ?? 0;
   const chosen = methods.find((m) => m.method === form.paymentMethod);
+  const chosenCombo = chosen?.cryptoOptions?.find((o) => o.coin === form.coin && o.network === form.network) ?? null;
+  const charged = chargedInFor(chosen, chosenCombo, currency);
+  const unavailable = quote?.paymentMethodsUnavailable;
 
   return (
     <div className={classes.step} {...rootAttrs}>
@@ -61,6 +70,28 @@ export function PaymentStep({ quote, form, patch, errors, guest, currency, befor
         <p className={classes.note} data-tone="success">
           {t('checkout.payment.allCovered')}
         </p>
+      ) : unavailable ? (
+        <div className={classes.section}>
+          <p className={classes.note} data-tone="warn" role="status">
+            {unavailable === 'partner_not_ready'
+              ? t('checkout.payment.notReady')
+              : unavailable === 'rate_unavailable'
+                ? t('checkout.payment.rateUnavailable')
+                : t('checkout.payment.unreachable')}
+          </p>
+          {unavailable !== 'partner_not_ready' && onRetryQuote ? (
+            <button
+              type="button"
+              className={classes.retry}
+              onClick={onRetryQuote}
+              disabled={busy}
+              data-sf-part="button"
+              data-variant="default"
+            >
+              {t('checkout.payment.retry')}
+            </button>
+          ) : null}
+        </div>
       ) : methods.length === 0 ? (
         <p className={classes.note} data-tone="warn">
           {t('checkout.payment.noMethods')}
@@ -125,6 +156,12 @@ export function PaymentStep({ quote, form, patch, errors, guest, currency, befor
           {errors.coin ? (
             <p className={classes.note} data-tone="danger">
               {msg(errors.coin)}
+            </p>
+          ) : null}
+
+          {charged ? (
+            <p className={classes.chargedIn} data-testid="charged-in">
+              {t('checkout.payment.chargedIn', { currency: charged.currency, amount: formatMoney(charged.amount, charged.currency) })}
             </p>
           ) : null}
 

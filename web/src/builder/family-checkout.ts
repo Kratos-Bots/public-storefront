@@ -67,6 +67,8 @@ export interface CheckoutData {
   /** A quote is in the air or a guest token is being minted. */
   busy: boolean;
   quoteStale: boolean;
+  /** Asks for the quote again (the payment step's Try again when the partner could not be asked). Absent on the canvas. */
+  retryQuote?: () => void;
   couponError?: string;
   shippingNotice?: string;
   addressNotice?: string;

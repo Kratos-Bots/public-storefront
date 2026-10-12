@@ -13,6 +13,32 @@
   color: var(--sf-muted);
 }
 
+/* What a partner-taken payment is charged in, when that is not the shop's currency. */
+.chargedIn {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--sf-text);
+}
+
+.retry {
+  align-self: flex-start;
+  min-height: 2.5rem;
+  padding: 0 1rem;
+  border: 1px solid var(--sf-line-strong);
+  border-radius: var(--sf-card-radius);
+  background: transparent;
+  color: var(--sf-text);
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.retry:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
 .aside {
   margin: 0;
   font-size: 0.75rem;
