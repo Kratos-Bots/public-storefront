@@ -24,7 +24,7 @@ import { fetchOrderPayment } from '@/api/orders.ts';
 import { OrderDetailPage } from '@/features/account/OrderDetailPage.tsx';
 import { PaymentStep } from '@/features/checkout/steps/PaymentStep.tsx';
 import { DEFAULT_FORM } from '@/features/checkout/form-state.ts';
-import { PARTNER_WINDOW_MS } from '@/features/order-status/partner-pending.ts';
+import { PARTNER_WINDOW_MS, trackPartnerWait } from '@/features/order-status/partner-pending.ts';
 import type { PaymentMethod, Quote } from '@/types/checkout.ts';
 import type { PublicOrder } from '@/types/public-order.ts';
 
@@ -65,7 +65,7 @@ beforeEach(() => {
   paymentMock.mockReset();
   vi.useFakeTimers();
 });
-afterEach(() => { cleanup(); vi.useRealTimers(); });
+afterEach(() => { cleanup(); trackPartnerWait('K4M2QP', false); vi.useRealTimers(); });
 
 describe('partner pending on the order page', () => {
   it('says the payment is being prepared, re-reads every 5 s and turns into the pay screen on the third read', async () => {
@@ -93,7 +93,7 @@ describe('partner pending on the order page', () => {
     const reads = paymentMock.mock.calls.length;
     expect(reads).toBeGreaterThanOrEqual(24);
     expect(reads).toBeLessThanOrEqual(26);
-    expect(screen.getByText(/Your payment details will appear on this order page/)).toBeTruthy();
+    expect(screen.getByText(/Your payment details aren.t ready yet/)).toBeTruthy();
     await tick(60_000);
     expect(paymentMock).toHaveBeenCalledTimes(reads);
     paymentMock.mockResolvedValue(hosted);
@@ -101,6 +101,30 @@ describe('partner pending on the order page', () => {
     await tick(0);
     expect(paymentMock).toHaveBeenCalledTimes(reads + 1);
     expect(screen.getByRole('link', { name: /Click here to Pay/ })).toBeTruthy();
+  });
+});
+
+describe('partner pending edge cases', () => {
+  it('shows the preparing face and the deadline even when the backend sends canPay false', async () => {
+    paymentMock.mockResolvedValue(view({ canPay: false, payBy: '2026-01-09T10:00:00Z', activePayment: null, partnerPending: true }));
+    mount();
+    await tick(0);
+    await tick(100);
+    expect(screen.getByText('Payment is being prepared')).toBeTruthy();
+    expect(screen.getByText(/Pay by/)).toBeTruthy();
+  });
+
+  it('a read that fails during the wait keeps the preparing face, stops at 2 minutes and offers Refresh', async () => {
+    paymentMock.mockResolvedValueOnce(pending).mockRejectedValue(new Error('429'));
+    mount();
+    await tick(0);
+    await tick(PARTNER_WINDOW_MS + 1_000);
+    const reads = paymentMock.mock.calls.length;
+    expect(screen.getByText('Payment is being prepared')).toBeTruthy();
+    expect(screen.getByText(/aren.t ready yet/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Refresh' })).toBeTruthy();
+    await tick(10 * 60_000);
+    expect(paymentMock).toHaveBeenCalledTimes(reads);
   });
 });
 

@@ -769,6 +769,35 @@ describe('CheckoutPage — guest', () => {
     const submitToken = placeGuestOrderMock.mock.calls[0]![0].turnstileToken;
     expect(quoteTokens).not.toContain(submitToken);
   });
+  it('Try again on an unavailable payment step asks for the quote again, with a fresh token, though no input changed', async () => {
+    guestQuoteMock.mockResolvedValue(makeQuote({ paymentMethods: [], paymentMethodsUnavailable: 'partner_unreachable' }));
+    mount();
+    type('First name', 'Ada');
+    type('Surname', 'Lovelace');
+    type('Email', 'ada@example.com');
+    pressContinue();
+    type('Address line 1', '1 Main St');
+    type('Town / City', 'London');
+    type(/postcode/i, 'SW1A 1AA');
+    fireEvent.change(screen.getByLabelText('Country'), { target: { value: 'GB' } });
+    pressContinue();
+    await settle();
+    fireEvent.click(screen.getByRole('radio', { name: /Royal Mail Tracked 24/ }));
+    await settle();
+    pressContinue();
+    await settle();
+    expect(screen.getByText(/couldn.t reach the payment service/i)).toBeInTheDocument();
+
+    const before = guestQuoteMock.mock.calls.length;
+    guestQuoteMock.mockResolvedValue(makeQuote());
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    await settle();
+    expect(guestQuoteMock.mock.calls.length).toBe(before + 1);
+    const tokens = guestQuoteMock.mock.calls.map((c) => c[0].turnstileToken);
+    expect(new Set(tokens).size).toBe(tokens.length);
+    expect(screen.getByRole('radio', { name: /Stripe/ })).toBeInTheDocument();
+  });
+
   it('sends a guest to the order-placed screen after an offline-paid order, and saves nothing to this browser', async () => {
     placeGuestOrderMock.mockResolvedValue({
       reference: 'G8N3RQ',

@@ -58,7 +58,7 @@ export default defineTextArea('order', {
   'payment.chargedIn': { en: 'Charged in {currency}: {amount}', max: 60 },
   'payment.preparingTitle': { en: 'Payment is being prepared', max: 60 },
   'payment.preparingNote': { en: 'We’re setting up your payment. This page updates on its own.' },
-  'payment.preparingLate': { en: 'This is taking longer than usual. Your payment details will appear on this order page once they’re ready.' },
+  'payment.preparingLate': { en: 'Your payment details aren’t ready yet. Press Refresh, or come back to this order later.' },
   'payment.refresh': { en: 'Refresh', max: 30 },
   'payment.refreshing': { en: 'Checking…', max: 30 },
   'payment.changeMethod': { en: 'Change payment method', max: 60 },

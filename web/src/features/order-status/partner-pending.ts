@@ -12,12 +12,18 @@ export const PARTNER_WINDOW_MS = 120_000;
 const started = new Map<string, number>();
 
 /** Milliseconds this order has been waiting on a partner payment, starting the clock on first sight; null when it is not waiting. */
+/** Waits older than this are forgotten when another is written, so the map stays small. */
+const FORGET_AFTER_MS = 10 * 60_000;
+
 export function trackPartnerWait(reference: string, pending: boolean, now: number = Date.now()): number | null {
   if (!pending) {
     started.delete(reference);
     return null;
   }
-  if (!started.has(reference)) started.set(reference, now);
+  if (!started.has(reference)) {
+    for (const [ref, at] of started) if (now - at > FORGET_AFTER_MS) started.delete(ref);
+    started.set(reference, now);
+  }
   return now - started.get(reference)!;
 }
 
@@ -32,6 +38,10 @@ export type PartnerPendingPhase = 'waiting' | 'timedOut';
 /** The panel's phase: waiting until the window is spent, then timed out until the payment appears (or the panel goes). */
 export function usePartnerPendingPhase(reference: string, pending: boolean): PartnerPendingPhase {
   const [timedOut, setTimedOut] = useState(false);
+  // The payment appeared (or the order moved on): the next wait starts afresh. Leaving the page does not end it.
+  useEffect(() => {
+    if (!pending) trackPartnerWait(reference, false);
+  }, [reference, pending]);
   useEffect(() => {
     if (!pending) {
       setTimedOut(false);
@@ -47,8 +57,6 @@ export function usePartnerPendingPhase(reference: string, pending: boolean): Par
     }
     return () => {
       if (id !== undefined) clearTimeout(id);
-      // A new visit, or the payment appearing, starts the next wait afresh.
-      trackPartnerWait(reference, false);
     };
   }, [reference, pending]);
   return pending && timedOut ? 'timedOut' : 'waiting';

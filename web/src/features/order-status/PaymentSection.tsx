@@ -86,7 +86,7 @@ export function PaymentSection({ order, reference, methodName }: PaymentSectionP
   return (
     <div ref={root} className={classes.faces}>
       {/* Stated once, above whichever face is showing: every way of paying is on the same clock. */}
-      {payment.canPay ? <Deadline payBy={payment.payBy} /> : null}
+      {payment.canPay || preparing ? <Deadline payBy={payment.payBy} /> : null}
 
       {preparing ? <PartnerPending reference={reference} /> : null}
 

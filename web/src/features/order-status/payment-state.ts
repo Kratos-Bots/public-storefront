@@ -109,9 +109,15 @@ export function paymentPollInterval(
   partnerWaitedMs = 0,
 ): number | false {
   if (!state.data) return false;
-  if (state.status === 'error') return FAILED_READ_POLL_MS;
+  const partner = state.data.payment?.partnerPending === true;
   // A partner payment is being created: ask often, but only for a couple of minutes (the page then offers Refresh).
-  if (state.data.payment?.partnerPending) return partnerWaitedMs >= PARTNER_WINDOW_MS ? false : PARTNER_POLL_MS;
+  // The stop wins over everything, a failed read included.
+  if (partner && partnerWaitedMs >= PARTNER_WINDOW_MS) return false;
+  if (state.status === 'error') {
+    // The slow retry must not land past the stop either.
+    return partner && partnerWaitedMs + FAILED_READ_POLL_MS >= PARTNER_WINDOW_MS ? false : FAILED_READ_POLL_MS;
+  }
+  if (partner) return PARTNER_POLL_MS;
   const interval = pollInterval(state.data);
   // A tab left open on an unpaid order is not being watched any more: stop asking every ten seconds.
   return interval !== false && watchedMs >= LONG_WATCH_MS ? Math.max(interval, LONG_WATCH_POLL_MS) : interval;

@@ -154,7 +154,7 @@ for (const width of [1280, 390]) {
       });
       await expect(page.getByRole('heading', { name: 'Payment is being prepared' })).toBeVisible();
       await page.clock.runFor(125_000);
-      await expect(page.getByText(/Your payment details will appear on this order page/)).toBeVisible();
+      await expect(page.getByText(/Your payment details aren.t ready yet/)).toBeVisible();
       await shot(page, 'order-preparing-late');
       // Asking has stopped.
       await expect.poll(() => mocks.state.paymentReads).toBeGreaterThan(1);

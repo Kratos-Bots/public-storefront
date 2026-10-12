@@ -45,7 +45,7 @@ export default {
   'payment.chargedIn': 'Order payment faces (hosted checkout, crypto, other), when the payment is charged in another currency than the shop uses',
   'payment.preparingTitle': 'Order page, heading while a payment is being created with the payment partner of the warehouse',
   'payment.preparingNote': 'Order page, under the heading while the payment is being created; the page re-reads on its own',
-  'payment.preparingLate': 'Order page, after two minutes of waiting: the details will appear on this page later',
+  'payment.preparingLate': 'Order page, after two minutes of waiting: the payment details are not ready yet; Refresh or come back later',
   'payment.refresh': 'Order page, button that re-reads the payment once the automatic checking has stopped',
   'payment.refreshing': 'Order page, that button while it is reading',
   'payment.changeMethod': 'Button that opens the list to switch payment method',
