@@ -9,5 +9,9 @@ export interface AccountData {
   /** The profile's standing line inputs; null until the profile is in. */
   standing: { memberSince: string; totalOrders: number } | null;
   pathname: string;
+  /** False when the shopper's group has loyalty switched off: the Loyalty tab goes. */
+  loyaltyOn: boolean;
+  /** True when loyalty is off but store credit remains: the Loyalty tab stays, relabelled, as a credit-only page. */
+  creditOnly: boolean;
 }
 export const AccountFamily = createFamily<AccountData>('account');

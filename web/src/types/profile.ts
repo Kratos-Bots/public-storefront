@@ -8,6 +8,22 @@ export interface Profile {
   /** False when this customer is signed in but not allowed into a restricted shop.
    *  Absent on backends older than shop access. */
   shopAccess?: boolean;
+  /** False when the shopper's customer group has the loyalty programme switched off.
+   *  Absent on backends older than loyalty per group, which means on. */
+  loyaltyEnabled?: boolean;
+}
+
+/** Loyalty is shown unless the backend says it is off for this shopper. Unknown (still loading, older backend) = shown. */
+export function loyaltyOn(profile: Pick<Profile, 'loyaltyEnabled'> | undefined | null): boolean {
+  return profile?.loyaltyEnabled !== false;
+}
+
+/**
+ * Loyalty is off for this shopper but they still hold store credit, which stays spendable: the
+ * account keeps one credit-only page so the balance can be seen. Unknown (loading, older backend) is not this case.
+ */
+export function creditOnly(profile: Pick<Profile, 'loyaltyEnabled' | 'storeCreditBalance'> | undefined | null): boolean {
+  return !!profile && !loyaltyOn(profile) && profile.storeCreditBalance > 0;
 }
 export interface RedeemOption { id: number; label: string; pointsCost: number; creditValue: number; affordable: boolean }
 export interface RedeemOptions { loyaltyPoints: number; options: RedeemOption[] }

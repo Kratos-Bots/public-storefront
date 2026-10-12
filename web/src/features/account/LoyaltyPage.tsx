@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Navigate } from 'react-router';
 import { Button, Modal } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -16,7 +17,7 @@ import {
   useRedeemOptions,
 } from '@/features/account/queries.ts';
 import { useText } from '@/text/runtime.tsx';
-import type { RedeemOption } from '@/types/profile.ts';
+import { creditOnly, loyaltyOn, type RedeemOption } from '@/types/profile.ts';
 import { LoyaltyFamily, type LoyaltyData, type LoyaltyPreview } from '@/builder/family-loyalty.ts';
 import { usePreviewFixture, usePreviewState } from '@/builder/mode.ts';
 import type { FamilyValue, PartViewProps } from '@/builder/parts.ts';
@@ -33,6 +34,7 @@ export function reachRatio(points: number, cost: number): number {
 function PointsView({ styleAttrs }: PartViewProps) {
   const { t } = useText();
   const { profile } = LoyaltyFamily.useData();
+  if (!loyaltyOn(profile)) return null;
   return (
     <div className={classes.meter} {...styleAttrs}>
       <span className={classes.meterFigure}>{formatInteger(profile.loyaltyPoints)}</span>
@@ -44,6 +46,8 @@ function PointsView({ styleAttrs }: PartViewProps) {
 function CreditView({ styleAttrs }: PartViewProps) {
   const { t } = useText();
   const { profile } = LoyaltyFamily.useData();
+  // Loyalty off keeps the balance visible while there is credit left to spend.
+  if (!loyaltyOn(profile) && !creditOnly(profile)) return null;
   return (
     <div className={classes.row} {...styleAttrs}>
       <span className={classes.rowLabel}>{t('account.loyalty.storeCredit')}</span>
@@ -57,15 +61,15 @@ function CreditView({ styleAttrs }: PartViewProps) {
 function NoPointsView({ styleAttrs }: PartViewProps) {
   const { t } = useText();
   const { profile } = LoyaltyFamily.useData();
-  if (profile.loyaltyPoints !== 0) return null;
+  if (!loyaltyOn(profile) || profile.loyaltyPoints !== 0) return null;
   return <p className={classes.note} {...styleAttrs}>{t('account.loyalty.noPoints')}</p>;
 }
 
 function RewardsView({ styleAttrs }: PartViewProps) {
   const { t } = useText();
   const { currency } = useSettings();
-  const { options: ladder, points, confirm, redeeming } = LoyaltyFamily.useData();
-  if (!ladder) return null;
+  const { profile, options: ladder, points, confirm, redeeming } = LoyaltyFamily.useData();
+  if (!ladder || !loyaltyOn(profile)) return null;
   return (
     <section className={classes.section} aria-label={t('account.loyalty.redeemAria')} {...styleAttrs}>
       {/* No balance repeated here: the meter states it three lines up, and the
@@ -150,7 +154,8 @@ export function LoyaltyPage({ slots }: { slots?: { content: SlotRender } } = {})
   // The editor previews from a fixture (spec §11.3): the queries neither fire nor are read.
   const preview = fixture !== null;
   const profile = useProfile(!preview);
-  const options = useRedeemOptions(!preview);
+  // Off for this shopper's group: the backend answers 404 to the ladder, so do not ask for it.
+  const options = useRedeemOptions(!preview && profile.data !== undefined && loyaltyOn(profile.data));
   const client = useQueryClient();
   const [confirming, setConfirming] = useState<RedeemOption | null>(null);
   const legacy = useMemo(() => (slots ? null : defaultSlotRenders('Loyalty', 'storefront', {}, 'account.loyalty')), [slots]);
@@ -197,6 +202,8 @@ export function LoyaltyPage({ slots }: { slots?: { content: SlotRender } } = {})
   );
 
   if (!preview) {
+    if (profile.data && !loyaltyOn(profile.data) && !creditOnly(profile.data)) return <Navigate to="/account/orders" replace />;
+
     if (profile.isPending) return <PageSkeleton inline />;
 
     if (profile.isError) {

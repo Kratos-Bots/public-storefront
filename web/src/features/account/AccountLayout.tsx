@@ -4,6 +4,7 @@ import { accessGate } from '@/app/access-gate.ts';
 import { useSessionStore } from '@/stores/session.ts';
 import { formatDate } from '@/lib/format.ts';
 import { useProfile } from '@/features/account/queries.ts';
+import { creditOnly, loyaltyOn } from '@/types/profile.ts';
 import { textKey, useText } from '@/text/runtime.tsx';
 import { FADE } from '@/lib/motion.ts';
 import { AccountFamily, type AccountData } from '@/builder/family-account.ts';
@@ -15,7 +16,7 @@ import classes from '@/features/account/Account.module.css';
 
 const TABS = [
   { to: '/account/orders', label: textKey('account.nav.orders') },
-  { to: '/account/loyalty', label: textKey('account.nav.loyalty') },
+  { to: '/account/loyalty', label: textKey('account.nav.loyalty'), creditLabel: textKey('account.nav.storeCredit') },
   { to: '/account/referrals', label: textKey('account.nav.referrals') },
   { to: '/account/profile', label: textKey('account.nav.profile') },
 ];
@@ -47,11 +48,11 @@ function GreetingView({ styleAttrs }: PartViewProps) {
 
 function TabsView({ styleAttrs }: PartViewProps) {
   const { t } = useText();
-  const { pathname } = AccountFamily.useData();
+  const { pathname, loyaltyOn: showLoyalty, creditOnly: showCredit } = AccountFamily.useData();
   if (isOrderDetailPath(pathname)) return null;
   return (
     <nav className={classes.tabs} aria-label={t('account.nav.ariaLabel')} {...styleAttrs}>
-      {TABS.map((tab) => (
+      {TABS.filter((tab) => tab.to !== '/account/loyalty' || showLoyalty || showCredit).map((tab) => (
         <NavLink
           key={tab.to}
           to={tab.to}
@@ -59,7 +60,7 @@ function TabsView({ styleAttrs }: PartViewProps) {
             isActive ? `${classes.tab} ${classes.tabActive}` : classes.tab
           }
         >
-          {t(tab.label)}
+          {t(showCredit && tab.creditLabel ? tab.creditLabel : tab.label)}
         </NavLink>
       ))}
     </nav>
@@ -96,12 +97,14 @@ export function AccountLayout({ children, slots, docKey = 'account.orders' }: { 
   const legacy = useMemo(() => (slots ? null : defaultSlotRenders('AccountNav', 'storefront', {}, docKey)), [slots, docKey]);
   const head = slots?.head ?? legacy!.head!;
   const name = sessionNickname ?? profile.data?.nickname ?? null;
+  const showLoyalty = loyaltyOn(profile.data);
+  const showCredit = creditOnly(profile.data);
   const standing = profile.data ? { memberSince: profile.data.memberSince, totalOrders: profile.data.totalOrders } : null;
   const value = useMemo(
-    () => ({ data: { name, standing, pathname: location.pathname }, views: ACCOUNT_VIEWS }),
+    () => ({ data: { name, standing, pathname: location.pathname, loyaltyOn: showLoyalty, creditOnly: showCredit }, views: ACCOUNT_VIEWS }),
     // `standing` is rebuilt every render; its fields are the dependencies.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [name, standing?.memberSince, standing?.totalOrders, location.pathname],
+    [name, standing?.memberSince, standing?.totalOrders, location.pathname, showLoyalty, showCredit],
   );
 
   return (

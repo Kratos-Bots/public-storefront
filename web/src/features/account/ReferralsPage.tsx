@@ -9,6 +9,7 @@ import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { errorMessage } from '@/lib/errors.ts';
 import { setReferralCode } from '@/api/profile.ts';
 import { PROFILE_KEY, useProfile } from '@/features/account/queries.ts';
+import { loyaltyOn } from '@/types/profile.ts';
 import { referralLink, referralShareLinks, referralShareText } from '@/features/account/referral-share.ts';
 import { useText } from '@/text/runtime.tsx';
 import { ReferralsFamily, type ReferralsData, type ReferralsPreview } from '@/builder/family-referrals.ts';
@@ -35,6 +36,8 @@ function canShare(): boolean {
 function CodeView({ styleAttrs }: PartViewProps) {
   const { t } = useText();
   const { profile, canCopy: copyable, copied, copy, link, linkCopied, copyLink } = ReferralsFamily.useData();
+  // Sharing a code earns nothing once loyalty is off for this shopper's group.
+  if (!loyaltyOn(profile)) return null;
   return (
     <div className={classes.plate} {...styleAttrs}>
       <span className={classes.plateLabel}>{t('account.referrals.yourCode')}</span>
@@ -70,8 +73,8 @@ function CodeView({ styleAttrs }: PartViewProps) {
 
 function ShareView() {
   const { t } = useText();
-  const { links, canShare: shareable, share } = ReferralsFamily.useData();
-  if (!(shareable || links.whatsapp || links.telegram)) return null;
+  const { profile, links, canShare: shareable, share } = ReferralsFamily.useData();
+  if (!loyaltyOn(profile) || !(shareable || links.whatsapp || links.telegram)) return null;
   return (
     <>
       <div className={classes.share}>
@@ -111,6 +114,7 @@ function ShareView() {
 function StatsView({ styleAttrs }: PartViewProps) {
   const { t } = useText();
   const { profile } = ReferralsFamily.useData();
+  if (!loyaltyOn(profile)) return null;
   return (
     <section className={classes.section} aria-label={t('account.referrals.broughtInAria')} {...styleAttrs}>
       <div className={classes.sectionHead}>
