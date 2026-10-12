@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAutofillAdvance } from '@/lib/use-autofill-advance.ts';
 import { useAutofillDiag } from '@/lib/use-autofill-diag.tsx';
 import { Link, Navigate, useNavigate } from 'react-router';
+import { flushSync } from 'react-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@mantine/core';
 import { useDebouncedValue } from '@mantine/hooks';
@@ -659,7 +660,9 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
             return placeOrder({ ...body, useStoreCredit: form.useStoreCredit });
           })();
 
-      setPlaced(true);
+      // Flushed before the store changes below: a store-driven render (the cart emptying, a new session) must already
+      // see `placed`, or it would flash the empty-cart screen and let a signed-in quote go out for an order that exists.
+      flushSync(() => setPlaced(true));
       // The backend clears the server cart itself; this is the local mirror.
       clearCart();
       clearPersistedCheckout();
