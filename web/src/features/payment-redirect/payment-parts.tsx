@@ -124,7 +124,7 @@ function ActionsView({ styleAttrs }: PartViewProps) {
         <a
           href={checkoutUrl}
           target="_blank"
-          rel="noopener"
+          rel="noopener noreferrer"
           onClick={(event) => {
             if (!isTelegramWebApp()) return;
             event.preventDefault();

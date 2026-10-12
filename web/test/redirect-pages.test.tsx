@@ -308,7 +308,7 @@ describe('OrderPlacedPage', () => {
       const button = openCheckout();
       expect(button).toHaveAttribute('href', URL);
       expect(button).toHaveAttribute('target', '_blank');
-      expect(button.getAttribute('rel')).toContain('noopener');
+      expect(button.getAttribute('rel')).toBe('noopener noreferrer');
       expect(screen.getByText(/use the button below to pay securely online/i)).toBeInTheDocument();
       expect(screen.queryByRole('link', { name: /whatsapp/i })).toBeNull();
       expect(screen.queryByText(/message us on whatsapp or telegram/i)).toBeNull();
