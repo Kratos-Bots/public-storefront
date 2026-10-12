@@ -345,7 +345,7 @@ describe('account order: pay and cancel', () => {
       const link = await screen.findByRole('link', { name: 'Click here to Pay' });
       expect(link.getAttribute('href')).toBe('https://pay.example/abc');
       expect(link.getAttribute('target')).toBe('_blank');
-      expect(link.getAttribute('rel')).toBe('noopener');
+      expect(link.getAttribute('rel')).toBe('noopener noreferrer');
       expect(open).not.toHaveBeenCalled();
       expect(openExternalLink).not.toHaveBeenCalled();
       expect(window.location.href).toBe(here);

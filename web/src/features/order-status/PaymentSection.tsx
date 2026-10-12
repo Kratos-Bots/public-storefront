@@ -112,7 +112,7 @@ export function PaymentSection({ order, reference, methodName }: PaymentSectionP
             className={classes.cta}
             href={active.checkoutUrl!}
             target="_blank"
-            rel="noopener"
+            rel="noopener noreferrer"
             // Some gateways refuse Telegram's in-app view, so inside the Mini App Telegram's own opener (the
             // system browser) takes it, called within the tap. The anchor keeps its href for everything else.
             onClick={(event) => {
