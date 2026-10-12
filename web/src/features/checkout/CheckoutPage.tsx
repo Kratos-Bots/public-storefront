@@ -8,6 +8,7 @@ import { useDebouncedValue } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { useSettings } from '@/app/settings.ts';
 import { useSessionStore, selectIsLoggedIn } from '@/stores/session.ts';
+import { startSession } from '@/features/auth/useLoginSuccess.ts';
 import { clearStoredReferral, readStoredReferral } from '@/features/referrals/stored-referral.ts';
 import { useCartStore } from '@/stores/cart.ts';
 import { useServerCart } from '@/features/cart/useServerCart.ts';
@@ -36,7 +37,7 @@ import { collectionAddress, modeForCountry, pickerCountries, quoteDeliveryFields
 import { useQuote } from '@/features/checkout/useQuote.ts';
 import { warehouseBody } from '@/api/warehouse-param.ts';
 import { useWarehouseId, useWarehouseOrdering } from '@/features/warehouses/use-warehouse.ts';
-import { accountOrderPath, resolveCheckoutOutcome } from '@/features/checkout/outcome.ts';
+import { resolveCheckoutOutcome } from '@/features/checkout/outcome.ts';
 import { GuestTurnstile, type GuestTurnstileHandle } from '@/features/checkout/GuestTurnstile.tsx';
 import { CHECKOUT_VIEWS, InertActionBand } from '@/features/checkout/checkout-parts.tsx';
 import { STEP_META } from '@/features/checkout/step-meta.ts';
@@ -54,7 +55,7 @@ import {
 } from '@/builder/family-checkout.ts';
 import { DIAL_CODES } from '@/lib/dial-codes.ts';
 import { formatMoney } from '@/lib/format.ts';
-import { haptic, isTelegramWebApp, openExternalLink } from '@/lib/telegram-webapp.ts';
+import { haptic, isTelegramWebApp } from '@/lib/telegram-webapp.ts';
 import { usePrimaryAction } from '@/stores/primary-action.ts';
 import { useBackAction } from '@/stores/back-action.ts';
 import { FADE } from '@/lib/motion.ts';
@@ -271,6 +272,7 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
   // each with a token minted for that one request.
   const { quote, isFetching, error: quoteError, needsToken, refetchWithToken, refetch: refetchQuote, optionsCurrent } = useQuote(effective, {
     guest,
+    paused: placed,
   });
 
   // A quote that fails takes its own query key's data with it — `keepPreviousData`
@@ -664,24 +666,18 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
       // The code has been sent with this order; a later order must not carry it again.
       clearStoredReferral();
 
-      if (inTelegram) haptic.notify('success');
-      const outcome = resolveCheckoutOutcome(result, loggedIn);
-      if (outcome.kind === 'external' && inTelegram) {
-        // Some gateways refuse to run inside Telegram's WebView: pay in the
-        // browser, and leave the Mini App on the order so the shopper comes back
-        // to its status rather than an empty checkout. A signed-in shopper lands
-        // on their account order (inside the Mini App shell, with the BackButton);
-        // a guest has no order page, so they get the order-placed screen.
-        openExternalLink(outcome.url);
-        navigate(
-          loggedIn ? accountOrderPath(result.reference) : `/order-placed?${new URLSearchParams({ order: result.reference })}`,
-          { replace: true },
-        );
-      } else if (outcome.kind === 'external') {
-        window.location.assign(outcome.url);
-      } else {
-        navigate(outcome.to, { replace: true });
+      // A guest order that created a new customer comes back with their session: they are signed in from here on,
+      // so they land on their account order page rather than the guest screen. The cart has just been emptied, so
+      // nothing is merged; the account's cart is the empty one the order left behind, which is server mode.
+      if (result.session) {
+        startSession(result.session);
+        useCartStore.getState().setMode('server');
       }
+
+      if (inTelegram) haptic.notify('success');
+      // Nobody is sent off to a payment processor: the hosted checkout opens from the "Open checkout" button on the page below.
+      const outcome = resolveCheckoutOutcome(result, loggedIn || Boolean(result.session));
+      navigate(outcome.to, { replace: true, state: outcome.state });
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         notifications.show({

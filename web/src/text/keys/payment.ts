@@ -21,6 +21,7 @@ export default defineTextArea('payment', {
   'placed.headline': { en: 'Order placed', max: 80 },
   'placed.warning': { en: 'We couldn’t set up online payment for this order — message us and we’ll help you pay.' },
   'placed.chatHint': { en: 'Message us on WhatsApp or Telegram to arrange payment — your order reference is already filled in for you.' },
+  'placed.checkoutHint': { en: 'Your order is saved and waiting for payment. Tap below to pay securely online.' },
   'placed.payViaWhatsapp': { en: 'Pay via WhatsApp', max: 60 },
   'placed.payViaTelegram': { en: 'Pay via Telegram', max: 60 },
   'placed.viewOrder': { en: 'View your order', max: 40 },

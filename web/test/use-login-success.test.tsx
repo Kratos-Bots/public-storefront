@@ -25,7 +25,7 @@ import { useCartStore, type LocalLine } from '@/stores/cart.ts';
 import { accessGate } from '@/app/access-gate.ts';
 import { useSessionStore } from '@/stores/session.ts';
 import { resetCartSync } from '@/features/cart/useServerCart.ts';
-import { safeReturnTo, unionCartLines, useLoginSuccess } from '@/features/auth/useLoginSuccess.ts';
+import { safeReturnTo, startSession, unionCartLines, useLoginSuccess } from '@/features/auth/useLoginSuccess.ts';
 
 const fetchMock = vi.mocked(fetchCart);
 const putMock = vi.mocked(putCart);
@@ -145,6 +145,22 @@ describe('safeReturnTo', () => {
     expect(safeReturnTo('checkout')).toBeNull();
     expect(safeReturnTo(null)).toBeNull();
     expect(safeReturnTo('')).toBeNull();
+  });
+});
+
+describe('startSession', () => {
+  it('stores the session and clears a stale refusal, without navigating or touching the cart', () => {
+    accessGate.getState().setDenied(true);
+    useCartStore.setState({ lines: [line({ productId: 3 })], mode: 'local' });
+    startSession(result);
+
+    expect(useSessionStore.getState()).toMatchObject({ token: 'sess-token', customer: { id: 42, nickname: 'Jane D.' } });
+    expect(accessGate.getState().denied).toBe(false);
+    expect(useCartStore.getState().lines).toHaveLength(1);
+    expect(useCartStore.getState().mode).toBe('local');
+    expect(navigate).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(putMock).not.toHaveBeenCalled();
   });
 });
 

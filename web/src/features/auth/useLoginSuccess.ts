@@ -72,6 +72,20 @@ export async function adoptAccountCart(client?: QueryClient): Promise<void> {
 }
 
 /**
+ * Make a login token the current session, without navigating anywhere or touching the cart's contents.
+ * Shared by every sign-in and by guest checkout, which signs a brand-new customer in once their order is placed.
+ *
+ * The api client reads the token from the store to sign calls, so this has to run before the first of them.
+ * A refusal recorded for a previous customer must not follow this one, and a previous session in this tab
+ * can have left a debounce timer armed and a stale server cart cached; neither belongs to the new customer.
+ */
+export function startSession(result: LoginResult): void {
+  accessGate.getState().reset();
+  useSessionStore.getState().setSession(result.token, result.customer);
+  resetCartSync();
+}
+
+/**
  * Everything that happens the moment a login token comes back, whichever
  * provider produced it: store the session, fold the guest cart into the
  * account's, then hand the customer back to whatever they were doing.
@@ -90,15 +104,8 @@ export function useLoginSuccess(): (result: LoginResult) => Promise<void> {
       // Read where they were headed before writing anything: `setSession` swaps
       // the whole state object, so a snapshot taken before it is stale after it.
       const destination = safeReturnTo(useSessionStore.getState().returnTo) ?? DEFAULT_LANDING;
-      // The api client reads the token from the store to sign the cart calls below,
-      // so the session has to be in place before the first of them goes out.
-      // A refusal recorded for a previous customer must not follow this one.
-      accessGate.getState().reset();
-      useSessionStore.getState().setSession(result.token, result.customer);
-
-      // A previous session in this tab can have left a debounce timer armed and a
-      // stale server cart cached; neither belongs to the customer signing in now.
-      resetCartSync();
+      // The cart calls below are signed with the token, so the session goes in first.
+      startSession(result);
 
       await adoptAccountCart(client);
 

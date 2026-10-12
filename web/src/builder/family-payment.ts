@@ -10,10 +10,12 @@ export interface PaymentData {
   /** Chat links with the reference pre-typed (placed); null when the shop has none. */
   whatsapp: string | null;
   telegram: string | null;
+  /** The hosted checkout to open from a pay button (placed); absent or null unless this order came back with one. Never in the URL: it rides router state. */
+  checkoutUrl?: string | null;
 }
 export const PaymentFamily = createFamily<PaymentData>('payment');
 
 /** What the editor's Preview state supplies for a payment container (stage 4 §6). */
 export interface PaymentPreview {
-  orderRef: string | null; signIn: string | null; warning: boolean; whatsapp: string | null; telegram: string | null;
+  orderRef: string | null; signIn: string | null; warning: boolean; whatsapp: string | null; telegram: string | null; checkoutUrl?: string | null;
 }

@@ -15,6 +15,8 @@ import type { VerificationResult } from '@/api/verify.ts';
 export const FIXTURE_TOKEN = 'sf-builder-fixture-token';
 export const FIXTURE_CUSTOMER: SessionCustomer = { id: 900001, nickname: 'Morgan' };
 export const FIXTURE_ORDER_REF = 'NB0977';
+/** A placeholder hosted-checkout address on shop.example, for the "Order placed" preview's pay button. */
+export const FIXTURE_CHECKOUT_URL = `https://shop.example/pay/${FIXTURE_ORDER_REF}`;
 /** The sign-in link a signed-out customer sees on the payment pages. */
 export const FIXTURE_SIGN_IN = `/login?returnTo=${encodeURIComponent(`/account/orders/${FIXTURE_ORDER_REF}`)}`;
 

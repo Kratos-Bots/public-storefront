@@ -37,6 +37,7 @@ vi.mock('@/features/cart/useServerCart.ts', () => ({
     sync: cart.sync,
     refresh: vi.fn(async () => {}),
   }),
+  resetCartSync: vi.fn(),
 }));
 
 const notify = vi.hoisted(() => ({ show: vi.fn() }));
@@ -204,7 +205,13 @@ function makeQuote(overrides: Partial<Quote> = {}): Quote {
 let client: QueryClient;
 
 function LocationProbe() {
-  return <div data-testid="path">{useLocation().pathname}</div>;
+  const location = useLocation();
+  return (
+    <>
+      <div data-testid="path">{location.pathname}</div>
+      <div data-testid="state">{JSON.stringify(location.state)}</div>
+    </>
+  );
 }
 
 function Wrapper({ children }: { children: ReactNode }) {
@@ -478,25 +485,26 @@ describe('CheckoutPage — signed in', () => {
     });
   });
 
-  describe('external payment inside Telegram', () => {
-    const external = (reference: string, publicUrl: string | null) => ({
+  describe('hosted checkout', () => {
+    const hosted = (reference: string) => ({
       reference,
-      publicUrl,
+      publicUrl: null,
       status: 'pending',
       total: 84.99,
       payment: { type: 'checkout_url' as const, paymentId: 1, method: 'stripe', amount: 84.99, url: 'https://pay.example/session/1' },
     });
 
-    it('opens the gateway in the browser and lands a signed-in shopper on the account order', async () => {
-      tg.inTelegram = true;
-      placeOrderMock.mockResolvedValue(external('K7 M2', null));
+    it.each([false, true])('lands a signed-in shopper on the account order and does not open the gateway (Telegram: %s)', async (inTelegram) => {
+      tg.inTelegram = inTelegram;
+      placeOrderMock.mockResolvedValue(hosted('K7 M2'));
       mount();
       await walkToReview();
       pressPlace();
       await settle();
 
-      expect(tg.openLink).toHaveBeenCalledWith('https://pay.example/session/1');
       expect(screen.getByTestId('path')).toHaveTextContent('/account/orders/K7%20M2');
+      expect(screen.getByTestId('state')).toHaveTextContent('null');
+      expect(tg.openLink).not.toHaveBeenCalled();
     });
   });
 
@@ -816,22 +824,69 @@ describe('CheckoutPage — guest', () => {
     expect(screen.getByTestId('path')).toHaveTextContent(/^\/order-placed$/);
     expect(localStorage.getItem('sf-orders-v1')).toBeNull();
   });
-  it('sends a guest to the order-placed screen after an external payment inside Telegram', async () => {
-    tg.inTelegram = true;
-    placeGuestOrderMock.mockResolvedValue({
+  describe('hosted checkout for a guest', () => {
+    const hosted = (extra: object = {}) => ({
       reference: 'G8N3RQ',
       publicUrl: `${window.location.origin}/order/G8N3RQ/key456`,
       status: 'pending',
       total: 84.99,
-      payment: { type: 'checkout_url', paymentId: 2, method: 'stripe', amount: 84.99, url: 'https://pay.example/session/2' },
+      payment: { type: 'checkout_url' as const, paymentId: 2, method: 'stripe', amount: 84.99, url: 'https://pay.example/session/2' },
+      ...extra,
     });
-    mount();
-    await walkToReview();
-    pressPlace();
-    await settle();
 
-    expect(tg.openLink).toHaveBeenCalledWith('https://pay.example/session/2');
-    expect(screen.getByTestId('path')).toHaveTextContent(/^\/order-placed$/);
+    it.each([false, true])('without a session: order-placed with the address in state, not the URL, and no gateway opened (Telegram: %s)', async (inTelegram) => {
+      tg.inTelegram = inTelegram;
+      placeGuestOrderMock.mockResolvedValue(hosted());
+      mount();
+      await walkToReview();
+      pressPlace();
+      await settle();
+
+      expect(screen.getByTestId('path')).toHaveTextContent(/^\/order-placed$/);
+      expect(screen.getByTestId('state')).toHaveTextContent(JSON.stringify({ checkoutUrl: 'https://pay.example/session/2' }));
+      expect(tg.openLink).not.toHaveBeenCalled();
+      expect(useSessionStore.getState().token).toBeNull();
+    });
+
+    it('with a session (a brand-new customer): signs them in and lands on their account order page', async () => {
+      placeGuestOrderMock.mockResolvedValue(hosted({ session: { token: 'new-token', customer: { id: 77, nickname: null } } }));
+      mount();
+      await walkToReview();
+      pressPlace();
+      await settle();
+
+      expect(useSessionStore.getState()).toMatchObject({ token: 'new-token', customer: { id: 77, nickname: null } });
+      expect(screen.getByTestId('path')).toHaveTextContent('/account/orders/G8N3RQ');
+      expect(screen.getByTestId('state')).toHaveTextContent('null');
+      // The order emptied the cart; signing in neither refills it nor merges anything.
+      expect(useCartStore.getState().lines).toEqual([]);
+      expect(useCartStore.getState().mode).toBe('server');
+    });
+
+    it('with a session and an offline method: the account order page too, not the guest screen', async () => {
+      placeGuestOrderMock.mockResolvedValue({
+        reference: 'G8N3RQ', publicUrl: null, status: 'pending', total: 84.99,
+        payment: { type: 'manual', paymentId: 3, method: 'bank', displayName: 'Bank transfer', amount: 84.99, instructions: {} },
+        session: { token: 'new-token', customer: { id: 77, nickname: null } },
+      });
+      mount();
+      await walkToReview();
+      pressPlace();
+      await settle();
+
+      expect(screen.getByTestId('path')).toHaveTextContent('/account/orders/G8N3RQ');
+    });
+
+    it('asks for no signed-in quote once the session appears under the placed order', async () => {
+      placeGuestOrderMock.mockResolvedValue(hosted({ session: { token: 'new-token', customer: { id: 77, nickname: null } } }));
+      mount();
+      await walkToReview();
+      const before = quoteMock.mock.calls.length;
+      pressPlace();
+      await settle();
+
+      expect(quoteMock.mock.calls.length).toBe(before);
+    });
   });
 });
 

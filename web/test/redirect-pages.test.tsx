@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
 import { MemoryRouter, Route, Routes, useParams } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -10,6 +10,13 @@ const state = vi.hoisted(() => ({
   settings: { brand: { links: { whatsapp: null, telegram: null } }, features: { accounts: true } } as unknown as StorefrontSettings,
 }));
 vi.mock('@/app/settings.ts', () => ({ useSettings: () => state.settings }));
+
+const tg = vi.hoisted(() => ({ inTelegram: false, openLink: vi.fn() }));
+vi.mock('@/lib/telegram-webapp.ts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/telegram-webapp.ts')>()),
+  isTelegramWebApp: () => tg.inTelegram,
+  openExternalLink: (url: string) => tg.openLink(url),
+}));
 
 import { useSessionStore } from '@/stores/session.ts';
 import { useCartStore } from '@/stores/cart.ts';
@@ -36,13 +43,17 @@ beforeEach(() => {
   localStorage.clear();
   signOut();
   state.settings = settings({ whatsapp: null, telegram: null });
+  tg.inTelegram = false;
+  tg.openLink.mockClear();
 });
 
 afterEach(() => {
   cleanup();
 });
 
-function Wrapper({ children, entry }: { children: ReactNode; entry: string }) {
+type Entry = string | { pathname: string; search: string; state: unknown };
+
+function Wrapper({ children, entry }: { children: ReactNode; entry: Entry }) {
   return (
     <QueryClientProvider client={client}>
       <MantineProvider env="test">
@@ -75,7 +86,7 @@ function mountCancel(entry: string) {
   );
 }
 
-function mountOrderPlaced(entry: string) {
+function mountOrderPlaced(entry: Entry) {
   return render(
     <Wrapper entry={entry}>
       <OrderPlacedPage />
@@ -283,6 +294,50 @@ describe('OrderPlacedPage', () => {
     expect(screen.queryByRole('link', { name: /telegram/i })).toBeNull();
     expect(screen.getByText(/quote your order reference/i)).toBeInTheDocument();
     expect(screen.queryByText(/message us on whatsapp or telegram/i)).toBeNull();
+  });
+
+  describe('with a hosted checkout in navigation state', () => {
+    const URL = 'https://pay.example/session/9';
+    const withCheckout = (extra: Partial<{ search: string }> = {}) => ({ pathname: '/order-placed', search: extra.search ?? '?order=REF9', state: { checkoutUrl: URL } });
+    const openCheckout = () => screen.getByRole('link', { name: /click here to pay/i });
+
+    it('renders an Open checkout button that opens in a new tab, and drops the chat arrangement', () => {
+      state.settings = settings({ whatsapp: 'https://wa.me/447700900000', telegram: 'https://t.me/shopbot' });
+      mountOrderPlaced(withCheckout());
+
+      const button = openCheckout();
+      expect(button).toHaveAttribute('href', URL);
+      expect(button).toHaveAttribute('target', '_blank');
+      expect(button.getAttribute('rel')).toContain('noopener');
+      expect(screen.getByText(/tap below to pay securely online/i)).toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: /whatsapp/i })).toBeNull();
+      expect(screen.queryByText(/message us on whatsapp or telegram/i)).toBeNull();
+      expect(screen.queryByText(/quote your order reference/i)).toBeNull();
+    });
+
+    it('keeps the sign-in link after the button when signed out', () => {
+      mountOrderPlaced(withCheckout({ search: '?order=REF3' }));
+      expect(openCheckout()).toBeInTheDocument();
+      expect(signInLink()?.getAttribute('href')).toBe(SIGN_IN);
+    });
+
+    it('inside Telegram the tap goes through the system browser opener, not the page', () => {
+      tg.inTelegram = true;
+      mountOrderPlaced(withCheckout());
+      fireEvent.click(openCheckout());
+      expect(tg.openLink).toHaveBeenCalledWith(URL);
+    });
+
+    it('outside Telegram the tap is left to the browser', () => {
+      mountOrderPlaced(withCheckout());
+      fireEvent.click(openCheckout());
+      expect(tg.openLink).not.toHaveBeenCalled();
+    });
+
+    it('ignores an address that is not a web address', () => {
+      mountOrderPlaced({ pathname: '/order-placed', search: '?order=REF9', state: { checkoutUrl: 'javascript:alert(1)' } });
+      expect(screen.queryByRole('link', { name: /click here to pay/i })).toBeNull();
+    });
   });
 
   it('signed out, accounts on: the sign-in link sits with the chat buttons', () => {

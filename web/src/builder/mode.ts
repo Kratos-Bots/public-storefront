@@ -14,7 +14,7 @@ export interface BuilderMode {
 export const PREVIEW_STATE_IDS = {
   OrdersList: ['orders', 'none', 'more'], Loyalty: ['rewards', 'no-points'], Referrals: ['new', 'referred'],
   Profile: ['website', 'webapp'], PaymentSuccess: ['reference', 'missing'], PaymentCancel: ['signed-out', 'no-reference'],
-  OrderPlaced: ['chat', 'warning', 'no-chat', 'missing'],
+  OrderPlaced: ['chat', 'warning', 'no-chat', 'missing', 'checkout'],
   TrackingLookup: ['form', 'found-2', 'found-1', 'nothing-shipped', 'not-found', 'error'],
   VerifyForm: ['form', 'authentic', 'expired', 'not-verified', 'error'],
   ResetPassword: ['form', 'set', 'expired', 'checking', 'unreachable'],
