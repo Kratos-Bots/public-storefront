@@ -4,6 +4,7 @@ import { defineTextArea } from '@/text/define.ts';
 export default defineTextArea('account', {
   'nav.orders': { en: 'Orders', max: 30 },
   'nav.loyalty': { en: 'Loyalty', max: 30 },
+  'nav.storeCredit': { en: 'Store credit', max: 30 },
   'nav.referrals': { en: 'Referrals', max: 30 },
   'nav.profile': { en: 'Profile', max: 30 },
   'nav.ariaLabel': { en: 'Account sections', max: 60 },

@@ -17,7 +17,7 @@ import {
   useRedeemOptions,
 } from '@/features/account/queries.ts';
 import { useText } from '@/text/runtime.tsx';
-import { loyaltyOn, type RedeemOption } from '@/types/profile.ts';
+import { creditOnly, loyaltyOn, type RedeemOption } from '@/types/profile.ts';
 import { LoyaltyFamily, type LoyaltyData, type LoyaltyPreview } from '@/builder/family-loyalty.ts';
 import { usePreviewFixture, usePreviewState } from '@/builder/mode.ts';
 import type { FamilyValue, PartViewProps } from '@/builder/parts.ts';
@@ -46,7 +46,8 @@ function PointsView({ styleAttrs }: PartViewProps) {
 function CreditView({ styleAttrs }: PartViewProps) {
   const { t } = useText();
   const { profile } = LoyaltyFamily.useData();
-  if (!loyaltyOn(profile)) return null;
+  // Loyalty off keeps the balance visible while there is credit left to spend.
+  if (!loyaltyOn(profile) && !creditOnly(profile)) return null;
   return (
     <div className={classes.row} {...styleAttrs}>
       <span className={classes.rowLabel}>{t('account.loyalty.storeCredit')}</span>
@@ -201,7 +202,7 @@ export function LoyaltyPage({ slots }: { slots?: { content: SlotRender } } = {})
   );
 
   if (!preview) {
-    if (profile.data && !loyaltyOn(profile.data)) return <Navigate to="/account/orders" replace />;
+    if (profile.data && !loyaltyOn(profile.data) && !creditOnly(profile.data)) return <Navigate to="/account/orders" replace />;
 
     if (profile.isPending) return <PageSkeleton inline />;
 

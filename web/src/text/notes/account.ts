@@ -2,6 +2,7 @@
 export default {
   'nav.orders': 'Account section tab, and the small label on the orders error and empty screens',
   'nav.loyalty': 'Account section tab, and the small label on the loyalty error screen',
+  'nav.storeCredit': 'Account section tab shown in place of Loyalty when the shopper\'s group has loyalty switched off but they still hold store credit',
   'nav.referrals': 'Account section tab, and the small label on the referrals error screen',
   'nav.profile': 'Account section tab, and the small label on the profile error screen',
   'nav.ariaLabel': 'Screen-reader name of the account section tabs',

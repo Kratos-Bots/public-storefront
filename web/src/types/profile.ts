@@ -17,6 +17,14 @@ export interface Profile {
 export function loyaltyOn(profile: Pick<Profile, 'loyaltyEnabled'> | undefined | null): boolean {
   return profile?.loyaltyEnabled !== false;
 }
+
+/**
+ * Loyalty is off for this shopper but they still hold store credit, which stays spendable: the
+ * account keeps one credit-only page so the balance can be seen. Unknown (loading, older backend) is not this case.
+ */
+export function creditOnly(profile: Pick<Profile, 'loyaltyEnabled' | 'storeCreditBalance'> | undefined | null): boolean {
+  return !!profile && !loyaltyOn(profile) && profile.storeCreditBalance > 0;
+}
 export interface RedeemOption { id: number; label: string; pointsCost: number; creditValue: number; affordable: boolean }
 export interface RedeemOptions { loyaltyPoints: number; options: RedeemOption[] }
 export interface RedeemResult { pointsDeducted: number; creditAwarded: number; newPointsBalance: number; newCreditBalance: number }
