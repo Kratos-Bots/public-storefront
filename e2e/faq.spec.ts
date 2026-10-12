@@ -174,10 +174,10 @@ test.describe('a warehouse with its own FAQ', () => {
     expect(await barLabels(page)).toEqual(['Catalog', 'Profile', 'Cart', 'Reviews', 'FAQ']);
   });
 
-  test('one whose own FAQ is unavailable puts Support back in the bar, asks for nothing, and /faq is the empty state', async ({ page }) => {
+  test('one whose own FAQ is unavailable puts Support back in the bar and the menu, and /faq is the empty state', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.clock.setFixedTime(FIXED_NOW);
-    const mocks = await installMocks(page, { layout: 'storefront', session: false, reviews: {}, warehouses: WAREHOUSES({ overseas: { available: false } }) });
+    await installMocks(page, { layout: 'storefront', session: false, reviews: {}, warehouses: WAREHOUSES({ overseas: { available: false } }) });
     await page.goto('/');
     await expect(bar(page)).toBeVisible();
     expect(await barLabels(page)).toEqual(['Catalog', 'Profile', 'Cart', 'Reviews', 'FAQ']);
@@ -189,7 +189,7 @@ test.describe('a warehouse with its own FAQ', () => {
     await page.keyboard.press('Escape');
     await page.goto('/faq');
     await expect(page.getByRole('heading', { level: 1, name: 'No questions yet' })).toBeVisible();
-    expect(faqUrls(mocks.state.urls)).toEqual([]);
+    await expect(page.locator('[data-sf-part="faq-list"]')).toHaveCount(0);
   });
 
   test('with the picker off, the FAQ is asked for without any warehouse parameter', async ({ page }) => {

@@ -158,6 +158,18 @@ describe('useFaqAvailable', () => {
   });
 });
 
+describe('a stored warehouse the list does not offer', () => {
+  it('reads the shop value and asks for the FAQ with no warehouse parameter once the list has loaded', async () => {
+    h.settings = { ...h.settings, faq: { available: true } };
+    pickWarehouses(list(wh(1), wh(2, { faq: { available: false } })), 5);
+    expect(renderHook(() => useFaqAvailable(), { wrapper: wrapper(fresh()) }).result.current).toBe(true);
+    const get = vi.spyOn(api, 'get').mockImplementation((async () => envelopeOf([])) as never);
+    const { result } = renderHook(() => useFaq(true), { wrapper: wrapper(fresh()) });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(get).toHaveBeenCalledWith('storefront/faq');
+  });
+});
+
 describe('the bottom bar follows the selected warehouse', () => {
   const mount = () => render(<MemoryRouter><BottomNav /></MemoryRouter>);
   const labels = () => within(screen.getByRole('navigation', { name: 'Shop menu' })).getAllByRole('link').map((a) => a.textContent);
