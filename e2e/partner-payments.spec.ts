@@ -127,6 +127,27 @@ for (const width of [1280, 390]) {
       await shot(page, 'order-pay-screen');
     });
 
+    test('4b · the pay-later picker and the placed crypto payment say what they charge in', async ({ page }) => {
+      await open(page, { path: ORDER_PAGE, width, orderFixture: 'unpaid', paymentMethods: PARTNER_EUR_METHODS });
+      const card = page.getByRole('button', { name: /^Pay by card/ });
+      await expect(card).toContainText('£47.45'); // the order's own currency (the fixture's)
+      await expect(card).toContainText('Charged in EUR: €43.65');
+      const crypto = page.getByRole('button', { name: /^Pay with crypto/ });
+      await crypto.click();
+      await page.getByText('USDT', { exact: true }).first().click();
+      await expect(page.getByTestId('charged-in').filter({ hasText: '€43.65' }).last()).toBeVisible();
+      await shot(page, 'order-picker-eur');
+    });
+
+    test('4c · a placed crypto payment shows its settlement in the same line', async ({ page }) => {
+      await open(page, {
+        path: ORDER_PAGE, width, orderFixture: 'crypto',
+        tweakOrder: (o) => { Object.assign(o.payment!.activePayment!, { settlementAmount: 42.3, settlementCurrency: 'EUR' }); },
+      });
+      await expect(page.getByTestId('charged-in')).toHaveText('Charged in EUR: €42.30');
+      await shot(page, 'order-crypto-eur');
+    });
+
     test('5 · after two minutes it stops asking, says where the details will appear, and Refresh looks again', async ({ page }) => {
       const mocks = await open(page, {
         path: ORDER_PAGE, width, orderFixture: 'unpaid', clock: true, partnerPending: { resolveOnRead: null },

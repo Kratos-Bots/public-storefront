@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, render, renderHook, screen } from '@testing-library/react';
+import { act, cleanup, renderHook } from '@testing-library/react';
 import {
   PARTNER_POLL_MS,
   PARTNER_WINDOW_MS,
@@ -57,4 +57,3 @@ describe('usePartnerPendingPhase', () => {
   });
 });
 
-void render; void screen;
