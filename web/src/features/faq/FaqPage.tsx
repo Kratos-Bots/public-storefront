@@ -5,7 +5,7 @@ import { EmptyState } from '@/components/EmptyState.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { errorMessage } from '@/lib/errors.ts';
 import { FADE } from '@/lib/motion.ts';
-import { faqAvailable } from '@/features/faq/settings.ts';
+import { useFaqAvailable, useFaqPending } from '@/features/faq/use-faq-available.ts';
 import { useFaq } from '@/features/faq/queries.ts';
 import { linkify } from '@/features/faq/linkify.ts';
 import type { FaqSection } from '@/types/faq.ts';
@@ -21,7 +21,8 @@ import classes from '@/features/faq/FaqPage.module.css';
 export function FaqPage() {
   const settings = useSettings();
   const { t } = useText();
-  const available = faqAvailable(settings);
+  const available = useFaqAvailable();
+  const pending = useFaqPending();
   const query = useFaq(available);
 
   // The tab says where the shopper is, like a product page's; the shop's own title comes back on the way out.
@@ -38,9 +39,10 @@ export function FaqPage() {
     <EmptyState as="h1" title={t('faq.page.empty.title')} description={t('faq.page.empty.body')} />
   );
   // Off, the query never starts and `isPending` would stay true forever, so this comes first.
-  if (!available) return empty;
+  // Which FAQ applies is not known until the warehouse list arrives: wait rather than flash the shop's answer.
+  if (!pending && !available) return empty;
 
-  if (query.isPending) {
+  if (pending || query.isPending) {
     return (
       <>
         <h1 className={classes.srOnly}>{pageTitle}</h1>

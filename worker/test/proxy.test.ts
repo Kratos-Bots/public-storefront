@@ -66,6 +66,10 @@ describe('cacheTtlFor', () => {
     expect(cacheTtlFor('storefront/faq')).toBe(0);
     expect(cacheTtlFor('storefront/reviews')).toBe(0);
   });
+  it("forwards the FAQ warehouse parameter to the backend and still does not cache it (one warehouse's FAQ never answers another)", () => {
+    expect(buildBackendUrl('https://b.test/', 'storefront/faq', '?warehouse=2').toString()).toBe('https://b.test/api/v1/public/storefront/faq?warehouse=2');
+    expect(cacheTtlFor('storefront/faq')).toBe(0);
+  });
   it('caches the published page set 30s per layout and nothing next to it', () => {
     expect(cacheTtlFor('storefront/pages/storefront')).toBe(30);
     expect(cacheTtlFor('storefront/pages/menu')).toBe(30);

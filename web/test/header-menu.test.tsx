@@ -37,6 +37,7 @@ import { MenuHeader } from '@/layouts/MenuShell.tsx';
 import { WebAppHeader } from '@/layouts/WebAppShell.tsx';
 import { MENU_LINKS } from '@/layouts/menu-links.ts';
 import { useSessionStore } from '@/stores/session.ts';
+import { resetWarehouseStore, useWarehouseStore } from '@/features/warehouses/store.ts';
 
 function setViewport(phone: boolean) {
   window.matchMedia = ((query: string) => ({
@@ -154,6 +155,26 @@ describe('the menu panel', () => {
     mount(<StorefrontHeader />, { faq: 'older' });
     fireEvent.click(burger()!);
     expect(labels()).toEqual(['Catalog', 'Reviews', 'Support', 'Sign in']);
+  });
+  it('follows the selected warehouse: its own FAQ puts FAQ in, an unavailable one takes it out, faq null keeps the shop value', () => {
+    const wh = (id: number, faq?: { available: boolean } | null) => ({ id, name: 'Site ' + id, country: null, isDefault: id === 1, ...(faq === undefined ? {} : { faq }) });
+    const pick = (rows: ReturnType<typeof wh>[], chosen: number) =>
+      useWarehouseStore.setState({ warehouseId: chosen, ctx: { enabled: true, list: rows, failed: false, carried: null } });
+    pick([wh(1), wh(2, { available: true })], 2);
+    mount(<StorefrontHeader />, { faq: false });
+    fireEvent.click(burger()!);
+    expect(labels()).toEqual(['Catalog', 'Reviews', 'FAQ', 'Support', 'Sign in']);
+    cleanup();
+    pick([wh(1), wh(2, { available: false })], 2);
+    mount(<StorefrontHeader />, { faq: true });
+    fireEvent.click(burger()!);
+    expect(labels()).toEqual(['Catalog', 'Reviews', 'Support', 'Sign in']);
+    cleanup();
+    pick([wh(1), wh(2, null)], 2);
+    mount(<StorefrontHeader />, { faq: true });
+    fireEvent.click(burger()!);
+    expect(labels()).toEqual(['Catalog', 'Reviews', 'FAQ', 'Support', 'Sign in']);
+    resetWarehouseStore();
   });
   it('marks FAQ as the current page on /faq', () => {
     mount(<StorefrontHeader />, { path: '/faq', faq: true });

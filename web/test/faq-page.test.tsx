@@ -13,6 +13,7 @@ vi.mock('@/api/faq.ts', () => ({ fetchFaq: vi.fn() }));
 import { fetchFaq } from '@/api/faq.ts';
 import { FaqPage } from '@/features/faq/FaqPage.tsx';
 import { ApiError } from '@/lib/errors.ts';
+import { resetWarehouseStore, useWarehouseStore } from '@/features/warehouses/store.ts';
 
 const fetchMock = vi.mocked(fetchFaq);
 
@@ -209,5 +210,44 @@ describe('the FAQ page', () => {
     fetchMock.mockRejectedValue(new ApiError(403, 'ACCESS_DENIED'));
     mount();
     expect(await screen.findByText('Your account doesn’t have access to this shop.')).toBeInTheDocument();
+  });
+});
+
+describe('the FAQ page while the warehouse list is on its way', () => {
+  const rows = [{ id: 1, name: 'Main', country: null, isDefault: true }, { id: 2, name: 'Site 2', country: null, isDefault: false, faq: { available: true } }];
+  afterEach(() => resetWarehouseStore());
+
+  it('shows the skeleton, not the empty state, when a stored warehouse is chosen and the list has not arrived (shop FAQ off)', () => {
+    shop.faq = { available: false };
+    useWarehouseStore.setState({ warehouseId: 2, ctx: { enabled: true, list: null, failed: false, carried: null } });
+    mount();
+    expect(screen.getByRole('heading', { level: 1, name: 'Frequently asked questions' })).toBeInTheDocument();
+    expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(screen.queryByText('No questions yet')).toBeNull();
+  });
+  it('then shows the warehouse sections once the list arrives', async () => {
+    shop.faq = { available: false };
+    fetchMock.mockResolvedValue({ sections });
+    useWarehouseStore.setState({ warehouseId: 2, ctx: { enabled: true, list: null, failed: false, carried: null } });
+    mount();
+    act(() => useWarehouseStore.getState().setContext({ list: rows }));
+    await screen.findByRole('button', { name: 'Ordering Process' });
+    expect(fetchMock).toHaveBeenCalledWith(2);
+  });
+  it('is not pending forever: a failed list reads the shop value (empty state when the shop has no FAQ)', () => {
+    shop.faq = { available: false };
+    useWarehouseStore.setState({ warehouseId: 2, ctx: { enabled: true, list: null, failed: true, carried: null } });
+    mount();
+    expect(screen.getByRole('heading', { level: 1, name: 'No questions yet' })).toBeInTheDocument();
+  });
+  it('is never pending with no selection or with the picker off', () => {
+    shop.faq = { available: false };
+    useWarehouseStore.setState({ warehouseId: null, ctx: { enabled: true, list: null, failed: false, carried: null } });
+    mount();
+    expect(screen.getByRole('heading', { name: 'No questions yet' })).toBeInTheDocument();
+    cleanup();
+    useWarehouseStore.setState({ warehouseId: 2, ctx: { enabled: false, list: null, failed: false, carried: null } });
+    mount();
+    expect(screen.getByRole('heading', { name: 'No questions yet' })).toBeInTheDocument();
   });
 });
