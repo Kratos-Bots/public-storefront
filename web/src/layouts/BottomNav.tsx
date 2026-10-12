@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router';
 import { useSettings } from '@/app/settings.ts';
 import { useEffectiveLayout } from '@/app/layout.ts';
 import { BagIcon, FaqIcon, HelpIcon, HomeIcon, StarIcon, UserIcon, type GlyphProps } from '@/components/icons.tsx';
-import { faqAvailable } from '@/features/faq/settings.ts';
+import { useFaqAvailable } from '@/features/faq/use-faq-available.ts';
 import { reviewSettingsOf } from '@/features/reviews/settings.ts';
 import { useModalOpen } from '@/lib/use-modal-open.ts';
 import { isTelegramWebApp } from '@/lib/telegram-webapp.ts';
@@ -66,7 +66,7 @@ function Bar({ pathname, inset, coverUnderDialog }: { pathname: string; inset: '
   }, []);
 
   const reviews = reviewSettingsOf(settings).enabled;
-  const faq = faqAvailable(settings);
+  const faq = useFaqAvailable();
   // Inside Telegram the web app layout has no sign-in page: the account is already there (as in the header).
   const profileTo = loggedIn || (layout === 'webapp' && native) ? '/account/profile' : '/login';
   const items: Item[] = [

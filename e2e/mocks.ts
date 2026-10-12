@@ -315,8 +315,14 @@ export interface InstallMocksOptions {
    * feature is off and every answer is exactly what it always was.
    */
   warehouses?: {
-    list: Array<{ id: number; name: string; country: string | null; isDefault: boolean; description?: string | null; orderingEnabled?: boolean; orderingMessage?: string | null; shipping?: { countries: string[]; collectionCountries: string[] } }>;
+    list: Array<{ id: number; name: string; country: string | null; isDefault: boolean; description?: string | null; orderingEnabled?: boolean; orderingMessage?: string | null; shipping?: { countries: string[]; collectionCountries: string[] }; faq?: { available: boolean } | null }>;
     carries: Record<number, number[]>;
+    /**
+     * Warehouses with their own FAQ: warehouse id -> the sections `GET storefront/faq?warehouse=<id>` answers instead of the shop's
+     * (give that row `faq: { available: true }`; a row with `faq: { available: false }` is never asked for).
+     * A warehouse not listed here answers the shop FAQ, as the backend does for one on `faqMode: 'shop'`.
+     */
+    faqs?: Record<number, FaqSection[]>;
     /** `features.warehousePrompt`: ask which warehouse before showing the catalogue. Default off. */
     prompt?: boolean;
     /**
@@ -1173,6 +1179,12 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
       }
       if (options.faq?.status) {
         await fail(route, options.faq.status, options.faq.message ?? 'Error');
+        return;
+      }
+      // A warehouse with its own FAQ answers its own sections (none at all when that FAQ has nothing readable).
+      const own = options.warehouses?.faqs?.[Number(url.searchParams.get('warehouse'))];
+      if (own) {
+        await envelope(route, { sections: own });
         return;
       }
       const available = options.faq?.available ?? true;

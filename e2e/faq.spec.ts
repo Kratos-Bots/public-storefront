@@ -1,6 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
+import type { FaqSection } from '../web/src/types/faq.ts';
 import { installMocks, installTelegramStub, type InstallMocksOptions, type Layout } from './mocks.ts';
 import { FIXED_NOW } from './flows.ts';
 import { presetTheme } from './template-theme.ts';
@@ -118,6 +119,90 @@ test.describe('the page', () => {
       expect(await overflow(page)).toBeLessThanOrEqual(0);
     });
   }
+});
+
+test.describe('a warehouse with its own FAQ', () => {
+  const OWN_EU: FaqSection[] = [
+    { id: 'xeu000001', title: 'Dispatch from the EU hub', body: 'Parcels from Test EU leave on Tuesdays and Fridays.' },
+    { id: 'xeu000002', title: 'Duties and VAT', body: 'Prices at Test EU include VAT.' },
+  ];
+  const WAREHOUSES = (rows: { eu?: { available: boolean } | null; overseas?: { available: boolean } | null }): NonNullable<InstallMocksOptions['warehouses']> => ({
+    list: [
+      { id: 1, name: 'Main', country: 'GB', isDefault: true },
+      { id: 2, name: 'Test EU', country: 'DE', isDefault: false, ...(rows.eu === undefined ? {} : { faq: rows.eu }) },
+      { id: 3, name: 'Test Overseas', country: null, isDefault: false, ...(rows.overseas === undefined ? {} : { faq: rows.overseas }) },
+    ],
+    carries: { 2: [102, 104], 3: [101] },
+    faqs: { 2: OWN_EU },
+  });
+  const picker = (page: Page) => page.getByLabel('Shipping from');
+  const faqUrls = (urls: string[]) => urls.filter((u) => /^GET storefront\/faq(\?|$)/.test(u));
+  const openFaq = async (page: Page) => {
+    await bar(page).getByRole('link', { name: 'FAQ' }).click();
+    await expect(page).toHaveURL(/\/faq$/);
+  };
+  const titles = (page: Page) => page.locator('[data-sf-part="faq-list"] button[aria-expanded]');
+
+  test('picking it shows its sections on /faq, and picking the default shows the shop\'s again', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.clock.setFixedTime(FIXED_NOW);
+    const mocks = await installMocks(page, { layout: 'storefront', session: false, reviews: {}, warehouses: WAREHOUSES({ eu: { available: true } }) });
+    await page.goto('/');
+    await expect(picker(page)).toHaveValue('1');
+    await picker(page).selectOption({ label: 'Test EU · DE' });
+    await openFaq(page);
+    await expect(titles(page)).toHaveText(['Dispatch from the EU hub', 'Duties and VAT']);
+    await expect(page.getByText('Parcels from Test EU leave on Tuesdays and Fridays.')).toBeVisible();
+    expect(faqUrls(mocks.state.urls)).toEqual(['GET storefront/faq?warehouse=2']);
+
+    await bar(page).getByRole('link', { name: 'Catalog' }).click();
+    await picker(page).selectOption({ label: 'Main · GB' });
+    await openFaq(page);
+    await expect(titles(page)).toHaveText(['Ordering Process', 'Shipping Info', 'Payment']);
+    expect(faqUrls(mocks.state.urls)).toEqual(['GET storefront/faq?warehouse=2', 'GET storefront/faq']);
+  });
+
+  test('it puts FAQ in the bar even when the shop has no FAQ of its own', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.clock.setFixedTime(FIXED_NOW);
+    await installMocks(page, { layout: 'storefront', session: false, reviews: {}, faq: { available: false }, warehouses: WAREHOUSES({ eu: { available: true } }) });
+    await page.goto('/');
+    await expect(bar(page)).toBeVisible();
+    expect(await barLabels(page)).toEqual(['Catalog', 'Profile', 'Cart', 'Reviews', 'Support']);
+    await picker(page).selectOption({ label: 'Test EU · DE' });
+    await expect(bar(page).getByRole('link', { name: 'FAQ' })).toBeVisible();
+    expect(await barLabels(page)).toEqual(['Catalog', 'Profile', 'Cart', 'Reviews', 'FAQ']);
+  });
+
+  test('one whose own FAQ is unavailable puts Support back in the bar, asks for nothing, and /faq is the empty state', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.clock.setFixedTime(FIXED_NOW);
+    const mocks = await installMocks(page, { layout: 'storefront', session: false, reviews: {}, warehouses: WAREHOUSES({ overseas: { available: false } }) });
+    await page.goto('/');
+    await expect(bar(page)).toBeVisible();
+    expect(await barLabels(page)).toEqual(['Catalog', 'Profile', 'Cart', 'Reviews', 'FAQ']);
+    await picker(page).selectOption({ label: 'Test Overseas' });
+    await expect(bar(page).getByRole('link', { name: 'Support' })).toBeVisible();
+    expect(await barLabels(page)).toEqual(['Catalog', 'Profile', 'Cart', 'Reviews', 'Support']);
+    await page.getByRole('button', { name: 'Open menu' }).click();
+    await expect(page.getByRole('dialog').getByRole('link')).toHaveText(['Catalog', 'Reviews', 'Support', 'Sign in']);
+    await page.keyboard.press('Escape');
+    await page.goto('/faq');
+    await expect(page.getByRole('heading', { level: 1, name: 'No questions yet' })).toBeVisible();
+    expect(faqUrls(mocks.state.urls)).toEqual([]);
+  });
+
+  test('with the picker off, the FAQ is asked for without any warehouse parameter', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.clock.setFixedTime(FIXED_NOW);
+    // A stale stored choice must do nothing while the feature is off.
+    await page.addInitScript(() => window.localStorage.setItem('sf-warehouse-v1', JSON.stringify({ state: { warehouseId: 2 }, version: 0 })));
+    const mocks = await installMocks(page, { layout: 'storefront', session: false, reviews: {} });
+    await page.goto('/faq');
+    await expect(titles(page)).toHaveText(['Ordering Process', 'Shipping Info', 'Payment']);
+    expect(faqUrls(mocks.state.urls)).toEqual(['GET storefront/faq']);
+    expect(mocks.state.urls.filter((u) => /warehouse/.test(u))).toEqual([]);
+  });
 });
 
 test.describe('in every template', () => {

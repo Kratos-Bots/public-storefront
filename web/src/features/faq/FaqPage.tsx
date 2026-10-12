@@ -5,7 +5,7 @@ import { EmptyState } from '@/components/EmptyState.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { errorMessage } from '@/lib/errors.ts';
 import { FADE } from '@/lib/motion.ts';
-import { faqAvailable } from '@/features/faq/settings.ts';
+import { useFaqAvailable } from '@/features/faq/use-faq-available.ts';
 import { useFaq } from '@/features/faq/queries.ts';
 import { linkify } from '@/features/faq/linkify.ts';
 import type { FaqSection } from '@/types/faq.ts';
@@ -21,7 +21,7 @@ import classes from '@/features/faq/FaqPage.module.css';
 export function FaqPage() {
   const settings = useSettings();
   const { t } = useText();
-  const available = faqAvailable(settings);
+  const available = useFaqAvailable();
   const query = useFaq(available);
 
   // The tab says where the shopper is, like a product page's; the shop's own title comes back on the way out.

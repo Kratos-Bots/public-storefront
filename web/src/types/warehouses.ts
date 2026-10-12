@@ -17,5 +17,10 @@ export interface Warehouse {
    * one with its own lists only its own countries and no collection countries. Absent on an older backend.
    */
   shipping?: { countries: string[]; collectionCountries: string[] };
+  /**
+   * `null`: this warehouse uses the shop FAQ (read `settings.faq.available`). `{ available }`: it has its own FAQ, and `available` is whether
+   * that has anything to show. Absent on an older backend - read as `null`.
+   */
+  faq?: { available: boolean } | null;
 }
 export interface WarehouseList { warehouses: Warehouse[] }
