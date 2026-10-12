@@ -106,6 +106,8 @@ export interface OrderPaymentState {
   cancelBlockedBy?: CancelBlockedBy | null;
   payBy: string | null; // ISO 8601 auto-cancel deadline
   activePayment: ActivePayment | null;
+  /** True while a payment the shopper chose is still being created with a dropship partner (then `activePayment` is null). Absent otherwise. */
+  partnerPending?: true;
 }
 
 export interface PublicOrder {

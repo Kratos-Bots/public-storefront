@@ -269,7 +269,7 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
   // sent (STOREFRONT.md §3.5a). With no token the hook's automatic query stays
   // disabled and every guest quote goes out through `refetchWithToken` below,
   // each with a token minted for that one request.
-  const { quote, isFetching, error: quoteError, needsToken, refetchWithToken, optionsCurrent } = useQuote(effective, {
+  const { quote, isFetching, error: quoteError, needsToken, refetchWithToken, refetch: refetchQuote, optionsCurrent } = useQuote(effective, {
     guest,
   });
 
@@ -402,6 +402,20 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
   const comboStale = Boolean(method?.cryptoOptions && form.coin && !combo);
   const selectionsStale = shippingStale || methodStale || comboStale;
 
+  // The partner that takes payment for this warehouse could not be asked: nothing can be chosen, so nothing can be placed.
+  const payUnavailable = Boolean(shownQuote?.paymentMethodsUnavailable) && (shownQuote?.amountDue ?? 0) > 0;
+  const retryQuote = () => {
+    if (guest) {
+      // A guest quote needs a token of its own: let the mint effect run again for the same inputs.
+      quotedKey.current = null;
+      setRetryTick((n) => n + 1);
+    } else refetchQuote();
+  };
+  // The data memo below must not change on every render, and the closure must see the latest quote key.
+  const retryRef = useRef(retryQuote);
+  retryRef.current = retryQuote;
+  const stableRetry = useCallback(() => retryRef.current(), []);
+
   const chargeTotal = selectionsStale
     ? null
     : (combo?.chargeTotal ?? method?.chargeTotal ?? shownQuote?.amountDue ?? null);
@@ -518,6 +532,8 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
         }
         return true;
       }
+      // The message is already on the step; there is nothing to choose until the partner answers.
+      if (payUnavailable) return false;
       if (!form.paymentMethod) {
         setErrors({ method: textKey('checkout.errors.paymentMissing') });
         return false;
@@ -703,6 +719,7 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
       combo,
       busy: isFetching || verifying,
       quoteStale: Boolean(quoteError),
+      retryQuote: stableRetry,
       couponError: errorTarget === 'coupon' ? quoteMessage : undefined,
       shippingNotice: errorTarget === 'shipping' ? quoteMessage : undefined,
       addressNotice: errorTarget === 'address' ? quoteMessage : undefined,
@@ -713,7 +730,7 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
       stack,
       goTo,
     }),
-    [form, patch, errors, effectiveContactModes, shipCountries, shipsNowhere, shipLists, phoneMode, guest, currency, shownQuote, optionsPending, method, combo, isFetching, verifying, quoteError, errorTarget, quoteMessage, order, step, kind, stack, goTo],
+    [form, patch, errors, effectiveContactModes, shipCountries, shipsNowhere, shipLists, phoneMode, guest, currency, shownQuote, optionsPending, method, combo, isFetching, verifying, quoteError, errorTarget, quoteMessage, order, step, kind, stack, goTo, stableRetry],
   );
   const value = useMemo(() => ({ data, views: CHECKOUT_VIEWS }), [data]);
 
@@ -731,7 +748,7 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
                 ? t('checkout.actions.placeOrderTotal', { total: formatMoney(chargeTotal, currency) })
                 : t('checkout.actions.placeOrder'),
           onClick: lastStep ? () => void submit() : next,
-          disabled: submitting || locked || (lastStep && guest && verifying),
+          disabled: submitting || locked || (lastStep && guest && verifying) || (lastStep && payUnavailable),
           busy: submitting,
         }
       : null,
@@ -785,7 +802,7 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
   // Below 62em the docket column is drawn only on the review step (and on the editor canvas); a custom layout that put the
   // coupon in there keeps it reachable. Everywhere else it is dropped whole, so it leaves no gap.
   const asideShown = stack || onReview || containsVisibleType(s.aside.items, 'CheckoutCoupon');
-  const nextDisabled = submitting || locked || (onReview && guest && verifying);
+  const nextDisabled = submitting || locked || (onReview && guest && verifying) || (onReview && payUnavailable);
 
   return (
     <CheckoutFamily.Provider value={value}>

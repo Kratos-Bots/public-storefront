@@ -32,6 +32,8 @@ export interface UseQuoteResult {
   /** Re-run the current (guest) quote with a fresh token, without waiting for the
    *  debounced key to change. No-op key-wise for a logged-in quote. */
   refetchWithToken: (token: string) => Promise<void>;
+  /** Asks the signed-in quote again. A guest quote needs a fresh token: the page re-runs its own mint instead. */
+  refetch: () => void;
   /** True only when the quote data on hand was fetched for the delivery options key
    *  (country, delivery method, point carrier) the form holds right now. False while
    *  a quote for a different one is in flight, and when there is no quote at all. */
@@ -185,6 +187,7 @@ export function useQuote(form: CheckoutForm, { guest, turnstileToken }: UseQuote
     error: query.error ?? null,
     needsToken,
     refetchWithToken,
+    refetch: () => void query.refetch(),
     optionsCurrent,
   };
 }

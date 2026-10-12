@@ -1,9 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
+import { useIsFetching, useQueryClient } from '@tanstack/react-query';
 import { ArrowUpRightIcon, ChevronIcon } from '@/components/icons.tsx';
-import { formatDateTime } from '@/lib/format.ts';
+import { formatDateTime, formatMoney } from '@/lib/format.ts';
+import { chargedInFromPayment } from '@/lib/charged-in.ts';
 import { CryptoPaymentCard } from '@/features/order-status/CryptoPaymentCard.tsx';
 import { MethodPicker } from '@/features/order-status/MethodPicker.tsx';
 import { visibleCryptoPayments } from '@/features/order-status/payment-state.ts';
+import { usePartnerPendingPhase } from '@/features/order-status/partner-pending.ts';
+import { orderPaymentKey } from '@/features/order-status/queries.ts';
 import { FADE } from '@/lib/motion.ts';
 import { isTelegramWebApp, openExternalLink } from '@/lib/telegram-webapp.ts';
 import type { PublicOrder } from '@/types/public-order.ts';
@@ -69,12 +73,22 @@ export function PaymentSection({ order, reference, methodName }: PaymentSectionP
 
   // A hosted checkout is only a face when there is something to open and it is still waiting.
   const hostedUsable = active?.kind === 'gateway' && active.status === 'pending' && !!active.checkoutUrl;
-  const picking = payment.canPay && (!active || (active.kind === 'gateway' && !hostedUsable));
+  // A payment the shopper chose is being created with the warehouse's partner: nothing to pick, nothing to open yet.
+  const preparing = payment.partnerPending === true && !active;
+  const picking = payment.canPay && !preparing && (!active || (active.kind === 'gateway' && !hostedUsable));
+  const charged = chargedInFromPayment(active);
+  const chargedLine = charged ? (
+    <p className={classes.faceNote} data-testid="charged-in">
+      {t('order.payment.chargedIn', { currency: charged.currency, amount: formatMoney(charged.amount, charged.currency) })}
+    </p>
+  ) : null;
 
   return (
     <div ref={root} className={classes.faces}>
       {/* Stated once, above whichever face is showing: every way of paying is on the same clock. */}
       {payment.canPay ? <Deadline payBy={payment.payBy} /> : null}
+
+      {preparing ? <PartnerPending reference={reference} /> : null}
 
       {picking ? (
         <section className={classes.face} aria-label={t('order.payment.ariaLabel')}>
@@ -112,6 +126,7 @@ export function PaymentSection({ order, reference, methodName }: PaymentSectionP
             {t('order.payment.openCheckout')}
             <ArrowUpRightIcon size={14} />
           </a>
+          {chargedLine}
           <p className={classes.faceNote}>{t('order.payment.hostedNote')}</p>
         </section>
       ) : null}
@@ -120,9 +135,12 @@ export function PaymentSection({ order, reference, methodName }: PaymentSectionP
         <section className={classes.face} aria-label={t('order.payment.ariaLabel')}>
           <h3 className={classes.faceTitle} tabIndex={-1} data-face-title>{t('order.payment.pendingTitle')}</h3>
           {methodName ? <p className={classes.faceLead}><span className={classes.faceMethod}>{t('order.payment.payingWith', { method: methodName })}</span></p> : null}
+          {chargedLine}
           <p className={classes.faceNote}>{t('order.payment.pendingNote')}</p>
         </section>
       ) : null}
+
+      {active?.kind === 'crypto' && active.status === 'pending' && !changing ? chargedLine : null}
 
       {cards(changing ? active?.paymentId : undefined)}
 
@@ -135,6 +153,36 @@ export function PaymentSection({ order, reference, methodName }: PaymentSectionP
         />
       ) : null}
     </div>
+  );
+}
+
+/**
+ * A payment the shopper chose is still being created with the warehouse's payment partner. The page re-reads the
+ * order every few seconds (`useOrderPayment`); once the payment exists this face is replaced by the usual one. After
+ * two minutes the polling has stopped, so it says where the details will appear and lets the shopper look again.
+ */
+function PartnerPending({ reference }: { reference: string }) {
+  const { t } = useText();
+  const phase = usePartnerPendingPhase(reference, true);
+  const queryClient = useQueryClient();
+  const reading = useIsFetching({ queryKey: orderPaymentKey(reference) }) > 0;
+  return (
+    <section className={classes.face} aria-label={t('order.payment.ariaLabel')} aria-busy={phase === 'waiting' || undefined}>
+      <h3 className={classes.faceTitle} tabIndex={-1} data-face-title>{t('order.payment.preparingTitle')}</h3>
+      <p className={classes.faceNote} role="status">
+        {phase === 'waiting' ? t('order.payment.preparingNote') : t('order.payment.preparingLate')}
+      </p>
+      {phase === 'timedOut' ? (
+        <button
+          type="button"
+          className={`${classes.ghost} ${classes.ghostWide}`}
+          disabled={reading}
+          onClick={() => void queryClient.invalidateQueries({ queryKey: orderPaymentKey(reference) })}
+        >
+          {reading ? t('order.payment.refreshing') : t('order.payment.refresh')}
+        </button>
+      ) : null}
+    </section>
   );
 }
 

@@ -158,6 +158,7 @@ function Payment({ props, styleAttrs }: PartViewProps) {
   return framed(d, 'payment', (
     <PaymentStep
       quote={d.quote} form={d.form} patch={d.patch} errors={d.errors} guest={d.guest} currency={d.currency}
+      onRetryQuote={d.retryQuote} busy={d.busy}
       before={slotOf(props, 'before')} after={slotOf(props, 'after')} rootAttrs={styleAttrs}
     />
   ));
