@@ -309,7 +309,7 @@ describe('OrderPlacedPage', () => {
       expect(button).toHaveAttribute('href', URL);
       expect(button).toHaveAttribute('target', '_blank');
       expect(button.getAttribute('rel')).toContain('noopener');
-      expect(screen.getByText(/tap below to pay securely online/i)).toBeInTheDocument();
+      expect(screen.getByText(/use the button below to pay securely online/i)).toBeInTheDocument();
       expect(screen.queryByRole('link', { name: /whatsapp/i })).toBeNull();
       expect(screen.queryByText(/message us on whatsapp or telegram/i)).toBeNull();
       expect(screen.queryByText(/quote your order reference/i)).toBeNull();

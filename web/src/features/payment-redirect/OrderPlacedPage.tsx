@@ -35,7 +35,7 @@ export function OrderPlacedPage({ slots }: { slots?: PaymentSlots } = {}) {
   const location = useLocation();
   const orderRef = preview ? preview.orderRef : params.get('order');
   const warning = preview ? preview.warning : params.get('warning') === '1';
-  // Handed over by checkout in navigation state, so it never sits in a URL that could be shared; gone after a reload.
+  // Handed over by checkout in navigation state, so it never sits in a URL that could be shared; a fresh visit to this address does not have it.
   const checkoutUrl = preview ? (preview.checkoutUrl ?? null) : checkoutUrlFromState(location.state);
   const clearCart = useCartStore((s) => s.clear);
   const { brand } = useSettings();
