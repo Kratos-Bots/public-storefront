@@ -111,6 +111,8 @@ describe('labels and fixtures', () => {
     expect((f('OrderPlaced', 'warning') as PaymentPreview).warning).toBe(true);
     expect(f('OrderPlaced', 'no-chat')).toMatchObject({ whatsapp: null, telegram: null });
     expect((f('OrderPlaced', 'missing') as PaymentPreview).orderRef).toBeNull();
+    expect((f('OrderPlaced', 'checkout') as PaymentPreview).checkoutUrl).toMatch(/^https:\/\/shop\.example\//);
+    expect((f('OrderPlaced', 'chat') as PaymentPreview).checkoutUrl ?? null).toBeNull();
 
     expect((f('TrackingLookup', 'found-2') as TrackingPreview).data?.parcels).toHaveLength(2);
     expect((f('TrackingLookup', 'found-1') as TrackingPreview).data?.parcels).toHaveLength(1);

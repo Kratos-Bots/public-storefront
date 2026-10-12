@@ -3,8 +3,9 @@ import { useSettings } from '@/app/settings.ts';
 import { accountOrderPath } from '@/features/checkout/outcome.ts';
 import { selectIsLoggedIn, useSessionStore } from '@/stores/session.ts';
 import { ContactLinks } from '@/components/ContactLinks.tsx';
-import { CheckIcon, CloseIcon, TelegramIcon, WhatsAppIcon } from '@/components/icons.tsx';
+import { ArrowUpRightIcon, CheckIcon, CloseIcon, TelegramIcon, WhatsAppIcon } from '@/components/icons.tsx';
 import { orderChatMessage, orderInquiryMessage } from '@/lib/chat-links.ts';
+import { isTelegramWebApp, openExternalLink } from '@/lib/telegram-webapp.ts';
 import { ReferenceRow } from '@/features/payment-redirect/ReferenceRow.tsx';
 import { PaymentFamily, type PaymentData } from '@/builder/family-payment.ts';
 import type { FamilyValue, PartViewProps } from '@/builder/parts.ts';
@@ -59,10 +60,12 @@ function HeadlineView({ styleAttrs }: PartViewProps) {
 }
 
 function MessageView({ styleAttrs }: PartViewProps) {
-  const { kind, warning, whatsapp, telegram } = PaymentFamily.useData();
+  const { kind, warning, whatsapp, telegram, checkoutUrl } = PaymentFamily.useData();
   const { t } = useText();
   if (kind === 'success') return <p className={classes.detail} {...styleAttrs}>{t('payment.success.detail')}</p>;
   if (kind === 'cancel') return <p className={classes.detail} {...styleAttrs}>{t('payment.cancel.detail')}</p>;
+  // A hosted checkout is one tap away (the button in Actions): the chat hint would send them the long way round.
+  if (checkoutUrl) return <p className={classes.detail} {...styleAttrs}>{t('payment.placed.checkoutHint')}</p>;
   if (warning) {
     return (
       <p className={classes.alert} role="status" {...styleAttrs}>
@@ -79,7 +82,7 @@ function ReferenceView({ styleAttrs }: PartViewProps) {
 }
 
 function ActionsView({ styleAttrs }: PartViewProps) {
-  const { kind, orderRef, signIn, whatsapp, telegram } = PaymentFamily.useData();
+  const { kind, orderRef, signIn, whatsapp, telegram, checkoutUrl } = PaymentFamily.useData();
   const loggedIn = useSessionStore(selectIsLoggedIn);
   const { t } = useText();
   const signInCta = signIn ? (
@@ -108,6 +111,33 @@ function ActionsView({ styleAttrs }: PartViewProps) {
             {t('payment.cancel.backToShop')}
           </Link>
         )}
+      </div>
+    );
+  }
+
+  // Placed with a hosted checkout in hand (a guest, straight from checkout): one button that opens it, then the way to sign in.
+  // It lives in this part, not a part of its own, so a saved page set that already places Actions shows it with no edit.
+  // Same behaviour as the order page's button: a new tab, or inside Telegram its own opener within the tap.
+  if (checkoutUrl) {
+    return (
+      <div className={classes.actions} {...styleAttrs}>
+        <a
+          href={checkoutUrl}
+          target="_blank"
+          rel="noopener"
+          onClick={(event) => {
+            if (!isTelegramWebApp()) return;
+            event.preventDefault();
+            openExternalLink(checkoutUrl);
+          }}
+          className={classes.cta}
+          data-sf-part="button"
+          data-variant="filled"
+        >
+          {t('order.payment.openCheckout')}
+          <ArrowUpRightIcon size={14} />
+        </a>
+        {signInCta}
       </div>
     );
   }

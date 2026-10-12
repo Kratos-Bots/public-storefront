@@ -14,7 +14,7 @@ import type { VerifyEmailPreview } from '@/builder/family-verify-email.ts';
 import { useEditorStore } from '@/builder/editor/store.ts';
 import { effectivePreviewAs } from '@/builder/editor/fixture-mode.ts';
 import {
-  FIXTURE_CHAT_LINKS, FIXTURE_ORDERS, FIXTURE_ORDER_REF, FIXTURE_SIGN_IN, FIXTURE_REDEEM, FIXTURE_TRACKING, fixtureOrderDetails, fixtureOrderStates,
+  FIXTURE_CHAT_LINKS, FIXTURE_CHECKOUT_URL, FIXTURE_ORDERS, FIXTURE_ORDER_REF, FIXTURE_SIGN_IN, FIXTURE_REDEEM, FIXTURE_TRACKING, fixtureOrderDetails, fixtureOrderStates,
   fixtureProfile, fixtureVerification,
 } from '@/builder/editor/fixtures.ts';
 
@@ -32,6 +32,7 @@ export const PREVIEW_STATE_LABELS: Record<ContainerName, Labelled> = {
   PaymentCancel: [{ id: 'signed-out', label: 'Signed out' }, { id: 'no-reference', label: 'No reference' }],
   OrderPlaced: [
     { id: 'chat', label: 'Chat links' }, { id: 'warning', label: 'Warning' }, { id: 'no-chat', label: 'No chat links' }, { id: 'missing', label: 'Missing reference' },
+    { id: 'checkout', label: 'Hosted checkout' },
   ],
   TrackingLookup: [
     { id: 'form', label: 'Lookup form' }, { id: 'found-2', label: 'Found (2 parcels)' }, { id: 'found-1', label: 'Found (1 parcel)' },
@@ -95,6 +96,7 @@ const BUILDERS: { [C in ContainerName]: (state: string, now: Date) => unknown } 
     return {
       orderRef: state === 'missing' ? null : FIXTURE_ORDER_REF, signIn: state !== 'missing' ? FIXTURE_SIGN_IN : null, warning: state === 'warning',
       whatsapp: chat ? FIXTURE_CHAT_LINKS.whatsapp : null, telegram: chat ? FIXTURE_CHAT_LINKS.telegram : null,
+      checkoutUrl: state === 'checkout' ? FIXTURE_CHECKOUT_URL : null,
     };
   },
   TrackingLookup: (state): TrackingPreview => {

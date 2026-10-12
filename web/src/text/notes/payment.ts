@@ -15,6 +15,7 @@ export default {
   'placed.headline': 'Heading once an order is placed without online payment',
   'placed.warning': 'Shown when the online payment could not be started',
   'placed.chatHint': 'Text above the pay-via-chat buttons',
+  'placed.checkoutHint': 'Text above the Open checkout button when a guest has just placed an order with an online payment to complete',
   'placed.payViaWhatsapp': 'Button that opens WhatsApp with the order reference filled in',
   'placed.payViaTelegram': 'Button that opens Telegram with the order reference filled in',
   'placed.viewOrder': 'Button on the order-placed page that takes a signed-in customer to their order',

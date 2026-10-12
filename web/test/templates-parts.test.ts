@@ -139,7 +139,7 @@ describe('parts', () => {
     ['../src/features/order-status/PaymentSection.tsx', 1],
     ['../src/features/tracking/LookupForm.tsx', 1],
     ['../src/features/verify/VerifyPage.tsx', 1],
-    ['../src/features/payment-redirect/payment-parts.tsx', 6],
+    ['../src/features/payment-redirect/payment-parts.tsx', 7],
     ['../src/features/wholesale/WholesaleBar.tsx', 1],
   ])('%s tags exactly its %i primary-CTA button(s) as shared filled buttons', (file, n) => {
     const src = read(file);

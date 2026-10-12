@@ -8,7 +8,7 @@ export const block = defineBlock<{ id: string }>({
   name: 'PaymentMessage', label: 'Message', category: 'part', part: { family: 'payment' },
   layouts: 'all', routeBound: false, slots: [],
   style: styleSupport('root', [...BOX, ...TEXT, ...VIS]),
-  text: ['payment.success.detail', 'payment.cancel.detail', 'payment.placed.warning', 'payment.placed.chatHint'],
+  text: ['payment.success.detail', 'payment.cancel.detail', 'payment.placed.warning', 'payment.placed.chatHint', 'payment.placed.checkoutHint'],
   schema: z.object({}), defaultProps: {},
   render: (p) => <PaymentFamily.PartHost name="PaymentMessage" props={p as Record<string, unknown>} styleAttrs={p.puck.style} />,
 });

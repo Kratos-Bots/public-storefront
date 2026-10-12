@@ -18,6 +18,8 @@ export interface UseQuoteOptions {
    *  (success or failure) is never sent again, automatically or otherwise; see
    *  `needsToken`/`refetchWithToken`. */
   turnstileToken?: string;
+  /** The order has been placed: no further quote is wanted, even though the session may have just changed under the page. */
+  paused?: boolean;
 }
 
 export interface UseQuoteResult {
@@ -81,7 +83,7 @@ interface HashInput {
  * only while the current token is still unconsumed. `needsToken` surfaces that state so
  * the caller knows to fetch a fresh token before the next quote.
  */
-export function useQuote(form: CheckoutForm, { guest, turnstileToken }: UseQuoteOptions): UseQuoteResult {
+export function useQuote(form: CheckoutForm, { guest, turnstileToken, paused = false }: UseQuoteOptions): UseQuoteResult {
   const queryClient = useQueryClient();
   const lines = useCartStore((s) => s.lines);
   // Every token this hook instance has ever sent to the guest endpoints, win or lose.
@@ -144,7 +146,7 @@ export function useQuote(form: CheckoutForm, { guest, turnstileToken }: UseQuote
 
   const tokenSpent = guest && turnstileToken !== undefined && consumedTokensRef.current.has(turnstileToken);
   const needsToken = guest && (!turnstileToken || tokenSpent);
-  const enabled = Boolean(debounced.country) && (!guest || (Boolean(turnstileToken) && !tokenSpent));
+  const enabled = !paused && Boolean(debounced.country) && (!guest || (Boolean(turnstileToken) && !tokenSpent));
 
   const query = useQuery<Quote, ApiError>({
     queryKey,

@@ -1,7 +1,8 @@
 import { useEffect, useMemo } from 'react';
-import { useSearchParams } from 'react-router';
+import { useLocation, useSearchParams } from 'react-router';
 import { useSettings } from '@/app/settings.ts';
 import { useCartStore } from '@/stores/cart.ts';
+import { checkoutUrlFromState } from '@/features/checkout/outcome.ts';
 import { clearPersistedCheckout } from '@/features/checkout/form-state.ts';
 import { orderChatMessage, withPrefilledText } from '@/lib/chat-links.ts';
 import { MissingReferenceScreen } from '@/features/payment-redirect/MissingReferenceScreen.tsx';
@@ -19,7 +20,10 @@ import classes from '@/features/payment-redirect/PaymentRedirect.module.css';
  * chat-settled method (bank transfer, manual), or a hosted checkout that
  * failed to start (`warning=1`). The order already exists on the backend;
  * paying happens over chat from here, so the WhatsApp/Telegram links carry
- * the reference pre-typed rather than asking the shopper to repeat it. A
+ * the reference pre-typed rather than asking the shopper to repeat it. A guest
+ * whose order did start a hosted checkout also lands here, with its address in
+ * router state, and gets an "Open checkout" button: nobody is redirected to a
+ * processor, the checkout opens only when they tap. A
  * container of payment parts (spec 5.6): without `slots` it draws the default
  * arrangement, exactly v0.7.0's.
  */
@@ -28,8 +32,11 @@ export function OrderPlacedPage({ slots }: { slots?: PaymentSlots } = {}) {
   const preview = usePreviewFixture<PaymentPreview>('OrderPlaced');
   const previewing = preview !== null;
   const [params] = useSearchParams();
+  const location = useLocation();
   const orderRef = preview ? preview.orderRef : params.get('order');
   const warning = preview ? preview.warning : params.get('warning') === '1';
+  // Handed over by checkout in navigation state, so it never sits in a URL that could be shared; a fresh visit to this address does not have it.
+  const checkoutUrl = preview ? (preview.checkoutUrl ?? null) : checkoutUrlFromState(location.state);
   const clearCart = useCartStore((s) => s.clear);
   const { brand } = useSettings();
   const liveSignIn = useSignInTarget(orderRef);
@@ -57,8 +64,8 @@ export function OrderPlacedPage({ slots }: { slots?: PaymentSlots } = {}) {
       whatsapp = withPrefilledText(whatsappLink, message);
       telegram = withPrefilledText(telegramLink, message);
     }
-    return { data: { kind: 'placed', orderRef, signIn, warning, whatsapp, telegram }, views: PAYMENT_VIEWS };
-  }, [orderRef, signIn, warning, preview, whatsappLink, telegramLink, t]);
+    return { data: { kind: 'placed', orderRef, signIn, warning, whatsapp, telegram, checkoutUrl }, views: PAYMENT_VIEWS };
+  }, [orderRef, signIn, warning, checkoutUrl, preview, whatsappLink, telegramLink, t]);
 
   if (!orderRef) {
     return <MissingReferenceScreen />;

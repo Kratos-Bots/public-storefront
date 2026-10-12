@@ -194,7 +194,7 @@ test.describe('inside Telegram', () => {
     expect(await backHandlers(page)).toBe(1);
   });
 
-  test('an external payment opens in the browser and returns to the account order', async ({ page }) => {
+  test('an external payment is not opened for the shopper, who lands on the account order', async ({ page }) => {
     const gateway = 'https://pay.example.invalid/session/e2e';
     const mocks = await openInTelegram(page, {
       checkoutReference: 'K4M2QP',
@@ -215,9 +215,9 @@ test.describe('inside Telegram', () => {
     await clickMain(page);
 
     await expect.poll(() => mocks.state.checkouts.length).toBe(1);
-    await expect.poll(async () => (await callsNamed(page, 'openLink')).map((c) => c[1])).toEqual([gateway]);
-    // The Mini App itself never leaves for the gateway; it lands on the order inside the shell.
+    // Nothing is opened on placing: the hosted checkout only opens from the order page's button.
     await expect(page).toHaveURL(/\/account\/orders\/K4M2QP$/);
+    expect(await callsNamed(page, 'openLink')).toEqual([]);
     expect(page.url()).not.toContain('pay.example');
     await expect(page.getByRole('heading', { name: 'K4M2QP' })).toBeVisible();
     await expect(page.locator('[data-sf-layout="webapp"]')).toBeVisible();

@@ -52,7 +52,11 @@ export type CheckoutPayment =
   | { type: 'crypto'; paymentId: number; method: string; coin: string; network: string; coinLabel: string; networkLabel: string; address: string; coinAmount: string; fiatAmount: number; qrData: string; walletLinks: Array<{ label: string; url: string }>; settlementAmount?: number | null; settlementCurrency?: string | null }
   /** The payment is being created with a dropship partner; the order's payment view carries `partnerPending` until it exists. */
   | { type: 'partner_pending'; method: string; coin?: string; network?: string };
-export interface CheckoutResult { reference: string; publicUrl: string | null; status: string; total: number; payment: CheckoutPayment; warning?: string }
+export interface CheckoutResult {
+  reference: string; publicUrl: string | null; status: string; total: number; payment: CheckoutPayment; warning?: string;
+  /** Guest checkout only, and only when it created a brand-new customer: a session for them. Older backends omit it. */
+  session?: import('./auth.ts').LoginResult;
+}
 export interface GuestQuoteInput extends Omit<QuoteInput, 'useStoreCredit'> { turnstileToken: string; items: import('./cart.ts').CartLineInput[] }
 export interface GuestCheckoutInput extends Omit<CheckoutInput, 'useStoreCredit'> { turnstileToken: string; items: import('./cart.ts').CartLineInput[] }
 
