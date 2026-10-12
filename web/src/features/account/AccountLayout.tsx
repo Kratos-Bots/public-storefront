@@ -4,6 +4,7 @@ import { accessGate } from '@/app/access-gate.ts';
 import { useSessionStore } from '@/stores/session.ts';
 import { formatDate } from '@/lib/format.ts';
 import { useProfile } from '@/features/account/queries.ts';
+import { loyaltyOn } from '@/types/profile.ts';
 import { textKey, useText } from '@/text/runtime.tsx';
 import { FADE } from '@/lib/motion.ts';
 import { AccountFamily, type AccountData } from '@/builder/family-account.ts';
@@ -47,11 +48,11 @@ function GreetingView({ styleAttrs }: PartViewProps) {
 
 function TabsView({ styleAttrs }: PartViewProps) {
   const { t } = useText();
-  const { pathname } = AccountFamily.useData();
+  const { pathname, loyaltyOn: showLoyalty } = AccountFamily.useData();
   if (isOrderDetailPath(pathname)) return null;
   return (
     <nav className={classes.tabs} aria-label={t('account.nav.ariaLabel')} {...styleAttrs}>
-      {TABS.map((tab) => (
+      {TABS.filter((tab) => tab.to !== '/account/loyalty' || showLoyalty).map((tab) => (
         <NavLink
           key={tab.to}
           to={tab.to}
@@ -96,12 +97,13 @@ export function AccountLayout({ children, slots, docKey = 'account.orders' }: { 
   const legacy = useMemo(() => (slots ? null : defaultSlotRenders('AccountNav', 'storefront', {}, docKey)), [slots, docKey]);
   const head = slots?.head ?? legacy!.head!;
   const name = sessionNickname ?? profile.data?.nickname ?? null;
+  const showLoyalty = loyaltyOn(profile.data);
   const standing = profile.data ? { memberSince: profile.data.memberSince, totalOrders: profile.data.totalOrders } : null;
   const value = useMemo(
-    () => ({ data: { name, standing, pathname: location.pathname }, views: ACCOUNT_VIEWS }),
+    () => ({ data: { name, standing, pathname: location.pathname, loyaltyOn: showLoyalty }, views: ACCOUNT_VIEWS }),
     // `standing` is rebuilt every render; its fields are the dependencies.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [name, standing?.memberSince, standing?.totalOrders, location.pathname],
+    [name, standing?.memberSince, standing?.totalOrders, location.pathname, showLoyalty],
   );
 
   return (

@@ -265,13 +265,18 @@ describe('previews draw from fixtures and never fetch', () => {
 
   it('negative control: without a fixture the same containers do query', async () => {
     vi.mocked(fetchOrders).mockResolvedValue({ data: [], meta: { page: 1, hasNextPage: false, totalItems: 0 } } as never);
-    vi.mocked(fetchProfile).mockReturnValue(new Promise(() => {}));
+    // The redeem ladder waits for the profile (it is not asked for when loyalty is off for the shopper).
+    vi.mocked(fetchProfile).mockResolvedValue({
+      loyaltyPoints: 0, storeCreditBalance: 0, referralCode: 'X', referralsCount: 0, referredPeopleCount: 0, hasReferrer: false,
+      referrerNickname: null, totalOrders: 0, totalSpend: 0, memberSince: '2026-01-01T00:00:00.000Z', nickname: null,
+      identities: { telegram: false, whatsapp: false, email: false },
+    });
     vi.mocked(fetchRedeemOptions).mockReturnValue(new Promise(() => {}));
     const live = { editing: false, previewAs: null, previewStates: null, previewFixtures: null };
     render(<Shell mode={live}><OrdersPage /><LoyaltyPage /></Shell>);
     await waitFor(() => expect(fetchOrders).toHaveBeenCalled());
     expect(fetchProfile).toHaveBeenCalled();
-    expect(fetchRedeemOptions).toHaveBeenCalled();
+    await waitFor(() => expect(fetchRedeemOptions).toHaveBeenCalled());
   });
 
   it.each([
