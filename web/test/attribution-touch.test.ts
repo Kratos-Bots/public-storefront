@@ -75,3 +75,18 @@ describe('safeLandingPath', () => {
     expect(readTouch('https://shop.example/order/ORD-1/abcdef', '').landingPath).toBe('/order');
   });
 });
+
+describe('readTouch return routes', () => {
+  const PROCESSOR = 'https://checkout.processor.example/pay/abc';
+  it.each(['/payment/success', '/payment/cancel', '/order-placed', '/order/ORD-1/key', '/auth/telegram/callback'])(
+    'ignores the referrer on %s but still reads UTM tags',
+    (path) => {
+      const touch = readTouch(`https://shop.example${path}?utm_source=mail`, PROCESSOR);
+      expect(touch.referrerHost).toBeNull();
+      expect(touch.utmSource).toBe('mail');
+    },
+  );
+  it('keeps the referrer on a normal page', () => {
+    expect(readTouch('https://shop.example/p/5', PROCESSOR).referrerHost).toBe('checkout.processor.example');
+  });
+});

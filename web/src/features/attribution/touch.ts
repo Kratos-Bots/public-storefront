@@ -44,6 +44,18 @@ export function safeLandingPath(pathname: string): string {
   return pathname;
 }
 
+/**
+ * Routes whose only purpose is to receive the browser back from a third party (a hosted checkout, the old
+ * emailed order link, Telegram's sign-in redirect). The referrer there is the processor's or Telegram's host,
+ * not a source, so it is ignored; UTM tags on such a URL are still read.
+ */
+const RETURN_PATHS: readonly RegExp[] = [
+  /^\/order(?:\/.*)?$/, // /order/:ref/:accessKey
+  /^\/payment\/(?:success|cancel)\/?$/, // hosted checkout return
+  /^\/order-placed\/?$/, // hosted checkout return / order placed
+  /^\/auth\/telegram\/callback\/?$/, // Telegram sign-in redirect
+];
+
 /** What this page load says about where the shopper came from. Only the referrer's host is kept,
  *  never its path or query, and a referrer from the shop itself is not a source. */
 export function readTouch(href: string, referrer: string): Touch {
@@ -51,7 +63,7 @@ export function readTouch(href: string, referrer: string): Touch {
   let referrerHost: string | null = null;
   try {
     const host = referrer ? new URL(referrer).host : '';
-    if (host && host !== url.host) referrerHost = host;
+    if (host && host !== url.host && !RETURN_PATHS.some((p) => p.test(url.pathname))) referrerHost = host;
   } catch { /* not a URL: no referrer */ }
   return {
     referrerHost: clip(referrerHost, 255),
