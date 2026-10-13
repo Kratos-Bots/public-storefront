@@ -40,10 +40,28 @@ describe('trackPageLoad', () => {
     expect(JSON.parse(localStorage.getItem(VISIT_KEY)!).firstTouch.utmSource).toBe('original');
   });
 
-  it('never throws when the report fails', async () => {
-    postVisit.mockRejectedValueOnce(new Error('offline'));
+  it('never throws, and handles the rejection, when the report fails', async () => {
+    // process.on('unhandledRejection') is not observable here (checked: with the .catch removed
+    // from trackPageLoad it still saw nothing, vitest owns that event), so assert directly that a
+    // rejection handler was attached to the promise postVisit returned (vitest itself
+    // attaches then() to mock results, so spy on catch, which the tracker is expected to call).
+    const failed = Promise.reject(new Error('offline'));
+    const then = vi.spyOn(failed, 'catch');
+    postVisit.mockReturnValueOnce(failed as unknown as Promise<undefined>);
     expect(() => trackPageLoad()).not.toThrow();
-    await Promise.resolve();
+    expect(then).toHaveBeenCalled();
+    await expect(failed).rejects.toThrow('offline');
+  });
+
+  it('a second trackPageLoad in the same page load does not report a second visit', () => {
+    window.history.replaceState(null, '', '/p/5?utm_source=newsletter');
+    try {
+      trackPageLoad();
+      trackPageLoad();
+      expect(postVisit).toHaveBeenCalledTimes(1);
+    } finally {
+      window.history.replaceState(null, '', '/');
+    }
   });
 
   it('never throws when storage holds junk', () => {
