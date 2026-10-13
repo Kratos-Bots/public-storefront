@@ -6,6 +6,7 @@ vi.mock('@/app/builder-gate.ts', () => ({ isBuilderMode: () => false, BUILDER_PA
 
 import { GUEST_SYNC_DEBOUNCE_MS, resetGuestCartSync, scheduleGuestCartSync } from '@/features/cart/guest-cart-sync.ts';
 import { useCartStore, type LocalLine } from '@/stores/cart.ts';
+import { useSessionStore } from '@/stores/session.ts';
 
 const line = (productId: number, quantity: number): LocalLine => ({
   productId, displayName: `P${productId}`, sku: `S${productId}`, unitPrice: 10, basePrice: 10, pricingTiers: [],
@@ -18,6 +19,7 @@ beforeEach(() => {
   api.deleteGuestCart.mockClear();
   resetGuestCartSync();
   useCartStore.setState({ lines: [], mode: 'local' });
+  useSessionStore.setState({ token: null, customer: null });
 });
 afterEach(() => vi.useRealTimers());
 
@@ -54,6 +56,24 @@ describe('scheduleGuestCartSync', () => {
     useCartStore.setState({ mode: 'server' });
     await vi.advanceTimersByTimeAsync(GUEST_SYNC_DEBOUNCE_MS);
     expect(api.putGuestCart).not.toHaveBeenCalled();
+  });
+
+  it('sends nothing for a signed-in shopper whose cart is still in local mode', async () => {
+    useSessionStore.setState({ token: 'tok' });
+    useCartStore.setState({ lines: [line(5, 1)], mode: 'local' });
+    scheduleGuestCartSync();
+    await vi.advanceTimersByTimeAsync(GUEST_SYNC_DEBOUNCE_MS);
+    expect(api.putGuestCart).not.toHaveBeenCalled();
+    expect(api.deleteGuestCart).not.toHaveBeenCalled();
+  });
+
+  it('sends nothing if a session appears during the debounce', async () => {
+    useCartStore.setState({ lines: [line(5, 1)] });
+    scheduleGuestCartSync();
+    useSessionStore.setState({ token: 'tok' });
+    await vi.advanceTimersByTimeAsync(GUEST_SYNC_DEBOUNCE_MS);
+    expect(api.putGuestCart).not.toHaveBeenCalled();
+    expect(api.deleteGuestCart).not.toHaveBeenCalled();
   });
 
   it('leaves the cart untouched when the request fails', async () => {
