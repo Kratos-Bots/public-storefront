@@ -19,6 +19,8 @@ import { EmptyState } from '@/components/EmptyState.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { ClosedPage } from '@/features/closed/ClosedPage.tsx';
 import { fetchCart } from '@/api/cart.ts';
+import { useAttribution } from '@/features/attribution/useAttribution.ts';
+import { scheduleGuestCartSync } from '@/features/cart/guest-cart-sync.ts';
 import { WarehouseSync } from '@/features/warehouses/WarehouseSync.tsx';
 import { useCartStore } from '@/stores/cart.ts';
 import { useSessionStore } from '@/stores/session.ts';
@@ -58,7 +60,12 @@ function useBootCart() {
     // Inside Telegram the sign-in adopts the right cart itself (telegram-session.ts);
     // fetching here too would race it with whatever token was stored before launch.
     if (useTelegramAuthStore.getState().status !== 'none') return;
-    if (!useSessionStore.getState().token) return;
+    if (!useSessionStore.getState().token) {
+      // A returning guest: their cart is in localStorage but its mirror expired after a day, so
+      // show it to the admin again. A no-op for an empty cart beyond one DELETE.
+      if (useCartStore.getState().lines.length > 0) scheduleGuestCartSync();
+      return;
+    }
     void fetchCart()
       .then((cart) => useCartStore.getState().replaceFromServer(cart))
       .catch(() => undefined);
@@ -147,6 +154,7 @@ function SettingsBoundary() {
   // Renders above TextProvider, so this is always the built-in English (boot.* keys are fixed).
   const { t } = useText();
   useBootCart();
+  useAttribution(router);
 
   if (query.data && !telegramPending) return <ThemedApp settings={query.data} />;
 

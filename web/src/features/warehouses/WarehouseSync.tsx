@@ -5,6 +5,7 @@ import { useSessionStore } from '@/stores/session.ts';
 import { useCartStore } from '@/stores/cart.ts';
 import { useSettingsQuery } from '@/app/settings.ts';
 import { isBuilderMode } from '@/app/builder-gate.ts';
+import { scheduleGuestCartSync } from '@/features/cart/guest-cart-sync.ts';
 import { refreshCartForWarehouse } from '@/features/cart/useServerCart.ts';
 import { useCatalog } from '@/features/catalog/use-catalog.ts';
 import { selectedWarehouseId, useWarehouseStore, warehouseFeatureOn } from '@/features/warehouses/store.ts';
@@ -102,6 +103,15 @@ export function WarehouseSync() {
     if (selectedId === null && before === null) return; // first adoption, no warehouse: nothing differs
     void refreshCartForWarehouse();
   }, [selectedId, mode]);
+
+  // A guest's cart is mirrored to the shop's admin priced at the warehouse in force, so a change of warehouse
+  // re-sends it (a no-op for an empty cart, and for a signed-in one, which is re-read above).
+  const mirrored = useRef(selectedId);
+  useEffect(() => {
+    if (mirrored.current === selectedId) return;
+    mirrored.current = selectedId;
+    if (useCartStore.getState().lines.length > 0) scheduleGuestCartSync();
+  }, [selectedId]);
 
   return null;
 }

@@ -6,6 +6,7 @@ import { accessGate } from '@/app/access-gate.ts';
 import { queryClient, SETTINGS_KEY } from '@/lib/query-client.ts';
 import { isBuilderMode } from '@/app/builder-gate.ts';
 import { textSnapshot } from '@/text/snapshot.ts';
+import { getVisitorId } from '@/features/attribution/visitor.ts';
 
 // Re-exported so callers (and this task's test) can `import { ApiError } from '@/api/client.ts'`
 // without also reaching into `@/lib/errors.ts`; the class itself still lives there.
@@ -54,6 +55,12 @@ export const api = ky.create({
       (request) => {
         const token = useSessionStore.getState().token;
         if (token) request.headers.set('Authorization', `Bearer ${token}`);
+      },
+      // Analytics only: lets the shop count visitors and show a guest's cart to the admin. A
+      // header, not a query parameter, so it never enters the Worker's cache key. Not sent from
+      // the page builder, whose requests are an admin's, not a shopper's.
+      (request) => {
+        if (!isBuilderMode()) request.headers.set('X-Visitor-Id', getVisitorId());
       },
       // Must stay last: ky stops running beforeRequest hooks once one returns a Request.
       (request) => (interceptor && isBuilderMode() ? interceptor(request) : undefined),
