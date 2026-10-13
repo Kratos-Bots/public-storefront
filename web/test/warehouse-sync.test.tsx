@@ -6,6 +6,8 @@ vi.mock('@/api/warehouses.ts', () => ({ fetchWarehouses: vi.fn() }));
 vi.mock('@/api/catalog.ts', () => ({ fetchCatalog: vi.fn(), fetchProduct: vi.fn() }));
 vi.mock('@/api/cart.ts', () => ({ fetchCart: vi.fn(), putCart: vi.fn(), clearCart: vi.fn() }));
 
+vi.mock('@/features/cart/guest-cart-sync.ts', () => ({ scheduleGuestCartSync: vi.fn(), resetGuestCartSync: vi.fn() }));
+
 import { fetchWarehouses } from '@/api/warehouses.ts';
 import { fetchCatalog } from '@/api/catalog.ts';
 import { fetchCart } from '@/api/cart.ts';
@@ -13,6 +15,7 @@ import { SETTINGS_KEY, queryClient } from '@/lib/query-client.ts';
 import { useSessionStore } from '@/stores/session.ts';
 import { useCartStore } from '@/stores/cart.ts';
 import { catalogKey, useCatalog } from '@/features/catalog/use-catalog.ts';
+import { scheduleGuestCartSync } from '@/features/cart/guest-cart-sync.ts';
 import { resetCartSync } from '@/features/cart/useServerCart.ts';
 import { resetWarehouseStore, useWarehouseStore } from '@/features/warehouses/store.ts';
 import { WarehouseSync } from '@/features/warehouses/WarehouseSync.tsx';
@@ -122,6 +125,21 @@ describe('WarehouseSync', () => {
     expect(fetchCart).not.toHaveBeenCalled();
     act(() => useCartStore.setState({ mode: 'server' }));
     await waitFor(() => expect(fetchCart).toHaveBeenCalledTimes(1));
+  });
+
+  it('re-sends a guest cart to the admin mirror when the warehouse changes, and not for an empty one', async () => {
+    queryClient.setQueryData(SETTINGS_KEY, settings(true));
+    vi.mocked(fetchCatalog).mockImplementation(async () => ({ products: [{ id: 4, price: 1, pricingTiers: [] }], categories: [] }) as unknown as Catalog);
+    mount();
+    await waitFor(() => expect(useWarehouseStore.getState().ctx.list).toEqual(LIST));
+    act(() => useWarehouseStore.getState().choose(2));
+    await waitFor(() => expect(fetchCatalog).toHaveBeenCalledWith(false, 2));
+    expect(scheduleGuestCartSync).not.toHaveBeenCalled(); // nothing in the basket, nothing to mirror
+    useCartStore.setState({
+      lines: [{ productId: 4, displayName: 'N', sku: 's', unitPrice: 1, basePrice: 1, pricingTiers: [], quantity: 1, isPreorder: false, excludedFromFreeShipping: false, imageProductId: null }],
+    });
+    act(() => useWarehouseStore.getState().choose(3));
+    await waitFor(() => expect(scheduleGuestCartSync).toHaveBeenCalledTimes(1));
   });
 
   it('adopting the server cart with no warehouse chosen reads nothing extra', async () => {

@@ -6,10 +6,12 @@ vi.mock('@/api/cart.ts', () => ({
   fetchCart: vi.fn(),
   putCart: vi.fn(),
   clearCart: vi.fn(),
+  putGuestCart: vi.fn(async () => undefined),
+  deleteGuestCart: vi.fn(async () => undefined),
 }));
 vi.mock('@mantine/notifications', () => ({ notifications: { show: vi.fn() } }));
 
-import { fetchCart, putCart } from '@/api/cart.ts';
+import { deleteGuestCart, fetchCart, putCart, putGuestCart } from '@/api/cart.ts';
 import { notifications } from '@mantine/notifications';
 import { ApiError } from '@/lib/errors.ts';
 import { useCartStore, type LocalLine } from '@/stores/cart.ts';
@@ -201,7 +203,7 @@ describe('useServerCart', () => {
     expect(result.current.issues.map((i) => i.productId)).toEqual([9, 11]);
   });
 
-  it('never calls the API in local mode', async () => {
+  it('in local mode only the one-way guest mirror goes out, never the signed-in cart API', async () => {
     useCartStore.setState({ mode: 'local' });
     const { result } = renderHook(() => useServerCart());
 
@@ -213,6 +215,10 @@ describe('useServerCart', () => {
 
     expect(putMock).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();
+    expect(vi.mocked(putGuestCart)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(putGuestCart)).toHaveBeenCalledWith([{ productId: 7, quantity: 5 }]);
+    expect(vi.mocked(deleteGuestCart)).not.toHaveBeenCalled();
+    expect(result.current.isSyncing).toBe(false);
     expect(useCartStore.getState().lines).toEqual([expect.objectContaining({ productId: 7, quantity: 5 })]);
     expect(result.current.issues).toEqual([]);
   });

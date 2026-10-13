@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { create } from 'zustand';
 import { notifications } from '@mantine/notifications';
 import { fetchCart, putCart } from '@/api/cart.ts';
+import { resetGuestCartSync, scheduleGuestCartSync } from '@/features/cart/guest-cart-sync.ts';
 import { useCartStore, type LocalLine } from '@/stores/cart.ts';
 import { selectedWarehouseId, useWarehouseStore } from '@/features/warehouses/store.ts';
 import { ApiError, errorMessage } from '@/lib/errors.ts';
@@ -176,7 +177,11 @@ async function refreshCart(): Promise<void> {
 }
 
 function schedule() {
-  if (!serverMode()) return;
+  if (!serverMode()) {
+    // A guest's edit: nothing to reconcile, just let the admin's Live Carts see it.
+    scheduleGuestCartSync();
+    return;
+  }
   // Supersede anything in flight before arming the timer — the local lines are
   // now newer than any answer already on its way back.
   ticketSeq += 1;
@@ -228,6 +233,7 @@ function unavailableAtWarehouse(l: LocalLine): ServerCartLine {
 
 /** Drop the pending write and the server snapshot — for logout, and for tests. */
 export function resetCartSync() {
+  resetGuestCartSync();
   if (timer) clearTimeout(timer);
   timer = null;
   pendingWrite = false;
@@ -273,8 +279,8 @@ export interface ServerCartControls {
  * replaces the local lines, so the server always has the last word on price
  * and availability.
  *
- * In `local` mode (a guest) it is a thin wrapper over the store and touches no
- * network at all.
+ * In `local` mode (a guest) it is a thin wrapper over the store. The only network it touches is
+ * the one-way guest mirror in guest-cart-sync.ts, whose answer is never read.
  */
 export function useServerCart(): ServerCartControls {
   const mode = useCartStore((s) => s.mode);
