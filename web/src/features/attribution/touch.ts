@@ -21,6 +21,29 @@ const clip = (value: string | null, max: number): string | null => {
   return trimmed ? trimmed : null;
 };
 
+/**
+ * The landing path as it may be stored: any route that carries a credential in its path collapses to its
+ * fixed prefix, so a working access key never reaches the backend's visit log (400 days, shown to admins).
+ * An ordered list of anchored patterns, each naming the route it protects; the router is not consulted at
+ * runtime. Keep in step with `sanitiseLandingPath` in the backend's
+ * `src/modules/public-storefront/attribution-rules.ts`.
+ */
+const CREDENTIAL_PATHS: ReadonlyArray<readonly [RegExp, string]> = [
+  // /order/:ref/:accessKey (the old order key link: the key is a working, non-expiring credential)
+  [/^\/order(?:\/.*)?$/, '/order'],
+  // /verify/:verificationCode/:authCode (the label's code pair), /reset-password/..., /verify-email/...
+  [/^\/verify(?:\/.*)?$/, '/verify'],
+  [/^\/reset-password(?:\/.*)?$/, '/reset-password'],
+  [/^\/verify-email(?:\/.*)?$/, '/verify-email'],
+];
+
+export function safeLandingPath(pathname: string): string {
+  for (const [pattern, prefix] of CREDENTIAL_PATHS) {
+    if (pattern.test(pathname)) return prefix;
+  }
+  return pathname;
+}
+
 /** What this page load says about where the shopper came from. Only the referrer's host is kept,
  *  never its path or query, and a referrer from the shop itself is not a source. */
 export function readTouch(href: string, referrer: string): Touch {
@@ -35,7 +58,7 @@ export function readTouch(href: string, referrer: string): Touch {
     utmSource: clip(url.searchParams.get('utm_source'), 100),
     utmMedium: clip(url.searchParams.get('utm_medium'), 100),
     utmCampaign: clip(url.searchParams.get('utm_campaign'), 100),
-    landingPath: clip(url.pathname, 500),
+    landingPath: clip(safeLandingPath(url.pathname), 500),
   };
 }
 

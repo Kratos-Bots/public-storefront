@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readTouch, shouldStartVisit, VISIT_IDLE_MS, type Touch, type VisitState } from '@/features/attribution/touch.ts';
+import { readTouch, safeLandingPath, shouldStartVisit, VISIT_IDLE_MS, type Touch, type VisitState } from '@/features/attribution/touch.ts';
 
 const SHOP = 'https://shop.example/p/5?utm_source=Newsletter&utm_medium=email&utm_campaign=oct';
 const direct: Touch = { referrerHost: null, utmSource: null, utmMedium: null, utmCampaign: null, landingPath: '/' };
@@ -48,5 +48,30 @@ describe('shouldStartVisit', () => {
   it('does not restart when the same campaign link is reloaded', () => {
     const tagged = { ...direct, utmSource: 'instagram' };
     expect(shouldStartVisit(state({ currentTouch: tagged }), { ...tagged, landingPath: '/other' }, now)).toBe(false);
+  });
+});
+
+describe('safeLandingPath', () => {
+  it('collapses the old order key link to its prefix', () => {
+    expect(safeLandingPath('/order/ORD-1/abcdef')).toBe('/order');
+  });
+  it('collapses with a trailing slash and extra segments', () => {
+    expect(safeLandingPath('/order/ORD-1/abcdef/')).toBe('/order');
+    expect(safeLandingPath('/order/ORD-1/abcdef/extra/more')).toBe('/order');
+    expect(safeLandingPath('/order/')).toBe('/order');
+    expect(safeLandingPath('/order')).toBe('/order');
+  });
+  it('collapses credential-bearing sub-paths of the token pages', () => {
+    expect(safeLandingPath('/verify/CODE123/AUTH456')).toBe('/verify');
+    expect(safeLandingPath('/reset-password/tok')).toBe('/reset-password');
+    expect(safeLandingPath('/verify-email/tok/')).toBe('/verify-email');
+  });
+  it('leaves ordinary pages unchanged', () => {
+    for (const p of ['/', '/p/5', '/cart', '/faq', '/order-placed', '/verify', '/reset-password', '/tracking/ORD-1', '/account/orders/ORD-1', '/c/peptides']) {
+      expect(safeLandingPath(p)).toBe(p);
+    }
+  });
+  it('is what readTouch stores as the landing path', () => {
+    expect(readTouch('https://shop.example/order/ORD-1/abcdef', '').landingPath).toBe('/order');
   });
 });
