@@ -71,6 +71,27 @@ describe('safeLandingPath', () => {
       expect(safeLandingPath(p)).toBe(p);
     }
   });
+  it('collapses the order route whatever its case, encoding or slashes', () => {
+    for (const p of ['/Order/ORD-1/key', '/ORDER/ORD-1/key/', '/%6Frder/ORD-1/key', '/%256Frder/ORD-1/key', '//order/ORD-1/key', '///Order//ORD-1/key']) {
+      expect(safeLandingPath(p)).toBe('/order');
+    }
+  });
+  it('collapses every other credential route in mixed case', () => {
+    expect(safeLandingPath('/Verify/CODE123/AUTH456')).toBe('/verify');
+    expect(safeLandingPath('/RESET-password/tok')).toBe('/reset-password');
+    expect(safeLandingPath('/Verify-Email/tok/')).toBe('/verify-email');
+    expect(safeLandingPath('/%76erify-email/tok')).toBe('/verify-email');
+  });
+  it('does not rewrite ordinary pages, whatever their case', () => {
+    expect(safeLandingPath('/p/5')).toBe('/p/5');
+    expect(safeLandingPath('/c/Vitamins')).toBe('/c/Vitamins');
+    expect(safeLandingPath('/Order-Placed')).toBe('/Order-Placed');
+  });
+  it('does not throw on a malformed escape', () => {
+    expect(() => safeLandingPath('/p/%E0%A4%A')).not.toThrow();
+    expect(safeLandingPath('/p/%E0%A4%A')).toBe('/p/%E0%A4%A');
+    expect(safeLandingPath('/order/%E0%A4%A')).toBe('/order');
+  });
   it('is what readTouch stores as the landing path', () => {
     expect(readTouch('https://shop.example/order/ORD-1/abcdef', '').landingPath).toBe('/order');
   });
@@ -84,6 +105,12 @@ describe('readTouch return routes', () => {
       const touch = readTouch(`https://shop.example${path}?utm_source=mail`, PROCESSOR);
       expect(touch.referrerHost).toBeNull();
       expect(touch.utmSource).toBe('mail');
+    },
+  );
+  it.each(['/Payment/Success', '/PAYMENT/cancel/', '/Order-Placed', '/ORDER/ORD-1/key', '//order/ORD-1/key', '/%6Frder/ORD-1/key', '/Auth/Telegram/Callback'])(
+    'ignores the referrer on %s in any case or encoding',
+    (path) => {
+      expect(readTouch(`https://shop.example${path}`, PROCESSOR).referrerHost).toBeNull();
     },
   );
   it('keeps the referrer on a normal page', () => {

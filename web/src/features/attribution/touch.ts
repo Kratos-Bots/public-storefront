@@ -30,16 +30,34 @@ const clip = (value: string | null, max: number): string | null => {
  */
 const CREDENTIAL_PATHS: ReadonlyArray<readonly [RegExp, string]> = [
   // /order/:ref/:accessKey (the old order key link: the key is a working, non-expiring credential)
-  [/^\/order(?:\/.*)?$/, '/order'],
+  [/^\/order(?:\/.*)?$/i, '/order'],
   // /verify/:verificationCode/:authCode (the label's code pair), /reset-password/..., /verify-email/...
-  [/^\/verify(?:\/.*)?$/, '/verify'],
-  [/^\/reset-password(?:\/.*)?$/, '/reset-password'],
-  [/^\/verify-email(?:\/.*)?$/, '/verify-email'],
+  [/^\/verify(?:\/.*)?$/i, '/verify'],
+  [/^\/reset-password(?:\/.*)?$/i, '/reset-password'],
+  [/^\/verify-email(?:\/.*)?$/i, '/verify-email'],
 ];
 
+/**
+ * The path as the router would see it, for matching only (never stored): percent-decoded (repeatedly, up to
+ * 3 times, so a double-encoded `%256F` cannot hide a letter; a malformed escape keeps the string as it was)
+ * with every run of slashes collapsed to one. The patterns that use it are case-insensitive. Keep in step with
+ * `normaliseForMatch` in the backend's `src/modules/public-storefront/attribution-rules.ts`.
+ */
+function normaliseForMatch(pathname: string): string {
+  let path = pathname;
+  for (let i = 0; i < 3; i += 1) {
+    let decoded: string;
+    try { decoded = decodeURIComponent(path); } catch { break; }
+    if (decoded === path) break;
+    path = decoded;
+  }
+  return path.replace(/\/{2,}/g, '/');
+}
+
 export function safeLandingPath(pathname: string): string {
+  const path = normaliseForMatch(pathname);
   for (const [pattern, prefix] of CREDENTIAL_PATHS) {
-    if (pattern.test(pathname)) return prefix;
+    if (pattern.test(path)) return prefix;
   }
   return pathname;
 }
@@ -50,10 +68,10 @@ export function safeLandingPath(pathname: string): string {
  * not a source, so it is ignored; UTM tags on such a URL are still read.
  */
 const RETURN_PATHS: readonly RegExp[] = [
-  /^\/order(?:\/.*)?$/, // /order/:ref/:accessKey
-  /^\/payment\/(?:success|cancel)\/?$/, // hosted checkout return
-  /^\/order-placed\/?$/, // hosted checkout return / order placed
-  /^\/auth\/telegram\/callback\/?$/, // Telegram sign-in redirect
+  /^\/order(?:\/.*)?$/i, // /order/:ref/:accessKey
+  /^\/payment\/(?:success|cancel)\/?$/i, // hosted checkout return
+  /^\/order-placed\/?$/i, // hosted checkout return / order placed
+  /^\/auth\/telegram\/callback\/?$/i, // Telegram sign-in redirect
 ];
 
 /** What this page load says about where the shopper came from. Only the referrer's host is kept,
@@ -63,7 +81,8 @@ export function readTouch(href: string, referrer: string): Touch {
   let referrerHost: string | null = null;
   try {
     const host = referrer ? new URL(referrer).host : '';
-    if (host && host !== url.host && !RETURN_PATHS.some((p) => p.test(url.pathname))) referrerHost = host;
+    const matchPath = normaliseForMatch(url.pathname);
+    if (host && host !== url.host && !RETURN_PATHS.some((p) => p.test(matchPath))) referrerHost = host;
   } catch { /* not a URL: no referrer */ }
   return {
     referrerHost: clip(referrerHost, 255),
