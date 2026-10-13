@@ -8,7 +8,7 @@ export const block = defineBlock<{ id: string }>({
   name: 'CartSummaryCheckout', label: 'Checkout button', category: 'part', part: { family: 'cart-summary' },
   layouts: 'all', routeBound: false, slots: [],
   style: styleSupport('wrap', [...BOX]),
-  text: ['cart.summary.checkout', 'cart.summary.held'],
+  text: ['cart.summary.checkout', 'cart.summary.held', 'cart.limit.maxUnits'],
   schema: z.object({}), defaultProps: {},
   render: (p) => <CartSummaryFamily.PartHost name="CartSummaryCheckout" props={p as Record<string, unknown>} styleAttrs={p.puck.style} />,
 });

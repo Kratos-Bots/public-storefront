@@ -85,10 +85,12 @@ function TermsView({ styleAttrs }: PartViewProps) {
  */
 function CheckoutView() {
   const { t } = useText();
-  const { blocked, onNavigate, primaryElsewhere, checkoutTo } = CartSummaryFamily.useData();
+  const { blocked, unitLimit, onNavigate, primaryElsewhere, checkoutTo } = CartSummaryFamily.useData();
   const { paused } = useWarehouseOrdering();
   if (paused) return <OrderingPausedNotice variant="inline" />;
-  if (primaryElsewhere) return blocked ? <p className={classes.held}>{t('cart.summary.held')}</p> : null;
+  // Over the shop's unit limit the shopper is told how many to remove; any other hold keeps the generic note.
+  const held = unitLimit?.over ? t('cart.limit.maxUnits', { count: unitLimit.max ?? 0, excess: unitLimit.excess }) : t('cart.summary.held');
+  if (primaryElsewhere) return blocked ? <p className={classes.held}>{held}</p> : null;
   if (blocked) {
     return (
       <>
@@ -96,7 +98,7 @@ function CheckoutView() {
           {t('cart.summary.checkout')}
           <Slot name="ButtonAdornment" variant="primary" cta />
         </button>
-        <p className={classes.held}>{t('cart.summary.held')}</p>
+        <p className={classes.held}>{held}</p>
       </>
     );
   }

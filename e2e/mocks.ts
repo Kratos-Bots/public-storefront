@@ -230,6 +230,8 @@ export interface InstallMocksOptions {
   profile?: Profile;
   /** Seed `sf-session-v1` so the app boots signed in. */
   session?: boolean;
+  /** The shop-wide cap on total units per order (`settings.limits.maxOrderUnits`); omitted = the fixture, which carries no `limits`. */
+  maxOrderUnits?: number | null;
   /** Mutate the settings fixture before it is served (flags, theme, kill switch). */
   tweakSettings?: (settings: StorefrontSettings) => void;
   /** Switch email/phone + password sign-in on (`login.password.available`); an object also sets the reset routes. */
@@ -690,6 +692,8 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
   }
 
   if (!options.faq?.older) state.settings = { ...state.settings, faq: { available: options.faq?.available ?? true } };
+
+  if (options.maxOrderUnits !== undefined) state.settings = { ...state.settings, limits: { maxOrderUnits: options.maxOrderUnits } };
 
   options.tweakSettings?.(state.settings);
   options.tweakProfile?.(state.profile);

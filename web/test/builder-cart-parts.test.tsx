@@ -11,6 +11,7 @@ import type { ServerCartLine } from '@/types/cart.ts';
 
 const state = vi.hoisted(() => ({
   features: {} as Record<string, unknown>,
+  limits: undefined as { maxOrderUnits: number | null } | undefined,
   issues: [] as unknown[],
   isSyncing: false,
   refresh: undefined as unknown as ReturnType<typeof import('vitest').vi.fn>,
@@ -22,6 +23,7 @@ vi.mock('@/app/settings.ts', () => ({
     currency: 'GBP', welcomeMessage: null, enabled: true, supportLinks: [], notices: [],
     brand: { name: 'Northbound Supply', title: 'Northbound Supply', tagline: null, links: { whatsapp: null, telegram: null } },
     features: state.features,
+    ...(state.limits ? { limits: state.limits } : {}),
   }) as unknown as StorefrontSettings,
 }));
 vi.mock('@/templates/runtime.tsx', async (orig) => ({ ...(await orig<typeof import('@/templates/runtime.tsx')>()), Slot: () => null }));
@@ -325,6 +327,52 @@ describe('blocked', () => {
     const el = await renderDoc(docOf(contents({})));
     expect(el.querySelector('button[class*="checkout"]:disabled')).toBeNull();
     expect(el.querySelector('a[href="/checkout"]')).not.toBeNull();
+  });
+  describe('shop-wide order unit limit', () => {
+    afterEach(() => { state.limits = undefined; });
+    it('over the limit: a disabled checkout and the unit notice instead of the generic held text', async () => {
+      state.limits = { maxOrderUnits: 2 };
+      seed([line(1, 2), line(2, 1)]);
+      const el = await renderDoc(docOf(contents({})));
+      expect(el.querySelector('button[class*="checkout"]:disabled')).not.toBeNull();
+      expect(el.querySelector('a[href="/checkout"]')).toBeNull();
+      expect(el.querySelector('[class*="held"]')?.textContent).toBe('Maximum 2 items per order. Remove 1 to continue.');
+    });
+    it('standalone summary is held too', async () => {
+      state.limits = { maxOrderUnits: 2 };
+      seed([line(1, 3)]);
+      const el = await renderDoc(docOf(contents({ summary: [] }), summaryOf(DEFAULT_SUMMARY(), 'solo')));
+      expect(el.querySelector('button[class*="checkout"]:disabled')).not.toBeNull();
+      expect(el.querySelector('[class*="held"]')?.textContent).toContain('Remove 1');
+    });
+    it('exactly at the limit: a live link and no held note', async () => {
+      state.limits = { maxOrderUnits: 2 };
+      seed([line(1, 2)]);
+      const el = await renderDoc(docOf(contents({})));
+      expect(el.querySelector('button[class*="checkout"]:disabled')).toBeNull();
+      expect(el.querySelector('a[href="/checkout"]')).not.toBeNull();
+      expect(el.querySelector('[class*="held"]')).toBeNull();
+    });
+    it('no limits in settings and 50 units: a live link', async () => {
+      seed([line(1, 50)]);
+      const el = await renderDoc(docOf(contents({})));
+      expect(el.querySelector('a[href="/checkout"]')).not.toBeNull();
+      expect(el.querySelector('button[class*="checkout"]:disabled')).toBeNull();
+    });
+    it('web app: the unit notice is the held note', async () => {
+      state.features = { layout: 'webapp' };
+      state.limits = { maxOrderUnits: 2 };
+      seed([line(1, 3)]);
+      const el = await renderDoc(docOf(contents({})), 'webapp');
+      expect(el.querySelector('[class*="held"]')?.textContent).toContain('Maximum 2 items per order');
+    });
+    it('a shopper over the limit can still step a line down and remove it', async () => {
+      state.limits = { maxOrderUnits: 2 };
+      seed([line(1, 3)]);
+      const el = await renderDoc(docOf(contents({})));
+      expect(el.querySelector('button[aria-label*="Remove" i], button[class*="remove"]')).not.toBeNull();
+      expect(el.querySelector('button[class*="checkout"]:disabled')).not.toBeNull();
+    });
   });
   it('web app: only the held note when blocked, else nothing', async () => {
     state.features = { layout: 'webapp' };

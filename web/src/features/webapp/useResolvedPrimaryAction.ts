@@ -6,6 +6,7 @@ import { useCartStore, selectCount, selectSubtotal } from '@/stores/cart.ts';
 import { useWarehouseOrdering } from '@/features/warehouses/use-warehouse.ts';
 import { usePrimaryActionStore, type PrimaryAction } from '@/stores/primary-action.ts';
 import { useServerCart } from '@/features/cart/useServerCart.ts';
+import { useOrderUnitLimit } from '@/features/cart/useOrderUnitLimit.ts';
 import { checkoutTarget } from '@/features/cart/checkout-target.ts';
 import { defaultPrimaryAction } from '@/features/webapp/default-action.ts';
 import { isTelegramWebApp } from '@/lib/telegram-webapp.ts';
@@ -30,6 +31,7 @@ function useActionParts(): ActionParts {
   const count = useCartStore(selectCount);
   const subtotal = useCartStore((s) => selectSubtotal(s.lines));
   const { issues } = useServerCart();
+  const unitLimit = useOrderUnitLimit();
   const { paused } = useWarehouseOrdering();
   const { pathname } = useLocation();
   const navigate = useNavigate();
@@ -42,7 +44,7 @@ function useActionParts(): ActionParts {
     checkoutTo: checkoutTarget(loggedIn, features.guestCheckout),
     // A paused warehouse takes no orders: no "View cart", no "Checkout" (the header's cart button still opens the basket).
     ordering: features.ordering && !paused,
-    blocked: issues.some((i) => i.inactive || i.belowMin || i.aboveMax),
+    blocked: issues.some((i) => i.inactive || i.belowMin || i.aboveMax) || unitLimit.over,
     browseOnCatalogOnly: isTelegramWebApp(),
   }, t);
   const label = fallback?.label ?? null;

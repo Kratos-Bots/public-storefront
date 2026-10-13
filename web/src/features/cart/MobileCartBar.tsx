@@ -9,6 +9,7 @@ import { haptic } from '@/lib/telegram-webapp.ts';
 import { basketPromotions } from '@/lib/promotions.ts';
 import { checkoutTarget } from '@/features/cart/checkout-target.ts';
 import { useServerCart } from '@/features/cart/useServerCart.ts';
+import { useOrderUnitLimit } from '@/features/cart/useOrderUnitLimit.ts';
 import { ChevronIcon } from '@/components/icons.tsx';
 import { Slot } from '@/templates/runtime.tsx';
 import classes from '@/features/cart/MobileCartBar.module.css';
@@ -73,8 +74,9 @@ export function CartBar({ inset = 'page' }: { inset?: CartBarInset }) {
   const count = useCartStore(selectCount);
   const subtotal = useCartStore((s) => selectSubtotal(s.lines));
   const { issues, server } = useServerCart();
+  const unitLimit = useOrderUnitLimit();
 
-  const blocked = issues.some((i) => i.inactive || i.belowMin || i.aboveMax);
+  const blocked = issues.some((i) => i.inactive || i.belowMin || i.aboveMax) || unitLimit.over;
   const items = tp('cart.summary.items', count);
   // With promotions applied the bar leads with the basket after them and keeps the subtotal struck
   // beside it; the server's figures only count while they still match the lines on screen.

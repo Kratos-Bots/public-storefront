@@ -159,4 +159,29 @@ test.describe('order quantity limits', () => {
     await expect(cart.getByText('Maximum 15 per order')).toHaveCount(0);
     await expect(cart.getByRole('link', { name: 'Checkout' })).toBeVisible();
   });
+
+  test('an order limit of 2 blocks checkout at 3 items and unblocks after removing one', async ({ page }) => {
+    const mocks = await installMocks(page, { layout: 'storefront', session: true, maxOrderUnits: 2 });
+
+    await page.goto('/');
+    await page.getByRole('button', { name: /^Add /, exact: false }).first().click();
+    await expect.poll(() => mocks.state.cart.items[0]?.quantity).toBe(1);
+
+    await onlyVisible(page.getByRole('link', { name: /^Cart, / })).click();
+    const cart = page.getByRole('dialog', { name: 'Your cart' });
+    const productName = mocks.state.cart.items[0]!.name;
+    const qty = cart.getByRole('textbox', { name: `${productName} quantity` });
+    await qty.fill('3');
+    await expect.poll(() => mocks.state.cart.items[0]?.quantity).toBe(3);
+
+    // Three items against a limit of two: held, with the count to remove; the line stays editable.
+    await expect(cart.getByRole('button', { name: 'Checkout' })).toBeDisabled();
+    await expect(cart.getByText('Maximum 2 items per order. Remove 1 to continue.')).toBeVisible();
+    await expect(qty).toBeEnabled();
+
+    await qty.fill('2');
+    await expect.poll(() => mocks.state.cart.items[0]?.quantity).toBe(2);
+    await expect(cart.getByText('Maximum 2 items per order. Remove 1 to continue.')).toHaveCount(0);
+    await expect(cart.getByRole('link', { name: 'Checkout' })).toBeVisible();
+  });
 });

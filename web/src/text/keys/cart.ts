@@ -7,6 +7,7 @@ export default defineTextArea('cart', {
   'summary.afterPromotions': { en: 'Basket after promotions', max: 60 },
   'summary.terms': { en: 'Shipping and discounts are calculated at checkout.', max: 200 },
   'summary.held': { en: 'Resolve the flagged items to continue.', max: 120 },
+  'limit.maxUnits': { en: 'Maximum {count} items per order. Remove {excess} to continue.', max: 120 },
   'summary.checkout': { en: 'Checkout', max: 40 },
   'summary.keepShopping': { en: 'Continue shopping', max: 60 },
   'drawer.title': { en: 'Your cart', max: 60 },
