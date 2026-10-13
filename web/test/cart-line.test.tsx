@@ -9,6 +9,7 @@ const state = vi.hoisted(() => ({ settings: {} as StorefrontSettings }));
 vi.mock('@/app/settings.ts', () => ({ useSettings: () => state.settings }));
 
 import { CartLine } from '@/features/cart/CartLine.tsx';
+import { useCartStore } from '@/stores/cart.ts';
 
 function line(overrides: Partial<LocalLine> = {}): LocalLine {
   return {
@@ -57,7 +58,10 @@ function mount(l: LocalLine, i?: ServerCartLine) {
   );
 }
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  useCartStore.setState({ lines: [], mode: 'local' });
+});
 
 describe('CartLine', () => {
   it('strikes the base price through when a bulk break applies', () => {
@@ -167,5 +171,63 @@ describe('CartLine', () => {
 
     const { container: withImage } = mount(line({ imageProductId: 5 }));
     expect(withImage.querySelector('img')).not.toBeNull();
+  });
+});
+
+describe('CartLine and the shop-wide unit limit', () => {
+  const seed = (limit: number | null, quantities: number[]) => {
+    useCartStore.setState({ lines: quantities.map((q, i) => line({ productId: 7 + i, quantity: q })), mode: 'local' });
+    state.settings = { currency: 'GBP', limits: { maxOrderUnits: limit } } as unknown as StorefrontSettings;
+  };
+  const mountWith = (l: LocalLine, onQuantity = vi.fn(), onRemove = vi.fn()) => {
+    render(
+      <MantineProvider env="test">
+        <ul>
+          <CartLine line={l} onQuantity={onQuantity} onRemove={onRemove} />
+        </ul>
+      </MantineProvider>,
+    );
+    return { onQuantity, onRemove };
+  };
+
+  it('disables + on a line when the cart is at the limit (limit 3, lines 2 + 1)', () => {
+    seed(3, [2, 1]);
+    mountWith(line({ productId: 7, quantity: 2 }));
+    expect(screen.getByRole('button', { name: 'One more BPC-157 5mg' })).toBeDisabled();
+    cleanup();
+    mountWith(line({ productId: 8, quantity: 1 }));
+    expect(screen.getByRole('button', { name: 'One more BPC-157 5mg' })).toBeDisabled();
+  });
+
+  it('keeps + enabled while there is headroom (limit 4, lines 2 + 1)', () => {
+    seed(4, [2, 1]);
+    const { onQuantity } = mountWith(line({ productId: 7, quantity: 2 }));
+    const more = screen.getByRole('button', { name: 'One more BPC-157 5mg' });
+    expect(more).toBeEnabled();
+    fireEvent.click(more);
+    expect(onQuantity).toHaveBeenCalledWith(7, 3);
+  });
+
+  it('an over-limit cart can still be stepped down and the line removed, but not up', () => {
+    seed(3, [3, 2]);
+    const { onQuantity, onRemove } = mountWith(line({ productId: 7, quantity: 3 }));
+    expect(screen.getByRole('button', { name: 'One more BPC-157 5mg' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'One fewer BPC-157 5mg' }));
+    expect(onQuantity).toHaveBeenCalledWith(7, 2);
+    fireEvent.click(screen.getByRole('button', { name: 'Remove BPC-157 5mg' }));
+    expect(onRemove).toHaveBeenCalledWith(7);
+  });
+
+  it('a typed quantity is clamped to the headroom', () => {
+    seed(5, [2, 1]);
+    const { onQuantity } = mountWith(line({ productId: 7, quantity: 2 }));
+    fireEvent.change(screen.getByRole('textbox', { name: /BPC-157 5mg/ }), { target: { value: '9' } });
+    expect(onQuantity).toHaveBeenCalledWith(7, 4);
+  });
+
+  it('no limit leaves the stepper alone', () => {
+    seed(null, [40]);
+    mountWith(line({ productId: 7, quantity: 40 }));
+    expect(screen.getByRole('button', { name: 'One more BPC-157 5mg' })).toBeEnabled();
   });
 });
