@@ -19,6 +19,7 @@ import { EmptyState } from '@/components/EmptyState.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { ClosedPage } from '@/features/closed/ClosedPage.tsx';
 import { fetchCart } from '@/api/cart.ts';
+import { markActivity, trackPageLoad } from '@/features/attribution/tracker.ts';
 import { WarehouseSync } from '@/features/warehouses/WarehouseSync.tsx';
 import { useCartStore } from '@/stores/cart.ts';
 import { useSessionStore } from '@/stores/session.ts';
@@ -62,6 +63,17 @@ function useBootCart() {
     void fetchCart()
       .then((cart) => useCartStore.getState().replaceFromServer(cart))
       .catch(() => undefined);
+  }, []);
+}
+
+/** Reports the visit once per page load, then keeps it alive while the shopper navigates. */
+function useAttribution() {
+  const started = useRef(false);
+  useEffect(() => {
+    if (started.current) return;
+    started.current = true;
+    trackPageLoad();
+    return router.subscribe(() => markActivity());
   }, []);
 }
 
@@ -147,6 +159,7 @@ function SettingsBoundary() {
   // Renders above TextProvider, so this is always the built-in English (boot.* keys are fixed).
   const { t } = useText();
   useBootCart();
+  useAttribution();
 
   if (query.data && !telegramPending) return <ThemedApp settings={query.data} />;
 
