@@ -63,8 +63,10 @@ export function CartLine({ line, issue, server, onQuantity, onRemove, index = 0 
     setDraft(digits);
     const typed = parseInt(digits, 10);
     if (!Number.isFinite(typed) || typed < 1) return;
-    // A typed number stops at the same ceiling the + button does.
-    const next = maxBound === null ? typed : Math.min(typed, Math.max(1, maxBound));
+    // A typed number stops at the order limit's headroom. The product's own max is deliberately not
+    // applied here: the server flags it (aboveMax) and offers the "Set to N" fix.
+    const typedCap = cappedCeiling(line.quantity, null, unitLimit);
+    const next = typedCap === null ? typed : Math.min(typed, Math.max(1, typedCap));
     if (next !== typed) setDraft(String(next));
     onQuantity(line.productId, next);
   };

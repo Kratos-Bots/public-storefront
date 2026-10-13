@@ -225,6 +225,30 @@ describe('CartLine and the shop-wide unit limit', () => {
     expect(onQuantity).toHaveBeenCalledWith(7, 4);
   });
 
+  it('without an order limit a typed value above the product max is not clamped (aboveMax flow stays reachable)', () => {
+    seed(null, [10]);
+    const onQuantity = vi.fn();
+    render(
+      <MantineProvider env="test">
+        <ul>
+          <CartLine line={line({ productId: 7, quantity: 10 })} issue={issue({ quantity: 10, maxOrderQuantity: 15 })} onQuantity={onQuantity} onRemove={vi.fn()} />
+        </ul>
+      </MantineProvider>,
+    );
+    fireEvent.change(screen.getByRole('textbox', { name: /BPC-157 5mg/ }), { target: { value: '20' } });
+    expect(onQuantity).toHaveBeenCalledWith(7, 20);
+  });
+
+  it('on an over-limit cart a larger typed number leaves the quantity unchanged and a smaller one is accepted', () => {
+    seed(3, [3, 2]);
+    const { onQuantity } = mountWith(line({ productId: 7, quantity: 3 }));
+    const box = screen.getByRole('textbox', { name: /BPC-157 5mg/ });
+    fireEvent.change(box, { target: { value: '9' } });
+    expect(onQuantity).toHaveBeenLastCalledWith(7, 3);
+    fireEvent.change(box, { target: { value: '1' } });
+    expect(onQuantity).toHaveBeenLastCalledWith(7, 1);
+  });
+
   it('no limit leaves the stepper alone', () => {
     seed(null, [40]);
     mountWith(line({ productId: 7, quantity: 40 }));
