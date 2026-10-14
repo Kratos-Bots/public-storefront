@@ -5,9 +5,10 @@ import { MemoryRouter, useLocation } from 'react-router';
 const ctx = vi.hoisted(() => ({
   features: { ordering: true, guestCheckout: true, wholesale: false } as Record<string, boolean>,
   issues: [] as Array<Record<string, boolean>>,
+  limits: undefined as { maxOrderUnits: number | null } | undefined,
 }));
 vi.mock('@/app/settings.ts', () => ({
-  useSettings: () => ({ currency: 'GBP', theme: { colors: {} }, features: ctx.features }),
+  useSettings: () => ({ currency: 'GBP', theme: { colors: {} }, features: ctx.features, limits: ctx.limits }),
 }));
 vi.mock('@/features/cart/useServerCart.ts', () => ({ useServerCart: () => ({ issues: ctx.issues, server: null }) }));
 
@@ -97,6 +98,7 @@ beforeEach(() => {
   delete (window as unknown as { Telegram?: unknown }).Telegram;
   ctx.features = { ordering: true, guestCheckout: true, wholesale: false };
   ctx.issues = [];
+  ctx.limits = undefined;
   usePrimaryActionStore.setState({ override: null });
   useBackActionStore.setState({ override: null });
   useCartStore.setState({ lines: [line], mode: 'local' });
@@ -136,6 +138,41 @@ describe('browser-mode web app', () => {
     const checkout = bar()!.querySelector('button[data-sf-cta="main"]') as HTMLButtonElement;
     expect(checkout.disabled).toBe(true);
     expect(bar()!.querySelector('a[href="/checkout"]')).toBeNull();
+  });
+
+  describe('shop-wide order unit limit', () => {
+    const checkoutButton = () => bar()!.querySelector('button[data-sf-cta="main"]') as HTMLButtonElement | null;
+    it('over the limit the running-tab Checkout is disabled, and not a link', () => {
+      ctx.limits = { maxOrderUnits: 1 };
+      mount('/');
+      expect(checkoutButton()!.disabled).toBe(true);
+      expect(bar()!.querySelector('a[href="/checkout"]')).toBeNull();
+    });
+    it('exactly at the limit Checkout is a live link', () => {
+      ctx.limits = { maxOrderUnits: 2 };
+      mount('/');
+      expect(checkoutButton()).toBeNull();
+      expect(bar()!.querySelector('a[href="/checkout"]')).not.toBeNull();
+    });
+    it('settings without limits do not block', () => {
+      mount('/');
+      expect(checkoutButton()).toBeNull();
+      expect(bar()!.querySelector('a[href="/checkout"]')).not.toBeNull();
+    });
+    it('over the limit the /cart primary action is disabled', () => {
+      ctx.limits = { maxOrderUnits: 1 };
+      mount('/cart');
+      expect(screen.getByRole('button', { name: /Checkout · £24.00/ })).toBeDisabled();
+    });
+    it('at the limit the /cart primary action is enabled', () => {
+      ctx.limits = { maxOrderUnits: 2 };
+      mount('/cart');
+      expect(screen.getByRole('button', { name: /Checkout · £24.00/ })).toBeEnabled();
+    });
+    it('without limits the /cart primary action is enabled', () => {
+      mount('/cart');
+      expect(screen.getByRole('button', { name: /Checkout · £24.00/ })).toBeEnabled();
+    });
   });
 
   it('keeps the single-button bar on /cart', () => {

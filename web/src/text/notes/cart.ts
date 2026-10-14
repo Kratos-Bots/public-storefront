@@ -5,6 +5,7 @@ export default {
   'summary.afterPromotions': 'Row under the cart subtotal showing the basket after promotions, when any apply',
   'summary.terms': 'Small print under the cart subtotal',
   'summary.held': 'Shown under the disabled Checkout button while a line is unavailable or breaks an order limit',
+  'limit.maxUnits': 'Shown under the disabled Checkout button while the cart holds more items than the shop allows per order; {count} is the limit, {excess} how many to remove',
   'summary.checkout': 'Checkout button in the cart summary and the phone cart bar',
   'summary.keepShopping': 'Link under the cart summary back to the catalogue',
   'drawer.title': 'Heading of the slide-out cart, also its screen-reader label',

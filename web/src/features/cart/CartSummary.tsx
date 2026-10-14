@@ -11,6 +11,7 @@ import { CartHostContext } from '@/features/cart/cart-host.ts';
 import { CART_SUMMARY_VIEWS } from '@/features/cart/cart-summary-parts.tsx';
 import { cartViews } from '@/builder/blocks/_shared/cart-views.ts';
 import { useServerCart } from '@/features/cart/useServerCart.ts';
+import { useOrderUnitLimit } from '@/features/cart/useOrderUnitLimit.ts';
 import { basketPromotions } from '@/lib/promotions.ts';
 import classes from '@/features/cart/CartSummary.module.css';
 
@@ -43,6 +44,7 @@ export function CartSummary({ blocked: blockedProp, onNavigate, slots, styleAttr
   const cart = useCartFamilyOptional();
   const host = useContext(CartHostContext);
   const { issues, server } = useServerCart();
+  const unitLimit = useOrderUnitLimit();
   const { currency, features } = useSettings();
   const loggedIn = useSessionStore(selectIsLoggedIn);
   const count = useCartStore(selectCount);
@@ -54,14 +56,15 @@ export function CartSummary({ blocked: blockedProp, onNavigate, slots, styleAttr
   const given = slots?.items;
   const items = useMemo(() => given ?? defaultSlotRenders('CartSummary', 'storefront', {}, 'cart').items!, [given]);
 
-  const blocked = blockedProp ?? cart?.blocked ?? issues.some((i) => i.inactive || i.belowMin || i.aboveMax);
+  // The shop-wide unit limit holds checkout whoever computed `blocked`; the notice needs the limit itself.
+  const blocked = (blockedProp ?? cart?.blocked ?? issues.some((i) => i.inactive || i.belowMin || i.aboveMax)) || unitLimit.over;
   const navigate = onNavigate ?? cart?.dismiss ?? host?.dismiss;
   const checkoutTo = checkoutTarget(loggedIn, features.guestCheckout);
   const promotions = useMemo(() => basketPromotions(server), [server]);
   const value = useMemo(() => {
-    const data: CartSummaryData = { blocked, count, subtotal, currency, mixedPreorder, primaryElsewhere, checkoutTo, promotions, ...(navigate ? { onNavigate: navigate } : {}) };
+    const data: CartSummaryData = { blocked, unitLimit, count, subtotal, currency, mixedPreorder, primaryElsewhere, checkoutTo, promotions, ...(navigate ? { onNavigate: navigate } : {}) };
     return { data, views: CART_SUMMARY_VIEWS };
-  }, [blocked, count, subtotal, currency, mixedPreorder, primaryElsewhere, checkoutTo, promotions, navigate]);
+  }, [blocked, unitLimit, count, subtotal, currency, mixedPreorder, primaryElsewhere, checkoutTo, promotions, navigate]);
 
   // Today neither the page foot nor the drawer footer exists for an empty cart.
   if (cart && cart.lines.length === 0) return null;

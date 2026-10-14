@@ -7,6 +7,8 @@ import { StockChip } from '@/features/catalog/StockChip.tsx';
 import { PromoBadge } from '@/features/catalog/PromoBadge.tsx';
 import { MinusIcon, PlusIcon } from '@/components/icons.tsx';
 import { rowAnim } from '@/lib/motion.ts';
+import { cappedCeiling } from '@/features/cart/order-unit-limit.ts';
+import { useOrderUnitLimit } from '@/features/cart/useOrderUnitLimit.ts';
 import type { Product } from '@/types/catalog.ts';
 import { useOutOfStockInPriceSlot } from '@/features/catalog/stock-price.ts';
 import { bestTier } from '@/features/catalog/best-tier.ts';
@@ -133,7 +135,11 @@ function RowAdd({ styleAttrs }: PartViewProps) {
   const status = deriveStockStatus(product.inStock, product.lowStockAlert);
   const unavailable = !product.isActive || (!product.isPreorder && status === 'out');
   const floor = Math.max(1, product.minOrderQuantity ?? 1);
-  const atCeiling = product.maxOrderQuantity != null && quantity >= product.maxOrderQuantity;
+  const unitLimit = useOrderUnitLimit();
+  const ceiling = cappedCeiling(quantity, product.maxOrderQuantity, unitLimit);
+  const atCeiling = ceiling !== null && quantity >= ceiling;
+  // Adding opens at the floor; a cart with less headroom than that can't take it.
+  const noRoom = unitLimit.remaining !== null && unitLimit.remaining < floor;
 
   return features.ordering && !paused ? (
     <div className={classes.gutter} {...styleAttrs}>
@@ -164,7 +170,7 @@ function RowAdd({ styleAttrs }: PartViewProps) {
         <button
           type="button"
           className={classes.quickAdd}
-          disabled={unavailable}
+          disabled={unavailable || noRoom}
           onClick={() => add(product, floor)}
           aria-label={
             !product.isActive

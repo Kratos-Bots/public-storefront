@@ -159,4 +159,38 @@ test.describe('order quantity limits', () => {
     await expect(cart.getByText('Maximum 15 per order')).toHaveCount(0);
     await expect(cart.getByRole('link', { name: 'Checkout' })).toBeVisible();
   });
+
+  test('a stored cart over a lowered order limit blocks checkout, cannot grow, and unblocks after stepping down', async ({ page }) => {
+    const mocks = await installMocks(page, { layout: 'storefront', session: true });
+
+    await page.goto('/');
+    await page.getByRole('button', { name: /^Add /, exact: false }).first().click();
+    await expect.poll(() => mocks.state.cart.items[0]?.quantity).toBe(1);
+
+    await onlyVisible(page.getByRole('link', { name: /^Cart, / })).click();
+    const cart = page.getByRole('dialog', { name: 'Your cart' });
+    const productName = mocks.state.cart.items[0]!.name;
+    const qty = cart.getByRole('textbox', { name: `${productName} quantity` });
+    await qty.fill('3');
+    await expect.poll(() => mocks.state.cart.items[0]?.quantity).toBe(3);
+
+    // The shop then lowers its limit to 2: the stored cart of 3 is now over it.
+    mocks.state.settings = { ...mocks.state.settings, limits: { maxOrderUnits: 2 } };
+    await page.reload();
+    await onlyVisible(page.getByRole('link', { name: /^Cart, / })).click();
+
+    // Three items against a limit of two: held, with the count to remove; the line stays editable.
+    await expect(cart.getByRole('button', { name: 'Checkout' })).toBeDisabled();
+    await expect(cart.getByText('Maximum 2 items per order. Remove 1 to continue.')).toBeVisible();
+    await expect(qty).toBeEnabled();
+    await expect(cart.getByRole('button', { name: `One more ${productName}` })).toBeDisabled();
+    // Typing a larger number changes nothing while over.
+    await qty.fill('5');
+    await expect.poll(() => mocks.state.cart.items[0]?.quantity).toBe(3);
+
+    await cart.getByRole('button', { name: `One fewer ${productName}` }).click();
+    await expect.poll(() => mocks.state.cart.items[0]?.quantity).toBe(2);
+    await expect(cart.getByText('Maximum 2 items per order. Remove 1 to continue.')).toHaveCount(0);
+    await expect(cart.getByRole('link', { name: 'Checkout' })).toBeVisible();
+  });
 });

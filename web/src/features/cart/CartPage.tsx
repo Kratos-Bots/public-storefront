@@ -7,6 +7,7 @@ import { CartHostContext } from '@/features/cart/cart-host.ts';
 import { CART_DRAWER_VIEWS, CART_PAGE_VIEWS } from '@/features/cart/cart-parts.tsx';
 import { cartViews } from '@/builder/blocks/_shared/cart-views.ts';
 import { useServerCart } from '@/features/cart/useServerCart.ts';
+import { useOrderUnitLimit } from '@/features/cart/useOrderUnitLimit.ts';
 import classes from '@/features/cart/CartPage.module.css';
 
 /**
@@ -27,6 +28,7 @@ export function CartPage({ foot, slots }: CartPageProps) {
   const lines = useCartStore((s) => s.lines);
   const count = useCartStore(selectCount);
   const { setQuantity, remove, issues, isSyncing, refresh, server } = useServerCart();
+  const unitLimit = useOrderUnitLimit();
 
   // The page pulls the customer's cart when it mounts; the drawer does so when it opens.
   useEffect(() => {
@@ -41,7 +43,7 @@ export function CartPage({ foot, slots }: CartPageProps) {
 
   const issueByProduct = useMemo(() => new Map(issues.map((i) => [i.productId, i])), [issues]);
   const serverByProduct = useMemo(() => new Map((server?.items ?? []).map((i) => [i.productId, i])), [server]);
-  const blocked = issues.some((i) => i.inactive || i.belowMin || i.aboveMax);
+  const blocked = issues.some((i) => i.inactive || i.belowMin || i.aboveMax) || unitLimit.over;
   const surface = host ? 'drawer' : 'page';
   const dismiss = host?.dismiss;
   const data = useMemo<CartData>(

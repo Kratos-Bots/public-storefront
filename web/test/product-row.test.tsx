@@ -131,6 +131,45 @@ describe('ProductRow', () => {
     expect(useCartStore.getState().lines[0]!.quantity).toBe(11);
   });
 
+  describe('shop-wide unit limit', () => {
+    const mountLimited = (max: number, p: Product = product()) => {
+      state.settings = {
+        currency: 'GBP', limits: { maxOrderUnits: max },
+        features: { layout: 'menu', ordering: true, guestCheckout: false, accounts: true, verify: true, tracking: false, wholesale: false, upsell: true },
+      } as unknown as StorefrontSettings;
+      return render(<MantineProvider env="test"><ProductRow product={p} onSelect={() => {}} /></MantineProvider>);
+    };
+
+    it('+ stops when the cart is at the limit', () => {
+      useCartStore.setState({ lines: [line({ productId: 7, quantity: 2 }), line({ productId: 8, quantity: 1 })], mode: 'local' });
+      mountLimited(3);
+      expect(screen.getByRole('button', { name: 'One more BPC-157 5mg' })).toBeDisabled();
+    });
+
+    it('+ steps while there is headroom', () => {
+      useCartStore.setState({ lines: [line({ productId: 7, quantity: 2 }), line({ productId: 8, quantity: 1 })], mode: 'local' });
+      mountLimited(4);
+      fireEvent.click(screen.getByRole('button', { name: 'One more BPC-157 5mg' }));
+      expect(useCartStore.getState().lines.find((l) => l.productId === 7)!.quantity).toBe(3);
+    });
+
+    it('the quick-add of a product not in a full cart is disabled', () => {
+      useCartStore.setState({ lines: [line({ productId: 8, quantity: 3 })], mode: 'local' });
+      mountLimited(3);
+      expect(screen.getByRole('button', { name: 'Add BPC-157 5mg' })).toBeDisabled();
+    });
+
+    it('an over-limit cart still steps this line down to zero', () => {
+      useCartStore.setState({ lines: [line({ productId: 7, quantity: 2 }), line({ productId: 8, quantity: 2 })], mode: 'local' });
+      mountLimited(3);
+      expect(screen.getByRole('button', { name: 'One more BPC-157 5mg' })).toBeDisabled();
+      fireEvent.click(screen.getByRole('button', { name: 'One fewer BPC-157 5mg' }));
+      expect(useCartStore.getState().lines.find((l) => l.productId === 7)!.quantity).toBe(1);
+      fireEvent.click(screen.getByRole('button', { name: 'One fewer BPC-157 5mg' }));
+      expect(useCartStore.getState().lines.find((l) => l.productId === 7)).toBeUndefined();
+    });
+  });
+
   // A signed-in shopper (always, inside Telegram) has a server cart: the cart page
   // adopts it on open, so a row edit that never reaches PUT /cart is thrown away.
   it('quick-add and the stepper reach the server cart for a signed-in shopper', () => {

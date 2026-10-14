@@ -3,6 +3,7 @@ import { createFamily } from '@/builder/parts.ts';
 import type { LocalLine } from '@/stores/cart.ts';
 import type { BasketPromotions } from '@/lib/promotions.ts';
 import type { ServerCartLine } from '@/types/cart.ts';
+import type { OrderUnitLimit } from '@/features/cart/order-unit-limit.ts';
 
 // Type-only imports: this module is in the shopper's entry bundle.
 
@@ -34,6 +35,8 @@ export const useCartFamilyOptional = (): CartData | null => useContext(CartDataC
 /** The nested CartSummary container's data (stage 4 spec §5.2). */
 export interface CartSummaryData {
   blocked: boolean;
+  /** The shop-wide unit limit against this cart; when `over`, it is why `blocked` is set and what the held note says. */
+  unitLimit?: OrderUnitLimit;
   onNavigate?: () => void;
   count: number;
   subtotal: number;

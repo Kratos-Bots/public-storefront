@@ -94,6 +94,8 @@ export interface StorefrontSettings {
   telegramWebApp?: { mode: 'off' | 'beta' | 'forced' };
   /** Absent on backends older than shop access. */
   access?: AccessSettings;
+  /** Shop-wide order rules. Absent on older backend = no limits. */
+  limits?: { maxOrderUnits: number | null };
   /** Absent on backends older than storefront reviews: reviews are off. */
   reviews?: ReviewSettings;
   /** Whether the shop has an FAQ to show (switch on and at least one answer written). Absent on an older backend: no FAQ. */

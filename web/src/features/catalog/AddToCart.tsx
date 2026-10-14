@@ -4,6 +4,8 @@ import { useSettings } from '@/app/settings.ts';
 import { MinusIcon, PlusIcon } from '@/components/icons.tsx';
 import { addToCart, removeFromCart, setCartQuantity } from '@/features/cart/useServerCart.ts';
 import { useCartStore } from '@/stores/cart.ts';
+import { cappedCeiling } from '@/features/cart/order-unit-limit.ts';
+import { useOrderUnitLimit } from '@/features/cart/useOrderUnitLimit.ts';
 import { useWarehouseOrdering } from '@/features/warehouses/use-warehouse.ts';
 import { deriveStockStatus, formatMoney, resolveUnitPrice } from '@/lib/format.ts';
 import { Slot } from '@/templates/runtime.tsx';
@@ -44,6 +46,8 @@ export function AddToCart({ product, size = 'lg', showPrice = true, rootAttrs }:
   // returns, so the hook order never changes.
   const inCart = useCartStore((s) => s.lines.find((l) => l.productId === product.id)?.quantity ?? 0);
 
+  const unitLimit = useOrderUnitLimit();
+
   // The warehouse the shopper ships from has stopped taking orders: browse only, like `ordering: false`.
   const { paused } = useWarehouseOrdering();
   if (!features.ordering || paused) return null;
@@ -54,7 +58,9 @@ export function AddToCart({ product, size = 'lg', showPrice = true, rootAttrs }:
   // exact count is never sent to the public API — so this can only catch full
   // depletion, not a positive-but-insufficient stock level. See task-13-report.md.
   const outOfStock = !product.isPreorder && status === 'out';
-  const disabled = !product.isActive || outOfStock;
+  // Adding opens at the product's minimum; a cart with less headroom than that can't take it.
+  const noRoom = inCart === 0 && unitLimit.remaining !== null && unitLimit.remaining < Math.max(1, product.minOrderQuantity ?? 1);
+  const disabled = !product.isActive || outOfStock || noRoom;
 
   // A product with a minimum opens straight at it — never fewer than the floor
   // it would just be flagged for a moment later — so the first tap always adds
@@ -85,7 +91,7 @@ export function AddToCart({ product, size = 'lg', showPrice = true, rootAttrs }:
   const stepper = !disabled && inCart > 0 && steppable;
   if (stepper) {
     const floor = Math.max(1, product.minOrderQuantity ?? 1);
-    const ceiling = product.maxOrderQuantity ?? null;
+    const ceiling = cappedCeiling(inCart, product.maxOrderQuantity, unitLimit);
     const sizeClass = size === 'sm' ? classes.sm : classes.lg;
     return (
       <div
@@ -130,6 +136,10 @@ export function AddToCart({ product, size = 'lg', showPrice = true, rootAttrs }:
     );
   }
 
+  // The plain button (the card's quick-add, while the shop has no card stepper) stays on screen once the product is in the
+  // cart, so it must also stop when one more tap no longer fits. Not folded into `disabled`, which decides the stepper.
+  const tapDoesNotFit = inCart > 0 && unitLimit.remaining !== null && unitLimit.remaining < quantity;
+
   const onClick = () => {
     addToCart(product, quantity);
     setPhase('added');
@@ -141,7 +151,7 @@ export function AddToCart({ product, size = 'lg', showPrice = true, rootAttrs }:
     <button
       type="button"
       className={`${classes.button} ${size === 'sm' ? classes.sm : classes.lg} ${shown === 'added' ? classes.done : ''}`}
-      disabled={disabled}
+      disabled={disabled || tapDoesNotFit}
       onClick={onClick}
       aria-label={showPrice ? undefined : t('product.add.labelWithName', { label, name: product.displayName })}
       data-sf-part="button"

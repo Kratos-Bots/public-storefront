@@ -6,6 +6,8 @@ import { PromoBadge } from '@/features/catalog/PromoBadge.tsx';
 import { ProductImage } from '@/features/catalog/ProductImage.tsx';
 import { MinusIcon, PlusIcon } from '@/components/icons.tsx';
 import { rowAnim } from '@/lib/motion.ts';
+import { cappedCeiling } from '@/features/cart/order-unit-limit.ts';
+import { useOrderUnitLimit } from '@/features/cart/useOrderUnitLimit.ts';
 import type { LocalLine } from '@/stores/cart.ts';
 import type { ServerCartLine } from '@/types/cart.ts';
 import classes from '@/features/cart/CartLine.module.css';
@@ -52,13 +54,21 @@ export function CartLine({ line, issue, server, onQuantity, onRemove, index = 0 
   // limit info — the stepper can't preemptively know a bound it hasn't been
   // told yet, and relies on the next server round trip to flag it.
   const minBound = issue?.minOrderQuantity ?? 1;
-  const maxBound = issue?.maxOrderQuantity ?? null;
+  // The product's own maximum and the shop-wide order limit's headroom, whichever is lower.
+  const unitLimit = useOrderUnitLimit();
+  const maxBound = cappedCeiling(line.quantity, issue?.maxOrderQuantity, unitLimit);
 
   const type = (raw: string) => {
     const digits = raw.replace(/\D/g, '');
     setDraft(digits);
-    const next = parseInt(digits, 10);
-    if (Number.isFinite(next) && next >= 1) onQuantity(line.productId, next);
+    const typed = parseInt(digits, 10);
+    if (!Number.isFinite(typed) || typed < 1) return;
+    // A typed number stops at the order limit's headroom. The product's own max is deliberately not
+    // applied here: the server flags it (aboveMax) and offers the "Set to N" fix.
+    const typedCap = cappedCeiling(line.quantity, null, unitLimit);
+    const next = typedCap === null ? typed : Math.min(typed, Math.max(1, typedCap));
+    if (next !== typed) setDraft(String(next));
+    onQuantity(line.productId, next);
   };
 
   const removeButton = (
