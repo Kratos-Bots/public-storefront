@@ -246,6 +246,44 @@ describe('AddToCart', () => {
       expect(button()).toBeDisabled();
     });
 
+    describe('card quick-add (sm, no stepper) with the product already in the cart', () => {
+      const withLimit = (max: number | undefined) => {
+        state.settings = { currency: 'GBP', ...(max === undefined ? {} : { limits: { maxOrderUnits: max } }), features: { layout: 'storefront', ordering: true } } as unknown as StorefrontSettings;
+        render(<MantineProvider env="test"><AddToCart product={product()} size="sm" showPrice={false} /></MantineProvider>);
+      };
+      it('at the limit the button is disabled and a click adds nothing', () => {
+        useCartStore.setState({ lines: [cartLine(7, 2)], mode: 'local' });
+        withLimit(2);
+        expect(screen.queryByRole('group')).toBeNull();
+        expect(button()).toBeDisabled();
+        fireEvent.click(button()!);
+        expect(useCartStore.getState().lines.find((l) => l.productId === 7)!.quantity).toBe(2);
+      });
+      it('with headroom the button is enabled and adds one', () => {
+        useCartStore.setState({ lines: [cartLine(7, 2)], mode: 'local' });
+        withLimit(3);
+        expect(button()).toBeEnabled();
+        fireEvent.click(button()!);
+        expect(useCartStore.getState().lines.find((l) => l.productId === 7)!.quantity).toBe(3);
+      });
+      it('with no limit it keeps adding', () => {
+        useCartStore.setState({ lines: [cartLine(7, 2)], mode: 'local' });
+        withLimit(undefined);
+        expect(button()).toBeEnabled();
+        fireEvent.click(button()!);
+        expect(useCartStore.getState().lines.find((l) => l.productId === 7)!.quantity).toBe(3);
+      });
+    });
+
+    it('the large stepper at the limit keeps a working minus and a disabled plus', () => {
+      useCartStore.setState({ lines: [cartLine(7, 2)], mode: 'local' });
+      state.settings = { currency: 'GBP', limits: { maxOrderUnits: 2 }, features: { layout: 'storefront', ordering: true } } as unknown as StorefrontSettings;
+      render(<MantineProvider env="test"><AddToCart product={product()} size="lg" /></MantineProvider>);
+      expect(screen.getByRole('button', { name: 'One more BPC-157 5mg' })).toBeDisabled();
+      fireEvent.click(screen.getByRole('button', { name: 'One fewer BPC-157 5mg' }));
+      expect(useCartStore.getState().lines.find((l) => l.productId === 7)!.quantity).toBe(1);
+    });
+
     it('an over-limit cart can still step this line down and remove it', () => {
       useCartStore.setState({ lines: [cartLine(7, 3), cartLine(1, 2)], mode: 'local' });
       state.settings = { currency: 'GBP', limits: { maxOrderUnits: 3 }, features: { layout: 'storefront', ordering: true } } as unknown as StorefrontSettings;

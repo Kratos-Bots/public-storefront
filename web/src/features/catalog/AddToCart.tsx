@@ -136,6 +136,10 @@ export function AddToCart({ product, size = 'lg', showPrice = true, rootAttrs }:
     );
   }
 
+  // The plain button (the card's quick-add, while the shop has no card stepper) stays on screen once the product is in the
+  // cart, so it must also stop when one more tap no longer fits. Not folded into `disabled`, which decides the stepper.
+  const tapDoesNotFit = inCart > 0 && unitLimit.remaining !== null && unitLimit.remaining < quantity;
+
   const onClick = () => {
     addToCart(product, quantity);
     setPhase('added');
@@ -147,7 +151,7 @@ export function AddToCart({ product, size = 'lg', showPrice = true, rootAttrs }:
     <button
       type="button"
       className={`${classes.button} ${size === 'sm' ? classes.sm : classes.lg} ${shown === 'added' ? classes.done : ''}`}
-      disabled={disabled}
+      disabled={disabled || tapDoesNotFit}
       onClick={onClick}
       aria-label={showPrice ? undefined : t('product.add.labelWithName', { label, name: product.displayName })}
       data-sf-part="button"

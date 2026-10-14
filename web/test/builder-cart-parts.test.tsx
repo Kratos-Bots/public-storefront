@@ -338,6 +338,12 @@ describe('blocked', () => {
       expect(el.querySelector('a[href="/checkout"]')).toBeNull();
       expect(el.querySelector('[class*="held"]')?.textContent).toBe('Maximum 2 items per order. Remove 1 to continue.');
     });
+    it('at a limit of 1 the notice is singular', async () => {
+      state.limits = { maxOrderUnits: 1 };
+      seed([line(1, 2)]);
+      const el = await renderDoc(docOf(contents({})));
+      expect(el.querySelector('[class*="held"]')?.textContent).toBe('Maximum 1 item per order. Remove 1 to continue.');
+    });
     it('standalone summary is held too', async () => {
       state.limits = { maxOrderUnits: 2 };
       seed([line(1, 3)]);

@@ -84,12 +84,12 @@ function TermsView({ styleAttrs }: PartViewProps) {
  * button, and the basket above it stays as editable as ever.
  */
 function CheckoutView() {
-  const { t } = useText();
+  const { t, tp } = useText();
   const { blocked, unitLimit, onNavigate, primaryElsewhere, checkoutTo } = CartSummaryFamily.useData();
   const { paused } = useWarehouseOrdering();
   if (paused) return <OrderingPausedNotice variant="inline" />;
   // Over the shop's unit limit the shopper is told how many to remove; any other hold keeps the generic note.
-  const held = unitLimit?.over ? t('cart.limit.maxUnits', { count: unitLimit.max ?? 0, excess: unitLimit.excess }) : t('cart.summary.held');
+  const held = unitLimit?.over ? tp('cart.limit.maxUnits', unitLimit.max ?? 0, { excess: unitLimit.excess }) : t('cart.summary.held');
   if (primaryElsewhere) return blocked ? <p className={classes.held}>{held}</p> : null;
   if (blocked) {
     return (
