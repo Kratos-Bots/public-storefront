@@ -46,6 +46,11 @@ export default defineTextArea('support', {
   'thread.newTicket': { en: 'Open a new ticket', max: 60 },
   'thread.viewOrder': { en: 'View order', max: 40 },
   'thread.failed': { en: "Couldn't send. Tap to retry.", max: 80 },
+  'thread.newMessage': { en: 'New message', max: 30 },
+  'thread.options': { en: 'Ticket options', max: 40 },
+  'thread.openPhoto': { en: 'Open photo', max: 40 },
+  'thread.closePhoto': { en: 'Close photo', max: 40 },
+  'thread.notFound': { en: "This ticket can't be found.", max: 80 },
 
   // ── photos and entry points ───────────────────────────────────────────────
   'photo.invalid': { en: 'Photos must be JPEG, PNG, WebP or GIF, up to 5 MB.', max: 120 },

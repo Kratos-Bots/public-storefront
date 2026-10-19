@@ -22,6 +22,11 @@ describe('defaultPrimaryAction', () => {
     }
   });
 
+  it("stands down on a support ticket's conversation, whose composer owns the foot", () => {
+    expect(defaultPrimaryAction({ ...base, pathname: '/support/tickets/42' })).toBeNull();
+    expect(defaultPrimaryAction({ ...base, pathname: '/support/new' })?.to).toBe('/cart');
+  });
+
   it('inside Telegram, /cart still offers checkout', () => {
     expect(defaultPrimaryAction({ ...base, pathname: '/cart', browseOnCatalogOnly: true })?.label).toBe('Checkout · £24.00');
   });

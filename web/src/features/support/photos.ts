@@ -38,5 +38,11 @@ export function usePhotos() {
     setInvalid(false);
     setPhotos((list) => list.filter((p) => p.key !== key));
   };
-  return { photos, invalid, add, remove };
+  /** Empties the set once it has been handed on (a sent message), freeing every preview. */
+  const clear = () => {
+    for (const p of live.current) URL.revokeObjectURL(p.url);
+    setInvalid(false);
+    setPhotos([]);
+  };
+  return { photos, invalid, add, remove, clear };
 }

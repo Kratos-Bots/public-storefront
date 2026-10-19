@@ -21,6 +21,8 @@ export class ApiError extends Error {
   get isAccessDenied(): boolean { return this.status === 403 && this.message === 'ACCESS_DENIED'; }
   /** No new customers are being taken. */
   get isRegistrationClosed(): boolean { return this.status === 403 && this.message === 'REGISTRATION_CLOSED'; }
+  /** `409 TICKET_CLOSED`: a reply to a support ticket closed for longer than the reopen window. */
+  get isTicketClosed(): boolean { return this.status === 409 && this.message === 'TICKET_CLOSED'; }
 }
 /** Resolved at call time (playbook rule 8), so the mounted provider's wording applies and nothing freezes at import. */
 export function errorMessage(err: unknown, fallback?: string): string {

@@ -5,6 +5,7 @@ import {
   closeTicket, createTicket, fetchTicket, fetchTicketForOrder, fetchTickets, postMessage,
   type CustomerMessage, type CustomerTicketDetail, type NewMessageInput, type NewTicketInput,
 } from '@/api/support.ts';
+import { ApiError } from '@/lib/errors.ts';
 import { useText } from '@/text/runtime.tsx';
 import { selectIsLoggedIn, useSessionStore } from '@/stores/session.ts';
 import { useSettings } from '@/app/settings.ts';
@@ -156,7 +157,15 @@ export function useSendMessage(id: number) {
       setLocal(id, (l) => l.filter((m) => m.id !== ctx.tempId));
       void qc.invalidateQueries({ queryKey: key });
     },
-    onError: (_err, _vars, ctx) => { if (ctx) mark(ctx.tempId, 'failed'); },
+    onError: (err, _vars, ctx) => {
+      if (!ctx) return;
+      // Closed past its reopen window: the message can never go, so it leaves, and the refetched ticket (no longer
+      // masked as `needs_reply` by a local message) says the thread is over.
+      if (err instanceof ApiError && err.isTicketClosed) {
+        setLocal(id, (l) => l.filter((m) => m.id !== ctx.tempId));
+        void qc.invalidateQueries({ queryKey: key });
+      } else mark(ctx.tempId, 'failed');
+    },
     onSettled: () => { void qc.invalidateQueries({ queryKey: LIST_KEY }); },
   });
 }

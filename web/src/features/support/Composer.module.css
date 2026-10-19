@@ -1,0 +1,105 @@
+/* The reply box: a band of the shop's glass along the foot of the conversation, with a round attach control, a
+   pill-shaped field that grows with what is written, and a round send arrow in the shop's primary. */
+.composer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.6rem 0 0.6rem;
+}
+
+.row {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.4rem;
+}
+
+.field {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The box is the composer's own whatever the template does with form fields (an underline, a box): a rounded field
+   in the shop's button radius, so it sits with the two round controls either side. 16px or more, or a phone zooms
+   the page on focus. Specific enough to outrank the shared `.sf-input` rules. */
+.field textarea.input {
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--sf-line-strong);
+  border-radius: var(--sf-btn-radius, 1.4rem);
+  background: var(--sf-bg);
+  color: var(--sf-text);
+  font-family: var(--sf-font-body);
+  font-size: max(16px, calc(1rem * var(--sf-text-scale, 1)));
+  line-height: 1.4;
+}
+
+.field textarea.input:focus {
+  border-color: var(--sf-primary);
+}
+
+.attach {
+  flex: none;
+  color: var(--sf-muted);
+}
+
+.attach:hover:not(:disabled) {
+  color: var(--sf-text);
+}
+
+.send {
+  flex: none;
+}
+
+.attach:focus-visible,
+.send:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+.photos {
+  display: flex;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0.45rem 0.45rem 0;
+  list-style: none;
+  overflow-x: auto;
+}
+
+.photo {
+  position: relative;
+  flex: none;
+  width: 3.75rem;
+  height: 3.75rem;
+}
+
+.thumb {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border: 1px solid var(--sf-line);
+  border-radius: 0.75rem;
+  background: var(--sf-surface);
+}
+
+.remove {
+  position: absolute;
+  top: -0.45rem;
+  right: -0.45rem;
+  border: 1px solid var(--sf-line-strong);
+  background: var(--sf-bg);
+  color: var(--sf-text);
+}
+
+/* Small to look at, a thumb's 44px to hit. */
+.remove::after {
+  content: '';
+  position: absolute;
+  inset: -0.6rem;
+}
+
+.error {
+  margin: 0;
+  font-size: calc(0.8125rem * var(--sf-text-scale, 1));
+  line-height: 1.4;
+  color: var(--sf-danger);
+}

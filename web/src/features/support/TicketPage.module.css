@@ -1,0 +1,268 @@
+/* A ticket's conversation, set as a chat in the support pages' one column. The page fills the screen between the
+   header and the bottom navigation, so a short thread still has its reply box at the foot. Three bands: the
+   ticket's head with the order it is about pinned under the shop header, the thread, and the foot (the reply box,
+   held above the bottom navigation bar or the keyboard). Tokens only, so every template restyles it. */
+.page {
+  display: flex;
+  flex-direction: column;
+  max-width: 40rem;
+  min-height: calc(100dvh - var(--sf-bar-h, 56px) - var(--sf-nav-h, 0px) - env(safe-area-inset-top, 0px));
+  margin-inline: auto;
+  padding-top: 0.75rem;
+}
+
+.head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.35rem;
+  padding-bottom: 0.6rem;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-left: -0.6rem;
+  border-radius: 50%;
+  color: var(--sf-text);
+}
+
+.back:focus-visible,
+.more:focus-visible,
+.order:focus-visible,
+.pill:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+.subject {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--sf-font-heading);
+  font-size: calc(1.1875rem * var(--sf-text-scale, 1));
+  font-weight: var(--sf-heading-weight, 700);
+  letter-spacing: var(--sf-heading-tracking, -0.01em);
+  text-transform: var(--sf-heading-transform, none);
+  line-height: 1.25;
+  color: var(--sf-text);
+}
+
+.status {
+  justify-self: end;
+}
+
+.more {
+  margin-right: -0.6rem;
+  color: var(--sf-muted);
+}
+
+.error {
+  margin: 0 0 0.5rem;
+  font-size: calc(0.875rem * var(--sf-text-scale, 1));
+  color: var(--sf-danger);
+}
+
+/* The order this ticket is about: a docket row, pinned under the shop header so the context never scrolls away.
+   The reference in the shop's mono voice, where it stands and when below it, the way to the order on the right. */
+.order {
+  composes: glass-soft from global;
+  position: sticky;
+  top: calc(var(--sf-bar-h, 52px) + var(--sf-pin-h, 0px) + var(--sf-wh-h, 0px) + env(safe-area-inset-top, 0px));
+  z-index: 5;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'ref  view'
+    'meta view';
+  align-items: center;
+  column-gap: 0.75rem;
+  min-height: 3.25rem;
+  padding: 0.5rem 0.85rem;
+  border: 1px solid var(--sf-line);
+  border-radius: var(--sf-card-radius);
+  color: var(--sf-text);
+  text-decoration: none;
+}
+
+.orderRef {
+  grid-area: ref;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--sf-font-mono);
+  font-size: calc(0.875rem * var(--sf-text-scale, 1));
+  font-weight: 600;
+}
+
+.orderMeta {
+  grid-area: meta;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.6rem;
+  font-size: calc(0.8125rem * var(--sf-text-scale, 1));
+  font-variant-numeric: tabular-nums;
+  color: var(--sf-muted);
+}
+
+.orderView {
+  grid-area: view;
+  font-size: calc(0.8125rem * var(--sf-text-scale, 1));
+  font-weight: 600;
+  color: var(--sf-text);
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+}
+
+.log {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding: 0.5rem 0 1.25rem;
+}
+
+/* The ticket's own events: a quiet centred line between the messages. */
+.event {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0 0.5rem;
+  margin: 1.25rem 0 0.25rem;
+  font-size: calc(0.75rem * var(--sf-text-scale, 1));
+  line-height: 1.4;
+  text-align: center;
+  color: var(--sf-faint);
+}
+
+.event > span {
+  font-weight: 600;
+  color: var(--sf-muted);
+}
+
+/* The foot: held above the bottom navigation bar, or above the keyboard while it is up (--sf-kb, set by the page).
+   It draws its own band of glass across the column; the bottom bar owns the home-indicator inset while it shows
+   (--sf-bar-safe is 0 then), otherwise the larger of the browser's and Telegram's is kept clear. */
+.foot {
+  composes: glass-soft from global;
+  position: sticky;
+  bottom: max(var(--sf-nav-h, 0px), var(--sf-kb, 0px));
+  z-index: 6;
+  margin-inline: calc(-1 * var(--sf-main-pad, 1rem));
+  padding-inline: var(--sf-main-pad, 1rem);
+  padding-bottom: var(--sf-bar-safe, max(env(safe-area-inset-bottom, 0px), var(--tg-safe-bottom, 0px)));
+  border-top: 1px solid var(--sf-line);
+}
+
+/* With the keyboard up the home indicator is under it: no inset to keep. */
+.page[data-kb] .foot {
+  padding-bottom: 0;
+}
+
+/* Told to the document, so a control focused by keyboard is scrolled clear of the foot rather than under it. */
+@media (max-width: 61.99em) {
+  :global(:root):global(:root):has(.foot) {
+    --sf-bottom-inset: calc(4.25rem + var(--sf-nav-h, 0px));
+  }
+}
+
+.note {
+  margin: 0;
+  padding-top: 0.6rem;
+  font-size: calc(0.8125rem * var(--sf-text-scale, 1));
+  line-height: 1.4;
+  color: var(--sf-muted);
+}
+
+.expired {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+  padding: 0.85rem 0;
+}
+
+.expiredText {
+  margin: 0;
+  font-size: calc(0.9375rem * var(--sf-text-scale, 1));
+  color: var(--sf-muted);
+}
+
+.newTicket {
+  min-height: 44px;
+}
+
+/* "New message": waits just above the foot when a reply lands while the customer is reading further up. */
+.pill {
+  position: absolute;
+  bottom: calc(100% + 0.6rem);
+  left: 50%;
+  translate: -50% 0;
+  min-height: 36px;
+  padding: 0 1rem;
+  border: 1px solid var(--sf-line-strong);
+  border-radius: var(--sf-pill-radius, 999px);
+  background: var(--sf-bg);
+  box-shadow: var(--sf-card-shadow, none);
+  color: var(--sf-text);
+  font: inherit;
+  font-size: calc(0.8125rem * var(--sf-text-scale, 1));
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* The pill's hit area reaches a thumb's 44px without looking bigger. */
+.pill::after {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pill {
+    animation: rise 180ms ease-out;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    translate: -50% 0.4rem;
+  }
+}
+
+.gone {
+  max-width: 40rem;
+  margin-inline: auto;
+  padding: 2.5rem 0 3rem;
+}
+
+.goneText {
+  margin: 0;
+  font-size: calc(1rem * var(--sf-text-scale, 1));
+  line-height: 1.5;
+  color: var(--sf-text);
+}
+
+.goneBack {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-top: 0.5rem;
+  color: var(--sf-text);
+  font-size: calc(0.9375rem * var(--sf-text-scale, 1));
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+}
+
+.goneBack:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}

@@ -1,0 +1,151 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter, Route, Routes } from 'react-router';
+import { MantineProvider } from '@mantine/core';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ApiError } from '@/lib/errors.ts';
+import type { CustomerMessage, CustomerTicketDetail } from '@/api/support.ts';
+
+const shop = vi.hoisted(() => ({ settings: {} as Record<string, unknown> }));
+vi.mock('@/app/settings.ts', () => ({ useSettings: () => shop.settings }));
+
+const api = vi.hoisted(() => ({ fetchTicket: vi.fn(), postMessage: vi.fn(), closeTicket: vi.fn() }));
+vi.mock('@/api/support.ts', async (orig) => ({
+  ...(await orig<typeof import('@/api/support.ts')>()),
+  fetchTicket: api.fetchTicket,
+  postMessage: api.postMessage,
+  closeTicket: api.closeTicket,
+}));
+
+import { TicketPage } from '@/features/support/TicketPage.tsx';
+import { useLocalMessages } from '@/features/support/queries.ts';
+import { useSessionStore } from '@/stores/session.ts';
+
+const SUPPORT: CustomerMessage = {
+  id: 2, fromSupport: true, authorLabel: 'Support · Northbound', body: "It's with the courier.", attachments: [],
+  createdAt: '2026-10-15T10:00:00Z',
+};
+const MINE: CustomerMessage = {
+  id: 1, fromSupport: false, authorLabel: 'Ada', body: 'Where is my parcel?', attachments: [], createdAt: '2026-10-15T09:12:00Z',
+};
+
+const ticket = (over: Partial<CustomerTicketDetail> = {}): CustomerTicketDetail => ({
+  id: 7,
+  subject: 'Where is my parcel?',
+  status: 'waiting_on_customer',
+  order: { reference: 'A1042', status: 'shipped', createdAt: '2026-10-14T10:00:00Z' },
+  messages: [MINE, SUPPORT],
+  timeline: [{ type: 'opened', at: '2026-10-15T09:12:00Z' }],
+  canReply: true,
+  reopenUntil: null,
+  createdAt: '2026-10-15T09:12:00Z',
+  ...over,
+});
+
+const mount = () => {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return render(
+    <MantineProvider env="test">
+      <QueryClientProvider client={qc}>
+        <MemoryRouter initialEntries={['/support/tickets/7']}>
+          <Routes>
+            <Route path="/support/tickets/:id" element={<TicketPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    </MantineProvider>,
+  );
+};
+
+const write = (text: string) => fireEvent.change(screen.getByRole('textbox', { name: 'Message' }), { target: { value: text } });
+const send = () => fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+
+beforeEach(() => {
+  shop.settings = { currency: 'GBP', supportLinks: [], brand: { name: 'Northbound', links: {} }, support: { enabled: true } };
+  api.fetchTicket.mockReset();
+  api.postMessage.mockReset();
+  api.closeTicket.mockReset();
+  useSessionStore.setState({ token: 'tok', customer: { id: 1, nickname: 'Ada' } });
+  useLocalMessages.setState({ byTicket: {} });
+  vi.stubGlobal('fetch', vi.fn());
+});
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
+describe('the ticket conversation', () => {
+  it('renders support label and hides composer when canReply is false', async () => {
+    api.fetchTicket.mockResolvedValue(ticket({
+      status: 'closed', canReply: false,
+      timeline: [{ type: 'opened', at: '2026-10-15T09:12:00Z' }, { type: 'closed', at: '2026-10-16T09:00:00Z' }],
+    }));
+    mount();
+    expect(await screen.findByText('Support · Northbound')).toBeInTheDocument();
+    // The customer's own messages read "You", whatever the server called them.
+    expect(screen.getByText('You')).toBeInTheDocument();
+    expect(screen.queryByText('Ada')).toBeNull();
+    expect(screen.getByRole('log')).toHaveTextContent("It's with the courier.");
+    expect(screen.getByText('Ticket opened')).toBeInTheDocument();
+    expect(screen.getByText('Ticket closed')).toBeInTheDocument();
+
+    expect(screen.queryByRole('textbox', { name: 'Message' })).toBeNull();
+    expect(screen.getByText('This ticket is closed.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open a new ticket' })).toHaveAttribute('href', '/support/new?order=A1042');
+    expect(screen.getByRole('link', { name: /A1042/ })).toHaveAttribute('href', '/account/orders/A1042');
+  });
+
+  it('failed send shows retry', async () => {
+    api.fetchTicket.mockResolvedValue(ticket());
+    const sent = { ...MINE, id: 3, body: 'Any news?', createdAt: '2026-10-16T09:00:00Z' };
+    api.postMessage.mockRejectedValueOnce(new ApiError(500, 'boom')).mockResolvedValueOnce(sent);
+    mount();
+    await screen.findByText('Support · Northbound');
+
+    write('Any news?');
+    send();
+    // Optimistic: the bubble is in the thread at once, and the composer is clear for the next one.
+    expect(screen.getByRole('log')).toHaveTextContent('Any news?');
+    expect(screen.getByRole('textbox', { name: 'Message' })).toHaveValue('');
+
+    const retry = await screen.findByRole('button', { name: "Couldn't send. Tap to retry." });
+    api.fetchTicket.mockResolvedValue(ticket({ status: 'needs_reply', messages: [MINE, SUPPORT, sent] }));
+    fireEvent.click(retry);
+    await waitFor(() => expect(api.postMessage).toHaveBeenCalledTimes(2));
+    expect(api.postMessage).toHaveBeenLastCalledWith(7, { body: 'Any news?', files: [] });
+    await waitFor(() => expect(screen.queryByRole('button', { name: "Couldn't send. Tap to retry." })).toBeNull());
+    // Sent once, shown once.
+    expect(screen.getAllByText('Any news?')).toHaveLength(1);
+  });
+
+  it('closed within window shows closedNote and composer', async () => {
+    api.fetchTicket.mockResolvedValue(ticket({ status: 'closed', canReply: true, reopenUntil: '2026-10-30T00:00:00Z' }));
+    mount();
+    expect(await screen.findByText('This ticket is closed. Replying reopens it.')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Message' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Open a new ticket' })).toBeNull();
+  });
+
+  it('a reply refused as TICKET_CLOSED swaps the composer for a new ticket', async () => {
+    api.fetchTicket.mockResolvedValueOnce(ticket({ status: 'closed', canReply: true }));
+    api.fetchTicket.mockResolvedValue(ticket({ status: 'closed', canReply: false }));
+    api.postMessage.mockRejectedValue(new ApiError(409, 'TICKET_CLOSED'));
+    mount();
+    await screen.findByText('This ticket is closed. Replying reopens it.');
+
+    write('Hello?');
+    send();
+    expect(await screen.findByRole('link', { name: 'Open a new ticket' })).toBeInTheDocument();
+    expect(screen.getByText('This ticket is closed.')).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'Message' })).toBeNull();
+    // The message could never go: it is not left behind as a retry.
+    expect(screen.queryByRole('button', { name: "Couldn't send. Tap to retry." })).toBeNull();
+  });
+
+  it('an unknown ticket is a friendly not-found with the way back', async () => {
+    api.fetchTicket.mockRejectedValue(new ApiError(404, 'Ticket not found'));
+    mount();
+    expect(await screen.findByText("This ticket can't be found.")).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Back to support' })).toHaveAttribute('href', '/support');
+  });
+});

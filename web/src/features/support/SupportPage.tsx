@@ -3,26 +3,18 @@ import { Link } from 'react-router';
 import { useSettings } from '@/app/settings.ts';
 import { ContactLinks } from '@/components/ContactLinks.tsx';
 import { StatusPill } from '@/features/account/StatusPill.tsx';
-import type { Tone } from '@/features/order-status/status.ts';
 import { useTickets } from '@/features/support/queries.ts';
-import type { CustomerTicketSummary, TicketStatus } from '@/api/support.ts';
+import { TICKET_STATUS } from '@/features/support/status.ts';
+import type { CustomerTicketSummary } from '@/api/support.ts';
 import { formatDate } from '@/lib/format.ts';
 import { FADE } from '@/lib/motion.ts';
 import { selectIsLoggedIn, useSessionStore } from '@/stores/session.ts';
-import { textKey, useText } from '@/text/runtime.tsx';
-import type { StringKey } from '@/text/registry.ts';
+import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/support/SupportPage.module.css';
-
-/** "Reply" is the customer's move, so it carries the accent; "Waiting" is the shop's. */
-const STATUS: Record<TicketStatus, { label: Extract<StringKey, `support.status.${string}`>; tone: Tone }> = {
-  needs_reply: { label: textKey('support.status.needsReply'), tone: 'default' },
-  waiting_on_customer: { label: textKey('support.status.waiting'), tone: 'success' },
-  closed: { label: textKey('support.status.closed'), tone: 'muted' },
-};
 
 function TicketRow({ ticket }: { ticket: CustomerTicketSummary }) {
   const { t } = useText();
-  const status = STATUS[ticket.status];
+  const status = TICKET_STATUS[ticket.status];
   return (
     <li>
       <Link
