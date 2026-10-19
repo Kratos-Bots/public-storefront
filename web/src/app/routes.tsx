@@ -17,6 +17,8 @@ import { useUiStore } from '@/stores/ui.ts';
 const ReviewsPage = lazy(() => import('@/features/reviews/ReviewsPage.tsx').then((m) => ({ default: m.ReviewsPage })));
 const FaqPage = lazy(() => import('@/features/faq/FaqPage.tsx').then((m) => ({ default: m.FaqPage })));
 const SupportPage = lazy(() => import('@/features/support/SupportPage.tsx').then((m) => ({ default: m.SupportPage })));
+const NewTicketPage = lazy(() => import('@/features/support/NewTicketPage.tsx').then((m) => ({ default: m.NewTicketPage })));
+const TicketPage = lazy(() => import('@/features/support/TicketPage.tsx').then((m) => ({ default: m.TicketPage })));
 
 /** Mantine's `md` breakpoint — the point at which the cart becomes a drawer instead of a page. */
 const DESKTOP = '(min-width: 62em)';
@@ -217,6 +219,27 @@ export const routes: RouteObject[] = [
           <Suspense fallback={<PageSkeleton inline />}>
             <SupportPage />
           </Suspense>
+        ),
+      },
+      // A ticket is the signed-in customer's own: both pages send a visitor to sign in and back.
+      {
+        path: 'support/new',
+        element: (
+          <Guard spec={{ session: true }}>
+            <Suspense fallback={<PageSkeleton inline />}>
+              <NewTicketPage />
+            </Suspense>
+          </Guard>
+        ),
+      },
+      {
+        path: 'support/tickets/:id',
+        element: (
+          <Guard spec={{ session: true }}>
+            <Suspense fallback={<PageSkeleton inline />}>
+              <TicketPage />
+            </Suspense>
+          </Guard>
         ),
       },
       { path: 'pages/:slug', handle: { routeKey: 'page' }, element: <CustomPageRoute /> },

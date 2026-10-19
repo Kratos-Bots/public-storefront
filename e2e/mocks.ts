@@ -6,6 +6,7 @@ import type { ServerCart, ServerCartLine, CartLineInput } from '../web/src/types
 import type { OrderDetail, OrderSummary, PageMeta, UnpaidOrder } from '../web/src/types/orders.ts';
 import type { OrderReviewRecord, PublicReview, ReviewableOrder } from '../web/src/types/reviews.ts';
 import type { FaqSection } from '../web/src/types/faq.ts';
+import type { CustomerMessage, CustomerTicketDetail, CustomerTicketSummary } from '../web/src/api/support.ts';
 import type { Profile, RedeemOptions } from '../web/src/types/profile.ts';
 import type { PublicOrder, SelectPaymentResult, Shipment } from '../web/src/types/public-order.ts';
 import type { ServicePoint } from '../web/src/types/service-points.ts';
@@ -14,6 +15,7 @@ import type { TrackingLookup } from '../web/src/types/tracking.ts';
 import type { LoginResult, ResetCheck, WhatsappStart } from '../web/src/types/auth.ts';
 import type { ProfilePassword } from '../web/src/types/profile.ts';
 import type { PageSet } from '../web/src/builder/types.ts';
+import { FIXED_NOW } from './flows.ts';
 
 /** The dev server the suite starts (see playwright.config.ts). Route globs are
  *  anchored to it: a bare `**\/api\/**` also matches Vite's own module URLs
@@ -292,6 +294,20 @@ export interface InstallMocksOptions {
    * answer that HTTP status with `message` (e.g. 401 LOGIN_REQUIRED). `sections` are served as given.
    */
   faq?: { available?: boolean; older?: boolean; sections?: FaqSection[]; status?: number; message?: string };
+  /**
+   * Support tickets (STOREFRONT.md 3.13). Given, `settings.support` is `{ enabled }` (default true) and every customer support route
+   * answers from `tickets` (default: the `support-tickets.json` fixture: an open thread and a closed one still inside its reopen
+   * window, both about K4M2QP); a new ticket or message is added to that list as the backend would. `refuseMessages` makes a reply
+   * answer that error and take the ticket past its reopen window (`canReply` false), as a stale tab meets it; `holdMessages` keeps
+   * every reply request waiting until `MockState.support.releaseMessages()`, so a spec can look at the message still sending.
+   * Omitted: no `support` in the settings and no support routes, as on an older backend.
+   */
+  support?: {
+    enabled?: boolean;
+    tickets?: CustomerTicketDetail[];
+    refuseMessages?: { status: number; error: string };
+    holdMessages?: boolean;
+  };
   /** `GET storefront/checkout/last-details` (signed in only) answers `{ details }` with this; `null` answers no details. Omitted: the route is not there (404), as on an older backend. */
   lastDetails?: LastCheckoutDetails | null;
   /** What both cancel routes answer. `'ok'` (default) cancels; a number answers that status with 409 `ORDER_NOT_CANCELLABLE:bank_transfer` (any other status answers a plain error) and marks the order as blocked. */
@@ -437,6 +453,18 @@ export interface MockState {
   orderGone: boolean;
   /** How many times the anonymous catalogue (`catalog`, `catalog/products/:id`) was asked for. */
   anonymousCatalogHits: number;
+  /** The support mock (`InstallMocksOptions.support`): the tickets as served now, and what the page has posted. */
+  support: {
+    tickets: CustomerTicketDetail[];
+    /** Replies posted: the ticket, the text and the names of the photos sent with it. */
+    messagePosts: Array<{ ticketId: number; body: string; files: string[] }>;
+    /** Tickets opened: subject, text, the order it is about and the photos' names. */
+    ticketPosts: Array<{ subject: string; body: string; orderReference: string | null; files: string[] }>;
+    /** Held until `releaseMessages()` when `holdMessages` is set; resolved otherwise. */
+    gate: Promise<void>;
+    /** Lets the held reply requests through (`holdMessages`); a no-op otherwise. */
+    releaseMessages: () => void;
+  };
 }
 
 /**
@@ -624,6 +652,134 @@ function body(route: Route): Record<string, unknown> {
   }
 }
 
+/** The text fields and file names of a multipart body (the support routes' uploads). */
+function multipart(route: Route): { fields: Record<string, string>; files: string[] } {
+  const raw = route.request().postDataBuffer()?.toString('latin1') ?? '';
+  const fields: Record<string, string> = {};
+  const files: string[] = [];
+  for (const part of raw.split(/--[^\r\n]+\r\n/).slice(1)) {
+    const name = /name="([^"]+)"/.exec(part)?.[1];
+    if (!name) continue;
+    const file = /filename="([^"]*)"/.exec(part)?.[1];
+    if (file !== undefined) { files.push(file); continue; }
+    fields[name] = part.split('\r\n\r\n').slice(1).join('\r\n\r\n').replace(/\r\n(--.*)?$/, '');
+  }
+  return { fields, files };
+}
+
+const SUPPORT_SIG = '0123456789abcdef0123456789abcdef';
+/** A photo link's expiry as the backend signs it (`exp = ceil(now / 1h) * 1h + 1h`, whole hours), from the specs' fixed clock. */
+const SUPPORT_HOUR = 3600;
+const SUPPORT_EXP = Math.ceil(FIXED_NOW.getTime() / 1000 / SUPPORT_HOUR) * SUPPORT_HOUR + SUPPORT_HOUR;
+const PHOTO_SVG = (id: number) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"><rect width="400" height="400" fill="hsl(${id * 47} 30% 62%)"/><circle cx="200" cy="200" r="90" fill="hsl(${id * 47} 30% 80%)"/></svg>`;
+const lastAt = (t: CustomerTicketDetail) => t.messages.at(-1)?.createdAt ?? t.createdAt;
+
+/** The customer support routes (`storefront/support/*`), answered from `state.support.tickets`. Returns false for a path it does not know. */
+async function handleSupport(route: Route, rest: string, method: string, url: URL, state: MockState, o: NonNullable<InstallMocksOptions['support']>): Promise<boolean> {
+  const tickets = state.support.tickets;
+
+  // The signed photo links are the credential: no session header on an <img> request.
+  const attachment = /^attachments\/(\d+)$/.exec(rest);
+  if (attachment && method === 'GET') {
+    await route.fulfill({ status: 200, contentType: 'image/svg+xml', body: PHOTO_SVG(Number(attachment[1])) });
+    return true;
+  }
+  if (!route.request().headers()['authorization']) {
+    await fail(route, 401, 'Unauthorized');
+    return true;
+  }
+  const photos = (ticketId: number, names: string[]) => names.map((_, i) => {
+    const id = 100 * ticketId + i + 1;
+    return { id, url: `public/storefront/support/attachments/${id}?exp=${SUPPORT_EXP}&sig=${SUPPORT_SIG}`, width: 400, height: 400 };
+  });
+  const nextMessageId = () => Math.max(0, ...tickets.flatMap((t) => t.messages.map((m) => m.id))) + 1;
+  const now = () => new Date().toISOString();
+
+  if (rest === 'tickets' && method === 'GET') {
+    const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
+    const limit = Math.min(50, Math.max(1, Number(url.searchParams.get('limit')) || 20));
+    const sorted = [...tickets].sort((a, b) => Date.parse(lastAt(b)) - Date.parse(lastAt(a)));
+    const rows: CustomerTicketSummary[] = sorted.slice((page - 1) * limit, page * limit).map((t) => {
+      const last = t.messages.at(-1);
+      return {
+        id: t.id, subject: t.subject, status: t.status, order: t.order ? { reference: t.order.reference } : null, unread: false, createdAt: t.createdAt,
+        lastMessage: { preview: last?.body.slice(0, 80) ?? '', fromSupport: last?.fromSupport ?? false, at: lastAt(t) },
+      };
+    });
+    const totalPages = Math.ceil(tickets.length / limit);
+    await envelope(route, rows, { page, limit, totalItems: tickets.length, totalPages, hasNextPage: page < totalPages, hasPrevPage: page > 1 });
+    return true;
+  }
+
+  if (rest === 'tickets' && method === 'POST') {
+    const { fields, files } = multipart(route);
+    state.support.ticketPosts.push({ subject: fields.subject ?? '', body: fields.body ?? '', orderReference: fields.orderReference ?? null, files });
+    const id = Math.max(100, ...tickets.map((t) => t.id)) + 1;
+    const at = now();
+    const ticket: CustomerTicketDetail = {
+      id,
+      subject: fields.subject ?? '',
+      status: 'needs_reply',
+      order: fields.orderReference ? { reference: fields.orderReference, status: 'delivered', createdAt: '2026-08-20T10:00:00Z' } : null,
+      timeline: [{ type: 'opened', at }],
+      canReply: true,
+      reopenUntil: null,
+      createdAt: at,
+      messages: [{ id: nextMessageId(), fromSupport: false, authorLabel: 'Ada', body: fields.body ?? '', attachments: photos(id, files), createdAt: at }],
+    };
+    tickets.push(ticket);
+    await envelope(route, ticket, undefined, 201);
+    return true;
+  }
+
+  // Declared before `tickets/:id`, which would read "by-order" as an id.
+  const byOrder = /^tickets\/by-order\/([^/]+)$/.exec(rest);
+  if (byOrder && method === 'GET') {
+    const reference = decodeURIComponent(byOrder[1]!);
+    const open = tickets.filter((t) => t.order?.reference === reference && t.status !== 'closed').sort((a, b) => b.id - a.id)[0];
+    await envelope(route, { ticketId: open?.id ?? null });
+    return true;
+  }
+
+  const one = /^tickets\/(\d+)(?:\/(messages|close))?$/.exec(rest);
+  if (!one) return false;
+  const ticket = tickets.find((t) => t.id === Number(one[1]));
+  if (!ticket) {
+    await fail(route, 404, 'Ticket not found');
+    return true;
+  }
+  if (!one[2] && method === 'GET') {
+    await envelope(route, ticket);
+    return true;
+  }
+  if (one[2] === 'messages' && method === 'POST') {
+    await state.support.gate;
+    const { fields, files } = multipart(route);
+    state.support.messagePosts.push({ ticketId: ticket.id, body: fields.body ?? '', files });
+    if (o.refuseMessages) {
+      // Closed longer ago than the reopen window: the reply is refused and the ticket takes no more.
+      ticket.status = 'closed';
+      ticket.canReply = false;
+      await fail(route, o.refuseMessages.status, o.refuseMessages.error);
+      return true;
+    }
+    const at = now();
+    const message: CustomerMessage = { id: nextMessageId(), fromSupport: false, authorLabel: 'Ada', body: fields.body ?? '', attachments: photos(ticket.id, files), createdAt: at };
+    if (ticket.status === 'closed') ticket.timeline.push({ type: 'reopened', at });
+    ticket.messages.push(message);
+    ticket.status = 'needs_reply';
+    await envelope(route, message, undefined, 201);
+    return true;
+  }
+  if (one[2] === 'close' && method === 'POST') {
+    ticket.status = 'closed';
+    ticket.timeline.push({ type: 'closed', at: now() });
+    await envelope(route, ticket);
+    return true;
+  }
+  return false;
+}
+
 /**
  * Every network call the app can make, answered from fixtures. No backend, no
  * Worker: `installMocks` must be awaited before the first navigation, because
@@ -678,7 +834,15 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     quoteUnavailable: options.partnerQuoteUnavailable ?? null,
     payGone: options.payRoutesGone ?? false,
     orderGone: false,
+    support: {
+      tickets: options.support ? clone(options.support.tickets ?? read<CustomerTicketDetail[]>('support-tickets.json')) : [],
+      messagePosts: [],
+      ticketPosts: [],
+      gate: Promise.resolve(),
+      releaseMessages: () => {},
+    },
   };
+  if (options.support?.holdMessages) state.support.gate = new Promise<void>((resolve) => { state.support.releaseMessages = resolve; });
   if (options.warehouses) state.settings = { ...state.settings, features: { ...state.settings.features, warehouseSelect: true, warehousePrompt: options.warehouses.prompt === true } };
   if (options.orderFixture) {
     const fixture = orderFixture(options.orderFixture, options.orderReference);
@@ -694,6 +858,9 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
   if (!options.faq?.older) state.settings = { ...state.settings, faq: { available: options.faq?.available ?? true } };
 
   if (options.maxOrderUnits !== undefined) state.settings = { ...state.settings, limits: { maxOrderUnits: options.maxOrderUnits } };
+
+  // Only with the option: every other spec's settings (and DOM baselines) stay exactly as they were.
+  if (options.support) state.settings = { ...state.settings, support: { enabled: options.support.enabled ?? true } };
 
   options.tweakSettings?.(state.settings);
   options.tweakProfile?.(state.profile);
@@ -1214,6 +1381,10 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
       }
       await envelope(route, { orders: asked ?? [] });
       return;
+    }
+
+    if (options.support && path.startsWith('storefront/support/')) {
+      if (await handleSupport(route, path.slice('storefront/support/'.length), method, url, state, options.support)) return;
     }
 
     if (path === 'storefront/faq' && method === 'GET') {

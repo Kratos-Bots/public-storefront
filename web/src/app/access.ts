@@ -59,6 +59,15 @@ function isAccountPath(pathname: string): boolean {
 }
 
 /**
+ * Support stays open to a signed-in customer who may not shop, like their account: the backend leaves the support
+ * routes outside the shop-access gate so a refused customer can still ask for help (a ban is refused by the session).
+ */
+function isSupportPath(pathname: string): boolean {
+  const p = stripTrailingSlash(pathname);
+  return p === '/support' || p.startsWith('/support/');
+}
+
+/**
  * The old `/order/:ref/:accessKey` link only redirects to the customer's account order page, which stays open
  * to a refused customer, so the link must not be the one door that locks them out of it. A signed-out visitor
  * is still sent through sign-in with the link as the way back.
@@ -95,7 +104,8 @@ export interface AccessContext {
  */
 export function checksProfile(ctx: AccessContext): boolean {
   return ctx.loggedIn && ctx.access.storefront === 'restricted' && !ctx.denied && !ctx.builder
-    && !isClosedExemptPath(ctx.pathname) && !isAccountPath(ctx.pathname) && !isOrderLinkPath(ctx.pathname) && !isAuthPath(ctx.pathname);
+    && !isClosedExemptPath(ctx.pathname) && !isAccountPath(ctx.pathname) && !isSupportPath(ctx.pathname)
+    && !isOrderLinkPath(ctx.pathname) && !isAuthPath(ctx.pathname);
 }
 
 export function accessDecision(ctx: AccessContext): AccessDecision {
@@ -105,7 +115,8 @@ export function accessDecision(ctx: AccessContext): AccessDecision {
     // setSession flips loggedIn before useLoginSuccess navigates away; keep the bare frame
     // meanwhile, so the shop frame never wraps the sign-in page. LoginPage redirects.
     if (ctx.access.storefront !== 'public' && isAuthPath(ctx.pathname)) return { kind: 'authOnly' };
-    if (ctx.denied && ctx.access.storefront === 'restricted' && !isAccountPath(ctx.pathname) && !isOrderLinkPath(ctx.pathname)) {
+    if (ctx.denied && ctx.access.storefront === 'restricted' && !isAccountPath(ctx.pathname) && !isSupportPath(ctx.pathname)
+      && !isOrderLinkPath(ctx.pathname)) {
       return { kind: 'locked', variant: 'denied' };
     }
     return { kind: 'allow' };

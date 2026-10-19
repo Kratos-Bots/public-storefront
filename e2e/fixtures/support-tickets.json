@@ -1,0 +1,33 @@
+[
+  {
+    "id": 7,
+    "subject": "Where is my parcel? Tracking has not moved since Monday",
+    "status": "waiting_on_customer",
+    "order": { "reference": "E2E1", "status": "shipped", "createdAt": "2026-08-20T10:00:00Z" },
+    "timeline": [{ "type": "opened", "at": "2026-08-22T09:12:00Z" }],
+    "canReply": true,
+    "reopenUntil": null,
+    "createdAt": "2026-08-22T09:12:00Z",
+    "messages": [
+      { "id": 1, "fromSupport": false, "authorLabel": "Ada", "body": "Tracking hasn't moved since Monday, is it lost?", "attachments": [], "createdAt": "2026-08-22T09:12:00Z" },
+      { "id": 2, "fromSupport": true, "authorLabel": "Support · Northbound Supply", "body": "Hi! It's with the courier, there's a delay at the depot. I've chased it for you and will update you here.", "attachments": [], "createdAt": "2026-08-22T11:40:00Z" }
+    ]
+  },
+  {
+    "id": 9,
+    "subject": "Order K4M2QP arrived damaged",
+    "status": "closed",
+    "order": { "reference": "K4M2QP", "status": "delivered", "createdAt": "2026-08-20T10:00:00Z" },
+    "timeline": [
+      { "type": "opened", "at": "2026-08-01T09:00:00Z" },
+      { "type": "closed", "at": "2026-08-03T09:00:00Z" }
+    ],
+    "canReply": true,
+    "reopenUntil": "2026-08-25T09:00:00Z",
+    "createdAt": "2026-08-01T09:00:00Z",
+    "messages": [
+      { "id": 21, "fromSupport": false, "authorLabel": "Ada", "body": "The box was crushed when it arrived.", "attachments": [], "createdAt": "2026-08-01T09:00:00Z" },
+      { "id": 22, "fromSupport": true, "authorLabel": "Support · Northbound Supply", "body": "Sorry about that, a replacement is on its way.", "attachments": [], "createdAt": "2026-08-02T10:00:00Z" }
+    ]
+  }
+]

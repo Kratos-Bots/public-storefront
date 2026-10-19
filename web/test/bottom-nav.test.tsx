@@ -109,7 +109,7 @@ describe('BottomNav FAQ slot', () => {
 describe('BottomNav active item', () => {
   it.each([
     ['/', 'Catalog'], ['/c/serums', 'Catalog'], ['/p/12', 'Catalog'], ['/cart', 'Cart'], ['/account/profile', 'Profile'], ['/account/orders', 'Profile'],
-    ['/reviews', 'Reviews'], ['/support', 'Support'],
+    ['/reviews', 'Reviews'], ['/support', 'Support'], ['/support/new', 'Support'], ['/support/tickets/7', 'Support'],
   ])('marks the item for %s as the current page: %s', (path, label) => {
     mount(path);
     const current = within(nav()!).getAllByRole('link').filter((a) => a.getAttribute('aria-current') === 'page');

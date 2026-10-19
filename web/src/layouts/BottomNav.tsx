@@ -84,7 +84,7 @@ function Bar({ pathname, inset, coverUnderDialog }: { pathname: string; inset: '
     // FAQ takes Support's place while the shop has one (Support stays in the header menu); otherwise Support, as ever.
     faq
       ? { key: 'faq', to: '/faq', label: t('shell.bottomNav.faq'), Icon: FaqIcon, active: pathname === '/faq' }
-      : { key: 'support', to: '/support', label: t('shell.bottomNav.support'), Icon: HelpIcon, active: pathname === '/support' },
+      : { key: 'support', to: '/support', label: t('shell.bottomNav.support'), Icon: HelpIcon, active: pathname === '/support' || pathname.startsWith('/support/') },
   ];
 
   const cls = [classes.nav, native ? classes.telegram : inset === 'webapp' ? classes.webapp : '', coverUnderDialog && modalOpen ? classes.covered : '']

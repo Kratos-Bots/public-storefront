@@ -1,3 +1,4 @@
+import { isTicketConversationPath } from '@/features/support/paths.ts';
 import { textSnapshot, type TextApi } from '@/text/snapshot.ts';
 
 export interface DefaultActionInput {
@@ -39,6 +40,8 @@ export function defaultPrimaryAction(input: DefaultActionInput, t: TextApi['t'] 
   const { pathname, count, subtotalLabel, checkoutTo, ordering, blocked, browseOnCatalogOnly = false } = input;
   if (!ordering || count === 0) return null;
   if (TERMINAL.some((p) => pathname === p || (p.endsWith('/') && pathname.startsWith(p)))) return null;
+  // A ticket's conversation keeps the foot of the phone for its composer.
+  if (isTicketConversationPath(pathname)) return null;
   if (pathname === '/cart') return { label: t('webapp.action.checkout', { subtotal: subtotalLabel }), to: checkoutTo, disabled: blocked };
   if (browseOnCatalogOnly && !isCatalogue(pathname)) return null;
   return { label: t('webapp.action.viewCart', { subtotal: subtotalLabel }), to: '/cart', disabled: false };

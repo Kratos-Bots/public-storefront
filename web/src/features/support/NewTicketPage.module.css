@@ -1,0 +1,231 @@
+/* The new-ticket form: one calm column under the support page's masthead. A choice of what it is about, the order
+   (a short list of ruled docket rows, the orders list's idiom, one of them ticked), then subject, message, photos and
+   the one action. Tokens only, so every template restyles it; every target is at least 44px tall for a thumb. */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.segment {
+  background: var(--sf-surface);
+  border: 1px solid var(--sf-line);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.label {
+  margin: 0 0 0.35rem;
+  font-family: var(--sf-font-heading);
+  font-size: calc(0.875rem * var(--sf-text-scale, 1));
+  font-weight: 600;
+  color: var(--sf-text);
+}
+
+.orders {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--sf-line);
+}
+
+/* One order, tapped anywhere. The tick on the left is the only thing that changes when it is chosen, with the row's
+   ground lifting to the surface so the choice reads at a glance in both themes. */
+.order {
+  display: grid;
+  grid-template-columns: 1.25rem minmax(0, 1fr) auto;
+  grid-template-areas:
+    'tick ref  status'
+    'tick meta status';
+  align-items: center;
+  column-gap: 0.75rem;
+  width: 100%;
+  min-height: 3.5rem;
+  padding: 0.65rem 0.5rem;
+  border: 0;
+  border-bottom: 1px solid var(--sf-line);
+  border-radius: var(--sf-card-radius);
+  background: transparent;
+  color: var(--sf-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.order:hover {
+  background: color-mix(in srgb, var(--sf-surface) 60%, transparent);
+}
+
+.order:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: -2px;
+}
+
+.order[aria-checked='true'] {
+  background: var(--sf-surface);
+}
+
+.tick {
+  grid-area: tick;
+  width: 1.125rem;
+  height: 1.125rem;
+  border: 1.5px solid var(--sf-line-strong);
+  border-radius: 50%;
+  transition: border-width 120ms ease, border-color 120ms ease;
+}
+
+.order[aria-checked='true'] .tick {
+  border: 5px solid var(--sf-primary);
+}
+
+.ref {
+  grid-area: ref;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--sf-font-mono);
+  font-size: calc(0.9375rem * var(--sf-text-scale, 1));
+  font-weight: 600;
+}
+
+.meta {
+  grid-area: meta;
+  font-size: calc(0.8125rem * var(--sf-text-scale, 1));
+  font-variant-numeric: tabular-nums;
+  color: var(--sf-muted);
+}
+
+.orderStatus {
+  grid-area: status;
+  justify-self: end;
+}
+
+.older {
+  align-self: flex-start;
+}
+
+.placeholder {
+  height: 7rem;
+  border-top: 1px solid var(--sf-line);
+}
+
+.quiet {
+  margin: 0;
+  padding: 0.75rem 0.5rem;
+  border-top: 1px solid var(--sf-line);
+  font-size: calc(0.9375rem * var(--sf-text-scale, 1));
+  color: var(--sf-muted);
+}
+
+.photosField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.photos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.photo {
+  position: relative;
+  width: 4.5rem;
+  height: 4.5rem;
+}
+
+.thumb {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border: 1px solid var(--sf-line);
+  border-radius: var(--sf-card-radius);
+  background: var(--sf-surface);
+}
+
+.remove {
+  position: absolute;
+  top: -0.45rem;
+  right: -0.45rem;
+  border: 1px solid var(--sf-line-strong);
+  background: var(--sf-bg);
+  color: var(--sf-text);
+}
+
+/* The remove control is small to look at, but its hit area reaches a thumb's 44px. */
+.remove::after {
+  content: '';
+  position: absolute;
+  inset: -0.6rem;
+}
+
+.attach {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+}
+
+.attach > button {
+  min-height: 44px;
+}
+
+.hint {
+  font-size: calc(0.8125rem * var(--sf-text-scale, 1));
+  color: var(--sf-faint);
+}
+
+.error {
+  margin: 0;
+  font-size: calc(0.875rem * var(--sf-text-scale, 1));
+  line-height: 1.45;
+  color: var(--sf-danger);
+}
+
+.send {
+  min-height: 48px;
+}
+
+/* On a wide screen the action stays a button, not a bar. */
+@media (min-width: 48em) {
+  .send[data-block] {
+    align-self: flex-start;
+    width: auto;
+    min-width: 12rem;
+  }
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-top: 0.5rem;
+  color: var(--sf-text);
+  font-size: calc(0.9375rem * var(--sf-text-scale, 1));
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+}
+
+.back:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .order,
+  .tick {
+    transition: none;
+  }
+}

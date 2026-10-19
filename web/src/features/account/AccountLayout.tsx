@@ -4,6 +4,7 @@ import { accessGate } from '@/app/access-gate.ts';
 import { useSessionStore } from '@/stores/session.ts';
 import { formatDate } from '@/lib/format.ts';
 import { useProfile } from '@/features/account/queries.ts';
+import { useSupportReachable } from '@/features/support/queries.ts';
 import { creditOnly, loyaltyOn } from '@/types/profile.ts';
 import { textKey, useText } from '@/text/runtime.tsx';
 import { FADE } from '@/lib/motion.ts';
@@ -19,6 +20,8 @@ const TABS = [
   { to: '/account/loyalty', label: textKey('account.nav.loyalty'), creditLabel: textKey('account.nav.storeCredit') },
   { to: '/account/referrals', label: textKey('account.nav.referrals') },
   { to: '/account/profile', label: textKey('account.nav.profile') },
+  // Support lives at /support (the bottom bar opens it too); the tab is the account's way there.
+  { to: '/support', label: textKey('support.account.nav') },
 ];
 
 /** One order's own page: it is read on its own, so the account's greeting and section rail stay out of the way. */
@@ -49,10 +52,11 @@ function GreetingView({ styleAttrs }: PartViewProps) {
 function TabsView({ styleAttrs }: PartViewProps) {
   const { t } = useText();
   const { pathname, loyaltyOn: showLoyalty, creditOnly: showCredit } = AccountFamily.useData();
+  const showSupport = useSupportReachable();
   if (isOrderDetailPath(pathname)) return null;
   return (
     <nav className={classes.tabs} aria-label={t('account.nav.ariaLabel')} {...styleAttrs}>
-      {TABS.filter((tab) => tab.to !== '/account/loyalty' || showLoyalty || showCredit).map((tab) => (
+      {TABS.filter((tab) => (tab.to === '/account/loyalty' ? showLoyalty || showCredit : tab.to !== '/support' || showSupport)).map((tab) => (
         <NavLink
           key={tab.to}
           to={tab.to}

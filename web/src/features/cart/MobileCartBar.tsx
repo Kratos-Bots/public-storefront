@@ -14,6 +14,7 @@ import { ChevronIcon } from '@/components/icons.tsx';
 import { Slot } from '@/templates/runtime.tsx';
 import classes from '@/features/cart/MobileCartBar.module.css';
 import { useText } from '@/text/runtime.tsx';
+import { isTicketConversationPath } from '@/features/support/paths.ts';
 
 /** Mantine's `md` breakpoint — above it the cart is a drawer and needs no band. */
 const DESKTOP = '(min-width: 62em)';
@@ -24,7 +25,8 @@ const DESKTOP = '(min-width: 62em)';
  *
  * It stands down for the wholesale sheet, which flies its own tab in the same
  * slot, and on the two routes that already show the cart — `/cart` and
- * `/checkout` — where a second way in would only be in the way.
+ * `/checkout` — where a second way in would only be in the way. A support ticket's conversation keeps the foot for
+ * its composer.
  */
 export function useMobileCartBar(): boolean {
   const { features } = useSettings();
@@ -41,7 +43,8 @@ export function useMobileCartBar(): boolean {
     !desktop &&
     count > 0 &&
     pathname !== '/cart' &&
-    pathname !== '/checkout'
+    pathname !== '/checkout' &&
+    !isTicketConversationPath(pathname)
   );
 }
 
