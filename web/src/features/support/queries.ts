@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { create } from 'zustand';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  closeTicket, createTicket, fetchTicket, fetchTickets, postMessage,
+  closeTicket, createTicket, fetchTicket, fetchTicketForOrder, fetchTickets, postMessage,
   type CustomerMessage, type CustomerTicketDetail, type NewMessageInput, type NewTicketInput,
 } from '@/api/support.ts';
 import { useText } from '@/text/runtime.tsx';
@@ -12,6 +12,7 @@ import { useSettings } from '@/app/settings.ts';
 export const SUPPORT_TICKETS_KEY = ['support-tickets'] as const;
 export const ticketKey = (id: number) => [...SUPPORT_TICKETS_KEY, id] as const;
 const LIST_KEY = [...SUPPORT_TICKETS_KEY, 'list'] as const;
+const BY_ORDER_KEY = [...SUPPORT_TICKETS_KEY, 'by-order'] as const;
 
 export const TICKETS_PAGE_SIZE = 20;
 
@@ -85,6 +86,24 @@ export function useTicket(id: number | undefined) {
   });
 }
 
+/**
+ * The newest open ticket about an order, asked once on arrival at the new-ticket form. Never kept once the form is
+ * gone (a remembered id may since have been closed) and never refetched behind the customer's back: coming back from
+ * the photo picker must not pull a half-written ticket away.
+ */
+export function useTicketForOrder(reference: string | null) {
+  return useQuery({
+    queryKey: [...BY_ORDER_KEY, reference],
+    queryFn: () => fetchTicketForOrder(reference as string),
+    enabled: reference !== null,
+    retry: false,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+}
+
 export function useCreateTicket() {
   const qc = useQueryClient();
   return useMutation({
@@ -92,6 +111,7 @@ export function useCreateTicket() {
     onSuccess: (ticket) => {
       qc.setQueryData(ticketKey(ticket.id), ticket);
       void qc.invalidateQueries({ queryKey: LIST_KEY });
+      qc.removeQueries({ queryKey: BY_ORDER_KEY });
     },
   });
 }
@@ -148,6 +168,7 @@ export function useCloseTicket(id: number) {
     onSuccess: (ticket) => {
       qc.setQueryData(ticketKey(id), ticket);
       void qc.invalidateQueries({ queryKey: LIST_KEY });
+      qc.removeQueries({ queryKey: BY_ORDER_KEY });
     },
   });
 }

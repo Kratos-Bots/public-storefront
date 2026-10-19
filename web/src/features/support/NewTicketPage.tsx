@@ -1,15 +1,14 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Button, CloseButton, FileButton, SegmentedControl, Textarea, TextInput } from '@mantine/core';
-import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useSettings } from '@/app/settings.ts';
-import { fetchTicketForOrder } from '@/api/support.ts';
 import { Money } from '@/components/Money.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { StatusPill } from '@/features/account/StatusPill.tsx';
 import { useOrders } from '@/features/account/queries.ts';
 import { orderStatusLabel, orderStatusTone } from '@/features/order-status/status.ts';
-import { useCreateTicket } from '@/features/support/queries.ts';
+import { MAX_PHOTOS, PHOTO_TYPES, usePhotos } from '@/features/support/photos.ts';
+import { useCreateTicket, useTicketForOrder } from '@/features/support/queries.ts';
 import { errorMessage } from '@/lib/errors.ts';
 import { formatDate } from '@/lib/format.ts';
 import { FADE } from '@/lib/motion.ts';
@@ -18,47 +17,10 @@ import type { OrderSummary } from '@/types/orders.ts';
 import page from '@/features/support/SupportPage.module.css';
 import classes from '@/features/support/NewTicketPage.module.css';
 
-/** The backend's limits (spec: images only, 4 per message, 5 MB each; subject 1–120, body ≤ 4000). */
-export const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'] as const;
-export const MAX_PHOTOS = 4;
-export const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 const MAX_SUBJECT = 120;
 const MAX_BODY = 4000;
 
 type Mode = 'order' | 'other';
-interface Photo { key: number; file: File; url: string }
-
-let photoKey = 0;
-
-/** Photos chosen for a message, with previews. Every preview URL is revoked on remove and when the form goes away. */
-function usePhotos() {
-  const [photos, setPhotos] = useState<Photo[]>([]);
-  const [invalid, setInvalid] = useState(false);
-  const live = useRef<Photo[]>([]);
-  live.current = photos;
-  useEffect(() => () => { for (const p of live.current) URL.revokeObjectURL(p.url); }, []);
-
-  const add = (files: File[]) => {
-    let refused = false;
-    const room = MAX_PHOTOS - live.current.length;
-    const fits = files.filter((f) => {
-      const ok = (PHOTO_TYPES as readonly string[]).includes(f.type) && f.size <= MAX_PHOTO_BYTES;
-      if (!ok) refused = true;
-      return ok;
-    });
-    if (fits.length > room) refused = true;
-    const added = fits.slice(0, Math.max(room, 0)).map((file) => ({ key: ++photoKey, file, url: URL.createObjectURL(file) }));
-    setInvalid(refused);
-    if (added.length) setPhotos((list) => [...list, ...added]);
-  };
-  const remove = (key: number) => {
-    const gone = live.current.find((p) => p.key === key);
-    if (gone) URL.revokeObjectURL(gone.url);
-    setInvalid(false);
-    setPhotos((list) => list.filter((p) => p.key !== key));
-  };
-  return { photos, invalid, add, remove };
-}
 
 function PaperclipIcon() {
   return (
@@ -249,22 +211,15 @@ export function NewTicketPage() {
   const enabled = support?.enabled === true;
   const wanted = params.get('order')?.trim() || null;
 
-  const existing = useQuery({
-    queryKey: ['support-ticket-for-order', wanted],
-    queryFn: () => fetchTicketForOrder(wanted as string),
-    enabled: enabled && wanted !== null,
-    retry: false,
-    staleTime: 0,
-    // A one-time check on arrival: coming back from the photo picker must not pull a half-written ticket away.
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-  });
-  const existingId = existing.data ?? null;
+  const existing = useTicketForOrder(enabled ? wanted : null);
+  // Only an answer fetched for this visit counts: a remembered id may be a ticket closed since.
+  const fresh = existing.isFetchedAfterMount || existing.isError;
+  const existingId = fresh ? existing.data ?? null : null;
   useEffect(() => {
     if (existingId !== null) void navigate(`/support/tickets/${existingId}`, { replace: true });
   }, [existingId, navigate]);
 
-  if (enabled && wanted && (existing.isPending || existingId !== null)) return <PageSkeleton inline />;
+  if (enabled && wanted && (!fresh || existingId !== null)) return <PageSkeleton inline />;
 
   return (
     <div className={`${page.page} ${FADE}`}>

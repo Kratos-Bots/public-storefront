@@ -30,8 +30,8 @@ function Where() {
   return <p data-testid="where">{loc.pathname}</p>;
 }
 
-const mount = (url = '/support/new') => {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+const newClient = () => new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+const mount = (url = '/support/new', qc = newClient()) => {
   return render(
     <MantineProvider env="test">
       <QueryClientProvider client={qc}>
@@ -53,11 +53,6 @@ const photo = (name: string, type = 'image/jpeg', size = 1000) => {
 };
 const fileInput = () => document.querySelector('input[type="file"]') as HTMLInputElement;
 const pick = (files: File[]) => fireEvent.change(fileInput(), { target: { files } });
-
-// Mantine's autosizing textarea listens for web fonts loading; jsdom has no `document.fonts`.
-if (!('fonts' in document)) {
-  Object.defineProperty(document, 'fonts', { configurable: true, value: { addEventListener: () => {}, removeEventListener: () => {} } });
-}
 
 beforeEach(() => {
   shop.settings = { currency: 'GBP', supportLinks: [], brand: { name: 'Shop', links: {} }, support: { enabled: true } };
@@ -84,6 +79,18 @@ describe('the new ticket page', () => {
     mount('/support/new?order=A1042');
     expect(await screen.findByTestId('where')).toHaveTextContent('/support/tickets/42');
     expect(api.fetchTicketForOrder).toHaveBeenCalledWith('A1042');
+  });
+
+  it('a remembered ticket id that refetches as null does not redirect', async () => {
+    // Ticket 42 was open when last asked, and has been closed since.
+    const qc = newClient();
+    qc.setQueryData(['support-tickets', 'by-order', 'A1042'], 42);
+    api.fetchTicketForOrder.mockResolvedValue(null);
+    mount('/support/new?order=A1042', qc);
+    const card = await screen.findByRole('radio', { name: /A1042/ });
+    expect(card).toBeChecked();
+    expect(api.fetchTicketForOrder).toHaveBeenCalledWith('A1042');
+    expect(screen.queryByTestId('where')).toBeNull();
   });
 
   it('?order without a ticket preselects that order and prefills the subject', async () => {

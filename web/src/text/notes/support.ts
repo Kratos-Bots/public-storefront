@@ -7,6 +7,7 @@ export default {
   'page.signIn': 'Button shown to a signed-out visitor on the Support page',
   'page.preferChat': 'Lead-in to the shop\'s chat contact links at the foot of the Support page',
   'page.fromSupport': 'Who said the last line, before its preview in a Support page ticket row, when the shop wrote it',
+  'page.preview': 'Last line of a ticket row on the Support page: {who} is who said it (Support or You), {text} the start of what they said',
   'status.needsReply': 'Label on a ticket that is waiting for the shop to answer',
   'status.waiting': 'Label on a ticket where the shop has answered and the customer may reply',
   'status.closed': 'Label on a ticket that is closed',

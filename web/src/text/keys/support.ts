@@ -10,6 +10,7 @@ export default defineTextArea('support', {
   'page.signIn': { en: 'Sign in to open a ticket', max: 80 },
   'page.preferChat': { en: 'Prefer chat?', max: 60 },
   'page.fromSupport': { en: 'Support', max: 30 },
+  'page.preview': { en: '{who}: {text}', max: 40 },
 
   // ── status labels ─────────────────────────────────────────────────────────
   'status.needsReply': { en: 'Waiting', max: 30 },

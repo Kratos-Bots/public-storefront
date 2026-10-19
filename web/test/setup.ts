@@ -8,3 +8,7 @@ Object.defineProperty(window, 'matchMedia', {
 globalThis.ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} } as unknown as typeof ResizeObserver;
 // jsdom logs "not implemented" for scrollTo; react-router's <ScrollRestoration /> calls it on every navigation.
 window.scrollTo = (() => undefined) as typeof window.scrollTo;
+// Mantine's autosizing Textarea listens for web fonts loading; jsdom has no `document.fonts`.
+if (!('fonts' in document)) {
+  Object.defineProperty(document, 'fonts', { configurable: true, value: { addEventListener() {}, removeEventListener() {} } });
+}

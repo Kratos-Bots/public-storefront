@@ -37,7 +37,10 @@ function TicketRow({ ticket }: { ticket: CustomerTicketSummary }) {
         <span className={classes.about}>{ticket.order ? ticket.order.reference : t('support.general')}</span>
         <span className={classes.when}>{formatDate(ticket.lastMessage.at)}</span>
         <span className={classes.preview}>
-          {`${ticket.lastMessage.fromSupport ? t('support.page.fromSupport') : t('support.thread.you')}: ${ticket.lastMessage.preview}`}
+          {t('support.page.preview', {
+            who: ticket.lastMessage.fromSupport ? t('support.page.fromSupport') : t('support.thread.you'),
+            text: ticket.lastMessage.preview,
+          })}
         </span>
       </Link>
     </li>
