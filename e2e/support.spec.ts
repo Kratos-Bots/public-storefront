@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { installMocks, type InstallMocksOptions, type Layout, type MockHandle } from './mocks.ts';
+import type { CustomerTicketDetail } from '../web/src/api/support.ts';
 import { FIXED_NOW } from './flows.ts';
 
 /**
@@ -55,6 +56,8 @@ for (const width of [390, 1280]) {
       await expect(log).toContainText('delay at the depot');
 
       await page.locator('input[type="file"]').setInputFiles({ name: 'seal.png', mimeType: 'image/png', buffer: PNG });
+      // A pick is prepared (a big photo brought down to size) before its preview shows.
+      await expect(page.getByRole('button', { name: 'Remove photo' })).toBeVisible();
       await page.getByRole('textbox', { name: 'Message' }).fill('Here is a photo of the seal.');
       await page.getByRole('button', { name: 'Send' }).click();
 
@@ -97,6 +100,26 @@ for (const width of [390, 1280]) {
     });
   });
 }
+
+test('a ticket closed past its reopen window offers a new one from the start, with no reply box to fail in', async ({ page }) => {
+  const closed: CustomerTicketDetail = {
+    id: 9, subject: `Order ${REF} arrived damaged`, status: 'closed',
+    order: { reference: REF, status: 'delivered', createdAt: '2026-08-20T10:00:00Z' },
+    timeline: [{ type: 'opened', at: '2026-07-01T09:00:00Z' }, { type: 'closed', at: '2026-07-03T09:00:00Z' }],
+    canReply: false, reopenUntil: null, createdAt: '2026-07-01T09:00:00Z',
+    messages: [{ id: 21, fromSupport: false, authorLabel: 'Ada', body: 'The box was crushed when it arrived.', attachments: [], createdAt: '2026-07-01T09:00:00Z' }],
+  };
+  const mocks = await open(page, { path: '/support/tickets/9', support: { tickets: [closed] } });
+  await expect(page.getByRole('log')).toContainText('The box was crushed when it arrived.');
+  await expect(page.getByText('This ticket is closed.')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Open a new ticket' })).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Message' })).toHaveCount(0);
+
+  await page.getByRole('link', { name: 'Open a new ticket' }).click();
+  await expect(page).toHaveURL(new RegExp(`/support/new\\?order=${REF}$`));
+  await expect(page.getByRole('radio', { name: new RegExp(REF) })).toHaveAttribute('aria-checked', 'true');
+  expect(mocks.state.support.messagePosts).toEqual([]);
+});
 
 test('an order that already has an open ticket goes straight to it', async ({ page }) => {
   const mocks = await open(page, { path: '/account/orders/E2E1', orderFixture: 'shipped', support: {} });

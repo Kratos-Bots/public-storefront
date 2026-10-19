@@ -15,6 +15,7 @@ import type { TrackingLookup } from '../web/src/types/tracking.ts';
 import type { LoginResult, ResetCheck, WhatsappStart } from '../web/src/types/auth.ts';
 import type { ProfilePassword } from '../web/src/types/profile.ts';
 import type { PageSet } from '../web/src/builder/types.ts';
+import { FIXED_NOW } from './flows.ts';
 
 /** The dev server the suite starts (see playwright.config.ts). Route globs are
  *  anchored to it: a bare `**\/api\/**` also matches Vite's own module URLs
@@ -667,6 +668,9 @@ function multipart(route: Route): { fields: Record<string, string>; files: strin
 }
 
 const SUPPORT_SIG = '0123456789abcdef0123456789abcdef';
+/** A photo link's expiry as the backend signs it (`exp = ceil(now / 1h) * 1h + 1h`, whole hours), from the specs' fixed clock. */
+const SUPPORT_HOUR = 3600;
+const SUPPORT_EXP = Math.ceil(FIXED_NOW.getTime() / 1000 / SUPPORT_HOUR) * SUPPORT_HOUR + SUPPORT_HOUR;
 const PHOTO_SVG = (id: number) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"><rect width="400" height="400" fill="hsl(${id * 47} 30% 62%)"/><circle cx="200" cy="200" r="90" fill="hsl(${id * 47} 30% 80%)"/></svg>`;
 const lastAt = (t: CustomerTicketDetail) => t.messages.at(-1)?.createdAt ?? t.createdAt;
 
@@ -686,7 +690,7 @@ async function handleSupport(route: Route, rest: string, method: string, url: UR
   }
   const photos = (ticketId: number, names: string[]) => names.map((_, i) => {
     const id = 100 * ticketId + i + 1;
-    return { id, url: `public/storefront/support/attachments/${id}?exp=1788000000&sig=${SUPPORT_SIG}`, width: 400, height: 400 };
+    return { id, url: `public/storefront/support/attachments/${id}?exp=${SUPPORT_EXP}&sig=${SUPPORT_SIG}`, width: 400, height: 400 };
   });
   const nextMessageId = () => Math.max(0, ...tickets.flatMap((t) => t.messages.map((m) => m.id))) + 1;
   const now = () => new Date().toISOString();
