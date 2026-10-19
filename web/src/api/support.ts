@@ -60,6 +60,9 @@ export interface NewMessageInput {
   files: File[];
 }
 
+/** Four 5 MB photos on a phone connection can outlast the shared 20 s. */
+const UPLOAD_TIMEOUT = 60_000;
+
 /** The Worker maps `/api/storefront/...` to the backend's `/api/v1/public/storefront/...`. */
 export const attachmentSrc = (a: SupportAttachment) => `/api/${a.url.replace(/^public\//, '')}`;
 
@@ -85,10 +88,10 @@ export function createTicket({ subject, body, orderReference, files }: NewTicket
   fd.append('subject', subject);
   if (orderReference) fd.append('orderReference', orderReference);
   // No transport retry: a replayed POST would open a second ticket.
-  return unwrap<CustomerTicketDetail>(api.post('storefront/support/tickets', { body: fd, retry: 0 }));
+  return unwrap<CustomerTicketDetail>(api.post('storefront/support/tickets', { body: fd, retry: 0, timeout: UPLOAD_TIMEOUT }));
 }
 
 export const postMessage = (id: number, { body, files }: NewMessageInput) =>
-  unwrap<CustomerMessage>(api.post(`storefront/support/tickets/${id}/messages`, { body: messageForm(body, files), retry: 0 }));
+  unwrap<CustomerMessage>(api.post(`storefront/support/tickets/${id}/messages`, { body: messageForm(body, files), retry: 0, timeout: UPLOAD_TIMEOUT }));
 
 export const closeTicket = (id: number) => unwrap<CustomerTicketDetail>(api.post(`storefront/support/tickets/${id}/close`));
