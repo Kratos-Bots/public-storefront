@@ -72,7 +72,7 @@ function PaperclipIcon() {
 function OrderOption({ order, checked, onPick }: { order: Pick<OrderSummary, 'reference'> & Partial<OrderSummary>; checked: boolean; onPick: () => void }) {
   const { t } = useText();
   return (
-    <li>
+    <li role="none">
       <button type="button" role="radio" aria-checked={checked} className={classes.order} onClick={onPick}>
         <span className={classes.tick} aria-hidden="true" />
         <span className={classes.ref}>{order.reference}</span>
@@ -255,6 +255,9 @@ export function NewTicketPage() {
     enabled: enabled && wanted !== null,
     retry: false,
     staleTime: 0,
+    // A one-time check on arrival: coming back from the photo picker must not pull a half-written ticket away.
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
   const existingId = existing.data ?? null;
   useEffect(() => {
