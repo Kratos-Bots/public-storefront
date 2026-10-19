@@ -36,7 +36,9 @@ function TicketRow({ ticket }: { ticket: CustomerTicketSummary }) {
         <span className={classes.status}><StatusPill tone={status.tone}>{t(status.label)}</StatusPill></span>
         <span className={classes.about}>{ticket.order ? ticket.order.reference : t('support.general')}</span>
         <span className={classes.when}>{formatDate(ticket.lastMessage.at)}</span>
-        <span className={classes.preview}>{ticket.lastMessage.preview}</span>
+        <span className={classes.preview}>
+          {`${ticket.lastMessage.fromSupport ? t('support.page.fromSupport') : t('support.thread.you')}: ${ticket.lastMessage.preview}`}
+        </span>
       </Link>
     </li>
   );

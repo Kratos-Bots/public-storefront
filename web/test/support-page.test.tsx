@@ -111,12 +111,13 @@ describe('the support page with support switched on', () => {
     expect(first).toHaveAttribute('href', '/support/tickets/7');
     expect(within(first).getByText('Reply')).toBeInTheDocument();
     expect(within(first).getByText('A1042')).toBeInTheDocument();
-    expect(within(first).getByText(/It left our warehouse yesterday/)).toBeInTheDocument();
+    expect(within(first).getByText('Support: It left our warehouse yesterday')).toBeInTheDocument();
     expect(first.querySelector('[data-unread]')).not.toBeNull();
 
     const second = screen.getByRole('link', { name: /Payment question/ });
     expect(within(second).getByText('Waiting')).toBeInTheDocument();
     expect(within(second).getByText('General')).toBeInTheDocument();
+    expect(within(second).getByText('You: Can I pay by bank transfer?')).toBeInTheDocument();
     expect(second.querySelector('[data-unread]')).toBeNull();
 
     const third = screen.getByRole('link', { name: /Wrong item received/ });

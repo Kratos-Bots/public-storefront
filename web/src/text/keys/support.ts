@@ -9,6 +9,7 @@ export default defineTextArea('support', {
   'page.empty': { en: 'No tickets yet.', max: 80 },
   'page.signIn': { en: 'Sign in to open a ticket', max: 80 },
   'page.preferChat': { en: 'Prefer chat?', max: 60 },
+  'page.fromSupport': { en: 'Support', max: 30 },
 
   // ── status labels ─────────────────────────────────────────────────────────
   'status.needsReply': { en: 'Waiting', max: 30 },
@@ -22,12 +23,15 @@ export default defineTextArea('support', {
   'new.other': { en: 'Something else', max: 60 },
   'new.whichOrder': { en: 'Which order?', max: 60 },
   'new.moreOrders': { en: 'Show older orders', max: 60 },
+  'new.orderSubject': { en: 'Order {reference}', max: 60 },
   'new.subject': { en: 'Subject', max: 40 },
   'new.message': { en: 'Message', max: 40 },
   'new.addPhotos': { en: 'Add photos', max: 40 },
+  'new.removePhoto': { en: 'Remove photo', max: 40 },
   'new.photoLimit': { en: 'Up to {max} photos', max: 60 },
   'new.send': { en: 'Send', max: 30 },
   'new.disabled': { en: 'New tickets are not being accepted right now.', max: 120 },
+  'new.back': { en: 'Back to support', max: 40 },
 
   // ── the conversation ──────────────────────────────────────────────────────
   'thread.you': { en: 'You', max: 30 },
