@@ -27,11 +27,11 @@ const ORDERS = [
 
 function Where() {
   const loc = useLocation();
-  return <p data-testid="where">{loc.pathname}</p>;
+  return <><p data-testid="where">{loc.pathname}</p><p data-testid="where-state">{(loc.state as { body?: string } | null)?.body ?? ''}</p></>;
 }
 
 const newClient = () => new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-const mount = (url = '/support/new', qc = newClient()) => {
+const mount = (url: string | { pathname: string; search?: string; state?: unknown } = '/support/new', qc = newClient()) => {
   return render(
     <MantineProvider env="test">
       <QueryClientProvider client={qc}>
@@ -168,5 +168,12 @@ describe('the new ticket page', () => {
     expect(screen.getByText(/not being accepted/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /back to support/i })).toHaveAttribute('href', '/support');
     expect(screen.queryByRole('button', { name: 'Send' })).toBeNull();
+  });
+
+  it('text carried from a closed ticket goes on to the open ticket the order already has', async () => {
+    api.fetchTicketForOrder.mockResolvedValue(42);
+    mount({ pathname: '/support/new', search: '?order=A1042', state: { body: 'It is still broken.' } });
+    expect(await screen.findByTestId('where')).toHaveTextContent('/support/tickets/42');
+    expect(screen.getByTestId('where-state')).toHaveTextContent('It is still broken.');
   });
 });

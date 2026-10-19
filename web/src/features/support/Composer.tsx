@@ -27,6 +27,8 @@ function SendIcon() {
 }
 
 export interface ComposerProps {
+  /** A draft to start from (text carried over from another ticket). */
+  initialBody?: string;
   onSend: (body: string, files: File[]) => void;
   /** The textarea took focus: the page brings the newest message back into view above it. */
   onFocus?: () => void;
@@ -39,9 +41,9 @@ export interface ComposerProps {
  * (it shows there as sending) and clears the box for the next one. Enter sends on a desktop keyboard (Shift+Enter for
  * a new line); on a phone Enter is a new line and the arrow sends.
  */
-export function Composer({ onSend, onFocus, onUnsent }: ComposerProps) {
+export function Composer({ initialBody = '', onSend, onFocus, onUnsent }: ComposerProps) {
   const { t } = useText();
-  const [body, setBody] = useState('');
+  const [body, setBody] = useState(() => initialBody.slice(0, MAX_BODY));
   const { photos, invalid, add, remove, clear } = usePhotos();
   const resetFile = useRef<() => void>(null);
   const latest = useRef({ body, onUnsent });

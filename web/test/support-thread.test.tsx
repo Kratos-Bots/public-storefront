@@ -49,11 +49,11 @@ function NewTicketStandIn() {
 }
 
 const newClient = () => new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-const mount = (qc = newClient()) => {
+const mount = (qc = newClient(), entry: string | { pathname: string; state?: unknown } = '/support/tickets/7') => {
   return render(
     <MantineProvider env="test">
       <QueryClientProvider client={qc}>
-        <MemoryRouter initialEntries={['/support/tickets/7']}>
+        <MemoryRouter initialEntries={[entry]}>
           <Routes>
             <Route path="/support/tickets/:id" element={<TicketPage />} />
             <Route path="/support/new" element={<NewTicketStandIn />} />
@@ -197,5 +197,31 @@ describe('the ticket conversation', () => {
     mount();
     expect(await screen.findByText("This ticket can't be found.")).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Back to support' })).toHaveAttribute('href', '/support');
+  });
+
+  it('text carried here from a closed ticket starts as the draft in the reply box, once', async () => {
+    api.fetchTicket.mockResolvedValue(ticket());
+    mount(newClient(), { pathname: '/support/tickets/7', state: { body: 'It is still broken.' } });
+    expect(await screen.findByRole('textbox', { name: 'Message' })).toHaveValue('It is still broken.');
+    expect(api.postMessage).not.toHaveBeenCalled();
+  });
+
+  it('the keyboard coming up does not pull a reader who scrolled back up down to the end', async () => {
+    api.fetchTicket.mockResolvedValue(ticket());
+    const vv = Object.assign(new EventTarget(), { height: 844, offsetTop: 0 });
+    vi.stubGlobal('visualViewport', vv);
+    vi.stubGlobal('innerHeight', 844);
+    mount();
+    await screen.findByRole('log');
+    const log = screen.getByRole('log').parentElement!;
+    const scrollTo = vi.fn();
+    vi.stubGlobal('scrollTo', scrollTo);
+    // Reading far above the end.
+    log.getBoundingClientRect = () => ({ bottom: 3000 } as DOMRect);
+    fireEvent.scroll(window);
+    vv.height = 500;
+    vv.dispatchEvent(new Event('resize'));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(scrollTo).not.toHaveBeenCalled();
   });
 });

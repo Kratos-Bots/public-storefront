@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { ActionIcon, Button, Menu } from '@mantine/core';
-import { Link, useParams } from 'react-router';
+import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { useSettings } from '@/app/settings.ts';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { StatusPill } from '@/features/account/StatusPill.tsx';
@@ -56,7 +56,7 @@ function distanceFromEnd(page: HTMLElement, keyboard: number): number {
   return page.getBoundingClientRect().bottom - (window.innerHeight - Math.max(nav, keyboard));
 }
 
-function Conversation({ id, detail }: { id: number; detail: ThreadDetail }) {
+function Conversation({ id, detail, seed }: { id: number; detail: ThreadDetail; seed: string }) {
   const { t } = useText();
   const { support } = useSettings();
   const send = useSendMessage(id);
@@ -64,7 +64,8 @@ function Conversation({ id, detail }: { id: number; detail: ThreadDetail }) {
   const keyboard = useKeyboardInset();
   const [photo, setPhoto] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState(false);
-  const [unsent, setUnsent] = useState('');
+  // Text carried here from another ticket starts as the draft; if this one cannot take it either, it goes on again.
+  const [unsent, setUnsent] = useState(() => (detail.canReply ? '' : seed));
 
   const page = useRef<HTMLDivElement>(null);
   const atEnd = useRef(true);
@@ -125,9 +126,10 @@ function Conversation({ id, detail }: { id: number; detail: ThreadDetail }) {
     return () => ro.disconnect();
   }, [scrollToEnd]);
 
-  // The keyboard coming up shrinks the view from below: keep the newest message just above the box.
+  // The keyboard coming up shrinks the view from below: keep the newest message just above the box, but only for a
+  // reader who was at the end; one who scrolled back up stays where they are.
   useEffect(() => {
-    if (keyboard > 0) scrollToEnd(false);
+    if (keyboard > 0 && atEnd.current) scrollToEnd(false);
   }, [keyboard, scrollToEnd]);
 
   const onSend = (body: string, files: File[]) => {
@@ -216,7 +218,7 @@ function Conversation({ id, detail }: { id: number; detail: ThreadDetail }) {
         {detail.canReply ? (
           <>
             {closed ? <p className={classes.note}>{t('support.thread.closedNote')}</p> : null}
-            <Composer onSend={onSend} onFocus={() => scrollToEnd(true)} onUnsent={setUnsent} />
+            <Composer initialBody={seed} onSend={onSend} onFocus={() => scrollToEnd(true)} onUnsent={setUnsent} />
           </>
         ) : (
           <div className={classes.expired}>
@@ -246,6 +248,18 @@ export function TicketPage() {
   const { id: param } = useParams();
   const id = param && /^\d+$/.test(param) ? Number(param) : undefined;
   const ticket = useTicket(id);
+  // Text carried from a ticket that could no longer take it (via the new-ticket page, which found this one open for
+  // the same order). Read once and then dropped from the history entry, so a reload or a step back does not seed it again.
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [seed] = useState(() => {
+    const body = (location.state as { body?: unknown } | null)?.body;
+    return typeof body === 'string' ? body : '';
+  });
+  useEffect(() => {
+    if (seed) void navigate({ pathname: location.pathname, search: location.search }, { replace: true, state: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on arrival
+  }, []);
 
   // A failed poll keeps the conversation on screen; only a ticket that never loaded is an error page.
   if (id === undefined || (ticket.isError && !ticket.data)) {
@@ -260,5 +274,5 @@ export function TicketPage() {
     );
   }
   if (!ticket.data) return <PageSkeleton inline />;
-  return <Conversation key={id} id={id} detail={ticket.data} />;
+  return <Conversation key={id} id={id} detail={ticket.data} seed={seed} />;
 }

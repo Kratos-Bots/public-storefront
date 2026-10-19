@@ -210,6 +210,8 @@ export function NewTicketPage() {
   const { support } = useSettings();
   const navigate = useNavigate();
   const [params] = useSearchParams();
+  // Text carried over from a conversation that could no longer take it (see TicketPage): it follows a redirect too.
+  const carried = (useLocation().state as { body?: unknown } | null)?.body;
   const enabled = support?.enabled === true;
   const wanted = params.get('order')?.trim() || null;
 
@@ -219,8 +221,10 @@ export function NewTicketPage() {
   // A failed check answers nothing: `data` may still hold an id cached before it.
   const existingId = fresh && !existing.isError ? existing.data ?? null : null;
   useEffect(() => {
-    if (existingId !== null) void navigate(`/support/tickets/${existingId}`, { replace: true });
-  }, [existingId, navigate]);
+    if (existingId !== null) {
+      void navigate(`/support/tickets/${existingId}`, { replace: true, state: typeof carried === 'string' && carried ? { body: carried } : undefined });
+    }
+  }, [existingId, navigate, carried]);
 
   if (enabled && wanted && (!fresh || existingId !== null)) return <PageSkeleton inline />;
 
