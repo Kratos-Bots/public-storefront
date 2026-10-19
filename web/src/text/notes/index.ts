@@ -12,6 +12,7 @@ import order from '@/text/notes/order.ts';
 import payment from '@/text/notes/payment.ts';
 import product from '@/text/notes/product.ts';
 import faq from '@/text/notes/faq.ts';
+import support from '@/text/notes/support.ts';
 import reviews from '@/text/notes/reviews.ts';
 import shell from '@/text/notes/shell.ts';
 import templates from '@/text/notes/templates.ts';
@@ -26,7 +27,7 @@ import wholesale from '@/text/notes/wholesale.ts';
  * (en / max / fixed). Import this ONLY from `builder/editor/**` — a registry test enforces it.
  */
 const byArea: Record<string, Readonly<Record<string, string>>> = {
-  account, auth, boot, cart, catalog, checkout, closed, common, errors, faq, notices, order, payment, product, reviews, shell,
+  account, auth, boot, cart, catalog, checkout, closed, common, errors, faq, support, notices, order, payment, product, reviews, shell,
   templates, tracking, verify, webapp, wholesale,
 };
 

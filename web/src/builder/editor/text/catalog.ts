@@ -44,6 +44,7 @@ export const AREA_TITLES: Record<string, string> = {
   tracking: 'Tracking',
   reviews: 'Reviews',
   faq: 'FAQ',
+  support: 'Support',
   verify: 'Product check',
   wholesale: 'Wholesale',
   webapp: 'Telegram buttons',
