@@ -106,15 +106,22 @@ describe('useTicket and the tickets list', () => {
 
   it('reading a ticket (which the server marks read) clears its unread dot in the cached list, and only its own', async () => {
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    qc.setQueryData<List>([...SUPPORT_TICKETS_KEY, 'list'], {
-      pages: [{ data: [summary(3, true), summary(4, true)], meta: {} }], pageParams: [1],
-    });
+    const LIST = [...SUPPORT_TICKETS_KEY, 'list'];
+    qc.setQueryData<List>(LIST, { pages: [{ data: [summary(3, true), summary(4, true)], meta: {} }], pageParams: [1] }, { updatedAt: 1000 });
     const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
     renderHook(() => useTicket(3), { wrapper });
     await waitFor(() => {
-      const rows = qc.getQueryData<List>([...SUPPORT_TICKETS_KEY, 'list'])!.pages[0]!.data;
+      const rows = qc.getQueryData<List>(LIST)!.pages[0]!.data;
       expect(rows.map((r) => [r.id, r.unread])).toEqual([[3, false], [4, true]]);
     });
+    // Clearing a dot is not news from the server: the list keeps its own age, so going back to it still refetches.
+    expect(qc.getQueryState(LIST)!.dataUpdatedAt).toBe(1000);
+    // Later polls of the ticket leave the list alone entirely.
+    const data = qc.getQueryData(LIST);
+    await poll(qc);
+    await poll(qc);
+    expect(qc.getQueryData(LIST)).toBe(data);
+    expect(qc.getQueryState(LIST)!.dataUpdatedAt).toBe(1000);
   });
 });
 

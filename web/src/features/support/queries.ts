@@ -98,14 +98,19 @@ export function useTicket(id: number | undefined) {
     ),
   });
   // Every read of a ticket marks it read on the server: clear its dot in the cached list too (no request), so going
-  // back to the list never shows a stale "unread" until the list's own poll.
+  // back to the list never shows a stale "unread" until the list's own poll. Written only when the dot is there, and
+  // under the list's own timestamp: any write would otherwise make the list look freshly fetched, and going back to
+  // it (or refocusing the tab) would no longer refetch it.
   const { dataUpdatedAt } = query;
   useEffect(() => {
     if (id === undefined || !dataUpdatedAt) return;
-    qc.setQueryData<TicketList>(LIST_KEY, (list) => {
-      if (!list?.pages.some((p) => p.data.some((t) => t.id === id && t.unread))) return list;
-      return { ...list, pages: list.pages.map((p) => ({ ...p, data: p.data.map((t) => (t.id === id ? { ...t, unread: false } : t)) })) };
-    });
+    const list = qc.getQueryData<TicketList>(LIST_KEY);
+    if (!list?.pages.some((p) => p.data.some((t) => t.id === id && t.unread))) return;
+    qc.setQueryData<TicketList>(
+      LIST_KEY,
+      { ...list, pages: list.pages.map((p) => ({ ...p, data: p.data.map((t) => (t.id === id ? { ...t, unread: false } : t)) })) },
+      { updatedAt: qc.getQueryState(LIST_KEY)?.dataUpdatedAt },
+    );
   }, [id, dataUpdatedAt, qc]);
   return query;
 }
