@@ -1,6 +1,6 @@
 import { useEffect, useState, type CSSProperties } from 'react';
-import { attachmentSrc } from '@/api/support.ts';
 import type { ThreadMessage } from '@/features/support/queries.ts';
+import { stableAttachmentSrc } from '@/features/support/stable-src.ts';
 import { formatDateTime } from '@/lib/format.ts';
 import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/support/MessageBubble.module.css';
@@ -63,7 +63,7 @@ export function MessageBubble({ message, showAuthor, canRetry, onRetry, onOpenPh
   const drafts = useDraftPhotos(message.local?.draft.files);
   const photos: BubblePhoto[] = message.local
     ? drafts
-    : message.attachments.map((a) => ({ key: String(a.id), src: attachmentSrc(a), width: a.width, height: a.height }));
+    : message.attachments.map((a) => ({ key: String(a.id), src: stableAttachmentSrc(a), width: a.width, height: a.height }));
   const state = message.local?.state;
   const body = message.body.trim();
 

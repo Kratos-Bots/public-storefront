@@ -63,7 +63,7 @@ async function setup(page: Page, template: string, preset: string, layout: Layou
   const themed = await presetTheme(page, template, preset);
   await installMocks(page, {
     layout, session: true,
-    tweakSettings: (s) => { themed(s); (s as unknown as { support: { enabled: boolean } }).support = { enabled: true }; },
+    tweakSettings: (s) => { themed(s); s.support = { enabled: true }; },
   });
   await page.route('**/api/storefront/support/attachments/**', (route) => {
     const id = Number(new URL(route.request().url()).pathname.split('/').pop());
@@ -100,3 +100,26 @@ for (const t of TEMPLATES) {
     }
   }
 }
+
+// A revisit inside the app (chunk loaded, ticket cached) still opens at the newest message, not where the router's
+// scroll reset leaves the page.
+test('a revisit through the tickets list opens at the newest message', async ({ page }) => {
+  await setup(page, 'modern', 'default', 'storefront', 390, OPEN);
+  const summary = {
+    id: 7, subject: OPEN.subject, status: OPEN.status, order: { reference: 'K4M2QP' }, unread: false, createdAt: OPEN.createdAt,
+    lastMessage: { preview: 'It is moving again: due tomorrow.', fromSupport: true, at: '2026-08-23T08:05:00Z' },
+  };
+  await page.route('**/api/storefront/support/tickets?**', (route) => route.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify({ success: true, data: [summary], error: null, meta: { page: 1, limit: 20, totalItems: 1, totalPages: 1, hasNextPage: false, hasPrevPage: false } }),
+  }));
+  await page.goto('/support/tickets/7');
+  await expect(page.getByRole('textbox', { name: 'Message' })).toBeInViewport();
+  for (let i = 0; i < 2; i++) {
+    await page.getByRole('link', { name: 'Back to support' }).click();
+    await page.getByRole('link', { name: /Where is my parcel/ }).click();
+    await expect(page.getByRole('log')).toContainText('due tomorrow');
+    await expect(page.getByRole('textbox', { name: 'Message' })).toBeInViewport();
+    await expect(page.getByText('It is moving again: due tomorrow.')).toBeInViewport();
+  }
+});
