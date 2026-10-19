@@ -53,8 +53,6 @@ const EXPIRED: CustomerTicketDetail = {
   timeline: [...OPEN.timeline, { type: 'closed', at: '2026-08-23T09:00:00Z' }],
 };
 
-const PHOTO_SVG = (id: number) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"><rect width="400" height="400" fill="hsl(${id * 47} 30% 62%)"/><circle cx="200" cy="200" r="90" fill="hsl(${id * 47} 30% 80%)"/></svg>`;
-
 async function setup(page: Page, template: string, preset: string, layout: Layout, width: number, ticket: CustomerTicketDetail) {
   await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
   await page.clock.setFixedTime(FIXED_NOW);
@@ -62,15 +60,9 @@ async function setup(page: Page, template: string, preset: string, layout: Layou
   if (layout === 'webapp') await installTelegramStub(page);
   const themed = await presetTheme(page, template, preset);
   await installMocks(page, {
-    layout, session: true,
-    tweakSettings: (s) => { themed(s); s.support = { enabled: true }; },
+    layout, session: true, support: { tickets: [ticket] },
+    tweakSettings: themed,
   });
-  await page.route('**/api/storefront/support/attachments/**', (route) => {
-    const id = Number(new URL(route.request().url()).pathname.split('/').pop());
-    return route.fulfill({ status: 200, contentType: 'image/svg+xml', body: PHOTO_SVG(id) });
-  });
-  await page.route('**/api/storefront/support/tickets/7', (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, data: ticket, error: null }) }));
 }
 
 async function expectNoOverflow(page: Page): Promise<void> {
@@ -105,14 +97,6 @@ for (const t of TEMPLATES) {
 // scroll reset leaves the page.
 test('a revisit through the tickets list opens at the newest message', async ({ page }) => {
   await setup(page, 'modern', 'default', 'storefront', 390, OPEN);
-  const summary = {
-    id: 7, subject: OPEN.subject, status: OPEN.status, order: { reference: 'K4M2QP' }, unread: false, createdAt: OPEN.createdAt,
-    lastMessage: { preview: 'It is moving again: due tomorrow.', fromSupport: true, at: '2026-08-23T08:05:00Z' },
-  };
-  await page.route('**/api/storefront/support/tickets?**', (route) => route.fulfill({
-    status: 200, contentType: 'application/json',
-    body: JSON.stringify({ success: true, data: [summary], error: null, meta: { page: 1, limit: 20, totalItems: 1, totalPages: 1, hasNextPage: false, hasPrevPage: false } }),
-  }));
   await page.goto('/support/tickets/7');
   await expect(page.getByRole('textbox', { name: 'Message' })).toBeInViewport();
   for (let i = 0; i < 2; i++) {
