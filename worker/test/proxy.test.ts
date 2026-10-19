@@ -387,3 +387,39 @@ describe('warehouse choice (?warehouse=<id>)', () => {
     expect(signedIn.headers.get('X-SF-Cache')).toBe('BYPASS');
   });
 });
+
+// Support photos are signed links (`?exp=&sig=`), stable within an hour, and the backend answers them
+// `private, max-age=3600` so the browser can keep each one for the hour its link is good for. The Worker must
+// pass that through (not force `no-store`) and must still never put one in the shared edge cache.
+describe('support photo links', () => {
+  const path = 'storefront/support/attachments/12';
+  const search = '?exp=1788004800&sig=0123456789abcdef0123456789abcdef';
+
+  it('keeps the backend cache header on an anonymous GET and caches nothing at the edge', async () => {
+    const fetchSpy = stubFetch((url) => {
+      expect(url).toBe(`https://backend.test/api/v1/public/${path}${search}`);
+      return new Response('webp', { status: 200, headers: { 'content-type': 'image/webp', 'cache-control': 'private, max-age=3600' } });
+    });
+    const ctx = createExecutionContext();
+    const a = await worker.fetch(new Request(`https://shop.test/api/${path}${search}`), env, ctx);
+    await waitOnExecutionContext(ctx);
+    expect(a.headers.get('cache-control')).toBe('private, max-age=3600');
+    expect(a.headers.get('X-SF-Cache')).toBe('BYPASS');
+    const b = await worker.fetch(new Request(`https://shop.test/api/${path}${search}`), env, createExecutionContext());
+    expect(b.headers.get('X-SF-Cache')).toBe('BYPASS');
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('is no-store when the backend sends no cache header, and for anything that is not a plain photo read', async () => {
+    stubFetch(() => new Response('x', { status: 200, headers: { 'cache-control': 'private, max-age=3600' } }));
+    const authed = await worker.fetch(
+      new Request(`https://shop.test/api/${path}${search}`, { headers: { Authorization: 'Bearer tok' } }), env, createExecutionContext(),
+    );
+    expect(authed.headers.get('cache-control')).toBe('no-store');
+    const ticket = await worker.fetch(new Request('https://shop.test/api/storefront/support/tickets/12'), env, createExecutionContext());
+    expect(ticket.headers.get('cache-control')).toBe('no-store');
+    stubFetch(() => new Response('x', { status: 200 }));
+    const bare = await worker.fetch(new Request(`https://shop.test/api/${path}${search}`), env, createExecutionContext());
+    expect(bare.headers.get('cache-control')).toBe('no-store');
+  });
+});

@@ -14,6 +14,8 @@ const CACHE_RULES: Array<[RegExp, number]> = [
   [/^catalog$/, 60],
   [/^catalog\/products\/\d+$/, 60],
 ];
+/** A support ticket photo, read through its signed link. */
+const SUPPORT_ATTACHMENT = /^storefront\/support\/attachments\/\d+$/;
 // Exact-match strips; any inbound `x-forwarded-*` (host, port, for, proto,
 // ...) is additionally wildcard-stripped below alongside `cf-*`, since the
 // proxy sets its own X-Forwarded-For/X-Forwarded-Proto and a client-supplied
@@ -93,7 +95,11 @@ export async function proxyApi(request: Request, env: Env, ctx: ExecutionContext
   const headers = new Headers(upstream.headers);
   headers.delete('set-cookie');
   headers.set('X-SF-Cache', cacheable ? 'MISS' : 'BYPASS');
-  headers.set('cache-control', cacheable ? `public, max-age=${ttl}` : 'no-store');
+  // A support photo link is signed (`?exp=&sig=`) and stable for the hour; the backend's own header
+  // (`private, max-age=3600`) lets the browser keep it that long. Never edge-cached: no CACHE_RULES entry matches it.
+  const keepUpstreamCache = request.method === 'GET' && !request.headers.has('authorization')
+    && SUPPORT_ATTACHMENT.test(rest) && upstream.headers.has('cache-control');
+  if (!keepUpstreamCache) headers.set('cache-control', cacheable ? `public, max-age=${ttl}` : 'no-store');
   const response = new Response(upstream.body, { status: upstream.status, headers });
   if (cacheable) ctx.waitUntil(cache.put(cacheKey, response.clone()));
   return response;
