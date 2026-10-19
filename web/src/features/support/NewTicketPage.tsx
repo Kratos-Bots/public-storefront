@@ -60,7 +60,7 @@ function NewTicketForm({ wanted }: { wanted: string | null }) {
   const orders = useOrders();
   const rows = orders.data?.pages.flatMap((p) => p.data) ?? [];
   const create = useCreateTicket();
-  const { photos, invalid, add, remove } = usePhotos();
+  const { photos, problem, add, remove } = usePhotos();
   const resetFile = useRef<() => void>(null);
 
   const [chosenMode, setMode] = useState<Mode | null>(null);
@@ -175,7 +175,7 @@ function NewTicketForm({ wanted }: { wanted: string | null }) {
         ) : null}
         <div className={classes.attach}>
           <FileButton
-            onChange={(files) => { add(files); resetFile.current?.(); }}
+            onChange={(files) => { void add(files); resetFile.current?.(); }}
             accept={PHOTO_TYPES.join(',')}
             multiple
             resetRef={resetFile}
@@ -188,7 +188,11 @@ function NewTicketForm({ wanted }: { wanted: string | null }) {
           </FileButton>
           <span className={classes.hint}>{t('support.new.photoLimit', { max: MAX_PHOTOS })}</span>
         </div>
-        {invalid ? <p className={classes.error} role="alert">{t('support.photo.invalid')}</p> : null}
+        {problem ? (
+          <p className={classes.error} role="alert">
+            {problem === 'tooMany' ? t('support.photo.tooMany', { max: MAX_PHOTOS }) : t('support.photo.invalid')}
+          </p>
+        ) : null}
       </div>
 
       {create.isError ? <p className={classes.error} role="alert">{errorMessage(create.error)}</p> : null}

@@ -44,7 +44,7 @@ export interface ComposerProps {
 export function Composer({ initialBody = '', onSend, onFocus, onUnsent }: ComposerProps) {
   const { t } = useText();
   const [body, setBody] = useState(() => initialBody.slice(0, MAX_BODY));
-  const { photos, invalid, add, remove, clear } = usePhotos();
+  const { photos, problem, add, remove, clear } = usePhotos();
   const resetFile = useRef<() => void>(null);
   const latest = useRef({ body, onUnsent });
   latest.current = { body, onUnsent };
@@ -87,11 +87,16 @@ export function Composer({ initialBody = '', onSend, onFocus, onUnsent }: Compos
           ))}
         </ul>
       ) : null}
-      {invalid ? <p className={classes.error} role="alert">{t('support.photo.invalid')}</p> : null}
+      {photos.length > 0 && !problem ? <p className={classes.hint}>{t('support.new.photoLimit', { max: MAX_PHOTOS })}</p> : null}
+      {problem ? (
+        <p className={classes.error} role="alert">
+          {problem === 'tooMany' ? t('support.photo.tooMany', { max: MAX_PHOTOS }) : t('support.photo.invalid')}
+        </p>
+      ) : null}
 
       <div className={classes.row}>
         <FileButton
-          onChange={(files) => { add(files); resetFile.current?.(); }}
+          onChange={(files) => { void add(files); resetFile.current?.(); }}
           accept={PHOTO_TYPES.join(',')}
           multiple
           resetRef={resetFile}

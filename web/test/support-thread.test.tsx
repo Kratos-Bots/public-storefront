@@ -224,4 +224,18 @@ describe('the ticket conversation', () => {
     await new Promise((r) => setTimeout(r, 50));
     expect(scrollTo).not.toHaveBeenCalled();
   });
+
+  it('the reply box says how many photos a reply can carry once one is attached, and refuses a fifth in those words', async () => {
+    api.fetchTicket.mockResolvedValue(ticket());
+    vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: vi.fn(() => 'blob:p'), revokeObjectURL: vi.fn() }));
+    mount();
+    await screen.findByRole('log');
+    expect(screen.queryByText('Up to 4 photos')).toBeNull();
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const png = (n: number) => new File(['x'], `${n}.png`, { type: 'image/png' });
+    fireEvent.change(input, { target: { files: [png(1)] } });
+    expect(await screen.findByText('Up to 4 photos')).toBeInTheDocument();
+    fireEvent.change(input, { target: { files: [png(2), png(3), png(4), png(5)] } });
+    expect(await screen.findByText('You can add up to 4 photos.')).toBeInTheDocument();
+  });
 });

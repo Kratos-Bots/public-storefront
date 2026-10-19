@@ -55,6 +55,7 @@ export default defineTextArea('support', {
 
   // ── photos and entry points ───────────────────────────────────────────────
   'photo.invalid': { en: 'Photos must be JPEG, PNG, WebP or GIF, up to 5 MB.', max: 120 },
+  'photo.tooMany': { en: 'You can add up to {max} photos.', max: 80 },
   'account.nav': { en: 'Support', max: 30 },
   'order.getHelp': { en: 'Get help with this order', max: 60 },
 });

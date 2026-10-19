@@ -101,17 +101,26 @@ describe('the new ticket page', () => {
     expect(screen.getByLabelText('Subject')).toHaveValue('Order A1042');
   });
 
-  it('5th photo is refused with the photo copy', async () => {
+  it('a 5th photo is refused with its own message: how many a message can carry', async () => {
     mount();
     await screen.findByRole('radio', { name: /A1042/ });
     pick([photo('1.jpg'), photo('2.png', 'image/png'), photo('3.webp', 'image/webp'), photo('4.gif', 'image/gif'), photo('5.jpg')]);
-    expect(await screen.findByText('Photos must be JPEG, PNG, WebP or GIF, up to 5 MB.')).toBeInTheDocument();
+    expect(await screen.findByText('You can add up to 4 photos.')).toBeInTheDocument();
+    expect(screen.queryByText('Photos must be JPEG, PNG, WebP or GIF, up to 5 MB.')).toBeNull();
     expect(screen.getAllByRole('button', { name: 'Remove photo' })).toHaveLength(4);
 
     // Removing a photo frees its preview.
     fireEvent.click(screen.getAllByRole('button', { name: 'Remove photo' })[0]!);
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:photo-1');
     expect(screen.getAllByRole('button', { name: 'Remove photo' })).toHaveLength(3);
+  });
+
+  it('a wrong file among too many is named for what is wrong with it', async () => {
+    mount();
+    await screen.findByRole('radio', { name: /A1042/ });
+    pick([photo('1.jpg'), photo('2.jpg'), photo('3.jpg'), photo('4.jpg'), photo('5.jpg'), photo('doc.pdf', 'application/pdf')]);
+    expect(await screen.findByText('Photos must be JPEG, PNG, WebP or GIF, up to 5 MB.')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Remove photo' })).toHaveLength(4);
   });
 
   it('refuses a file that is too large or not an image', async () => {
@@ -131,6 +140,8 @@ describe('the new ticket page', () => {
     expect(send).toBeDisabled();
     fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'Tracking has not moved since Monday.' } });
     pick([photo('parcel.jpg')]);
+    // A pick is prepared (brought down to size) before it is shown.
+    await screen.findByRole('button', { name: 'Remove photo' });
     expect(send).toBeEnabled();
     fireEvent.click(send);
     expect(await screen.findByTestId('where')).toHaveTextContent('/support/tickets/77');

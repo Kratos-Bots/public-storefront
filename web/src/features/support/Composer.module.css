@@ -97,6 +97,13 @@
   inset: -0.6rem;
 }
 
+.hint {
+  margin: 0;
+  font-size: calc(0.8125rem * var(--sf-text-scale, 1));
+  line-height: 1.4;
+  color: var(--sf-faint);
+}
+
 .error {
   margin: 0;
   font-size: calc(0.8125rem * var(--sf-text-scale, 1));
