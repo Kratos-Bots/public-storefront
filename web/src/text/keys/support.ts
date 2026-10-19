@@ -50,6 +50,7 @@ export default defineTextArea('support', {
   'thread.options': { en: 'Ticket options', max: 40 },
   'thread.openPhoto': { en: 'Open photo', max: 40 },
   'thread.closePhoto': { en: 'Close photo', max: 40 },
+  'thread.photo': { en: 'Photo', max: 40 },
   'thread.notFound': { en: "This ticket can't be found.", max: 80 },
 
   // ── photos and entry points ───────────────────────────────────────────────

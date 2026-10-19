@@ -79,9 +79,13 @@ export function useTicket(id: number | undefined) {
     enabled: id !== undefined,
     refetchInterval: () => (tabVisible() ? 15_000 : false),
     select: useCallback(
-      (d: CustomerTicketDetail): ThreadDetail => (locals.length
-        ? { ...d, status: 'needs_reply', messages: [...d.messages, ...locals] }
-        : d),
+      (d: CustomerTicketDetail): ThreadDetail => {
+        if (!locals.length) return d;
+        // A reply on its way will (re)open the ticket, so it already reads as waiting on the shop; one that failed
+        // changed nothing on the server, so the ticket keeps its own status.
+        const sending = locals.some((m) => m.local?.state === 'sending');
+        return { ...d, ...(sending ? { status: 'needs_reply' as const } : {}), messages: [...d.messages, ...locals] };
+      },
       [locals],
     ),
   });
@@ -159,12 +163,10 @@ export function useSendMessage(id: number) {
     },
     onError: (err, _vars, ctx) => {
       if (!ctx) return;
-      // Closed past its reopen window: the message can never go, so it leaves, and the refetched ticket (no longer
-      // masked as `needs_reply` by a local message) says the thread is over.
-      if (err instanceof ApiError && err.isTicketClosed) {
-        setLocal(id, (l) => l.filter((m) => m.id !== ctx.tempId));
-        void qc.invalidateQueries({ queryKey: key });
-      } else mark(ctx.tempId, 'failed');
+      mark(ctx.tempId, 'failed');
+      // Closed past its reopen window: the message stays on screen (failed, with no way to retry once the refetched
+      // ticket says it can no longer take replies), so its text can go into a new ticket.
+      if (err instanceof ApiError && err.isTicketClosed) void qc.invalidateQueries({ queryKey: key });
     },
     onSettled: () => { void qc.invalidateQueries({ queryKey: LIST_KEY }); },
   });

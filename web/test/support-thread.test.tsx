@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { MantineProvider } from '@mantine/core';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ApiError } from '@/lib/errors.ts';
@@ -42,14 +42,21 @@ const ticket = (over: Partial<CustomerTicketDetail> = {}): CustomerTicketDetail 
   ...over,
 });
 
-const mount = () => {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+/** Stands in for the new-ticket page: shows the text a conversation handed over. */
+function NewTicketStandIn() {
+  const state = useLocation().state as { body?: string } | null;
+  return <p data-testid="carried">{state?.body ?? ''}</p>;
+}
+
+const newClient = () => new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+const mount = (qc = newClient()) => {
   return render(
     <MantineProvider env="test">
       <QueryClientProvider client={qc}>
         <MemoryRouter initialEntries={['/support/tickets/7']}>
           <Routes>
             <Route path="/support/tickets/:id" element={<TicketPage />} />
+            <Route path="/support/new" element={<NewTicketStandIn />} />
           </Routes>
         </MemoryRouter>
       </QueryClientProvider>
@@ -126,20 +133,63 @@ describe('the ticket conversation', () => {
     expect(screen.queryByRole('link', { name: 'Open a new ticket' })).toBeNull();
   });
 
-  it('a reply refused as TICKET_CLOSED swaps the composer for a new ticket', async () => {
+  it('a reply refused as TICKET_CLOSED swaps the composer for a new ticket, keeping what was written', async () => {
     api.fetchTicket.mockResolvedValueOnce(ticket({ status: 'closed', canReply: true }));
     api.fetchTicket.mockResolvedValue(ticket({ status: 'closed', canReply: false }));
     api.postMessage.mockRejectedValue(new ApiError(409, 'TICKET_CLOSED'));
     mount();
     await screen.findByText('This ticket is closed. Replying reopens it.');
 
-    write('Hello?');
+    write('Hello? The parcel never came.');
     send();
-    expect(await screen.findByRole('link', { name: 'Open a new ticket' })).toBeInTheDocument();
+    const link = await screen.findByRole('link', { name: 'Open a new ticket' });
     expect(screen.getByText('This ticket is closed.')).toBeInTheDocument();
     expect(screen.queryByRole('textbox', { name: 'Message' })).toBeNull();
-    // The message could never go: it is not left behind as a retry.
+    // The refused text stays on screen, with no retry that could only fail again…
+    expect(screen.getByRole('log')).toHaveTextContent('Hello? The parcel never came.');
     expect(screen.queryByRole('button', { name: "Couldn't send. Tap to retry." })).toBeNull();
+    // …and goes with the customer into the new ticket.
+    fireEvent.click(link);
+    expect(await screen.findByTestId('carried')).toHaveTextContent('Hello? The parcel never came.');
+  });
+
+  it('a draft in the box when the ticket stops taking replies is carried to the new ticket', async () => {
+    const qc = newClient();
+    api.fetchTicket.mockResolvedValueOnce(ticket({ status: 'closed', canReply: true }));
+    mount(qc);
+    await screen.findByText('This ticket is closed. Replying reopens it.');
+    write('Half-written question');
+
+    // The next poll finds the reopen window over.
+    api.fetchTicket.mockResolvedValue(ticket({ status: 'closed', canReply: false }));
+    await qc.invalidateQueries();
+    fireEvent.click(await screen.findByRole('link', { name: 'Open a new ticket' }));
+    expect(await screen.findByTestId('carried')).toHaveTextContent('Half-written question');
+  });
+
+  it('a failed send on a closed ticket leaves it reading as closed', async () => {
+    api.fetchTicket.mockResolvedValue(ticket({ status: 'closed', canReply: true }));
+    api.postMessage.mockRejectedValue(new ApiError(500, 'boom'));
+    mount();
+    await screen.findByText('This ticket is closed. Replying reopens it.');
+    write('Still there?');
+    send();
+    await screen.findByRole('button', { name: "Couldn't send. Tap to retry." });
+    expect(screen.getByText('This ticket is closed. Replying reopens it.')).toBeInTheDocument();
+    expect(screen.getByText('Closed')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Ticket options' })).toBeNull();
+  });
+
+  it('a photo opens full size in a named dialog that Escape closes', async () => {
+    api.fetchTicket.mockResolvedValue(ticket({
+      messages: [MINE, { ...SUPPORT, attachments: [{ id: 5, url: 'public/storefront/support/attachments/5?exp=1&sig=a', width: 800, height: 600 }] }],
+    }));
+    mount();
+    fireEvent.click(await screen.findByRole('button', { name: 'Open photo' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Photo' });
+    expect(dialog.querySelector('img')).toHaveAttribute('src', '/api/storefront/support/attachments/5?exp=1&sig=a');
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 
   it('an unknown ticket is a friendly not-found with the way back', async () => {

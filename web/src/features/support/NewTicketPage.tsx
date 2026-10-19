@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Button, CloseButton, FileButton, SegmentedControl, Textarea, TextInput } from '@mantine/core';
-import { Link, useNavigate, useSearchParams } from 'react-router';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router';
 import { useSettings } from '@/app/settings.ts';
 import { Money } from '@/components/Money.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
@@ -68,7 +68,9 @@ function NewTicketForm({ wanted }: { wanted: string | null }) {
   const mode: Mode = chosenMode ?? (wanted || orders.isPending || rows.length > 0 ? 'order' : 'other');
   const [selected, setSelected] = useState<string | null>(wanted);
   const [typedSubject, setSubject] = useState<string | null>(null);
-  const [body, setBody] = useState('');
+  // Text carried over from a conversation that could no longer take it (see TicketPage).
+  const carried = (useLocation().state as { body?: unknown } | null)?.body;
+  const [body, setBody] = useState(() => (typeof carried === 'string' ? carried.slice(0, MAX_BODY) : ''));
 
   const orderRef = mode === 'order' ? selected : null;
   // The subject follows the chosen order until the customer writes their own.

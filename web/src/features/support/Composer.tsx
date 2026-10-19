@@ -1,4 +1,4 @@
-import { useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { ActionIcon, CloseButton, FileButton, Textarea } from '@mantine/core';
 import { MAX_PHOTOS, PHOTO_TYPES, usePhotos } from '@/features/support/photos.ts';
 import { useText } from '@/text/runtime.tsx';
@@ -30,6 +30,8 @@ export interface ComposerProps {
   onSend: (body: string, files: File[]) => void;
   /** The textarea took focus: the page brings the newest message back into view above it. */
   onFocus?: () => void;
+  /** The box is going away (the ticket stopped taking replies) with this unsent text in it, so it can be carried on. */
+  onUnsent?: (body: string) => void;
 }
 
 /**
@@ -37,11 +39,17 @@ export interface ComposerProps {
  * (it shows there as sending) and clears the box for the next one. Enter sends on a desktop keyboard (Shift+Enter for
  * a new line); on a phone Enter is a new line and the arrow sends.
  */
-export function Composer({ onSend, onFocus }: ComposerProps) {
+export function Composer({ onSend, onFocus, onUnsent }: ComposerProps) {
   const { t } = useText();
   const [body, setBody] = useState('');
   const { photos, invalid, add, remove, clear } = usePhotos();
   const resetFile = useRef<() => void>(null);
+  const latest = useRef({ body, onUnsent });
+  latest.current = { body, onUnsent };
+  useEffect(() => () => {
+    const left = latest.current.body.trim();
+    if (left) latest.current.onUnsent?.(left);
+  }, []);
 
   const text = body.trim();
   const ready = text.length <= MAX_BODY && (text.length > 0 || photos.length > 0);

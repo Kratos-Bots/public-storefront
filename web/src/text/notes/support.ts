@@ -41,6 +41,7 @@ export default {
   'thread.options': 'Screen-reader name of the menu button in a ticket\'s header (it holds Close ticket)',
   'thread.openPhoto': 'Screen-reader name of a photo in a ticket conversation; opens it full size',
   'thread.closePhoto': 'Screen-reader name of the button that closes a full-size photo',
+  'thread.photo': 'Screen-reader name of the full-size photo view in a ticket conversation',
   'thread.notFound': 'Shown when a ticket link points at a ticket that does not exist or is not the customer\'s',
   'photo.invalid': 'Message shown when a chosen photo is the wrong type or too large',
   'account.nav': 'Name of the Support entry in the account area',

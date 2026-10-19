@@ -2,7 +2,6 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import { ActionIcon, Button, Menu } from '@mantine/core';
 import { Link, useParams } from 'react-router';
 import { useSettings } from '@/app/settings.ts';
-import type { TicketTimelineEvent } from '@/api/support.ts';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { StatusPill } from '@/features/account/StatusPill.tsx';
 import { orderStatusLabel } from '@/features/order-status/status.ts';
@@ -10,6 +9,7 @@ import { Composer } from '@/features/support/Composer.tsx';
 import { MessageBubble } from '@/features/support/MessageBubble.tsx';
 import { PhotoLightbox } from '@/features/support/PhotoLightbox.tsx';
 import { useCloseTicket, useSendMessage, useTicket, type ThreadDetail, type ThreadMessage } from '@/features/support/queries.ts';
+import { threadItems, type ThreadItem } from '@/features/support/thread-items.ts';
 import { TICKET_STATUS } from '@/features/support/status.ts';
 import { useKeyboardInset } from '@/features/support/useKeyboardInset.ts';
 import { ApiError, errorMessage } from '@/lib/errors.ts';
@@ -26,26 +26,6 @@ const EVENT_LABEL = {
 
 /** Within this many px of the newest message counts as "reading the end": new messages then scroll into view. */
 const NEAR_END = 96;
-
-type Item =
-  | { kind: 'event'; key: string; event: TicketTimelineEvent }
-  | { kind: 'message'; key: string; message: ThreadMessage };
-
-/**
- * Messages and the ticket's opened/closed/reopened lines in one order of time. At the same instant the opening line
- * comes first and a closing or reopening line last; messages still on their way always end the thread.
- */
-function threadItems(detail: ThreadDetail): Item[] {
-  const rank = (i: Item) => (i.kind === 'message' ? 0 : i.event.type === 'opened' ? -1 : 1);
-  const at = (i: Item) => Date.parse(i.kind === 'message' ? i.message.createdAt : i.event.at) || 0;
-  const settled: Item[] = [
-    ...detail.timeline.map((event, n) => ({ kind: 'event' as const, key: `e${n}-${event.type}`, event })),
-    ...detail.messages.filter((m) => !m.local).map((message) => ({ kind: 'message' as const, key: `m${message.id}`, message })),
-  ];
-  settled.sort((a, b) => at(a) - at(b) || rank(a) - rank(b));
-  const pending = detail.messages.filter((m) => m.local).map((message) => ({ kind: 'message' as const, key: `m${message.id}`, message }));
-  return [...settled, ...pending];
-}
 
 function BackIcon() {
   return (
@@ -84,6 +64,7 @@ function Conversation({ id, detail }: { id: number; detail: ThreadDetail }) {
   const keyboard = useKeyboardInset();
   const [photo, setPhoto] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState(false);
+  const [unsent, setUnsent] = useState('');
 
   const page = useRef<HTMLDivElement>(null);
   const atEnd = useRef(true);
@@ -92,7 +73,7 @@ function Conversation({ id, detail }: { id: number; detail: ThreadDetail }) {
   keyboardRef.current = keyboard;
 
   const items = useMemo(() => threadItems(detail), [detail]);
-  const lastMessage = [...items].reverse().find((i): i is Extract<Item, { kind: 'message' }> => i.kind === 'message')?.message;
+  const lastMessage = [...items].reverse().find((i): i is Extract<ThreadItem, { kind: 'message' }> => i.kind === 'message')?.message;
   const status = TICKET_STATUS[detail.status];
   const order = detail.order;
 
@@ -158,6 +139,12 @@ function Conversation({ id, detail }: { id: number; detail: ThreadDetail }) {
   };
 
   const closed = detail.status === 'closed';
+  // Whatever the customer wrote and could not send here (replies refused, a draft left in the box when the ticket
+  // stopped taking replies) goes with them to the new ticket's message.
+  const carried = [...detail.messages.filter((m) => m.local?.state === 'failed').map((m) => m.local!.draft.body), unsent]
+    .map((b) => b.trim())
+    .filter(Boolean)
+    .join('\n\n');
   const newTicketTo = order ? `/support/new?order=${encodeURIComponent(order.reference)}` : '/support/new';
   const style = { '--sf-kb': `${keyboard}px` } as CSSProperties;
 
@@ -229,13 +216,13 @@ function Conversation({ id, detail }: { id: number; detail: ThreadDetail }) {
         {detail.canReply ? (
           <>
             {closed ? <p className={classes.note}>{t('support.thread.closedNote')}</p> : null}
-            <Composer onSend={onSend} onFocus={() => scrollToEnd(true)} />
+            <Composer onSend={onSend} onFocus={() => scrollToEnd(true)} onUnsent={setUnsent} />
           </>
         ) : (
           <div className={classes.expired}>
             <p className={classes.expiredText}>{t('support.thread.expired')}</p>
             {support?.enabled !== false ? (
-              <Button component={Link} to={newTicketTo} size="md" className={classes.newTicket}>
+              <Button component={Link} to={newTicketTo} state={carried ? { body: carried } : undefined} size="md" className={classes.newTicket}>
                 {t('support.thread.newTicket')}
               </Button>
             ) : null}
