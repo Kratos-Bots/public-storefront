@@ -214,7 +214,8 @@ export function NewTicketPage() {
   const existing = useTicketForOrder(enabled ? wanted : null);
   // Only an answer fetched for this visit counts: a remembered id may be a ticket closed since.
   const fresh = existing.isFetchedAfterMount || existing.isError;
-  const existingId = fresh ? existing.data ?? null : null;
+  // A failed check answers nothing: `data` may still hold an id cached before it.
+  const existingId = fresh && !existing.isError ? existing.data ?? null : null;
   useEffect(() => {
     if (existingId !== null) void navigate(`/support/tickets/${existingId}`, { replace: true });
   }, [existingId, navigate]);
