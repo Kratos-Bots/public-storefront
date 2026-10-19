@@ -1,5 +1,5 @@
-/* One column, set like the reviews page: a heading and a line, then the shop's own contact routes. Tokens only, so every
-   template restyles it. */
+/* One column, set like the reviews page: a heading and a line, the one action, the customer's tickets as docket rows
+   (the orders list's idiom), then the shop's own contact routes. Tokens only, so every template restyles it. */
 .page {
   max-width: 40rem;
   margin-inline: auto;
@@ -30,6 +30,150 @@
   font-size: calc(0.9375rem * var(--sf-text-scale, 1));
   line-height: 1.5;
   color: var(--sf-muted);
+}
+
+/* The page's one primary action: New ticket, or Sign in. Capped so it never stretches across a desktop column. */
+.action {
+  max-width: 22rem;
+  padding-bottom: 1.5rem;
+}
+
+.note {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--sf-line);
+  border-radius: var(--sf-card-radius);
+  background: var(--sf-surface);
+  font-size: calc(0.875rem * var(--sf-text-scale, 1));
+  line-height: 1.45;
+  color: var(--sf-muted);
+}
+
+.tickets {
+  padding-bottom: 1.75rem;
+}
+
+.heading {
+  margin: 0 0 0.25rem;
+  font-family: var(--sf-font-heading);
+  font-size: calc(1.0625rem * var(--sf-text-scale, 1));
+  font-weight: var(--sf-heading-weight, 700);
+  letter-spacing: var(--sf-heading-tracking, -0.01em);
+  color: var(--sf-text);
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--sf-line);
+}
+
+/* A ticket is one docket row: subject and status on top, then what it is about and when, then the last line said. */
+.ticket {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'subject status'
+    'about   when'
+    'preview preview';
+  align-items: baseline;
+  gap: 0.15rem 1rem;
+  padding: 0.85rem 0.4rem;
+  border-bottom: 1px solid var(--sf-line);
+  border-radius: var(--sf-card-radius);
+  color: var(--sf-text);
+  text-decoration: none;
+  transition: background-color 120ms ease;
+}
+
+.ticket:hover {
+  background: var(--sf-surface);
+}
+
+.ticket:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: -2px;
+}
+
+.subject {
+  grid-area: subject;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  font-size: calc(0.9375rem * var(--sf-text-scale, 1));
+  font-weight: 600;
+}
+
+.subjectText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Something from the shop the customer has not read yet. */
+.dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--sf-primary);
+}
+
+.status {
+  grid-area: status;
+  justify-self: end;
+}
+
+.about {
+  grid-area: about;
+  font-family: var(--sf-font-mono);
+  font-size: calc(0.75rem * var(--sf-text-scale, 1));
+  color: var(--sf-muted);
+}
+
+.when {
+  grid-area: when;
+  justify-self: end;
+  font-size: calc(0.75rem * var(--sf-text-scale, 1));
+  font-variant-numeric: tabular-nums;
+  color: var(--sf-faint);
+  white-space: nowrap;
+}
+
+.preview {
+  grid-area: preview;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: calc(0.8125rem * var(--sf-text-scale, 1));
+  color: var(--sf-muted);
+}
+
+/* A closed ticket stays findable but steps back. */
+.ticketClosed .subject {
+  font-weight: 500;
+  color: var(--sf-muted);
+}
+
+.empty {
+  margin: 0;
+  padding: 1rem 0.4rem;
+  border-top: 1px solid var(--sf-line);
+  font-size: calc(0.9375rem * var(--sf-text-scale, 1));
+  color: var(--sf-muted);
+}
+
+.placeholder {
+  height: 4.5rem;
+  border-top: 1px solid var(--sf-line);
+}
+
+.more {
+  margin-top: 0.5rem;
 }
 
 .contact {
@@ -69,4 +213,10 @@
 .link:focus-visible {
   outline: 2px solid var(--sf-primary);
   outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticket {
+    transition: none;
+  }
 }

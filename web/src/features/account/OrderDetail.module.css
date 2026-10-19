@@ -119,6 +119,11 @@
   color: var(--sf-block-fg, var(--sf-muted));
 }
 
+/* The way to ask about this order: quiet, under the heading's lines. */
+.help {
+  padding-top: 0.6rem;
+}
+
 /* ---------------------------------------------------------------------- cards */
 
 .card {

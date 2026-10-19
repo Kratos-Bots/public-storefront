@@ -6,6 +6,8 @@ import {
   type CustomerMessage, type CustomerTicketDetail, type NewMessageInput, type NewTicketInput,
 } from '@/api/support.ts';
 import { useText } from '@/text/runtime.tsx';
+import { selectIsLoggedIn, useSessionStore } from '@/stores/session.ts';
+import { useSettings } from '@/app/settings.ts';
 
 export const SUPPORT_TICKETS_KEY = ['support-tickets'] as const;
 export const ticketKey = (id: number) => [...SUPPORT_TICKETS_KEY, id] as const;
@@ -32,6 +34,11 @@ export const useLocalMessages = create<LocalState>((set) => ({
   byTicket: {},
   set: (id, fn) => set((s) => ({ byTicket: { ...s.byTicket, [id]: fn(s.byTicket[id] ?? []) } })),
 }));
+// Unsent messages belong to the account that wrote them: any way the session ends (sign-out, a 401, a failed Telegram
+// sign-in) or changes hands takes them out of this browser.
+useSessionStore.subscribe((s, prev) => {
+  if (s.token !== prev.token) useLocalMessages.setState({ byTicket: {} });
+});
 const NONE: ThreadMessage[] = [];
 
 export function useTickets(enabled = true) {
@@ -44,6 +51,19 @@ export function useTickets(enabled = true) {
     refetchInterval: 60_000,
     enabled,
   });
+}
+
+/**
+ * Whether the customer's way into support (the account's Support tab) is shown: always while the shop takes new
+ * tickets, otherwise only for a signed-in customer who already has one, so a switched-off shop can still be answered.
+ */
+export function useSupportReachable(): boolean {
+  const { support } = useSettings();
+  const enabled = support?.enabled === true;
+  const loggedIn = useSessionStore(selectIsLoggedIn);
+  // An older backend has no `support` field and no tickets route: ask nothing of it.
+  const tickets = useTickets(loggedIn && support?.enabled === false);
+  return enabled || (tickets.data?.pages[0]?.data.length ?? 0) > 0;
 }
 
 const tabVisible = () => typeof document === 'undefined' || document.visibilityState === 'visible';

@@ -178,6 +178,9 @@ describe('route table', () => {
       '/verify': { feature: 'verify' },
       '/tracking': { feature: 'tracking' },
       '/tracking/:reference': { feature: 'tracking' },
+      // Shell pages, not page-builder documents: a ticket is the signed-in customer's own.
+      '/support/new': { session: true },
+      '/support/tickets/:id': { session: true },
     });
   });
 });

@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { Link, useParams } from 'react-router';
+import { useSettings } from '@/app/settings.ts';
 import { EmptyState } from '@/components/EmptyState.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { Money } from '@/components/Money.tsx';
@@ -94,6 +95,8 @@ function BackLinkView({ styleAttrs }: PartViewProps) {
 function HeadingView({ styleAttrs }: PartViewProps) {
   const { t } = useText();
   const { order: data } = OrderFamily.useData();
+  // Only while the shop takes new tickets: the button opens one.
+  const supportOn = useSettings().support?.enabled === true;
   // A closed order says so in words, and whether any money moved: the status pill alone does not.
   const moved = data.payments.some((p) => p.status === 'completed' || p.status === 'refunded');
   const closedNote =
@@ -111,6 +114,13 @@ function HeadingView({ styleAttrs }: PartViewProps) {
       <p className={classes.meta}>{t('account.order.placed', { date: formatDate(data.createdAt) })}</p>
       {data.servicePoint ? <p className={classes.meta}>{t('account.order.collectFrom', { name: data.servicePoint.name })}</p> : null}
       {closedNote ? <p className={classes.meta}>{closedNote}</p> : null}
+      {supportOn ? (
+        <div className={classes.help}>
+          <Button component={Link} to={`/support/new?order=${encodeURIComponent(data.reference)}`} variant="default" size="sm">
+            {t('support.order.getHelp')}
+          </Button>
+        </div>
+      ) : null}
     </header>
   );
 }
