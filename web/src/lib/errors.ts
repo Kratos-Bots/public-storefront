@@ -23,6 +23,8 @@ export class ApiError extends Error {
   get isRegistrationClosed(): boolean { return this.status === 403 && this.message === 'REGISTRATION_CLOSED'; }
   /** `409 TICKET_CLOSED`: a reply to a support ticket closed for longer than the reopen window. */
   get isTicketClosed(): boolean { return this.status === 409 && this.message === 'TICKET_CLOSED'; }
+  /** `403 SUPPORT_DISABLED`: the shop stopped taking new support tickets (existing ones stay open). */
+  get isSupportDisabled(): boolean { return this.status === 403 && this.message === 'SUPPORT_DISABLED'; }
 }
 /** Resolved at call time (playbook rule 8), so the mounted provider's wording applies and nothing freezes at import. */
 export function errorMessage(err: unknown, fallback?: string): string {
@@ -32,6 +34,7 @@ export function errorMessage(err: unknown, fallback?: string): string {
     if (err.isLoginRequired) return t('errors.loginRequired');
     if (err.isAccessDenied) return t('errors.accessDenied');
     if (err.isRegistrationClosed) return t('errors.registrationClosed');
+    if (err.isSupportDisabled) return t('support.new.disabled');
     if (err.status === 429) return t('errors.rateLimited');
     if (err.status === 502) return t('errors.unavailable');
     return err.message || fb;

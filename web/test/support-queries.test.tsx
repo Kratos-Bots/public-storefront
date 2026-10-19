@@ -3,10 +3,17 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
-const h = vi.hoisted(() => ({ post: vi.fn(), get: vi.fn() }));
-vi.mock('@/api/support.ts', async (orig) => ({ ...(await orig<typeof import('@/api/support.ts')>()), postMessage: h.post, fetchTicket: h.get }));
+const h = vi.hoisted(() => ({ post: vi.fn(), get: vi.fn(), create: vi.fn() }));
+vi.mock('@/api/support.ts', async (orig) => ({
+  ...(await orig<typeof import('@/api/support.ts')>()), postMessage: h.post, fetchTicket: h.get, createTicket: h.create,
+}));
 
-import { useLocalMessages, useSendMessage, useTicket } from '@/features/support/queries.ts';
+import type { InfiniteData } from '@tanstack/react-query';
+import type { CustomerTicketSummary } from '@/api/support.ts';
+import { ApiError } from '@/lib/errors.ts';
+import { SETTINGS_KEY, queryClient } from '@/lib/query-client.ts';
+import { useSessionStore } from '@/stores/session.ts';
+import { SUPPORT_TICKETS_KEY, useCreateTicket, useLocalMessages, useSendMessage, useTicket } from '@/features/support/queries.ts';
 
 const base = {
   id: 3, subject: 'Hi', status: 'waiting_on_customer', order: null, messages: [] as unknown[], timeline: [],
@@ -63,5 +70,62 @@ describe('useSendMessage', () => {
     h.get.mockResolvedValue({ ...base, messages: [row(41)] });
     act(() => { result.current.send.mutate({ ...failed.local!.draft, tempId: failed.id }); });
     await waitFor(() => expect(msgs(result).map((m) => m.id)).toEqual([41]));
+  });
+});
+
+describe('useCreateTicket', () => {
+  it("a 403 SUPPORT_DISABLED refetches the settings, so the form gives way to the shop's not-accepting copy", async () => {
+    h.create.mockRejectedValueOnce(new ApiError(403, 'SUPPORT_DISABLED'));
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    qc.setQueryData(SETTINGS_KEY, { support: { enabled: true } });
+    const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
+    const { result } = renderHook(() => useCreateTicket(), { wrapper });
+    act(() => { result.current.mutate({ subject: 's', body: 'b', files: [] }); });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(qc.getQueryState(SETTINGS_KEY)?.isInvalidated).toBe(true);
+  });
+
+  it('any other failure leaves the settings alone', async () => {
+    h.create.mockRejectedValueOnce(new ApiError(429, 'Too many requests'));
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    qc.setQueryData(SETTINGS_KEY, { support: { enabled: true } });
+    const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
+    const { result } = renderHook(() => useCreateTicket(), { wrapper });
+    act(() => { result.current.mutate({ subject: 's', body: 'b', files: [] }); });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(qc.getQueryState(SETTINGS_KEY)?.isInvalidated).toBe(false);
+  });
+});
+
+describe('useTicket and the tickets list', () => {
+  const summary = (id: number, unread: boolean): CustomerTicketSummary => ({
+    id, subject: 's', status: 'waiting_on_customer', order: null, unread, createdAt: 'now',
+    lastMessage: { preview: 'p', fromSupport: true, at: 'now' },
+  });
+  type List = InfiniteData<{ data: CustomerTicketSummary[]; meta: unknown }, number>;
+
+  it('reading a ticket (which the server marks read) clears its unread dot in the cached list, and only its own', async () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    qc.setQueryData<List>([...SUPPORT_TICKETS_KEY, 'list'], {
+      pages: [{ data: [summary(3, true), summary(4, true)], meta: {} }], pageParams: [1],
+    });
+    const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
+    renderHook(() => useTicket(3), { wrapper });
+    await waitFor(() => {
+      const rows = qc.getQueryData<List>([...SUPPORT_TICKETS_KEY, 'list'])!.pages[0]!.data;
+      expect(rows.map((r) => [r.id, r.unread])).toEqual([[3, false], [4, true]]);
+    });
+  });
+});
+
+describe('the session changing hands', () => {
+  it('drops every cached ticket, the list and the by-order answers included', () => {
+    useSessionStore.setState({ token: 'a' });
+    queryClient.setQueryData([...SUPPORT_TICKETS_KEY, 3], { ...base });
+    queryClient.setQueryData([...SUPPORT_TICKETS_KEY, 'list'], { pages: [], pageParams: [] });
+    queryClient.setQueryData([...SUPPORT_TICKETS_KEY, 'by-order', 'REF'], 3);
+    useSessionStore.setState({ token: 'b' });
+    expect(queryClient.getQueriesData({ queryKey: SUPPORT_TICKETS_KEY })).toEqual([]);
+    useSessionStore.setState({ token: null });
   });
 });

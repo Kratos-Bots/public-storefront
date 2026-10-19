@@ -1,11 +1,13 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { create } from 'zustand';
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query';
 import {
   closeTicket, createTicket, fetchTicket, fetchTicketForOrder, fetchTickets, postMessage,
-  type CustomerMessage, type CustomerTicketDetail, type NewMessageInput, type NewTicketInput,
+  type CustomerMessage, type CustomerTicketDetail, type CustomerTicketSummary, type NewMessageInput, type NewTicketInput,
 } from '@/api/support.ts';
 import { ApiError } from '@/lib/errors.ts';
+import { SETTINGS_KEY, queryClient } from '@/lib/query-client.ts';
+import type { PageMeta } from '@/types/orders.ts';
 import { useText } from '@/text/runtime.tsx';
 import { selectIsLoggedIn, useSessionStore } from '@/stores/session.ts';
 import { useSettings } from '@/app/settings.ts';
@@ -37,9 +39,12 @@ export const useLocalMessages = create<LocalState>((set) => ({
   set: (id, fn) => set((s) => ({ byTicket: { ...s.byTicket, [id]: fn(s.byTicket[id] ?? []) } })),
 }));
 // Unsent messages belong to the account that wrote them: any way the session ends (sign-out, a 401, a failed Telegram
-// sign-in) or changes hands takes them out of this browser.
+// sign-in) or changes hands takes them out of this browser, and so do the cached tickets (the list, every thread and
+// the by-order answers all sit under SUPPORT_TICKETS_KEY), so the next account never sees the last one's.
 useSessionStore.subscribe((s, prev) => {
-  if (s.token !== prev.token) useLocalMessages.setState({ byTicket: {} });
+  if (s.token === prev.token) return;
+  useLocalMessages.setState({ byTicket: {} });
+  queryClient.removeQueries({ queryKey: SUPPORT_TICKETS_KEY });
 });
 const NONE: ThreadMessage[] = [];
 
@@ -68,12 +73,15 @@ export function useSupportReachable(): boolean {
   return enabled || (tickets.data?.pages[0]?.data.length ?? 0) > 0;
 }
 
+type TicketList = InfiniteData<{ data: CustomerTicketSummary[]; meta: PageMeta }, number>;
+
 const tabVisible = () => typeof document === 'undefined' || document.visibilityState === 'visible';
 
 /** Polls while the tab is in front, so a reply from the shop lands without a refresh. Local messages are merged in at read time. */
 export function useTicket(id: number | undefined) {
+  const qc = useQueryClient();
   const locals = useLocalMessages((s) => (id === undefined ? NONE : s.byTicket[id] ?? NONE));
-  return useQuery<CustomerTicketDetail, Error, ThreadDetail>({
+  const query = useQuery<CustomerTicketDetail, Error, ThreadDetail>({
     queryKey: ticketKey(id ?? 0),
     queryFn: () => fetchTicket(id as number),
     enabled: id !== undefined,
@@ -89,6 +97,17 @@ export function useTicket(id: number | undefined) {
       [locals],
     ),
   });
+  // Every read of a ticket marks it read on the server: clear its dot in the cached list too (no request), so going
+  // back to the list never shows a stale "unread" until the list's own poll.
+  const { dataUpdatedAt } = query;
+  useEffect(() => {
+    if (id === undefined || !dataUpdatedAt) return;
+    qc.setQueryData<TicketList>(LIST_KEY, (list) => {
+      if (!list?.pages.some((p) => p.data.some((t) => t.id === id && t.unread))) return list;
+      return { ...list, pages: list.pages.map((p) => ({ ...p, data: p.data.map((t) => (t.id === id ? { ...t, unread: false } : t)) })) };
+    });
+  }, [id, dataUpdatedAt, qc]);
+  return query;
 }
 
 /**
@@ -117,6 +136,10 @@ export function useCreateTicket() {
       qc.setQueryData(ticketKey(ticket.id), ticket);
       void qc.invalidateQueries({ queryKey: LIST_KEY });
       qc.removeQueries({ queryKey: BY_ORDER_KEY });
+    },
+    // The shop stopped taking new tickets while the form was open: fresh settings swap the form for that news.
+    onError: (err) => {
+      if (err instanceof ApiError && err.isSupportDisabled) void qc.invalidateQueries({ queryKey: SETTINGS_KEY });
     },
   });
 }
