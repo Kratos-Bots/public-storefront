@@ -31,6 +31,10 @@ interface TgWebApp {
   isVersionAtLeast(version: string): boolean;
   ready(): void;
   expand(): void;
+  /** Bot API 8.0+: the Mini App takes the whole screen (phones; Desktop would cover the monitor). */
+  requestFullscreen?(): void;
+  isFullscreen?: boolean;
+  platform?: string;
   close(): void;
   setHeaderColor(color: string): void;
   setBackgroundColor(color: string): void;
