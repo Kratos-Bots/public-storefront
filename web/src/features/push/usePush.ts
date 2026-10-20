@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSettingsQuery } from '@/app/settings.ts';
 import { selectIsLoggedIn, useSessionStore } from '@/stores/session.ts';
 import { isTelegramWebApp } from '@/lib/telegram-webapp.ts';
-import { fetchPushDevices } from '@/features/push/api.ts';
+import { deletePushDevice, fetchPushDevices } from '@/features/push/api.ts';
 import { currentEndpoint, subscribeThisDevice, unsubscribeThisDevice } from '@/features/push/client.ts';
 import { pushAvailability, readBrowserPushEnv, type PushAvailability } from '@/features/push/support.ts';
 
@@ -45,18 +45,20 @@ export function usePush() {
 
   /** Call from a tap handler: the permission prompt needs the user gesture. */
   const enable = useCallback(async () => {
-    if (!settingsPush) return;
+    // Telegram, signed out, iOS-not-installed, denied: never reach the permission prompt or the service worker.
+    if (availability !== 'ready' || !settingsPush) return;
     try { await subscribeThisDevice(settingsPush.publicKey); } finally { await refresh(); }
-  }, [settingsPush, refresh]);
+  }, [availability, settingsPush, refresh]);
 
   const disable = useCallback(async () => {
     try { await unsubscribeThisDevice(); } finally { await refresh(); }
   }, [refresh]);
 
-  /** The backend deletes only by endpoint and only this browser knows its own, so only the current device can be removed from here. */
+  /** The current device goes through the browser (unsubscribe + DELETE by endpoint); any other is deleted by id. */
   const removeDevice = useCallback(async (id: number) => {
-    if (devices.data?.find((d) => d.id === id)?.current) await disable();
-  }, [devices.data, disable]);
+    if (devices.data?.find((d) => d.id === id)?.current) { await disable(); return; }
+    try { await deletePushDevice(id); } finally { await refresh(); }
+  }, [devices.data, disable, refresh]);
 
   return { availability, subscribed: endpoint !== null, devices: devices.data ?? [], enable, disable, removeDevice };
 }

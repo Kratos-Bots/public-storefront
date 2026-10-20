@@ -13,3 +13,8 @@ export const deleteSubscription = async (endpoint: string): Promise<void> => {
 
 export const fetchPushDevices = (endpoint: string | null) =>
   unwrap<{ devices: PushDevice[] }>(api.get('storefront/push/subscriptions', endpoint ? { searchParams: { endpoint } } : undefined));
+
+/** Owner-scoped; 204 whether or not the device exists. */
+export const deletePushDevice = async (id: number): Promise<void> => {
+  await api.delete('storefront/push/subscriptions/' + id);
+};
