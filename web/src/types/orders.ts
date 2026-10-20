@@ -1,7 +1,7 @@
 import type { OrderReviewState } from '@/types/reviews.ts';
 import type { CancelBlockedBy, ShippingAddress } from '@/types/public-order.ts';
 
-/** `currency` is the order's own; the list endpoints do not send it yet, so read a missing one as the shop currency. */
+/** `currency` is the order's own. An older backend omits it; read a missing one as the shop currency. */
 export interface OrderSummary { reference: string; status: string; createdAt: string; totalAmount: number; outstandingBalance: number; currency?: string }
 export interface OrderShipment { status: string; carrier: string | null; trackingNumber: string | null; trackingUrl: string | null; trackingStatusDescription: string | null; shippedAt: string | null; deliveredAt: string | null }
 export interface OrderDetail {
