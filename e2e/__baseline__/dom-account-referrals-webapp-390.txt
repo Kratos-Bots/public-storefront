@@ -170,7 +170,7 @@ title: Northbound Supply
 </a>
 </li>
 <li class="_cell_H">
-<a class="_item_H" data-sf-nav="support" href="/support" data-discover="true">
+<a class="_item_H" data-sf-nav="help" href="/help" data-discover="true">
 <span class="_icon_H">
 <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
 <circle cx="12" cy="12" r="8.6">
@@ -181,7 +181,7 @@ title: Northbound Supply
 </path>
 </svg>
 </span>
-<span class="_label_H">Support</span>
+<span class="_label_H">Help</span>
 </a>
 </li>
 </ul>

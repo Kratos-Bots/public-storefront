@@ -53,7 +53,7 @@ const rect = (page: Page, selector: string) => page.evaluate((sel) => {
 }, selector);
 
 test.describe('where the bar shows', () => {
-  for (const path of ['/', '/p/101', '/cart', '/account/profile', '/reviews', '/support', '/faq']) {
+  for (const path of ['/', '/p/101', '/cart', '/account/profile', '/reviews', '/help', '/support', '/faq']) {
     test(`390x844: on ${path}`, async ({ page }) => {
       await setup(page, { session: true, cart: path === '/cart' });
       await page.goto(path);
@@ -98,7 +98,7 @@ test.describe('where the bar shows', () => {
     await setup(page, { tweak: (s) => { s.features.accounts = false; s.features.ordering = false; } , noReviews: true });
     await page.goto('/');
     await expect(navOf(page)).toBeVisible();
-    expect(await navOf(page).getByRole('link').allTextContents()).toEqual(['Catalog', 'FAQ']);
+    expect(await navOf(page).getByRole('link').allTextContents()).toEqual(['Catalog', 'Help']);
   });
 
   test('marks the current page, and the cart count follows the cart', async ({ page }) => {
@@ -231,18 +231,18 @@ test.describe('what stacks on the bar', () => {
   });
 });
 
-test.describe('the support page', () => {
+test.describe('the Help page', () => {
   for (const layout of ['storefront', 'menu', 'webapp'] as const) {
     test(`${layout}: opens from the bar, shows the heading and the coming-soon line`, async ({ page }) => {
-      // A shop with no FAQ keeps Support in the bar (with one, FAQ takes its place and Support lives in the header menu).
+      // A shop with no FAQ (and no tickets) shows the shell copy on the Help page.
       await setup(page, { layout, faq: { available: false } });
       await page.goto('/');
       await expect(navOf(page)).toBeVisible();
-      await navOf(page).getByRole('link', { name: 'Support' }).click();
-      await expect(page).toHaveURL(/\/support$/);
+      await navOf(page).getByRole('link', { name: 'Help' }).click();
+      await expect(page).toHaveURL(/\/help$/);
       await expect(page.getByRole('heading', { level: 1, name: 'Support' })).toBeVisible();
       await expect(page.getByText(/coming soon/i)).toBeVisible();
-      await expect(navOf(page).locator('[aria-current="page"]')).toHaveText('Support');
+      await expect(navOf(page).locator('[aria-current="page"]')).toHaveText('Help');
     });
   }
 });

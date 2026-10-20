@@ -126,7 +126,7 @@ for (const c of CASES) {
       test(`dom · ${c.name} · ${layout} · ${width}`, async ({ page }) => {
         await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
         await page.clock.setFixedTime(FIXED_NOW);
-        // A shop with no FAQ: the phone bottom bar keeps Support, which is what these captured baselines hold.
+        // A shop with no FAQ: the Help page is the shell copy, which is what these captured baselines hold.
         await installMocks(page, { ...c.mocks, layout, session: c.session, tweakSettings: c.tweak, faq: { available: false } });
         await page.goto(c.path);
         await c.drive?.(page);
