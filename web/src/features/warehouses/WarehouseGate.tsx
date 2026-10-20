@@ -1,9 +1,11 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
-import { useLocation } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import { useSettings } from '@/app/settings.ts';
 import { isBuilderMode } from '@/app/builder-gate.ts';
 import { Brand } from '@/components/Brand.tsx';
+import { HelpIcon } from '@/components/icons.tsx';
 import { PageSkeleton } from '@/components/PageSkeleton.tsx';
+import { useFaqAvailable } from '@/features/faq/use-faq-available.ts';
 import { useText } from '@/text/runtime.tsx';
 import { promptDecision } from '@/features/warehouses/prompt.ts';
 import { useWarehouseStore, warehouseEnabled } from '@/features/warehouses/store.ts';
@@ -47,6 +49,10 @@ function Chooser({ list, stored, onPick }: { list: Warehouse[]; stored: number |
   const { t } = useText();
   const heading = useRef<HTMLHeadingElement>(null);
   const uid = useId();
+  const { supportLinks, brand, support } = useSettings();
+  const faq = useFaqAvailable();
+  // The Help page has something for the shopper: tickets, an FAQ, or a way to reach the shop.
+  const canHelp = support?.enabled === true || faq || supportLinks.length > 0 || Boolean(brand.links.whatsapp || brand.links.telegram);
   useEffect(() => {
     heading.current?.focus({ preventScroll: true });
   }, []);
@@ -99,6 +105,14 @@ function Chooser({ list, stored, onPick }: { list: Warehouse[]; stored: number |
             );
           })}
         </ul>
+        {canHelp ? (
+          <p className={classes.help}>
+            <Link to="/help" className={classes.helpLink}>
+              <HelpIcon size={18} />
+              {t('shell.warehouse.prompt.help')}
+            </Link>
+          </p>
+        ) : null}
       </div>
     </main>
   );

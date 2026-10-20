@@ -16,7 +16,7 @@ const EU: Warehouse = { id: 2, name: 'Test EU', country: 'DE', isDefault: false 
 const LIST = [MAIN, EU];
 const MARKER = 'sf-warehouse-visit-v1';
 
-function settings(features: Record<string, unknown> = {}): StorefrontSettings {
+function settings(features: Record<string, unknown> = {}, extra: Record<string, unknown> = {}): StorefrontSettings {
   return {
     enabled: true,
     brand: {
@@ -25,6 +25,8 @@ function settings(features: Record<string, unknown> = {}): StorefrontSettings {
     },
     features: { warehouseSelect: true, warehousePrompt: true, ...features },
     access: { storefront: 'public' },
+    supportLinks: [],
+    ...extra,
   } as unknown as StorefrontSettings;
 }
 
@@ -32,8 +34,8 @@ function setStore(over: Partial<ReturnType<typeof useWarehouseStore.getState>['c
   useWarehouseStore.setState({ warehouseId: stored, ctx: { enabled: true, list: LIST, failed: false, carried: null, ...over } });
 }
 
-function mount(at = '/', features?: Record<string, unknown>) {
-  queryClient.setQueryData(SETTINGS_KEY, settings(features));
+function mount(at = '/', features?: Record<string, unknown>, extra?: Record<string, unknown>) {
+  queryClient.setQueryData(SETTINGS_KEY, settings(features, extra));
   return render(
     <QueryClientProvider client={queryClient}>
       <MantineProvider env="test">
@@ -55,6 +57,37 @@ beforeEach(() => {
   queryClient.clear();
 });
 afterEach(() => cleanup());
+
+describe('WarehouseGate Need help link', () => {
+  const link = () => screen.queryByRole('link', { name: 'Need help?' });
+
+  it.each([
+    ['support tickets are on', { support: { enabled: true } }],
+    ['the shop has an FAQ', { faq: { available: true } }],
+    ['the shop has a support link', { supportLinks: [{ label: 'Help centre', url: 'https://help.example.invalid/' }] }],
+    ['the shop has a WhatsApp chat', { brand: { ...settings().brand, links: { whatsapp: 'https://wa.me/447700900000', telegram: null } } }],
+    ['the shop has a Telegram chat', { brand: { ...settings().brand, links: { whatsapp: null, telegram: 'https://t.me/shop_example' } } }],
+  ])('links to /help below the list when %s', (_name, extra) => {
+    setStore();
+    mount('/', undefined, extra);
+    expect(link()).not.toBeNull();
+    expect(link()!.getAttribute('href')).toBe('/help');
+  });
+
+  it('is not there when Help has nothing to offer', () => {
+    setStore();
+    mount('/', undefined, { support: { enabled: false } });
+    expect(link()).toBeNull();
+  });
+
+  it('is not a warehouse choice: following it does not pick one', () => {
+    setStore();
+    mount('/', undefined, { support: { enabled: true } });
+    fireEvent.click(link()!);
+    expect(useWarehouseStore.getState().warehouseId).toBeNull();
+    expect(sessionStorage.getItem(MARKER)).toBeNull();
+  });
+});
 
 describe('WarehouseGate', () => {
   it('asks first: a heading and one button per warehouse, and no catalogue behind it', () => {
