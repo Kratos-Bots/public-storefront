@@ -30,6 +30,8 @@ export interface Quote {
   /** `grandTotal` is already net of these; `coupon.discountAmount` stays the coupon's own amount. */
   promotionDiscount?: number; promotions?: QuotePromotion[]; nudge?: import('./cart.ts').Nudge | null;
   contactModes: import('./settings.ts').ContactModes;
+  /** The currency every figure in this quote is in (the selected warehouse's). Absent on an older backend - read as the shop currency. */
+  currency?: string;
 }
 export interface QuoteInput { /** The shopper's chosen warehouse; the API layer adds it, and only when a non-default one is chosen. */ warehouseId?: number; country?: string; couponCode?: string; shippingOptionId?: number; useStoreCredit?: boolean; deliveryMethod?: 'home' | 'collection'; servicePointCarrier?: string }
 export interface ShippingAddressInput {

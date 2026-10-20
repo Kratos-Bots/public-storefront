@@ -33,6 +33,7 @@ function PaperclipIcon() {
 /** One order the ticket can be about: reference, when, how much, and where it stands. A radio, tapped anywhere. */
 function OrderOption({ order, checked, onPick }: { order: Pick<OrderSummary, 'reference'> & Partial<OrderSummary>; checked: boolean; onPick: () => void }) {
   const { t } = useText();
+  const shopCurrency = useSettings().currency;
   return (
     <li role="none">
       <button type="button" role="radio" aria-checked={checked} className={classes.order} onClick={onPick}>
@@ -46,7 +47,7 @@ function OrderOption({ order, checked, onPick }: { order: Pick<OrderSummary, 're
         {order.createdAt ? (
           <span className={classes.meta}>
             {formatDate(order.createdAt)}
-            {order.totalAmount !== undefined ? <> &middot; <Money amount={order.totalAmount} /></> : null}
+            {order.totalAmount !== undefined ? <> &middot; <Money amount={order.totalAmount} currency={order.currency || shopCurrency} /></> : null}
           </span>
         ) : null}
       </button>

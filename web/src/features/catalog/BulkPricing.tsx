@@ -1,4 +1,4 @@
-import { useSettings } from '@/app/settings.ts';
+import { useCurrency } from '@/features/warehouses/use-currency.ts';
 import { formatMoney } from '@/lib/format.ts';
 import { useText } from '@/text/runtime.tsx';
 import type { PricingTier } from '@/types/catalog.ts';
@@ -15,7 +15,7 @@ export interface BulkPricingProps {
  * comparing a column of unit prices, and the saving is the column they came for.
  */
 export function BulkPricing({ tiers, price }: BulkPricingProps) {
-  const { currency } = useSettings();
+  const currency = useCurrency();
   const { t } = useText();
   if (tiers.length === 0) return null;
 

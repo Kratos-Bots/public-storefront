@@ -46,3 +46,18 @@ describe('chargedInFromPayment', () => {
     expect(chargedInFromPayment(null)).toBeNull();
   });
 });
+
+describe('chargedIn against the order or quote currency', () => {
+  it('chargedIn is null when charge currency equals the order currency', () => {
+    expect(chargedIn({ chargeCurrency: 'GBP', settlementTotal: 50 }, 'GBP')).toBeNull();
+    expect(chargedInFor({ chargeCurrency: 'GBP', settlementTotal: 50 }, null, 'gbp')).toBeNull();
+    // A EUR warehouse whose partner charges GBP in a GBP shop is a real charge line once compared to the EUR quote.
+    expect(chargedIn({ chargeCurrency: 'GBP', settlementTotal: 50 }, 'EUR')).toEqual({ amount: 50, currency: 'GBP' });
+  });
+  it('chargedInFromPayment is null when the settlement currency equals the order currency', () => {
+    const pay = { settlementAmount: 50, settlementCurrency: 'EUR' };
+    expect(chargedInFromPayment(pay, 'EUR')).toBeNull();
+    expect(chargedInFromPayment(pay, 'GBP')).toEqual({ amount: 50, currency: 'EUR' });
+    expect(chargedInFromPayment(pay)).toEqual({ amount: 50, currency: 'EUR' });
+  });
+});

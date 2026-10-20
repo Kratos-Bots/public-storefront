@@ -3,6 +3,7 @@ import { Button } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import { Link, useParams } from 'react-router';
 import { useSettings } from '@/app/settings.ts';
+import { useCurrency } from '@/features/warehouses/use-currency.ts';
 import { useCatalog, useProduct } from '@/features/catalog/use-catalog.ts';
 import { ProductImage } from '@/features/catalog/ProductImage.tsx';
 import { StockChip } from '@/features/catalog/StockChip.tsx';
@@ -55,7 +56,7 @@ function PageTitle({ styleAttrs }: PartViewProps) {
 
 function PagePrice({ styleAttrs }: PartViewProps) {
   const { product } = ProductFamily.useData();
-  const { currency } = useSettings();
+  const currency = useCurrency();
   return <p className={classes.price} data-sf-part="price" {...styleAttrs}>{formatMoney(product.price, currency)}</p>;
 }
 

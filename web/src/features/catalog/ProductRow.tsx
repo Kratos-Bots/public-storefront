@@ -1,4 +1,5 @@
 import { useSettings } from '@/app/settings.ts';
+import { useCurrency } from '@/features/warehouses/use-currency.ts';
 import { useCartStore } from '@/stores/cart.ts';
 import { useWarehouseOrdering } from '@/features/warehouses/use-warehouse.ts';
 import { addToCart, setCartQuantity } from '@/features/cart/useServerCart.ts';
@@ -72,7 +73,7 @@ function RowName({ styleAttrs }: PartViewProps) {
 
 function RowMeta({ styleAttrs }: PartViewProps) {
   const { product } = CardRowFamily.useData();
-  const { currency } = useSettings();
+  const currency = useCurrency();
   const { showSku } = useCoreOptions();
   const { t } = useText();
   // When the price slot already says "Out of stock", the meta line does not repeat it.
@@ -102,7 +103,7 @@ function RowMeta({ styleAttrs }: PartViewProps) {
 
 /** The price itself: in its own column, or (ordering paused) inside the Add slot. */
 function PriceText({ product, styleAttrs }: { product: Product; styleAttrs?: PartViewProps['styleAttrs'] }) {
-  const { currency } = useSettings();
+  const currency = useCurrency();
   const outInPrice = useOutOfStockInPriceSlot(product);
   return (
     <p className={outInPrice ? `${classes.price} ${classes.priceOut}` : classes.price} data-sf-part="price" {...styleAttrs}>

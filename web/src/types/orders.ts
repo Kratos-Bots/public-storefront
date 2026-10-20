@@ -1,10 +1,13 @@
 import type { OrderReviewState } from '@/types/reviews.ts';
 import type { CancelBlockedBy, ShippingAddress } from '@/types/public-order.ts';
 
-export interface OrderSummary { reference: string; status: string; createdAt: string; totalAmount: number; outstandingBalance: number }
+/** `currency` is the order's own; the list endpoints do not send it yet, so read a missing one as the shop currency. */
+export interface OrderSummary { reference: string; status: string; createdAt: string; totalAmount: number; outstandingBalance: number; currency?: string }
 export interface OrderShipment { status: string; carrier: string | null; trackingNumber: string | null; trackingUrl: string | null; trackingStatusDescription: string | null; shippedAt: string | null; deliveredAt: string | null }
 export interface OrderDetail {
   reference: string; status: string; createdAt: string;
+  /** The currency every amount on this order is in (the one it was placed in). Absent on an older backend - read as the shop currency. */
+  currency?: string;
   servicePoint?: { name: string; carrier: string } | null;
   items: Array<{ name: string; quantity: number; unitPrice: number; lineTotal: number; promotionDiscount?: number }>;
   /** `discountAmount` INCLUDES `promotionDiscount`; the coupon/other part is the difference. */
@@ -20,7 +23,7 @@ export interface OrderDetail {
 
 /** An order the customer can still pay, as `GET storefront/orders/unpaid` returns it. */
 export interface UnpaidOrder {
-  reference: string; createdAt: string; totalAmount: number; outstandingBalance: number;
+  reference: string; createdAt: string; totalAmount: number; outstandingBalance: number; currency?: string;
   payBy: string | null; canCancel: boolean; cancelBlockedBy: CancelBlockedBy | null;
 }
 export interface PageMeta { page: number; limit: number; totalItems: number; totalPages: number; hasNextPage: boolean; hasPrevPage: boolean }

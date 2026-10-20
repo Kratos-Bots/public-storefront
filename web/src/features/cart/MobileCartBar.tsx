@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router';
 import { useMediaQuery } from '@mantine/hooks';
 import { useSettings } from '@/app/settings.ts';
+import { useCurrency } from '@/features/warehouses/use-currency.ts';
 import { useSessionStore, selectIsLoggedIn } from '@/stores/session.ts';
 import { useCartStore, selectCount, selectSubtotal } from '@/stores/cart.ts';
 import { useWarehouseOrdering } from '@/features/warehouses/use-warehouse.ts';
@@ -72,7 +73,8 @@ export type CartBarInset = 'page' | 'webapp' | 'telegram';
  */
 export function CartBar({ inset = 'page' }: { inset?: CartBarInset }) {
   const { t, tp } = useText();
-  const { currency, features } = useSettings();
+  const { features } = useSettings();
+  const currency = useCurrency();
   const loggedIn = useSessionStore(selectIsLoggedIn);
   const count = useCartStore(selectCount);
   const subtotal = useCartStore((s) => selectSubtotal(s.lines));

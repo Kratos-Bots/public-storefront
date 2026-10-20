@@ -83,6 +83,7 @@ function ClassicBotSwitch({ rootAttrs }: { rootAttrs?: PartViewProps['styleAttrs
 function DetailsView() {
   const { t } = useText();
   const { profile: data } = ProfileFamily.useData();
+  const shopCurrency = useSettings().currency;
   return (
     <>
       <div className={classes.sectionHead}>
@@ -104,7 +105,7 @@ function DetailsView() {
       <div className={classes.row}>
         <span className={classes.rowLabel}>{t('account.profile.totalSpend')}</span>
         <span className={classes.rowFigure}>
-          <Money amount={data.totalSpend} />
+          <Money amount={data.totalSpend} currency={shopCurrency} />
         </span>
       </div>
     </>

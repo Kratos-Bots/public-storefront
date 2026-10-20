@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
 import { useSettings } from '@/app/settings.ts';
+import { useCurrency } from '@/features/warehouses/use-currency.ts';
 import { deriveStockStatus, formatMoney } from '@/lib/format.ts';
 import { ProductImage } from '@/features/catalog/ProductImage.tsx';
 import { StockChip } from '@/features/catalog/StockChip.tsx';
@@ -107,7 +108,7 @@ function TileFlags({ styleAttrs }: PartViewProps) {
 
 /** The price and its bulk rung: in the foot's own column, or (ordering paused) inside the Add slot. */
 function PriceStack({ product, className, styleAttrs }: { product: Product; className: string; styleAttrs?: PartViewProps['styleAttrs'] }) {
-  const { currency } = useSettings();
+  const currency = useCurrency();
   const best = bestTier(product);
   const outInPrice = useOutOfStockInPriceSlot(product);
   return (

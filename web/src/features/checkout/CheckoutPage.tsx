@@ -38,6 +38,7 @@ import { collectionAddress, modeForCountry, pickerCountries, quoteDeliveryFields
 import { useQuote } from '@/features/checkout/useQuote.ts';
 import { warehouseBody } from '@/api/warehouse-param.ts';
 import { useWarehouseId, useWarehouseOrdering } from '@/features/warehouses/use-warehouse.ts';
+import { useCurrency } from '@/features/warehouses/use-currency.ts';
 import { resolveCheckoutOutcome } from '@/features/checkout/outcome.ts';
 import { GuestTurnstile, type GuestTurnstileHandle } from '@/features/checkout/GuestTurnstile.tsx';
 import { CHECKOUT_VIEWS, InertActionBand } from '@/features/checkout/checkout-parts.tsx';
@@ -145,7 +146,8 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
   const settings = useSettings();
   const queryClient = useQueryClient();
   const { name: warehouseName } = useWarehouseOrdering();
-  const { contactModes, currency, features } = settings;
+  const { contactModes, features } = settings;
+  const warehouseCurrency = useCurrency();
   const { lists: rawShipping, none: shipsNowhere } = useShipSource(settings);
   const shipLists = useMemo(() => shipListsOf({ shipping: rawShipping }), [rawShipping]);
   const shipCountries = useMemo(() => pickerCountries(shipLists), [shipLists]);
@@ -283,6 +285,8 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
   const lastGoodQuote = useRef<Quote | undefined>(undefined);
   if (quote) lastGoodQuote.current = quote;
   const shownQuote = quote ?? lastGoodQuote.current;
+  // The quote states the currency its figures are in; the warehouse's is the answer until one arrives (and on an older backend).
+  const currency = shownQuote?.currency ?? warehouseCurrency;
   // The shown quote is priced for another country, delivery method or point carrier than
   // the form holds now (or none has arrived): its shipping options must not be offered
   // or accepted. Totals and the other steps keep the shown quote.

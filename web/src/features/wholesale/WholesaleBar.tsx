@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { useSettings } from '@/app/settings.ts';
+import { useCurrency } from '@/features/warehouses/use-currency.ts';
 import { useCartStore, selectCount, selectSubtotal } from '@/stores/cart.ts';
 import { formatMoney } from '@/lib/format.ts';
 import { ChevronIcon } from '@/components/icons.tsx';
@@ -16,7 +16,7 @@ import { useText } from '@/text/runtime.tsx';
  */
 export function WholesaleBar() {
   const { t, tp } = useText();
-  const { currency } = useSettings();
+  const currency = useCurrency();
   const lines = useCartStore((s) => s.lines.length);
   const units = useCartStore(selectCount);
   const subtotal = useCartStore((s) => selectSubtotal(s.lines));

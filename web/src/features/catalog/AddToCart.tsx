@@ -1,6 +1,7 @@
 import type { StyleAttrs } from '@/builder/define.ts';
 import { useEffect, useRef, useState } from 'react';
 import { useSettings } from '@/app/settings.ts';
+import { useCurrency } from '@/features/warehouses/use-currency.ts';
 import { MinusIcon, PlusIcon } from '@/components/icons.tsx';
 import { addToCart, removeFromCart, setCartQuantity } from '@/features/cart/useServerCart.ts';
 import { useCartStore } from '@/stores/cart.ts';
@@ -35,7 +36,8 @@ export interface AddToCartProps {
  * nowhere. The label carries the state — no toast, no badge animation.
  */
 export function AddToCart({ product, size = 'lg', showPrice = true, rootAttrs }: AddToCartProps) {
-  const { features, currency } = useSettings();
+  const { features } = useSettings();
+  const currency = useCurrency();
   const { t } = useText();
   const [phase, setPhase] = useState<'idle' | 'added' | 'again'>('idle');
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);

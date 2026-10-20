@@ -1,5 +1,6 @@
 import { useContext, useMemo } from 'react';
 import { useSettings } from '@/app/settings.ts';
+import { useCurrency } from '@/features/warehouses/use-currency.ts';
 import { useEffectiveLayout } from '@/app/layout.ts';
 import { useSessionStore, selectIsLoggedIn } from '@/stores/session.ts';
 import { useCartStore, selectCount, selectHasMixedPreorder, selectSubtotal } from '@/stores/cart.ts';
@@ -45,7 +46,8 @@ export function CartSummary({ blocked: blockedProp, onNavigate, slots, styleAttr
   const host = useContext(CartHostContext);
   const { issues, server } = useServerCart();
   const unitLimit = useOrderUnitLimit();
-  const { currency, features } = useSettings();
+  const { features } = useSettings();
+  const currency = useCurrency();
   const loggedIn = useSessionStore(selectIsLoggedIn);
   const count = useCartStore(selectCount);
   const subtotal = useCartStore((s) => selectSubtotal(s.lines));

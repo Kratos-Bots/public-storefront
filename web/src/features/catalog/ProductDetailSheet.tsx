@@ -1,6 +1,7 @@
 import { useContext, useEffect, useMemo, type ReactNode } from 'react';
 import { Button } from '@mantine/core';
 import { useSettings } from '@/app/settings.ts';
+import { useCurrency } from '@/features/warehouses/use-currency.ts';
 import { useCatalog, useProduct } from '@/features/catalog/use-catalog.ts';
 import { ancestorChain } from '@/features/catalog/category-tree.ts';
 import { Sheet } from '@/components/Sheet.tsx';
@@ -194,7 +195,7 @@ function SheetTitle({ styleAttrs }: PartViewProps) {
 
 function SheetPrice({ styleAttrs }: PartViewProps) {
   const { product } = ProductFamily.useData();
-  const { currency } = useSettings();
+  const currency = useCurrency();
   // The one number the shopper came for: set directly under the name, no band, no label.
   return (
     <p className={classes.price} data-sf-part="price" {...styleAttrs}>{formatMoney(product.price, currency)}</p>

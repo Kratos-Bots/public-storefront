@@ -1,3 +1,4 @@
+import { useSettings } from '@/app/settings.ts';
 import { Modal } from '@mantine/core';
 import { Link } from 'react-router';
 import { Money } from '@/components/Money.tsx';
@@ -19,6 +20,7 @@ export interface UnpaidOrderDialogProps {
  */
 export default function UnpaidOrderDialog({ order, more, onLater, onReview }: UnpaidOrderDialogProps) {
   const { t } = useText();
+  const shopCurrency = useSettings().currency;
 
   return (
     <Modal
@@ -37,7 +39,7 @@ export default function UnpaidOrderDialog({ order, more, onLater, onReview }: Un
       <p className={classes.lede} tabIndex={-1} data-autofocus>{t('order.prompt.body', { reference: order.reference })}</p>
       <p className={classes.amount}>
         <span className={classes.amountLabel}>{t('order.prompt.amount')}</span>
-        <span className={classes.amountValue}><Money amount={order.amount} /></span>
+        <span className={classes.amountValue}><Money amount={order.amount} currency={order.currency || shopCurrency} /></span>
       </p>
       <div className={classes.actions}>
         <button type="button" className={orderClasses.cta} data-sf-part="button" data-variant="filled" onClick={onReview}>

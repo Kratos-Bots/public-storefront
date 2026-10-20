@@ -179,6 +179,8 @@ function BalanceView({ styleAttrs }: PartViewProps) {
 function ItemsView({ styleAttrs }: PartViewProps) {
   const { t, tp } = useText();
   const { order: data } = OrderFamily.useData();
+  const shopCurrency = useSettings().currency;
+  const currency = data.currency || shopCurrency;
   // `discountAmount` includes the promotions; the discount row is what is left once they have their own.
   const promotions = (data.promotions ?? []).filter((p) => p.amount > 0);
   const other = otherDiscount(data.discountAmount, data.promotionDiscount);
@@ -195,16 +197,16 @@ function ItemsView({ styleAttrs }: PartViewProps) {
             <li key={`${item.name}-${i}`} className={classes.line}>
               <span className={classes.lineName}>{item.name}</span>
               <span className={classes.lineQty}>
-                {item.quantity} × <Money amount={item.unitPrice} />
+                {item.quantity} × <Money amount={item.unitPrice} currency={currency} />
               </span>
               <span className={classes.lineTotal}>
                 {promo.discounted ? (
                   <>
-                    <s className={classes.lineWas}><Money amount={item.lineTotal} /></s>
-                    {promo.free ? <span className={classes.free}>{t('common.promo.free')}</span> : <Money amount={promo.net} />}
+                    <s className={classes.lineWas}><Money amount={item.lineTotal} currency={currency} /></s>
+                    {promo.free ? <span className={classes.free}>{t('common.promo.free')}</span> : <Money amount={promo.net} currency={currency} />}
                   </>
                 ) : (
-                  <Money amount={item.lineTotal} />
+                  <Money amount={item.lineTotal} currency={currency} />
                 )}
               </span>
             </li>
@@ -215,27 +217,27 @@ function ItemsView({ styleAttrs }: PartViewProps) {
       <div className={classes.totals}>
         <div className={classes.sum}>
           <span className={classes.sumLabel}>{t('common.totals.subtotal')}</span>
-          <span className={classes.sumFigure}><Money amount={data.subtotal} /></span>
+          <span className={classes.sumFigure}><Money amount={data.subtotal} currency={currency} /></span>
         </div>
         <div className={classes.sum}>
           <span className={classes.sumLabel}>{t('common.totals.shipping')}</span>
-          <span className={classes.sumFigure}><Money amount={data.shippingAmount} /></span>
+          <span className={classes.sumFigure}><Money amount={data.shippingAmount} currency={currency} /></span>
         </div>
         {promotions.map((p, i) => (
           <div key={`${p.label}-${i}`} className={classes.sum}>
             <span className={classes.sumLabel}>{p.label}</span>
-            <span className={`${classes.sumFigure} ${classes.sumGood}`}>−<Money amount={p.amount} /></span>
+            <span className={`${classes.sumFigure} ${classes.sumGood}`}>−<Money amount={p.amount} currency={currency} /></span>
           </div>
         ))}
         {other > 0 ? (
           <div className={classes.sum}>
             <span className={classes.sumLabel}>{t('common.totals.discount')}</span>
-            <span className={classes.sumFigure}>−<Money amount={other} /></span>
+            <span className={classes.sumFigure}>−<Money amount={other} currency={currency} /></span>
           </div>
         ) : null}
         <div className={`${classes.sum} ${classes.grand}`}>
           <span className={`${classes.sumLabel} ${classes.grandLabel}`}>{t('common.totals.total')}</span>
-          <span className={`${classes.sumFigure} ${classes.grandFigure}`}><Money amount={data.totalAmount} /></span>
+          <span className={`${classes.sumFigure} ${classes.grandFigure}`}><Money amount={data.totalAmount} currency={currency} /></span>
         </div>
       </div>
     </section>
@@ -289,6 +291,8 @@ function AddressView({ styleAttrs }: PartViewProps) {
 function PaymentsView({ styleAttrs }: PartViewProps) {
   const { t } = useText();
   const { order: data } = OrderFamily.useData();
+  const shopCurrency = useSettings().currency;
+  const currency = data.currency || shopCurrency;
   const payments = shownPayments(data.payments);
   if (payments.length === 0) return null;
   return (
@@ -302,7 +306,7 @@ function PaymentsView({ styleAttrs }: PartViewProps) {
             <span className={classes.eventName}>{payment.methodLabel ?? methodLabel(payment.method)}</span>
             <span className={classes.eventWhen}>{formatDateTime(payment.createdAt)}</span>
             <span className={classes.eventFigure}>
-              <Money amount={payment.amount} />
+              <Money amount={payment.amount} currency={currency} />
             </span>
             <span className={classes.eventStatus}>
               <StatusPill tone={paymentTone(payment.status)}>{paymentStatusLabel(payment.status, t)}</StatusPill>

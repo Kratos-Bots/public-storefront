@@ -6,6 +6,8 @@ export interface Warehouse {
   country: string | null;
   /** The shop's own warehouse: choosing it is the same as choosing nothing. */
   isDefault: boolean;
+  /** Upper-case ISO code of the currency this warehouse sells in. Absent on an older backend - read as the shop currency. */
+  currency?: string;
   /** A short line the owner wrote about this warehouse (up to 160 characters), shown on the choose-a-warehouse card. Null or absent: none (an older backend sends no such field). */
   description?: string | null;
   /** False = browsable, but the shop refuses checkout here. Absent on an older backend — read as true. */

@@ -13,10 +13,12 @@ export function promptAllowedOn(pathname: string): boolean {
 export interface PromptOrder {
   reference: string;
   amount: number;
+  /** The order's own currency when the backend sent one; else the shop's. */
+  currency?: string;
   /** Where "Review or cancel order" goes. */
   reviewPath: string;
 }
 
 export function fromUnpaid(order: UnpaidOrder): PromptOrder {
-  return { reference: order.reference, amount: order.outstandingBalance, reviewPath: `/account/orders/${encodeURIComponent(order.reference)}` };
+  return { reference: order.reference, amount: order.outstandingBalance, ...(order.currency ? { currency: order.currency } : {}), reviewPath: `/account/orders/${encodeURIComponent(order.reference)}` };
 }

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { useSettings } from '@/app/settings.ts';
+import { useCurrency } from '@/features/warehouses/use-currency.ts';
 import { useSessionStore, selectIsLoggedIn } from '@/stores/session.ts';
 import { useCartStore, selectCount, selectSubtotal } from '@/stores/cart.ts';
 import { useWarehouseOrdering } from '@/features/warehouses/use-warehouse.ts';
@@ -26,7 +27,8 @@ interface ActionParts {
 
 function useActionParts(): ActionParts {
   const override = usePrimaryActionStore((s) => s.override);
-  const { currency, features } = useSettings();
+  const { features } = useSettings();
+  const currency = useCurrency();
   const loggedIn = useSessionStore(selectIsLoggedIn);
   const count = useCartStore(selectCount);
   const subtotal = useCartStore((s) => selectSubtotal(s.lines));

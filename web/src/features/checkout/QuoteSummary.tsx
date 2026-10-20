@@ -6,7 +6,7 @@ import { Money } from '@/components/Money.tsx';
 import { rowAnim } from '@/lib/motion.ts';
 import { formatMoney } from '@/lib/format.ts';
 import { badgeParts, lineFigures, nudgeSentence } from '@/lib/promotions.ts';
-import { useSettings } from '@/app/settings.ts';
+import { useCurrency } from '@/features/warehouses/use-currency.ts';
 import { useText } from '@/text/runtime.tsx';
 import classes from '@/features/checkout/QuoteSummary.module.css';
 
@@ -49,7 +49,8 @@ export function QuoteSummary({
 }: QuoteSummaryProps) {
   const text = useText();
   const { t, tn, tp } = text;
-  const { currency } = useSettings();
+  const warehouseCurrency = useCurrency();
+  const currency = quote?.currency ?? warehouseCurrency;
   const [open, setOpen] = useState(defaultOpen);
   const autoOpened = useRef(defaultOpen);
   const bodyId = useId();
@@ -118,7 +119,7 @@ export function QuoteSummary({
         >
           <span className={classes.toggleLabel}>{open ? t('checkout.summary.hide') : t('checkout.summary.ariaLabel')}</span>
           <span className={classes.toggleFigure}>
-            <Money amount={heroAmount ?? quote?.grandTotal ?? localSubtotal} />
+            <Money amount={heroAmount ?? quote?.grandTotal ?? localSubtotal} currency={currency} />
           </span>
           <span className={classes.caret} aria-hidden />
         </button>
@@ -159,10 +160,10 @@ export function QuoteSummary({
                 {promo.discounted ? (
                   <>
                     <s className={classes.itemWas}>{formatMoney(item.lineTotal, currency)}</s>
-                    {promo.free ? <span className={classes.itemFree}>{t('common.promo.free')}</span> : <Money amount={promo.net} />}
+                    {promo.free ? <span className={classes.itemFree}>{t('common.promo.free')}</span> : <Money amount={promo.net} currency={currency} />}
                   </>
                 ) : (
-                  <Money amount={item.lineTotal} />
+                  <Money amount={item.lineTotal} currency={currency} />
                 )}
               </span>
             </li>
@@ -174,7 +175,7 @@ export function QuoteSummary({
           <div className={classes.row}>
             <span className={classes.rowLabel}>{t('common.totals.subtotal')}</span>
             <span className={classes.rowFigure}>
-              <Money amount={quote ? quote.subtotal : localSubtotal} />
+              <Money amount={quote ? quote.subtotal : localSubtotal} currency={currency} />
             </span>
           </div>
 
@@ -185,7 +186,7 @@ export function QuoteSummary({
               </span>
               {p.amount > 0 ? (
                 <span className={classes.rowFigure}>
-                  −<Money amount={p.amount} />
+                  −<Money amount={p.amount} currency={currency} />
                 </span>
               ) : null}
             </div>
@@ -198,7 +199,7 @@ export function QuoteSummary({
               </span>
               <span className={classes.rowFigure}>
                 −
-                <Money amount={quote.coupon.discountAmount + quote.coupon.shippingDiscount} />
+                <Money amount={quote.coupon.discountAmount + quote.coupon.shippingDiscount} currency={currency} />
               </span>
             </div>
           ) : null}
@@ -207,7 +208,7 @@ export function QuoteSummary({
             <div className={classes.row}>
               <span className={classes.rowLabel}>{t('common.totals.shipping')}</span>
               <span className={classes.rowFigure}>
-                {quote.shippingAmount === 0 ? t('checkout.shipping.free') : <Money amount={quote.shippingAmount} />}
+                {quote.shippingAmount === 0 ? t('checkout.shipping.free') : <Money amount={quote.shippingAmount} currency={currency} />}
               </span>
             </div>
           ) : null}
@@ -216,7 +217,7 @@ export function QuoteSummary({
             <div className={`${classes.row} ${classes.total}`}>
               <span className={classes.rowLabel}>{t('common.totals.total')}</span>
               <span className={classes.rowFigure}>
-                <Money amount={quote.grandTotal} />
+                <Money amount={quote.grandTotal} currency={currency} />
               </span>
             </div>
           ) : null}
@@ -225,7 +226,7 @@ export function QuoteSummary({
             <div className={`${classes.row} ${classes.credit}`}>
               <span className={classes.rowLabel}>{t('common.totals.storeCredit')}</span>
               <span className={classes.rowFigure}>
-                −<Money amount={quote.storeCredit.applied} />
+                −<Money amount={quote.storeCredit.applied} currency={currency} />
               </span>
             </div>
           ) : null}
@@ -235,7 +236,7 @@ export function QuoteSummary({
               <div className={classes.row}>
                 <span className={classes.rowLabel}>{t('checkout.summary.amountDue')}</span>
                 <span className={classes.rowFigure}>
-                  <Money amount={due} />
+                  <Money amount={due} currency={currency} />
                 </span>
               </div>
               {fee !== 0 ? (
@@ -246,7 +247,7 @@ export function QuoteSummary({
                   </span>
                   <span className={classes.rowFigure}>
                     {fee > 0 ? '+' : '−'}
-                    <Money amount={Math.abs(fee)} />
+                    <Money amount={Math.abs(fee)} currency={currency} />
                   </span>
                 </div>
               ) : null}
@@ -258,7 +259,7 @@ export function QuoteSummary({
           <div className={classes.hero}>
             <span className={classes.heroLabel}>{heroLabel}</span>
             <span className={classes.heroFigure}>
-              <Money amount={heroAmount} />
+              <Money amount={heroAmount} currency={currency} />
             </span>
           </div>
         ) : null}

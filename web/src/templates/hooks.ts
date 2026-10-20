@@ -5,6 +5,9 @@ import { buildCategoryTree } from '@/features/catalog/category-tree.ts';
 import { categoryCounts } from '@/features/catalog/filter.ts';
 import { BASE_TOKENS, type HeaderIconMode, type OptionValues, type Scheme, type TemplateTokens } from '@/templates/define.ts';
 import { useWarehouseOrdering } from '@/features/warehouses/use-warehouse.ts';
+import { useCurrency } from '@/features/warehouses/use-currency.ts';
+
+export { useCurrency };
 import { useTemplateContext } from '@/templates/runtime.tsx';
 import { CoreOptionsScopeContext, definedScope } from '@/templates/core-scope.ts';
 import type { Brand, Features, SupportLink } from '@/types/settings.ts';
@@ -70,8 +73,9 @@ export function headerIconClass(mode: HeaderIconMode): string | null {
 
 export interface StorefrontInfo { brand: Brand; features: Features; supportLinks: SupportLink[]; welcomeMessage: string | null; currency: string; enabled: boolean }
 export function useStorefront(): StorefrontInfo {
+  const currency = useCurrency();
   const s = useSettings();
-  return { brand: s.brand, features: s.features, supportLinks: s.supportLinks, welcomeMessage: s.welcomeMessage, currency: s.currency, enabled: s.enabled };
+  return { brand: s.brand, features: s.features, supportLinks: s.supportLinks, welcomeMessage: s.welcomeMessage, currency, enabled: s.enabled };
 }
 
 export interface CatalogStats { productCount: number | null; categoryCount: number | null }

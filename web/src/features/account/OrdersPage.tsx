@@ -1,3 +1,4 @@
+import { useSettings } from '@/app/settings.ts';
 import { useMemo } from 'react';
 import { Button } from '@mantine/core';
 import { Link } from 'react-router';
@@ -34,6 +35,7 @@ function HeadingView({ styleAttrs }: PartViewProps) {
 function RowsView({ styleAttrs }: PartViewProps) {
   const { t, tn } = useText();
   const { rows } = OrdersFamily.useData();
+  const shopCurrency = useSettings().currency;
   if (rows.length === 0) return null;
   return (
     <ul className={classes.orders} {...styleAttrs}>
@@ -42,7 +44,7 @@ function RowsView({ styleAttrs }: PartViewProps) {
           <Link to={`/account/orders/${order.reference}`} className={classes.order}>
             <span className={classes.ref}>{order.reference}</span>
             <span className={classes.total}>
-              <Money amount={order.totalAmount} />
+              <Money amount={order.totalAmount} currency={order.currency || shopCurrency} />
             </span>
             <span className={classes.date}>{formatDate(order.createdAt)}</span>
             <span className={classes.status}>
@@ -52,7 +54,7 @@ function RowsView({ styleAttrs }: PartViewProps) {
             </span>
             {order.outstandingBalance > 0 ? (
               <span className={classes.due}>
-                {tn('account.orders.balanceDue', { amount: <Money amount={order.outstandingBalance} /> })}
+                {tn('account.orders.balanceDue', { amount: <Money amount={order.outstandingBalance} currency={order.currency || shopCurrency} /> })}
               </span>
             ) : null}
           </Link>

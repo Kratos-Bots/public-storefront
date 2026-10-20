@@ -76,7 +76,7 @@ export function PaymentSection({ order, reference, methodName }: PaymentSectionP
   // A payment the shopper chose is being created with the warehouse's partner: nothing to pick, nothing to open yet.
   const preparing = payment.partnerPending === true && !active;
   const picking = payment.canPay && !preparing && (!active || (active.kind === 'gateway' && !hostedUsable));
-  const charged = chargedInFromPayment(active);
+  const charged = chargedInFromPayment(active, order.currency);
   const chargedLine = charged ? (
     <p className={classes.faceNote} data-testid="charged-in">
       {t('order.payment.chargedIn', { currency: charged.currency, amount: formatMoney(charged.amount, charged.currency) })}

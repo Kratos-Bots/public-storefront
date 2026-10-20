@@ -46,13 +46,14 @@ function PointsView({ styleAttrs }: PartViewProps) {
 function CreditView({ styleAttrs }: PartViewProps) {
   const { t } = useText();
   const { profile } = LoyaltyFamily.useData();
+  const shopCurrency = useSettings().currency;
   // Loyalty off keeps the balance visible while there is credit left to spend.
   if (!loyaltyOn(profile) && !creditOnly(profile)) return null;
   return (
     <div className={classes.row} {...styleAttrs}>
       <span className={classes.rowLabel}>{t('account.loyalty.storeCredit')}</span>
       <span className={classes.rowFigure}>
-        <Money amount={profile.storeCreditBalance} />
+        <Money amount={profile.storeCreditBalance} currency={shopCurrency} />
       </span>
     </div>
   );

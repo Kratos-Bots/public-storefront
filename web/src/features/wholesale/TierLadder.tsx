@@ -1,4 +1,4 @@
-import { useSettings } from '@/app/settings.ts';
+import { useCurrency } from '@/features/warehouses/use-currency.ts';
 import { formatMoney } from '@/lib/format.ts';
 import { activeRungMin, ladderRungs } from '@/features/wholesale/wholesale-helpers.ts';
 import type { Product } from '@/types/catalog.ts';
@@ -24,7 +24,7 @@ export interface TierLadderProps {
  * force is named, not just tinted.
  */
 export function TierLadder({ id, product, quantity, band, inCart, groupEnd, ordering, codeColumn = true }: TierLadderProps) {
-  const { currency } = useSettings();
+  const currency = useCurrency();
   const { t } = useText();
   const rungs = ladderRungs(product);
   const activeMin = activeRungMin(product, quantity);

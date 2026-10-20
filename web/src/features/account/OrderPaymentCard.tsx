@@ -1,3 +1,4 @@
+import { useSettings } from '@/app/settings.ts';
 import { useId, useState, useSyncExternalStore } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Money } from '@/components/Money.tsx';
@@ -48,6 +49,7 @@ function useAccountOrderRead(reference: string): { updatedAt: number; fetching: 
  */
 export function OrderPaymentCard({ order, payment, styleAttrs }: { order: OrderDetail; payment: PaymentRead; styleAttrs?: StyleAttrs }) {
   const { t } = useText();
+  const shopCurrency = useSettings().currency;
   const queryClient = useQueryClient();
   const titleId = useId();
 
@@ -88,7 +90,7 @@ export function OrderPaymentCard({ order, payment, styleAttrs }: { order: OrderD
         <h2 id={titleId} className={classes.payEyebrow}>{t('account.order.pay.eyebrow')}</h2>
         <p className={classes.payAmount}>
           <span className={classes.srOnly}>{t('account.order.balanceDue')}</span>
-          <Money amount={order.outstandingBalance} />
+          <Money amount={order.outstandingBalance} currency={order.currency || shopCurrency} />
         </p>
       </div>
 

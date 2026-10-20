@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useSettings } from '@/app/settings.ts';
+import { useCurrency } from '@/features/warehouses/use-currency.ts';
 import { formatMoney } from '@/lib/format.ts';
 import { lineFigures } from '@/lib/promotions.ts';
 import { PromoBadge } from '@/features/catalog/PromoBadge.tsx';
@@ -37,7 +37,7 @@ export interface CartLineProps {
  */
 export function CartLine({ line, issue, server, onQuantity, onRemove, index = 0 }: CartLineProps) {
   const { t } = useText();
-  const { currency } = useSettings();
+  const currency = useCurrency();
   const [draft, setDraft] = useState(String(line.quantity));
   useEffect(() => setDraft(String(line.quantity)), [line.quantity]);
 

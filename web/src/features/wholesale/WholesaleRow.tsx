@@ -1,5 +1,5 @@
 import { useEffect, useId, useState } from 'react';
-import { useSettings } from '@/app/settings.ts';
+import { useCurrency } from '@/features/warehouses/use-currency.ts';
 import { useCartStore } from '@/stores/cart.ts';
 import { addToCart, setCartQuantity } from '@/features/cart/useServerCart.ts';
 import { deriveStockStatus, formatMoney, resolveUnitPrice } from '@/lib/format.ts';
@@ -40,7 +40,7 @@ export interface WholesaleRowProps {
  */
 export function WholesaleRow({ product, band, groupEnd, ordering, priceInSlot = false, index }: WholesaleRowProps) {
   const { t } = useText();
-  const { currency } = useSettings();
+  const currency = useCurrency();
   const { showSku } = useCoreOptions();
   const quantity = useCartStore(
     (s) => s.lines.find((l) => l.productId === product.id)?.quantity ?? 0,

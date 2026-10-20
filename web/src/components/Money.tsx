@@ -1,15 +1,15 @@
-import { useSettings } from '@/app/settings.ts';
+import { useCurrency } from '@/features/warehouses/use-currency.ts';
 import { formatMoney } from '@/lib/format.ts';
 
 /**
- * A price in the store's currency. Always tabular so figures line up when a
+ * A price in the currency being shown (the selected warehouse's). Always tabular so figures line up when a
  * quantity stepper or a quote changes the number in place.
  */
 export function Money({ amount, currency }: { amount: number; currency?: string }) {
-  const settings = useSettings();
+  const shopCurrency = useCurrency();
   return (
     <span style={{ fontVariantNumeric: 'tabular-nums' }}>
-      {formatMoney(amount, currency ?? settings.currency)}
+      {formatMoney(amount, currency ?? shopCurrency)}
     </span>
   );
 }
