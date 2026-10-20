@@ -11,6 +11,7 @@ import {
   setClosingConfirmation,
   setVerticalSwipes,
   tgExpand,
+  tgRequestFullscreen,
   tgReady,
   watchSafeAreas,
 } from '@/lib/telegram-webapp.ts';
@@ -39,6 +40,7 @@ export function useTelegramChrome(): void {
   useEffect(() => {
     tgReady();
     tgExpand();
+    tgRequestFullscreen();
     // Swipe-down-to-close fights every scrolling sheet and list in the shop.
     setVerticalSwipes(false);
     const stop = watchSafeAreas();

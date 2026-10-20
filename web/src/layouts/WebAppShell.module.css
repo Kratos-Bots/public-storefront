@@ -49,6 +49,13 @@
   height: calc(var(--tg-safe-top, 0px) + var(--tg-content-safe-top, 0px));
 }
 
+/* Fullscreen: the bar also holds the safe-area spacer (see .safeTop), so everything that sticks under it
+   (catalogue section rules, the ticket's order card) must come to rest below that too. Both insets are 0
+   outside fullscreen, which leaves the plain 52px. */
+.shell.native {
+  --sf-bar-h: calc(52px + var(--tg-safe-top, 0px) + var(--tg-content-safe-top, 0px));
+}
+
 /* Inside Telegram the insets above are the whole story — the browser's own
    env() inset would count the notch twice. */
 .native .bar {

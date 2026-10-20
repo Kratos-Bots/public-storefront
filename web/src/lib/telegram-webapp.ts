@@ -136,6 +136,18 @@ export function tgExpand(): void {
   run(null, (wa) => wa.expand());
 }
 
+/**
+ * Bot API 8.0+, phones only: Telegram Desktop and the web client would take over the whole monitor, so only `ios`
+ * and `android` ask. Already fullscreen is left alone.
+ */
+export function tgRequestFullscreen(): void {
+  run('8.0', (wa) => {
+    if (wa.isFullscreen) return;
+    if (wa.platform !== 'ios' && wa.platform !== 'android') return;
+    wa.requestFullscreen?.();
+  });
+}
+
 export function tgClose(): void {
   run(null, (wa) => wa.close());
 }

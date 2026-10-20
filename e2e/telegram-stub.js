@@ -82,6 +82,7 @@
       isVersionAtLeast: atLeast,
       ready: rec('ready'),
       expand: rec('expand'),
+      requestFullscreen: rec('requestFullscreen'),
       close: rec('close'),
       setHeaderColor: rec('setHeaderColor'),
       setBackgroundColor: rec('setBackgroundColor'),
