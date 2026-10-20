@@ -35,7 +35,7 @@ export default {
     // the identity (edge-cached) is looked up only once we know the response is HTML.
     if (request.method !== 'GET') return env.ASSETS.fetch(request);
     const asset = await env.ASSETS.fetch(request);
-    if (!(asset.headers.get('content-type') ?? '').toLowerCase().includes('text/html')) return asset;
+    if (asset.status !== 200 || !(asset.headers.get('content-type') ?? '').toLowerCase().includes('text/html')) return asset;
     return rewriteHtml(asset, await getAppIdentity(env, ctx));
   },
 } satisfies ExportedHandler<Env>;

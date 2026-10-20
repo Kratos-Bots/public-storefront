@@ -70,6 +70,32 @@ describe('html rewriting', () => {
     expect(body).toContain('<div id="root"></div>');
   });
 
+  it('a bare (unwrapped) manifest body is accepted', async () => {
+    stubFetch(() => new Response(JSON.stringify({ name: 'Bare', icons: [] }), { status: 200 }));
+    const res = await run(new Request('https://shop.test/manifest.webmanifest'));
+    expect(await res.json()).toMatchObject({ name: 'Bare', display: 'standalone' });
+  });
+
+  it('a hanging backend degrades to the fallback name instead of stalling the page', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      globalThis.fetch = ((_u: unknown, init?: RequestInit) => new Promise((_res, rej) => {
+        init?.signal?.addEventListener('abort', () => rej(new Error('aborted')));
+      })) as unknown as typeof fetch;
+      const pending = run(new Request('https://shop.test/'), () => new Response(html, { headers: { 'content-type': 'text/html' } }));
+      await vi.advanceTimersByTimeAsync(2500);
+      expect(await (await pending).text()).toContain('content="Shop"');
+    } finally { vi.useRealTimers(); }
+  });
+
+  it('a non-200 html response passes through without an identity lookup', async () => {
+    const spy = stubFetch(() => identity('Acme'));
+    const asset = new Response(null, { status: 304, headers: { 'content-type': 'text/html' } });
+    const res = await run(new Request('https://shop.test/'), () => asset);
+    expect(res).toBe(asset);
+    expect(spy).not.toHaveBeenCalled();
+  });
+
   it('html is still served with the fallback name when the backend is down', async () => {
     stubFetch(() => { throw new Error('down'); });
     const res = await run(new Request('https://shop.test/'), () => new Response(html, { headers: { 'content-type': 'text/html' } }));

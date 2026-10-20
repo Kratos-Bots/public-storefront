@@ -18,10 +18,17 @@ self.addEventListener('push', (event) => {
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
+// The payload is server-supplied; only ever open a same-origin URL (rejects javascript:, data:, off-site), else the home page.
+function safeTarget(raw) {
+  try {
+    const u = new URL(typeof raw === 'string' ? raw : '/', self.location.origin);
+    return u.origin === self.location.origin ? u.href : new URL('/', self.location.origin).href;
+  } catch { return new URL('/', self.location.origin).href; }
+}
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const url = event.notification.data && event.notification.data.url;
-  if (!url) return;
+  const url = safeTarget(event.notification.data && event.notification.data.url);
   event.waitUntil((async () => {
     const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     const sameOrigin = wins.find((c) => { try { return new URL(c.url).origin === self.location.origin; } catch { return false; } });

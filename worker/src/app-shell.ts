@@ -5,6 +5,9 @@ import { buildBackendUrl } from './proxy';
 const IDENTITY_TTL = 300;
 /** A failed identity fetch is remembered briefly so an outage is not retried on every page view. */
 const FALLBACK_TTL = 30;
+/** Bounds on the backend calls a page view or icon request can wait for. */
+const IDENTITY_TIMEOUT_MS = 2000;
+const ICON_TIMEOUT_MS = 5000;
 const ICON_VARIANT = /^(?:192|512|maskable-512|apple-180|badge)$/;
 
 export interface AppIdentity extends Record<string, unknown> {
@@ -18,6 +21,12 @@ function jsonResponse(body: unknown, ttl: number): Response {
     status: 200,
     headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': `public, max-age=${ttl}` },
   });
+}
+
+function timeoutSignal(ms: number): AbortSignal {
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), ms);
+  return controller.signal;
 }
 
 /**
@@ -36,7 +45,7 @@ export async function getAppIdentity(env: Env, ctx: ExecutionContext): Promise<A
     } catch { /* fall through to a fresh fetch */ }
   }
   try {
-    const res = await fetch(target.toString(), { headers: { accept: 'application/json' } });
+    const res = await fetch(target.toString(), { headers: { accept: 'application/json' }, signal: timeoutSignal(IDENTITY_TIMEOUT_MS) });
     if (res.ok) {
       const raw = (await res.json()) as { data?: unknown } & Record<string, unknown>;
       // The backend wraps responses in { success, data }; accept a bare object too.
@@ -76,7 +85,7 @@ export async function serveAppIcon(request: Request, env: Env, ctx: ExecutionCon
 
   let upstream: Response;
   try {
-    upstream = await fetch(target.toString());
+    upstream = await fetch(target.toString(), { signal: timeoutSignal(ICON_TIMEOUT_MS) });
   } catch {
     return new Response('Backend unavailable', { status: 502, headers: { 'cache-control': 'no-store' } });
   }
