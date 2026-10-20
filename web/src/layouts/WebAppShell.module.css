@@ -56,6 +56,11 @@
   --sf-bar-h: calc(52px + var(--tg-safe-top, 0px) + var(--tg-content-safe-top, 0px));
 }
 
+/* A header that scrolls away leaves only the safe-area spacer to rest under (it is the top of the page). */
+.shell.native:has(.unstuck) {
+  --sf-bar-h: calc(var(--tg-safe-top, 0px) + var(--tg-content-safe-top, 0px));
+}
+
 /* Inside Telegram the insets above are the whole story — the browser's own
    env() inset would count the notch twice. */
 .native .bar {
