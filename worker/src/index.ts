@@ -1,5 +1,6 @@
 import { proxyApi } from './proxy';
 import { proxyMedia } from './media';
+import { getAppIdentity, rewriteHtml, serveAppIcon, serveManifest } from './app-shell';
 
 interface EnvBindings {
   ASSETS: Fetcher;
@@ -28,6 +29,13 @@ export default {
     }
     if (pathname === '/api' || pathname.startsWith('/api/')) return proxyApi(request, env, ctx);
     if (pathname.startsWith('/media/')) return proxyMedia(request, env, ctx);
-    return env.ASSETS.fetch(request);
+    if (pathname === '/manifest.webmanifest') return serveManifest(request, env, ctx);
+    if (pathname === '/apple-touch-icon.png' || pathname.startsWith('/app-icon/')) return serveAppIcon(request, env, ctx);
+    // Every other path is a static asset (or the SPA fallback). Only HTML gets the injected head tag;
+    // the identity (edge-cached) is looked up only once we know the response is HTML.
+    if (request.method !== 'GET') return env.ASSETS.fetch(request);
+    const asset = await env.ASSETS.fetch(request);
+    if (!(asset.headers.get('content-type') ?? '').toLowerCase().includes('text/html')) return asset;
+    return rewriteHtml(asset, await getAppIdentity(env, ctx));
   },
 } satisfies ExportedHandler<Env>;

@@ -84,7 +84,8 @@ test('builds the manifest from the real wrangler.jsonc', () => {
   const m = buildReleaseManifest(text, 'v0.0.0');
   assert.match(m.worker.compatibilityDate, /^\d{4}-\d{2}-\d{2}$/);
   assert.deepEqual(m.vars, ['BACKEND_URL']);
-  assert.ok(m.assets.runWorkerFirst.includes('/healthz'));
+  // The Worker runs first for every path (it rewrites HTML and serves the manifest), which covers /healthz, /api and /media.
+  assert.deepEqual(m.assets.runWorkerFirst, ['/*']);
   assert.equal(m.assets.binding, 'ASSETS');
   assert.equal(m.assets.notFoundHandling, 'single-page-application');
   assert.equal(m.worker.name, 'ecommerce-storefront');

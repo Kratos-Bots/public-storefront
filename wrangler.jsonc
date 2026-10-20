@@ -7,7 +7,9 @@
     "directory": "./web/dist",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*", "/media/*", "/healthz"]
+    // Every request reaches the Worker so it can serve the manifest/icons and inject head tags into HTML.
+    // An array (not `true`): the release manifest and the backend deploy carry run_worker_first as string[].
+    "run_worker_first": ["/*"]
   },
   // `name` applies to local `wrangler dev` / manual deploys only. Deploys driven
   // from the admin panel name the script `ecommerce-storefront-${CLIENT_ID}` and
