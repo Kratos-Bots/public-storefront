@@ -129,10 +129,10 @@ test('an order that already has an open ticket goes straight to it', async ({ pa
   expect(mocks.state.support.ticketPosts).toEqual([]);
 });
 
-test('signed out, the support page asks for a sign-in and keeps the shop\'s chat links', async ({ page }) => {
-  const mocks = await open(page, { path: '/support', session: false, support: {} });
-  await expect(page.getByRole('heading', { level: 1, name: 'Support' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Sign in to open a ticket' })).toHaveAttribute('href', `/login?returnTo=${encodeURIComponent('/support')}`);
+test('signed out, the Help page asks for a sign-in and keeps the shop\'s chat links', async ({ page }) => {
+  const mocks = await open(page, { path: '/help', session: false, support: {} });
+  await expect(page.getByRole('heading', { level: 1, name: 'Help' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Sign in to open a ticket' })).toHaveAttribute('href', `/login?returnTo=${encodeURIComponent('/help')}`);
   // The page's own contact routes (the footer repeats the chat link, so scope to the section).
   const contact = page.getByLabel('Prefer chat?');
   await expect(contact.getByRole('link', { name: 'WhatsApp' })).toHaveAttribute('href', /wa.me/);

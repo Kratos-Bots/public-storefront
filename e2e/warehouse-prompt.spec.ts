@@ -180,3 +180,17 @@ test('the switch flips mid-session: checkout ends on the cart with the notice an
   await expect(page.getByRole('link', { name: 'Checkout' })).toHaveCount(0);
   expect(await page.content()).not.toContain('WAREHOUSE_ORDERING_PAUSED');
 });
+
+test('Need help? opens the Help page from the chooser, and going back asks again', async ({ page }) => {
+  await installMocks(page, { layout: 'storefront', warehouses: WAREHOUSES });
+  await page.goto('/');
+  const help = page.getByRole('link', { name: 'Need help?' });
+  await expect(help).toBeVisible();
+  expect((await help.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await help.click();
+  await expect(page).toHaveURL(/\/help$/);
+  await expect(page.getByRole('heading', { level: 1, name: 'Help' })).toBeVisible();
+  await expect(page.locator(PROMPT)).toHaveCount(0);
+  await page.goBack();
+  await expect(page.locator(PROMPT)).toBeVisible();
+});

@@ -15,6 +15,7 @@ import {
   supportsSecondaryButton,
   setVerticalSwipes,
   telegramInitData,
+  tgRequestFullscreen,
   watchSafeAreas,
 } from '@/lib/telegram-webapp.ts';
 
@@ -345,5 +346,47 @@ describe('readableTextOn', () => {
 
   it('falls back to white for something it cannot parse', () => {
     expect(readableTextOn('var(--x)')).toBe('#ffffff');
+  });
+});
+
+describe('tgRequestFullscreen', () => {
+  const stub = (version: string, overrides: Record<string, unknown> = {}) => {
+    const requestFullscreen = vi.fn();
+    stubWebApp(version, { requestFullscreen, isFullscreen: false, ...overrides });
+    return requestFullscreen;
+  };
+
+  it.each(['ios', 'android'])('goes fullscreen on %s at 8.0', (platform) => {
+    const request = stub('8.0', { platform });
+    tgRequestFullscreen();
+    expect(request).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['tdesktop', 'weba', 'macos'])('leaves %s alone, it would take the whole monitor', (platform) => {
+    const request = stub('8.0', { platform });
+    tgRequestFullscreen();
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it('does nothing below Bot API 8.0', () => {
+    const request = stub('7.10', { platform: 'ios' });
+    tgRequestFullscreen();
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it('does nothing when already fullscreen', () => {
+    const request = stub('8.0', { platform: 'ios', isFullscreen: true });
+    tgRequestFullscreen();
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it('does nothing in a plain browser', () => {
+    expect(() => tgRequestFullscreen()).not.toThrow();
+  });
+
+  it('swallows a client that throws', () => {
+    const request = stub('8.0', { platform: 'android' });
+    request.mockImplementation(() => { throw new Error('WebAppMethodUnsupported'); });
+    expect(() => tgRequestFullscreen()).not.toThrow();
   });
 });

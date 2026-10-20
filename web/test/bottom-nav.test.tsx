@@ -48,10 +48,10 @@ afterEach(() => {
 });
 
 describe('BottomNav items', () => {
-  it('shows Shop, Profile, Cart, Reviews and Support in that order, each a link with a label', () => {
+  it('shows Shop, Profile, Cart, Reviews and Help in that order, each a link with a label', () => {
     mount();
-    expect(labels()).toEqual(['Catalog', 'Profile', 'Cart', 'Reviews', 'Support']);
-    expect(within(nav()!).getAllByRole('link').map((a) => a.getAttribute('href'))).toEqual(['/', '/login', '/cart', '/reviews', '/support']);
+    expect(labels()).toEqual(['Catalog', 'Profile', 'Cart', 'Reviews', 'Help']);
+    expect(within(nav()!).getAllByRole('link').map((a) => a.getAttribute('href'))).toEqual(['/', '/login', '/cart', '/reviews', '/help']);
   });
   it('sends Profile to the profile page once signed in, and to sign-in before', () => {
     useSessionStore.setState({ token: 'sess-1', customer: { id: 5, nickname: 'ada' } });
@@ -67,7 +67,7 @@ describe('BottomNav items', () => {
   it('drops Profile when accounts are off, Cart when ordering is off, Reviews when reviews are off', () => {
     h.settings = { currency: 'GBP', features: { accounts: false, ordering: false } };
     mount();
-    expect(labels()).toEqual(['Catalog', 'Support']);
+    expect(labels()).toEqual(['Catalog', 'Help']);
   });
   it('shows the cart count as a badge that follows the cart, and names it for screen readers', () => {
     useCartStore.setState({ lines: [line(2), { ...line(3), productId: 13 }], mode: 'local' });
@@ -81,27 +81,24 @@ describe('BottomNav items', () => {
   });
 });
 
-describe('BottomNav FAQ slot', () => {
-  it('replaces Support with FAQ as the last slot when the shop has an FAQ', () => {
-    h.settings = { ...h.settings, faq: { available: true } };
-    mount();
-    expect(labels()).toEqual(['Catalog', 'Profile', 'Cart', 'Reviews', 'FAQ']);
-    expect(within(nav()!).getAllByRole('link').map((a) => a.getAttribute('href'))).toEqual(['/', '/login', '/cart', '/reviews', '/faq']);
-    expect(within(nav()!).queryByRole('link', { name: 'Support' })).toBeNull();
-  });
-  it.each([[{ available: false }], [undefined], [{}], [null]])('keeps Support when faq is %j (including an older backend with no faq key)', (faq) => {
+describe('BottomNav Help slot', () => {
+  it.each([[{ available: true }], [{ available: false }], [undefined], [{}], [null]])('is always the last slot, whatever the FAQ (%j)', (faq) => {
     h.settings = { ...h.settings, faq };
     mount();
-    expect(labels()).toEqual(['Catalog', 'Profile', 'Cart', 'Reviews', 'Support']);
+    expect(labels()).toEqual(['Catalog', 'Profile', 'Cart', 'Reviews', 'Help']);
+    expect(within(nav()!).queryByRole('link', { name: 'FAQ' })).toBeNull();
+    expect(within(nav()!).queryByRole('link', { name: 'Support' })).toBeNull();
   });
-  it('marks FAQ current on /faq and Support on nothing', () => {
-    h.settings = { ...h.settings, faq: { available: true } };
+  it('marks Help current on the old /faq link too', () => {
     mount('/faq');
     const current = within(nav()!).getAllByRole('link').filter((a) => a.getAttribute('aria-current') === 'page');
-    expect(current.map((a) => a.textContent)).toEqual(['FAQ']);
+    expect(current.map((a) => a.textContent)).toEqual(['Help']);
   });
-  it('shows on /faq', () => {
+  it('shows on /faq and /help', () => {
     mount('/faq');
+    expect(nav()).not.toBeNull();
+    cleanup();
+    mount('/help');
     expect(nav()).not.toBeNull();
   });
 });
@@ -109,7 +106,7 @@ describe('BottomNav FAQ slot', () => {
 describe('BottomNav active item', () => {
   it.each([
     ['/', 'Catalog'], ['/c/serums', 'Catalog'], ['/p/12', 'Catalog'], ['/cart', 'Cart'], ['/account/profile', 'Profile'], ['/account/orders', 'Profile'],
-    ['/reviews', 'Reviews'], ['/support', 'Support'], ['/support/new', 'Support'], ['/support/tickets/7', 'Support'],
+    ['/reviews', 'Reviews'], ['/help', 'Help'], ['/support', 'Help'], ['/support/new', 'Help'], ['/support/tickets/1', 'Help'], ['/support/tickets/7', 'Help'], ['/faq', 'Help'],
   ])('marks the item for %s as the current page: %s', (path, label) => {
     mount(path);
     const current = within(nav()!).getAllByRole('link').filter((a) => a.getAttribute('aria-current') === 'page');
@@ -122,7 +119,7 @@ describe('BottomNav active item', () => {
 });
 
 describe('BottomNav visibility', () => {
-  it.each(['/', '/c/serums', '/p/12', '/cart', '/account/orders/K4M2QP', '/account/profile', '/reviews', '/support', '/pages/about', '/order/K4M2QP', '/tracking/abc', '/verify/abc'])(
+  it.each(['/', '/c/serums', '/p/12', '/cart', '/account/orders/K4M2QP', '/account/profile', '/reviews', '/help', '/support', '/pages/about', '/order/K4M2QP', '/tracking/abc', '/verify/abc'])(
     'shows on %s', (path) => {
       mount(path);
       expect(nav()).not.toBeNull();

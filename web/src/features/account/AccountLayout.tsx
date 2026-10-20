@@ -20,8 +20,8 @@ const TABS = [
   { to: '/account/loyalty', label: textKey('account.nav.loyalty'), creditLabel: textKey('account.nav.storeCredit') },
   { to: '/account/referrals', label: textKey('account.nav.referrals') },
   { to: '/account/profile', label: textKey('account.nav.profile') },
-  // Support lives at /support (the bottom bar opens it too); the tab is the account's way there.
-  { to: '/support', label: textKey('support.account.nav') },
+  // Support lives on the Help page (the bottom bar opens it too); the tab is the account's way there.
+  { to: '/help', label: textKey('support.account.nav') },
 ];
 
 /** One order's own page: it is read on its own, so the account's greeting and section rail stay out of the way. */
@@ -56,7 +56,7 @@ function TabsView({ styleAttrs }: PartViewProps) {
   if (isOrderDetailPath(pathname)) return null;
   return (
     <nav className={classes.tabs} aria-label={t('account.nav.ariaLabel')} {...styleAttrs}>
-      {TABS.filter((tab) => (tab.to === '/account/loyalty' ? showLoyalty || showCredit : tab.to !== '/support' || showSupport)).map((tab) => (
+      {TABS.filter((tab) => (tab.to === '/account/loyalty' ? showLoyalty || showCredit : tab.to !== '/help' || showSupport)).map((tab) => (
         <NavLink
           key={tab.to}
           to={tab.to}

@@ -153,7 +153,7 @@ function Conversation({ id, detail, seed }: { id: number; detail: ThreadDetail; 
   return (
     <div ref={page} className={`${classes.page} ${FADE}`} style={style} data-kb={keyboard > 0 ? '' : undefined}>
       <header className={classes.head}>
-        <Link to="/support" className={classes.back} aria-label={t('support.new.back')}>
+        <Link to="/help" className={classes.back} aria-label={t('support.new.back')}>
           <BackIcon />
         </Link>
         <h1 className={classes.subject}>{detail.subject}</h1>
@@ -269,7 +269,7 @@ export function TicketPage() {
         <p className={classes.goneText} role={missing ? undefined : 'alert'}>
           {missing ? t('support.thread.notFound') : errorMessage(ticket.error, t('errors.requestFailed'))}
         </p>
-        <Link to="/support" className={classes.goneBack}>{t('support.new.back')}</Link>
+        <Link to="/help" className={classes.goneBack}>{t('support.new.back')}</Link>
       </div>
     );
   }

@@ -3,7 +3,9 @@ import { defineTextArea } from '@/text/define.ts';
 /** Area `support`: the tickets page, the new-ticket form, the conversation, and the entry points from the account and an order. */
 export default defineTextArea('support', {
   // ── the tickets page ──────────────────────────────────────────────────────
-  'page.lede': { en: 'Questions about an order or anything else? Send us a message.', max: 160 },
+  'help.title': { en: 'Help', max: 40 },
+  'help.lede': { en: 'Find an answer, check on a ticket or get in touch.', max: 160 },
+  'help.documentTitle': { en: '{page} — {shop}', max: 100 },
   'page.new': { en: 'New ticket', max: 40 },
   'page.yours': { en: 'Your tickets', max: 60 },
   'page.empty': { en: 'No tickets yet.', max: 80 },
@@ -32,7 +34,7 @@ export default defineTextArea('support', {
   'new.photoLimit': { en: 'Up to {max} photos', max: 60 },
   'new.send': { en: 'Send', max: 30 },
   'new.disabled': { en: 'New tickets are not being accepted right now.', max: 120 },
-  'new.back': { en: 'Back to support', max: 40 },
+  'new.back': { en: 'Back to Help', max: 40 },
 
   // ── the conversation ──────────────────────────────────────────────────────
   'thread.you': { en: 'You', max: 30 },

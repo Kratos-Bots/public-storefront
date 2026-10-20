@@ -177,7 +177,7 @@ describe('the new ticket page', () => {
     shop.settings = { ...shop.settings, support: { enabled: false } };
     mount();
     expect(screen.getByText(/not being accepted/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /back to support/i })).toHaveAttribute('href', '/support');
+    expect(screen.getByRole('link', { name: /back to help/i })).toHaveAttribute('href', '/help');
     expect(screen.queryByRole('button', { name: 'Send' })).toBeNull();
   });
 

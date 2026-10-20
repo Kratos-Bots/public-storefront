@@ -55,7 +55,7 @@ describe('checksProfile', () => {
     ['public shop', { access: mode('public') }], ['login shop', { access: mode('login') }],
     ['signed out', { loggedIn: false }], ['already denied', { denied: true }], ['builder', { builder: true }],
     ['account path', { pathname: '/account/orders' }], ['verify-email', { pathname: '/verify-email' }],
-    ['support', { pathname: '/support' }], ['new ticket', { pathname: '/support/new' }],
+    ['help', { pathname: '/help' }], ['help, trailing slash', { pathname: '/help/' }], ['support', { pathname: '/support' }], ['new ticket', { pathname: '/support/new' }],
     ['a ticket', { pathname: '/support/tickets/7' }], ['support, trailing slash', { pathname: '/support/' }],
     ['auth path', { pathname: '/login' }], ['exempt path', { pathname: '/payment/success' }],
   ])('does not ask: %s', (_n, extra) => {
@@ -112,7 +112,7 @@ describe('accessDecision', () => {
       expect(accessDecision({ ...base, access: mode('restricted'), loggedIn: true, denied: true, pathname })).toEqual({ kind: 'allow' });
     });
 
-  it.each(['/support', '/support/', '/support/new', '/support/tickets/7'])(
+  it.each(['/help', '/help/', '/support', '/support/', '/support/new', '/support/tickets/7'])(
     'keeps %s reachable for a refused customer: help stays open to a customer who may not shop', (pathname) => {
       expect(accessDecision({ ...base, access: mode('restricted'), loggedIn: true, denied: true, pathname })).toEqual({ kind: 'allow' });
     });

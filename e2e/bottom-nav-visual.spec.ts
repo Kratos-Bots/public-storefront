@@ -99,7 +99,7 @@ for (const [template, preset] of THEMES) {
 
       test(`${base} support`, async ({ page }) => {
         await start(page, false);
-        await page.goto('/support');
+        await page.goto('/help');
         await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
         await page.evaluate(() => document.fonts.ready);
         await shot(page, `${base}-support`);
