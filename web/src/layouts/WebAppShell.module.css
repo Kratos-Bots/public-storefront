@@ -54,6 +54,8 @@
    outside fullscreen, which leaves the plain 52px. */
 .shell.native {
   --sf-bar-h: calc(52px + var(--tg-safe-top, 0px) + var(--tg-content-safe-top, 0px));
+  /* --sf-bar-h already holds Telegram's insets: rules that add the browser's env() top inset add nothing here. */
+  --sf-env-top: 0px;
 }
 
 /* A header that scrolls away leaves only the safe-area spacer to rest under (it is the top of the page). */

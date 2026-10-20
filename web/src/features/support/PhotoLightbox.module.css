@@ -14,7 +14,7 @@
   justify-content: center;
   height: 100%;
   padding:
-    calc(3.5rem + env(safe-area-inset-top, 0px) + var(--tg-safe-top, 0px) + var(--tg-content-safe-top, 0px))
+    calc(3.5rem + max(env(safe-area-inset-top, 0px), var(--tg-safe-top, 0px) + var(--tg-content-safe-top, 0px)))
     1rem
     calc(1.5rem + env(safe-area-inset-bottom, 0px));
 }
@@ -29,7 +29,7 @@
 
 .close {
   position: absolute;
-  top: calc(0.75rem + env(safe-area-inset-top, 0px) + var(--tg-safe-top, 0px) + var(--tg-content-safe-top, 0px));
+  top: calc(0.75rem + max(env(safe-area-inset-top, 0px), var(--tg-safe-top, 0px) + var(--tg-content-safe-top, 0px)));
   right: 0.75rem;
   width: 44px;
   height: 44px;

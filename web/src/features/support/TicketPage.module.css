@@ -6,7 +6,7 @@
   display: flex;
   flex-direction: column;
   max-width: 40rem;
-  min-height: calc(100dvh - var(--sf-bar-h, 56px) - var(--sf-nav-h, 0px) - env(safe-area-inset-top, 0px));
+  min-height: calc(100dvh - var(--sf-bar-h, 56px) - var(--sf-nav-h, 0px) - var(--sf-env-top, env(safe-area-inset-top, 0px)));
   margin-inline: auto;
   padding-top: 0.75rem;
 }
@@ -73,7 +73,7 @@
 .order {
   composes: glass-soft from global;
   position: sticky;
-  top: calc(var(--sf-bar-h, 52px) + var(--sf-pin-h, 0px) + var(--sf-wh-h, 0px) + env(safe-area-inset-top, 0px));
+  top: calc(var(--sf-bar-h, 52px) + var(--sf-pin-h, 0px) + var(--sf-wh-h, 0px) + var(--sf-env-top, env(safe-area-inset-top, 0px)));
   z-index: 5;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
