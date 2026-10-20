@@ -14,6 +14,8 @@ export interface CouponFieldProps {
   /** A `404` reads as "Unknown code"; a `422` carries the coupon's own message. */
   error?: string;
   busy?: boolean;
+  /** The shown quote's currency. Absent: the warehouse's. */
+  currency?: string;
 }
 
 /**
@@ -22,7 +24,7 @@ export interface CouponFieldProps {
  * offered: there is no code to remove that the shopper ever typed, only the
  * option to try one of their own over the top.
  */
-export function CouponField({ applied, code, onApply, onRemove, error, busy }: CouponFieldProps) {
+export function CouponField({ applied, code, onApply, onRemove, error, busy, currency }: CouponFieldProps) {
   const { t } = useText();
   const id = useId();
   const [draft, setDraft] = useState('');
@@ -103,7 +105,7 @@ export function CouponField({ applied, code, onApply, onRemove, error, busy }: C
           <span className={classes.code}>{applied.code}</span>
           {saving > 0 ? (
             <span className={classes.saving}>
-              −<Money amount={saving} />
+              −<Money amount={saving} currency={currency} />
             </span>
           ) : null}
           {applied.autoApplied ? (

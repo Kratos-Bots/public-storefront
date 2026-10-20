@@ -1,9 +1,9 @@
-import { useSettings } from '@/app/settings.ts';
 import { Modal } from '@mantine/core';
 import { Link } from 'react-router';
 import { Money } from '@/components/Money.tsx';
 import type { PromptOrder } from '@/features/unpaid-prompt/rules.ts';
 import { useText } from '@/text/runtime.tsx';
+import { useSettings } from '@/app/settings.ts';
 import orderClasses from '@/features/order-status/OrderStatus.module.css';
 import classes from '@/features/unpaid-prompt/UnpaidOrderPrompt.module.css';
 

@@ -1,4 +1,3 @@
-import { useSettings } from '@/app/settings.ts';
 import { useMemo } from 'react';
 import { Button } from '@mantine/core';
 import { Link } from 'react-router';
@@ -16,6 +15,7 @@ import { usePreviewFixture, usePreviewState } from '@/builder/mode.ts';
 import type { FamilyValue, PartViewProps } from '@/builder/parts.ts';
 import { defaultSlotRenders } from '@/builder/render.tsx';
 import type { SlotRender } from '@/builder/define.ts';
+import { useSettings } from '@/app/settings.ts';
 import classes from '@/features/account/Account.module.css';
 
 function HeadingView({ styleAttrs }: PartViewProps) {

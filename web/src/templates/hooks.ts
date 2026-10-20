@@ -6,11 +6,11 @@ import { categoryCounts } from '@/features/catalog/filter.ts';
 import { BASE_TOKENS, type HeaderIconMode, type OptionValues, type Scheme, type TemplateTokens } from '@/templates/define.ts';
 import { useWarehouseOrdering } from '@/features/warehouses/use-warehouse.ts';
 import { useCurrency } from '@/features/warehouses/use-currency.ts';
-
-export { useCurrency };
 import { useTemplateContext } from '@/templates/runtime.tsx';
 import { CoreOptionsScopeContext, definedScope } from '@/templates/core-scope.ts';
 import type { Brand, Features, SupportLink } from '@/types/settings.ts';
+
+export { useCurrency };
 
 export interface TemplateInfo { id: string; presetId: string; scheme: Scheme; options: OptionValues; tokens: TemplateTokens }
 export function useTemplate(): TemplateInfo {

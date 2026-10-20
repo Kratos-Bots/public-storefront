@@ -1,4 +1,3 @@
-import { useSettings } from '@/app/settings.ts';
 import { useId, useState, useSyncExternalStore } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Money } from '@/components/Money.tsx';
@@ -15,6 +14,7 @@ import { useText } from '@/text/runtime.tsx';
 import type { StyleAttrs } from '@/builder/define.ts';
 import type { OrderDetail } from '@/types/orders.ts';
 import type { PublicOrder } from '@/types/public-order.ts';
+import { useSettings } from '@/app/settings.ts';
 import classes from '@/features/account/OrderDetail.module.css';
 
 /** What the card needs of the payment query: the editor's preview hands it the same shape. */

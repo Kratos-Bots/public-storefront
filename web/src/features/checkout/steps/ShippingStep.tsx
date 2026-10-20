@@ -15,6 +15,8 @@ export interface ShippingStepProps {
   errors: Record<string, string>;
   /** A quote error this step is responsible for — an unavailable option, say. */
   notice?: string;
+  /** The shown quote's currency (its figures are priced in it). Absent: the warehouse's. */
+  currency?: string;
   /** Content slots of the step part: before everything, after everything. */
   before?: ReactNode;
   after?: ReactNode;
@@ -31,6 +33,7 @@ export function ShippingStep({
   patch,
   errors,
   notice,
+  currency,
   before,
   after,
   rootAttrs,
@@ -78,7 +81,7 @@ export function ShippingStep({
                       : fields.choiceFigure
                   }
                 >
-                  {o.freeShipping || o.price === 0 ? t('checkout.shipping.free') : <Money amount={o.price} />}
+                  {o.freeShipping || o.price === 0 ? t('checkout.shipping.free') : <Money amount={o.price} currency={currency} />}
                 </span>
               </label>
             ))}

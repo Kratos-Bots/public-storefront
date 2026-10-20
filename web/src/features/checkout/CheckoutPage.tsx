@@ -884,7 +884,7 @@ function CheckoutFlow({ slots }: CheckoutPageProps) {
                   {submitting
                     ? t('checkout.actions.placing')
                     : chargeTotal !== null && chargeTotal > 0
-                      ? tn('checkout.actions.placeOrderTotal', { total: <Money amount={chargeTotal} /> })
+                      ? tn('checkout.actions.placeOrderTotal', { total: <Money amount={chargeTotal} currency={currency} /> })
                       : t('checkout.actions.placeOrder')}
                   <Slot name="ButtonAdornment" variant="primary" cta busy={submitting} />
                 </button>

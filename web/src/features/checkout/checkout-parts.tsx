@@ -146,7 +146,7 @@ function Shipping({ props, styleAttrs }: PartViewProps) {
   if (!d.stack && d.kind !== 'shipping') return null;
   return framed(d, 'shipping', (
     <ShippingStep
-      quote={d.optionsPending ? undefined : d.quote} form={d.form} patch={d.patch} errors={d.errors} notice={d.shippingNotice}
+      quote={d.optionsPending ? undefined : d.quote} form={d.form} patch={d.patch} errors={d.errors} notice={d.shippingNotice} currency={d.currency}
       before={slotOf(props, 'before')} after={slotOf(props, 'after')} rootAttrs={styleAttrs}
     />
   ));
@@ -189,6 +189,7 @@ function Coupon({ styleAttrs }: PartViewProps) {
         applied={d.quote?.coupon ?? null}
         code={d.form.couponCode}
         busy={d.busy}
+        currency={d.currency}
         error={d.couponError}
         onApply={(code) => d.patch({ couponCode: code })}
         onRemove={() => d.patch({ couponCode: '' })}

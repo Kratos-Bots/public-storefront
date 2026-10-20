@@ -8,6 +8,7 @@ import { chargedInFor } from '@/lib/charged-in.ts';
 import { formatMoney } from '@/lib/format.ts';
 import { CryptoComboPicker } from '@/features/checkout/CryptoComboPicker.tsx';
 import { useText } from '@/text/runtime.tsx';
+import { useSettings } from '@/app/settings.ts';
 import fields from '@/features/checkout/Fields.module.css';
 import classes from '@/features/checkout/steps/Steps.module.css';
 
@@ -37,6 +38,8 @@ export interface PaymentStepProps {
  */
 export function PaymentStep({ quote, form, patch, errors, guest, currency, onRetryQuote, busy, before, after, rootAttrs }: PaymentStepProps) {
   const { t, tn, msg } = useText();
+  // Store credit is held in the shop currency whichever warehouse is shown.
+  const shopCurrency = useSettings().currency;
   const name = useId();
   const methods = quote?.paymentMethods ?? [];
   const balance = quote?.storeCredit.balance ?? 0;
@@ -59,7 +62,7 @@ export function PaymentStep({ quote, form, patch, errors, guest, currency, onRet
           <span className={classes.toggleBox} aria-hidden />
           <span className={classes.toggleLabel}>{t('checkout.payment.useStoreCredit')}</span>
           <span className={classes.toggleFigure}>
-            {tn('checkout.payment.creditAvailable', { amount: <Money amount={balance} /> })}
+            {tn('checkout.payment.creditAvailable', { amount: <Money amount={balance} currency={shopCurrency} /> })}
           </span>
         </label>
       ) : null}
@@ -130,7 +133,7 @@ export function PaymentStep({ quote, form, patch, errors, guest, currency, onRet
                     ) : null}
                   </span>
                   <span className={fields.choiceFigure}>
-                    <Money amount={m.chargeTotal} />
+                    <Money amount={m.chargeTotal} currency={currency} />
                   </span>
                 </label>
 
