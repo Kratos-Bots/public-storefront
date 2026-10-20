@@ -16,7 +16,7 @@ async function stubPush(page: Page, opts: StubOptions = {}) {
   await page.addInitScript(({ endpoint, subscribed }) => {
     const calls = { register: 0, subscribe: 0, unsubscribe: 0, permission: 0 };
     (window as unknown as { __push: typeof calls }).__push = calls;
-    const bytes = (n: number) => new Uint8Array(n).fill(7).buffer;
+    const bytes = (n: number) => new Uint8Array(n).fill(4).buffer;
     let current: unknown = null;
     const makeSub = (key: ArrayBuffer | null) => ({
       endpoint,

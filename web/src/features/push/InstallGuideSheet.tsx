@@ -13,6 +13,8 @@ const ICON_SRC = '/app-icon/192.png';
 export function InstallGuideSheet({ opened, onClose }: { opened: boolean; onClose: () => void }) {
   const { t } = useText();
   const { brand } = useSettings();
+  // The Worker injects the app name the Home Screen will show; fall back to the brand name.
+  const appName = document.querySelector('meta[name="apple-mobile-web-app-title"]')?.getAttribute('content') || brand.name;
   return (
     <Sheet
       opened={opened}
@@ -26,7 +28,7 @@ export function InstallGuideSheet({ opened, onClose }: { opened: boolean; onClos
     >
       <div className={classes.guide}>
         <img className={classes.guideIcon} src={ICON_SRC} alt="" width={64} height={64} />
-        <p className={classes.guideName}>{brand.name}</p>
+        <p className={classes.guideName}>{appName}</p>
         <ul className={classes.steps}>
           <li className={classes.step}>{t('account.notifications.install.step1')}</li>
           <li className={classes.step}>{t('account.notifications.install.step2')}</li>

@@ -20,10 +20,27 @@ async function registration(): Promise<ServiceWorkerRegistration | null> {
 
 /** This browser's push endpoint, or null when it has none (or push is unsupported). Never registers anything. */
 export async function currentEndpoint(): Promise<string | null> {
+  return (await currentSubscription())?.endpoint ?? null;
+}
+
+/** This browser's subscription and whether it was made against `publicKey` (a changed key pair kills it). Never registers anything. */
+export async function currentSubscription(publicKey?: string): Promise<{ endpoint: string; keyMatches: boolean } | null> {
   try {
     const sub = await (await registration())?.pushManager.getSubscription();
-    return sub?.endpoint ?? null;
+    if (!sub) return null;
+    return { endpoint: sub.endpoint, keyMatches: publicKey ? sameKey(sub.options?.applicationServerKey, keyBytes(publicKey)) : true };
   } catch { return null; }
+}
+
+// The shopper switched notifications off on this browser (or signed out of it): nothing may quietly turn them back on.
+const OPT_OUT_KEY = 'push-opted-out';
+
+export function hasOptedOut(): boolean {
+  try { return localStorage.getItem(OPT_OUT_KEY) === '1'; } catch { return false; }
+}
+
+function setOptedOut(off: boolean): void {
+  try { if (off) localStorage.setItem(OPT_OUT_KEY, '1'); else localStorage.removeItem(OPT_OUT_KEY); } catch { /* storage unavailable */ }
 }
 
 /**
@@ -51,10 +68,12 @@ export async function subscribeThisDevice(publicKey: string): Promise<void> {
   const auth = json.keys?.auth;
   if (!json.endpoint || !p256dh || !auth) throw new Error('The browser returned an incomplete push subscription');
   await registerSubscription({ endpoint: json.endpoint, keys: { p256dh, auth } });
+  setOptedOut(false);
 }
 
 /** Removes this device on the server first (that needs the session), then drops the browser subscription. */
 export async function unsubscribeThisDevice(): Promise<void> {
+  setOptedOut(true);
   const sub = await (await registration())?.pushManager.getSubscription();
   if (!sub) return;
   try {

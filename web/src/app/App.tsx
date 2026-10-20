@@ -22,6 +22,7 @@ import { fetchCart } from '@/api/cart.ts';
 import { useAttribution } from '@/features/attribution/useAttribution.ts';
 import { scheduleGuestCartSync } from '@/features/cart/guest-cart-sync.ts';
 import { WarehouseSync } from '@/features/warehouses/WarehouseSync.tsx';
+import { setInstallPromptAllowed } from '@/features/push/install-prompt.ts';
 import { useCartStore } from '@/stores/cart.ts';
 import { useSessionStore } from '@/stores/session.ts';
 import { useTelegramAuthStore } from '@/stores/telegram.ts';
@@ -154,6 +155,8 @@ function SettingsBoundary() {
   // Renders above TextProvider, so this is always the built-in English (boot.* keys are fixed).
   const { t } = useText();
   useBootCart();
+  const installAllowed = query.data?.push?.enabled === true;
+  useEffect(() => { setInstallPromptAllowed(installAllowed); }, [installAllowed]);
   useAttribution(router);
 
   if (query.data && !telegramPending) return <ThemedApp settings={query.data} />;

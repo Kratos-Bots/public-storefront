@@ -4,10 +4,17 @@ import { useSettingsQuery } from '@/app/settings.ts';
 import { selectIsLoggedIn, useSessionStore } from '@/stores/session.ts';
 import { isTelegramWebApp } from '@/lib/telegram-webapp.ts';
 import { deletePushDevice, fetchPushDevices } from '@/features/push/api.ts';
-import { currentEndpoint, subscribeThisDevice, unsubscribeThisDevice } from '@/features/push/client.ts';
+import { currentSubscription, hasOptedOut, subscribeThisDevice, unsubscribeThisDevice } from '@/features/push/client.ts';
 import { pushAvailability, readBrowserPushEnv, type PushAvailability } from '@/features/push/support.ts';
 
 const DEVICES_KEY = ['push-devices'] as const;
+
+// One silent re-subscribe per page load, shared by every usePush() caller, so a failure cannot loop.
+let healAttempted = false;
+/** Test hook: a fresh page load. */
+export function resetPushHeal(): void { healAttempted = false; }
+
+interface BrowserSub { endpoint: string; keyMatches: boolean }
 
 export function usePush() {
   const settingsPush = useSettingsQuery().data?.push;
@@ -15,7 +22,9 @@ export function usePush() {
   const qc = useQueryClient();
   const [tick, setTick] = useState(0);
   // undefined = this browser has not been asked yet (or push is not active here), so `subscribed` is not yet a fact.
-  const [endpoint, setEndpoint] = useState<string | null | undefined>(undefined);
+  const [browser, setBrowser] = useState<BrowserSub | null | undefined>(undefined);
+  const endpoint = browser === undefined ? undefined : browser?.endpoint ?? null;
+  const publicKey = settingsPush?.publicKey;
 
   const availability: PushAvailability = useMemo(
     () => pushAvailability({ settingsPush, signedIn, telegram: isTelegramWebApp(), ...readBrowserPushEnv() }),
@@ -27,10 +36,10 @@ export function usePush() {
 
   useEffect(() => {
     let live = true;
-    if (!active) { setEndpoint(undefined); return; }
-    void currentEndpoint().then((e) => { if (live) setEndpoint(e); });
+    if (!active) { setBrowser(undefined); return; }
+    void currentSubscription(publicKey).then((b) => { if (live) setBrowser(b); });
     return () => { live = false; };
-  }, [active, tick]);
+  }, [active, tick, publicKey]);
 
   const devices = useQuery({
     queryKey: [...DEVICES_KEY, endpoint],
@@ -40,10 +49,30 @@ export function usePush() {
     staleTime: 30_000,
   });
 
+  // The browser's own subscription is not proof: the keys may have been regenerated, the server may have
+  // dropped the row, or another customer may own it. Only a live, current-key, server-known device counts.
+  const serverKnowsThisDevice = devices.data?.some((d) => d.current) === true;
+  const subscribed = typeof endpoint === 'string' && browser?.keyMatches === true && serverKnowsThisDevice;
+  // Settled once nothing is in flight that could still change `subscribed` (a banner must not fire before then).
+  const waitingOnServer = typeof endpoint === 'string' && browser?.keyMatches === true && devices.isPending;
+  const settled = !active || (endpoint !== undefined && !waitingOnServer);
+
   const refresh = useCallback(async () => {
     setTick((n) => n + 1);
     await qc.invalidateQueries({ queryKey: DEVICES_KEY });
   }, [qc]);
+
+  // Self-heal: permission was already granted, so this is not a prompt. A browser subscription that is missing,
+  // made against an old key, or unknown to the server is quietly replaced (the server upsert reassigns the endpoint).
+  // A shopper who switched notifications off (or signed out) on this browser is left alone.
+  useEffect(() => {
+    if (healAttempted || availability !== 'ready' || !settingsPush || !settled || subscribed) return;
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted' || hasOptedOut()) return;
+    // A failed list fetch says nothing about the server: only act on a list we actually have.
+    if (typeof endpoint === 'string' && browser?.keyMatches === true && !devices.isSuccess) return;
+    healAttempted = true;
+    void subscribeThisDevice(settingsPush.publicKey).catch(() => undefined).finally(() => { void refresh(); });
+  }, [availability, settingsPush, settled, subscribed, endpoint, browser, devices.isSuccess, refresh]);
 
   /** Call from a tap handler: the permission prompt needs the user gesture. */
   const enable = useCallback(async () => {
@@ -62,6 +91,5 @@ export function usePush() {
     try { await deletePushDevice(id); } finally { await refresh(); }
   }, [devices.data, disable, refresh]);
 
-  // `settled`: the browser's own subscription has been read, so `subscribed` can be trusted (a banner must not fire before it).
-  return { availability, subscribed: typeof endpoint === 'string', settled: !active || endpoint !== undefined, devices: devices.data ?? [], enable, disable, removeDevice };
+  return { availability, subscribed, settled, devices: devices.data ?? [], enable, disable, removeDevice };
 }

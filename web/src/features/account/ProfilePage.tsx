@@ -13,7 +13,6 @@ import { useEffectiveLayout } from '@/app/layout.ts';
 import { errorMessage } from '@/lib/errors.ts';
 import { isTelegramWebApp, tgClose } from '@/lib/telegram-webapp.ts';
 import { signOutAndReload } from '@/features/auth/sign-out.ts';
-import { unsubscribeBeforeSignOut } from '@/features/push/client.ts';
 import { textKey, useText } from '@/text/runtime.tsx';
 import { useProfile } from '@/features/account/queries.ts';
 import type { Profile } from '@/types/profile.ts';
@@ -229,9 +228,9 @@ export function ProfilePage({ slots }: { slots?: { content: SlotRender } } = {})
     setSigningOut(true);
 
     // The page builder's fixture session: the editor refused the call (and said so). Clearing or
-    // reloading here would drop the editor frame out of builder mode.
+    // reloading here would drop the editor frame out of builder mode. No push unsubscribe either: that would
+    // drop the editor's real browser subscription, not a fixture one.
     if (isBuilderMode()) {
-      await unsubscribeBeforeSignOut();
       await logout().catch(() => undefined);
       setSigningOut(false);
       return;
