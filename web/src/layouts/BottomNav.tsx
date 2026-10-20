@@ -2,14 +2,14 @@ import { useLayoutEffect, useRef, type ComponentType } from 'react';
 import { Link, useLocation } from 'react-router';
 import { useSettings } from '@/app/settings.ts';
 import { useEffectiveLayout } from '@/app/layout.ts';
-import { BagIcon, FaqIcon, HelpIcon, HomeIcon, StarIcon, UserIcon, type GlyphProps } from '@/components/icons.tsx';
-import { useFaqAvailable } from '@/features/faq/use-faq-available.ts';
+import { BagIcon, HelpIcon, HomeIcon, StarIcon, UserIcon, type GlyphProps } from '@/components/icons.tsx';
 import { reviewSettingsOf } from '@/features/reviews/settings.ts';
 import { useModalOpen } from '@/lib/use-modal-open.ts';
 import { isTelegramWebApp } from '@/lib/telegram-webapp.ts';
 import { useSessionStore, selectIsLoggedIn } from '@/stores/session.ts';
 import { useCartStore, selectCount } from '@/stores/cart.ts';
 import { useText } from '@/text/runtime.tsx';
+import { isHelpPath } from '@/layouts/menu-links.ts';
 import { useBottomNavShown } from '@/layouts/bottom-nav-rules.ts';
 import classes from '@/layouts/BottomNav.module.css';
 
@@ -24,7 +24,7 @@ interface Item {
 }
 
 /**
- * The phone's bottom navigation: Catalog, Profile, Cart, Reviews, then FAQ (Support while the shop has no FAQ), in a bar fixed to the foot of the screen.
+ * The phone's bottom navigation: Catalog, Profile, Cart, Reviews, then Help (tickets, FAQ and contact routes in one page), in a bar fixed to the foot of the screen.
  * Mounted once by each frame, so it needs no placement of its own. It publishes its measured height (safe area
  * included) as `--sf-nav-h` on the root, 0 whenever it is not on the page, and every other bottom element — the
  * cart bars, the wholesale bar, the contact strip, the shells' clearance — adds that value.
@@ -66,7 +66,6 @@ function Bar({ pathname, inset, coverUnderDialog }: { pathname: string; inset: '
   }, []);
 
   const reviews = reviewSettingsOf(settings).enabled;
-  const faq = useFaqAvailable();
   // Inside Telegram the web app layout has no sign-in page: the account is already there (as in the header).
   const profileTo = loggedIn || (layout === 'webapp' && native) ? '/account/profile' : '/login';
   const items: Item[] = [
@@ -81,10 +80,8 @@ function Bar({ pathname, inset, coverUnderDialog }: { pathname: string; inset: '
         }]
       : []),
     ...(reviews ? [{ key: 'reviews', to: '/reviews', label: t('shell.bottomNav.reviews'), Icon: StarIcon, active: pathname === '/reviews' }] : []),
-    // FAQ takes Support's place while the shop has one (Support stays in the header menu); otherwise Support, as ever.
-    faq
-      ? { key: 'faq', to: '/faq', label: t('shell.bottomNav.faq'), Icon: FaqIcon, active: pathname === '/faq' }
-      : { key: 'support', to: '/support', label: t('shell.bottomNav.support'), Icon: HelpIcon, active: pathname === '/support' || pathname.startsWith('/support/') },
+    // One Help item: tickets, FAQ and contact routes together. Active on its sub-pages (a ticket) and the old /faq too.
+    { key: 'help', to: '/help', label: t('shell.bottomNav.help'), Icon: HelpIcon, active: isHelpPath(pathname) },
   ];
 
   const cls = [classes.nav, native ? classes.telegram : inset === 'webapp' ? classes.webapp : '', coverUnderDialog && modalOpen ? classes.covered : '']

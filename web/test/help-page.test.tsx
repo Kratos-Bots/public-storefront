@@ -10,9 +10,11 @@ const shop = vi.hoisted(() => ({
 vi.mock('@/app/settings.ts', () => ({ useSettings: () => shop.settings }));
 
 const api = vi.hoisted(() => ({ fetchTickets: vi.fn() }));
+vi.mock('@/api/faq.ts', () => ({ fetchFaq: vi.fn() }));
 vi.mock('@/api/support.ts', async (orig) => ({ ...(await orig<typeof import('@/api/support.ts')>()), fetchTickets: api.fetchTickets }));
 
-import { SupportPage } from '@/features/support/SupportPage.tsx';
+import { fetchFaq } from '@/api/faq.ts';
+import { HelpPage } from '@/features/support/HelpPage.tsx';
 import { useSessionStore } from '@/stores/session.ts';
 import { useLocalMessages } from '@/features/support/queries.ts';
 
@@ -23,7 +25,7 @@ const mount = () => {
   return render(
     <MantineProvider env="test">
       <QueryClientProvider client={qc}>
-        <MemoryRouter><SupportPage /></MemoryRouter>
+        <MemoryRouter><HelpPage /></MemoryRouter>
       </QueryClientProvider>
     </MantineProvider>,
   );
@@ -44,7 +46,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe('the support page with support switched off', () => {
+describe('the Help page with support switched off', () => {
   it('is a heading and a coming-soon line when the shop has no contact routes', () => {
     mount();
     expect(screen.getByRole('heading', { level: 1, name: 'Support' })).toBeInTheDocument();
@@ -74,16 +76,16 @@ describe('the support page with support switched off', () => {
     expect(screen.getByText(/reach us/i)).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /new ticket/i })).toBeNull();
     expect(screen.queryByText('Your tickets')).toBeNull();
-    expect(screen.queryByText(/send us a message/i)).toBeNull();
+    expect(screen.queryByText(/get in touch/i)).toBeNull();
   });
 });
 
-describe('the support page with support switched on', () => {
+describe('the Help page with support switched on', () => {
   it('signed out shows sign-in and chat links', () => {
     shop.settings = { currency: 'GBP', supportLinks: [], brand: CHAT, support: { enabled: true } };
     mount();
-    expect(screen.getByText(/send us a message/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Sign in to open a ticket' })).toHaveAttribute('href', '/login?returnTo=%2Fsupport');
+    expect(screen.getByRole('heading', { level: 1, name: 'Help' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Sign in to open a ticket' })).toHaveAttribute('href', '/login?returnTo=%2Fhelp');
     expect(screen.getByText('Prefer chat?')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'WhatsApp' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /new ticket/i })).toBeNull();
@@ -143,6 +145,60 @@ describe('the support page with support switched on', () => {
     expect(await screen.findByRole('link', { name: /Old question/ })).toBeInTheDocument();
     expect(screen.getByText(/not being accepted/i)).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'New ticket' })).toBeNull();
+  });
+});
+
+describe('the Help page as one place for tickets and the FAQ', () => {
+  const faqSections = { sections: [{ id: 'ship', title: 'How long does shipping take?', body: 'Two to four days.' }] };
+  const ticket = { id: 7, subject: 'Where is my parcel?', status: 'needs_reply', order: null,
+    lastMessage: { preview: 'Hello', fromSupport: false, at: '2026-10-18T10:00:00Z' }, unread: false, createdAt: '2026-10-17T10:00:00Z' };
+  beforeEach(() => { vi.mocked(fetchFaq).mockReset(); });
+
+  it('signed in: New ticket, Your tickets, Common questions, then the contact block, in that order', async () => {
+    useSessionStore.setState({ token: 'tok', customer: { id: 1, nickname: 'Ada' } });
+    shop.settings = { currency: 'GBP', supportLinks: [], brand: CHAT, support: { enabled: true }, faq: { available: true } };
+    api.fetchTickets.mockResolvedValue({ data: [ticket], meta: { ...meta, totalItems: 1, totalPages: 1 } });
+    vi.mocked(fetchFaq).mockResolvedValue(faqSections);
+    const { container } = mount();
+    await screen.findByRole('link', { name: /Where is my parcel/ });
+    await screen.findByRole('button', { name: 'How long does shipping take?' });
+    const order = ['New ticket', 'Your tickets', 'Common questions', 'Prefer chat?'].map((text) => {
+      const el = screen.getByText(text);
+      return el;
+    });
+    for (let i = 0; i < order.length - 1; i += 1) {
+      expect(order[i]!.compareDocumentPosition(order[i + 1]!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+    expect(container.querySelector('section#faq')).not.toBeNull();
+  });
+
+  it('signed out: Sign in to open a ticket above the FAQ, and no tickets section', async () => {
+    shop.settings = { currency: 'GBP', supportLinks: [], brand: CHAT, support: { enabled: true }, faq: { available: true } };
+    vi.mocked(fetchFaq).mockResolvedValue(faqSections);
+    mount();
+    await screen.findByRole('button', { name: 'How long does shipping take?' });
+    expect(screen.getByRole('link', { name: 'Sign in to open a ticket' })).toBeInTheDocument();
+    expect(screen.queryByText('Your tickets')).toBeNull();
+    expect(api.fetchTickets).not.toHaveBeenCalled();
+  });
+
+  it('a shop with the FAQ on and support off shows the FAQ and the contact block, no ticket action', async () => {
+    shop.settings = { currency: 'GBP', supportLinks: [], brand: CHAT, support: { enabled: false }, faq: { available: true } };
+    vi.mocked(fetchFaq).mockResolvedValue(faqSections);
+    mount();
+    await screen.findByRole('button', { name: 'How long does shipping take?' });
+    expect(screen.getByText('Prefer chat?')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'WhatsApp' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /ticket/i })).toBeNull();
+    expect(screen.queryByText(/coming soon/i)).toBeNull();
+  });
+
+  it('a shop with nothing switched on shows the shell copy', () => {
+    shop.settings = { currency: 'GBP', supportLinks: [], brand: NO_CHAT, support: { enabled: false }, faq: { available: false } };
+    mount();
+    expect(screen.getByText(/coming soon/i)).toBeInTheDocument();
+    expect(screen.queryByText('Common questions')).toBeNull();
+    expect(vi.mocked(fetchFaq)).not.toHaveBeenCalled();
   });
 });
 

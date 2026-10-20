@@ -126,8 +126,8 @@ describe('the menu panel', () => {
     expect(d).toHaveAttribute('aria-modal', 'true');
     expect(d).toHaveAccessibleName('Menu');
     expect(burger()).toHaveAttribute('aria-expanded', 'true');
-    expect(labels()).toEqual(['Catalog', 'Reviews', 'Support', 'Sign in']);
-    expect(hrefs()).toEqual(['/', '/reviews', '/support', '/login']);
+    expect(labels()).toEqual(['Catalog', 'Reviews', 'Help', 'Sign in']);
+    expect(hrefs()).toEqual(['/', '/reviews', '/help', '/login']);
   });
   it('has no cart entry', () => {
     mount(<StorefrontHeader />);
@@ -139,53 +139,34 @@ describe('the menu panel', () => {
     useSessionStore.setState({ token: 'sess-1', customer: { id: 5, nickname: 'ada' } });
     mount(<StorefrontHeader />);
     fireEvent.click(burger()!);
-    expect(labels()).toEqual(['Catalog', 'Reviews', 'Support', 'Your account']);
-    expect(hrefs()).toEqual(['/', '/reviews', '/support', '/account']);
+    expect(labels()).toEqual(['Catalog', 'Reviews', 'Help', 'Your account']);
+    expect(hrefs()).toEqual(['/', '/reviews', '/help', '/account']);
   });
-  it('puts FAQ just before Support when the shop has an FAQ, and omits it when it has none or the backend is older', () => {
-    mount(<StorefrontHeader />, { faq: true });
-    fireEvent.click(burger()!);
-    expect(labels()).toEqual(['Catalog', 'Reviews', 'FAQ', 'Support', 'Sign in']);
-    expect(hrefs()).toEqual(['/', '/reviews', '/faq', '/support', '/login']);
-    cleanup();
-    mount(<StorefrontHeader />, { faq: false });
-    fireEvent.click(burger()!);
-    expect(labels()).toEqual(['Catalog', 'Reviews', 'Support', 'Sign in']);
-    cleanup();
-    mount(<StorefrontHeader />, { faq: 'older' });
-    fireEvent.click(burger()!);
-    expect(labels()).toEqual(['Catalog', 'Reviews', 'Support', 'Sign in']);
-  });
-  it('follows the selected warehouse: its own FAQ puts FAQ in, an unavailable one takes it out, faq null keeps the shop value', () => {
+  it('has one Help entry whatever the FAQ: shop on, off, an older backend, or a warehouse with its own', () => {
     const wh = (id: number, faq?: { available: boolean } | null) => ({ id, name: 'Site ' + id, country: null, isDefault: id === 1, ...(faq === undefined ? {} : { faq }) });
-    const pick = (rows: ReturnType<typeof wh>[], chosen: number) =>
-      useWarehouseStore.setState({ warehouseId: chosen, ctx: { enabled: true, list: rows, failed: false, carried: null } });
-    pick([wh(1), wh(2, { available: true })], 2);
+    for (const faq of [true, false, 'older'] as const) {
+      mount(<StorefrontHeader />, { faq });
+      fireEvent.click(burger()!);
+      expect(labels()).toEqual(['Catalog', 'Reviews', 'Help', 'Sign in']);
+      expect(hrefs()).toEqual(['/', '/reviews', '/help', '/login']);
+      cleanup();
+    }
+    useWarehouseStore.setState({ warehouseId: 2, ctx: { enabled: true, list: [wh(1), wh(2, { available: true })], failed: false, carried: null } });
     mount(<StorefrontHeader />, { faq: false });
     fireEvent.click(burger()!);
-    expect(labels()).toEqual(['Catalog', 'Reviews', 'FAQ', 'Support', 'Sign in']);
-    cleanup();
-    pick([wh(1), wh(2, { available: false })], 2);
-    mount(<StorefrontHeader />, { faq: true });
-    fireEvent.click(burger()!);
-    expect(labels()).toEqual(['Catalog', 'Reviews', 'Support', 'Sign in']);
-    cleanup();
-    pick([wh(1), wh(2, null)], 2);
-    mount(<StorefrontHeader />, { faq: true });
-    fireEvent.click(burger()!);
-    expect(labels()).toEqual(['Catalog', 'Reviews', 'FAQ', 'Support', 'Sign in']);
+    expect(labels()).toEqual(['Catalog', 'Reviews', 'Help', 'Sign in']);
     resetWarehouseStore();
   });
-  it('marks FAQ as the current page on /faq', () => {
-    mount(<StorefrontHeader />, { path: '/faq', faq: true });
+  it.each(['/faq', '/support/tickets/1'])('marks Help as the current page on %s', (path) => {
+    mount(<StorefrontHeader />, { path, faq: true });
     fireEvent.click(burger()!);
     const current = within(dialog()!).getAllByRole('link').filter((a) => a.getAttribute('aria-current') === 'page');
-    expect(current.map((a) => a.textContent)).toEqual(['FAQ']);
+    expect(current.map((a) => a.textContent)).toEqual(['Help']);
   });
   it('drops Reviews when the shop has reviews off, and the account entry when accounts are off', () => {
     mount(<StorefrontHeader />, { reviews: false, accounts: false });
     fireEvent.click(burger()!);
-    expect(labels()).toEqual(['Catalog', 'Support']);
+    expect(labels()).toEqual(['Catalog', 'Help']);
   });
   it('sends a signed-out visitor to the same place as the header account button, in each layout', () => {
     mount(<MenuHeader />);
@@ -201,7 +182,7 @@ describe('the menu panel', () => {
     expect(nativeHref).toBe('/account');
   });
   it.each([
-    ['/', 'Catalog'], ['/c/12', 'Catalog'], ['/p/101', 'Catalog'], ['/reviews', 'Reviews'], ['/support', 'Support'],
+    ['/', 'Catalog'], ['/c/12', 'Catalog'], ['/p/101', 'Catalog'], ['/reviews', 'Reviews'], ['/help', 'Help'], ['/support', 'Help'],
   ])('marks %s as the current page: %s', (path, name) => {
     mount(<StorefrontHeader />, { path });
     fireEvent.click(burger()!);
@@ -252,9 +233,9 @@ describe('the menu panel', () => {
   it('closes when a link is chosen, and the page changes', async () => {
     const { router } = mount(<StorefrontHeader />);
     fireEvent.click(burger()!);
-    fireEvent.click(within(dialog()!).getByRole('link', { name: 'Support' }));
+    fireEvent.click(within(dialog()!).getByRole('link', { name: 'Help' }));
     await waitFor(() => expect(dialog()).toBeNull());
-    expect(router.state.location.pathname).toBe('/support');
+    expect(router.state.location.pathname).toBe('/help');
   });
   it('closes when the page changes some other way (the back button)', async () => {
     const { router } = mount(<StorefrontHeader />);
@@ -263,9 +244,9 @@ describe('the menu panel', () => {
     await waitFor(() => expect(dialog()).toBeNull());
   });
   it('closes when the page you are already on is chosen', async () => {
-    mount(<StorefrontHeader />, { path: '/support' });
+    mount(<StorefrontHeader />, { path: '/help' });
     fireEvent.click(burger()!);
-    fireEvent.click(within(dialog()!).getByRole('link', { name: 'Support' }));
+    fireEvent.click(within(dialog()!).getByRole('link', { name: 'Help' }));
     await waitFor(() => expect(dialog()).toBeNull());
   });
   it('carries Telegram\'s safe-area padding class inside Telegram only', () => {

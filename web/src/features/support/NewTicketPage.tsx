@@ -14,7 +14,7 @@ import { formatDate } from '@/lib/format.ts';
 import { FADE } from '@/lib/motion.ts';
 import { useText } from '@/text/runtime.tsx';
 import type { OrderSummary } from '@/types/orders.ts';
-import page from '@/features/support/SupportPage.module.css';
+import page from '@/features/support/HelpPage.module.css';
 import classes from '@/features/support/NewTicketPage.module.css';
 
 const MAX_SUBJECT = 120;
@@ -242,7 +242,7 @@ export function NewTicketPage() {
       ) : (
         <div className={page.action}>
           <p className={page.note}>{t('support.new.disabled')}</p>
-          <Link to="/support" className={classes.back}>{t('support.new.back')}</Link>
+          <Link to="/help" className={classes.back}>{t('support.new.back')}</Link>
         </div>
       )}
     </div>

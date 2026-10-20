@@ -15,8 +15,7 @@ import { PageSkeleton } from '@/components/PageSkeleton.tsx';
 import { useUiStore } from '@/stores/ui.ts';
 
 const ReviewsPage = lazy(() => import('@/features/reviews/ReviewsPage.tsx').then((m) => ({ default: m.ReviewsPage })));
-const FaqPage = lazy(() => import('@/features/faq/FaqPage.tsx').then((m) => ({ default: m.FaqPage })));
-const SupportPage = lazy(() => import('@/features/support/SupportPage.tsx').then((m) => ({ default: m.SupportPage })));
+const HelpPage = lazy(() => import('@/features/support/HelpPage.tsx').then((m) => ({ default: m.HelpPage })));
 const NewTicketPage = lazy(() => import('@/features/support/NewTicketPage.tsx').then((m) => ({ default: m.NewTicketPage })));
 const TicketPage = lazy(() => import('@/features/support/TicketPage.tsx').then((m) => ({ default: m.TicketPage })));
 
@@ -204,23 +203,18 @@ export const routes: RouteObject[] = [
           </Suspense>
         ),
       },
-      // Shell pages like /reviews: not page-builder documents, in every layout. /faq is the empty state while the shop has no FAQ.
+      // Shell page like /reviews: not a page-builder document, in every layout. Tickets, FAQ and contact routes in one;
+      // the old /support and /faq links (bookmarks, earlier messages) land on it.
       {
-        path: 'faq',
+        path: 'help',
         element: (
           <Suspense fallback={<PageSkeleton inline />}>
-            <FaqPage />
+            <HelpPage />
           </Suspense>
         ),
       },
-      {
-        path: 'support',
-        element: (
-          <Suspense fallback={<PageSkeleton inline />}>
-            <SupportPage />
-          </Suspense>
-        ),
-      },
+      { path: 'support', element: <Navigate to="/help" replace /> },
+      { path: 'faq', element: <Navigate to="/help#faq" replace /> },
       // A ticket is the signed-in customer's own: both pages send a visitor to sign in and back.
       {
         path: 'support/new',

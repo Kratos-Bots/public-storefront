@@ -170,24 +170,19 @@ describe('a stored warehouse the list does not offer', () => {
   });
 });
 
-describe('the bottom bar follows the selected warehouse', () => {
+describe('the bottom bar and the selected warehouse', () => {
   const mount = () => render(<MemoryRouter><BottomNav /></MemoryRouter>);
   const labels = () => within(screen.getByRole('navigation', { name: 'Shop menu' })).getAllByRole('link').map((a) => a.textContent);
 
-  it('shows FAQ at a warehouse with an own FAQ, even when the shop has none', () => {
-    h.settings = { ...h.settings, faq: { available: false } };
-    pickWarehouses(list(wh(1), wh(2, { faq: { available: true } })), 2);
+  // Help is one item for tickets and the FAQ together: no warehouse's FAQ setting adds or removes it.
+  it.each([
+    ['an own FAQ the shop lacks', { faq: { available: true } }, { faq: { available: false } }],
+    ['an own FAQ that is unavailable', { faq: { available: false } }, undefined],
+    ['faq null', { faq: null }, undefined],
+  ])('keeps the same Help item at a warehouse with %s', (_name, over, shopFaq) => {
+    if (shopFaq) h.settings = { ...h.settings, ...shopFaq };
+    pickWarehouses(list(wh(1), wh(2, over)), 2);
     mount();
-    expect(labels()).toEqual(['Catalog', 'Profile', 'Cart', 'Reviews', 'FAQ']);
-  });
-  it('puts Support back at a warehouse whose own FAQ is unavailable', () => {
-    pickWarehouses(list(wh(1), wh(2, { faq: { available: false } })), 2);
-    mount();
-    expect(labels()).toEqual(['Catalog', 'Profile', 'Cart', 'Reviews', 'Support']);
-  });
-  it('shows the shop FAQ at a warehouse on faq null', () => {
-    pickWarehouses(list(wh(1), wh(2, { faq: null })), 2);
-    mount();
-    expect(labels()).toEqual(['Catalog', 'Profile', 'Cart', 'Reviews', 'FAQ']);
+    expect(labels()).toEqual(['Catalog', 'Profile', 'Cart', 'Reviews', 'Help']);
   });
 });

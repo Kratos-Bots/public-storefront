@@ -196,7 +196,7 @@ describe('the ticket conversation', () => {
     api.fetchTicket.mockRejectedValue(new ApiError(404, 'Ticket not found'));
     mount();
     expect(await screen.findByText("This ticket can't be found.")).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Back to support' })).toHaveAttribute('href', '/support');
+    expect(screen.getByRole('link', { name: 'Back to Help' })).toHaveAttribute('href', '/help');
   });
 
   it('text carried here from a closed ticket starts as the draft in the reply box, once', async () => {

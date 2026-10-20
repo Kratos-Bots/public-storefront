@@ -100,7 +100,7 @@ test('a revisit through the tickets list opens at the newest message', async ({ 
   await page.goto('/support/tickets/7');
   await expect(page.getByRole('textbox', { name: 'Message' })).toBeInViewport();
   for (let i = 0; i < 2; i++) {
-    await page.getByRole('link', { name: 'Back to support' }).click();
+    await page.getByRole('link', { name: 'Back to Help' }).click();
     await page.getByRole('link', { name: /Where is my parcel/ }).click();
     await expect(page.getByRole('log')).toContainText('due tomorrow');
     await expect(page.getByRole('textbox', { name: 'Message' })).toBeInViewport();

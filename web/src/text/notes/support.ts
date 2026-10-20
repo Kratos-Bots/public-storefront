@@ -1,6 +1,8 @@
 /** Editor-only notes for area `support`: where each line appears, in shopper words (Text panel). */
 export default {
-  'page.lede': 'Line under the heading of the Support page, where a customer sees their tickets',
+  'help.title': 'Heading of the Help page, which holds the tickets of the customer, the FAQ of the shop and its contact routes',
+  'help.lede': 'Line under the heading of the Help page',
+  'help.documentTitle': 'Browser tab title on the Help page; {page} is the page name and {shop} the shop name',
   'page.new': 'Button on the Support page that starts a new ticket',
   'page.yours': 'Heading above the customer\'s list of tickets',
   'page.empty': 'Shown on the Support page when the customer has no tickets yet',
@@ -25,7 +27,7 @@ export default {
   'new.photoLimit': 'Hint beside the photo button; {max} is how many photos one message can carry',
   'new.send': 'Button that sends the new ticket',
   'new.disabled': 'Shown instead of the form when the shop is not accepting new tickets',
-  'new.back': 'Link back to the Support page when new tickets are not being accepted',
+  'new.back': 'Link back to the Help page when new tickets are not being accepted',
   'thread.you': 'Name shown on the customer\'s own messages in a ticket',
   'thread.opened': 'Marker in a ticket conversation where the ticket was opened',
   'thread.closed': 'Marker in a ticket conversation where the ticket was closed',

@@ -1,5 +1,5 @@
 /* One column, set like the reviews page: a heading and a line, the one action, the customer's tickets as docket rows
-   (the orders list's idiom), then the shop's own contact routes. Tokens only, so every template restyles it. */
+   (the orders list's idiom), the shop's FAQ, then its own contact routes. Tokens only, so every template restyles it. */
 .page {
   max-width: 40rem;
   margin-inline: auto;
@@ -174,6 +174,29 @@
 
 .more {
   margin-top: 0.5rem;
+}
+
+/* The FAQ is the page's reference shelf: it sits under the tickets, with the accordion's own rules for its structure,
+   so the section only adds air and a heading. A skeleton of three rule-and-bar rows stands in while it loads. */
+.faq {
+  padding-bottom: 1.75rem;
+  /* A link to /help#faq lands on the heading, not under the shop header. */
+  scroll-margin-top: calc(var(--sf-bar-h, 52px) + 0.75rem);
+}
+
+.faq .heading {
+  margin-bottom: 0.6rem;
+}
+
+.faqSkeleton {
+  border-top: 1px solid var(--sf-line-strong);
+}
+
+.faqSkeleton span {
+  display: block;
+  height: 3.5rem;
+  border-bottom: 1px solid var(--sf-line-strong);
+  background: linear-gradient(var(--sf-surface), var(--sf-surface)) 1rem 50% / 55% 0.8rem no-repeat;
 }
 
 .contact {

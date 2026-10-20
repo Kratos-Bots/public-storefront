@@ -59,12 +59,12 @@ function isAccountPath(pathname: string): boolean {
 }
 
 /**
- * Support stays open to a signed-in customer who may not shop, like their account: the backend leaves the support
+ * Support (and the Help page that fronts it) stays open to a signed-in customer who may not shop, like their account: the backend leaves the support
  * routes outside the shop-access gate so a refused customer can still ask for help (a ban is refused by the session).
  */
 function isSupportPath(pathname: string): boolean {
   const p = stripTrailingSlash(pathname);
-  return p === '/support' || p.startsWith('/support/');
+  return p === '/help' || p === '/support' || p.startsWith('/support/');
 }
 
 /**
