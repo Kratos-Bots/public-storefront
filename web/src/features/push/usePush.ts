@@ -14,7 +14,8 @@ export function usePush() {
   const signedIn = useSessionStore(selectIsLoggedIn);
   const qc = useQueryClient();
   const [tick, setTick] = useState(0);
-  const [endpoint, setEndpoint] = useState<string | null>(null);
+  // undefined = this browser has not been asked yet (or push is not active here), so `subscribed` is not yet a fact.
+  const [endpoint, setEndpoint] = useState<string | null | undefined>(undefined);
 
   const availability: PushAvailability = useMemo(
     () => pushAvailability({ settingsPush, signedIn, telegram: isTelegramWebApp(), ...readBrowserPushEnv() }),
@@ -26,15 +27,16 @@ export function usePush() {
 
   useEffect(() => {
     let live = true;
-    if (!active) { setEndpoint(null); return; }
+    if (!active) { setEndpoint(undefined); return; }
     void currentEndpoint().then((e) => { if (live) setEndpoint(e); });
     return () => { live = false; };
   }, [active, tick]);
 
   const devices = useQuery({
     queryKey: [...DEVICES_KEY, endpoint],
-    queryFn: () => fetchPushDevices(endpoint).then((r) => r.devices),
-    enabled: active,
+    queryFn: () => fetchPushDevices(endpoint ?? null).then((r) => r.devices),
+    // Wait for the browser's own endpoint so the list marks the current device on its first fetch.
+    enabled: active && endpoint !== undefined,
     staleTime: 30_000,
   });
 
@@ -60,5 +62,6 @@ export function usePush() {
     try { await deletePushDevice(id); } finally { await refresh(); }
   }, [devices.data, disable, refresh]);
 
-  return { availability, subscribed: endpoint !== null, devices: devices.data ?? [], enable, disable, removeDevice };
+  // `settled`: the browser's own subscription has been read, so `subscribed` can be trusted (a banner must not fire before it).
+  return { availability, subscribed: typeof endpoint === 'string', settled: !active || endpoint !== undefined, devices: devices.data ?? [], enable, disable, removeDevice };
 }

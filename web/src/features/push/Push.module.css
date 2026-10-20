@@ -1,0 +1,231 @@
+/* Web push surfaces: the invitation banner, the Home Screen guide and the profile switch.
+   One class per selector; every colour is a `--sf-*` token. */
+
+/* ----------------------------------------------------------------- banner */
+
+.banner {
+  position: fixed;
+  right: 0.75rem;
+  bottom: calc(var(--sf-nav-h, 0px) + var(--sf-bar-safe, env(safe-area-inset-bottom, 0px)) + 0.75rem);
+  left: 0.75rem;
+  z-index: 24;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  max-width: 28rem;
+  margin: 0 auto;
+  padding: 0.85rem 0.9rem;
+  border: 1px solid var(--sf-line-strong);
+  border-radius: var(--sf-radius, 0.5rem);
+  background: var(--sf-bg-deep);
+  box-shadow: 0 6px 24px color-mix(in srgb, var(--sf-text) 14%, transparent);
+}
+
+/* The running-tab bar owns the strip above the bottom bar: step over it. */
+.bannerAboveBar {
+  bottom: calc(76px + var(--sf-nav-h, 0px) + var(--sf-bar-safe, env(safe-area-inset-bottom, 0px)) + 0.75rem);
+}
+
+.message {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--sf-text);
+}
+
+.buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.primary,
+.secondary {
+  flex: 1;
+  min-height: 44px;
+  padding: 0 1rem;
+  border-radius: var(--sf-btn-radius);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primary {
+  border: 0;
+  background: var(--sf-primary);
+  color: var(--sf-on-primary, #fff);
+}
+
+.secondary {
+  border: 1px solid var(--sf-line-strong);
+  background: transparent;
+  color: var(--sf-text);
+}
+
+.primary:focus-visible,
+.secondary:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------------ guide */
+
+.guide {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.5rem 1.25rem 1rem;
+  text-align: center;
+}
+
+.guideIcon {
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  background: var(--sf-bg-deep);
+}
+
+.guideName {
+  margin: 0;
+  font-family: var(--sf-font-heading);
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--sf-text);
+}
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  width: 100%;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+
+.step {
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--sf-line);
+  border-radius: var(--sf-radius, 0.5rem);
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: var(--sf-text);
+}
+
+.guideClose {
+  width: 100%;
+}
+
+/* ----------------------------------------------------------------- profile */
+
+.switchRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 0 0;
+  margin-top: 0.6rem;
+  border-top: 1px solid var(--sf-line);
+  cursor: pointer;
+}
+
+.switchLabel {
+  font-size: calc(0.9375rem * var(--sf-text-scale, 1));
+  font-weight: 600;
+  color: var(--sf-block-fg, var(--sf-text));
+}
+
+.switch {
+  appearance: none;
+  position: relative;
+  flex: none;
+  width: 44px;
+  height: 26px;
+  margin: 0;
+  border: 1px solid var(--sf-line-strong);
+  border-radius: 999px;
+  background: var(--sf-bg-deep);
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--sf-muted);
+  transition: transform 120ms ease, background-color 120ms ease;
+}
+
+.switch:checked {
+  border-color: var(--sf-primary);
+  background: var(--sf-primary);
+}
+
+.switch:checked::after {
+  background: var(--sf-on-primary, #fff);
+  transform: translateX(18px);
+}
+
+.switch:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.switch:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+
+.devices {
+  margin: 0.4rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.device {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--sf-line);
+}
+
+.deviceName {
+  min-width: 0;
+  font-size: calc(0.9375rem * var(--sf-text-scale, 1));
+  color: var(--sf-block-fg, var(--sf-text));
+  overflow-wrap: anywhere;
+}
+
+.deviceDate {
+  display: block;
+  font-size: calc(0.75rem * var(--sf-text-scale, 1));
+  color: var(--sf-block-fg, var(--sf-muted));
+}
+
+.remove {
+  flex: none;
+  min-height: 36px;
+  padding: 0 0.75rem;
+  border: 1px solid var(--sf-line-strong);
+  border-radius: var(--sf-btn-radius);
+  background: transparent;
+  font: inherit;
+  font-size: calc(0.8125rem * var(--sf-text-scale, 1));
+  color: var(--sf-block-fg, var(--sf-text));
+  cursor: pointer;
+}
+
+.remove:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

@@ -575,9 +575,9 @@ shells. The families, their containers and the documents they live on:
 | `order` | `OrderDetail` | `account.order` | `OrderHeading`, `OrderItems` (optional: `OrderBackLink`, `OrderBalance`, `OrderAddress`, `OrderParcels`, `OrderPayments`) |
 | `loyalty` | `Loyalty` | `account.loyalty` | `LoyaltyPoints`, `LoyaltyRewards` |
 | `referrals` | `Referrals` | `account.referrals` | `ReferralCode` |
-| `profile` | `Profile` | `account.profile` | `ProfileSignOut` (`ProfilePassword` is an optional part: it draws nothing while the shop has password sign-in off) |
+| `profile` | `Profile` | `account.profile` | `ProfileSignOut` (`ProfilePassword` is an optional part: it draws nothing while the shop has password sign-in off; `ProfileNotifications` likewise draws nothing where web push is unavailable) |
 | `login` | `LoginOptions` | `login` | `LoginHeading`, `LoginMethods` |
-| `payment` | `PaymentSuccess`, `PaymentCancel`, `OrderPlaced` | `payment-success`, `payment-cancel`, `order-placed` | per container (see the block table) |
+| `payment` | `PaymentSuccess`, `PaymentCancel`, `OrderPlaced` | `payment-success`, `payment-cancel`, `order-placed` | per container (see the block table); `PushOptIn` ("Get notified when your order ships") is a default part of `OrderPlaced` only and draws nothing where web push is unavailable |
 | `tracking` | `TrackingLookup` | `tracking` | `TrackingIntro`, `TrackingState`, `TrackingForm`, `TrackingHero`, `TrackingParcels` |
 | `verify` | `VerifyForm` | `verify` | `VerifyIntro`, `VerifyFields`, `VerifyResult` |
 | `reset-password` | `ResetPassword` | `reset-password` | `ResetPasswordHeading`, `ResetPasswordForm` |

@@ -22,4 +22,5 @@ export default {
   'signIn.action': 'Button that takes a signed-out customer to sign in and then to their order',
   'signIn.hint': 'Line under the sign-in button on the after-checkout pages (order placed, payment received, payment cancelled)',
   'placed.fallback': 'Shown when the shop has no WhatsApp or Telegram link',
+  'placed.notify': 'Button on the order placed page that turns on order notifications for this device',
 } as const satisfies Record<string, string>;

@@ -1,7 +1,7 @@
 import { part, type ContainerSpec } from '@/builder/parts.ts';
 
 const PARTS = ['PaymentMark', 'PaymentEyebrow', 'PaymentHeadline', 'PaymentMessage', 'PaymentReference', 'PaymentActions',
-  'PaymentContact', 'PaymentBack'] as const;
+  'PaymentContact', 'PaymentBack', 'PushOptIn'] as const;
 
 /** Three specs, one factory (spec §5.6): they differ only in the default order, what is required and what is offered. */
 function paymentContainer(opts: { required: readonly string[]; defaults: readonly (typeof PARTS)[number][]; offers?: readonly string[] }): ContainerSpec {
@@ -28,5 +28,5 @@ export const PAYMENT_CANCEL_CONTAINER = paymentContainer({
 
 export const ORDER_PLACED_CONTAINER = paymentContainer({
   required: ['PaymentHeadline', 'PaymentReference', 'PaymentActions'],
-  defaults: ['PaymentMark', 'PaymentEyebrow', 'PaymentHeadline', 'PaymentMessage', 'PaymentReference', 'PaymentActions', 'PaymentBack'],
+  defaults: ['PaymentMark', 'PaymentEyebrow', 'PaymentHeadline', 'PaymentMessage', 'PaymentReference', 'PaymentActions', 'PushOptIn', 'PaymentBack'],
 });

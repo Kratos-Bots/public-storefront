@@ -2663,7 +2663,8 @@
           "PaymentReference",
           "PaymentActions",
           "PaymentContact",
-          "PaymentBack"
+          "PaymentBack",
+          "PushOptIn"
         ],
         "insertSlot": "content"
       }
@@ -2996,7 +2997,8 @@
           "PaymentReference",
           "PaymentActions",
           "PaymentContact",
-          "PaymentBack"
+          "PaymentBack",
+          "PushOptIn"
         ],
         "insertSlot": "content"
       }
@@ -3241,7 +3243,8 @@
           "PaymentReference",
           "PaymentActions",
           "PaymentContact",
-          "PaymentBack"
+          "PaymentBack",
+          "PushOptIn"
         ],
         "insertSlot": "content"
       }
@@ -3862,6 +3865,7 @@
           "ProfileDetails",
           "ProfileChannels",
           "ProfilePassword",
+          "ProfileNotifications",
           "ProfileContact",
           "ProfileBotSwitch",
           "ProfileSignOut"
@@ -4006,6 +4010,40 @@
       }
     },
     {
+      "name": "ProfileNotifications",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "textSize",
+          "align",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "profile"
+      }
+    },
+    {
       "name": "ProfilePassword",
       "category": "part",
       "layouts": [
@@ -4067,6 +4105,37 @@
       },
       "part": {
         "family": "profile"
+      }
+    },
+    {
+      "name": "PushOptIn",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "padTop",
+          "padBottom",
+          "padX",
+          "marginTop",
+          "marginBottom",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "shadow",
+          "maxWidth",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "payment"
       }
     },
     {

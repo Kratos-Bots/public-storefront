@@ -6,6 +6,7 @@ import { ContactLinks } from '@/components/ContactLinks.tsx';
 import { ArrowUpRightIcon, CheckIcon, CloseIcon, TelegramIcon, WhatsAppIcon } from '@/components/icons.tsx';
 import { orderChatMessage, orderInquiryMessage } from '@/lib/chat-links.ts';
 import { isTelegramWebApp, openExternalLink } from '@/lib/telegram-webapp.ts';
+import { PushOrderPart } from '@/features/push/PushOptIn.tsx';
 import { ReferenceRow } from '@/features/payment-redirect/ReferenceRow.tsx';
 import { PaymentFamily, type PaymentData } from '@/builder/family-payment.ts';
 import type { FamilyValue, PartViewProps } from '@/builder/parts.ts';
@@ -213,7 +214,14 @@ function BackView({ styleAttrs }: PartViewProps) {
   );
 }
 
+/** "Get notified when your order ships": only on the order-placed page, and only where this device can take push. */
+function PushOptInView({ styleAttrs }: PartViewProps) {
+  const { kind } = PaymentFamily.useData();
+  if (kind !== 'placed') return null;
+  return <PushOrderPart wrapperClassName={classes.actions} className={classes.cta} rootAttrs={styleAttrs} />;
+}
+
 export const PAYMENT_VIEWS: FamilyValue<PaymentData>['views'] = {
   PaymentMark: MarkView, PaymentEyebrow: EyebrowView, PaymentHeadline: HeadlineView, PaymentMessage: MessageView,
-  PaymentReference: ReferenceView, PaymentActions: ActionsView, PaymentContact: ContactView, PaymentBack: BackView,
+  PaymentReference: ReferenceView, PaymentActions: ActionsView, PaymentContact: ContactView, PaymentBack: BackView, PushOptIn: PushOptInView,
 };

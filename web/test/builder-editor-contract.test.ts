@@ -12,6 +12,7 @@ import * as mode from '@/builder/mode.ts';
 import { STAGE4_PARTS } from './helpers/stage4-parts.ts';
 import { STAGE5_PARTS } from './helpers/stage5-parts.ts';
 import { PASSWORD_PARTS } from './helpers/password-parts.ts';
+import { PUSH_PARTS } from './helpers/push-parts.ts';
 import { sanitizeRichtext, RICHTEXT_ALLOWED_TAGS } from '@/builder/sanitize.ts';
 import { FIXED_ROUTE_KEYS } from '@/builder/types.ts';
 
@@ -62,7 +63,7 @@ describe('Plan 2 contract the editor builds on (spec §13 A7)', () => {
   });
 
   it('registers exactly the stage 3 list, stage-4 and stage-5 parts', () => {
-    const expected = new Set([...PART_BLOCKS, ...Object.keys(STAGE4_PARTS), ...Object.keys(STAGE5_PARTS), ...Object.keys(PASSWORD_PARTS)]);
+    const expected = new Set([...PART_BLOCKS, ...Object.keys(STAGE4_PARTS), ...Object.keys(STAGE5_PARTS), ...Object.keys(PASSWORD_PARTS), ...Object.keys(PUSH_PARTS)]);
     expect(Object.values(BLOCKS).filter((x) => x.part).map((d) => d.name).sort()).toEqual([...expected].sort());
   });
 
