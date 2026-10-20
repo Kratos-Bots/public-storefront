@@ -102,4 +102,6 @@ export interface StorefrontSettings {
   faq?: { available: boolean };
   /** Whether new support tickets can be opened. Absent on an older backend: read as off. */
   support?: { enabled: boolean };
+  /** Web push. Absent (older backend) or null = inactive: no opt-in, no service worker. */
+  push?: { enabled: boolean; publicKey: string } | null;
 }
