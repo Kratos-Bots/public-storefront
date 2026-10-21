@@ -1,4 +1,5 @@
 import { logout } from '@/api/auth.ts';
+import { unsubscribeBeforeSignOut } from '@/features/push/client.ts';
 import { resetCartSync } from '@/features/cart/useServerCart.ts';
 import { useCartStore } from '@/stores/cart.ts';
 import { useSessionStore } from '@/stores/session.ts';
@@ -19,6 +20,8 @@ import { clearLegacyOrderKeys } from '@/app/legacy-storage.ts';
  * cached query and in-memory store.
  */
 export async function signOutAndReload(): Promise<void> {
+  // Needs the live session (the DELETE is authenticated), so it goes first; best effort, 2 s at most.
+  await unsubscribeBeforeSignOut();
   // A revoke that fails still ends the session here: the token is useless to a
   // customer who has left, and refusing to sign them out would be the worse answer.
   await logout().catch(() => undefined);

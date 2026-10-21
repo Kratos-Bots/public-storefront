@@ -43,6 +43,7 @@ vi.mock('@/features/account/queries.ts', () => ({
     data: { nickname: 'Morgan', memberSince: '2026-03-02T09:00:00.000Z', totalOrders: 2, totalSpend: 40, identities: { telegram: false, whatsapp: true, email: true } },
   }),
 }));
+vi.mock('@/features/push/client.ts', () => ({ unsubscribeBeforeSignOut: vi.fn(async () => undefined) }));
 vi.mock('@marsidev/react-turnstile', () => ({
   Turnstile: forwardRef(function Turnstile() {
     g.turnstiles += 1;
@@ -54,6 +55,7 @@ import { builderOverrides } from '@/app/builder-gate.ts';
 import { useEffectiveLayout } from '@/app/layout.ts';
 import { usePrefetchPageSet } from '@/app/App.tsx';
 import { logout } from '@/api/auth.ts';
+import { unsubscribeBeforeSignOut } from '@/features/push/client.ts';
 import { fetchOrderPaymentOptions, selectOrderPaymentMethod } from '@/api/orders.ts';
 import { lookupTracking } from '@/api/tracking.ts';
 import { TELEGRAM_WIDGET_SRC, TelegramLogin } from '@/features/auth/TelegramLogin.tsx';
@@ -118,6 +120,8 @@ describe('ProfilePage sign-out', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Sign out' })).toBeEnabled());
     expect(logout).toHaveBeenCalledTimes(1);
+    // The editor's own browser must keep its real push subscription.
+    expect(unsubscribeBeforeSignOut).not.toHaveBeenCalled();
     expect(useSessionStore.getState().token).toBe('sf-builder-fixture-token');
     // jsdom reports window.location.assign as a not-implemented navigation.
     expect(errors.mock.calls.flat().join(' ')).not.toMatch(/navigation/i);
@@ -138,6 +142,8 @@ describe('ProfilePage sign-out for shoppers', () => {
     await waitFor(() => expect(useSessionStore.getState().token).toBeNull());
     expect(useCartStore.getState()).toMatchObject({ lines: [], mode: 'local' });
     expect(logout).toHaveBeenCalledTimes(1);
+    // A real shopper's sign-out still drops this browser's push subscription.
+    expect(unsubscribeBeforeSignOut).toHaveBeenCalledTimes(1);
     // The builder guard did not fire: the button stays in its signing-out state until the reload.
     expect(screen.getByRole('button', { name: 'Signing out' })).toBeDisabled();
   });

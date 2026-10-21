@@ -18,9 +18,11 @@ import { keepFocusedFieldClear } from '@/lib/keep-field-clear.ts';
 import { disablePinchZoom } from '@/lib/no-pinch-zoom.ts';
 import { captureReferralFromLocation } from '@/features/referrals/capture.tsx';
 import { loadTelegramSdk } from '@/lib/telegram-webapp.ts';
+import { guardInstallPrompt } from '@/features/push/install-prompt.ts';
 
 disablePinchZoom();
 keepFocusedFieldClear();
+guardInstallPrompt();
 
 // Saved order access keys from the removed order-links store: bearer credentials, so wiped once per browser.
 clearLegacyOrderKeys();

@@ -17,6 +17,7 @@ import { textKey, useText } from '@/text/runtime.tsx';
 import { useProfile } from '@/features/account/queries.ts';
 import type { Profile } from '@/types/profile.ts';
 import { PasswordSection } from '@/features/account/PasswordSection.tsx';
+import { NotificationsPart } from '@/features/push/PushOptIn.tsx';
 import { ProfileFamily, type ProfileData, type ProfilePreview } from '@/builder/family-profile.ts';
 import { usePreviewFixture } from '@/builder/mode.ts';
 import type { FamilyValue, PartViewProps } from '@/builder/parts.ts';
@@ -163,6 +164,10 @@ function PasswordView({ styleAttrs }: PartViewProps) {
   return <PasswordSection profile={profile} resetByEmail={resetByEmail} rootAttrs={styleAttrs} />;
 }
 
+function NotificationsView({ styleAttrs }: PartViewProps) {
+  return <NotificationsPart rootAttrs={styleAttrs} />;
+}
+
 function BotSwitchView({ styleAttrs }: PartViewProps) {
   const { showBotSwitch } = ProfileFamily.useData();
   return showBotSwitch ? <ClassicBotSwitch rootAttrs={styleAttrs} /> : null;
@@ -189,7 +194,7 @@ function SignOutView({ styleAttrs }: PartViewProps) {
 
 /** The profile tab's views (spec §5.4): the v0.7.0 JSX of each piece. */
 export const PROFILE_VIEWS: FamilyValue<ProfileData>['views'] = {
-  ProfileDetails: DetailsView, ProfileChannels: ChannelsView, ProfilePassword: PasswordView, ProfileContact: ContactView,
+  ProfileDetails: DetailsView, ProfileChannels: ChannelsView, ProfilePassword: PasswordView, ProfileNotifications: NotificationsView, ProfileContact: ContactView,
   ProfileBotSwitch: BotSwitchView, ProfileSignOut: SignOutView,
 };
 
@@ -223,7 +228,8 @@ export function ProfilePage({ slots }: { slots?: { content: SlotRender } } = {})
     setSigningOut(true);
 
     // The page builder's fixture session: the editor refused the call (and said so). Clearing or
-    // reloading here would drop the editor frame out of builder mode.
+    // reloading here would drop the editor frame out of builder mode. No push unsubscribe either: that would
+    // drop the editor's real browser subscription, not a fixture one.
     if (isBuilderMode()) {
       await logout().catch(() => undefined);
       setSigningOut(false);

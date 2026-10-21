@@ -89,7 +89,7 @@ const REQUIRED: Record<string, string[]> = { Loyalty: ['LoyaltyPoints', 'Loyalty
 const DEFAULTS: Record<string, string[]> = {
   Loyalty: ['LoyaltyPoints', 'LoyaltyCredit', 'LoyaltyNoPoints', 'LoyaltyRewards'],
   Referrals: ['ReferralCode', 'ReferralShare', 'ReferralStats', 'ReferralReferrer'],
-  Profile: ['ProfileDetails', 'ProfileChannels', 'ProfilePassword', 'ProfileContact', 'ProfileBotSwitch', 'ProfileSignOut'],
+  Profile: ['ProfileDetails', 'ProfileChannels', 'ProfilePassword', 'ProfileNotifications', 'ProfileContact', 'ProfileBotSwitch', 'ProfileSignOut'],
 };
 const LAYOUTS: LayoutKind[] = ['storefront', 'menu', 'webapp'];
 

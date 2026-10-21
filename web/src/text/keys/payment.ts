@@ -29,4 +29,5 @@ export default defineTextArea('payment', {
   'signIn.hint': { en: 'Use the email or phone number you gave at checkout.', max: 200 },
 
   'placed.fallback': { en: 'Contact us through your usual channel and quote your order reference to arrange payment.' },
+  'placed.notify': { en: 'Get notified when your order ships', max: 60 },
 });

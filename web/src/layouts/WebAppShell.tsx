@@ -7,6 +7,7 @@ import { CutoffBar } from '@/features/notices/CutoffBar.tsx';
 import { LoginModal } from '@/features/auth/LoginModal.tsx';
 import { UnpaidOrderPrompt } from '@/features/unpaid-prompt/UnpaidOrderPrompt.tsx';
 import { ReviewPrompt } from '@/features/review-prompt/ReviewPrompt.tsx';
+import { PushInviteBanner } from '@/features/push/PushInviteBanner.tsx';
 import { BottomNav } from '@/layouts/BottomNav.tsx';
 import { PrimaryActionBar, usePrimaryBarShowing } from '@/features/webapp/PrimaryActionBar.tsx';
 import { WebAppCartBar } from '@/features/webapp/WebAppCartBar.tsx';
@@ -64,6 +65,7 @@ export function WebAppFrame({ children }: { children: ReactNode; cartBar?: boole
       {features.accounts && !native ? <LoginModal /> : null}
       <UnpaidOrderPrompt />
       <ReviewPrompt />
+      <PushInviteBanner />
 
       <Slot name="Overlay" />
     </div>

@@ -36,11 +36,13 @@ import { STAGE4_PARTS } from './helpers/stage4-parts.ts';
 
 const LOGIN_PARTS = ['LoginHeading', 'LoginMethods'] as const;
 const PAYMENT_PARTS = ['PaymentMark', 'PaymentEyebrow', 'PaymentHeadline', 'PaymentMessage', 'PaymentReference', 'PaymentActions', 'PaymentContact', 'PaymentBack'] as const;
+// PushOptIn (web push) is a payment part too, but its style row lives in helpers/push-parts.ts.
+const PAYMENT_PARTS_WITH_PUSH = [...PAYMENT_PARTS, 'PushOptIn'] as const;
 const CONTAINERS = [
   { name: 'LoginOptions', docKey: 'login' as DocKey, spec: LOGIN_CONTAINER, parts: LOGIN_PARTS },
-  { name: 'PaymentSuccess', docKey: 'payment-success' as DocKey, spec: PAYMENT_SUCCESS_CONTAINER, parts: PAYMENT_PARTS },
-  { name: 'PaymentCancel', docKey: 'payment-cancel' as DocKey, spec: PAYMENT_CANCEL_CONTAINER, parts: PAYMENT_PARTS },
-  { name: 'OrderPlaced', docKey: 'order-placed' as DocKey, spec: ORDER_PLACED_CONTAINER, parts: PAYMENT_PARTS },
+  { name: 'PaymentSuccess', docKey: 'payment-success' as DocKey, spec: PAYMENT_SUCCESS_CONTAINER, parts: PAYMENT_PARTS_WITH_PUSH },
+  { name: 'PaymentCancel', docKey: 'payment-cancel' as DocKey, spec: PAYMENT_CANCEL_CONTAINER, parts: PAYMENT_PARTS_WITH_PUSH },
+  { name: 'OrderPlaced', docKey: 'order-placed' as DocKey, spec: ORDER_PLACED_CONTAINER, parts: PAYMENT_PARTS_WITH_PUSH },
 ];
 const LAYOUTS: LayoutKind[] = ['storefront', 'menu', 'webapp'];
 type Links = { whatsapp: string | null; telegram: string | null };
@@ -109,7 +111,8 @@ describe('contract', () => {
     for (const { spec } of CONTAINERS) expect(spec.insertSlot).toBe('content');
     expect(defaults('PaymentSuccess').map((i) => i.type)).toEqual(['PaymentMark', 'PaymentEyebrow', 'PaymentHeadline', 'PaymentMessage', 'PaymentReference', 'PaymentActions', 'PaymentContact', 'PaymentBack']);
     expect(defaults('PaymentCancel').map((i) => i.type)).toEqual(['PaymentMark', 'PaymentEyebrow', 'PaymentHeadline', 'PaymentMessage', 'PaymentReference', 'PaymentActions', 'PaymentContact']);
-    expect(defaults('OrderPlaced').map((i) => i.type)).toEqual(['PaymentMark', 'PaymentEyebrow', 'PaymentHeadline', 'PaymentMessage', 'PaymentReference', 'PaymentActions', 'PaymentBack']);
+    // PushOptIn is on the placed page only: a signed-in customer's success return is redirected to their order before it could show.
+    expect(defaults('OrderPlaced').map((i) => i.type)).toEqual(['PaymentMark', 'PaymentEyebrow', 'PaymentHeadline', 'PaymentMessage', 'PaymentReference', 'PaymentActions', 'PushOptIn', 'PaymentBack']);
     expect(defaults('LoginOptions').map((i) => i.type)).toEqual(['LoginHeading', 'LoginMethods']);
   });
 

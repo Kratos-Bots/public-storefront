@@ -425,6 +425,10 @@ export interface MockState {
   oidcCalls: Array<{ route: 'start' | 'complete'; body: Record<string, unknown> }>;
   /** Bodies posted to the classic-bot switch. */
   botModes: Array<Record<string, unknown>>;
+  /** Web push: the devices the backend holds (seed it to list some), the bodies POSTed to register, and what was deleted (by endpoint or by id). */
+  pushDevices: Array<{ id: number; endpoint: string; deviceLabel: string; createdAt: string }>;
+  pushPosts: Array<Record<string, unknown>>;
+  pushDeletes: Array<{ id?: number; endpoint?: string }>;
   /** Every password / account-password / email-verification request, with its body and Authorization header. */
   passwordCalls: Array<{ route: string; body: Record<string, unknown>; authorization: string | null }>;
   /** Bodies posted to the sign-in-by-code routes, keyed by the route after auth/code/. */
@@ -820,6 +824,9 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
     webappLogins: [],
     oidcCalls: [],
     botModes: [],
+    pushDevices: [],
+    pushPosts: [],
+    pushDeletes: [],
     passwordCalls: [],
     codeCalls: [],
     pages: options.pages ?? {},
@@ -1472,6 +1479,38 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
 
     if (path === 'storefront/profile/referral-code' && method === 'POST') {
       await envelope(route, { referrerNickname: 'Bea' });
+      return;
+    }
+
+    // Web push (STOREFRONT.md 3.14). The list marks the device whose endpoint the page sent as `current`.
+    if (path === 'storefront/push/subscriptions') {
+      if (method === 'POST') {
+        const posted = body(route);
+        state.pushPosts.push(posted);
+        const id = 100 + state.pushPosts.length;
+        state.pushDevices.push({ id, endpoint: String(posted.endpoint), deviceLabel: 'Chrome on Android', createdAt: '2026-08-24T09:00:00.000Z' });
+        await envelope(route, { id, deviceLabel: 'Chrome on Android' }, undefined, 201);
+        return;
+      }
+      if (method === 'GET') {
+        const endpoint = url.searchParams.get('endpoint');
+        await envelope(route, { devices: state.pushDevices.map((d) => ({ id: d.id, deviceLabel: d.deviceLabel, createdAt: d.createdAt, current: endpoint !== null && d.endpoint === endpoint })) });
+        return;
+      }
+      if (method === 'DELETE') {
+        const endpoint = String(body(route).endpoint ?? '');
+        state.pushDeletes.push({ endpoint });
+        state.pushDevices = state.pushDevices.filter((d) => d.endpoint !== endpoint);
+        await route.fulfill({ status: 204 });
+        return;
+      }
+    }
+    const pushDevice = /^storefront\/push\/subscriptions\/(\d+)$/.exec(path);
+    if (pushDevice && method === 'DELETE') {
+      const id = Number(pushDevice[1]);
+      state.pushDeletes.push({ id });
+      state.pushDevices = state.pushDevices.filter((d) => d.id !== id);
+      await route.fulfill({ status: 204 });
       return;
     }
 
