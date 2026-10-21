@@ -33,6 +33,18 @@ describe('fetchPublished', () => {
   });
 });
 
+describe('fetchPublished locale param', () => {
+  it('sends the shopper preference comma-joined and URL-encoded, and nothing when empty', async () => {
+    respond({ version: 3, data: SET });
+    await fetchPublished('menu', ['fr-CA', 'en']);
+    await fetchPublished('menu');
+    const urls = (vi.mocked(fetch).mock.calls as unknown as [Request][]).map(([r]) => new URL(r.url));
+    expect(urls[0]!.searchParams.get('locale')).toBe('fr-CA,en');
+    expect(urls[0]!.search).toBe('?locale=fr-CA%2Cen');
+    expect(urls[1]!.search).toBe('');
+  });
+});
+
 describe('toPublishedText', () => {
   it('rejects a non-canonical locale or formatLocale', () => {
     expect(toPublishedText({ ...TEXT, locale: 'EN' })).toBeNull();
@@ -44,6 +56,11 @@ describe('toPublishedText', () => {
   });
   it('requires both layers to be objects', () => {
     expect(toPublishedText({ ...TEXT, layout: [] })).toBeNull();
+  });
+  it('keeps a valid languages list and ignores a malformed one (read as [locale])', () => {
+    expect(toPublishedText({ ...TEXT, locale: 'fr', languages: ['fr', 'en'] })?.languages).toEqual(['fr', 'en']);
+    expect(toPublishedText(TEXT)).not.toHaveProperty('languages');
+    for (const bad of ['fr', [], ['fr', 'EN'], ['fr', 3], null]) expect(toPublishedText({ ...TEXT, languages: bad })).not.toHaveProperty('languages');
   });
   it('toPublished ignores a non-object body', () => {
     expect(toPublished('nope')).toEqual({ pageSet: null, text: null });

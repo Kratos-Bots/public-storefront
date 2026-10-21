@@ -15,7 +15,7 @@ import { readdirSync } from 'node:fs';
 const keys = Object.keys(TEXT_ENTRIES);
 const srcFiles = (dir = SRC_ROOT): string[] => readdirSync(dir, { withFileTypes: true }).flatMap((d) => {
   const abs = path.join(dir, d.name);
-  if (d.isDirectory()) return abs.includes(`${path.sep}text${path.sep}keys`) || abs.includes(`${path.sep}text${path.sep}notes`) ? [] : srcFiles(abs);
+  if (d.isDirectory()) return ['keys', 'notes', 'packs'].some((d) => abs.includes(`${path.sep}text${path.sep}${d}`)) ? [] : srcFiles(abs);
   return /\.(ts|tsx)$/.test(d.name) ? [abs] : [];
 });
 

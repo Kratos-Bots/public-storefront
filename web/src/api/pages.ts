@@ -58,7 +58,11 @@ export function toPublishedText(raw: unknown): PublishedText | null {
   const shared = toLocaleStrings(raw.shared);
   const layout = toLocaleStrings(raw.layout);
   if (!shared || !layout) return null;
-  return { version, locale, formatLocale: formatLocale as PublishedText['formatLocale'], shared, layout };
+  const text: PublishedText = { version, locale, formatLocale: formatLocale as PublishedText['formatLocale'], shared, layout };
+  // An older backend sends no `languages`, and a malformed list is ignored: both read as [locale].
+  const { languages } = raw;
+  if (Array.isArray(languages) && languages.length > 0 && languages.every(isLocale)) text.languages = languages as string[];
+  return text;
 }
 
 /** `data` of the public read → Published. A v0.7.0 backend sends no `text`; a malformed `text` alone is dropped. */
@@ -73,9 +77,11 @@ export function toPublished(body: unknown): Published {
  * "nothing published", and every page renders its default document. `retry: 0`: the shared
  * client retries a GET once, which would make a 503 two requests on every page load.
  */
-export async function fetchPublished(layout: LayoutKind): Promise<Published> {
+export async function fetchPublished(layout: LayoutKind, prefer: readonly string[] = []): Promise<Published> {
   try {
-    return toPublished(await unwrap<unknown>(api.get(`storefront/pages/${layout}`, PAGE_SET_REQUEST)));
+    // `locale` = the shopper's preferred languages, comma-joined (the backend picks one; an older one ignores it).
+    const options = prefer.length > 0 ? { ...PAGE_SET_REQUEST, searchParams: { locale: prefer.join(',') } } : PAGE_SET_REQUEST;
+    return toPublished(await unwrap<unknown>(api.get(`storefront/pages/${layout}`, options)));
   } catch {
     return NOTHING;
   }

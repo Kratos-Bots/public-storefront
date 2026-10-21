@@ -305,8 +305,14 @@ DOM is byte-identical to v0.7.0.
 `TextProvider` (app level) reads the published text of the effective layout from the page-set
 response (`GET storefront/pages/:layout` carries `text` — no extra request); the editor and the
 version preview inject theirs through `PageSetOverrideProvider`'s `text`. For each key: the
-layout's override for the store language, then the shared value, then the built-in English. A
-stored value is ignored (with one console warning) when it fails `checkValue`: unknown key, string
+layout's override for the store language, then the shared value, then the **built-in pack** of the
+store language's primary subtag (`web/src/text/packs/{fr,it,es}/<area>.ts`, one lazy chunk per
+language, loaded inside `pageSetQueryFn` before the query resolves; no pack for `closed.*`/`boot.*`),
+then the built-in English. A stored or pack value picks its plural form with the store locale's
+rules (`Resolved.rulesLocale`); only the English fallback uses `en` rules. The shopper's language
+(`?lang=` → `localStorage['sf.lang']` → `navigator.languages`, `text/preference.ts`) is sent as the
+read's `locale` param, never in the builder canvas or previews; `TextApi.languages` lists what the
+store offers. A stored value is ignored (with one console warning) when it fails `checkValue`: unknown key, string
 vs plural mismatch, a placeholder the key doesn't offer, a stray brace, empty, longer than `max`,
 or a fixed key. The provider also sets `<html lang>` and the **format profile**: English with
 built-in formatting keeps every v0.7.0 per-call-site locale (money `en`, dates `en-GB`, …); any

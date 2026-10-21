@@ -14,12 +14,21 @@ export interface TextLanguage {
   locale: Locale;
   /** '' = built-in formatting for `locale` (spec §6.5); else used for every formatter. */
   formatLocale: '' | Locale;
+  /** Extra languages shoppers may switch to (spec languages §4): canonical, unique, never `locale`. Absent ≡ []. */
+  offered?: Locale[];
 }
 export interface SiteText { schemaVersion: 1; language: TextLanguage; strings: Record<Locale, LocaleStrings> }
 export interface PageText { strings: Record<Locale, LocaleStrings> }
 
 /** The two stored layers for the active locale, plus the language (the public read's `text`, spec §4.6). */
-export interface TextLayers { locale: Locale; formatLocale: '' | Locale; shared: LocaleStrings; layout: LocaleStrings }
+export interface TextLayers {
+  locale: Locale;
+  formatLocale: '' | Locale;
+  shared: LocaleStrings;
+  layout: LocaleStrings;
+  /** Every language the store offers, default first (the public read's `text.languages`). Absent ≡ [locale]. */
+  languages?: readonly Locale[];
+}
 export interface PublishedText extends TextLayers { version: number }
 /** What the editor and the version preview inject through `PageSetOverrideProvider`'s `text` prop. */
 export type EditorText = TextLayers;

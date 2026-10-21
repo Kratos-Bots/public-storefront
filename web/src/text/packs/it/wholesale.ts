@@ -1,0 +1,38 @@
+// TODO(translate)
+import type wholesale from '@/text/keys/wholesale.ts';
+import type { AreaPack } from '@/text/packs/index.ts';
+
+export default {
+  "wholesale.page.title": "Trade list",
+  "wholesale.page.eyebrow": "Trade list",
+  "wholesale.page.categoryEyebrow": "Category",
+  "wholesale.page.searchEyebrow": "Search",
+  "wholesale.page.loadFailedHint": "The list is still there — this was a hiccup between your browser and us.",
+  "wholesale.page.categoryMissingHint": "It may have been renamed or retired. The full list is still one tap away.",
+  "wholesale.page.showWholeList": "Show the whole list",
+  "wholesale.page.wholeList": "Whole list",
+  "wholesale.page.noMatchesHint": "Try a shorter word, or the product code from your last order.",
+  "wholesale.page.emptyHint": "The list is empty for now — message us and we'll send the current sheet.",
+  "wholesale.search.withCode": "Search name or code",
+  "wholesale.search.plain": "Search",
+  "wholesale.tally.unit": {"one":"line","other":"lines"},
+  "wholesale.tally.of": "of",
+  "wholesale.table.code": "Code",
+  "wholesale.table.product": "Product",
+  "wholesale.table.unit": "Unit",
+  "wholesale.table.bulk": "Bulk",
+  "wholesale.table.line": "Line",
+  "wholesale.table.qty": "Qty",
+  "wholesale.bar.lines": {"one":"{count} line","other":"{count} lines"},
+  "wholesale.bar.units": {"one":"{count} unit","other":"{count} units"},
+  "wholesale.bar.tally": "{lines} · {units}",
+  "wholesale.bar.ariaLabel": "View basket — {lines}, {units}, {subtotal}",
+  "wholesale.bar.viewBasket": "View basket",
+  "wholesale.ladder.minUnits": "{min}+ units",
+  "wholesale.ladder.yourPrice": "your price",
+  "wholesale.row.min": "Min {count}",
+  "wholesale.row.bulkPriceApplied": "Bulk price applied, {percent}% off — show the price breaks for {name}",
+  "wholesale.row.showBreaks": "Show the price breaks for {name}",
+  "wholesale.row.bulk": "Bulk",
+  "wholesale.row.removeAria": "Remove {name} from the order",
+} satisfies AreaPack<typeof wholesale>;

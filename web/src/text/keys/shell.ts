@@ -17,6 +17,8 @@ export default defineTextArea('shell', {
   'menu.help': { en: 'Help', max: 24 },
   'menu.account': { en: 'Your account', max: 24 },
   'menu.signIn': { en: 'Sign in', max: 24 },
+  'language.label': { en: 'Language', max: 40 },
+  'language.change': { en: 'Change language — {language}', max: 80 },
   'bottomNav.ariaLabel': { en: 'Shop menu', max: 40 },
   'bottomNav.catalog': { en: 'Catalog', max: 16 },
   'bottomNav.profile': { en: 'Profile', max: 16 },
