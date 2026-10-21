@@ -4,7 +4,7 @@ import { isDocKey, type ViewportWidth } from '@/builder/editor/protocol.ts';
 import { docFor, docsFromPageSet, isCustomKey, isShownIn, newCustomPage, normalizeDoc, withDoc, withoutDoc, type DocMap } from '@/builder/editor/page-set.ts';
 import type { DocKey, LayoutKind, PageSet, PuckDoc } from '@/builder/types.ts';
 import { TEXT_LIMITS, type EditorText, type LocaleStrings, type PageText, type SiteText, type TextLanguage } from '@/text/types.ts';
-import { DEFAULT_LANGUAGE, emptyPageText, emptySiteText, noRoomFor, withValue, type DraftValue, type TextIssue, type TextScope } from '@/builder/editor/text/model.ts';
+import { DEFAULT_LANGUAGE, emptyPageText, emptySiteText, noRoomFor, withValue, wordingLanguages, type DraftValue, type TextIssue, type TextScope } from '@/builder/editor/text/model.ts';
 import { rowFor } from '@/builder/editor/text/catalog.ts';
 import { isStoreLocale } from '@/builder/editor/text/languages.ts';
 import { useTextUi } from '@/builder/editor/text/ui-store.ts';
@@ -169,16 +169,19 @@ let roomMemo: { shared: SiteText['strings'] | null; layout: PageText['strings'];
 let issueMemo: { inputs: unknown[]; issues: TextIssue[] } | null = null;
 /** Every blocking text issue (spec §7.1) — the header and the posted change use this one list. */
 export function textIssuesOf(s: Pick<EditorState, 'sharedEditable' | 'siteText' | 'published' | 'pageText'>): TextIssue[] {
-  const locale = editingLocaleOf(s);
-  const inputs = [s.sharedEditable, s.siteText, s.pageText, locale];
+  // Every language that holds wording blocks publishing, whichever one the owner is editing now.
+  // A language without wording has no issues, so the editing language is not an input.
+  const inputs = [s.sharedEditable, s.siteText, s.pageText];
   if (issueMemo && inputs.every((v, i) => v === issueMemo!.inputs[i])) return issueMemo.issues;
+  const shared = s.sharedEditable ? s.siteText : null;
+  const locales = [...new Set([...(shared ? wordingLanguages(shared.strings) : []), ...wordingLanguages(s.pageText.strings)])];
   // Layer-wide issues first: they survive the change's 500-issue cap.
   const issues = [
-    ...layerIssues({ shared: s.sharedEditable ? s.siteText : null, layout: s.pageText }),
-    ...textIssues({
-      shared: s.sharedEditable && s.siteText ? s.siteText.strings[locale] ?? EMPTY_STRINGS : null,
+    ...layerIssues({ shared, layout: s.pageText }),
+    ...locales.flatMap((locale) => textIssues({
+      shared: shared ? shared.strings[locale] ?? EMPTY_STRINGS : null,
       layout: s.pageText.strings[locale] ?? EMPTY_STRINGS,
-    }),
+    }, locale)),
   ];
   issueMemo = { inputs, issues };
   return issues;

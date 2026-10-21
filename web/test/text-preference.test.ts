@@ -23,8 +23,19 @@ describe('preferredLocales', () => {
     window.localStorage.setItem('sf.lang', 'es');
     setUrl('?lang=fr-ca');
     // The URL choice replaces the stored one, so the old 'es' survives only as a browser language.
-    expect(preferredLocales()).toEqual(['fr-CA', 'it', 'es', 'fr']);
+    expect(preferredLocales()).toEqual(['fr-CA', 'it', 'es']);   // the browser's plain 'fr' repeats the URL choice's language
     expect(window.localStorage.getItem('sf.lang')).toBe('fr-CA');
+  });
+  it('keeps one tag per language, the earliest (fewer distinct lists to cache)', () => {
+    setBrowserLanguages(['en-GB', 'en-US', 'en']);
+    expect(preferredLocales()).toEqual(['en-GB']);
+    setBrowserLanguages(['fr', 'en-US', 'en']);
+    expect(preferredLocales()).toEqual(['fr', 'en-US']);
+  });
+  it('the stored choice stays first even when the browser has the same language', () => {
+    window.localStorage.setItem('sf.lang', 'en');
+    setBrowserLanguages(['en-GB', 'fr']);
+    expect(preferredLocales()).toEqual(['en', 'fr']);
   });
   it('caps the list at 5', () => {
     setBrowserLanguages(['it', 'es', 'fr', 'de']);

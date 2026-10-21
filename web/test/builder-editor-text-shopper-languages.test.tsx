@@ -108,9 +108,10 @@ describe('the editing language', () => {
     expect(S().setText('shared', key, 'Français', null)).toBe(true);
     expect(S().siteText!.strings).toMatchObject({ en: { [key]: 'English' }, fr: { [key]: 'Français' } });
     S().setText('layout', key, 'Bad {nope}', null);
-    expect(textIssuesOf(S()).map((i) => i.scope)).toEqual(['layout']);
+    expect(textIssuesOf(S()).map((i) => [i.scope, i.locale])).toEqual([['layout', 'fr']]);
     useTextUi.getState().setEditLocale(null);
-    expect(textIssuesOf(S())).toEqual([]);   // the English layer is fine
+    // Switching away does not hide it: the French layer still blocks publishing.
+    expect(textIssuesOf(S()).map((i) => [i.scope, i.locale])).toEqual([['layout', 'fr']]);
     expect(editorTextOf(S())).toMatchObject({ locale: 'en', formatLocale: 'en-GB', languages: ['en', 'fr'], shared: { [key]: 'English' } });
     useTextUi.getState().setEditLocale('fr');
     expect(editorTextOf(S())).toMatchObject({ locale: 'fr', formatLocale: '', languages: ['en', 'fr'], shared: { [key]: 'Français' } });

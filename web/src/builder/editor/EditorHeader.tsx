@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
-import { setPuckHistorySource, useEditorStore } from '@/builder/editor/store.ts';
+import { setPuckHistorySource, textLanguage, useEditorStore } from '@/builder/editor/store.ts';
 import { usePuck, useGetPuck } from '@/builder/editor/use-puck.ts';
 import { useHints, useIssues, useLockedPresent } from '@/builder/editor/use-issues.ts';
 import { blockMenu } from '@/builder/editor/config.ts';
@@ -19,6 +19,7 @@ import { rememberPanel, shouldAutoCloseBlocks, WIDE_FRAME_QUERY } from '@/builde
 import { CheckIcon, PanelLeftIcon, PanelRightIcon, PlusIcon, RedoIcon, TextIcon, TipIcon, UndoIcon, WarnIcon } from '@/builder/editor/icons.tsx';
 import { useTextIssues } from '@/builder/editor/text/hooks.ts';
 import { useTextUi } from '@/builder/editor/text/ui-store.ts';
+import { englishName } from '@/builder/editor/text/languages.ts';
 import { TextOverlay } from '@/builder/editor/text/TextOverlay.tsx';
 import { useWideFrame } from '@/builder/editor/text/plugin.tsx';
 import { puckHistoryView, redoStep, setAnchorSource, undoStep } from '@/builder/editor/text/history.ts';
@@ -692,18 +693,28 @@ function IssuesMenu() {
             <h2 id={`${id}-text`} className={styles.panelTitle}>Text</h2>
             <ul className={styles.panelList}>
               {textIssues.map((issue) => (
-                <li key={`${issue.scope}-${issue.key}-${issue.rule}`}>
+                <li key={`${issue.scope}-${issue.locale ?? ''}-${issue.key}-${issue.rule}`}>
                   <button
                     type="button"
                     className={styles.panelItem}
                     data-kind="issue"
-                    onClick={() => { setOpen(false); useTextUi.getState().show({ key: issue.key, filter: 'issues' }); }}
+                    onClick={() => {
+                      setOpen(false);
+                      // An issue in another language: edit that language, so its row is there to fix.
+                      if (issue.locale) {
+                        const s = useEditorStore.getState();
+                        const lang = textLanguage(s);
+                        if (issue.locale === lang.locale || lang.offered?.includes(issue.locale)) useTextUi.getState().setEditLocale(issue.locale);
+                      }
+                      useTextUi.getState().show({ key: issue.key, filter: 'issues' });
+                    }}
                   >
                     <WarnIcon />
                     <span className={styles.panelItemBody}>
                       <span className={styles.panelWhere}>
                         <span>{rowFor(issue.key)?.label ?? LAYER_ISSUE_LABELS[issue.key] ?? issue.key}</span>
                         <span className={styles.panelPart}>{issue.scope === 'shared' ? 'All layouts' : `Only ${LAYOUT_LABELS[layout]}`}</span>
+                        {issue.locale && <span className={styles.panelPart} lang="en">{englishName(issue.locale)}</span>}
                       </span>
                       <span>{issue.message}</span>
                     </span>

@@ -64,7 +64,7 @@ function useRowCell(key: string, locale: string): TextCell {
   const layout = useEditorStore((s) => own(editorTextOf(s).layout, key));
   const sharedEditable = useEditorStore((s) => s.sharedEditable);
   const signature = useEditorStore((s) => {
-    const mine = textIssuesOf(s).filter((i) => i.key === key);
+    const mine = textIssuesOf(s).filter((i) => i.key === key && (i.locale === undefined || i.locale === locale));
     return mine.length === 0 ? '' : JSON.stringify(mine);
   });
   const issues = useMemo(() => (signature ? (JSON.parse(signature) as TextIssue[]) : EMPTY_ISSUES), [signature]);

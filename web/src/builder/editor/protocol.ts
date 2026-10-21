@@ -3,7 +3,7 @@ import { themeSchema } from '@/templates/theme-schema.ts';
 import { MEDIA_SRC_RE } from '@/builder/define.ts';
 import { CARD_KINDS, FIXED_ROUTE_KEYS, isCardKey, isRecord, type DocKey, type Issue, type LayoutKind, type PageSet, type PuckDoc } from '@/builder/types.ts';
 import type { Theme } from '@/types/settings.ts';
-import type { PageText, SiteText } from '@/text/types.ts';
+import { TEXT_LIMITS, type PageText, type SiteText } from '@/text/types.ts';
 import type { TextIssue } from '@/builder/editor/text/model.ts';
 import { isStoreLocale } from '@/builder/editor/text/languages.ts';
 
@@ -44,9 +44,10 @@ const stringsSchema = z.record(localeSchema, z.record(z.string(), textValueSchem
 // A layout's overrides are read per language: a bad tag drops that language only (toPageSet), as
 // a malformed siteText drops only the shared layer — never the whole load.
 const pageTextSchema = z.object({ strings: z.record(z.string(), z.record(z.string(), textValueSchema)) });
+const languageSchema = z.object({ locale: localeSchema, formatLocale: z.union([z.literal(''), localeSchema]) });
 const siteTextSchema = z.object({
   schemaVersion: z.literal(1),
-  language: z.object({ locale: localeSchema, formatLocale: z.union([z.literal(''), localeSchema]) }),
+  language: languageSchema,
   strings: stringsSchema,
 });
 const pageSetSchema = z.object({
@@ -157,11 +158,28 @@ function pageTextOf(raw: z.infer<typeof pageTextSchema>): PageText | undefined {
   return Object.keys(strings).length > 0 ? { strings } : undefined;
 }
 
+/** Real, distinct tags other than the default, at most TEXT_LIMITS.locales - 1; undefined when none. */
+function offeredOf(raw: unknown, defaultLocale: string): string[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const out: string[] = [];
+  for (const tag of raw) {
+    if (typeof tag === 'string' && tag !== defaultLocale && isStoreLocale(tag) && !out.includes(tag)) out.push(tag);
+  }
+  const capped = out.slice(0, TEXT_LIMITS.locales - 1);
+  return capped.length > 0 ? capped : undefined;
+}
+
 function siteTextOf(raw: unknown): SiteText | null | undefined {
   if (raw === undefined) return undefined;
   if (raw === null) return null;
   const parsed = siteTextSchema.safeParse(raw);
-  if (parsed.success) return parsed.data as SiteText;
+  if (parsed.success) {
+    // Read apart from the schema, which strips unknown keys: a bad `offered` must never fail the load,
+    // yet a good one must survive it or the next autosave would erase the owner's shopper languages.
+    const offered = offeredOf(isRecord(raw) && isRecord(raw.language) ? raw.language.offered : undefined, parsed.data.language.locale);
+    const language = { ...parsed.data.language, ...(offered ? { offered } : {}) };
+    return { ...parsed.data, language } as SiteText;
+  }
   if (import.meta.env.DEV) console.warn('[builder] ignored a malformed siteText; shared text is read-only for this load', parsed.error.issues[0]);
   return undefined;
 }

@@ -95,12 +95,12 @@ export function textIssueMessage(rule: string, key: string, value: unknown): str
   }
 }
 
-export function textIssues(input: { shared: LocaleStrings | null; layout: LocaleStrings }): TextIssue[] {
+export function textIssues(input: { shared: LocaleStrings | null; layout: LocaleStrings }, locale?: string): TextIssue[] {
   const out: TextIssue[] = [];
   const scan = (scope: TextScope, strings: LocaleStrings) => {
     for (const [key, value] of Object.entries(strings)) {
       const rule = ruleFor(key, value);
-      if (rule && !NON_BLOCKING.has(rule)) out.push({ scope, key, rule, message: textIssueMessage(rule, key, value) });
+      if (rule && !NON_BLOCKING.has(rule)) out.push({ scope, key, rule, message: textIssueMessage(rule, key, value), ...(locale ? { locale } : {}) });
     }
   };
   if (input.shared) scan('shared', input.shared);

@@ -8,8 +8,9 @@ import { configureCatalogSource } from '@/builder/editor/custom-fields/pickers.t
 import { collectIssues, stableStringify, toPageSet } from '@/builder/editor/page-set.ts';
 import { parseInbound, type ChangeText } from '@/builder/editor/protocol.ts';
 import { prepareDocs } from '@/builder/editor/prepare.ts';
-import { textIssuesOf, useEditorStore, type EditorState } from '@/builder/editor/store.ts';
-import { postablePageText, postableSiteText } from '@/builder/editor/text/model.ts';
+import { textIssuesOf, textLanguage, useEditorStore, type EditorState } from '@/builder/editor/store.ts';
+import { postablePageText, postableSiteText, type TextIssue } from '@/builder/editor/text/model.ts';
+import { englishName } from '@/builder/editor/text/languages.ts';
 
 /**
  * What the admin receives: the sparse set (editor-only leftovers such as unpicked rows removed)
@@ -19,12 +20,23 @@ import { postablePageText, postableSiteText } from '@/builder/editor/text/model.
  * admin drops a whole change it cannot parse (spec §4.3). Returns the change's signature; nothing
  * is posted when it equals `last` (an edit that only touched editor-only state).
  */
+/**
+ * The admin lists issue messages without a language column: when more than one language is in play,
+ * the posted message names the language ("French: ...").
+ */
+function postedTextIssues(s: EditorState): TextIssue[] {
+  const issues = textIssuesOf(s);
+  const lang = textLanguage(s);
+  const multi = (lang.offered?.length ?? 0) > 0 || issues.some((i) => i.locale !== undefined && i.locale !== lang.locale);
+  return multi ? issues.map((i) => (i.locale ? { ...i, message: `${englishName(i.locale)}: ${i.message}` } : i)) : issues;
+}
+
 function postDocs(bridge: Bridge, s: EditorState, last: string | null): string {
   const emitted = prepareDocs(s.docs);
   const pageSet = toPageSet(emitted, s.layout, postablePageText(s.pageText));
   const issues = collectIssues(emitted, s.layout);
   const text: ChangeText = {
-    textIssues: textIssuesOf(s),
+    textIssues: postedTextIssues(s),
     ...(s.sharedEditable && s.siteText ? { siteText: postableSiteText(s.siteText) } : {}),
   };
   const signature = stableStringify({ pageSet, issues, text });

@@ -20,7 +20,7 @@ import { reviewSettingsOf } from '@/features/reviews/settings.ts';
 import { Slot } from '@/templates/runtime.tsx';
 import { headerIconClass, useCoreOptions } from '@/templates/hooks.ts';
 import { Menu } from '@mantine/core';
-import { LanguageList } from '@/components/LanguageList.tsx';
+import { LanguageMenuItems } from '@/components/LanguageList.tsx';
 import { languageCode, nativeName } from '@/components/language-name.ts';
 import { useText } from '@/text/runtime.tsx';
 import { compactScope, iconOverride, type Override, type SlotRender, type StyleAttrs } from '@/builder/define.ts';
@@ -175,17 +175,18 @@ function CartView({ props, styleAttrs }: PartViewProps) {
 function LanguageView({ styleAttrs }: PartViewProps) {
   const { classes } = HeaderFamily.useData();
   const { t, languages, locale } = useText();
+  const { showHeaderMenu } = useCoreOptions();
   // An owner placing the part needs to see it even while the shop offers one language.
   if (languages.length < 2 && !isBuilderMode()) return null;
   return (
     <Menu position="bottom-end" shadow="md" withinPortal>
       <Menu.Target>
-        <button type="button" className={classes.action} aria-label={t('shell.language.change', { language: nativeName(locale) })} {...styleAttrs}>
+        <button type="button" className={showHeaderMenu && !isBuilderMode() ? `${classes.action} sf-hide-mobile` : classes.action} aria-label={t('shell.language.change', { language: nativeName(locale) })} {...styleAttrs}>
           <span className={language.code} aria-hidden>{languageCode(locale)}</span>
         </button>
       </Menu.Target>
       <Menu.Dropdown className={language.dropdown}>
-        <LanguageList />
+        <LanguageMenuItems />
       </Menu.Dropdown>
     </Menu>
   );

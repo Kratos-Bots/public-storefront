@@ -39,8 +39,11 @@ export function preferredLocales(): Locale[] {
   let browser: readonly string[] = [];
   try { browser = window.navigator.languages?.length ? window.navigator.languages : [window.navigator.language]; } catch { /* none */ }
   const out: Locale[] = [];
+  // The worker caches by full URL, so each distinct list is a cache entry: a later tag in a language an
+  // earlier one already covers (en-GB,en-US,en → en-GB) adds nothing the shop could use, only fragmentation.
+  const primary = (tag: string) => tag.split('-')[0];
   for (const raw of [fromUrl, canonicalLocale(readStored()), ...browser.slice(0, MAX_BROWSER_TAGS).map(canonicalLocale)]) {
-    if (raw && !out.includes(raw)) out.push(raw);
+    if (raw && !out.some((o) => primary(o) === primary(raw))) out.push(raw);
   }
   return out.slice(0, MAX_TAGS);
 }

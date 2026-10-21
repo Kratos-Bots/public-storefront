@@ -2,7 +2,7 @@
 import { useEffect, useId, useMemo, useRef, useState, type FocusEvent } from 'react';
 import type { EditorText } from '@/text/types.ts';
 import { useTemplateContext } from '@/templates/runtime.tsx';
-import { editorTextOf, textIssuesOf, textLanguage, useEditorStore } from '@/builder/editor/store.ts';
+import { editingLocaleOf, editorTextOf, textIssuesOf, textLanguage, useEditorStore } from '@/builder/editor/store.ts';
 import { applyText, useEditingLocale, useEditorText, useLoadEpoch, useTextIssues, useTextReadiness } from '@/builder/editor/text/hooks.ts';
 import { useTextUi, type TextFilter } from '@/builder/editor/text/ui-store.ts';
 import { nativeName } from '@/builder/editor/text/languages.ts';
@@ -61,7 +61,8 @@ export function TextPanel({ onClose }: { onClose?: () => void }) {
   const [limit, setLimit] = useState(ROW_PAGE);
   useEffect(() => { setPinned(null); setLimit(ROW_PAGE); }, [filter, query]);
 
-  const issueKeys = useMemo(() => new Set(issues.map((i) => i.key)), [issues]);
+  // The rows list the editing language; other languages' issues show in the header's Issues list.
+  const issueKeys = useMemo(() => new Set(issues.filter((i) => i.locale === undefined || i.locale === editing).map((i) => i.key)), [issues, editing]);
   const rowKeys = useMemo(() => new Set<string>(templateGroups.flatMap((g) => g.rows.map((r) => r.key))), [templateGroups]);
   /**
    * Lines of templates other than the active one are not listed, but an issue on one still blocks
@@ -92,7 +93,7 @@ export function TextPanel({ onClose }: { onClose?: () => void }) {
     if (row) {
       const s = useEditorStore.getState();
       const current = editorTextOf(s);
-      const keys = new Set(textIssuesOf(s).map((i) => i.key));
+      const keys = new Set(textIssuesOf(s).filter((i) => i.locale === undefined || i.locale === editingLocaleOf(s)).map((i) => i.key));
       if (!passesFilter(row, ui.filter, current, keys)) ui.setFilter('all');
       if (!passesQuery(row, ui.query, current)) ui.setQuery('');
     }

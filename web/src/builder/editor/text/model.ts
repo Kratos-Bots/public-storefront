@@ -8,7 +8,11 @@ import { KEY_RE, TEXT_LIMITS, isLocale, type Locale, type LocaleStrings, type Pa
 
 export type TextScope = 'shared' | 'layout';
 /** One blocking text problem, as posted in sf-builder-change `textIssues` (spec §7.1). */
-export interface TextIssue { scope: TextScope; key: string; rule: string; message: string }
+export interface TextIssue {
+  scope: TextScope; key: string; rule: string; message: string;
+  /** The language the wording is in; absent on layer-wide issues (too many languages, too large). */
+  locale?: string;
+}
 export type StringsByLocale = Record<Locale, LocaleStrings>;
 
 export const PLURAL_FORMS = ['zero', 'one', 'two', 'few', 'many', 'other'] as const;

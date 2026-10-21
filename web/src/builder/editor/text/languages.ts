@@ -90,6 +90,16 @@ function displayName(tag: string): string {
 /** "Deutsch", "Français" — a language named in itself. */
 export const nativeName = (code: string): string => displayName(code);
 
+/** A language named in English ("French"), for lists that mix languages. */
+export function englishName(tag: string): string {
+  try {
+    const name = new Intl.DisplayNames(['en'], { type: 'language', languageDisplay: 'standard' }).of(tag);
+    return name && name !== tag ? name : tag;
+  } catch {
+    return tag;
+  }
+}
+
 /** "Deutsch (Österreich) · 1.234,5 · 30.09.2026" */
 export function variantLabel(tag: string): string {
   return `${displayName(tag)} · ${formatSample(tag)}`;

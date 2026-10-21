@@ -5,7 +5,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router';
 import type { ReactNode } from 'react';
 import type { StorefrontSettings } from '@/types/settings.ts';
 
-const h = vi.hoisted(() => ({ languages: ['en'] as string[], locale: 'en' }));
+const h = vi.hoisted(() => ({ languages: ['en'] as string[], locale: 'en', menu: true }));
 vi.mock('@/app/settings.ts', () => ({ useSettings: () => ({
   currency: 'GBP', welcomeMessage: null, enabled: true, supportLinks: [], notices: [],
   brand: { name: 'Northbound Supply', title: 'Northbound Supply', tagline: null, links: { whatsapp: null, telegram: null } },
@@ -24,7 +24,7 @@ vi.mock('@/templates/runtime.tsx', async (importOriginal) => ({
 }));
 vi.mock('@/templates/hooks.ts', async (orig) => {
   const real = await orig<typeof import('@/templates/hooks.ts')>();
-  return { ...real, useCoreOptions: () => ({ ...real.useCoreOptions(), showMobileBottomNav: false, showHeaderMenu: true }) };
+  return { ...real, useCoreOptions: () => ({ ...real.useCoreOptions(), showMobileBottomNav: false, showHeaderMenu: h.menu }) };
 });
 vi.mock('@/text/runtime.tsx', async (orig) => {
   const real = await orig<typeof import('@/text/runtime.tsx')>();
@@ -53,6 +53,7 @@ function Part() {
 beforeEach(() => {
   h.languages = ['en'];
   h.locale = 'en';
+  h.menu = true;
   window.matchMedia = ((query: string) => ({
     matches: false, media: query, onchange: null, addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent: () => false,
   })) as typeof window.matchMedia;
@@ -86,6 +87,7 @@ describe('the header menu language group', () => {
     const items = within(group).getAllByRole('button');
     expect(items.map((b) => b.textContent)).toEqual(['English', 'Français', 'Italiano']);
     expect(items.map((b) => b.getAttribute('aria-current'))).toEqual(['true', null, null]);
+    expect(items.map((b) => b.getAttribute('lang'))).toEqual(['en', 'fr', 'it']);
     fireEvent.click(items[0]!);
     expect(chooseLanguage).not.toHaveBeenCalled();
     fireEvent.click(items[1]!);
@@ -109,10 +111,34 @@ describe('the HeaderLanguage part', () => {
     const b = screen.getByRole('button', { name: /^Change language.*Français$/ });
     expect(b.textContent).toBe('FR');
     fireEvent.click(b);
-    const items = screen.getAllByRole('button').filter((x) => x !== b);
+    const items = screen.getAllByRole('menuitem');
     expect(items.map((x) => x.textContent)).toEqual(['English', 'Français']);
     expect(items.map((x) => x.getAttribute('aria-current'))).toEqual([null, 'true']);
+    expect(items.map((x) => x.getAttribute('lang'))).toEqual(['en', 'fr']);
     fireEvent.click(items[0]!);
     expect(chooseLanguage).toHaveBeenCalledWith('en');
+  });
+  it('does nothing when a language is chosen in the page builder (no reload of the editor frame)', () => {
+    vi.mocked(isBuilderMode).mockReturnValue(true);
+    h.languages = ['en', 'fr'];
+    mount(<Part />);
+    fireEvent.click(screen.getByRole('button', { name: /^Change language/ }));
+    fireEvent.click(screen.getAllByRole('menuitem')[1]!);
+    expect(chooseLanguage).not.toHaveBeenCalled();
+  });
+  it('is hidden on phones while the header menu is shown (it carries a Language group), always shown in the builder', () => {
+    h.languages = ['en', 'fr'];
+    mount(<Part />);
+    expect(screen.getByRole('button', { name: /^Change language/ }).className).toContain('sf-hide-mobile');
+    cleanup();
+    vi.mocked(isBuilderMode).mockReturnValue(true);
+    mount(<Part />);
+    expect(screen.getByRole('button', { name: /^Change language/ }).className).not.toContain('sf-hide-mobile');
+  });
+  it('stays visible on phones when the header menu option is off', () => {
+    h.languages = ['en', 'fr'];
+    h.menu = false;
+    mount(<Part />);
+    expect(screen.getByRole('button', { name: /^Change language/ }).className).not.toContain('sf-hide-mobile');
   });
 });

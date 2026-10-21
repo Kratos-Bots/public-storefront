@@ -143,7 +143,7 @@ export function useTextCell(key: string): TextCell {
     // resolveCell only returns a layer that passes ruleFor (a usable `other`), i.e. a real TextValue.
     effective: resolveCell(key, { layout: layout as TextValue | undefined, shared: shared as TextValue | undefined }, text.locale),
     below: resolveCell(key, { shared: shared as TextValue | undefined }, text.locale),
-    issues: issues.filter((i) => i.key === key),
+    issues: issues.filter((i) => i.key === key && (i.locale === undefined || i.locale === text.locale)),
   }), [key, shared, layout, sharedEditable, issues, text.locale]);
 }
 
