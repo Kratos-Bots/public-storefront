@@ -50,8 +50,7 @@ describe.each(PACK_LANGUAGES)('built-in %s pack (languages spec section 3 gate)'
   it('is frozen', () => {
     expect(Object.isFrozen(pack)).toBe(true);
   });
-  // Task 3 unskips
-  it.skip('is translated: no area file still carries TODO(translate)', () => {
+  it('is translated: no area file still carries TODO(translate)', () => {
     const dir = path.resolve(here, '../src/text/packs', lang);
     const todo = readdirSync(dir).filter((f) => readFileSync(path.join(dir, f), 'utf8').includes('TODO(translate)'));
     expect(todo).toEqual([]);

@@ -64,7 +64,8 @@ describe('createTextApi with the real fr pack', () => {
     await loadPack('fr');
     const fr = createTextApi({ locale: 'fr', formatLocale: '', shared: {}, layout: {} });
     const de = createTextApi({ locale: 'de', formatLocale: '', shared: {}, layout: {} }); // no pack: English fallback
-    expect(fr.tp('shell.header.cartAriaLabel', 0)).toBe('Cart, 0 item'); // stub holds English forms, picked with fr rules
+    expect(fr.tp('shell.header.cartAriaLabel', 0)).toBe('Panier, 0 article'); // fr rules: 0 is `one`
+    expect(fr.tp('shell.header.cartAriaLabel', 2)).toBe('Panier, 2 articles');
     expect(de.tp('shell.header.cartAriaLabel', 0)).toBe('Cart, 0 items');
   });
   it('languages defaults to [locale] and reflects the layers', () => {

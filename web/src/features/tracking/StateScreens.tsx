@@ -1,6 +1,7 @@
 import { ContactLinks } from '@/components/ContactLinks.tsx';
 import { EmptyState } from '@/components/EmptyState.tsx';
 import { formatRelative } from '@/features/tracking/status.ts';
+import { ORDER_STATUS_LABEL } from '@/features/order-status/status.ts';
 import { useText } from '@/text/runtime.tsx';
 import type { TrackingLookup } from '@/types/tracking.ts';
 import type { StyleAttrs } from '@/builder/define.ts';
@@ -173,7 +174,12 @@ export function ErrorScreen({ status, onRetry }: { status: number; onRetry: () =
 
 /** The order is real and nothing has been dispatched — the majority case. */
 export function NothingShippedScreen({ data }: { data: TrackingLookup }) {
-  const { t } = useText();
+  const { t, locale } = useText();
+  // The status as a word in the shop's language ("cancelled", "annulée"); English renders exactly as the raw status did.
+  const statusWord = (status: string) => {
+    const key = Object.hasOwn(ORDER_STATUS_LABEL, status) ? ORDER_STATUS_LABEL[status] : undefined;
+    return key ? t(key).toLocaleLowerCase(locale) : status;
+  };
   const terminal = data.status === 'cancelled' || data.status === 'refunded';
   return (
     <div className={classes.nothing} data-tone={terminal ? 'danger' : undefined}>
@@ -183,7 +189,7 @@ export function NothingShippedScreen({ data }: { data: TrackingLookup }) {
       </div>
       <p className={classes.screenText}>
         {terminal
-          ? t('tracking.states.cancelledBody', { status: data.status })
+          ? t('tracking.states.cancelledBody', { status: statusWord(data.status) })
           : data.isPreorder
             ? t('tracking.states.preorderBody')
             : t('tracking.states.notDispatchedBody')}

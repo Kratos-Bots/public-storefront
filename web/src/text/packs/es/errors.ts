@@ -1,15 +1,14 @@
-// TODO(translate)
 import type errors from '@/text/keys/errors.ts';
 import type { AreaPack } from '@/text/packs/index.ts';
 
 export default {
-  "errors.generic": "Something went wrong",
-  "errors.rateLimited": "Too many attempts — please wait a moment and try again",
-  "errors.unavailable": "The store is temporarily unavailable",
-  "errors.requestFailed": "Request failed",
-  "errors.timeout": "The request timed out",
-  "errors.network": "Network error",
-  "errors.loginRequired": "Please sign in to continue.",
-  "errors.accessDenied": "Your account doesn’t have access to this shop.",
-  "errors.registrationClosed": "This shop isn’t taking new customers right now.",
+  "errors.generic": "Algo ha salido mal",
+  "errors.rateLimited": "Demasiados intentos: espera un momento e inténtalo de nuevo",
+  "errors.unavailable": "La tienda no está disponible temporalmente",
+  "errors.requestFailed": "La solicitud ha fallado",
+  "errors.timeout": "La solicitud ha tardado demasiado",
+  "errors.network": "Error de red",
+  "errors.loginRequired": "Inicia sesión para continuar.",
+  "errors.accessDenied": "Tu cuenta no tiene acceso a esta tienda.",
+  "errors.registrationClosed": "Esta tienda no admite clientes nuevos ahora mismo.",
 } satisfies AreaPack<typeof errors>;
