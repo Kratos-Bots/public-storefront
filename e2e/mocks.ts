@@ -385,6 +385,25 @@ export interface MockText {
   formatLocale?: string;            // default ''
   shared?: Record<string, unknown>; // active-locale shared strings
   layout?: Partial<Record<Layout, Record<string, unknown>>>; // per-layout overrides
+  /** Shopper languages (default first). When set, the route serves `text.languages` and honours `?locale=` like the
+   *  backend: exact tag, then the same primary subtag, then the default; `locale` is the default language. */
+  languages?: string[];
+  /** Wording per offered language (`shared` / `layout`); a language without an entry serves no overrides. */
+  byLocale?: Record<string, { shared?: Record<string, unknown>; layout?: Partial<Record<Layout, Record<string, unknown>>>; formatLocale?: string }>;
+}
+
+/** Spec §4.6: the first requested tag with an exact match, else one with the same primary subtag; else the default. */
+export function pickLanguage(languages: string[], requested: string): string {
+  const tags = requested.split(',').map((t) => t.trim()).filter(Boolean).slice(0, 5);
+  const lower = languages.map((l) => l.toLowerCase());
+  for (const tag of tags) {
+    const i = lower.indexOf(tag.toLowerCase());
+    if (i >= 0) return languages[i]!;
+    const primary = tag.toLowerCase().split('-')[0];
+    const j = lower.findIndex((l) => l.split('-')[0] === primary);
+    if (j >= 0) return languages[j]!;
+  }
+  return languages[0]!;
 }
 
 export interface MockState {
@@ -1095,15 +1114,34 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
         await envelope(route, set ? { version: 1, data: set } : null);
         return;
       }
+      const t = state.text;
+      if (t.languages && t.languages.length > 0) {
+        const served = pickLanguage(t.languages, url.searchParams.get('locale') ?? '');
+        const isDefault = served === t.languages[0];
+        const src = isDefault ? { shared: t.shared, layout: t.layout, formatLocale: t.formatLocale } : (t.byLocale?.[served] ?? {});
+        await envelope(route, {
+          version: set ? 1 : 0,
+          data: set,
+          text: {
+            version: t.version ?? 1,
+            locale: served,
+            languages: t.languages,
+            formatLocale: src.formatLocale ?? '',
+            shared: src.shared ?? {},
+            layout: src.layout?.[pages[1] as Layout] ?? {},
+          },
+        });
+        return;
+      }
       await envelope(route, {
         version: set ? 1 : 0,
         data: set,
         text: {
-          version: state.text.version ?? 1,
-          locale: state.text.locale ?? 'en',
-          formatLocale: state.text.formatLocale ?? '',
-          shared: state.text.shared ?? {},
-          layout: state.text.layout?.[pages[1] as Layout] ?? {},
+          version: t.version ?? 1,
+          locale: t.locale ?? 'en',
+          formatLocale: t.formatLocale ?? '',
+          shared: t.shared ?? {},
+          layout: t.layout?.[pages[1] as Layout] ?? {},
         },
       });
       return;
