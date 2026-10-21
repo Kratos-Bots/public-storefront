@@ -169,12 +169,16 @@ let roomMemo: { shared: SiteText['strings'] | null; layout: PageText['strings'];
 let issueMemo: { inputs: unknown[]; issues: TextIssue[] } | null = null;
 /** Every blocking text issue (spec §7.1) — the header and the posted change use this one list. */
 export function textIssuesOf(s: Pick<EditorState, 'sharedEditable' | 'siteText' | 'published' | 'pageText'>): TextIssue[] {
-  // Every language that holds wording blocks publishing, whichever one the owner is editing now.
-  // A language without wording has no issues, so the editing language is not an input.
-  const inputs = [s.sharedEditable, s.siteText, s.pageText];
+  // Every language shoppers can be served (the store language and the offered ones) blocks publishing,
+  // whichever one the owner is editing now. Wording kept in a language the shop does not serve never
+  // shows, so it does not block. The editing language is not an input.
+  const inputs = [s.sharedEditable, s.siteText, s.pageText, s.published];
   if (issueMemo && inputs.every((v, i) => v === issueMemo!.inputs[i])) return issueMemo.issues;
   const shared = s.sharedEditable ? s.siteText : null;
-  const locales = [...new Set([...(shared ? wordingLanguages(shared.strings) : []), ...wordingLanguages(s.pageText.strings)])];
+  const lang = textLanguage(s);
+  const served = new Set([lang.locale, ...(lang.offered ?? [])]);
+  const locales = [...new Set([...(shared ? wordingLanguages(shared.strings) : []), ...wordingLanguages(s.pageText.strings)])]
+    .filter((l) => served.has(l));
   // Layer-wide issues first: they survive the change's 500-issue cap.
   const issues = [
     ...layerIssues({ shared, layout: s.pageText }),

@@ -207,8 +207,8 @@ describe('builder session: published text arrival', () => {
     const stop = startBuilderSession(win, new QueryClient());
     const bad = { strings: { de: { [plainKey()]: 'Kaputt {' } } };
     send(load({ pageSet: { schemaVersion: 1, shell: shell(), pages: {}, text: bad } }));
-    // A language holding wording blocks publishing even before the published language is known.
-    expect(changes()[0].textIssues).toEqual([expect.objectContaining({ scope: 'layout', rule: 'bad-brace', locale: 'de' })]);
+    // Until the published language is known the shop serves only English, so German wording does not block.
+    expect(changes()[0].textIssues).toEqual([]);
     useEditorStore.getState().setPublishedText({ language: { locale: 'de', formatLocale: '' }, shared: {} });
     vi.advanceTimersByTime(CHANGE_DEBOUNCE_MS);
     expect(changes()).toHaveLength(2);

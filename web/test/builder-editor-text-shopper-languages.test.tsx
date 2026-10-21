@@ -117,6 +117,17 @@ describe('the editing language', () => {
     expect(editorTextOf(S())).toMatchObject({ locale: 'fr', formatLocale: '', languages: ['en', 'fr'], shared: { [key]: 'Français' } });
   });
 
+  it('wording in a language the shop does not serve never blocks; offering it does', () => {
+    load({ locale: 'en', formatLocale: '', offered: ['fr'] });
+    useTextUi.getState().setEditLocale('fr');
+    S().setText('layout', key, 'Bad {nope}', null);
+    expect(textIssuesOf(S()).map((i) => i.locale)).toEqual(['fr']);
+    S().setLanguage({ offered: [] }, null);
+    expect(textIssuesOf(S())).toEqual([]);
+    S().setLanguage({ offered: ['fr'] }, null);
+    expect(textIssuesOf(S()).map((i) => i.locale)).toEqual(['fr']);
+  });
+
   it('the room check is for the editing language', () => {
     S().load({ layout: 'storefront', pageSet: null, readOnly: false, siteText: { ...SITE, language: { locale: 'en', formatLocale: '', offered: ['qb'] }, strings: fullStrings(key) } });
     useTextUi.getState().setEditLocale('qb');
