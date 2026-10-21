@@ -1,4 +1,3 @@
-import { textKey } from '@/text/snapshot.ts';
 import { isLocale, type Locale } from '@/text/types.ts';
 
 /*
@@ -11,9 +10,6 @@ export const LANG_PARAM = 'lang';
 export const LANG_STORAGE_KEY = 'sf.lang';
 const MAX_TAGS = 5;
 const MAX_BROWSER_TAGS = 3;
-
-/** The keys the language switcher renders (Task 4 reads them through `useText()`). */
-export const LANGUAGE_TEXT = [textKey('shell.language.label'), textKey('shell.language.change')] as const;
 
 export function canonicalLocale(tag: unknown): Locale | null {
   if (typeof tag !== 'string' || !tag) return null;

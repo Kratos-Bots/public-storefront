@@ -1,0 +1,56 @@
+/* Rows share the header menu's page links: muted text, full-strength and a primary rule on the current one. */
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 1.25rem;
+  border: 0;
+  background: none;
+  color: var(--sf-muted);
+  font-family: var(--sf-font-heading);
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: start;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 150ms ease, background-color 150ms ease;
+}
+
+.item:hover,
+.item:active {
+  color: var(--sf-text);
+  background: var(--sf-surface);
+}
+
+.item:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: -2px;
+}
+
+.item[aria-current='true'] {
+  color: var(--sf-text);
+  cursor: default;
+}
+
+.item[aria-current='true']::before {
+  content: '';
+  position: absolute;
+  inset-block: 10px;
+  inset-inline-start: 0;
+  width: 2px;
+  background: var(--sf-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .item {
+    transition: none;
+  }
+}

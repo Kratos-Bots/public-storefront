@@ -1,0 +1,15 @@
+/* The compact button's code: the two-letter mark sits where the other actions keep a glyph. */
+.code {
+  font-family: var(--sf-font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.dropdown {
+  min-width: 11rem;
+  padding: 0.25rem 0;
+  background: var(--sf-bg-deep);
+  border: 1px solid var(--sf-line-strong);
+  border-radius: var(--sf-card-radius);
+}
