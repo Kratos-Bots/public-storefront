@@ -111,7 +111,10 @@ function postableStrings(strings: StringsByLocale): StringsByLocale {
 export const hasStrings = (strings: StringsByLocale): boolean => Object.values(strings).some((m) => Object.keys(m).length > 0);
 
 export function postableSiteText(doc: SiteText): SiteText {
-  return { schemaVersion: 1, language: { locale: doc.language.locale, formatLocale: doc.language.formatLocale }, strings: postableStrings(doc.strings) };
+  const { locale, formatLocale, offered } = doc.language;
+  // `offered` only when there is one, so a document that never offered a language posts byte-identically.
+  const language: TextLanguage = offered && offered.length > 0 ? { locale, formatLocale, offered: [...offered] } : { locale, formatLocale };
+  return { schemaVersion: 1, language, strings: postableStrings(doc.strings) };
 }
 
 /** undefined = nothing to send: `toPageSet` then omits `text`. */

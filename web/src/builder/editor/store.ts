@@ -3,10 +3,12 @@ import type { PreviewAs } from '@/builder/mode.ts';
 import { isDocKey, type ViewportWidth } from '@/builder/editor/protocol.ts';
 import { docFor, docsFromPageSet, isCustomKey, isShownIn, newCustomPage, normalizeDoc, withDoc, withoutDoc, type DocMap } from '@/builder/editor/page-set.ts';
 import type { DocKey, LayoutKind, PageSet, PuckDoc } from '@/builder/types.ts';
-import type { EditorText, LocaleStrings, PageText, SiteText, TextLanguage } from '@/text/types.ts';
+import { TEXT_LIMITS, type EditorText, type LocaleStrings, type PageText, type SiteText, type TextLanguage } from '@/text/types.ts';
 import { DEFAULT_LANGUAGE, emptyPageText, emptySiteText, noRoomFor, withValue, type DraftValue, type TextIssue, type TextScope } from '@/builder/editor/text/model.ts';
 import { rowFor } from '@/builder/editor/text/catalog.ts';
 import { isStoreLocale } from '@/builder/editor/text/languages.ts';
+import { useTextUi } from '@/builder/editor/text/ui-store.ts';
+import { packFor } from '@/text/packs/index.ts';
 import { layerIssues, textIssues } from '@/builder/editor/text/issues.ts';
 import { COALESCE_MS, TEXT_HISTORY_MAX, type PuckHistoryView, type TextHistoryEntry } from '@/builder/editor/text/history.ts';
 
@@ -127,6 +129,16 @@ export function textLanguage(s: TextState): TextLanguage {
   return s.published?.language ?? DEFAULT_LANGUAGE;
 }
 
+/**
+ * The language the Text panel edits (and the canvas previews): the owner's pick in the Text UI store
+ * when it is still one of `[locale, ...offered]`, else the store language. `pick` defaults to the UI
+ * store's current choice.
+ */
+export function editingLocaleOf(s: TextState, pick: string | null = useTextUi.getState().editLocale): string {
+  const lang = textLanguage(s);
+  return pick !== null && (pick === lang.locale || lang.offered?.includes(pick)) ? pick : lang.locale;
+}
+
 /** Text can be edited once we know the language: from siteText, or from the published read. */
 export const isTextReady = (s: TextState): boolean => s.sharedEditable || s.published !== null;
 
@@ -157,7 +169,7 @@ let roomMemo: { shared: SiteText['strings'] | null; layout: PageText['strings'];
 let issueMemo: { inputs: unknown[]; issues: TextIssue[] } | null = null;
 /** Every blocking text issue (spec §7.1) — the header and the posted change use this one list. */
 export function textIssuesOf(s: Pick<EditorState, 'sharedEditable' | 'siteText' | 'published' | 'pageText'>): TextIssue[] {
-  const { locale } = textLanguage(s);
+  const locale = editingLocaleOf(s);
   const inputs = [s.sharedEditable, s.siteText, s.pageText, locale];
   if (issueMemo && inputs.every((v, i) => v === issueMemo!.inputs[i])) return issueMemo.issues;
   // Layer-wide issues first: they survive the change's 500-issue cap.
@@ -179,15 +191,22 @@ let textMemo: { inputs: unknown[]; text: EditorText } | null = null;
  * provider does not re-render every text consumer on unrelated store updates.
  */
 export function editorTextOf(s: Pick<EditorState, 'sharedEditable' | 'siteText' | 'published' | 'pageText'>): EditorText {
-  const { locale, formatLocale } = textLanguage(s);
-  const shared = (s.sharedEditable ? s.siteText?.strings[locale] : s.published?.shared) ?? EMPTY_STRINGS;
+  const lang = textLanguage(s);
+  const locale = editingLocaleOf(s);
+  // Number formats belong to the store language only (spec languages §7); other languages use their own built-in.
+  const formatLocale = locale === lang.locale ? lang.formatLocale : '';
+  const shared = (s.sharedEditable ? s.siteText?.strings[locale] : locale === lang.locale ? s.published?.shared : undefined) ?? EMPTY_STRINGS;
   const layout = s.pageText.strings[locale] ?? EMPTY_STRINGS;
-  const inputs = [locale, formatLocale, shared, layout];
+  const offered = lang.offered ?? NO_LOCALES;
+  // The pack is an input: one that arrives after the first render must give the canvas a new object.
+  const inputs = [locale, formatLocale, shared, layout, lang.locale, offered, packFor(locale)];
   if (textMemo && inputs.every((v, i) => v === textMemo!.inputs[i])) return textMemo.text;
-  const text: EditorText = { locale, formatLocale, shared, layout };
+  const text: EditorText = { locale, formatLocale, shared, layout, languages: [lang.locale, ...offered] };
   textMemo = { inputs, text };
   return text;
 }
+
+const NO_LOCALES: readonly string[] = Object.freeze([]);
 
 /** Consecutive keystrokes into one field are one undo step. */
 let lastTextEdit: { target: string; at: number; anchor: string | null } | null = null;
@@ -303,7 +322,7 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
     if (s.readOnly || s.status !== 'ready' || (loadEpoch !== undefined && loadEpoch !== s.loadEpoch)) return false;
     if (scope === 'shared' && (!s.sharedEditable || !s.siteText)) return false;
     if (value !== null && value !== '' && !rowFor(key)) return false;
-    const { locale } = textLanguage(s);
+    const locale = editingLocaleOf(s);
     // A layer already holding the most languages the backend keeps can't start another one.
     if (value !== null && value !== '' && noRoomFor(scope === 'shared' ? s.siteText!.strings : s.pageText.strings, locale)) return false;
     let patch: Partial<EditorState>;
@@ -334,11 +353,19 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
     const locale = patch.locale ?? cur.locale;
     const formatLocale = patch.formatLocale !== undefined ? patch.formatLocale : locale !== cur.locale ? '' : cur.formatLocale;
     if (!isStoreLocale(locale) || (formatLocale !== '' && !isStoreLocale(formatLocale))) return false;
-    if (locale === cur.locale && formatLocale === cur.formatLocale) return true;
+    const before = cur.offered ?? [];
+    // A new default is no longer an extra language; an explicit list may not contain it.
+    const offered = patch.offered !== undefined ? patch.offered : before.filter((l) => l !== locale);
+    if (offered.length > TEXT_LIMITS.locales - 1 || new Set(offered).size !== offered.length) return false;
+    if (offered.some((l) => l === locale || !isStoreLocale(l))) return false;
+    const same = locale === cur.locale && formatLocale === cur.formatLocale
+      && offered.length === before.length && offered.every((l, i) => l === before[i]);
+    if (same) return true;
     if (locale !== cur.locale && languageRoom(s, locale).length > 0) return false;
+    if (offered.some((l) => !before.includes(l) && languageRoom(s, l).length > 0)) return false;
     lastTextEdit = null;
     set({
-      siteText: { ...s.siteText, language: { locale, formatLocale } },
+      siteText: { ...s.siteText, language: { locale, formatLocale, ...(offered.length > 0 ? { offered } : {}) } },
       textPast: pushCapped(s.textPast, { snap: { siteText: s.siteText, pageText: s.pageText }, anchor }),
       textFuture: [],
     });

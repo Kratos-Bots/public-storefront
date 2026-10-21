@@ -1,6 +1,6 @@
 import { checkValue, type TextRule } from '@/text/resolve.ts';
 import { TEXT_LIMITS, type LocaleStrings, type PageText, type SiteText, type TextValue } from '@/text/types.ts';
-import { rowFor } from '@/builder/editor/text/catalog.ts';
+import { builtInFor, rowFor } from '@/builder/editor/text/catalog.ts';
 import { postedSiteTextBytes, wordingLanguages, type TextIssue, type TextScope } from '@/builder/editor/text/model.ts';
 
 /**
@@ -147,10 +147,11 @@ export function layerIssues(input: { shared: SiteText | null; layout: PageText }
 export interface ResolvedCell { value: TextValue; from: 'layout' | 'shared' | 'default' }
 
 /** One key as the canvas shows it: the first valid layer (spec §6.3). */
-export function resolveCell(key: string, layers: { layout?: TextValue; shared?: TextValue }): ResolvedCell {
+export function resolveCell(key: string, layers: { layout?: TextValue; shared?: TextValue }, locale = 'en'): ResolvedCell {
   if (layers.layout !== undefined && ruleFor(key, layers.layout) === null) return { value: layers.layout, from: 'layout' };
   if (layers.shared !== undefined && ruleFor(key, layers.shared) === null) return { value: layers.shared, from: 'shared' };
-  return { value: rowFor(key)?.def ?? '', from: 'default' };
+  const row = rowFor(key);
+  return { value: row ? builtInFor(row, locale) : '', from: 'default' };
 }
 
 export interface UnusedEntry { scope: TextScope; key: string; rule: 'unknown-key' | 'fixed'; value: TextValue }

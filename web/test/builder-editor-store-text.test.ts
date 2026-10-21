@@ -391,7 +391,7 @@ describe('editor store: editorTextOf', () => {
     S().setText('shared', key, 'Shared', null);
     S().setText('layout', key, 'Mine', null);
     const a = editorTextOf(S());
-    expect(a).toEqual({ locale: 'en', formatLocale: '', shared: { [key]: 'Shared' }, layout: { [key]: 'Mine' } });
+    expect(a).toEqual({ locale: 'en', formatLocale: '', shared: { [key]: 'Shared' }, layout: { [key]: 'Mine' }, languages: ['en'] });
     expect(editorTextOf(S())).toBe(a);
     S().setPreviewAs({ cart: 'empty' });
     expect(editorTextOf(S())).toBe(a);
@@ -404,10 +404,10 @@ describe('editor store: editorTextOf', () => {
   it('empty layers are one stable object; without siteText the shared layer is the published one', () => {
     S().load({ layout: 'storefront', pageSet: null, readOnly: false });
     const a = editorTextOf(S());
-    expect(a).toEqual({ locale: 'en', formatLocale: '', shared: {}, layout: {} });
+    expect(a).toEqual({ locale: 'en', formatLocale: '', shared: {}, layout: {}, languages: ['en'] });
     S().setPublishedText({ language: { locale: 'de', formatLocale: 'de-AT' }, shared: { [key]: 'Geteilt' } });
     const b = editorTextOf(S());
-    expect(b).toEqual({ locale: 'de', formatLocale: 'de-AT', shared: { [key]: 'Geteilt' }, layout: {} });
+    expect(b).toEqual({ locale: 'de', formatLocale: 'de-AT', shared: { [key]: 'Geteilt' }, layout: {}, languages: ['de'] });
     expect(b.layout).toBe(a.layout);
   });
 });

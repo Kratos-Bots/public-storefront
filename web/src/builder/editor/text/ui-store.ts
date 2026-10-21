@@ -9,6 +9,13 @@ interface TextUiState {
   query: string;
   /** A row to scroll to and focus; `seq` changes on every request, even for the same key. */
   focus: { key: string; seq: number } | null;
+  /**
+   * The language the panel edits and the canvas previews; null = the store language. Only honoured
+   * while it is one of `[locale, ...offered]` (see `editingLocaleOf`); `useEditingLocale` clears it
+   * when it leaves the list.
+   */
+  editLocale: string | null;
+  setEditLocale(locale: string | null): void;
   show(opts?: { key?: string; filter?: TextFilter; query?: string }): void;
   hide(): void;
   setFilter(filter: TextFilter): void;
@@ -21,6 +28,8 @@ export const useTextUi = create<TextUiState>()((set) => ({
   filter: 'all',
   query: '',
   focus: null,
+  editLocale: null,
+  setEditLocale(editLocale) { set({ editLocale }); },
   show(opts = {}) {
     set((s) => ({
       open: true,

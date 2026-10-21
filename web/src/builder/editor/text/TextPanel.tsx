@@ -2,9 +2,10 @@
 import { useEffect, useId, useMemo, useRef, useState, type FocusEvent } from 'react';
 import type { EditorText } from '@/text/types.ts';
 import { useTemplateContext } from '@/templates/runtime.tsx';
-import { editorTextOf, textIssuesOf, useEditorStore } from '@/builder/editor/store.ts';
-import { applyText, useEditorText, useLoadEpoch, useTextIssues, useTextReadiness } from '@/builder/editor/text/hooks.ts';
+import { editorTextOf, textIssuesOf, textLanguage, useEditorStore } from '@/builder/editor/store.ts';
+import { applyText, useEditingLocale, useEditorText, useLoadEpoch, useTextIssues, useTextReadiness } from '@/builder/editor/text/hooks.ts';
 import { useTextUi, type TextFilter } from '@/builder/editor/text/ui-store.ts';
+import { nativeName } from '@/builder/editor/text/languages.ts';
 import { rowFor, rowMatches, textGroups, type TextRowDef } from '@/builder/editor/text/catalog.ts';
 import { LANGUAGES_ISSUE, SIZE_ISSUE, isLayerIssue, unusedEntries } from '@/builder/editor/text/issues.ts';
 import { valueStrings } from '@/builder/editor/text/model.ts';
@@ -42,6 +43,8 @@ export function TextPanel({ onClose }: { onClose?: () => void }) {
   const query = useTextUi((s) => s.query);
   const focus = useTextUi((s) => s.focus);
   const text = useEditorText();
+  const editing = useEditingLocale();
+  const offeredLocales = useEditorStore((s) => textLanguage(s));
   const issues = useTextIssues();
   const readiness = useTextReadiness();
   const loadEpoch = useLoadEpoch();
@@ -147,6 +150,16 @@ export function TextPanel({ onClose }: { onClose?: () => void }) {
         <p className={styles.unavailable} role="status"><WarnIcon />{TEXT_UNREADABLE}</p>
       ) : (
         <>
+          <label className={styles.field}>
+            <span>Editing language</span>
+            <select
+              value={editing}
+              aria-label="Editing language"
+              onChange={(e) => useTextUi.getState().setEditLocale(e.target.value)}
+            >
+              {[offeredLocales.locale, ...(offeredLocales.offered ?? [])].map((l) => <option key={l} value={l}>{nativeName(l)}</option>)}
+            </select>
+          </label>
           <LanguageSection />
           <div className={styles.tools}>
             <input

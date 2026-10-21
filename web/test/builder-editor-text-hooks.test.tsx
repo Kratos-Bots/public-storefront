@@ -38,7 +38,7 @@ describe('editor text hooks', () => {
     S().load({ layout: 'storefront', pageSet: null, readOnly: false, siteText: null });
     const { result, rerender } = renderHook(() => useEditorText());
     const first = result.current;
-    expect(first).toEqual({ locale: 'en', formatLocale: '', shared: {}, layout: {} });
+    expect(first).toEqual({ locale: 'en', formatLocale: '', shared: {}, layout: {}, languages: ['en'] });
     rerender();
     expect(result.current).toBe(first);
     act(() => { applyText('shared', key, 'Shared'); applyText('layout', key, 'Mine'); });
@@ -91,6 +91,14 @@ describe('editor text hooks', () => {
     renderHook(() => usePublishedTextSync(), { wrapper });
     await vi.waitFor(() => expect(S().published).toEqual({ language: { locale: 'de', formatLocale: '' }, shared: {} }));
     expect(renderHook(() => useEditorText()).result.current.locale).toBe('de');
+  });
+
+  it('the published read seeds offered from languages.slice(1)', async () => {
+    const mock = vi.mocked(fetchPublished);
+    mock.mockImplementationOnce(async () => ({ pageSet: null, text: { version: 3, locale: 'en', formatLocale: '', shared: {}, layout: {}, languages: ['en', 'fr', 'it'] } }));
+    S().load({ layout: 'storefront', pageSet: null, readOnly: false });
+    renderHook(() => usePublishedTextSync(), { wrapper });
+    await vi.waitFor(() => expect(S().published).toEqual({ language: { locale: 'en', formatLocale: '', offered: ['fr', 'it'] }, shared: {} }));
   });
 
   it('a published read that started under an earlier load never lands in the next one', async () => {
