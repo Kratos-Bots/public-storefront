@@ -1455,6 +1455,14 @@ or **Only {layout}** (this layout's override) — with the built-in default, the
 currently shows, placeholder chips, a length count and Reset; clearing the box resets. Plural
 keys get one box per plural category of the store language, with a live example.
 
+**Languages** (spec 2026-10-21 storefront languages): *Shopper languages* lists the extra
+languages shoppers may switch to (`SiteText.language.offered`; French, Italian and Spanish have a
+built-in translation, others fall back to English line by line). The *Editing language* select at
+the top of the panel picks which language the rows, counters, plural boxes and the canvas show;
+"Built-in:" is that language's pack value when there is one. Shoppers switch from a Language group
+in the phone header menu (automatic when more than one language is offered) or the optional
+`HeaderLanguage` header part; switching stores the choice and reloads.
+
 Selecting a block shows **Text in this block** under its fields (from the block's `text`
 patterns). The canvas re-resolves on every keystroke; only posting is debounced. Text edits share
 Undo/Redo with block edits (`editor/text/history.ts` anchors each text step to Puck's history
