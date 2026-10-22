@@ -207,6 +207,7 @@ describe('builder session: published text arrival', () => {
     const stop = startBuilderSession(win, new QueryClient());
     const bad = { strings: { de: { [plainKey()]: 'Kaputt {' } } };
     send(load({ pageSet: { schemaVersion: 1, shell: shell(), pages: {}, text: bad } }));
+    // Until the published language is known the shop serves only English, so German wording does not block.
     expect(changes()[0].textIssues).toEqual([]);
     useEditorStore.getState().setPublishedText({ language: { locale: 'de', formatLocale: '' }, shared: {} });
     vi.advanceTimersByTime(CHANGE_DEBOUNCE_MS);

@@ -18,6 +18,8 @@ import type { Locale, LocaleStrings, PluralForms, TextLayers } from '@/text/type
 
 export interface TextApi {
   locale: Locale;
+  /** Every language the store offers, default first; `[locale]` when it offers one (or an older backend sent none). */
+  languages: readonly Locale[];
   t<K extends StringKey>(key: K, ...p: ParamArgs<K>): string;
   tp<K extends PluralKey>(key: K, count: number, ...p: ParamArgs<K, 'count'>): string;
   /** A plural key takes its count (it picks the form and fills `{count}`); a string key takes none. */
@@ -43,19 +45,19 @@ export function createTextApi(layers: TextLayers): TextApi {
   // Built once per layers object, since the API itself is memoised per layers object.
   const stored = { layout: layers.layout ?? EMPTY, shared: layers.shared ?? EMPTY };
   const resolved = resolveText(stored, layers.locale);
-  // A built-in default is English whatever the store locale, so its form is chosen with English rules
-  // (fr would put 0 in `one`: "0 item"; ja has only `other`: "1 items"). A stored value is written for
-  // the store locale and uses its rules.
+  // A built-in English default keeps English rules whatever the store locale (fr would put 0 in `one`:
+  // "0 item"; ja has only `other`: "1 items"). A stored value or a built-in pack value is written for
+  // the store locale and uses its rules (resolved.rulesLocale).
   const pick = (key: string, count: number | undefined): string => {
     const v = resolved.value(key);
     if (typeof v === 'string') return v;
     const forms = v as PluralForms;
     if (count === undefined) return forms.other;
-    const rulesLocale = resolved.builtIn(key) ? 'en' : layers.locale;
-    return forms[pluralCategory(rulesLocale, count) as keyof PluralForms] ?? forms.other;
+    return forms[pluralCategory(resolved.rulesLocale(key), count) as keyof PluralForms] ?? forms.other;
   };
   const api: TextApi = {
     locale: layers.locale,
+    languages: layers.languages && layers.languages.length > 0 ? layers.languages : [layers.locale],
     t: ((key: string, params: Record<string, unknown> = {}) => fill(pick(key, undefined), params)) as TextApi['t'],
     tp: ((key: string, count: number, params: Record<string, unknown> = {}) =>
       fill(pick(key, count), { ...params, count: String(count) })) as TextApi['tp'],

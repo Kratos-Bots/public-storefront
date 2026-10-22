@@ -1,6 +1,7 @@
 // web/test/builder-editor-store-text.test.ts
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_PREVIEW_AS, TEXT_INITIAL, editorTextOf, isTextReady, languageRoom, setPuckHistorySource, textIssuesOf, textLanguage, useEditorStore } from '@/builder/editor/store.ts';
+import { useTextUi } from '@/builder/editor/text/ui-store.ts';
 import { TEXT_LIMITS } from '@/text/types.ts';
 import { LANGUAGES_ISSUE, SIZE_ISSUE } from '@/builder/editor/text/issues.ts';
 import { COALESCE_MS, TEXT_HISTORY_MAX, type PuckHistoryView } from '@/builder/editor/text/history.ts';
@@ -106,6 +107,19 @@ describe('editor store: text', () => {
     const a = textIssuesOf(S());
     expect(a.map((i) => [i.scope, i.rule])).toEqual([['shared', 'bad-brace'], ['layout', 'empty']]);
     expect(textIssuesOf(S())).toBe(a);
+  });
+
+  it('textIssuesOf covers every language holding wording, each issue naming its language', () => {
+    S().load({ layout: 'storefront', pageSet: null, readOnly: false, siteText: { ...SITE, language: { locale: 'en', formatLocale: '', offered: ['fr'] }, strings: {} } });
+    useTextUi.getState().setEditLocale('fr');
+    S().setText('shared', key, 'Bonjour {', null);
+    useTextUi.getState().setEditLocale(null);
+    S().setText('layout', key, 'Hello {', null);
+    const a = textIssuesOf(S());
+    expect(a.map((i) => [i.scope, i.locale])).toEqual([['shared', 'fr'], ['layout', 'en']]);
+    useTextUi.getState().setEditLocale('fr');
+    expect(textIssuesOf(S())).toBe(a);   // the editing language is not an input
+    useTextUi.getState().setEditLocale(null);
   });
 });
 
@@ -391,7 +405,7 @@ describe('editor store: editorTextOf', () => {
     S().setText('shared', key, 'Shared', null);
     S().setText('layout', key, 'Mine', null);
     const a = editorTextOf(S());
-    expect(a).toEqual({ locale: 'en', formatLocale: '', shared: { [key]: 'Shared' }, layout: { [key]: 'Mine' } });
+    expect(a).toEqual({ locale: 'en', formatLocale: '', shared: { [key]: 'Shared' }, layout: { [key]: 'Mine' }, languages: ['en'] });
     expect(editorTextOf(S())).toBe(a);
     S().setPreviewAs({ cart: 'empty' });
     expect(editorTextOf(S())).toBe(a);
@@ -404,10 +418,10 @@ describe('editor store: editorTextOf', () => {
   it('empty layers are one stable object; without siteText the shared layer is the published one', () => {
     S().load({ layout: 'storefront', pageSet: null, readOnly: false });
     const a = editorTextOf(S());
-    expect(a).toEqual({ locale: 'en', formatLocale: '', shared: {}, layout: {} });
+    expect(a).toEqual({ locale: 'en', formatLocale: '', shared: {}, layout: {}, languages: ['en'] });
     S().setPublishedText({ language: { locale: 'de', formatLocale: 'de-AT' }, shared: { [key]: 'Geteilt' } });
     const b = editorTextOf(S());
-    expect(b).toEqual({ locale: 'de', formatLocale: 'de-AT', shared: { [key]: 'Geteilt' }, layout: {} });
+    expect(b).toEqual({ locale: 'de', formatLocale: 'de-AT', shared: { [key]: 'Geteilt' }, layout: {}, languages: ['de'] });
     expect(b.layout).toBe(a.layout);
   });
 });

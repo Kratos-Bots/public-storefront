@@ -107,9 +107,13 @@
   justify-content: center;
   width: 44px;
   height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
   color: var(--sf-block-fg, var(--sf-muted));
   border-radius: var(--sf-card-radius);
   text-decoration: none;
+  cursor: pointer;
   transition: color 120ms ease, background-color 120ms ease;
 }
 

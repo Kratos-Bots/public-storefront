@@ -531,3 +531,9 @@ export function pausedPriceDesignSet(layout: Layout, hide?: 'mobile' | 'desktop'
   const base = storySet(layout);
   return { ...base, cards: { tile, row } };
 }
+
+/** The default header with the HeaderLanguage part placed at the end of its end slot (desktop switcher). */
+export function languageHeaderSet(layout: Layout): PageSet {
+  const filter = layout === 'storefront' ? [] : [p('HeaderFilter')];
+  return defaultShellSet(layout, { end: [...filter, p('HeaderAccount'), p('HeaderCart'), p('HeaderLanguage')] });
+}

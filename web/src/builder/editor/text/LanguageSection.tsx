@@ -1,8 +1,9 @@
 // web/src/builder/editor/text/LanguageSection.tsx
 import { useId, useMemo, useRef, useState } from 'react';
 import { TEXT_LIMITS } from '@/text/types.ts';
+import { packLanguage } from '@/text/packs/index.ts';
 import { languageRoom, useEditorStore } from '@/builder/editor/store.ts';
-import { applyClearLanguage, applyLanguage, useEditorText, useLoadEpoch, useTextIssues, useTextLanguage } from '@/builder/editor/text/hooks.ts';
+import { applyClearLanguage, applyLanguage, useEditingLocale, useEditorText, useLoadEpoch, useTextIssues, useTextLanguage } from '@/builder/editor/text/hooks.ts';
 import { isLayerIssue } from '@/builder/editor/text/issues.ts';
 import { wordingLanguages, type TextScope } from '@/builder/editor/text/model.ts';
 import { LAYOUT_LABELS } from '@/builder/editor/page-catalog.ts';
@@ -21,7 +22,9 @@ export function LanguageSection() {
 }
 
 function LanguageForLoad({ loadEpoch }: { loadEpoch: number }) {
-  const { locale, formatLocale } = useTextLanguage();
+  const { locale, formatLocale, offered: offeredList } = useTextLanguage();
+  const offered = offeredList ?? [];
+  const editing = useEditingLocale();
   const text = useEditorText();
   const sharedEditable = useEditorStore((s) => s.sharedEditable);
   const readOnly = useEditorStore((s) => s.readOnly);
@@ -45,9 +48,21 @@ function LanguageForLoad({ loadEpoch }: { loadEpoch: number }) {
 
   const rows = allRows();
   const set = rows.filter((r) => text.shared[r.key] !== undefined || text.layout[r.key] !== undefined).length;
-  const counter = locale === 'en'
+  const counter = editing === 'en'
     ? `${set} of ${rows.length} lines changed from the built-in wording`
-    : `${set} of ${rows.length} lines set in ${nativeName(locale)} — the rest show the built-in English`;
+    : `${set} of ${rows.length} lines set in ${nativeName(editing)} — the rest show the built-in ${packLanguage(editing) ? nativeName(editing) : 'English'}`;
+  // Offering never deletes wording and un-offering keeps it; the checklist lists every language but the default.
+  const toggleOffered = (code: string, on: boolean) => {
+    const next = on ? [...offered, code] : offered.filter((l) => l !== code);
+    if (on && next.length > TEXT_LIMITS.locales - 1) { setRefused(null); return; }
+    if (on && languageRoom(useEditorStore.getState(), code).length > 0) { setRefused(code); return; }
+    setRefused(null);
+    applyLanguage({ offered: next }, loadEpoch);
+  };
+  const choices = LANGUAGES.filter((l) => l.code !== locale);
+  // A stored language outside the picker's list (typed elsewhere) stays visible so it can be un-offered.
+  const extra = offered.filter((o) => !choices.some((c) => c.code === o));
+  const full = offered.length >= TEXT_LIMITS.locales - 1;
 
   const commitTag = () => {
     if (typing === null) return;
@@ -115,8 +130,31 @@ function LanguageForLoad({ loadEpoch }: { loadEpoch: number }) {
           <span id={`${id}-tagerr`} className={styles.error} role={error ? 'alert' : undefined}>{error}</span>
         </label>
       )}
+      <fieldset className={styles.offerSet} disabled={!editable}>
+        <legend>Shopper languages</legend>
+        <p className={styles.note}>Languages shoppers can switch to, besides {nativeName(locale)}. Un-ticking one keeps its wording.</p>
+        <ul className={`${styles.roomList} ${styles.offerList}`}>
+          {[...choices.map((c) => c.code), ...extra].map((code) => {
+            const on = offered.includes(code);
+            return (
+              <li key={code}>
+                <label className={styles.roomName}>
+                  <input
+                    type="checkbox"
+                    checked={on}
+                    disabled={!editable || (!on && full)}
+                    onChange={(e) => toggleOffered(code, e.target.checked)}
+                  />
+                  {' '}{nativeName(code)}
+                </label>
+                {packLanguage(code) && <span className={styles.roomCount}>Built-in translation</span>}
+              </li>
+            );
+          })}
+        </ul>
+      </fieldset>
       <p className={styles.counter}>{counter}</p>
-      <LanguageRoom locale={locale} refused={refused} loadEpoch={loadEpoch} />
+      <LanguageRoom locale={editing} refused={refused} loadEpoch={loadEpoch} />
     </section>
   );
 }

@@ -103,8 +103,8 @@ async function renderShell(d: PuckDoc, layout: LayoutKind = 'storefront', path =
 }
 
 describe('contract', () => {
-  it('registers exactly the six parts, in the header family, with the STAGE4_PARTS style', () => {
-    expect(HEADER_PARTS).toHaveLength(6);
+  it('registers exactly the seven parts, in the header family, with the STAGE4_PARTS style', () => {
+    expect(HEADER_PARTS).toHaveLength(7);
     for (const name of HEADER_PARTS) {
       const def = BLOCKS[name]!;
       expect(def, name).toBeDefined();

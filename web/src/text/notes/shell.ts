@@ -15,6 +15,8 @@ export default {
   'menu.help': 'Header menu entry that opens the Help page (tickets, FAQ and contact routes together)',
   'menu.account': 'Header menu entry that opens the account, shown to a signed-in shopper',
   'menu.signIn': 'Header menu entry that opens sign-in, shown to a shopper who is not signed in',
+  'language.label': 'Heading of the Language group in the phone header menu',
+  'language.change': 'Screen-reader label of the header button that opens the language list; {language} is the language now shown',
   'bottomNav.ariaLabel': 'Screen-reader name of the navigation bar fixed to the foot of the screen on phones',
   'bottomNav.catalog': 'Label under the catalogue icon in the phone bottom bar',
   'bottomNav.profile': 'Label under the account icon in the phone bottom bar',

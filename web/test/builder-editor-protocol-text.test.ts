@@ -1,6 +1,7 @@
 // web/test/builder-editor-protocol-text.test.ts
 import { describe, expect, it, vi } from 'vitest';
 import { changeMessage, MAX_CHANGE_ISSUES, parseInbound } from '@/builder/editor/protocol.ts';
+import { postableSiteText } from '@/builder/editor/text/model.ts';
 import { createBridge, CHANGE_DEBOUNCE_MS } from '@/builder/editor/bridge.ts';
 import type { PageSet } from '@/builder/types.ts';
 import type { TextIssue } from '@/builder/editor/text/model.ts';
@@ -47,6 +48,23 @@ describe('protocol: text on load', () => {
     expect(asLoad(parseInbound({ ...LOAD, siteText: null })).siteText).toBeNull();
     expect(asLoad(parseInbound(LOAD)).siteText).toBeUndefined();
     expect('siteText' in asLoad(parseInbound(LOAD))).toBe(false);
+  });
+
+  it('siteText keeps language.offered through the load and back out', () => {
+    const lang = (offered: unknown) => ({ ...SITE, language: { ...SITE.language, offered } });
+    const offeredOf = (offered: unknown) => asLoad(parseInbound({ ...LOAD, siteText: lang(offered) })).siteText!.language.offered;
+    expect(offeredOf(['fr', 'it'])).toEqual(['fr', 'it']);
+    // Junk entries, duplicates and the default language are dropped; none left = no key at all.
+    expect(offeredOf(['fr', 'fr', 'de', 'xx_YY', 5, 'it'])).toEqual(['fr', 'it']);
+    expect(offeredOf(['de', 'nope!'])).toBeUndefined();
+    expect('offered' in asLoad(parseInbound({ ...LOAD, siteText: lang(['de']) })).siteText!.language).toBe(false);
+    expect(offeredOf('fr')).toBeUndefined();
+    expect(offeredOf(undefined)).toBeUndefined();
+    const many = ['fr', 'it', 'es', 'pt', 'nl', 'sv', 'da', 'nb', 'fi', 'is', 'pl', 'cs'];
+    expect(offeredOf(many)).toEqual(many.slice(0, 9));
+    // The editor's own posted doc round-trips.
+    const loaded = asLoad(parseInbound({ ...LOAD, siteText: lang(['fr', 'it']) })).siteText!;
+    expect(postableSiteText(loaded).language).toEqual({ locale: 'de', formatLocale: 'de-AT', offered: ['fr', 'it'] });
   });
 
   it('a malformed siteText is treated as absent, not as a reason to drop the load', () => {

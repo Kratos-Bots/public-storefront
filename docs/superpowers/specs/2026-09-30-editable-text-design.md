@@ -333,7 +333,7 @@ export default defineTextArea('cart', {
 - `defineTextArea<const A, const E>(area, entries)` uses TypeScript 5 `const` type parameters so
   the full key (`'cart.summary.items'`) and its placeholders are inferred from the literal
   defaults: `ParamsOf<'Only {available} left'>` → `{ available: string | number }`.
-- Entry fields: `en` (the built-in default — the only built-in language), `note?` (where it
+- Entry fields: `en` (the built-in default; French, Italian and Spanish packs were added by the 2026-10-21 storefront-languages spec), `note?` (where it
   appears; shown in the Text panel), `label?` (short name; else derived from the last segment),
   `max?` (default 200, ≤ 1000), `fixed?` (§6.2).
 - Placeholders of a key = the union of names in all default forms. A plural key always accepts

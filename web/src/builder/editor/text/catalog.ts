@@ -4,6 +4,7 @@ import { formsOf, placeholdersOf as entryPlaceholders } from '@/text/define.ts';
 import { SITE_WIDE_TEXT } from '@/text/site-wide.ts';
 import { TEXT_LABELS, TEXT_NOTES } from '@/text/notes/index.ts';
 import { BLOCKS } from '@/builder/registry.ts';
+import { packFor } from '@/text/packs/index.ts';
 import { DEFAULT_MAX, type TextValue } from '@/text/types.ts';
 
 /**
@@ -93,6 +94,16 @@ export function allRows(): readonly TextRowDef[] {
   }
   byKey = new Map(rows.map((r) => [r.key, r]));
   return rows;
+}
+
+/**
+ * What the shop shows for a row when nothing overrides it, in `locale`: the built-in translation when
+ * that language has a loaded pack value for the key, else the built-in English (`row.def`). Rows are
+ * cached at module scope, so the per-language answer is computed here rather than stored on them.
+ */
+export function builtInFor(row: TextRowDef, locale: string): TextValue {
+  const pack = packFor(locale) as Readonly<Record<string, TextValue>> | undefined;
+  return pack && Object.hasOwn(pack, row.key) ? pack[row.key]! : row.def;
 }
 
 export function rowFor(key: string): TextRowDef | null {

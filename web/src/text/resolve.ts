@@ -1,4 +1,5 @@
 import { formsOf, hasBadBrace, placeholdersIn, placeholdersOf, type TextEntry } from '@/text/define.ts';
+import { packFor, type Pack } from '@/text/packs/index.ts';
 import { TEXT_ENTRIES } from '@/text/registry.ts';
 import { DEFAULT_MAX, isPluralForms, type Locale, type LocaleStrings, type TextValue } from '@/text/types.ts';
 
@@ -8,8 +9,11 @@ export type TextCheck = { ok: true } | { ok: false; rule: TextRule; message: str
 export interface Resolved {
   readonly locale: Locale;
   value(key: string): TextValue;
-  /** True when `value(key)` is the release's built-in English (no valid stored value) — its plural form is picked with 'en' rules. */
-  builtIn(key: string): boolean;
+  /**
+   * The locale whose plural rules pick a form of `value(key)`: 'en' only when it is the release's built-in
+   * English fallback; a stored value or a built-in pack value is written for `locale` and uses its rules.
+   */
+  rulesLocale(key: string): Locale;
 }
 export interface TextResolver {
   checkValue(key: string, value: unknown): TextCheck;
@@ -25,7 +29,10 @@ function warnOnce(id: string, message: string): void {
   console.warn(`[text] ${message}`);
 }
 
-export function createResolver(entries: Readonly<Record<string, TextEntry>>): TextResolver {
+export function createResolver(
+  entries: Readonly<Record<string, TextEntry>>,
+  packOf: (locale: Locale) => Pack | undefined = () => undefined,
+): TextResolver {
   function checkValue(key: string, value: unknown): TextCheck {
     const entry = Object.hasOwn(entries, key) ? entries[key] : undefined;
     if (!entry) return fail('unknown-key', 'This line is not used by this version of the shop.');
@@ -49,30 +56,39 @@ export function createResolver(entries: Readonly<Record<string, TextEntry>>): Te
     return OK;
   }
 
-  const memo = new WeakMap<object, Map<Locale, Resolved>>();
+  // The pack is part of the memo key: a resolution made before a pack loaded is never reused after it.
+  const memo = new WeakMap<object, Map<Locale, { pack: Pack | undefined; resolved: Resolved }>>();
 
   function resolveText(layers: { layout: LocaleStrings; shared: LocaleStrings }, locale: Locale): Resolved {
     let byLocale = memo.get(layers);
     if (!byLocale) { byLocale = new Map(); memo.set(layers, byLocale); }
-    const hit = byLocale.get(locale);
-    if (hit) return hit;
+    const pack = packOf(locale);
+    const memoed = byLocale.get(locale);
+    if (memoed && memoed.pack === pack) return memoed.resolved;
     for (const layer of [layers.layout, layers.shared]) {
       for (const key of Object.keys(layer)) {
         if (!Object.hasOwn(entries, key)) warnOnce(`unknown:${key}`, `ignoring "${key}": not a key of this release`);
       }
     }
-    const cache = new Map<string, { v: TextValue; builtIn: boolean }>();
-    const lookup = (key: string): { v: TextValue; builtIn: boolean } => {
+    const cache = new Map<string, { v: TextValue; english: boolean }>();
+    const lookup = (key: string): { v: TextValue; english: boolean } => {
       const cached = cache.get(key);
       if (cached) return cached;
       const entry = Object.hasOwn(entries, key) ? entries[key] : undefined;
-      let hit = { v: entry ? entry.en : key, builtIn: true } as { v: TextValue; builtIn: boolean };
+      let hit = { v: entry ? entry.en : key, english: true } as { v: TextValue; english: boolean };
       if (entry) {
+        let found = false;
         for (const [scope, layer] of [['layout', layers.layout], ['shared', layers.shared]] as const) {
           if (!Object.hasOwn(layer, key)) continue;
           const c = checkValue(key, layer[key]);
-          if (c.ok) { hit = { v: layer[key]!, builtIn: false }; break; }
+          if (c.ok) { hit = { v: layer[key]!, english: false }; found = true; break; }
           warnOnce(`${scope}:${key}:${c.rule}`, `ignoring the ${scope} value of "${key}" (${c.rule})`);
+        }
+        if (!found && pack && Object.hasOwn(pack, key)) {
+          const v = (pack as Readonly<Record<string, TextValue>>)[key]!;
+          const c = checkValue(key, v);
+          if (c.ok) hit = { v, english: false };
+          else warnOnce(`pack:${locale}:${key}:${c.rule}`, `ignoring the built-in ${locale} value of "${key}" (${c.rule})`);
         }
       }
       cache.set(key, hit);
@@ -81,16 +97,16 @@ export function createResolver(entries: Readonly<Record<string, TextEntry>>): Te
     const resolved: Resolved = {
       locale,
       value: (key) => lookup(key).v,
-      builtIn: (key) => lookup(key).builtIn,
+      rulesLocale: (key) => (lookup(key).english ? 'en' : locale),
     };
-    byLocale.set(locale, resolved);
+    byLocale.set(locale, { pack, resolved });
     return resolved;
   }
 
   return { checkValue, resolveText };
 }
 
-const shared = createResolver(TEXT_ENTRIES);
+const shared = createResolver(TEXT_ENTRIES, packFor);
 /** Also used by the editor to turn rejections into issues (spec §6.3, §7.2). */
 export const checkValue = shared.checkValue;
 export const resolveText = shared.resolveText;

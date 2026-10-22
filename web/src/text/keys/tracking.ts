@@ -79,7 +79,7 @@ export default defineTextArea('tracking', {
   'states.loading': { en: 'Loading tracking', max: 60 },
   'states.verifying': { en: 'Checking you\'re human', max: 60 },
   'states.blockedHead': { en: 'Verification unavailable', max: 60 },
-  'states.blockedBody': { en: 'We couldn\'t finish the security check that protects order lookups, so we can\'t fetch your tracking. A privacy extension or network filter blocking Cloudflare challenges is the usual cause.' },
+  'states.blockedBody': { en: 'We couldn\'t finish the security check that protects order lookups, so we can\'t fetch your tracking. A privacy extension or network filter blocking Cloudflare challenges is the usual cause.', max: 300 },
   'states.reload': { en: 'Reload page', max: 40 },
   'states.notFoundHead': { en: 'No order found', max: 60 },
   'states.notFoundBody': { en: 'We couldn\'t find an order with that number. Check it against your confirmation — it\'s six characters, letters and numbers.' },

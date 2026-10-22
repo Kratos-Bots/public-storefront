@@ -78,6 +78,9 @@
 }
 .sectionTitle { font-size: 13px; font-weight: 600; }
 .locked { color: var(--sfb-muted); }
+.offerSet { display: grid; gap: 4px; min-inline-size: 0; border: 0; margin: 0; padding: 0; }
+.offerSet > legend { padding: 0; font-weight: 500; }
+.offerList { max-block-size: 200px; overflow-y: auto; }
 .field { display: grid; gap: 4px; min-inline-size: 0; }
 .field > span:first-child { font-weight: 500; }
 .error { color: var(--sfb-danger); }

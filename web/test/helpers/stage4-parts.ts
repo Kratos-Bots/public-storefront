@@ -14,6 +14,7 @@ export const STAGE4_PARTS: Record<string, { family: PartFamily; style: { target:
   HeaderFilter: { family: 'header', style: T('root', BAR, VIS) },
   HeaderAccount: { family: 'header', style: T('root', BAR, VIS) },
   HeaderCart: { family: 'header', style: T('root', BAR, VIS) },
+  HeaderLanguage: { family: 'header', style: T('root', BAR, VIS) },
   CartHeading: { family: 'cart', style: T('root', BOX, TEXT) },
   CartLines: { family: 'cart', style: T('root', BOX) },
   CartEmpty: { family: 'cart', style: T('root', BOX, TEXT) },

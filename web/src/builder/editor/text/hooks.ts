@@ -1,11 +1,38 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useSyncExternalStore } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchPublished } from '@/api/pages.ts';
 import type { EditorText, TextLanguage, TextValue } from '@/text/types.ts';
-import { editorTextOf, isTextReady, textIssuesOf, textLanguage, useEditorStore } from '@/builder/editor/store.ts';
+import { preloadPacks } from '@/text/packs/index.ts';
+import { editingLocaleOf, editorTextOf, isTextReady, textIssuesOf, textLanguage, useEditorStore } from '@/builder/editor/store.ts';
+import { useTextUi } from '@/builder/editor/text/ui-store.ts';
 import { DEFAULT_LANGUAGE, type DraftValue, type TextIssue, type TextScope } from '@/builder/editor/text/model.ts';
 import { resolveCell, type ResolvedCell } from '@/builder/editor/text/issues.ts';
 import { currentAnchor } from '@/builder/editor/text/history.ts';
+
+/*
+ * The editor shows pack values for every offered language, so it loads every pack up front (its bundle
+ * size is not a concern). A pack that lands after the first render bumps `packsVersion`, which text
+ * consumers subscribe to: `editorTextOf` sees the new pack and hands the canvas a fresh object.
+ */
+let packsVersion = 0;
+const packListeners = new Set<() => void>();
+/** A pack finished loading (or, in tests, changed): subscribed text re-derives. */
+export function notifyPacksLoaded(): void { packsVersion += 1; packListeners.forEach((l) => l()); }
+void preloadPacks().then(notifyPacksLoaded);
+const subscribePacks = (l: () => void) => { packListeners.add(l); return () => { packListeners.delete(l); }; };
+const packsSnapshot = () => packsVersion;
+export const usePacksVersion = (): number => useSyncExternalStore(subscribePacks, packsSnapshot, packsSnapshot);
+
+/** The language being edited: the Text UI store's pick while it is still offered, else the store language. */
+export function useEditingLocale(): string {
+  const pick = useTextUi((s) => s.editLocale);
+  // A string selector: a keystroke (new siteText) does not re-render the rows that call this.
+  const locale = useEditorStore((s) => editingLocaleOf(s, pick));
+  // The pick left [locale, ...offered] (un-offered, or the default changed): back to the default.
+  const stale = pick !== null && pick !== locale;
+  useEffect(() => { if (stale) useTextUi.getState().setEditLocale(null); }, [stale]);
+  return locale;
+}
 
 export function useTextLanguage(): TextLanguage {
   const sharedEditable = useEditorStore((s) => s.sharedEditable);
@@ -20,7 +47,9 @@ export function useTextLanguage(): TextLanguage {
  * so text consumers do not re-render on unrelated store updates.
  */
 export function useEditorText(): EditorText {
-  return useEditorStore(editorTextOf);
+  usePacksVersion();
+  useTextUi((s) => s.editLocale);
+  return useEditorStore((s) => editorTextOf(s));
 }
 
 /** The current load, to capture when an edit (a focused input, a picker) starts. */
@@ -51,15 +80,22 @@ export function usePublishedTextSync(): void {
     if (!enabled || !missing || !query.isSuccess) return;
     const t = query.data.text;
     useEditorStore.getState().setPublishedText(
-      t ? { language: { locale: t.locale, formatLocale: t.formatLocale }, shared: t.shared } : { language: DEFAULT_LANGUAGE, shared: {} },
+      t ? { language: publishedLanguage(t), shared: t.shared } : { language: DEFAULT_LANGUAGE, shared: {} },
       loadEpoch,
     );
   }, [enabled, missing, query.isSuccess, query.data, loadEpoch]);
 }
 
+/** The read is locale-less, so it serves the default language: `languages` is the default first, then the offered ones. */
+export function publishedLanguage(t: Pick<TextLanguage, 'locale' | 'formatLocale'> & { languages?: readonly string[] }): TextLanguage {
+  const offered = (t.languages ?? []).slice(1);
+  return { locale: t.locale, formatLocale: t.formatLocale, ...(offered.length > 0 ? { offered } : {}) };
+}
+
 export function useTextIssues(): TextIssue[] {
+  useTextUi((s) => s.editLocale);
   // textIssuesOf is memoised in the store on its inputs: a stable array between text changes.
-  return useEditorStore(textIssuesOf);
+  return useEditorStore((s) => textIssuesOf(s));
 }
 
 export const useTextReady = (): boolean => useEditorStore(isTextReady);
@@ -105,10 +141,10 @@ export function useTextCell(key: string): TextCell {
   return useMemo(() => ({
     shared, layout, sharedEditable,
     // resolveCell only returns a layer that passes ruleFor (a usable `other`), i.e. a real TextValue.
-    effective: resolveCell(key, { layout: layout as TextValue | undefined, shared: shared as TextValue | undefined }),
-    below: resolveCell(key, { shared: shared as TextValue | undefined }),
-    issues: issues.filter((i) => i.key === key),
-  }), [key, shared, layout, sharedEditable, issues]);
+    effective: resolveCell(key, { layout: layout as TextValue | undefined, shared: shared as TextValue | undefined }, text.locale),
+    below: resolveCell(key, { shared: shared as TextValue | undefined }, text.locale),
+    issues: issues.filter((i) => i.key === key && (i.locale === undefined || i.locale === text.locale)),
+  }), [key, shared, layout, sharedEditable, issues, text.locale]);
 }
 
 /**

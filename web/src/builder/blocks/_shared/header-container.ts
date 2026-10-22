@@ -15,7 +15,7 @@ const withIcon = (type: string, id: string, o: unknown): ComponentData => ({ typ
 
 export const HEADER_CONTAINER: ContainerSpec = {
   family: 'header', insertSlot: 'end', required: ['HeaderBrand'],
-  unique: ['HeaderBrand', 'HeaderBack', 'HeaderSearch', 'HeaderFilter', 'HeaderAccount', 'HeaderCart'],
+  unique: ['HeaderBrand', 'HeaderBack', 'HeaderSearch', 'HeaderFilter', 'HeaderAccount', 'HeaderCart', 'HeaderLanguage'],
   legacyProps: ['search', 'accountIcon', 'cartIcon'],
   // `nav` is never filled (spec §5.1) so Reset keeps owner content in it.
   defaultSlots: (props, { layout, id }) => {

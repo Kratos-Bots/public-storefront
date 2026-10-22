@@ -1769,7 +1769,8 @@
           "HeaderSearch",
           "HeaderFilter",
           "HeaderAccount",
-          "HeaderCart"
+          "HeaderCart",
+          "HeaderLanguage"
         ],
         "insertSlot": "end"
       }
@@ -1877,6 +1878,32 @@
     },
     {
       "name": "HeaderFilter",
+      "category": "part",
+      "layouts": [
+        "storefront",
+        "menu",
+        "webapp"
+      ],
+      "routeBound": false,
+      "style": {
+        "target": "root",
+        "keys": [
+          "bg",
+          "fg",
+          "padX",
+          "border",
+          "borderColor",
+          "borderStyle",
+          "radius",
+          "hide"
+        ]
+      },
+      "part": {
+        "family": "header"
+      }
+    },
+    {
+      "name": "HeaderLanguage",
       "category": "part",
       "layouts": [
         "storefront",

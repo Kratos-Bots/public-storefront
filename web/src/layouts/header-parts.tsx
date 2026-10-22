@@ -19,6 +19,9 @@ import { isPreviewMode } from '@/app/preview-listener.ts';
 import { reviewSettingsOf } from '@/features/reviews/settings.ts';
 import { Slot } from '@/templates/runtime.tsx';
 import { headerIconClass, useCoreOptions } from '@/templates/hooks.ts';
+import { Menu } from '@mantine/core';
+import { LanguageMenuItems } from '@/components/LanguageList.tsx';
+import { languageCode, nativeName } from '@/components/language-name.ts';
 import { useText } from '@/text/runtime.tsx';
 import { compactScope, iconOverride, type Override, type SlotRender, type StyleAttrs } from '@/builder/define.ts';
 import { CoreOptionsScope } from '@/builder/blocks/_shared/CoreOptionsScope.tsx';
@@ -28,6 +31,7 @@ import type { ComponentData } from '@/builder/types.ts';
 import storefront from '@/layouts/StorefrontShell.module.css';
 import menu from '@/layouts/MenuShell.module.css';
 import webapp from '@/layouts/WebAppShell.module.css';
+import language from '@/layouts/HeaderLanguage.module.css';
 import reviewsLink from '@/layouts/HeaderReviewsLink.module.css';
 
 type Variant = HeaderData['variant'];
@@ -168,6 +172,26 @@ function CartView({ props, styleAttrs }: PartViewProps) {
   );
 }
 
+function LanguageView({ styleAttrs }: PartViewProps) {
+  const { classes } = HeaderFamily.useData();
+  const { t, languages, locale } = useText();
+  const { showHeaderMenu } = useCoreOptions();
+  // An owner placing the part needs to see it even while the shop offers one language.
+  if (languages.length < 2 && !isBuilderMode()) return null;
+  return (
+    <Menu position="bottom-end" shadow="md" withinPortal>
+      <Menu.Target>
+        <button type="button" className={showHeaderMenu && !isBuilderMode() ? `${classes.action} sf-hide-mobile` : classes.action} aria-label={t('shell.language.change', { language: nativeName(locale) })} {...styleAttrs}>
+          <span className={language.code} aria-hidden>{languageCode(locale)}</span>
+        </button>
+      </Menu.Target>
+      <Menu.Dropdown className={language.dropdown}>
+        <LanguageMenuItems />
+      </Menu.Dropdown>
+    </Menu>
+  );
+}
+
 /**
  * The header's "Reviews" link: a system mount of the header bar, not a part an owner places, so every header (a published
  * one included) carries it. Shown while the shop has reviews on, always on desktop, and on a phone only when neither the
@@ -193,7 +217,7 @@ function HeaderReviewsLink() {
 
 export const HEADER_VIEWS: FamilyValue<HeaderData>['views'] = {
   HeaderBrand: BrandView, HeaderBack: BackView, HeaderSearch: SearchView,
-  HeaderFilter: FilterView, HeaderAccount: AccountView, HeaderCart: CartView,
+  HeaderFilter: FilterView, HeaderAccount: AccountView, HeaderCart: CartView, HeaderLanguage: LanguageView,
 };
 
 // ── the container view ──────────────────────────────────────────────────────

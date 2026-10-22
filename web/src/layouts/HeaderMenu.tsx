@@ -12,6 +12,7 @@ import { HeaderFamily } from '@/builder/family-header.ts';
 import { useBottomNavShown } from '@/layouts/bottom-nav-rules.ts';
 import { MENU_LINKS, type MenuContext } from '@/layouts/menu-links.ts';
 import { useCoreOptions } from '@/templates/hooks.ts';
+import { LanguageList } from '@/components/LanguageList.tsx';
 import { useText } from '@/text/runtime.tsx';
 import classes from '@/layouts/HeaderMenu.module.css';
 
@@ -37,7 +38,7 @@ export function HeaderMenu() {
 
 function Menu() {
   const settings = useSettings();
-  const { t } = useText();
+  const { t, languages } = useText();
   const { pathname } = useLocation();
   const { variant, classes: header, loggedIn, native } = HeaderFamily.useData();
   const reducedMotion = useReducedMotion();
@@ -111,6 +112,12 @@ function Menu() {
               })}
             </ul>
           </nav>
+          {languages.length > 1 ? (
+            <section className={classes.group} aria-labelledby="sf-menu-language" data-sf-menu="language">
+              <h3 id="sf-menu-language" className={classes.groupTitle}>{t('shell.language.label')}</h3>
+              <LanguageList />
+            </section>
+          ) : null}
         </Drawer.Content>
       </Drawer.Root>
     </>

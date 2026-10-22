@@ -161,3 +161,21 @@ div:not(:empty) + .button {
     transition: none;
   }
 }
+
+/* The language group at the panel's end: the title's mono voice as its heading, then the shared list. */
+.group {
+  flex: none;
+  padding: 0.25rem 0 0.75rem;
+  border-top: 1px solid var(--sf-line);
+}
+
+.groupTitle {
+  margin: 0;
+  padding: 1rem 1.25rem 0.5rem;
+  font-family: var(--sf-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--sf-faint);
+}

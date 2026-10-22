@@ -1,13 +1,13 @@
 // web/src/builder/editor/text/TextRow.tsx
 import { memo, useId, useMemo, useRef, useState } from 'react';
 import type { TextValue } from '@/text/types.ts';
-import { editorTextOf, languageRoom, textIssuesOf, textLanguage, useEditorStore } from '@/builder/editor/store.ts';
+import { editingLocaleOf, editorTextOf, languageRoom, textIssuesOf, useEditorStore } from '@/builder/editor/store.ts';
 import { TEXT_LIMITS } from '@/text/types.ts';
 import { LAYOUT_LABELS } from '@/builder/editor/page-catalog.ts';
 import { WarnIcon } from '@/builder/editor/icons.tsx';
-import { applyText, useLoadEpoch, type TextCell } from '@/builder/editor/text/hooks.ts';
+import { applyText, useEditingLocale, usePacksVersion, useLoadEpoch, type TextCell } from '@/builder/editor/text/hooks.ts';
 import type { DraftValue, PluralForm, TextIssue, TextScope } from '@/builder/editor/text/model.ts';
-import type { TextRowDef } from '@/builder/editor/text/catalog.ts';
+import { builtInFor, type TextRowDef } from '@/builder/editor/text/catalog.ts';
 import { countWarnings, resolveCell } from '@/builder/editor/text/issues.ts';
 import { fillExample, pluralFormsFor, sampleCount } from '@/builder/editor/text/languages.ts';
 import styles from '@/builder/editor/text/Text.module.css';
@@ -28,7 +28,7 @@ const formOf = (value: DraftValue | TextValue, category: string): string =>
 export const summary = (value: DraftValue | TextValue): string => formOf(value, 'other');
 
 /** Non-blocking hints for the value at the chosen scope: {count} left out, edge spaces dropped. */
-function warningsFor(row: TextRowDef, value: DraftValue | undefined): string[] {
+function warningsFor(row: TextRowDef, value: DraftValue | undefined, builtIn: TextValue): string[] {
   if (value === undefined) return [];
   const out = countWarnings(row.key, value).map(
     (form) => `The “${form}” form leaves out {count}, so shoppers won’t see the number.`,
@@ -38,7 +38,7 @@ function warningsFor(row: TextRowDef, value: DraftValue | undefined): string[] {
     : [[null, value]];
   for (const [form, text] of pairs) {
     if (text === '') continue;
-    const def = formOf(row.def, form ?? 'other');
+    const def = formOf(builtIn, form ?? 'other');
     const where = form ? `The “${form}” form` : 'Yours';
     if (/^\s/.test(def) && !/^\s/.test(text)) out.push(`The built-in wording starts with a space. ${where} doesn’t, so it may run into the words before it.`);
     if (/\s$/.test(def) && !/\s$/.test(text)) out.push(`The built-in wording ends with a space. ${where} doesn’t, so it may run into the words after it.`);
@@ -56,23 +56,25 @@ const own = (map: Record<string, TextValue>, key: string): DraftValue | undefine
  * neither this key's layer values (same references in the copied maps) nor its issue signature,
  * so this row does not re-render. With ~700 rows, that is what keeps typing responsive.
  */
-function useRowCell(key: string): TextCell {
+function useRowCell(key: string, locale: string): TextCell {
   // The store's draft layers may hold a DraftValue (a plural without `other` while typing).
+  // A pack that arrives later changes what "built-in" means: re-derive the cell (packs is a dependency below).
+  const packs = usePacksVersion();
   const shared = useEditorStore((s) => own(editorTextOf(s).shared, key));
   const layout = useEditorStore((s) => own(editorTextOf(s).layout, key));
   const sharedEditable = useEditorStore((s) => s.sharedEditable);
   const signature = useEditorStore((s) => {
-    const mine = textIssuesOf(s).filter((i) => i.key === key);
+    const mine = textIssuesOf(s).filter((i) => i.key === key && (i.locale === undefined || i.locale === locale));
     return mine.length === 0 ? '' : JSON.stringify(mine);
   });
   const issues = useMemo(() => (signature ? (JSON.parse(signature) as TextIssue[]) : EMPTY_ISSUES), [signature]);
   return useMemo(() => ({
     shared, layout, sharedEditable,
     // resolveCell only returns a layer that passes ruleFor (a usable `other`), i.e. a real TextValue.
-    effective: resolveCell(key, { layout: layout as TextValue | undefined, shared: shared as TextValue | undefined }),
-    below: resolveCell(key, { shared: shared as TextValue | undefined }),
+    effective: resolveCell(key, { layout: layout as TextValue | undefined, shared: shared as TextValue | undefined }, locale),
+    below: resolveCell(key, { shared: shared as TextValue | undefined }, locale),
     issues,
-  }), [key, shared, layout, sharedEditable, issues]);
+  }), [key, shared, layout, sharedEditable, issues, locale, packs]);
 }
 
 /**
@@ -85,12 +87,13 @@ export const TextRow = memo(function TextRow(props: { row: TextRowDef; compact?:
 });
 
 function RowForLoad({ row, compact = false, loadEpoch }: { row: TextRowDef; compact?: boolean; loadEpoch: number }) {
-  const cell = useRowCell(row.key);
+  const locale = useEditingLocale();
+  const cell = useRowCell(row.key, locale);
   const layout = useEditorStore((s) => s.layout);
   const readOnly = useEditorStore((s) => s.readOnly);
-  const locale = useEditorStore((s) => textLanguage(s).locale);
-  /** Layers that can't take wording in the active language (the backend's language cap). */
-  const full = useEditorStore((s) => languageRoom(s, textLanguage(s).locale).join(' '));
+  /** Layers that can't take wording in the editing language (the backend's language cap). */
+  const full = useEditorStore((s) => languageRoom(s, editingLocaleOf(s)).join(' '));
+  const builtIn = builtInFor(row, locale);
   const id = domId(useId());
   const [scope, setScope] = useState<TextScope>(() => (cell.layout !== undefined || !cell.sharedEditable ? 'layout' : 'shared'));
   /** The load the current edit started under: captured on focus, else the load this row mounted in. */
@@ -100,7 +103,7 @@ function RowForLoad({ row, compact = false, loadEpoch }: { row: TextRowDef; comp
 
   const layoutLabel = LAYOUT_LABELS[layout];
   const stored = scope === 'shared' ? cell.shared : cell.layout;
-  const under: DraftValue | TextValue = scope === 'layout' ? cell.below.value : row.def;
+  const under: DraftValue | TextValue = scope === 'layout' ? cell.below.value : builtIn;
   const noRoom = full.split(' ').includes(scope);
   const locked = readOnly || (scope === 'shared' && !cell.sharedEditable) || noRoom;
   const scopeIssues = cell.issues.filter((i) => i.scope === scope);
@@ -108,7 +111,7 @@ function RowForLoad({ row, compact = false, loadEpoch }: { row: TextRowDef; comp
   const forms = row.plural ? pluralFormsFor(locale) : [];
   const storedForms: Forms = isForms(stored) ? stored : {};
   const storedText = typeof stored === 'string' ? stored : '';
-  const warnings = warningsFor(row, stored);
+  const warnings = warningsFor(row, stored, builtIn);
 
   const write = (value: DraftValue | null) => { applyText(scope, row.key, value, editEpoch.current); };
   const writeForm = (form: string, text: string) => write({ ...storedForms, [form]: text });
@@ -148,7 +151,7 @@ function RowForLoad({ row, compact = false, loadEpoch }: { row: TextRowDef; comp
       {!compact && (
         <p id={`${id}-note`} className={styles.note}>
           {row.note && <span>{row.note}. </span>}
-          <span className={styles.builtIn}>Built-in: {summary(row.def)}</span>
+          <span className={styles.builtIn}>Built-in: {summary(builtIn)}</span>
         </p>
       )}
       <div className={styles.scope} role="group" aria-label="Applies to">
