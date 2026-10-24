@@ -1460,8 +1460,12 @@ languages shoppers may switch to (`SiteText.language.offered`; French, Italian a
 built-in translation, others fall back to English line by line). The *Editing language* select at
 the top of the panel picks which language the rows, counters, plural boxes and the canvas show;
 "Built-in:" is that language's pack value when there is one. Shoppers switch from a Language group
-in the phone header menu (automatic when more than one language is offered) or the optional
-`HeaderLanguage` header part; switching stores the choice and reloads.
+in the phone header menu, and on desktop from a compact language button the header draws by itself
+(a system mount of the header bar, like the Reviews link: automatic whenever more than one language is
+offered, ahead of Account and Cart; hidden on phones while the header menu is on, shown there when it
+is off; not drawn in the canvas or previews). The optional `HeaderLanguage` header part is for owners
+who want to position it themselves: a header that places it anywhere (nested groups included) skips
+the automatic button, so there is only ever one. Switching stores the choice and reloads.
 
 Selecting a block shows **Text in this block** under its fields (from the block's `text`
 patterns). The canvas re-resolves on every keystroke; only posting is debounced. Text edits share

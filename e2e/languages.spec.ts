@@ -104,3 +104,58 @@ test.describe('the HeaderLanguage part (desktop)', () => {
     await expect(page.locator('[data-sf-part="header"]').getByRole('button', { name: /Cambia lingua/ })).toContainText('IT');
   });
 });
+
+test.describe('the automatic desktop language switcher', () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
+  const switchers = (page: Page) => page.locator('[data-sf-part="header"]').getByRole('button', { name: /Change language/ });
+
+  test('the default header carries one when the shop offers several languages, and it switches the page', async ({ page }) => {
+    await boot(page, OFFERED);
+    await page.goto('/');
+    const btn = switchers(page);
+    await expect(btn).toHaveCount(1);
+    await expect(btn).toBeVisible();
+    await expect(btn).toContainText('EN');
+    // Ahead of Cart in the actions group.
+    const order = await page.locator('[data-sf-part="header"]').evaluate((h) => {
+      const all = [...h.querySelectorAll('button, a')];
+      const at = (m: RegExp) => all.findIndex((e) => m.test(e.getAttribute('aria-label') ?? ''));
+      return { lang: at(/Change language/), cart: at(/cart/i) };
+    });
+    expect(order.lang).toBeGreaterThan(-1);
+    expect(order.lang).toBeLessThan(order.cart);
+    await btn.click();
+    await page.getByRole('menuitem', { name: 'Italiano' }).or(page.getByRole('button', { name: 'Italiano' })).first().click();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'it');
+    await expect(page.locator('[data-sf-part="header"]').getByRole('button', { name: /Cambia lingua/ })).toContainText('IT');
+  });
+
+  test('a placed HeaderLanguage part is the only switcher', async ({ page }) => {
+    await boot(page, OFFERED, { pages: { storefront: languageHeaderSet('storefront') } });
+    await page.goto('/');
+    await expect(switchers(page)).toHaveCount(1);
+    await expect(switchers(page)).toBeVisible();
+  });
+
+  test('a store offering one language has none', async ({ page }) => {
+    await boot(page, { languages: ['en'] });
+    await page.goto('/');
+    await expect(page.locator('[data-sf-part="header"]')).toBeVisible();
+    await expect(switchers(page)).toHaveCount(0);
+  });
+
+  test('on a phone it is hidden while the header menu is on, shown when the menu is off', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, OFFERED);
+    await page.goto('/');
+    await expect(page.getByRole('button', { name: 'Open menu' })).toBeVisible();
+    await expect(switchers(page)).toBeHidden();
+
+    const off = await page.context().newPage();
+    await boot(off, OFFERED, { tweakSettings: (s) => { s.theme = { ...s.theme, options: { ...s.theme.options, showHeaderMenu: false } }; } });
+    await off.setViewportSize({ width: 390, height: 844 });
+    await off.goto('/');
+    await expect(switchers(off)).toBeVisible();
+  });
+});
