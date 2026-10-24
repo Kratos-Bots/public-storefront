@@ -26,7 +26,7 @@ import { useText } from '@/text/runtime.tsx';
 import { compactScope, iconOverride, type Override, type SlotRender, type StyleAttrs } from '@/builder/define.ts';
 import { CoreOptionsScope } from '@/builder/blocks/_shared/CoreOptionsScope.tsx';
 import { HeaderFamily, type HeaderData } from '@/builder/family-header.ts';
-import { fixedSlot, type FamilyValue, type PartViewProps } from '@/builder/parts.ts';
+import { containsType, fixedSlot, type FamilyValue, type PartViewProps } from '@/builder/parts.ts';
 import type { ComponentData } from '@/builder/types.ts';
 import storefront from '@/layouts/StorefrontShell.module.css';
 import menu from '@/layouts/MenuShell.module.css';
@@ -172,16 +172,14 @@ function CartView({ props, styleAttrs }: PartViewProps) {
   );
 }
 
-function LanguageView({ styleAttrs }: PartViewProps) {
+/** The compact language button + menu, in the header's own action-button class; `hideOnPhone` adds `sf-hide-mobile`. */
+function LanguageSwitcher({ hideOnPhone, styleAttrs }: { hideOnPhone: boolean; styleAttrs?: StyleAttrs }) {
   const { classes } = HeaderFamily.useData();
-  const { t, languages, locale } = useText();
-  const { showHeaderMenu } = useCoreOptions();
-  // An owner placing the part needs to see it even while the shop offers one language.
-  if (languages.length < 2 && !isBuilderMode()) return null;
+  const { t, locale } = useText();
   return (
     <Menu position="bottom-end" shadow="md" withinPortal>
       <Menu.Target>
-        <button type="button" className={showHeaderMenu && !isBuilderMode() ? `${classes.action} sf-hide-mobile` : classes.action} aria-label={t('shell.language.change', { language: nativeName(locale) })} {...styleAttrs}>
+        <button type="button" className={hideOnPhone ? `${classes.action} sf-hide-mobile` : classes.action} aria-label={t('shell.language.change', { language: nativeName(locale) })} {...styleAttrs}>
           <span className={language.code} aria-hidden>{languageCode(locale)}</span>
         </button>
       </Menu.Target>
@@ -190,6 +188,14 @@ function LanguageView({ styleAttrs }: PartViewProps) {
       </Menu.Dropdown>
     </Menu>
   );
+}
+
+function LanguageView({ styleAttrs }: PartViewProps) {
+  const { languages } = useText();
+  const { showHeaderMenu } = useCoreOptions();
+  // An owner placing the part needs to see it even while the shop offers one language.
+  if (languages.length < 2 && !isBuilderMode()) return null;
+  return <LanguageSwitcher hideOnPhone={showHeaderMenu && !isBuilderMode()} styleAttrs={styleAttrs} />;
 }
 
 /**
@@ -212,6 +218,24 @@ function HeaderReviewsLink() {
       <span className={reviewsLink.text}>{t('shell.header.reviews')}</span>
       <span className={reviewsLink.glyph} aria-hidden><StarIcon size={17} /></span>
     </Link>
+  );
+}
+
+/**
+ * The end slot's actions wrapper with the automatic language switcher ahead of Account/Cart. The switcher is a system mount
+ * of the header bar (like the Reviews link): it draws while the shop offers more than one language, not in the page
+ * builder's canvas or in previews. The phone menu carries a Language group, so with the header menu on it is desktop-only;
+ * with it off, phones get it too. When it draws nothing the slot renders exactly as before.
+ */
+function AutoLanguageActions({ className, end }: { className: string; end: SlotRender }) {
+  const { languages } = useText();
+  const { showHeaderMenu } = useCoreOptions();
+  if (languages.length < 2 || isBuilderMode() || isPreviewMode()) return <>{end({ className })}</>;
+  return (
+    <div className={className}>
+      <LanguageSwitcher hideOnPhone={showHeaderMenu} />
+      {end()}
+    </div>
   );
 }
 
@@ -258,6 +282,8 @@ export function HeaderBar({ variant, topBar, sticky, slots, styleAttrs }: Header
   const value = useMemo(() => ({ data, views: HEADER_VIEWS }), [data]);
 
   const c = CLASSES[variant];
+  // The slots carry their stored items: a HeaderLanguage placed anywhere in the header (nested groups included) replaces the automatic switcher.
+  const placedLanguage = [slots.start, slots.nav, slots.middle, slots.end].some((slot) => containsType(slot.items, 'HeaderLanguage'));
   return (
     <HeaderFamily.Provider value={value}>
       {topBar && variant !== 'webapp' ? <Slot name="TopBar" /> : null}
@@ -269,7 +295,7 @@ export function HeaderBar({ variant, topBar, sticky, slots, styleAttrs }: Header
           {slots.nav()}
           <HeaderReviewsLink />
           {slots.middle()}
-          {slots.end({ className: c.actions })}
+          {placedLanguage ? slots.end({ className: c.actions }) : <AutoLanguageActions className={c.actions} end={slots.end} />}
           <HeaderMenu />
         </div>
         <WarehouseBar />
