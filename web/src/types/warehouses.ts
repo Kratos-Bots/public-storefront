@@ -24,5 +24,13 @@ export interface Warehouse {
    * that has anything to show. Absent on an older backend - read as `null`.
    */
   faq?: { available: boolean } | null;
+  /** The picker group this warehouse belongs to; null or absent: it stands alone. Absent on an older backend. */
+  groupId?: number | null;
 }
-export interface WarehouseList { warehouses: Warehouse[] }
+/** A named set of warehouses the chooser folds into one card. */
+export interface WarehouseGroup { id: number; name: string; description: string | null }
+export interface WarehouseList {
+  warehouses: Warehouse[];
+  /** Absent on an older backend: read as no groups. */
+  groups?: WarehouseGroup[];
+}

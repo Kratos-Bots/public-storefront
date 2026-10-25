@@ -9,6 +9,10 @@ import { scheduleGuestCartSync } from '@/features/cart/guest-cart-sync.ts';
 import { refreshCartForWarehouse } from '@/features/cart/useServerCart.ts';
 import { useCatalog } from '@/features/catalog/use-catalog.ts';
 import { selectedWarehouseId, useWarehouseStore, warehouseFeatureOn } from '@/features/warehouses/store.ts';
+import type { WarehouseGroup } from '@/types/warehouses.ts';
+
+/** Module-level and frozen so the context effect's deps stay stable when the backend sends no groups. */
+const NO_GROUPS: WarehouseGroup[] = Object.freeze([]) as unknown as WarehouseGroup[];
 
 /**
  * Keeps the warehouse store in step with the world. Mounted once, above the router, and renders nothing.
@@ -46,9 +50,10 @@ export function WarehouseSync() {
 
   const warehouses = enabled ? (list.data?.warehouses ?? null) : null;
   const failed = enabled && list.isError;
+  const groups = enabled ? (list.data?.groups ?? NO_GROUPS) : null;
   useEffect(() => {
-    setContext({ enabled, list: warehouses, failed });
-  }, [setContext, enabled, warehouses, failed]);
+    setContext({ enabled, list: warehouses, failed, groups });
+  }, [setContext, enabled, warehouses, failed, groups]);
 
   // A stored id the (fresh) list does not contain is stale. Only a loaded list can say so.
   useEffect(() => {

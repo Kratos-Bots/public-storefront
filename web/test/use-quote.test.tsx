@@ -524,7 +524,7 @@ describe('useQuote with the warehouse feature off', () => {
 
   it('puts nothing about a warehouse in the query key, even with a stale stored choice', async () => {
     resetWarehouseStore();
-    useWarehouseStore.setState({ warehouseId: 2, ctx: { enabled: false, list: null, failed: false, carried: null } });
+    useWarehouseStore.setState({ warehouseId: 2, ctx: { enabled: false, list: null, failed: false, groups: null, carried: null } });
     const { result } = renderHook(() => useQuote(form({ country: 'GB' }), { guest: false }), { wrapper });
     await settle();
     const keys = client.getQueryCache().getAll().map((q) => JSON.stringify(q.queryKey));

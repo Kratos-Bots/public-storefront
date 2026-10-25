@@ -31,7 +31,7 @@ function settings(features: Record<string, unknown> = {}, extra: Record<string, 
 }
 
 function setStore(over: Partial<ReturnType<typeof useWarehouseStore.getState>['ctx']> = {}, stored: number | null = null) {
-  useWarehouseStore.setState({ warehouseId: stored, ctx: { enabled: true, list: LIST, failed: false, carried: null, ...over } });
+  useWarehouseStore.setState({ warehouseId: stored, ctx: { enabled: true, list: LIST, failed: false, groups: null, carried: null, ...over } });
 }
 
 function mount(at = '/', features?: Record<string, unknown>, extra?: Record<string, unknown>) {
@@ -191,7 +191,7 @@ describe('WarehouseGate', () => {
     mount();
     expect(screen.queryByText('catalogue')).toBeNull();
     expect(heading()).toBeNull();
-    act(() => useWarehouseStore.setState({ ctx: { enabled: true, list: null, failed: true, carried: null } }));
+    act(() => useWarehouseStore.setState({ ctx: { enabled: true, list: null, failed: true, groups: null, carried: null } }));
     expect(screen.getByText('catalogue')).toBeTruthy();
   });
 

@@ -34,7 +34,7 @@ const US: Warehouse = { id: 3, name: 'Test US', country: null, isDefault: false 
 const LIST = [MAIN, EU, US];
 
 function setCtx(over: Partial<ReturnType<typeof useWarehouseStore.getState>['ctx']> = {}, stored: number | null = null) {
-  useWarehouseStore.setState({ warehouseId: stored, ctx: { enabled: true, list: LIST, failed: false, carried: null, ...over } });
+  useWarehouseStore.setState({ warehouseId: stored, ctx: { enabled: true, list: LIST, failed: false, groups: null, carried: null, ...over } });
 }
 
 beforeEach(() => {
@@ -327,7 +327,7 @@ describe('what a warehouse that does not carry something means', () => {
 
   it('nothing is flagged without a chosen warehouse, before its catalogue is in, or with the feature off', () => {
     useCartStore.setState({ lines: [line(4), line(9)], mode: 'local' });
-    for (const [ctx, stored] of [[{ carried: new Set([4]) }, null], [{ carried: null }, 2], [{ enabled: false, carried: new Set([4]) }, 2]] as const) {
+    for (const [ctx, stored] of [[{ carried: new Set([4]) }, null], [{ groups: null, carried: null }, 2], [{ enabled: false, carried: new Set([4]) }, 2]] as const) {
       setCtx(ctx, stored);
       const { result, unmount } = renderHook(() => useServerCart());
       expect(result.current.issues).toEqual([]);

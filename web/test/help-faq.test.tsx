@@ -230,7 +230,7 @@ describe('the Help page FAQ while the warehouse list is on its way', () => {
 
   it('shows the skeleton, not the empty state, when a stored warehouse is chosen and the list has not arrived (shop FAQ off)', () => {
     shop.faq = { available: false };
-    useWarehouseStore.setState({ warehouseId: 2, ctx: { enabled: true, list: null, failed: false, carried: null } });
+    useWarehouseStore.setState({ warehouseId: 2, ctx: { enabled: true, list: null, failed: false, groups: null, carried: null } });
     mount();
     expect(screen.getByRole('heading', { level: 1, name: 'Help' })).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
@@ -239,7 +239,7 @@ describe('the Help page FAQ while the warehouse list is on its way', () => {
   it('then shows the warehouse sections once the list arrives', async () => {
     shop.faq = { available: false };
     fetchMock.mockResolvedValue({ sections });
-    useWarehouseStore.setState({ warehouseId: 2, ctx: { enabled: true, list: null, failed: false, carried: null } });
+    useWarehouseStore.setState({ warehouseId: 2, ctx: { enabled: true, list: null, failed: false, groups: null, carried: null } });
     mount();
     act(() => useWarehouseStore.getState().setContext({ list: rows }));
     await screen.findByRole('button', { name: 'Ordering Process' });
@@ -247,17 +247,17 @@ describe('the Help page FAQ while the warehouse list is on its way', () => {
   });
   it('is not pending forever: a failed list reads the shop value (shell copy when the shop has no FAQ)', () => {
     shop.faq = { available: false };
-    useWarehouseStore.setState({ warehouseId: 2, ctx: { enabled: true, list: null, failed: true, carried: null } });
+    useWarehouseStore.setState({ warehouseId: 2, ctx: { enabled: true, list: null, failed: true, groups: null, carried: null } });
     mount();
     expect(screen.getByText(/coming soon/i)).toBeInTheDocument();
   });
   it('is never pending with no selection or with the picker off', () => {
     shop.faq = { available: false };
-    useWarehouseStore.setState({ warehouseId: null, ctx: { enabled: true, list: null, failed: false, carried: null } });
+    useWarehouseStore.setState({ warehouseId: null, ctx: { enabled: true, list: null, failed: false, groups: null, carried: null } });
     mount();
     expect(screen.getByText(/coming soon/i)).toBeInTheDocument();
     cleanup();
-    useWarehouseStore.setState({ warehouseId: 2, ctx: { enabled: false, list: null, failed: false, carried: null } });
+    useWarehouseStore.setState({ warehouseId: 2, ctx: { enabled: false, list: null, failed: false, groups: null, carried: null } });
     mount();
     expect(screen.getByText(/coming soon/i)).toBeInTheDocument();
   });

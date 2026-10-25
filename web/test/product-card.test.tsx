@@ -68,7 +68,7 @@ describe('ProductCard while ordering is paused', () => {
     useWarehouseStore.setState({
       warehouseId: selected,
       ctx: {
-        enabled: true, failed: false, carried: null,
+        enabled: true, failed: false, groups: null, carried: null,
         list: [{ id: 1, name: 'Main', country: 'GB', isDefault: true }, { id: 2, name: 'UK', country: 'GB', isDefault: false, orderingEnabled: false, orderingMessage: 'Back Monday' }],
       },
     });

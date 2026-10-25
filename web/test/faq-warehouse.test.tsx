@@ -62,7 +62,7 @@ const fresh = () => new QueryClient({ defaultOptions: { queries: { retry: false 
 
 /** Put the warehouse picker "on" with this list; `chosen` is the shopper's stored choice. */
 function pickWarehouses(rows: Warehouse[], chosen: number | null) {
-  useWarehouseStore.setState({ warehouseId: chosen, ctx: { enabled: true, list: rows, failed: false, carried: null } });
+  useWarehouseStore.setState({ warehouseId: chosen, ctx: { enabled: true, list: rows, failed: false, groups: null, carried: null } });
 }
 
 beforeEach(() => {
@@ -107,7 +107,7 @@ describe('useFaq request and key', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(get).toHaveBeenLastCalledWith('storefront/faq');
     cleanup();
-    useWarehouseStore.setState({ warehouseId: 2, ctx: { enabled: false, list: null, failed: false, carried: null } });
+    useWarehouseStore.setState({ warehouseId: 2, ctx: { enabled: false, list: null, failed: false, groups: null, carried: null } });
     const again = renderHook(() => useFaq(true), { wrapper: wrapper(fresh()) });
     await waitFor(() => expect(again.result.current.isSuccess).toBe(true));
     expect(get).toHaveBeenLastCalledWith('storefront/faq');
@@ -145,11 +145,11 @@ describe('useFaqAvailable', () => {
     expect(probe()).toBe(true);
     pickWarehouses(list(wh(1), wh(2)), 2);
     expect(probe()).toBe(true);
-    useWarehouseStore.setState({ warehouseId: 2, ctx: { enabled: true, list: null, failed: false, carried: null } });
+    useWarehouseStore.setState({ warehouseId: 2, ctx: { enabled: true, list: null, failed: false, groups: null, carried: null } });
     expect(probe()).toBe(true);
   });
   it('ignores a warehouse own FAQ while the picker is off', () => {
-    useWarehouseStore.setState({ warehouseId: 2, ctx: { enabled: false, list: list(wh(1), wh(2, { faq: { available: false } })), failed: false, carried: null } });
+    useWarehouseStore.setState({ warehouseId: 2, ctx: { enabled: false, list: list(wh(1), wh(2, { faq: { available: false } })), failed: false, groups: null, carried: null } });
     expect(probe()).toBe(true);
   });
   it('ignores the default warehouse row (choosing it is choosing nothing)', () => {

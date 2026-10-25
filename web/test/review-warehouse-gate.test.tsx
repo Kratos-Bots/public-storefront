@@ -67,7 +67,7 @@ beforeEach(() => {
   useUiStore.setState({ loginOpen: false, cartOpen: false });
   accessGate.getState().reset();
   useSessionStore.setState({ token: 'tok', customer: { id: 1, nickname: 'Ada' } });
-  useWarehouseStore.setState({ warehouseId: null, ctx: { enabled: true, list: LIST, failed: false, carried: null } });
+  useWarehouseStore.setState({ warehouseId: null, ctx: { enabled: true, list: LIST, failed: false, groups: null, carried: null } });
   unpaidMock.mockReset().mockResolvedValue([] as never);
   reviewableMock.mockReset().mockResolvedValue({ orders: [order('K4M2QP')] });
 });
