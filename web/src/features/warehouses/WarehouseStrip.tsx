@@ -1,6 +1,8 @@
-import { useId } from 'react';
+import { useId, useMemo } from 'react';
 import { useLocation } from 'react-router';
 import { useText } from '@/text/runtime.tsx';
+import { useWarehouseStore } from '@/features/warehouses/store.ts';
+import { buildPickerTree } from '@/features/warehouses/picker-tree.ts';
 import { useSelectedWarehouse } from '@/features/warehouses/use-warehouse.ts';
 import { markChosenThisVisit } from '@/features/warehouses/visit.ts';
 import type { Warehouse } from '@/types/warehouses.ts';
@@ -18,6 +20,8 @@ export function WarehouseStrip() {
   const { t } = useText();
   const { pathname } = useLocation();
   const id = useId();
+  const groups = useWarehouseStore((s) => s.ctx.groups);
+  const tree = useMemo(() => buildPickerTree(warehouses, groups ?? []), [warehouses, groups]);
   if (warehouses.length < 2 || !isWarehouseBarRoute(pathname)) return null;
 
   const optionLabel = (w: Warehouse) => {
@@ -41,9 +45,17 @@ export function WarehouseStrip() {
               value={selectedId ?? current?.id ?? ''}
               onChange={(e) => choose(e.target.value)}
             >
-              {warehouses.map((w) => (
-                <option key={w.id} value={w.id}>{optionLabel(w)}</option>
-              ))}
+              {tree.map((e) =>
+                e.kind === 'group' ? (
+                  <optgroup key={`g${e.group.id}`} label={e.group.name}>
+                    {e.warehouses.map((w) => (
+                      <option key={w.id} value={w.id}>{optionLabel(w)}</option>
+                    ))}
+                  </optgroup>
+                ) : (
+                  <option key={e.warehouse.id} value={e.warehouse.id}>{optionLabel(e.warehouse)}</option>
+                ),
+              )}
             </select>
             <svg className={classes.caret} viewBox="0 0 12 12" width="10" height="10" aria-hidden="true" focusable="false">
               <path d="M2.25 4.5 6 8.25 9.75 4.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />

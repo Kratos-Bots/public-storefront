@@ -79,6 +79,43 @@ test('a new visit asks again and marks the last choice', async ({ page, context 
   await expect(second.getByRole('button', { name: 'Shop from Main' })).not.toContainText('Your last choice');
 });
 
+test('grouped warehouses: open the group, go back, open it again, pick one', async ({ page }) => {
+  const mocks = await installMocks(page, {
+    layout: 'storefront',
+    warehouses: {
+      list: [
+        { id: 1, name: 'Main', country: 'GB', isDefault: true },
+        { id: 2, name: 'Test EU', country: 'DE', isDefault: false, groupId: 9, description: 'Ships from Berlin.' },
+        { id: 3, name: 'Test EU 2', country: 'FR', isDefault: false, groupId: 9 },
+      ],
+      groups: [{ id: 9, name: 'EU Warehouses', description: 'Pick the closest to you.' }],
+      carries: { 2: [102, 104], 3: [102, 104] },
+      prompt: true,
+    },
+  });
+  await page.goto('/');
+  const group = page.getByRole('button', { name: 'See warehouses in EU Warehouses' });
+  await expect(group).toContainText('2 warehouses');
+  await expect(page.getByRole('button', { name: 'Shop from Test EU' })).toHaveCount(0);
+
+  await group.click();
+  await expect(page.getByRole('heading', { level: 1, name: 'EU Warehouses' })).toBeVisible();
+  await expect(page.getByText('Pick the closest to you.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Shop from Test EU', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Shop from Main' })).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Back' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Where should we ship from?' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Shop from Main' })).toBeVisible();
+
+  await group.click();
+  await page.getByRole('button', { name: 'Shop from Test EU', exact: true }).click();
+  await expect(page.locator(PROMPT)).toHaveCount(0);
+  await expect(opener(page, 'Borealis Drops 25ml')).toBeVisible();
+  expect(mocks.state.urls).toContain('GET catalog?warehouse=2');
+  await expect(page.locator('[data-warehouse-picker] optgroup')).toHaveCount(1);
+});
+
 test('deep links are not interrupted', async ({ page }) => {
   await installMocks(page, { layout: 'storefront', warehouses: WAREHOUSES });
   await page.goto('/order-placed');

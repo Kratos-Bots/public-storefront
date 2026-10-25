@@ -264,6 +264,21 @@ describe('WarehouseStrip', () => {
     expect(select.value).toBe('1');
   });
 
+  it('groups warehouses into an optgroup, and draws none for a shop without groups', () => {
+    const UK1: Warehouse = { id: 4, name: 'UK1', country: 'GB', isDefault: false, groupId: 7 };
+    const UK2: Warehouse = { id: 5, name: 'UK2', country: 'GB', isDefault: false, groupId: 7 };
+    setCtx({ list: [MAIN, UK1, UK2, EU], groups: [{ id: 7, name: 'UK Warehouses', description: null }] });
+    const { container } = wrap(<WarehouseStrip />);
+    const groups = container.querySelectorAll('optgroup');
+    expect(groups).toHaveLength(1);
+    expect(groups[0]!.label).toBe('UK Warehouses');
+    expect([...groups[0]!.querySelectorAll('option')].map((o) => o.textContent)).toEqual(['UK1 · GB', 'UK2 · GB']);
+    expect(container.querySelectorAll('select > option')).toHaveLength(2);
+    cleanup();
+    setCtx();
+    expect(wrap(<WarehouseStrip />).container.querySelector('optgroup')).toBeNull();
+  });
+
   it('choosing a warehouse stores it; choosing the default stores nothing', () => {
     setCtx();
     wrap(<WarehouseStrip />);

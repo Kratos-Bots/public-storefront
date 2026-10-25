@@ -42,6 +42,9 @@ export default {
   "shell.warehouse.prompt.choose": "Acheter depuis {warehouse}",
   "shell.warehouse.prompt.lastTime": "Votre dernier choix",
   "shell.warehouse.prompt.help": "Besoin d’aide ?",
+  "shell.warehouse.prompt.groupCount": "{count} entrepôts",
+  "shell.warehouse.prompt.back": "Retour",
+  "shell.warehouse.prompt.openGroup": "Voir les entrepôts de {group}",
   "shell.warehouse.paused.badge": "Commandes suspendues",
   "shell.warehouse.paused.notice": "{warehouse} n’accepte pas de commandes pour le moment. Vous pouvez parcourir le catalogue ou choisir un autre entrepôt.",
 } satisfies AreaPack<typeof shell>;

@@ -89,6 +89,82 @@ describe('WarehouseGate Need help link', () => {
   });
 });
 
+describe('WarehouseGate groups', () => {
+  const CHINA: Warehouse = { id: 10, name: 'China', country: 'CN', isDefault: false };
+  const UK1: Warehouse = { id: 11, name: 'UK1', country: 'GB', isDefault: false, groupId: 7 };
+  const UK2: Warehouse = { id: 12, name: 'UK2', country: 'GB', isDefault: false, groupId: 7 };
+  const RAWS: Warehouse = { id: 13, name: 'Raws', country: null, isDefault: false };
+  const EU1: Warehouse = { id: 14, name: 'EU1', country: 'DE', isDefault: false };
+  const GROUPS = [{ id: 7, name: 'UK Warehouses', description: 'Ships from the UK in 1 to 2 days.' }];
+  const grouped = (stored: number | null = null) => setStore({ list: [CHINA, UK2, UK1, RAWS, EU1], groups: GROUPS }, stored);
+  const group = () => screen.getByRole('button', { name: 'See warehouses in UK Warehouses' });
+
+  it('shows the group as one card on the top screen, with its count, and none of its members', () => {
+    grouped();
+    mount();
+    expect(group().textContent).toContain('UK Warehouses');
+    expect(group().textContent).toContain('2 warehouses');
+    expect(screen.getByRole('button', { name: 'Shop from China' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Shop from Raws' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Shop from EU1' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Shop from UK1' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Shop from UK2' })).toBeNull();
+  });
+
+  it('opens a group to its own screen without choosing, and Back returns', () => {
+    grouped();
+    mount();
+    fireEvent.click(group());
+    expect(screen.getByRole('heading', { name: 'UK Warehouses' })).toBeTruthy();
+    expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'UK Warehouses' }));
+    expect(screen.getByText('Ships from the UK in 1 to 2 days.')).toBeTruthy();
+    const names = screen.getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent);
+    expect(names.filter((n) => n?.startsWith('Shop from'))).toEqual(['Shop from UK2', 'Shop from UK1']);
+    expect(screen.queryByRole('button', { name: 'Shop from China' })).toBeNull();
+    expect(sessionStorage.getItem(MARKER)).toBeNull();
+    expect(useWarehouseStore.getState().warehouseId).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    expect(heading()).not.toBeNull();
+    expect(group()).toBeTruthy();
+    expect(document.activeElement).toBe(heading());
+    expect(sessionStorage.getItem(MARKER)).toBeNull();
+  });
+
+  it('picking a member stores it and marks the visit', () => {
+    grouped();
+    mount();
+    fireEvent.click(group());
+    fireEvent.click(screen.getByRole('button', { name: 'Shop from UK1' }));
+    expect(useWarehouseStore.getState().warehouseId).toBe(11);
+    expect(sessionStorage.getItem(MARKER)).toBe('1');
+    expect(screen.getByText('catalogue')).toBeTruthy();
+  });
+
+  it('tags the group card when the last choice was one of its warehouses', () => {
+    grouped(11);
+    mount();
+    expect(group().textContent).toContain('Your last choice');
+    expect(screen.getByRole('button', { name: 'Shop from China' }).textContent).not.toContain('Your last choice');
+  });
+
+  it('falls back to the top screen when the open group collapses to one warehouse', () => {
+    grouped();
+    mount();
+    fireEvent.click(group());
+    act(() => setStore({ list: [CHINA, UK1, RAWS, EU1], groups: GROUPS }));
+    expect(heading()).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Shop from UK1' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Back' })).toBeNull();
+  });
+
+  it('leaves out the lede when the group has no description', () => {
+    setStore({ list: [CHINA, UK2, UK1], groups: [{ id: 7, name: 'UK Warehouses', description: null }] });
+    const { container } = mount();
+    fireEvent.click(group());
+    expect(container.querySelector('p')).toBeNull();
+  });
+});
+
 describe('WarehouseGate', () => {
   it('asks first: a heading and one button per warehouse, and no catalogue behind it', () => {
     setStore();
