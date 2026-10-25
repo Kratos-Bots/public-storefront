@@ -42,6 +42,9 @@ export default {
   "shell.warehouse.prompt.choose": "Comprar desde {warehouse}",
   "shell.warehouse.prompt.lastTime": "Tu última elección",
   "shell.warehouse.prompt.help": "¿Necesitas ayuda?",
+  "shell.warehouse.prompt.groupCount": "{count} almacenes",
+  "shell.warehouse.prompt.back": "Volver",
+  "shell.warehouse.prompt.openGroup": "Ver almacenes de {group}",
   "shell.warehouse.paused.badge": "Sin aceptar pedidos",
   "shell.warehouse.paused.notice": "{warehouse} no acepta pedidos ahora mismo. Puedes seguir mirando o elegir otro almacén.",
 } satisfies AreaPack<typeof shell>;

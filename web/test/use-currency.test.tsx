@@ -28,7 +28,7 @@ afterEach(() => cleanup());
 describe('useCurrency', () => {
   it("returns the selected warehouse's currency and follows a switch", () => {
     setSettings(true);
-    useWarehouseStore.setState({ warehouseId: 2, ctx: { enabled: true, list: [MAIN, EU, US], failed: false, carried: null } });
+    useWarehouseStore.setState({ warehouseId: 2, ctx: { enabled: true, list: [MAIN, EU, US], failed: false, groups: null, carried: null } });
     const { result } = renderHook(() => useCurrency(), { wrapper });
     expect(result.current).toBe('EUR');
     act(() => useWarehouseStore.getState().choose(3));
@@ -39,7 +39,7 @@ describe('useCurrency', () => {
 
   it('falls back to the shop currency with the picker off', () => {
     setSettings(false);
-    useWarehouseStore.setState({ warehouseId: 2, ctx: { enabled: false, list: [MAIN, EU], failed: false, carried: null } });
+    useWarehouseStore.setState({ warehouseId: 2, ctx: { enabled: false, list: [MAIN, EU], failed: false, groups: null, carried: null } });
     const { result } = renderHook(() => useCurrency(), { wrapper });
     expect(result.current).toBe('GBP');
   });
@@ -47,7 +47,7 @@ describe('useCurrency', () => {
   it('falls back to the shop currency when an older backend sends no warehouse currency', () => {
     setSettings(true);
     const old = { id: 2, name: 'EU', country: 'DE', isDefault: false } as Warehouse;
-    useWarehouseStore.setState({ warehouseId: 2, ctx: { enabled: true, list: [MAIN, old], failed: false, carried: null } });
+    useWarehouseStore.setState({ warehouseId: 2, ctx: { enabled: true, list: [MAIN, old], failed: false, groups: null, carried: null } });
     const { result } = renderHook(() => useCurrency(), { wrapper });
     expect(result.current).toBe('GBP');
   });

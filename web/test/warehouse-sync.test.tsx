@@ -78,6 +78,21 @@ describe('WarehouseSync', () => {
     expect(useWarehouseStore.getState().ctx.enabled).toBe(true);
   });
 
+  it('puts the response groups on ctx.groups, and [] when the backend sends none', async () => {
+    queryClient.setQueryData(SETTINGS_KEY, settings(true));
+    const groups = [{ id: 7, name: 'UK', description: null }];
+    vi.mocked(fetchWarehouses).mockResolvedValue({ warehouses: LIST, groups });
+    const first = mount();
+    await waitFor(() => expect(useWarehouseStore.getState().ctx.groups).toEqual(groups));
+    first.unmount();
+    resetWarehouseStore();
+    queryClient.clear();
+    queryClient.setQueryData(SETTINGS_KEY, settings(true));
+    vi.mocked(fetchWarehouses).mockResolvedValue({ warehouses: LIST });
+    mount();
+    await waitFor(() => expect(useWarehouseStore.getState().ctx.groups).toEqual([]));
+  });
+
   it('a returning shopper: one catalogue request, already for their warehouse, and the carried set is published', async () => {
     queryClient.setQueryData(SETTINGS_KEY, settings(true));
     useWarehouseStore.setState({ warehouseId: 2 });

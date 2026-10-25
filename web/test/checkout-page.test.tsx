@@ -1080,7 +1080,7 @@ describe('CheckoutPage — warehouse shipping', () => {
   };
 
   const choose = (warehouseId: number | null, enabled = true, list = [MAIN, NORTH, SOLO]) =>
-    act(() => useWarehouseStore.setState({ warehouseId, ctx: { enabled, list, failed: false, carried: null } }));
+    act(() => useWarehouseStore.setState({ warehouseId, ctx: { enabled, list, failed: false, groups: null, carried: null } }));
   const country = () => screen.getByLabelText('Country') as HTMLSelectElement;
   const offered = () => Array.from(country().options).map((o) => o.value).filter(Boolean).sort();
   const toAddress = async () => {
@@ -1230,7 +1230,7 @@ describe('CheckoutPage — a method chosen at another warehouse', () => {
     4: [{ id: 8, name: 'North Standard', courier: 'North Post', price: 5, freeShipping: false }],
   };
   const choose = (warehouseId: number | null) =>
-    act(() => useWarehouseStore.setState({ warehouseId, ctx: { enabled: true, list: [SHOP, OTHER], failed: false, carried: null } }));
+    act(() => useWarehouseStore.setState({ warehouseId, ctx: { enabled: true, list: [SHOP, OTHER], failed: false, groups: null, carried: null } }));
 
   beforeEach(() => {
     resetWarehouseStore();

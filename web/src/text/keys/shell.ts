@@ -42,6 +42,9 @@ export default defineTextArea('shell', {
   'warehouse.prompt.choose': { en: 'Shop from {warehouse}', max: 60 },
   'warehouse.prompt.lastTime': { en: 'Your last choice', max: 40 },
   'warehouse.prompt.help': { en: 'Need help?', max: 30 },
+  'warehouse.prompt.groupCount': { en: '{count} warehouses', max: 40 },
+  'warehouse.prompt.back': { en: 'Back', max: 30 },
+  'warehouse.prompt.openGroup': { en: 'See warehouses in {group}', max: 60 },
   'warehouse.paused.badge': { en: 'Not taking orders', max: 40 },
   'warehouse.paused.notice': { en: '{warehouse} is not taking orders right now. You can browse, or choose another warehouse.', max: 160 },
 });

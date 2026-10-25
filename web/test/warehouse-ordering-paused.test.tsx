@@ -39,7 +39,7 @@ function settings(): StorefrontSettings {
 }
 
 function setStore(list: Warehouse[], selected: number | null) {
-  useWarehouseStore.setState({ warehouseId: selected, ctx: { enabled: true, list, failed: false, carried: null } });
+  useWarehouseStore.setState({ warehouseId: selected, ctx: { enabled: true, list, failed: false, groups: null, carried: null } });
 }
 
 const wrap = (ui: ReactNode, at = '/') => {
@@ -233,7 +233,7 @@ describe('usePriceInAddSlot', () => {
     wrap(<Probe />);
     expect(slot()).toBe('false');
     cleanup();
-    useWarehouseStore.setState({ warehouseId: 2, ctx: { enabled: false, list: LIST, failed: false, carried: null } });
+    useWarehouseStore.setState({ warehouseId: 2, ctx: { enabled: false, list: LIST, failed: false, groups: null, carried: null } });
     wrap(<Probe />);
     expect(slot()).toBe('false');
   });
@@ -259,7 +259,7 @@ describe('useOrderingState().accepting', () => {
   });
 
   it('is true with the warehouse feature off, even if the list holds a paused warehouse', () => {
-    useWarehouseStore.setState({ warehouseId: 2, ctx: { enabled: false, list: LIST, failed: false, carried: null } });
+    useWarehouseStore.setState({ warehouseId: 2, ctx: { enabled: false, list: LIST, failed: false, groups: null, carried: null } });
     wrap(<Probe />);
     expect(state()).toBe('ordering=true accepting=true');
   });

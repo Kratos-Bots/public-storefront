@@ -353,8 +353,10 @@ export interface InstallMocksOptions {
    * feature is off and every answer is exactly what it always was.
    */
   warehouses?: {
-    list: Array<{ id: number; name: string; country: string | null; isDefault: boolean; description?: string | null; orderingEnabled?: boolean; orderingMessage?: string | null; shipping?: { countries: string[]; collectionCountries: string[] }; faq?: { available: boolean } | null }>;
+    list: Array<{ id: number; name: string; country: string | null; isDefault: boolean; groupId?: number | null; description?: string | null; orderingEnabled?: boolean; orderingMessage?: string | null; shipping?: { countries: string[]; collectionCountries: string[] }; faq?: { available: boolean } | null }>;
     carries: Record<number, number[]>;
+    /** Picker groups (`groups` beside `warehouses` in the list answer); a row joins one with `groupId`. Omitted: no groups. */
+    groups?: Array<{ id: number; name: string; description: string | null }>;
     /**
      * Warehouses with their own FAQ: warehouse id -> the sections `GET storefront/faq?warehouse=<id>` answers instead of the shop's
      * (give that row `faq: { available: true }`; a row with `faq: { available: false }` is never asked for).
@@ -1176,7 +1178,7 @@ export async function installMocks(page: Page, options: InstallMocksOptions = {}
         await fail(route, 401, 'LOGIN_REQUIRED');
         return;
       }
-      await envelope(route, { warehouses: options.warehouses?.list ?? [] });
+      await envelope(route, options.warehouses?.groups ? { warehouses: options.warehouses.list, groups: options.warehouses.groups } : { warehouses: options.warehouses?.list ?? [] });
       return;
     }
 

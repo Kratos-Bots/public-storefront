@@ -151,7 +151,7 @@ describe('the menu panel', () => {
       expect(hrefs()).toEqual(['/', '/reviews', '/help', '/login']);
       cleanup();
     }
-    useWarehouseStore.setState({ warehouseId: 2, ctx: { enabled: true, list: [wh(1), wh(2, { available: true })], failed: false, carried: null } });
+    useWarehouseStore.setState({ warehouseId: 2, ctx: { enabled: true, list: [wh(1), wh(2, { available: true })], failed: false, groups: null, carried: null } });
     mount(<StorefrontHeader />, { faq: false });
     fireEvent.click(burger()!);
     expect(labels()).toEqual(['Catalog', 'Reviews', 'Help', 'Sign in']);

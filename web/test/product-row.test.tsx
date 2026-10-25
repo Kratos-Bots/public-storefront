@@ -234,7 +234,7 @@ describe('ProductRow while ordering is paused', () => {
   const MAIN: Warehouse = { id: 1, name: 'Main', country: 'GB', isDefault: true };
   const UK: Warehouse = { id: 2, name: 'UK', country: 'GB', isDefault: false, orderingEnabled: false, orderingMessage: 'Back Monday' };
   const pause = (selected: number | null = 2) =>
-    useWarehouseStore.setState({ warehouseId: selected, ctx: { enabled: true, list: [MAIN, UK], failed: false, carried: null } });
+    useWarehouseStore.setState({ warehouseId: selected, ctx: { enabled: true, list: [MAIN, UK], failed: false, groups: null, carried: null } });
   const prices = (container: HTMLElement) => container.querySelectorAll('[data-sf-part="price"]');
 
   beforeEach(() => resetWarehouseStore());

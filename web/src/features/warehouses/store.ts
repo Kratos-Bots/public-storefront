@@ -4,7 +4,7 @@ import { queryClient, SETTINGS_KEY } from '@/lib/query-client.ts';
 import { accessOf } from '@/app/access.ts';
 import { useSessionStore } from '@/stores/session.ts';
 import type { StorefrontSettings } from '@/types/settings.ts';
-import type { Warehouse } from '@/types/warehouses.ts';
+import type { Warehouse, WarehouseGroup } from '@/types/warehouses.ts';
 
 /**
  * The shopper's warehouse choice (STOREFRONT.md §3.8b).
@@ -26,11 +26,13 @@ export interface WarehouseContext {
   list: Warehouse[] | null;
   /** The list request failed: the choice is ignored (default warehouse) until it succeeds. */
   failed: boolean;
+  /** Picker groups from the same response: `[]` when the backend sends none, `null` while the list is not asked for. */
+  groups: WarehouseGroup[] | null;
   /** Ids the selected warehouse carries, once its catalogue has loaded; `null` otherwise. */
   carried: ReadonlySet<number> | null;
 }
 
-export const EMPTY_CONTEXT: WarehouseContext = { enabled: null, list: null, failed: false, carried: null };
+export const EMPTY_CONTEXT: WarehouseContext = { enabled: null, list: null, failed: false, groups: null, carried: null };
 
 interface WarehouseState {
   warehouseId: number | null;

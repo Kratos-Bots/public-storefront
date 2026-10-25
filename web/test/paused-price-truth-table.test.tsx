@@ -29,7 +29,7 @@ const pause = (paused: boolean) =>
   useWarehouseStore.setState({
     warehouseId: paused ? 2 : null,
     ctx: {
-      enabled: true, failed: false, carried: null,
+      enabled: true, failed: false, groups: null, carried: null,
       list: [{ id: 1, name: 'Main', country: 'GB', isDefault: true }, { id: 2, name: 'UK', country: 'GB', isDefault: false, orderingEnabled: false, orderingMessage: 'Back Monday' }],
     },
   });

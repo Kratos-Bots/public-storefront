@@ -24,7 +24,7 @@ beforeEach(() => {
   queryClient.clear();
   queryClient.setQueryData(SETTINGS_KEY, { currency: 'GBP', features: { warehouseSelect: true }, access: { storefront: 'public' } } as unknown as StorefrontSettings);
   // The shopper has just switched to the USD warehouse.
-  useWarehouseStore.setState({ warehouseId: 3, ctx: { enabled: true, list: [MAIN, US], failed: false, carried: null } });
+  useWarehouseStore.setState({ warehouseId: 3, ctx: { enabled: true, list: [MAIN, US], failed: false, groups: null, carried: null } });
 });
 afterEach(cleanup);
 
