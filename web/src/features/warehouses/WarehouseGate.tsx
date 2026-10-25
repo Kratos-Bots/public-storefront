@@ -56,6 +56,8 @@ function Chooser({ list, groups, stored, onPick }: { list: Warehouse[]; groups: 
   const tree = useMemo(() => buildPickerTree(list, groups), [list, groups]);
   // A group that vanished or collapsed to one warehouse while it was open leaves `open` null: the top screen.
   const open = openGroupId !== null ? findGroupEntry(tree, openGroupId) : null;
+  // Forget it for good, so a group that comes back later does not reopen unprompted.
+  if (openGroupId !== null && open === null) setOpenGroupId(null);
   // The Help page has something for the shopper: tickets, an FAQ, or a way to reach the shop.
   const canHelp = support?.enabled === true || faq || supportLinks.length > 0 || Boolean(brand.links.whatsapp || brand.links.telegram);
   useEffect(() => {

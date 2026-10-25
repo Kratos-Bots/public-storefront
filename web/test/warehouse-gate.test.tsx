@@ -157,6 +157,17 @@ describe('WarehouseGate groups', () => {
     expect(screen.queryByRole('button', { name: 'Back' })).toBeNull();
   });
 
+  it('does not reopen a group that vanished and then came back', () => {
+    grouped();
+    mount();
+    fireEvent.click(group());
+    act(() => setStore({ list: [CHINA, UK1, RAWS, EU1], groups: GROUPS }));
+    act(() => grouped());
+    expect(heading()).not.toBeNull();
+    expect(group()).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Back' })).toBeNull();
+  });
+
   it('leaves out the lede when the group has no description', () => {
     setStore({ list: [CHINA, UK2, UK1], groups: [{ id: 7, name: 'UK Warehouses', description: null }] });
     const { container } = mount();
